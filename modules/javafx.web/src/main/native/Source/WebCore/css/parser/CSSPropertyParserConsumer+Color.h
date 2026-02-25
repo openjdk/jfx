@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +25,7 @@
 
 #pragma once
 
-#include "CSSParserFastPaths.h"
-#include "CSSUnresolvedColorResolutionContext.h"
-#include "StyleColor.h"
+#include "CSSColorType.h"
 #include <optional>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
@@ -34,49 +33,61 @@
 namespace WebCore {
 
 class Color;
-class CSSPrimitiveValue;
 class CSSParserTokenRange;
-class CSSUnresolvedColor;
-
+class CSSValue;
+class ScriptExecutionContext;
 struct CSSParserContext;
+enum CSSValueID : uint16_t;
+
+namespace CSS {
+struct Color;
+struct DynamicRangeLimit;
+struct PlatformColorResolutionState;
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // Options to augment color parsing.
 struct CSSColorParsingOptions {
-    bool acceptQuirkyColors = false;
-    OptionSet<StyleColor::CSSColorType> allowedColorTypes = { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current, StyleColor::CSSColorType::System };
+    OptionSet<CSS::ColorType> allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System };
 };
 
-// MARK: <color> consuming (unresolved)
-std::optional<CSSUnresolvedColor> consumeUnresolvedColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
+// MARK: Mode specific color settings.
+bool isColorKeywordAllowed(CSSValueID, const CSSParserContext&);
 
-// MARK: <color> consuming (CSSPrimitiveValue)
-RefPtr<CSSPrimitiveValue> consumeColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
+// MARK: <color> consuming (unresolved)
+std::optional<CSS::Color> consumeUnresolvedColor(CSSParserTokenRange&, CSS::PropertyParserState&, const CSSColorParsingOptions& = { });
+
+// MARK: <color> consuming (CSSValue)
+RefPtr<CSSValue> consumeColor(CSSParserTokenRange&, CSS::PropertyParserState&, const CSSColorParsingOptions& = { });
 
 // MARK: <color> consuming (raw)
-Color consumeColorRaw(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions&, const CSSUnresolvedColorResolutionContext& = { });
+WebCore::Color consumeColorRaw(CSSParserTokenRange&, CSS::PropertyParserState&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // MARK: <color> parsing (raw)
-Color parseColorRawSlow(const String&, const CSSParserContext&, const CSSColorParsingOptions&, const CSSUnresolvedColorResolutionContext& = { });
 
-template<typename F> Color parseColorRaw(const String& string, const CSSParserContext& context, F&& lazySlowPathOptionsFunctor)
-{
-    bool strict = !isQuirksModeBehavior(context.mode);
-    if (auto color = CSSParserFastPaths::parseSimpleColor(string, strict))
-        return *color;
+// Parse with default options.
+// NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
+WebCore::Color parseColorRaw(const String&, const CSSParserContext&, ScriptExecutionContext&);
 
-    // To avoid doing anything unnecessary before the fast path can run, callers bundle up
-    // a functor to generate the slow path parameters.
-    auto [options, eagerResolutionContext, eagerResolutionDelegate] = lazySlowPathOptionsFunctor();
+// Fast variant to be used when ScriptExecutionContext is expensive to obtain or when need to pass parsing options.
+// If the result is invalid, callers should call parseColorRawGeneral().
+// NOTE: Callers must include CSSPropertyParserConsumer+ColorInlines.h to use this.
+WebCore::Color parseColorRawSimple(const String&, const CSSParserContext&);
 
-    // If a delegate is provided, hook it up to the context here. By having it live on the stack,
-    // we avoid allocating it.
-    if (eagerResolutionDelegate)
-        eagerResolutionContext.delegate = &eagerResolutionDelegate.value();
+// Parse with specific options.
+WEBCORE_EXPORT WebCore::Color parseColorRawGeneral(const String&, const CSSParserContext&, ScriptExecutionContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
-    return parseColorRawSlow(string, context, options, eagerResolutionContext);
-}
+// FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution
+// when using this function and should switch to parseColorRaw().
+WEBCORE_EXPORT WebCore::Color deprecatedParseColorRawWithoutContext(const String&, const CSSColorParsingOptions& = { });
+
+// MARK: <dynamic-range-limit> (unresolved)
+std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// MARK: <dynamic-range-limit> (CSSValue)
+RefPtr<CSSValue> consumeDynamicRangeLimit(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

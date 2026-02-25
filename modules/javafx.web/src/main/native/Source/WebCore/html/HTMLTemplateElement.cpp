@@ -37,7 +37,9 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
+#include "SerializedNode.h"
 #include "ShadowRoot.h"
 #include "ShadowRootInit.h"
 #include "SlotAssignmentMode.h"
@@ -100,32 +102,50 @@ const AtomString& HTMLTemplateElement::shadowRootMode() const
     return emptyAtom();
 }
 
-void HTMLTemplateElement::setShadowRootMode(const AtomString& value)
-{
-        setAttribute(HTMLNames::shadowrootmodeAttr, value);
-}
-
 void HTMLTemplateElement::setDeclarativeShadowRoot(ShadowRoot& shadowRoot)
 {
     m_declarativeShadowRoot = shadowRoot;
 }
 
-Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& targetDocument, CloningOperation type)
+Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry) const
 {
     RefPtr<Node> clone;
     switch (type) {
-    case CloningOperation::OnlySelf:
-        return cloneElementWithoutChildren(targetDocument);
+    case CloningOperation::SelfOnly:
+        return cloneElementWithoutChildren(document, registry);
     case CloningOperation::SelfWithTemplateContent:
-        clone = cloneElementWithoutChildren(targetDocument);
+        clone = cloneElementWithoutChildren(document, registry);
         break;
     case CloningOperation::Everything:
-        clone = cloneElementWithChildren(targetDocument);
+        clone = cloneElementWithChildren(document, registry);
         break;
     }
-    if (m_content)
-        content().cloneChildNodes(downcast<HTMLTemplateElement>(clone.get())->content());
+    if (m_content) {
+        auto& templateElement = downcast<HTMLTemplateElement>(*clone);
+        Ref fragment = templateElement.content();
+        content().cloneChildNodes(fragment->document(), nullptr, fragment);
+    }
     return clone.releaseNonNull();
+}
+
+SerializedNode HTMLTemplateElement::serializeNode(CloningOperation type) const
+{
+    // FIXME: Implement CloningOperation::SelfWithTemplateContent and ShadowRoot serialization.
+    Vector<SerializedNode> children;
+    switch (type) {
+    case CloningOperation::SelfOnly:
+    case CloningOperation::SelfWithTemplateContent:
+        break;
+    case CloningOperation::Everything:
+        children = serializeChildNodes();
+        break;
+    }
+
+    auto attributes = this->elementData() ? WTF::map(this->attributes(), [] (const auto& attribute) {
+        return SerializedNode::Element::Attribute { { attribute.name() }, attribute.value() };
+    }) : Vector<SerializedNode::Element::Attribute>();
+
+    return { SerializedNode::HTMLTemplateElement { { { WTFMove(children) }, { tagQName() }, WTFMove(attributes) } } };
 }
 
 void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
@@ -135,43 +155,6 @@ void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& 
         return;
     ASSERT_WITH_SECURITY_IMPLICATION(&document() == &newDocument);
     m_content->setTreeScopeRecursively(newDocument.ensureTemplateDocument());
-}
-
-void HTMLTemplateElement::attachAsDeclarativeShadowRootIfNeeded(Element& host)
-{
-    if (m_declarativeShadowRoot) {
-        ASSERT(host.shadowRoot());
-        return;
-    }
-
-    auto modeString = shadowRootMode();
-    if (modeString.isEmpty())
-        return;
-
-    ASSERT(modeString == "closed"_s || modeString == "open"_s);
-    auto mode = modeString == "closed"_s ? ShadowRootMode::Closed : ShadowRootMode::Open;
-
-    auto delegatesFocus = hasAttributeWithoutSynchronization(HTMLNames::shadowrootdelegatesfocusAttr) ? ShadowRootDelegatesFocus::Yes : ShadowRootDelegatesFocus::No;
-    auto clonable = hasAttributeWithoutSynchronization(HTMLNames::shadowrootclonableAttr) ? ShadowRootClonable::Yes : ShadowRootClonable::No;
-    auto serializable = hasAttributeWithoutSynchronization(HTMLNames::shadowrootserializableAttr) ? ShadowRootSerializable::Yes : ShadowRootSerializable::No;
-
-    auto exceptionOrShadowRoot = host.attachDeclarativeShadow(mode, delegatesFocus, clonable, serializable);
-    if (exceptionOrShadowRoot.hasException())
-        return;
-
-    auto importedContent = document().importNode(content(), /* deep */ true).releaseReturnValue();
-    for (RefPtr<Node> node = NodeTraversal::next(importedContent), next; node; node = next) {
-        next = NodeTraversal::next(*node);
-        if (auto* templateElement = dynamicDowncast<HTMLTemplateElement>(*node)) {
-        if (RefPtr parentElement = node->parentElement())
-                templateElement->attachAsDeclarativeShadowRootIfNeeded(*parentElement);
-        }
-    }
-
-    Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
-    shadowRoot->appendChild(WTFMove(importedContent));
-
-    remove();
 }
 
 } // namespace WebCore

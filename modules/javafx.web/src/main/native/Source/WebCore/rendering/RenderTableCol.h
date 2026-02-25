@@ -40,7 +40,7 @@ public:
     RenderTableCol(Document&, RenderStyle&&);
     virtual ~RenderTableCol();
 
-    void clearPreferredLogicalWidthsDirtyBits();
+    void clearNeedsPreferredLogicalWidthsUpdate();
 
     unsigned span() const { return m_span; }
     void setSpan(unsigned span) { m_span = span; }
@@ -70,6 +70,7 @@ public:
 private:
     ASCIILiteral renderName() const override { return "RenderTableCol"_s; }
     void computePreferredLogicalWidths() override { ASSERT_NOT_REACHED(); }
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { ASSERT_NOT_REACHED(); }
 
     void insertedIntoTree() override;
     void willBeRemovedFromTree() override;
@@ -87,6 +88,7 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) override { }
 
     RenderTable* table() const;
+    CheckedPtr<RenderTable> checkedTable() const;
 
     unsigned m_span { 1 };
 };

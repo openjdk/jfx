@@ -132,6 +132,10 @@
 #define PAS_OS_LINUX 1
 #endif
 
+#if defined(__ANDROID__) || defined(ANDROID)
+#define PAS_OS_ANDROID 1
+#endif
+
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 #define PAS_OS_FREEBSD 1
 #endif
@@ -197,6 +201,20 @@
 #define PAS_CPU_ADDRESS64 1
 #else
 #error "Unsupported compiler for libpas"
+#endif
+
+/* PAS_ALLOW_UNSAFE_BUFFER_USAGE */
+
+#if PAS_COMPILER(CLANG)
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"")
+
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_END \
+    _Pragma("clang diagnostic pop")
+#else
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#define PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 #endif /* PAS_PLATFORM_H */

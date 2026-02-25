@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,11 +35,16 @@ import javafx.scene.paint.Color;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     static float overrideUIScale;
+
+    private static native String _getDefaultBrowser();
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -296,6 +301,40 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return WinCommonDialogs.showFolderChooser_impl(owner, folder, title);
     }
 
+    @Override
+    protected void _showDocument(String uri) {
+        String browser = _getDefaultBrowser();
+        if (browser == null) {
+            System.err.println("Could not retrieve default browser");
+            return;
+        }
+
+        if (browser.contains("%1")) {
+            browser = browser.replace("%1", uri);
+        } else {
+            browser = browser + " " + uri;
+        }
+
+        List<String> command = new ArrayList<>();
+        int firstIndex = browser.indexOf("\"");
+        int secondIndex = browser.indexOf("\"", firstIndex + 1);
+
+        if (firstIndex == 0 && secondIndex != firstIndex) {
+            command.add(browser.substring(firstIndex, secondIndex + 1));
+            browser = browser.substring(secondIndex + 1).trim();
+        }
+        command.addAll(Arrays.asList(browser.split(" ")));
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.start();
+        }  catch (Exception e) {
+            System.err.println("Error opening URI : " + uri + " : " +
+                    e.getLocalizedMessage());
+        }
+
+    }
+
     @Override protected long staticView_getMultiClickTime() {
         return WinView.getMultiClickTime_impl();
     }
@@ -335,6 +374,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override native protected boolean _supportsUnifiedWindows();
+
+    @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
 
     @Override
     public String getDataDirectory() {

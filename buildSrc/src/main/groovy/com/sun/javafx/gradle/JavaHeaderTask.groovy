@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,22 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.api.tasks.util.PatternSet
+import org.gradle.process.ExecOperations
+
+import javax.inject.Inject
 
 class JavaHeaderTask extends DefaultTask {
     @OutputDirectory File output;
     @Input List sourceRoots = new ArrayList();
     @Input FileCollection classpath;
     private final PatternFilterable patternSet = new PatternSet();
+
+    private final ExecOperations execOperations;
+
+    @Inject
+    JavaHeaderTask(ExecOperations execOperations) {
+        this.execOperations = execOperations;
+    }
 
 //    @InputFiles public void setSource(Object source) {
 //        sourceRoots.clear();
@@ -89,10 +99,10 @@ class JavaHeaderTask extends DefaultTask {
             })
         }
         // Execute javah
-        project.exec({
-            commandLine("$project.JAVAH", "-d", "$output", "-classpath", "${classpath.asPath}");
-            args(classNames);
-        });
+        execOperations.exec { spec ->
+            spec.commandLine("$project.JAVAH", "-d", "$output", "-classpath", "${classpath.asPath}");
+            spec.args(classNames);
+        }
     }
 }
 

@@ -28,16 +28,21 @@
 
 #include "SWContextManager.h"
 #include "ScriptExecutionContext.h"
+#include "ServiceWorkerDebuggable.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThreadProxy.h"
 #include "WorkerInspectorController.h"
 #include "WorkerRunLoop.h"
 #include <JavaScriptCore/InspectorAgentBase.h>
 #include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorkerInspectorProxy);
 
 ServiceWorkerInspectorProxy::ServiceWorkerInspectorProxy(ServiceWorkerThreadProxy& serviceWorkerThreadProxy)
     : m_serviceWorkerThreadProxy(serviceWorkerThreadProxy)
@@ -56,13 +61,14 @@ void ServiceWorkerInspectorProxy::serviceWorkerTerminated()
     m_channel = nullptr;
 }
 
-void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel)
+void ServiceWorkerInspectorProxy::connectToWorker(FrontendChannel& channel, bool isAutomaticConnection, bool immediatelyPause)
 {
     m_channel = &channel;
 
-    SWContextManager::singleton().setAsInspected(m_serviceWorkerThreadProxy.identifier(), true);
-    m_serviceWorkerThreadProxy.thread().runLoop().postDebuggerTask([] (ScriptExecutionContext& context) {
-        downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend();
+    RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get();
+    SWContextManager::singleton().setAsInspected(serviceWorkerThreadProxy->identifier(), true);
+    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask([isAutomaticConnection, immediatelyPause] (ScriptExecutionContext& context) {
+        downcast<WorkerGlobalScope>(context).inspectorController().connectFrontend(isAutomaticConnection, immediatelyPause);
     });
 }
 
@@ -71,19 +77,20 @@ void ServiceWorkerInspectorProxy::disconnectFromWorker(FrontendChannel& channel)
     ASSERT_UNUSED(channel, &channel == m_channel);
     m_channel = nullptr;
 
-    SWContextManager::singleton().setAsInspected(m_serviceWorkerThreadProxy.identifier(), false);
-    m_serviceWorkerThreadProxy.thread().runLoop().postDebuggerTask([] (ScriptExecutionContext& context) {
+    RefPtr serviceWorkerThreadProxy = m_serviceWorkerThreadProxy.get();
+    SWContextManager::singleton().setAsInspected(serviceWorkerThreadProxy->identifier(), false);
+    serviceWorkerThreadProxy->thread().runLoop().postDebuggerTask([] (ScriptExecutionContext& context) {
         downcast<WorkerGlobalScope>(context).inspectorController().disconnectFrontend(DisconnectReason::InspectorDestroyed);
 
         // In case the worker is paused running debugger tasks, ensure we break out of
         // the pause since this will be the last debugger task we send to the worker.
-        downcast<WorkerGlobalScope>(context).thread().stopRunningDebuggerTasks();
+        downcast<WorkerGlobalScope>(context).protectedThread()->stopRunningDebuggerTasks();
     });
 }
 
 void ServiceWorkerInspectorProxy::sendMessageToWorker(String&& message)
 {
-    m_serviceWorkerThreadProxy.thread().runLoop().postDebuggerTask([message = WTFMove(message).isolatedCopy()] (ScriptExecutionContext& context) {
+    m_serviceWorkerThreadProxy.get()->thread().runLoop().postDebuggerTask([message = WTFMove(message).isolatedCopy()] (ScriptExecutionContext& context) {
         downcast<WorkerGlobalScope>(context).inspectorController().dispatchMessageFromFrontend(message);
     });
 }

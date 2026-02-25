@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include "Document.h"
 #include "DragActions.h"
 #include "DragImage.h"
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "SimpleRange.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/WeakRef.h>
 
@@ -56,14 +58,15 @@ struct PromisedAttachmentInfo;
 struct RemoteUserInputEventData;
 
 class DragController {
-    WTF_MAKE_NONCOPYABLE(DragController); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DragController);
+    WTF_MAKE_NONCOPYABLE(DragController);
 public:
     DragController(Page&, std::unique_ptr<DragClient>&&);
     ~DragController();
 
     static DragOperation platformGenericDragOperation();
 
-    WEBCORE_EXPORT std::variant<std::optional<DragOperation>, RemoteUserInputEventData> dragEnteredOrUpdated(LocalFrame&, DragData&&);
+    WEBCORE_EXPORT Variant<std::optional<DragOperation>, RemoteUserInputEventData> dragEnteredOrUpdated(LocalFrame&, DragData&&);
     WEBCORE_EXPORT void dragExited(LocalFrame&, DragData&&);
     WEBCORE_EXPORT bool performDragOperation(DragData&&);
     WEBCORE_EXPORT void dragCancelled();
@@ -87,7 +90,7 @@ public:
     OptionSet<DragDestinationAction> dragDestinationActionMask() const { return m_dragDestinationActionMask; }
     OptionSet<DragSourceAction> delegateDragSourceAction(const IntPoint& rootViewPoint);
 
-    Element* draggableElement(const LocalFrame*, Element* start, const IntPoint&, DragState&) const;
+    RefPtr<Element> draggableElement(const LocalFrame*, Element* start, const IntPoint&, DragState&) const;
     WEBCORE_EXPORT void dragEnded();
 
     WEBCORE_EXPORT void placeDragCaret(const IntPoint&);

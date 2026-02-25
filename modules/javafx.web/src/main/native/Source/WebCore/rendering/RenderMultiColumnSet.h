@@ -135,7 +135,7 @@ public:
     };
     LayoutPoint translateFragmentPointToFragmentedFlow(const LayoutPoint & logicalPoint, ColumnHitTestTranslationMode = DoNotClampHitTestTranslationToColumns) const;
 
-    void updateHitTestResult(HitTestResult&, const LayoutPoint&) override;
+    void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
 
     LayoutRect columnRectAt(unsigned index) const;
     unsigned columnCount() const;
@@ -162,9 +162,10 @@ private:
 
     void repaintFragmentedFlowContent(const LayoutRect& repaintRect) const override;
 
-    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) override;
+    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) const override;
 
     Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const final;
+    bool contentRectSpansFragments(const LayoutRect&) const final;
 
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 

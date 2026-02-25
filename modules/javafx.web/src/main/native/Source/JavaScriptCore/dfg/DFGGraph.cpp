@@ -58,6 +58,8 @@
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 static constexpr bool dumpOSRAvailabilityData = false;
@@ -74,7 +76,7 @@ Graph::Graph(VM& vm, Plan& plan)
     , m_plan(plan)
     , m_codeBlock(m_plan.codeBlock())
     , m_profiledBlock(m_codeBlock->alternative())
-    , m_ssaCFG(makeUnique<SSACFG>(*this))
+    , m_ssaCFG(makeUniqueWithoutFastMallocCheck<SSACFG>(*this))
     , m_nextMachineLocal(0)
     , m_fixpointState(BeforeFixpoint)
     , m_structureRegistrationState(HaveNotStartedRegistering)
@@ -86,8 +88,8 @@ Graph::Graph(VM& vm, Plan& plan)
 
     m_hasDebuggerEnabled = m_profiledBlock->wasCompiledWithDebuggingOpcodes() || Options::forceDebuggerBytecodeGeneration();
 
-    m_indexingCache = makeUnique<FlowIndexing>(*this);
-    m_abstractValuesCache = makeUnique<FlowMap<AbstractValue>>(*this);
+    m_indexingCache = makeUniqueWithoutFastMallocCheck<FlowIndexing>(*this);
+    m_abstractValuesCache = makeUniqueWithoutFastMallocCheck<FlowMap<AbstractValue>>(*this);
 
     registerStructure(vm.structureStructure.get());
     this->stringStructure = registerStructure(vm.stringStructure.get());
@@ -231,6 +233,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, "numberOfBoundArguments = "_s, node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
+    if (node->hasArrayModes())
+        out.print(comma, ArrayModesDump(node->arrayModes()));
     if (node->hasArithUnaryType())
         out.print(comma, "Type:"_s, node->arithUnaryType());
     if (node->hasArithMode())
@@ -458,8 +462,12 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
     Prefix myPrefix(prefixStr);
     Prefix& prefix = prefixStr ? myPrefix : m_prefix;
 
-    out.print(prefix, "Block ", *block, " (", inContext(block->at(0)->origin.semantic, context), "):",
-        block->isReachable ? "" : " (skipped)", block->isOSRTarget ? " (OSR target)" : "", block->isCatchEntrypoint ? " (Catch Entrypoint)" : "", "\n");
+    out.print(prefix, "Block ", *block);
+#if ASSERT_ENABLED
+    if (block->cloneSource)
+        out.print("<-", block->cloneSource);
+#endif
+    out.print(" (", inContext(block->at(0)->origin.semantic, context), "):", block->isReachable ? "" : " (skipped)", block->isOSRTarget ? " (OSR target)" : "", block->isCatchEntrypoint ? " (Catch Entrypoint)" : "", "\n");
     if (block->executionCount == block->executionCount)
         out.print(prefix, "  Execution count: ", block->executionCount, "\n");
     out.print(prefix, "  Predecessors:");
@@ -694,9 +702,6 @@ void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
         return;
-
-    if (logCompilationChanges())
-        dataLog("Dethreading DFG graph.\n");
 
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
@@ -1125,6 +1130,17 @@ bool Graph::isSafeToLoad(JSObject* base, PropertyOffset offset)
     return m_safeToLoad.contains(std::make_pair(base, offset));
 }
 
+GetByOffsetMethod Graph::promoteToConstant(GetByOffsetMethod method)
+{
+    if (method.kind() == GetByOffsetMethod::LoadFromPrototype
+        && method.prototype()->structure()->dfgShouldWatch()) {
+        if (JSValue constant = tryGetConstantProperty(method.prototype()->value(), method.prototype()->structure(), method.offset()))
+            return GetByOffsetMethod::constant(freeze(constant));
+    }
+
+    return method;
+}
+
 bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifierNumber)
 {
     if (m_plan.isUnlinked())
@@ -1144,7 +1160,7 @@ bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifie
 
 FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
 {
-    HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>>::iterator iter = m_bytecodeLiveness.find(codeBlock);
+    UncheckedKeyHashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>>::iterator iter = m_bytecodeLiveness.find(codeBlock);
     if (iter != m_bytecodeLiveness.end())
         return *iter->value;
 
@@ -1163,8 +1179,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 {
     static constexpr bool verbose = false;
 
-    if (verbose)
-        dataLog("Checking of operand is live: ", operand, "\n");
+    dataLogLnIf(verbose, "Checking of operand is live: ", operand);
     bool isCallerOrigin = false;
 
     CodeOrigin* codeOriginPtr = &codeOrigin;
@@ -1192,8 +1207,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 
         VirtualRegister reg = operand.virtualRegister() - codeOriginPtr->stackOffset();
 
-        if (verbose)
-            dataLog("reg = ", reg, "\n");
+        dataLogLnIf(verbose, "reg = ", reg);
 
         if (operand.virtualRegister().offset() < codeOriginPtr->stackOffset() + CallFrame::headerSizeInRegisters) {
             if (reg.isArgument()) {
@@ -1202,23 +1216,20 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 
                 if (inlineCallFrame->isClosureCall
                     && reg == CallFrameSlot::callee) {
-                    if (verbose)
-                        dataLog("Looks like a callee.\n");
+                    dataLogLnIf(verbose, "Looks like a callee.");
                     return true;
                 }
 
                 if (inlineCallFrame->isVarargs()
                     && reg == CallFrameSlot::argumentCountIncludingThis) {
-                    if (verbose)
-                        dataLog("Looks like the argument count.\n");
+                    dataLogLnIf(verbose, "Looks like the argument count.");
                     return true;
                 }
 
                 return false;
             }
 
-            if (verbose)
-                dataLog("Asking the bytecode liveness.\n");
+            dataLogLnIf(verbose, "Asking the bytecode liveness.");
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
             BytecodeIndex bytecodeIndex = codeOriginPtr->bytecodeIndex();
@@ -1229,8 +1240,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
         // op_call_varargs inlining.
         if (inlineCallFrame && reg.isArgument()
             && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->m_argumentsWithFixup.size()) {
-            if (verbose)
-                dataLog("Argument is live.\n");
+            dataLogLnIf(verbose, "Argument is live.");
             return true;
         }
 
@@ -1240,8 +1250,7 @@ bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
     if (operand.isTmp())
         return false;
 
-    if (verbose)
-        dataLog("Ran out of stack, returning true.\n");
+    dataLogLnIf(verbose, "Ran out of stack, returning true.");
     return true;
 }
 
@@ -1557,8 +1566,8 @@ void Graph::visitChildren(SlotVisitor& visitor) { visitChildrenImpl(visitor); }
 
 FrozenValue* Graph::freeze(JSValue value)
 {
-    RELEASE_ASSERT(!m_frozenValuesAreFinalized);
-    if (UNLIKELY(!value))
+    RELEASE_ASSERT(!m_plan.isInSafepoint());
+    if (!value) [[unlikely]]
         return FrozenValue::emptySingleton();
 
     // There are weird relationships in how optimized CodeBlocks
@@ -1568,7 +1577,7 @@ FrozenValue* Graph::freeze(JSValue value)
     RELEASE_ASSERT(!jsDynamicCast<CodeBlock*>(value));
 
     auto result = m_frozenValueMap.add(JSValue::encode(value), nullptr);
-    if (LIKELY(!result.isNewEntry))
+    if (!result.isNewEntry) [[likely]]
         return result.iterator->value;
 
     if (value.isUInt32())
@@ -1670,21 +1679,23 @@ static void logDFGAssertionFailure(
     const char* assertion)
 {
     startCrashing();
-    dataLog("DFG ASSERTION FAILED: ", assertion, "\n");
-    dataLog(file, "(", line, ") : ", function, "\n");
-    dataLog("\n");
+    WTF::dataFile().atomically([&](auto&) {
+        dataLogLn("DFG ASSERTION FAILED: ", assertion);
+        dataLogLn(file, "(", line, ") : ", function);
+        dataLogLn();
     dataLog(whileText);
-    dataLog("Graph at time of failure:\n");
-    graph.dump();
-    dataLog("\n");
-    dataLog("DFG ASSERTION FAILED: ", assertion, "\n");
-    dataLog(file, "(", line, ") : ", function, "\n");
+        dataLogLn("Graph at time of failure:");
+        dataLog(graph);
+        dataLogLn();
+        dataLogLn("DFG ASSERTION FAILED: ", assertion);
+        dataLogLn(file, "(", line, ") : ", function);
+    });
 }
 
 void Graph::logAssertionFailure(
     std::nullptr_t, const char* file, int line, const char* function, const char* assertion)
 {
-    logDFGAssertionFailure(*this, "", file, line, function, assertion);
+    logDFGAssertionFailure(*this, ""_s, file, line, function, assertion);
 }
 
 void Graph::logAssertionFailure(
@@ -1711,7 +1722,7 @@ CPSDominators& Graph::ensureCPSDominators()
 {
     RELEASE_ASSERT(m_form != SSA && !m_isInSSAConversion);
     if (!m_cpsDominators)
-        m_cpsDominators = makeUnique<CPSDominators>(*this);
+        m_cpsDominators = makeUniqueWithoutFastMallocCheck<CPSDominators>(*this);
     return *m_cpsDominators;
 }
 
@@ -1719,7 +1730,7 @@ SSADominators& Graph::ensureSSADominators()
 {
     RELEASE_ASSERT(m_form == SSA || m_isInSSAConversion);
     if (!m_ssaDominators)
-        m_ssaDominators = makeUnique<SSADominators>(*this);
+        m_ssaDominators = makeUniqueWithoutFastMallocCheck<SSADominators>(*this);
     return *m_ssaDominators;
 }
 
@@ -1728,7 +1739,7 @@ CPSNaturalLoops& Graph::ensureCPSNaturalLoops()
     RELEASE_ASSERT(m_form != SSA && !m_isInSSAConversion);
     ensureCPSDominators();
     if (!m_cpsNaturalLoops)
-        m_cpsNaturalLoops = makeUnique<CPSNaturalLoops>(*this);
+        m_cpsNaturalLoops = makeUniqueWithoutFastMallocCheck<CPSNaturalLoops>(*this);
     return *m_cpsNaturalLoops;
 }
 
@@ -1737,7 +1748,7 @@ SSANaturalLoops& Graph::ensureSSANaturalLoops()
     RELEASE_ASSERT(m_form == SSA);
     ensureSSADominators();
     if (!m_ssaNaturalLoops)
-        m_ssaNaturalLoops = makeUnique<SSANaturalLoops>(*this);
+        m_ssaNaturalLoops = makeUniqueWithoutFastMallocCheck<SSANaturalLoops>(*this);
     return *m_ssaNaturalLoops;
 }
 
@@ -1746,7 +1757,7 @@ BackwardsCFG& Graph::ensureBackwardsCFG()
     // We could easily relax this in the future to work over CPS, but today, it's only used in SSA.
     RELEASE_ASSERT(m_form == SSA);
     if (!m_backwardsCFG)
-        m_backwardsCFG = makeUnique<BackwardsCFG>(*this);
+        m_backwardsCFG = makeUniqueWithoutFastMallocCheck<BackwardsCFG>(*this);
     return *m_backwardsCFG;
 }
 
@@ -1754,7 +1765,7 @@ BackwardsDominators& Graph::ensureBackwardsDominators()
 {
     RELEASE_ASSERT(m_form == SSA);
     if (!m_backwardsDominators)
-        m_backwardsDominators = makeUnique<BackwardsDominators>(*this);
+        m_backwardsDominators = makeUniqueWithoutFastMallocCheck<BackwardsDominators>(*this);
     return *m_backwardsDominators;
 }
 
@@ -1762,7 +1773,7 @@ ControlEquivalenceAnalysis& Graph::ensureControlEquivalenceAnalysis()
 {
     RELEASE_ASSERT(m_form == SSA);
     if (!m_controlEquivalenceAnalysis)
-        m_controlEquivalenceAnalysis = makeUnique<ControlEquivalenceAnalysis>(*this);
+        m_controlEquivalenceAnalysis = makeUniqueWithoutFastMallocCheck<ControlEquivalenceAnalysis>(*this);
     return *m_controlEquivalenceAnalysis;
 }
 
@@ -1815,9 +1826,14 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                 }
                 case op_call_ignore_result:
                     return { };
-                default:
+                default: {
+                    auto* valueProfile = profiledBlock->tryGetValueProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
                 return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
                 }
+            }
             }
 
             if (profiledBlock->hasBaselineJITProfiling()) {
@@ -1834,6 +1850,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
         case ValueRep:
         case DoubleRep:
         case Int52Rep:
+        case PurifyNaN:
             node = node->child1().node();
             break;
         default:
@@ -1874,26 +1891,6 @@ bool Graph::getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* reg
     return true;
 }
 
-bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStringImpl* uid)
-{
-    ObjectPropertyConditionSet conditions = generateConditionsForPrototypeEquivalenceConcurrently(m_vm, globalObject, globalObject->stringObjectStructure(), globalObject->stringPrototype(), uid);
-
-    if (!conditions.isValid())
-        return false;
-
-    ObjectPropertyCondition equivalenceCondition = conditions.slotBaseCondition();
-    RELEASE_ASSERT(equivalenceCondition.hasRequiredValue());
-    JSFunction* function = jsDynamicCast<JSFunction*>(equivalenceCondition.condition().requiredValue());
-    if (!function)
-        return false;
-
-    if (function->executable()->intrinsicFor(CodeForCall) != StringPrototypeValueOfIntrinsic)
-        return false;
-
-    return watchConditions(conditions);
-}
-
-
 bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
 {
     if (m_plan.isUnlinked())
@@ -1902,13 +1899,7 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     if (hasExitSite(codeOrigin, BadCache) || hasExitSite(codeOrigin, BadConstantCache))
         return false;
 
-    JSGlobalObject* globalObject = globalObjectFor(codeOrigin);
-    Structure* stringObjectStructure = globalObjectFor(codeOrigin)->stringObjectStructure();
-    registerStructure(stringObjectStructure);
-    ASSERT(stringObjectStructure->storedPrototype().isObject());
-    ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo() == StringPrototype::info());
-
-    if (!watchConditions(generateConditionsForPropertyMissConcurrently(m_vm, globalObject, stringObjectStructure, m_vm.propertyNames->toPrimitiveSymbol.impl())))
+    if (!isWatchingStringSymbolToPrimitiveWatchpoint(codeOrigin))
         return false;
 
     // We're being conservative here. We want DFG's ToString on StringObject to be
@@ -1916,9 +1907,13 @@ bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
     // (that would call toString()). We don't want the DFG to have to distinguish
     // between the two, just because that seems like it would get confusing. So we
     // just require both methods to be sane.
-    if (!isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->valueOf.impl()))
+    if (!isWatchingStringValueOfWatchpoint(codeOrigin))
         return false;
-    return isStringPrototypeMethodSane(globalObject, m_vm.propertyNames->toString.impl());
+
+    if (!isWatchingStringToStringWatchpoint(codeOrigin))
+        return false;
+
+    return true;
 }
 
 bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut)
@@ -2040,6 +2035,14 @@ const BoyerMooreHorspoolTable<uint8_t>* Graph::tryAddStringSearchTable8(const St
     }).iterator->value.get();
 }
 
+const ConcatKeyAtomStringCache* Graph::tryAddConcatKeyAtomStringCache(const String& s0, const String& s1, ConcatKeyAtomStringCache::Mode mode)
+{
+    if ((s0.length() + s1.length()) > ConcatKeyAtomStringCache::maxStringLengthForCache)
+        return nullptr;
+    m_concatKeyAtomStringCaches.append(makeUnique<ConcatKeyAtomStringCache>(m_codeBlock, mode));
+    return m_concatKeyAtomStringCaches.last().get();
+}
+
 void Prefix::dump(PrintStream& out) const
 {
     if (!m_enabled)
@@ -2066,5 +2069,7 @@ void Prefix::dump(PrintStream& out) const
 }
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(DFG_JIT)

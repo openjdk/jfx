@@ -38,13 +38,13 @@
 
 namespace WebCore {
 
-CSSToLengthConversionData::CSSToLengthConversionData(const RenderStyle& style, const Style::BuilderContext& builderContext)
+CSSToLengthConversionData::CSSToLengthConversionData(const RenderStyle& style, Style::BuilderState& builderState)
     : m_style(&style)
-    , m_rootStyle(builderContext.rootElementStyle)
-    , m_parentStyle(&builderContext.parentStyle)
-    , m_renderView(builderContext.document->renderView())
-    , m_elementForContainerUnitResolution(builderContext.element)
-    , m_viewportDependencyDetectionStyle(const_cast<RenderStyle*>(m_style))
+    , m_rootStyle(builderState.rootElementStyle())
+    , m_parentStyle(&builderState.parentStyle())
+    , m_renderView(builderState.document().renderView())
+    , m_elementForContainerUnitResolution(builderState.element())
+    , m_styleBuilderState(&builderState)
 {
 }
 
@@ -55,7 +55,6 @@ CSSToLengthConversionData::CSSToLengthConversionData(const RenderStyle& style, c
     , m_renderView(renderView)
     , m_elementForContainerUnitResolution(elementForContainerUnitResolution)
     , m_zoom(1.f)
-    , m_viewportDependencyDetectionStyle(const_cast<RenderStyle*>(m_style))
 {
 }
 
@@ -86,8 +85,8 @@ float CSSToLengthConversionData::zoom() const
 
 FloatSize CSSToLengthConversionData::defaultViewportFactor() const
 {
-    if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
+    if (m_styleBuilderState)
+        m_styleBuilderState->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -97,8 +96,8 @@ FloatSize CSSToLengthConversionData::defaultViewportFactor() const
 
 FloatSize CSSToLengthConversionData::smallViewportFactor() const
 {
-    if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
+    if (m_styleBuilderState)
+        m_styleBuilderState->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -108,8 +107,8 @@ FloatSize CSSToLengthConversionData::smallViewportFactor() const
 
 FloatSize CSSToLengthConversionData::largeViewportFactor() const
 {
-    if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
+    if (m_styleBuilderState)
+        m_styleBuilderState->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -119,8 +118,8 @@ FloatSize CSSToLengthConversionData::largeViewportFactor() const
 
 FloatSize CSSToLengthConversionData::dynamicViewportFactor() const
 {
-    if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
+    if (m_styleBuilderState)
+        m_styleBuilderState->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -130,8 +129,8 @@ FloatSize CSSToLengthConversionData::dynamicViewportFactor() const
 
 void CSSToLengthConversionData::setUsesContainerUnits() const
 {
-    if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setUsesContainerUnits();
+    if (m_styleBuilderState)
+        m_styleBuilderState->setUsesContainerUnits();
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,16 @@
 
 #include "ThreadTimers.h"
 #include <functional>
+#include <wtf/CheckedRef.h>
+#include <wtf/CompactRefPtrTuple.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/RunLoop.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Threading.h>
+#include <wtf/TypeTraits.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -57,8 +62,8 @@ public:
 };
 
 class TimerBase {
+    WTF_MAKE_TZONE_ALLOCATED(TimerBase);
     WTF_MAKE_NONCOPYABLE(TimerBase);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT TimerBase();
     WEBCORE_EXPORT virtual ~TimerBase();
@@ -99,8 +104,8 @@ protected:
         uint8_t shouldRestartWhenTimerFires : 1 { false }; // DeferrableOneShotTimer
     };
 
-    TimerBitfields bitfields() const { return bitwise_cast<TimerBitfields>(m_heapItemWithBitfields.type()); }
-    void setBitfields(const TimerBitfields& bitfields) { return m_heapItemWithBitfields.setType(bitwise_cast<uint8_t>(bitfields)); }
+    TimerBitfields bitfields() const { return std::bit_cast<TimerBitfields>(m_heapItemWithBitfields.type()); }
+    void setBitfields(const TimerBitfields& bitfields) { return m_heapItemWithBitfields.setType(std::bit_cast<uint8_t>(bitfields)); }
 
 private:
     virtual void fired() = 0;
@@ -131,7 +136,7 @@ private:
     Seconds m_repeatInterval; // 0 if not repeating
 
     CompactRefPtrTuple<ThreadTimerHeapItem, uint8_t> m_heapItemWithBitfields;
-    Ref<Thread> m_thread { Thread::current() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 
     friend class ThreadTimers;
     friend class TimerHeapLessThanFunction;
@@ -139,7 +144,7 @@ private:
 };
 
 class Timer : public TimerBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Timer, WEBCORE_EXPORT);
 public:
     static void schedule(Seconds delay, Function<void()>&& function)
     {
@@ -151,10 +156,36 @@ public:
         timer->startOneShot(delay);
     }
 
+    template<typename TimerFiredClass, typename TimerFiredBaseClass>
+    requires (WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
+    Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
+        : m_function([objectPtr = &object, function] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
+            Ref protectedObject { *objectPtr };
+            (objectPtr->*function)();
+        })
+    {
+    }
+
+
+    template<typename TimerFiredClass, typename TimerFiredBaseClass>
+    requires (WTF::HasCheckedPtrMemberFunctions<TimerFiredClass>::value && !WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
+    Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
+        : m_function([objectPtr = &object, function] {
+            CheckedRef checkedObject { *objectPtr };
+            (objectPtr->*function)();
+        })
+    {
+    }
+
+    // FIXME: This constructor isn't as safe as the other ones and should ideally be removed.
     template <typename TimerFiredClass, typename TimerFiredBaseClass>
+    requires (!WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value && !WTF::HasCheckedPtrMemberFunctions<TimerFiredClass>::value)
     Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
         : m_function(std::bind(function, &object))
     {
+        static_assert(WTF::IsDeprecatedTimerSmartPointerException<std::remove_cv_t<TimerFiredClass>>::value,
+            "Classes that use Timer should be ref-counted or CanMakeCheckedPtr. Please do not add new exceptions."
+        );
     }
 
     Timer(Function<void()>&& function)
@@ -181,9 +212,9 @@ inline bool TimerBase::isActive() const
 {
     // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS_FAMILY).
 #if !PLATFORM(IOS_FAMILY)
-    ASSERT(m_thread.ptr() == &Thread::current());
+    ASSERT(m_thread.ptr() == &Thread::currentSingleton());
 #else
-    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::current());
+    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::currentSingleton());
 #endif // PLATFORM(IOS_FAMILY)
     return static_cast<bool>(nextFireTime());
 }
@@ -196,7 +227,7 @@ inline void TimerBase::setHasReachedMaxNestingLevel(bool value)
 }
 
 class DeferrableOneShotTimer : protected TimerBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DeferrableOneShotTimer, WEBCORE_EXPORT);
 public:
     template<typename TimerFiredClass>
     DeferrableOneShotTimer(TimerFiredClass& object, void (TimerFiredClass::*function)(), Seconds delay)

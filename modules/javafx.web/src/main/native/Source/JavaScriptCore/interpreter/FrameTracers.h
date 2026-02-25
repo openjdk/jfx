@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,12 +43,12 @@ public:
         , m_savedLastException(vm.m_lastException, nullptr)
     {
         if (m_exceptionWasSet)
-            m_vm.traps().clearTrapBit(VMTraps::NeedExceptionHandling);
+            m_vm.traps().clearTrap(VMTraps::NeedExceptionHandling);
     }
     ~SuspendExceptionScope()
     {
         if (m_exceptionWasSet)
-            m_vm.traps().setTrapBit(VMTraps::NeedExceptionHandling);
+            m_vm.traps().fireTrap(VMTraps::NeedExceptionHandling);
     }
 private:
     VM& m_vm;
@@ -134,7 +134,7 @@ public:
     ~JITOperationPrologueCallFrameTracer()
     {
         // Fill vm.topCallFrame with invalid value when leaving from JIT operation functions.
-        m_vm.topCallFrame = bitwise_cast<CallFrame*>(static_cast<uintptr_t>(0x0badbeef0badbeefULL));
+        m_vm.topCallFrame = std::bit_cast<CallFrame*>(static_cast<uintptr_t>(0x0badbeef0badbeefULL));
     }
 
     VM& m_vm;
@@ -149,7 +149,7 @@ public:
     ~ICSlowPathCallFrameTracer()
     {
         // Fill vm.topCallFrame with invalid value when leaving from JIT operation functions.
-        m_vm.topCallFrame = bitwise_cast<CallFrame*>(static_cast<uintptr_t>(0x0badbeef0badbeefULL));
+        m_vm.topCallFrame = std::bit_cast<CallFrame*>(static_cast<uintptr_t>(0x0badbeef0badbeefULL));
     }
 
     VM& m_vm;

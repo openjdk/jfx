@@ -23,6 +23,7 @@
 #include "RenderCounter.h"
 
 #include "CSSCounterStyleRegistry.h"
+#include "ContainerNodeInlines.h"
 #include "CounterDirectives.h"
 #include "CounterNode.h"
 #include "Document.h"
@@ -33,6 +34,7 @@
 #include "PseudoElement.h"
 #include "RenderElementInlines.h"
 #include "RenderListItem.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include <wtf/StdLibExtras.h>
@@ -430,7 +432,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     return newNode.ptr();
 }
 
-RenderCounter::RenderCounter(Document& document, const CounterContent& counter)
+RenderCounter::RenderCounter(Document& document, const Style::Content::Counter& counter)
     : RenderText(Type::Counter, document, emptyString())
     , m_counter(counter)
 {
@@ -438,10 +440,8 @@ RenderCounter::RenderCounter(Document& document, const CounterContent& counter)
     view().addCounterNeedingUpdate(*this);
 }
 
-RenderCounter::~RenderCounter()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderCounter::~RenderCounter() = default;
 
 void RenderCounter::willBeDestroyed()
 {
@@ -467,23 +467,14 @@ String RenderCounter::originalText() const
     int value = child->actsAsReset() ? child->value() : child->countInParent();
 
     auto counterText = [&](int value) {
-        if (m_counter.listStyleType().type == ListStyleType::Type::None)
-            return emptyString();
-
-        if (m_counter.listStyleType().type == ListStyleType::Type::CounterStyle) {
-            ASSERT(counterStyle());
-            return counterStyle()->text(value, makeTextFlow(style().writingMode(), style().direction()));
-        }
-
-        ASSERT_NOT_REACHED();
-        return emptyString();
+            return counterStyle()->text(value, writingMode());
     };
     auto text = counterText(value);
-    if (!m_counter.separator().isNull()) {
+    if (!m_counter.separator.isNull()) {
         if (!child->actsAsReset())
             child = child->parent();
         while (CounterNode* parent = child->parent()) {
-            text = makeString(counterText(child->countInParent()), m_counter.separator(), text);
+            text = makeString(counterText(child->countInParent()), m_counter.separator, text);
             child = parent;
         }
     }
@@ -505,7 +496,7 @@ void RenderCounter::updateCounter()
                 break;
             beforeAfterContainer = beforeAfterContainer->parent();
         }
-        makeCounterNode(*beforeAfterContainer, m_counter.identifier(), true)->addRenderer(const_cast<RenderCounter&>(*this));
+        makeCounterNode(*beforeAfterContainer, m_counter.identifier, true)->addRenderer(const_cast<RenderCounter&>(*this));
     }
 
     setText(originalText(), true);
@@ -594,9 +585,9 @@ void RenderCounter::rendererStyleChangedSlowCase(RenderElement& renderer, const 
         }
 }
 
-RefPtr<CSSCounterStyle> RenderCounter::counterStyle() const
+Ref<CSSCounterStyle> RenderCounter::counterStyle() const
 {
-    return document().counterStyleRegistry().resolvedCounterStyle(m_counter.listStyleType());
+    return document().counterStyleRegistry().resolvedCounterStyle(m_counter.style);
 }
 
 } // namespace WebCore

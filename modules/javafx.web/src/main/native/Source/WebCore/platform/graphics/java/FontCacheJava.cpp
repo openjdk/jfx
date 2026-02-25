@@ -64,7 +64,7 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
     return false;
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String&)
 {
     notImplemented();
     return { };

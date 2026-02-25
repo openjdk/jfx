@@ -192,7 +192,7 @@ struct AdaptiveStructureWatchpointAdaptor {
 template<typename WatchpointSetType, typename Adaptor = SetPointerAdaptor<WatchpointSetType>>
 class GenericDesiredWatchpoints {
 #if ASSERT_ENABLED
-    typedef HashMap<WatchpointSetType, bool> StateMap;
+    typedef UncheckedKeyHashMap<WatchpointSetType, bool> StateMap;
 #endif
 public:
     GenericDesiredWatchpoints()
@@ -236,7 +236,7 @@ public:
     }
 
 private:
-    HashSet<WatchpointSetType> m_sets;
+    UncheckedKeyHashSet<WatchpointSetType> m_sets;
     bool m_reallyAdded;
 };
 

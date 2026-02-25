@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,17 @@
 #pragma once
 
 #include "CSSPropertyParser.h"
-#include "ComputedStyleExtractor.h"
+#include "CSSSerializationContext.h"
 #include "SVGAttributeAnimator.h"
 #include "SVGElement.h"
+#include "StyleExtractor.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 template<typename AnimationFunction>
 class SVGPropertyAnimator : public SVGAttributeAnimator {
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGPropertyAnimator);
 public:
     bool isDiscrete() const override { return m_function.isDiscrete(); }
 
@@ -82,9 +85,10 @@ protected:
 
         // Don't include any properties resulting from CSS Transitions/Animations or SMIL animations, as we want to retrieve the "base value".
         targetElement.setUseOverrideComputedStyle(true);
-        RefPtr<CSSValue> value = ComputedStyleExtractor(&targetElement).propertyValue(id);
+        auto serialization = Style::Extractor(&targetElement).propertyValueSerialization(id, CSS::defaultSerializationContext());
         targetElement.setUseOverrideComputedStyle(false);
-        return value ? value->cssText() : String();
+
+        return serialization;
     }
 
     String computeInheritedCSSPropertyValue(SVGElement& targetElement) const
@@ -97,5 +101,7 @@ protected:
 
     AnimationFunction m_function;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename AnimationFunction>, SVGPropertyAnimator<AnimationFunction>);
 
 } // namespace WebCore

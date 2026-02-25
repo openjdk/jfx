@@ -44,8 +44,8 @@ AccessibilityAtspi& AccessibilityAtspi::singleton()
 }
 
 AccessibilityAtspi::AccessibilityAtspi()
-    : m_cacheUpdateTimer(RunLoop::main(), this, &AccessibilityAtspi::cacheUpdateTimerFired)
-    , m_cacheClearTimer(RunLoop::main(), this, &AccessibilityAtspi::cacheClearTimerFired)
+    : m_cacheUpdateTimer(RunLoop::mainSingleton(), "AccessibilityAtspi::CacheUpdateTimer"_s, this, &AccessibilityAtspi::cacheUpdateTimerFired)
+    , m_cacheClearTimer(RunLoop::mainSingleton(), "AccessibilityAtspi::CacheClearTimer"_s, this, &AccessibilityAtspi::cacheClearTimerFired)
 {
     m_cacheUpdateTimer.setPriority(RunLoopSourcePriority::RunLoopDispatcher);
     m_cacheClearTimer.setPriority(RunLoopSourcePriority::ReleaseUnusedResourcesTimer);
@@ -55,8 +55,10 @@ void AccessibilityAtspi::connect(const String& busAddress, const String& busName
 {
     if (busAddress.isEmpty())
         return;
+
     RELEASE_ASSERT(g_dbus_is_name(busName.utf8().data()));
     RELEASE_ASSERT(!g_dbus_is_unique_name(busName.utf8().data()));
+
     m_busName = busName;
 
     m_isConnecting = true;
@@ -78,6 +80,7 @@ void AccessibilityAtspi::didConnect(GRefPtr<GDBusConnection>&& connection)
         m_isConnecting = false;
         return;
     }
+
     RELEASE_ASSERT(g_dbus_is_name(m_busName.utf8().data()));
     g_bus_own_name_on_connection(m_connection.get(), m_busName.utf8().data(), G_BUS_NAME_OWNER_FLAGS_DO_NOT_QUEUE,
         [](GDBusConnection*, const char*, gpointer userData) {
@@ -86,6 +89,7 @@ void AccessibilityAtspi::didConnect(GRefPtr<GDBusConnection>&& connection)
         },
         nullptr, this, nullptr);
 }
+
 void AccessibilityAtspi::didOwnName()
 {
     m_isConnecting = false;
@@ -143,6 +147,7 @@ void AccessibilityAtspi::initializeRegistry()
     }, this);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
 static GUniquePtr<char*> eventConvertingDetailToNonCamelCase(const char* eventName)
 {
     GUniquePtr<char*> event(g_strsplit(eventName, ":", 3));
@@ -189,6 +194,7 @@ static bool eventIsSubtype(char** needle, char** haystack)
 
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void AccessibilityAtspi::removeEventListener(const char* dbusName, const char* eventName)
 {
@@ -320,7 +326,7 @@ void AccessibilityAtspi::unregisterRoot(AccessibilityRootAtspi& rootObject)
         auto& pendingRootRegistration = m_pendingRootRegistrations[i];
         if (pendingRootRegistration.root.ptr() == &rootObject) {
             pendingRootRegistration.completionHandler({ });
-            m_pendingRootRegistrations.remove(i);
+            m_pendingRootRegistrations.removeAt(i);
             return;
         }
     }
@@ -637,7 +643,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::DocumentNote, { "comment", N_("comment") } },
     { AccessibilityRole::Feed, { "panel", N_("panel") } },
     { AccessibilityRole::Figure, { "panel", N_("panel") } },
-    { AccessibilityRole::Footer, { "footer", N_("footer") } },
     { AccessibilityRole::Footnote, { "footnote", N_("footnote") } },
     { AccessibilityRole::Form, { "form", N_("form") } },
     { AccessibilityRole::Generic, { "section", N_("section") } },
@@ -652,7 +657,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::Inline, { "text", N_("text") } },
     { AccessibilityRole::Image, { "image", N_("image") } },
     { AccessibilityRole::ImageMap, { "image map", N_("image map") } },
-    { AccessibilityRole::ImageMapLink, { "link", N_("link") } },
     { AccessibilityRole::Insertion, { "content insertion", N_("content insertion") } },
     { AccessibilityRole::Label, { "label", N_("label") } },
     { AccessibilityRole::LandmarkBanner, { "landmark", N_("landmark") } },
@@ -674,7 +678,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::MathElement, { "math", N_("math") } },
     { AccessibilityRole::Menu, { "menu", N_("menu") } },
     { AccessibilityRole::MenuBar, { "menu bar", N_("menu bar") } },
-    { AccessibilityRole::MenuButton, { "menu item", N_("menu item") } },
     { AccessibilityRole::MenuItem, { "menu item", N_("menu item") } },
     { AccessibilityRole::MenuItemCheckbox, { "check menu item", N_("check menu item") } },
     { AccessibilityRole::MenuItemRadio, { "radio menu item", N_("radio menu item") } },
@@ -692,6 +695,8 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::ScrollArea, { "scroll pane", N_("scroll pane") } },
     { AccessibilityRole::ScrollBar, { "scroll bar", N_("scroll bar") } },
     { AccessibilityRole::SearchField, { "entry", N_("entry") } },
+    { AccessibilityRole::SectionFooter, { "section footer", N_("section footer") } },
+    { AccessibilityRole::SectionHeader, { "section header", N_("section header") } },
     { AccessibilityRole::Slider, { "slider", N_("slider") } },
     { AccessibilityRole::SpinButton, { "spin button", N_("spin button") } },
     { AccessibilityRole::Splitter, { "separator", N_("separator") } },
@@ -722,7 +727,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::UserInterfaceTooltip, { "tool tip", N_("tool tip") } },
     { AccessibilityRole::Video, { "video", N_("video") } },
     { AccessibilityRole::WebArea, { "document web", N_("document web") } },
-    { AccessibilityRole::WebCoreLink, { "link", N_("link") } },
 };
 
 const char* AccessibilityAtspi::localizedRoleName(AccessibilityRole role)

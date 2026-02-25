@@ -26,7 +26,6 @@
 #include "config.h"
 #include "StyleInvalidator.h"
 
-#include "CSSSelectorList.h"
 #include "Document.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
@@ -90,7 +89,7 @@ static bool shouldDirtyAllStyle(const Vector<Ref<StyleSheetContents>>& sheets)
 
 Invalidator::Invalidator(const Vector<Ref<StyleSheetContents>>& sheets, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
     : m_ownedRuleSet(RuleSet::create())
-    , m_ruleSets({ m_ownedRuleSet })
+    , m_ruleSets({ { m_ownedRuleSet } })
     , m_dirtiesAllStyle(shouldDirtyAllStyle(sheets))
 {
     if (m_dirtiesAllStyle)
@@ -117,19 +116,19 @@ Invalidator::RuleInformation Invalidator::collectRuleInformation()
 {
     RuleInformation information;
     for (auto& ruleSet : m_ruleSets) {
-        if (!ruleSet->slottedPseudoElementRules().isEmpty())
+        if (!ruleSet.ruleSet->slottedPseudoElementRules().isEmpty())
             information.hasSlottedPseudoElementRules = true;
-        if (!ruleSet->hostPseudoClassRules().isEmpty())
+        if (!ruleSet.ruleSet->hostPseudoClassRules().isEmpty())
             information.hasHostPseudoClassRules = true;
-        if (ruleSet->hasHostPseudoClassRulesMatchingInShadowTree())
+        if (ruleSet.ruleSet->hasHostPseudoClassRulesMatchingInShadowTree())
             information.hasHostPseudoClassRulesMatchingInShadowTree = true;
-        if (ruleSet->hasUserAgentPartRules())
+        if (ruleSet.ruleSet->hasUserAgentPartRules())
             information.hasUserAgentPartRules = true;
 #if ENABLE(VIDEO)
-        if (!ruleSet->cuePseudoRules().isEmpty())
+        if (!ruleSet.ruleSet->cuePseudoRules().isEmpty())
             information.hasCuePseudoElementRules = true;
 #endif
-        if (!ruleSet->partPseudoElementRules().isEmpty())
+        if (!ruleSet.ruleSet->partPseudoElementRules().isEmpty())
             information.hasPartPseudoElementRules = true;
     }
     return information;
@@ -166,10 +165,11 @@ Invalidator::CheckDescendants Invalidator::invalidateIfNeeded(Element& element, 
     case Validity::AnimationInvalid:
     case Validity::InlineStyleInvalid: {
         for (auto& ruleSet : m_ruleSets) {
-            ElementRuleCollector ruleCollector(element, *ruleSet, selectorMatchingState);
+            ElementRuleCollector ruleCollector(element, *ruleSet.ruleSet, selectorMatchingState);
             ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
 
-            if (ruleCollector.matchesAnyAuthorRules()) {
+            auto matches = ruleCollector.matchesAnyAuthorRules();
+            if (ruleSet.isNegation == IsNegation::No ? matches : !matches) {
                 element.invalidateStyleInternal();
                 break;
             }
@@ -274,33 +274,40 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
 {
     switch (matchElement) {
     case MatchElement::Subject: {
+        // .changed
         invalidateIfNeeded(element, nullptr);
         break;
     }
     case MatchElement::Parent: {
+        // .changed > .subject
         auto children = childrenOfType<Element>(element);
         for (auto& child : children)
             invalidateIfNeeded(child, nullptr);
         break;
     }
     case MatchElement::Ancestor: {
+        // .changed .subject
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(element, &selectorMatchingState);
         break;
     }
     case MatchElement::DirectSibling:
+        // .changed + .subject
         if (auto* sibling = element.nextElementSibling())
             invalidateIfNeeded(*sibling, nullptr);
         break;
     case MatchElement::IndirectSibling:
+        // .changed ~ .subject
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling())
             invalidateIfNeeded(*sibling, nullptr);
         break;
     case MatchElement::AnySibling:
+        // :nth-last-child(even of .changed)
         for (auto& parentChild : childrenOfType<Element>(*element.parentNode()))
             invalidateIfNeeded(parentChild, nullptr);
         break;
     case MatchElement::ParentSibling:
+        // .changed ~ .a > .subject
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
             auto siblingChildren = childrenOfType<Element>(*sibling);
             for (auto& siblingChild : siblingChildren)
@@ -308,6 +315,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     case MatchElement::AncestorSibling: {
+        // .changed ~ .a .subject
         SelectorMatchingState selectorMatchingState;
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
             selectorMatchingState.selectorFilter.popParentsUntil(element.parentElement());
@@ -316,6 +324,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::ParentAnySibling:
+        // :nth-last-child(even of .changed) > .subject
         for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
             auto siblingChildren = childrenOfType<Element>(sibling);
             for (auto& siblingChild : siblingChildren)
@@ -323,6 +332,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     case MatchElement::AncestorAnySibling: {
+        // :nth-last-child(even of .changed) .subject
         SelectorMatchingState selectorMatchingState;
         for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
             selectorMatchingState.selectorFilter.popParentsUntil(element.parentElement());
@@ -331,11 +341,13 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasChild: {
+        // :has(> .changed)
         if (auto* parent = element.parentElement())
             invalidateIfNeeded(*parent, nullptr);
         break;
     }
     case MatchElement::HasDescendant: {
+        // :has(.changed)
         Vector<Element*, 16> ancestors;
         for (auto* parent = element.parentElement(); parent; parent = parent->parentElement())
             ancestors.append(parent);
@@ -349,6 +361,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasSibling:
+        // :has(~ .changed)
         if (auto* sibling = element.previousElementSibling()) {
             SelectorMatchingState selectorMatchingState;
             if (RefPtr parent = element.parentElement())
@@ -358,7 +371,11 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
                 invalidateIfNeeded(*sibling, &selectorMatchingState);
         }
         break;
+
+    case MatchElement::HasChildParent:
+        // :has(> .changed) > .subject
     case MatchElement::HasAnySibling: {
+        // :has(~ :is(.changed ~ .x))
         SelectorMatchingState selectorMatchingState;
         if (auto* parent = element.parentElement())
             selectorMatchingState.selectorFilter.pushParentInitializingIfNeeded(*parent);
@@ -367,6 +384,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasSiblingDescendant: {
+        // :has(~ .a .changed)
         Vector<Element*, 16> elementAndAncestors;
         elementAndAncestors.append(&element);
         for (auto* parent = element.parentElement(); parent; parent = parent->parentElement())
@@ -382,16 +400,28 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     }
+    case MatchElement::HasChildAncestor: {
+        // :has(> .changed) .subject
+        if (CheckedPtr parent = element.parentElement()) {
+            SelectorMatchingState selectorMatchingState;
+            invalidateStyleForDescendants(*parent, &selectorMatchingState);
+        }
+        break;
+    }
     case MatchElement::HasNonSubject:
+        // :has(.changed) .subject
     case MatchElement::HasScopeBreaking: {
+        // :has(:is(.changed .a))
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(*element.document().documentElement(), &selectorMatchingState);
         break;
     }
     case MatchElement::Host:
+        // :host(.changed) .subject
         invalidateInShadowTreeIfNeeded(element);
         break;
     case MatchElement::HostChild:
+        // ::slotted(.changed)
         if (auto* host = element.shadowHost()) {
             for (auto& hostChild : childrenOfType<Element>(*host))
                 invalidateIfNeeded(hostChild, nullptr);
@@ -426,7 +456,7 @@ void Invalidator::invalidateUserAgentParts(ShadowRoot& shadowRoot)
         if (!part)
             continue;
         for (auto& ruleSet : m_ruleSets) {
-            if (ruleSet->userAgentPartRules(part))
+            if (ruleSet.ruleSet->userAgentPartRules(part))
                 descendant.invalidateStyleInternal();
         }
     }
@@ -462,7 +492,14 @@ void Invalidator::addToMatchElementRuleSets(Invalidator::MatchElementRuleSets& m
 {
     matchElementRuleSets.ensure(invalidationRuleSet.matchElement, [] {
         return InvalidationRuleSetVector { };
-    }).iterator->value.append(invalidationRuleSet.ruleSet.copyRef());
+    }).iterator->value.append({ invalidationRuleSet.ruleSet.copyRef(), IsNegation::No });
+}
+
+void Invalidator::addToMatchElementRuleSetsRespectingNegation(Invalidator::MatchElementRuleSets& matchElementRuleSets, const InvalidationRuleSet& invalidationRuleSet)
+{
+    matchElementRuleSets.ensure(invalidationRuleSet.matchElement, [] {
+        return InvalidationRuleSetVector { };
+    }).iterator->value.append({ invalidationRuleSet.ruleSet.copyRef(), invalidationRuleSet.isNegation });
 }
 
 void Invalidator::invalidateWithMatchElementRuleSets(Element& element, const MatchElementRuleSets& matchElementRuleSets)
@@ -478,7 +515,7 @@ void Invalidator::invalidateWithMatchElementRuleSets(Element& element, const Mat
 void Invalidator::invalidateWithScopeBreakingHasPseudoClassRuleSet(Element& element, const RuleSet* ruleSet)
 {
     SetForScope isInvalidating(element.styleResolver().ruleSets().isInvalidatingStyleWithRuleSets(), true);
-    Invalidator invalidator({ ruleSet });
+    Invalidator invalidator(InvalidationRuleSetVector { { ruleSet } });
     invalidator.invalidateStyleWithMatchElement(element, MatchElement::HasScopeBreaking);
 }
 

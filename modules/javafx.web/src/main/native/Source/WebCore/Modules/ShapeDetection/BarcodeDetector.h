@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "BarcodeDetectorInterface.h"
-#include "ExceptionOr.h"
 #include "ImageBitmap.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include <wtf/Ref.h>
@@ -34,10 +33,12 @@
 
 namespace WebCore {
 
-struct BarcodeDetectorOptions;
-enum class BarcodeFormat : uint8_t;
-struct DetectedBarcode;
 class ScriptExecutionContext;
+struct BarcodeDetectorOptions;
+struct DetectedBarcode;
+template<typename> class ExceptionOr;
+
+enum class BarcodeFormat : uint8_t;
 
 class BarcodeDetector : public RefCounted<BarcodeDetector> {
 public:
@@ -54,7 +55,7 @@ public:
 private:
     BarcodeDetector(Ref<ShapeDetection::BarcodeDetector>&&);
 
-    Ref<ShapeDetection::BarcodeDetector> m_backing;
+    const Ref<ShapeDetection::BarcodeDetector> m_backing;
 };
 
 } // namespace WebCore

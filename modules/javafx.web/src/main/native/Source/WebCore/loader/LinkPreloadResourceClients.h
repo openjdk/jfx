@@ -37,7 +37,6 @@
 #include "CachedScript.h"
 #include "CachedStyleSheetClient.h"
 #include "CachedTextTrack.h"
-
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -77,7 +76,7 @@ private:
 };
 
 class LinkPreloadDefaultResourceClient : public LinkPreloadResourceClient, CachedResourceClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LinkPreloadDefaultResourceClient, Loader);
 public:
     LinkPreloadDefaultResourceClient(LinkLoader& loader, CachedResource& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -92,7 +91,7 @@ private:
 };
 
 class LinkPreloadStyleResourceClient : public LinkPreloadResourceClient, public CachedStyleSheetClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LinkPreloadStyleResourceClient, Loader);
 public:
     LinkPreloadStyleResourceClient(LinkLoader& loader, CachedCSSStyleSheet& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -101,7 +100,7 @@ public:
     }
 
 private:
-    void setCSSStyleSheet(const String&, const URL&, const String&, const CachedCSSStyleSheet* resource) final
+    void setCSSStyleSheet(const String&, const URL&, ASCIILiteral, const CachedCSSStyleSheet* resource) final
     {
         ASSERT(resource);
         ASSERT(ownedResource() == resource);
@@ -113,7 +112,8 @@ private:
 };
 
 class LinkPreloadImageResourceClient : public LinkPreloadResourceClient, public CachedImageClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LinkPreloadImageResourceClient, Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LinkPreloadImageResourceClient);
 public:
     LinkPreloadImageResourceClient(LinkLoader& loader, CachedImage& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -128,7 +128,7 @@ private:
 };
 
 class LinkPreloadFontResourceClient : public LinkPreloadResourceClient, public CachedFontClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LinkPreloadFontResourceClient, Loader);
 public:
     LinkPreloadFontResourceClient(LinkLoader& loader, CachedFont& resource)
         : LinkPreloadResourceClient(loader, resource)
@@ -148,7 +148,7 @@ private:
 };
 
 class LinkPreloadRawResourceClient : public LinkPreloadResourceClient, public CachedRawResourceClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LinkPreloadRawResourceClient, Loader);
 public:
     LinkPreloadRawResourceClient(LinkLoader& loader, CachedRawResource& resource)
         : LinkPreloadResourceClient(loader, resource)

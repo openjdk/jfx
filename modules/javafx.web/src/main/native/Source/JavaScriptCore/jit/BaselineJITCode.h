@@ -94,6 +94,11 @@ public:
 
     CodeLocationLabel<JSInternalPtrTag> getCallLinkDoneLocationForBytecodeIndex(BytecodeIndex) const;
 
+    double livenessRate() const { return m_livenessRate; }
+    void setLivenessRate(double rate) { m_livenessRate = rate; }
+    double fullnessRate() const { return m_fullnessRate; }
+    void setFullnessRate(double rate) { m_fullnessRate = rate; }
+
     FixedVector<BaselineUnlinkedCallLinkInfo> m_unlinkedCalls;
     FixedVector<BaselineUnlinkedStructureStubInfo> m_unlinkedStubInfos;
     FixedVector<SimpleJumpTable> m_switchJumpTables;
@@ -101,6 +106,12 @@ public:
     JITCodeMap m_jitCodeMap;
     JITConstantPool m_constantPool;
     std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
+private:
+    // The percentage of ValueProfiles that had some profiling data in them.
+    double m_livenessRate { 0 };
+    // The percentage of ValueProfile buckets that had a value in them.
+    double m_fullnessRate { 0 };
+public:
     bool m_isShareable { true };
 };
 
@@ -118,6 +129,9 @@ public:
 
     static constexpr ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(BaselineJITData, m_globalObject); }
     static constexpr ptrdiff_t offsetOfStackOffset() { return OBJECT_OFFSETOF(BaselineJITData, m_stackOffset); }
+    static constexpr ptrdiff_t offsetOfJITExecuteCounter() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_counter); }
+    static constexpr ptrdiff_t offsetOfJITExecutionActiveThreshold() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_activeThreshold); }
+    static constexpr ptrdiff_t offsetOfJITExecutionTotalCount() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_totalCount); }
 
     StructureStubInfo& stubInfo(unsigned index)
     {
@@ -130,8 +144,12 @@ public:
         return leadingSpan();
     }
 
+    BaselineExecutionCounter& executeCounter() { return m_executeCounter; }
+    const BaselineExecutionCounter& executeCounter() const { return m_executeCounter; }
+
     JSGlobalObject* m_globalObject { nullptr }; // This is not marked since owner CodeBlock will mark JSGlobalObject.
     intptr_t m_stackOffset { 0 };
+    BaselineExecutionCounter m_executeCounter;
 };
 
 } // namespace JSC

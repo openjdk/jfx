@@ -30,7 +30,6 @@
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
-#include <variant>
 #include <wtf/HashSet.h>
 #include <wtf/WeakRef.h>
 
@@ -102,7 +101,7 @@ private:
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = std::variant<
+    using DuplicateDataVariant = Variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,

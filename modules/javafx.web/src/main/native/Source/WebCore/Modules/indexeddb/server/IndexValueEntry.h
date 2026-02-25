@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IDBKeyData.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,7 +37,7 @@ enum class CursorDuplicity;
 namespace IDBServer {
 
 class IndexValueEntry {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(IndexValueEntry);
 public:
     explicit IndexValueEntry(bool unique);
     ~IndexValueEntry();
@@ -45,6 +46,7 @@ public:
 
     // Returns true if a key was actually removed.
     bool removeKey(const IDBKeyData&);
+    bool contains(const IDBKeyData&);
 
     const IDBKeyData* getLowest() const;
 
@@ -84,6 +86,7 @@ public:
     Iterator reverseFind(const IDBKeyData&, CursorDuplicity);
 
     bool unique() const { return m_unique; }
+    Vector<IDBKeyData> keys() const;
 
 private:
     union {

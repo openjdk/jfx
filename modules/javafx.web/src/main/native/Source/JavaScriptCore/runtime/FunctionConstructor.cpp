@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@
 #include "JSGeneratorFunction.h"
 #include "JSGlobalObject.h"
 #include "JSCInlines.h"
+#include "JSStringInlines.h"
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -66,23 +67,25 @@ void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionProt
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, functionPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 }
 
-static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, FunctionConstructionMode functionConstructionMode, ThrowScope& scope, std::optional<int>& functionConstructorParametersEndPosition)
+ASCIILiteral functionConstructorPrefix(FunctionConstructionMode functionConstructionMode)
 {
-    ASCIILiteral prefix;
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        prefix = "function "_s;
-        break;
+        return "function "_s;
     case FunctionConstructionMode::Generator:
-        prefix = "function* "_s;
-        break;
+        return "function* "_s;
     case FunctionConstructionMode::Async:
-        prefix = "async function "_s;
-        break;
+        return "async function "_s;
     case FunctionConstructionMode::AsyncGenerator:
-        prefix = "async function* "_s;
-        break;
+        return "async function* "_s;
     }
+    ASSERT_NOT_REACHED();
+    return ASCIILiteral { };
+}
+
+static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& args, const Identifier& functionName, FunctionConstructionMode functionConstructionMode, ThrowScope& scope, std::optional<int>& functionConstructorParametersEndPosition)
+{
+    ASCIILiteral prefix = functionConstructorPrefix(functionConstructionMode);
 
     // How we stringify functions is sometimes important for web compatibility.
     // See https://bugs.webkit.org/show_bug.cgi?id=24350.
@@ -91,15 +94,43 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
     if (args.isEmpty())
         program = makeString(prefix, functionName.string(), "(\n) {\n\n}"_s);
     else if (args.size() == 1) {
-        auto body = args.at(0).toWTFString(globalObject);
+        JSValue arg0 = args.at(0);
+        if (arg0.isString()) [[likely]]
+            program = tryMakeString(prefix, functionName.string(), "(\n) {\n"_s, asString(arg0), "\n}"_s);
+        else {
+            auto body = arg0.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         program = tryMakeString(prefix, functionName.string(), "(\n) {\n"_s, body, "\n}"_s);
-        if (UNLIKELY(!program)) {
+        }
+
+        if (!program) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
+    } else if (args.size() == 2) {
+        // This is really common since it means (1) arguments + (2) body.
+        JSValue arg0 = args.at(0);
+        JSValue arg1 = args.at(1);
+        size_t arg0Length = 0;
+        if (arg0.isString() && arg1.isString()) [[likely]] {
+            arg0Length = asString(arg0)->length();
+            program = tryMakeString(prefix, functionName.string(), "("_s, asString(arg0), "\n) {\n"_s, asString(arg1), "\n}"_s);
+        } else {
+            auto arg = arg0.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+            auto body = arg1.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+            arg0Length = arg.length();
+        program = tryMakeString(prefix, functionName.string(), "("_s, arg, "\n) {\n"_s, body, "\n}"_s);
+        }
+
+        if (!program) [[unlikely]] {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
+        functionConstructorParametersEndPosition = prefix.length() + functionName.string().length() + "("_s.length() + arg0Length + "\n)"_s.length();
     } else {
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         builder.append(prefix, functionName.string(), '(');
 
         auto* jsString = args.at(0).toString(globalObject);
@@ -114,19 +145,19 @@ static String stringifyFunction(JSGlobalObject* globalObject, const ArgList& arg
             RETURN_IF_EXCEPTION(scope, { });
             builder.append(',', view.data);
         }
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
 
-        functionConstructorParametersEndPosition = builder.length() + sizeof("\n)") - 1;
+        functionConstructorParametersEndPosition = builder.length() + "\n)"_s.length();
 
         auto* bodyString = args.at(args.size() - 1).toString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         auto body = bodyString->view(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         builder.append("\n) {\n"_s, body.data, "\n}"_s);
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -141,18 +172,41 @@ JSObject* constructFunction(JSGlobalObject* globalObject, const ArgList& args, c
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-
         std::optional<int> functionConstructorParametersEndPosition;
     auto code = stringifyFunction(globalObject, args, functionName, functionConstructionMode, scope, functionConstructorParametersEndPosition);
     EXCEPTION_ASSERT(!!scope.exception() == code.isNull());
 
-    if (UNLIKELY(!globalObject->evalEnabled())) {
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None) [[unlikely]] {
+        bool isTrusted = true;
+        auto* structure = globalObject->trustedScriptStructure();
+        for (size_t i = 0; i < args.size(); i++) {
+            auto arg = args.at(i);
+
+            if (!arg.isObject() || structure != asObject(arg)->structure()) {
+                isTrusted = false;
+                break;
+            }
+        }
+
+        if (!isTrusted) {
+            bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::Function, code, args);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (!canCompileStrings) {
+                throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
+                return nullptr;
+            }
+        }
+    }
+
+    if (!globalObject->evalEnabled()) [[unlikely]] {
+        if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
         scope.clearException();
-        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, !code.isNull() ? jsNontrivialString(vm, WTFMove(code)) : nullptr);
+        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, !code.isNull() ? WTFMove(code) : nullString());
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return nullptr;
     }
-    if (UNLIKELY(code.isNull()))
+    }
+    if (code.isNull()) [[unlikely]]
         return nullptr;
 
     LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
@@ -164,10 +218,9 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    SourceCode source = makeSource(program, sourceOrigin, taintedOrigin, sourceURL, position);
     JSObject* exception = nullptr;
-    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, lexicallyScopedFeatures, exception, overrideLineNumber, functionConstructorParametersEndPosition);
-    if (UNLIKELY(!function)) {
+    FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, WTFMove(program), sourceOrigin, taintedOrigin, sourceURL, position, lexicallyScopedFeatures, exception, overrideLineNumber, functionConstructorParametersEndPosition, functionConstructionMode);
+    if (!function) [[unlikely]] {
         ASSERT(exception);
         throwException(globalObject, scope, exception);
         return nullptr;

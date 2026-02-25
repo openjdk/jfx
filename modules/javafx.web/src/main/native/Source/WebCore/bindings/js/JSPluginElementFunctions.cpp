@@ -21,6 +21,7 @@
 #include "JSPluginElementFunctions.h"
 
 #include "BridgeJSC.h"
+#include "DOMTimer.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
 #include "JSHTMLElement.h"
@@ -153,6 +154,7 @@ CallData pluginElementCustomGetCallData(JSHTMLElement* element)
         callData.type = CallData::Type::Native;
         callData.native.function = callPlugin;
         callData.native.isBoundFunction = false;
+        callData.native.isWasm = false;
     }
 
     return callData;

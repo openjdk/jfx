@@ -605,6 +605,9 @@ sub addBuiltinTypedefs()
 
     my $EpochTimeStampType = IDLType->new(name => "unsigned long long");
     $typedefs{"EpochTimeStamp"} = IDLTypedef->new(type => $EpochTimeStampType);
+
+    my $domStringType = IDLType->new(name => "DOMString");
+    $typedefs{"Base64URLString"} = IDLTypedef->new(type => $domStringType);
 }
 
 my $nextOptionallyReadonlyAttribute_1 = '^(readonly|attribute)$';
@@ -2401,6 +2404,10 @@ sub parseExtendedAttributeRest2
     if ($next->type() == IdentifierToken) {
         my $name = $self->parseName();
         return $self->parseExtendedAttributeRest3($name);
+    }
+    if ($next->type() == StringToken) {
+        my $token = $self->getToken();
+        return $token->value();
     }
     if ($next->type() == IntegerToken) {
         my $token = $self->getToken();

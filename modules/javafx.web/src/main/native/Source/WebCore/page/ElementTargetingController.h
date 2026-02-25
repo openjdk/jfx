@@ -26,16 +26,17 @@
 #pragma once
 
 #include "Document.h"
-#include "ElementIdentifier.h"
 #include "ElementTargetingTypes.h"
 #include "EventTarget.h"
 #include "IntRectHash.h"
+#include "NodeIdentifier.h"
 #include "Region.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "Timer.h"
 #include <wtf/ApproximateTime.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -49,12 +50,13 @@ class Node;
 class Page;
 
 class ElementTargetingController final : public CanMakeCheckedPtr<ElementTargetingController> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ElementTargetingController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ElementTargetingController);
 public:
     ElementTargetingController(Page&);
 
     WEBCORE_EXPORT Vector<TargetedElementInfo> findTargets(TargetedElementRequest&&);
+    WEBCORE_EXPORT Vector<Vector<TargetedElementInfo>> findAllTargets(float);
 
     WEBCORE_EXPORT bool adjustVisibility(Vector<TargetedElementAdjustment>&&);
     void adjustVisibilityInRepeatedlyTargetedRegions(Document&);
@@ -65,7 +67,7 @@ public:
     WEBCORE_EXPORT uint64_t numberOfVisibilityAdjustmentRects();
     WEBCORE_EXPORT bool resetVisibilityAdjustments(const Vector<TargetedElementIdentifiers>&);
 
-    WEBCORE_EXPORT RefPtr<Image> snapshotIgnoringVisibilityAdjustment(ElementIdentifier, ScriptExecutionContextIdentifier);
+    WEBCORE_EXPORT RefPtr<Image> snapshotIgnoringVisibilityAdjustment(NodeIdentifier, ScriptExecutionContextIdentifier);
 
 private:
     void cleanUpAdjustmentClientRects();
@@ -87,17 +89,22 @@ private:
     std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const String& searchText);
     std::pair<Vector<Ref<Node>>, RefPtr<Element>> findNodes(const TargetedElementSelectors&);
 
-    Vector<TargetedElementInfo> extractTargets(Vector<Ref<Node>>&&, RefPtr<Element>&& innerElement, bool canIncludeNearbyElements);
+    enum class IncludeNearbyElements : bool { No, Yes };
+    enum class CheckViewportAreaRatio : bool { No, Yes };
+    Vector<TargetedElementInfo> extractTargets(Vector<Ref<Node>>&&, RefPtr<Element>&& innerElement, CheckViewportAreaRatio, IncludeNearbyElements);
 
     void recomputeAdjustedElementsIfNeeded();
+
+    void topologicallySortElementsHelper(NodeIdentifier currentElementID, Vector<NodeIdentifier>& depthSortedIDs, HashSet<NodeIdentifier>& processingIDs, HashSet<NodeIdentifier>& unprocessedIDs, const HashMap<NodeIdentifier, HashSet<NodeIdentifier>>& nodeIDToOccludedElementIDs);
+    Vector<NodeIdentifier> topologicallySortElements(const HashMap<NodeIdentifier, HashSet<NodeIdentifier>>& nodeIDToOccludedElementIDs);
 
     WeakPtr<Page> m_page;
     DeferrableOneShotTimer m_recentAdjustmentClientRectsCleanUpTimer;
     WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_documentsAffectedByVisibilityAdjustment;
-    HashMap<ElementIdentifier, IntRect> m_recentAdjustmentClientRects;
+    HashMap<NodeIdentifier, IntRect> m_recentAdjustmentClientRects;
     ApproximateTime m_startTimeForSelectorBasedVisibilityAdjustment;
     Timer m_selectorBasedVisibilityAdjustmentTimer;
-    Vector<std::pair<Markable<ElementIdentifier>, TargetedElementSelectors>> m_visibilityAdjustmentSelectors;
+    Vector<std::pair<Markable<NodeIdentifier>, TargetedElementSelectors>> m_visibilityAdjustmentSelectors;
     Vector<TargetedElementSelectors> m_initialVisibilityAdjustmentSelectors;
     Region m_adjustmentClientRegion;
     Region m_repeatedAdjustmentClientRegion;

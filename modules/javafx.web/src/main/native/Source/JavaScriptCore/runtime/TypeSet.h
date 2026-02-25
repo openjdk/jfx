@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,8 +73,8 @@ private:
 
     bool m_final;
     bool m_isInDictionaryMode;
-    HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_fields;
-    HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_optionalFields;
+    UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_fields;
+    UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_optionalFields;
     RefPtr<StructureShape> m_proto;
     std::unique_ptr<String> m_propertyHash;
     String m_constructorName;

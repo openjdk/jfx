@@ -29,6 +29,7 @@
 #if ENABLE(WEBXR)
 
 #include "DOMPointReadOnly.h"
+#include "ExceptionOr.h"
 #include "TransformationMatrix.h"
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <wtf/TZoneMallocInlines.h>

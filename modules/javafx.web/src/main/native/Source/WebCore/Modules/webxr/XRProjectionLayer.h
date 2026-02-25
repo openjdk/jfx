@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,12 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
+#include "PlatformXR.h"
 #include "WebGPUXRProjectionLayer.h"
 #include "WebXRRigidTransform.h"
 #include "XRCompositionLayer.h"
+
+#include <wtf/MachSendRight.h>
 
 namespace WebCore {
 
@@ -59,14 +62,17 @@ public:
     [[noreturn]] void setDeltaPose(WebXRRigidTransform*);
 
     // WebXRLayer
-    void startFrame(const PlatformXR::FrameData&) final;
+    void startFrame(PlatformXR::FrameData&) final;
     PlatformXR::Device::Layer endFrame() final;
 
     WebCore::WebGPU::XRProjectionLayer& backing();
+    std::optional<PlatformXR::FrameData::LayerData> layerData() const;
+
 private:
     XRProjectionLayer(ScriptExecutionContext&, Ref<WebCore::WebGPU::XRProjectionLayer>&&);
 
-    Ref<WebCore::WebGPU::XRProjectionLayer> m_backing;
+    const Ref<WebCore::WebGPU::XRProjectionLayer> m_backing;
+    std::optional<PlatformXR::FrameData::LayerData> m_layerData;
 };
 
 } // namespace WebCore

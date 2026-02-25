@@ -28,6 +28,7 @@
 
 #include <wtf/ApproximateTime.h>
 #include <wtf/Condition.h>
+#include <wtf/ContinuousTime.h>
 #include <wtf/Lock.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/PrintStream.h>
@@ -52,6 +53,16 @@ ApproximateTime Seconds::operator+(ApproximateTime other) const
     return other + *this;
 }
 
+ContinuousTime Seconds::operator+(ContinuousTime other) const
+{
+    return other + *this;
+}
+
+ContinuousApproximateTime Seconds::operator+(ContinuousApproximateTime other) const
+{
+    return other + *this;
+}
+
 TimeWithDynamicClockType Seconds::operator+(const TimeWithDynamicClockType& other) const
 {
     return other + *this;
@@ -72,6 +83,16 @@ ApproximateTime Seconds::operator-(ApproximateTime other) const
     return ApproximateTime::fromRawSeconds(value() - other.secondsSinceEpoch().value());
 }
 
+ContinuousTime Seconds::operator-(ContinuousTime other) const
+{
+    return ContinuousTime::fromRawSeconds(value() - other.secondsSinceEpoch().value());
+}
+
+ContinuousApproximateTime Seconds::operator-(ContinuousApproximateTime other) const
+{
+    return ContinuousApproximateTime::fromRawSeconds(value() - other.secondsSinceEpoch().value());
+}
+
 TimeWithDynamicClockType Seconds::operator-(const TimeWithDynamicClockType& other) const
 {
     return other.withSameClockAndRawSeconds(value() - other.secondsSinceEpoch().value());
@@ -84,7 +105,7 @@ void Seconds::dump(PrintStream& out) const
 
 TextStream& operator<<(TextStream& ts, Seconds seconds)
 {
-    ts << seconds.value() << "s";
+    ts << seconds.value() << 's';
     return ts;
 }
 

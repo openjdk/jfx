@@ -25,47 +25,69 @@
  */
 
 @linkTimeConstant
-function asyncFromSyncIteratorOnRejected(error, promise)
+function asyncFromSyncIteratorOnRejected(error, context)
 {
     "use strict";
+
+    var syncIterator = context.@syncIterator;
+    var promise = context.@promise;
+
+    @assert(@isObject(syncIterator) || syncIterator === @undefined);
+    @assert(@isPromise(promise));
+
+    if (syncIterator !== @undefined) {
+        var returnMethod;
+        try {
+            returnMethod = syncIterator.return;
+        } catch (e) {
+            return @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+        }
+        returnMethod.@call(syncIterator);
+    }
 
     return @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, error);
 }
 
 @linkTimeConstant
-function asyncFromSyncIteratorOnFulfilledContinue(result, promise)
+function asyncFromSyncIteratorOnFulfilledContinue(result, context)
 {
     "use strict";
 
-    return @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: false });
+    @assert(@isPromise(context.@promise));
+
+    return @resolvePromiseWithFirstResolvingFunctionCallCheck(context.@promise, { value: result, done: false });
 }
 
 @linkTimeConstant
-function asyncFromSyncIteratorOnFulfilledDone(result, promise)
+function asyncFromSyncIteratorOnFulfilledDone(result, context)
 {
     "use strict";
 
-    return @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, { value: result, done: true });
+    @assert(@isPromise(context.@promise));
+
+    return @resolvePromiseWithFirstResolvingFunctionCallCheck(context.@promise, { value: result, done: true });
 }
 
 function next(value)
 {
     "use strict";
 
+    @assert(@isAsyncFromSyncIterator(this));
+
     var promise = @newPromise();
 
-    if (!@isObject(this) || !@isObject(@getByIdDirectPrivate(this, "syncIterator"))) {
+    if (!@isObject(this) || !@isObject(@getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator))) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator is not an object.'));
         return promise;
     }
 
-    var syncIterator = @getByIdDirectPrivate(this, "syncIterator");
-    var nextMethod = @getByIdDirectPrivate(this, "nextMethod");
+    var syncIterator = @getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator);
+    var nextMethod = @getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldNextMethod);
 
     try {
         var nextResult = @argumentCount() === 0 ? nextMethod.@call(syncIterator) : nextMethod.@call(syncIterator, value);
         var onFulfilled = nextResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
-        @resolveWithoutPromiseForAsyncAwait(nextResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
+        @resolveWithoutPromiseForAsyncAwait(nextResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, { @promise: promise, @syncIterator: syncIterator });
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -77,14 +99,16 @@ function return(value)
 {
     "use strict";
 
+    @assert(@isAsyncFromSyncIterator(this));
+
     var promise = @newPromise();
 
-    if (!@isObject(this) || !@isObject(@getByIdDirectPrivate(this, "syncIterator"))) {
+    if (!@isObject(this) || !@isObject(@getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator))) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator is not an object.'));
         return promise;
     }
 
-    var syncIterator = @getByIdDirectPrivate(this, "syncIterator");
+    var syncIterator = @getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator);
 
     var returnMethod;
 
@@ -109,7 +133,7 @@ function return(value)
         }
 
         var onFulfilled = returnResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
-        @resolveWithoutPromiseForAsyncAwait(returnResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
+        @resolveWithoutPromiseForAsyncAwait(returnResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, { @promise: promise, @syncIterator: @undefined });
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -121,14 +145,16 @@ function throw(exception)
 {
     "use strict";
 
+    @assert(@isAsyncFromSyncIterator(this));
+
     var promise = @newPromise();
 
-    if (!@isObject(this) || !@isObject(@getByIdDirectPrivate(this, "syncIterator"))) {
+    if (!@isObject(this) || !@isObject(@getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator))) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator is not an object.'));
         return promise;
     }
 
-    var syncIterator = @getByIdDirectPrivate(this, "syncIterator");
+    var syncIterator = @getAsyncFromSyncIteratorInternalField(this, @asyncFromSyncIteratorFieldSyncIterator);
 
     var throwMethod;
 
@@ -140,7 +166,19 @@ function throw(exception)
     }
 
     if (@isUndefinedOrNull(throwMethod)) {
-        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, exception);
+        var returnMethod;
+        try {
+            returnMethod = syncIterator.return;
+        } catch (e) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+            return promise;
+        }
+        var returnResult = returnMethod.@call(syncIterator);
+        if (!@isObject(returnResult)) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator result interface is not an object.'));
+            return promise;
+        }
+        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError('Iterator does not provide a throw method.'));
         return promise;
     }
     
@@ -153,7 +191,7 @@ function throw(exception)
         }
         
         var onFulfilled = throwResult.done ? @asyncFromSyncIteratorOnFulfilledDone : @asyncFromSyncIteratorOnFulfilledContinue;
-        @resolveWithoutPromiseForAsyncAwait(throwResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, promise);
+        @resolveWithoutPromiseForAsyncAwait(throwResult.value, onFulfilled, @asyncFromSyncIteratorOnRejected, { @promise: promise, @syncIterator: syncIterator });
     } catch (e) {
         @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
     }
@@ -169,15 +207,5 @@ function createAsyncFromSyncIterator(syncIterator, nextMethod)
     if (!@isObject(syncIterator))
         @throwTypeError('Only objects can be wrapped by async-from-sync wrapper');
 
-    return new @AsyncFromSyncIterator(syncIterator, nextMethod);
-}
-
-@linkTimeConstant
-@constructor
-function AsyncFromSyncIterator(syncIterator, nextMethod)
-{
-    "use strict";
-
-    @putByIdDirectPrivate(this, "syncIterator", syncIterator);
-    @putByIdDirectPrivate(this, "nextMethod", nextMethod);
+    return @asyncFromSyncIteratorCreate(syncIterator, nextMethod);
 }

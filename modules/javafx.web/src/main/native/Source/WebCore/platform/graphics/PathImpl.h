@@ -28,14 +28,14 @@
 #include "FloatRoundedRect.h"
 #include "PathElement.h"
 #include "PathSegment.h"
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class PathImpl : public ThreadSafeRefCounted<PathImpl> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PathImpl);
 public:
     virtual ~PathImpl() = default;
 
@@ -47,6 +47,8 @@ public:
     }
 
     virtual bool isPathStream() const { return false; }
+
+    virtual bool definitelyEqual(const PathImpl&) const = 0;
 
     virtual Ref<PathImpl> copy() const = 0;
 
@@ -62,10 +64,11 @@ public:
     virtual void add(PathEllipseInRect) = 0;
     virtual void add(PathRect) = 0;
     virtual void add(PathRoundedRect) = 0;
+    virtual void add(PathContinuousRoundedRect) = 0;
     virtual void add(PathCloseSubpath) = 0;
 
     void addLinesForRect(const FloatRect&);
-    void addBeziersForRoundedRect(const FloatRoundedRect&);
+    static Vector<PathSegment, 10> beziersForRoundedRect(const FloatRoundedRect&);
 
     virtual void applySegments(const PathSegmentApplier&) const;
     virtual bool applyElements(const PathElementApplier&) const = 0;
@@ -73,13 +76,6 @@ public:
     virtual bool transform(const AffineTransform&) = 0;
 
     virtual std::optional<PathSegment> singleSegment() const { return std::nullopt; }
-    virtual std::optional<PathDataLine> singleDataLine() const { return std::nullopt; }
-    virtual std::optional<PathArc> singleArc() const { return std::nullopt; }
-    virtual std::optional<PathClosedArc> singleClosedArc() const { return std::nullopt; }
-    virtual std::optional<PathDataQuadCurve> singleQuadCurve() const { return std::nullopt; }
-    virtual std::optional<PathDataBezierCurve> singleBezierCurve() const { return std::nullopt; }
-
-    virtual bool isEmpty() const = 0;
 
     virtual bool isClosed() const;
 
@@ -101,8 +97,8 @@ inline void PathImpl::addSegment(PathSegment segment)
             add(WTFMove(segment));
         },
         [&](PathDataLine segment) {
-            add(PathMoveTo { segment.start });
-            add(PathLineTo { segment.end });
+            add(PathMoveTo { segment.start() });
+            add(PathLineTo { segment.end() });
         },
         [&](PathDataQuadCurve segment) {
             add(PathMoveTo { segment.start });

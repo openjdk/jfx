@@ -36,8 +36,11 @@ static inline void shiftDisplayBox(InlineDisplay::Box& displayBox, InlineLayoutU
 {
     if (!offset)
         return;
-    auto isHorizontalWritingMode = inlineFormattingContext.root().style().isHorizontalWritingMode();
-    isHorizontalWritingMode ? displayBox.moveHorizontally(offset) : displayBox.moveVertically(offset);
+    auto writingMode = inlineFormattingContext.root().style().writingMode();
+    if (writingMode.isLineOverLeft())
+        displayBox.moveVertically(-offset);
+    else
+        writingMode.isHorizontal() ? displayBox.moveHorizontally(offset) : displayBox.moveVertically(offset);
     if (!displayBox.isTextOrSoftLineBreak() && !displayBox.isRootInlineBox())
         inlineFormattingContext.geometryForBox(displayBox.layoutBox()).moveHorizontally(LayoutUnit { offset });
 }
@@ -50,8 +53,13 @@ static inline void expandInlineBox(InlineLayoutUnit expansion, InlineDisplay::Bo
     }
     if (!expansion)
         return;
-    inlineFormattingContext.root().style().isHorizontalWritingMode() ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
+    auto writingMode = inlineFormattingContext.root().writingMode();
+    writingMode.isHorizontal() ? displayBox.expandHorizontally(expansion) : displayBox.expandVertically(expansion);
     auto& boxGeometry = inlineFormattingContext.geometryForBox(displayBox.layoutBox());
+    if (writingMode.isLineOverLeft()) {
+        displayBox.setTop(displayBox.top() - expansion);
+        boxGeometry.setLeft(BoxGeometry::borderBoxLeft(boxGeometry) - LayoutUnit { expansion });
+    }
     boxGeometry.setContentBoxWidth(boxGeometry.contentBoxWidth() + LayoutUnit { expansion });
 }
 
@@ -194,10 +202,7 @@ static void computedExpansions(const Line::RunList& runs, WTF::Range<size_t> run
         auto expansionBehavior = ExpansionBehavior::defaultBehavior();
         size_t expansionOpportunitiesInRun = 0;
 
-        // According to the CSS3 spec, a UA can determine whether or not
-        // it wishes to apply text-align: justify to text with collapsible spaces (and this behavior matches Blink).
-        auto mayAlterSpacingWithinText = !TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingTrailingWhitespaceLength;
-        if (run.isText() && mayAlterSpacingWithinText) {
+        if (run.isText()) {
             if (run.hasTextCombine())
                 expansionBehavior = ExpansionBehavior::forbidAll();
             else {

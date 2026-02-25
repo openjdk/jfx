@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -60,9 +61,11 @@ public:
     LegacyRenderSVGResource() = default;
     virtual ~LegacyRenderSVGResource() = default;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true);
-    virtual void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) = 0;
-    virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) = 0;
+    void removeAllClientsFromCacheAndMarkForInvalidation(bool markForInvalidation = true);
+    virtual void removeAllClientsFromCache() = 0;
+    virtual void removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) = 0;
+    virtual void removeClientFromCache(RenderElement&) = 0;
+    virtual void removeClientFromCacheAndMarkForInvalidation(RenderElement&, bool markForInvalidation = true) = 0;
 
     enum class ApplyResult : uint8_t {
         ResourceApplied = 1 << 0,
@@ -83,8 +86,7 @@ public:
     static void markForLayoutAndParentResourceInvalidation(RenderObject&, bool needsLayout = true);
     static void markForLayoutAndParentResourceInvalidationIfNeeded(RenderObject&, bool needsLayout, SingleThreadWeakHashSet<RenderObject>* visitedRenderers);
 
-protected:
-    void fillAndStrokePathOrShape(GraphicsContext&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement* shape) const;
+    static void fillAndStrokePathOrShape(GraphicsContext&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement* shape);
 };
 
 constexpr bool resourceWasApplied(OptionSet<LegacyRenderSVGResource::ApplyResult> result)

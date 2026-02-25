@@ -2646,14 +2646,14 @@ g_markup_parse_boolean (const char  *string,
  * @G_MARKUP_COLLECT_STRDUP: as with %G_MARKUP_COLLECT_STRING, but
  *     expects a parameter of type (char **) and g_strdup()s the
  *     returned pointer. The pointer must be freed with g_free()
- * @G_MARKUP_COLLECT_BOOLEAN: expects a parameter of type (gboolean *)
+ * @G_MARKUP_COLLECT_BOOLEAN: expects a parameter of type (`gboolean *`)
  *     and parses the attribute value as a boolean. Sets %FALSE if the
  *     attribute isn't present. Valid boolean values consist of
  *     (case-insensitive) "false", "f", "no", "n", "0" and "true", "t",
  *     "yes", "y", "1"
  * @G_MARKUP_COLLECT_TRISTATE: as with %G_MARKUP_COLLECT_BOOLEAN, but
  *     in the case of a missing attribute a value is set that compares
- *     equal to neither %FALSE nor %TRUE G_MARKUP_COLLECT_OPTIONAL is
+ *     equal to neither %FALSE nor %TRUE %G_MARKUP_COLLECT_OPTIONAL is
  *     implied
  * @G_MARKUP_COLLECT_OPTIONAL: can be bitwise ORed with the other fields.
  *     If present, allows the attribute not to appear. A default value

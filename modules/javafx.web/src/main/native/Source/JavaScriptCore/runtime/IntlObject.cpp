@@ -77,6 +77,8 @@
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlObject);
@@ -167,6 +169,8 @@ namespace JSC {
   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
   DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
+  DurationFormat        createDurationFormatConstructor              DontEnum|PropertyCallback
+  ListFormat            createListFormatConstructor                  DontEnum|PropertyCallback
   Locale                createLocaleConstructor                      DontEnum|PropertyCallback
   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
   PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
@@ -254,13 +258,6 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
-#if HAVE(ICU_U_LIST_FORMATTER)
-        putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-#else
-    UNUSED_PARAM(&createDurationFormatConstructor);
-    UNUSED_PARAM(&createListFormatConstructor);
-#endif
 }
 
 Structure* IntlObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -317,12 +314,12 @@ Vector<char, 32> localeIDBufferForLanguageTagWithNullTerminator(const CString& t
     UErrorCode status = U_ZERO_ERROR;
     Vector<char, 32> buffer(32);
     int32_t parsedLength;
-    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.data(), buffer.size(), &parsedLength, &status);
+    auto bufferLength = uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), buffer.size(), &parsedLength, &status);
     if (needsToGrowToProduceCString(status)) {
         // Before ICU 64, there's a chance uloc_forLanguageTag will "buffer overflow" while requesting a *smaller* size.
         buffer.resize(bufferLength + 1);
         status = U_ZERO_ERROR;
-        uloc_forLanguageTag(tag.data(), buffer.data(), bufferLength + 1, &parsedLength, &status);
+        uloc_forLanguageTag(tag.data(), buffer.mutableSpan().data(), bufferLength + 1, &parsedLength, &status);
     }
     if (U_FAILURE(status) || parsedLength != static_cast<int32_t>(tag.length()))
         return { };
@@ -354,7 +351,7 @@ Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vec
         end++;
     }
 
-    Vector<char, 32> result(buffer.subspan(0, extensionIndex + 2)); // "-u" is included.
+    Vector<char, 32> result(buffer.span().first(extensionIndex + 2)); // "-u" is included.
     StringView extension = locale.substring(extensionIndex, extensionLength);
     ASSERT(extension.is8Bit());
     auto subtags = unicodeExtensionComponents(extension);
@@ -726,12 +723,12 @@ String canonicalizeUnicodeLocaleID(const CString& tag)
     auto buffer = localeIDBufferForLanguageTagWithNullTerminator(tag);
     if (buffer.isEmpty())
         return String();
-    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.data());
+    auto canonicalized = canonicalizeLocaleIDWithoutNullTerminator(buffer.span().data());
     if (!canonicalized)
         return String();
     canonicalized->append('\0');
     ASSERT(canonicalized->contains('\0'));
-    return languageTagForLocaleID(canonicalized->data());
+    return languageTagForLocaleID(canonicalized->span().data());
 }
 
 Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue locales)
@@ -770,7 +767,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
     uint64_t length = lengthProperty.toLength(globalObject);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
-    HashSet<String> seenSet;
+    UncheckedKeyHashSet<String> seenSet;
     for (uint64_t k = 0; k < length; ++k) {
         bool kPresent = localesObject->hasProperty(globalObject, k);
         RETURN_IF_EXCEPTION(scope, Vector<String>());
@@ -806,7 +803,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
             }
 
             String errorMessage = tryMakeString("invalid language tag: "_s, tag);
-            if (UNLIKELY(!errorMessage)) {
+            if (!errorMessage) [[unlikely]] {
                 throwException(globalObject, scope, createOutOfMemoryError(globalObject));
                 return { };
             }
@@ -1150,13 +1147,13 @@ static VariantCode parseVariantCode(StringView string)
     Code code { };
     for (unsigned index = 0; index < string.length(); ++index)
         code.characters[index] = toASCIILower(string[index]);
-    VariantCode result = bitwise_cast<VariantCode>(code);
+    VariantCode result = std::bit_cast<VariantCode>(code);
     ASSERT(result); // Not possible since some characters exist.
     ASSERT(result != static_cast<VariantCode>(-1)); // Not possible since all characters are ASCII (not Latin-1).
     return result;
 }
 
-static unsigned convertToUnicodeSingletonIndex(UChar singleton)
+static unsigned convertToUnicodeSingletonIndex(char16_t singleton)
 {
     ASSERT(isASCIIAlphanumeric(singleton));
     singleton = toASCIILower(singleton);
@@ -1298,7 +1295,7 @@ bool LanguageTagParser::parseUnicodeLanguageId()
             return true;
     }
 
-    HashSet<VariantCode> variantCodes;
+    UncheckedKeyHashSet<VariantCode> variantCodes;
     while (true) {
         if (!isUnicodeVariantSubtag(m_current))
             return true;
@@ -1443,7 +1440,7 @@ bool LanguageTagParser::parseExtensionsAndPUExtensions()
     while (true) {
         if (m_current.length() != 1)
             return true;
-        UChar prefixCode = m_current[0];
+        char16_t prefixCode = m_current[0];
         if (!isASCIIAlphanumeric(prefixCode))
             return true;
 
@@ -1558,8 +1555,6 @@ std::optional<String> mapICUCalendarKeywordToBCP47(const String& calendar)
 {
     if (calendar == "gregorian"_s)
         return "gregory"_s;
-    // islamicc is deprecated in BCP47, and islamic-civil is preferred.
-    // https://github.com/unicode-org/cldr/blob/master/common/bcp47/calendar.xml
     if (calendar == "ethiopic-amete-alem"_s)
         return "ethioaa"_s;
     return std::nullopt;
@@ -1569,8 +1564,6 @@ std::optional<String> mapBCP47ToICUCalendarKeyword(const String& calendar)
 {
     if (calendar == "gregory"_s)
         return "gregorian"_s;
-    if (calendar == "islamicc"_s)
-        return "islamic-civil"_s;
     if (calendar == "ethioaa"_s)
         return "ethiopic-amete-alem"_s;
     return std::nullopt;
@@ -1632,15 +1625,21 @@ const Vector<String>& intlAvailableCalendars()
             return StringImpl::createStaticStringImpl(string.span16());
         };
 
-        availableCalendars.construct(count, [&](size_t) {
+        availableCalendars.construct();
+        for (int32_t i = 0; i < count; ++i) {
             int32_t length = 0;
             const char* pointer = uenum_next(enumeration.get(), &length, &status);
             ASSERT(U_SUCCESS(status));
-            String calendar({ pointer, static_cast<size_t>(length) });
+            String calendar(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
             if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
-                return createImmortalThreadSafeString(WTFMove(mapped.value()));
-            return createImmortalThreadSafeString(WTFMove(calendar));
-        });
+                calendar = WTFMove(mapped.value());
+
+            // Skip if the obtained calendar code is not meeting Unicode Locale Identifier's `type` definition
+            // as whole ECMAScript's i18n is relying on Unicode Local Identifiers.
+            if (!isUnicodeLocaleIdentifierType(calendar))
+                continue;
+            availableCalendars->append(createImmortalThreadSafeString(WTFMove(calendar)));
+        }
 
         // The AvailableCalendars abstract operation returns a List, ordered as if an Array of the same
         // values had been sorted using %Array.prototype.sort% using undefined as comparator
@@ -1707,7 +1706,7 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available collations"_s);
             return { };
         }
-        String collation({ pointer, static_cast<size_t>(length) });
+        String collation(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
         if (collation == "standard"_s || collation == "search"_s)
             continue;
         if (auto mapped = mapICUCollationKeywordToBCP47(collation))
@@ -1764,7 +1763,7 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
             throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
             return { };
         }
-        String currency({ pointer, static_cast<size_t>(length) });
+        String currency(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
         if (currency == "EQE"_s)
             continue;
         if (currency == "LSM"_s)
@@ -1839,7 +1838,7 @@ static bool isValidTimeZoneNameFromICUTimeZone(StringView timeZoneName)
     if (timeZoneName.startsWith("SystemV/"_s))
         return false;
     if (timeZoneName.startsWith("Etc/"_s))
-        return isUTCEquivalent(timeZoneName);
+        return true;
     // IANA time zone names include '/'. Some of them are not including, but it is in backward links.
     // And ICU already resolved these backward links.
     if (!timeZoneName.contains('/'))
@@ -1855,7 +1854,7 @@ static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(String&& ti
     return std::make_optional(WTFMove(timeZoneName));
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
+// https://tc39.es/ecma402/#sup-availablenamedtimezoneidentifiers
 const Vector<String>& intlAvailableTimeZones()
 {
     static LazyNeverDestroyed<Vector<String>> availableTimeZones;
@@ -1873,7 +1872,7 @@ const Vector<String>& intlAvailableTimeZones()
             int32_t length = 0;
             const char* pointer = uenum_next(enumeration.get(), &length, &status);
             ASSERT(U_SUCCESS(status));
-            String timeZone({ pointer, static_cast<size_t>(length) });
+            String timeZone(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
             if (isValidTimeZoneNameFromICUTimeZone(timeZone)) {
                 if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTFMove(timeZone)))
                     temporary.append(WTFMove(mapped.value()));
@@ -1914,8 +1913,8 @@ TimeZoneID utcTimeZoneIDSlow()
     return utcTimeZoneIDStorage;
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
-static JSArray* availableTimeZones(JSGlobalObject* globalObject)
+// https://tc39.es/ecma402/#sec-availableprimarytimezoneidentifiers
+static JSArray* availablePrimaryTimeZoneIdentifiers(JSGlobalObject* globalObject)
 {
     return createArrayFromStringVector(globalObject, intlAvailableTimeZones());
 }
@@ -1946,7 +1945,7 @@ static JSArray* availableUnits(JSGlobalObject* globalObject)
     return result;
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-intl.supportedvaluesof
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
 JSC_DEFINE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -1968,7 +1967,7 @@ JSC_DEFINE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf, (JSGlobalObject* globa
         RELEASE_AND_RETURN(scope, JSValue::encode(availableNumberingSystems(globalObject)));
 
     if (key == "timeZone"_s)
-        RELEASE_AND_RETURN(scope, JSValue::encode(availableTimeZones(globalObject)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(availablePrimaryTimeZoneIdentifiers(globalObject)));
 
     if (key == "unit"_s)
         RELEASE_AND_RETURN(scope, JSValue::encode(availableUnits(globalObject)));
@@ -1978,3 +1977,5 @@ JSC_DEFINE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf, (JSGlobalObject* globa
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

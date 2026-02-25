@@ -136,7 +136,21 @@ if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
     endif ()
 endif ()
 
+if (DEVELOPER_MODE OR ARM)
+    # This lets us get good backtraces, in particular when using JSC_useGdbJITInfo=1.
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fno-omit-frame-pointer)
+endif ()
+
 if (COMPILER_IS_GCC_OR_CLANG)
+    if (COMPILER_IS_CLANG OR (DEVELOPER_MODE AND NOT ARM))
+        # Split debug information in ".debug_types" / ".debug_info" sections - this leads
+        # to a smaller overall size of the debug information, and avoids linker relocation
+        # errors on e.g. aarch64 (relocation R_AARCH64_ABS32 out of range: 4312197985 is not in [-2147483648, 4294967295])
+        # But when using GCC this breaks Linux distro debuginfo generation, so limit to DEVELOPER_MODE.
+        # Also when using GCC this causes ld to run out of memory on armv7, so disable for ARM.
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fdebug-types-section)
+    endif ()
+
     WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-strict-aliasing)
 
     # Split debug information in ".debug_types" / ".debug_info" sections - this leads
@@ -191,6 +205,11 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
     endif ()
 
+    # GCC gives false warnings for subobject-linkage <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105595>
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-subobject-linkage)
+    endif ()
+
     WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-noexcept-type)
 
     # These GCC warnings produce too many false positives to be useful. We'll
@@ -232,6 +251,9 @@ if (COMPILER_IS_GCC_OR_CLANG)
     # Makes builds faster. The GCC manual warns about the possibility that the assembler being
     # used may not support input from a pipe, but in practice the toolchains we support all do.
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-pipe)
+
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Werror=undefined-inline
+                                         -Werror=undefined-internal)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG AND NOT MSVC)
@@ -254,12 +276,18 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND NOT "${LOWERCASE_CMAKE_HOST_SY
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-Wl,--no-keep-memory ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
 endif ()
 
-if (LTO_MODE AND COMPILER_IS_CLANG)
+if (LTO_MODE AND COMPILER_IS_CLANG AND NOT MSVC)
     set(CMAKE_C_FLAGS "-flto=${LTO_MODE} ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-flto=${LTO_MODE} ${CMAKE_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_EXE_LINKER_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_SHARED_LINKER_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "-flto=${LTO_MODE} ${CMAKE_MODULE_LINKER_FLAGS}")
+elseif (LTO_MODE AND COMPILER_IS_CLANG AND MSVC AND NOT DEVELOPER_MODE)
+    set(CMAKE_C_FLAGS "-flto=${LTO_MODE} ${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-flto=${LTO_MODE} ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "/opt:lldlto=2 ${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "/opt:lldlto=2 ${CMAKE_SHARED_LINKER_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "/opt:lldlto=2 ${CMAKE_MODULE_LINKER_FLAGS}")
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
@@ -358,6 +386,8 @@ endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set(ATOMIC_TEST_SOURCE "
+#include <atomic>
+#include <optional>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -424,6 +454,8 @@ static inline bool compare_and_swap_uint64_weak(uint64_t* ptr, uint64_t old_valu
 }
 
 int main() {
+    std::atomic<std::optional<double>> d;
+    d = 0.0;
     bool y = false;
     bool expected = true;
     bool j = compare_and_swap_bool_weak(&y, expected, false);
@@ -438,13 +470,13 @@ int main() {
                   k ||
 #endif
                   l) ? 0 : 1;
-    return result;
+    return static_cast<int>(result + d.load().value());
 }
     ")
-    check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
+    check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
     if (NOT ATOMICS_ARE_BUILTIN)
         set(CMAKE_REQUIRED_LIBRARIES atomic)
-        check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
+        check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
 
@@ -489,10 +521,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND WTF_CPU_MIPS)
     # processor. This is a workaround and does not cover all cases
     # (see comment #28 in the link above).
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-mno-lxc1-sxc1)
-endif ()
-
-if (COMPILER_IS_GCC_OR_CLANG)
-    set(COMPILE_C_AS_CXX "-xc++;-std=c++2b")
 endif ()
 
 # FIXME: Enable pre-compiled headers for all ports <https://webkit.org/b/139438>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,15 +27,16 @@
 #define SQLiteTransaction_h
 
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SQLiteDatabase;
 
 class SQLiteTransaction {
-    WTF_MAKE_NONCOPYABLE(SQLiteTransaction); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SQLiteTransaction, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(SQLiteTransaction);
 public:
     WEBCORE_EXPORT SQLiteTransaction(SQLiteDatabase& db, bool readOnly = false);
     WEBCORE_EXPORT ~SQLiteTransaction();
@@ -51,7 +52,7 @@ public:
     SQLiteDatabase& database() const { return m_db.get(); }
 
 private:
-    CheckedRef<SQLiteDatabase> m_db;
+    const CheckedRef<SQLiteDatabase> m_db;
     bool m_inProgress;
     bool m_readOnly;
 };

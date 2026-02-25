@@ -45,6 +45,17 @@ auto CryptoKeyRaw::algorithm() const -> KeyAlgorithm
     return result;
 }
 
+CryptoKey::Data CryptoKeyRaw::data() const
+{
+    return CryptoKey::Data {
+        CryptoKeyClass::Raw,
+        algorithmIdentifier(),
+        extractable(),
+        usagesBitmap(),
+        { key() },
+    };
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(WEB_CRYPTO)

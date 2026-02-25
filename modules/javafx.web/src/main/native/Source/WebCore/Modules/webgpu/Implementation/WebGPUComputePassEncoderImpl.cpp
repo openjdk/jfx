@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,11 @@
 #include "WebGPUConvertToBackingContext.h"
 #include "WebGPUQuerySetImpl.h"
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ComputePassEncoderImpl);
 
 ComputePassEncoderImpl::ComputePassEncoderImpl(WebGPUPtr<WGPUComputePassEncoder>&& computePassEncoder, ConvertToBackingContext& convertToBackingContext)
     : m_backing(WTFMove(computePassEncoder))
@@ -65,22 +68,15 @@ void ComputePassEncoderImpl::end()
     wgpuComputePassEncoderEnd(m_backing.get());
 }
 
-void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& offsets)
 {
-    auto backingOffsets = valueOrDefault(offsets);
-    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), static_cast<uint32_t>(backingOffsets.size()), backingOffsets.data());
+    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTFMove(offsets));
 }
 
-void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
-    const uint32_t* dynamicOffsetsArrayBuffer,
-    size_t dynamicOffsetsArrayBufferLength,
-    Size64 dynamicOffsetsDataStart,
-    Size32 dynamicOffsetsDataLength)
+void ComputePassEncoderImpl::setBindGroup(Index32, const BindGroup*, std::span<const uint32_t>, Size64, Size32)
 {
-    UNUSED_PARAM(dynamicOffsetsArrayBufferLength);
-    // FIXME: Use checked algebra.
-    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer + dynamicOffsetsDataStart);
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void ComputePassEncoderImpl::pushDebugGroup(String&& groupLabel)

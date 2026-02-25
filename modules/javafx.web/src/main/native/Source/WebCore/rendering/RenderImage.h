@@ -79,11 +79,7 @@ public:
 
     virtual bool shouldDisplayBrokenImageIcon() const;
 
-    bool hasNonBitmapImage() const;
-
     String accessibilityDescription() const { return imageResource().image()->accessibilityDescription(); }
-
-    bool hasAnimatedImage() const;
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     bool isMultiRepresentationHEIC() const;
@@ -93,9 +89,9 @@ protected:
     RenderImage(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag>, StyleImage* = nullptr, const float imageDevicePixelRatio = 1.0f);
     void willBeDestroyed() override;
 
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
+    std::pair<FloatSize, FloatSize> computeIntrinsicSizeAndPreferredAspectRatio() const final;
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
@@ -137,14 +133,10 @@ private:
 
     void paintAreaElementFocusRing(PaintInfo&, const LayoutPoint& paintOffset);
 
-    void layoutShadowContent(const LayoutSize& oldSize);
-
     bool hasShadowContent() const { return m_hasShadowControls || m_hasImageOverlay; }
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ShouldComputePreferred::ComputeActual) const override;
     LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
-
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
 
     bool shouldCollapseToEmpty() const;
 

@@ -38,7 +38,8 @@ namespace WebCore {
 class Page;
 
 class EditorClientJava final : public EditorClient, public TextCheckerClient {
-    WTF_MAKE_NONCOPYABLE(EditorClientJava); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(EditorClientJava);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(EditorClientJava);
 public:
     EditorClientJava(const JLObject &webPage);
     ~EditorClientJava() override;
@@ -133,7 +134,6 @@ public:
     void updateSpellingUIWithMisspelledWord(const String&) override;
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
-    void willSetInputMethodState() override;
     void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions

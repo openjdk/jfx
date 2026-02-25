@@ -28,6 +28,7 @@
 #include "AbortController.h"
 #include "AbortSignal.h"
 #include "DOMFormData.h"
+#include "Element.h"
 #include "Event.h"
 #include "EventInit.h"
 #include "JSValueInWrappedObject.h"
@@ -45,6 +46,16 @@ enum class InterceptionState : uint8_t {
     Finished,
 };
 
+enum class InterceptionHandlersDidFulfill : bool {
+    No,
+    Yes
+};
+
+enum class FocusDidChange : bool {
+    No,
+    Yes
+};
+
 class NavigateEvent final : public Event {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(NavigateEvent);
 public:
@@ -55,6 +66,7 @@ public:
         RefPtr<DOMFormData> formData;
         String downloadRequest;
         JSC::JSValue info;
+        RefPtr<Element> sourceElement;
         bool canIntercept { false };
         bool userInitiated { false };
         bool hashChange { false };
@@ -91,6 +103,7 @@ public:
     String downloadRequest() { return m_downloadRequest; }
     JSC::JSValue info() { return m_info.getValue(); }
     JSValueInWrappedObject& infoWrapper() { return m_info; }
+    Element* sourceElement() { return m_sourceElement.get(); }
 
     ExceptionOr<void> intercept(Document&, NavigationInterceptOptions&&);
     ExceptionOr<void> scroll(Document&);
@@ -99,14 +112,16 @@ public:
     void setCanIntercept(bool canIntercept) { m_canIntercept = canIntercept; }
     void setInterceptionState(InterceptionState interceptionState) { m_interceptionState = interceptionState; }
 
-    void finish();
+    void finish(Document&, InterceptionHandlersDidFulfill, FocusDidChange);
 
     Vector<Ref<NavigationInterceptHandler>>& handlers() { return m_handlers; }
 
 private:
-    NavigateEvent(const AtomString& type, const Init&, AbortController*);
+    NavigateEvent(const AtomString& type, const Init&, EventIsTrusted, AbortController*);
 
     ExceptionOr<void> sharedChecks(Document&);
+    void potentiallyProcessScrollBehavior(Document&);
+    void processScrollBehavior(Document&);
 
     NavigationNavigationType m_navigationType;
     RefPtr<NavigationDestination> m_destination;
@@ -115,6 +130,7 @@ private:
     String m_downloadRequest;
     Vector<Ref<NavigationInterceptHandler>> m_handlers;
     JSValueInWrappedObject m_info;
+    RefPtr<Element> m_sourceElement;
     bool m_canIntercept { false };
     bool m_userInitiated { false };
     bool m_hashChange { false };
@@ -124,5 +140,7 @@ private:
     std::optional<NavigationScrollBehavior> m_scrollBehavior;
     RefPtr<AbortController> m_abortController;
 };
+
+WebCoreOpaqueRoot root(NavigateEvent*);
 
 } // namespace WebCore

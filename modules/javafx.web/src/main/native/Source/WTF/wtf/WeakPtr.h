@@ -28,6 +28,7 @@
 
 #include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CompactRefPtrTuple.h>
+#include <wtf/GetPtr.h>
 #include <wtf/Packed.h>
 #include <wtf/WeakPtrFactory.h>
 #include <wtf/WeakRef.h>
@@ -39,7 +40,7 @@ template<typename, typename = DefaultWeakPtrImpl, EnableWeakPtrThreadingAssertio
 template <typename, typename = DefaultWeakPtrImpl, EnableWeakPtrThreadingAssertions = EnableWeakPtrThreadingAssertions::Yes> class WeakListHashSet;
 
 template<typename T, typename WeakPtrImpl, typename PtrTraits> class WeakPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakPtr);
 public:
     WeakPtr() { }
     WeakPtr(std::nullptr_t) { }
@@ -50,7 +51,7 @@ public:
     template<typename U> WeakPtr(WeakRef<U, WeakPtrImpl>&&);
 
     template<typename = std::enable_if_t<!IsSmartPtr<T>::value>> WeakPtr(const T* object, EnableWeakPtrThreadingAssertions shouldEnableAssertions = EnableWeakPtrThreadingAssertions::Yes)
-        : m_impl(object ? implForObject(*object) : nullptr)
+        : m_impl(object ? &object->weakImpl() : nullptr)
 #if ASSERT_ENABLED
         , m_shouldEnableAssertions(shouldEnableAssertions == EnableWeakPtrThreadingAssertions::Yes)
 #endif
@@ -60,7 +61,7 @@ public:
     }
 
     template<typename = std::enable_if_t<!IsSmartPtr<T>::value && !std::is_pointer_v<T>>> WeakPtr(const T& object, EnableWeakPtrThreadingAssertions shouldEnableAssertions = EnableWeakPtrThreadingAssertions::Yes)
-        : m_impl(implForObject(object))
+        : m_impl(&object.weakImpl())
 #if ASSERT_ENABLED
         , m_shouldEnableAssertions(shouldEnableAssertions == EnableWeakPtrThreadingAssertions::Yes)
 #endif
@@ -88,7 +89,7 @@ public:
     T* get() const
     {
         static_assert(
-            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            HasRefPtrMemberFunctions<T>::value || HasCheckedPtrMemberFunctions<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         ASSERT(canSafelyBeUsed());
@@ -112,21 +113,25 @@ public:
     T* operator->() const
     {
         static_assert(
-            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            HasRefPtrMemberFunctions<T>::value || HasCheckedPtrMemberFunctions<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         ASSERT(canSafelyBeUsed());
-        return get();
+        auto* result = get();
+        RELEASE_ASSERT(result);
+        return result;
     }
 
     T& operator*() const
     {
         static_assert(
-            HasRefPtrMethods<T>::value || HasCheckedPtrMethods<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
+            HasRefPtrMemberFunctions<T>::value || HasCheckedPtrMemberFunctions<T>::value || IsDeprecatedWeakRefSmartPointerException<std::remove_cv_t<T>>::value,
             "Classes that offer weak pointers should also offer RefPtr or CheckedPtr. Please do not add new exceptions.");
 
         ASSERT(canSafelyBeUsed());
-        return *get();
+        auto* result = get();
+        RELEASE_ASSERT(result);
+        return *result;
     }
 
     void clear() { m_impl = nullptr; }
@@ -155,12 +160,6 @@ private:
 #endif
     {
         UNUSED_PARAM(shouldEnableAssertions);
-    }
-
-    template<typename U> static WeakPtrImpl* implForObject(const U& object)
-    {
-        object.weakPtrFactory().initializeIfNeeded(object);
-        return object.weakPtrFactory().impl();
     }
 
 #if ASSERT_ENABLED
@@ -312,11 +311,6 @@ template<typename T, typename U, typename WeakPtrImpl, typename PtrTraits> inlin
 template<typename T, typename U, typename WeakPtrImpl, typename PtrTraits> inline bool operator==(const WeakPtr<T, WeakPtrImpl, PtrTraits>& a, U* b)
 {
     return a.get() == b;
-}
-
-template<typename T, typename U, typename WeakPtrImpl, typename PtrTraits> inline bool operator==(T* a, const WeakPtr<U, WeakPtrImpl, PtrTraits>& b)
-{
-    return a == b.get();
 }
 
 template<class T, typename = std::enable_if_t<!IsSmartPtr<T>::value>>

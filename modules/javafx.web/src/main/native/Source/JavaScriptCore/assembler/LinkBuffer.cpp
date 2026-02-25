@@ -30,13 +30,17 @@
 
 #include "CodeBlock.h"
 #include "Disassembler.h"
+#include "GdbJIT.h"
 #include "JITCode.h"
 #include "Options.h"
 #include "PerfLog.h"
 #include "WasmCallee.h"
 #include "YarrJIT.h"
+#include <wtf/ScopedPrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -63,15 +67,18 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassembly
     ASSERT(m_didAllocate);
     CodeRef<LinkBufferPtrTag> codeRef(m_executableMemory ? CodeRef<LinkBufferPtrTag>(*m_executableMemory) : CodeRef<LinkBufferPtrTag>::createSelfManagedCodeRef(m_code));
 
-    if (UNLIKELY(Options::logJITCodeForPerf()))
-        logJITCodeForPerf(codeRef, simpleName);
+    logJITCodeForJITDump(codeRef, simpleName);
 
     return codeRef;
 }
 
-void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
+void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
 {
-#if OS(LINUX) || OS(DARWIN)
+    if (!Options::useJITDump() && !Options::useGdbJITInfo()) [[likely]]
+        return;
+    if (m_isRewriting)
+        return;
+
     auto dumpSimpleName = [&](StringPrintStream& out, ASCIILiteral simpleName) {
         if (simpleName.isNull())
             out.print("unspecified");
@@ -80,7 +87,7 @@ void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILite
     };
 
         StringPrintStream out;
-    out.print(profileName(m_profile), ": ");
+    out.print("JSC-", profileName(m_profile), ": ");
     switch (m_profile) {
     case Profile::Baseline:
     case Profile::DFG:
@@ -114,12 +121,13 @@ void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILite
         dumpSimpleName(out, simpleName);
         break;
     }
-    if (!m_isRewriting)
-        PerfLog::log(out.toCString(), codeRef.code().untaggedPtr<const uint8_t*>(), codeRef.size());
-#else
-    UNUSED_PARAM(codeRef);
-    UNUSED_PARAM(simpleName);
-#endif
+    auto finalName = out.toCString();
+
+    if (Options::useGdbJITInfo()) [[unlikely]]
+        GdbJIT::log(finalName, codeRef);
+
+    if (Options::useJITDump()) [[unlikely]]
+        PerfLog::log(finalName, codeRef);
 }
 
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImpl(bool dumpDisassembly, ASCIILiteral simpleName, const char* format, ...)
@@ -131,7 +139,7 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
 
     bool justDumpingHeader = !dumpDisassembly || m_alreadyDisassembled;
 
-    StringPrintStream out;
+    ScopedPrintStream out;
     out.printf("Generated JIT code for ");
     va_list argList;
     va_start(argList, format);
@@ -142,13 +150,13 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
         size_t stringLength = vsnprintf(nullptr, 0, format, preflightArgs);
         va_end(preflightArgs);
 
-        const char prefix[] = "thunk: ";
-        char* buffer = 0;
-        size_t length = stringLength + sizeof(prefix);
+        constexpr auto prefix = "thunk: "_s;
+        std::span<char> buffer;
+        size_t length = stringLength + prefix.length() + 1;
         CString label = CString::newUninitialized(length, buffer);
-        snprintf(buffer, length, "%s", prefix);
-        vsnprintf(buffer + sizeof(prefix) - 1, stringLength + 1, format, argList);
-        out.printf("%s", buffer);
+        memcpySpan(buffer, prefix.span8());
+        vsnprintf(buffer.subspan(prefix.length()).data(), stringLength + 1, format, argList);
+        out.printf("%s", buffer.data());
 
         registerLabel(result.code().untaggedPtr(), WTFMove(label));
     } else
@@ -159,26 +167,16 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
     uint8_t* executableAddress = result.code().untaggedPtr<uint8_t*>();
     out.printf(": [%p, %p) %zu bytes%s\n", executableAddress, executableAddress + result.size(), result.size(), justDumpingHeader ? "." : ":");
 
-    CString header = out.toCString();
-
     if (justDumpingHeader) {
-        if (Options::logJIT())
-            dataLog(header);
+        if (!Options::logJIT())
+            out.reset();
         return result;
     }
 
     void* codeStart = entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    void* codeEnd = bitwise_cast<uint8_t*>(codeStart) + size();
+    void* codeEnd = std::bit_cast<uint8_t*>(codeStart) + size();
 
-    if (Options::asyncDisassembly()) {
-        CodeRef<DisassemblyPtrTag> codeRefForDisassembly = result.retagged<DisassemblyPtrTag>();
-        disassembleAsynchronously(header, WTFMove(codeRefForDisassembly), m_size, codeStart, codeEnd, "    ");
-        return result;
-    }
-
-    dataLog(header);
-    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, codeStart, codeEnd, "    ", WTF::dataFile());
-
+    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, codeStart, codeEnd, "    ", out);
     return result;
 }
 
@@ -276,7 +274,7 @@ private:
 static ALWAYS_INLINE void recordLinkOffsets(AssemblerData& assemblerData, int32_t regionStart, int32_t regionEnd, int32_t offset)
 {
 #if OS(DARWIN)
-    memset_pattern4(bitwise_cast<uint8_t*>(assemblerData.buffer()) + regionStart, &offset, regionEnd - regionStart);
+    memset_pattern4(std::bit_cast<uint8_t*>(assemblerData.buffer()) + regionStart, &offset, regionEnd - regionStart);
 #else
     int32_t ptr = regionStart / sizeof(int32_t);
     const int32_t end = regionEnd / sizeof(int32_t);
@@ -296,11 +294,11 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 
     auto& jumpsToLink = macroAssembler.jumpsToLink();
     m_assemblerStorage = macroAssembler.m_assembler.buffer().releaseAssemblerData();
-    uint8_t* inData = bitwise_cast<uint8_t*>(m_assemblerStorage.buffer());
+    uint8_t* inData = std::bit_cast<uint8_t*>(m_assemblerStorage.buffer());
 #if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
     ARM64EHash<ShouldSign::No> verifyUncompactedHash;
     m_assemblerHashesStorage = macroAssembler.m_assembler.buffer().releaseAssemblerHashes();
-    uint32_t* inHashes = bitwise_cast<uint32_t*>(m_assemblerHashesStorage.buffer());
+    uint32_t* inHashes = std::bit_cast<uint32_t*>(m_assemblerHashesStorage.buffer());
 #endif
 
     uint8_t* codeOutData = m_code.dataLocation<uint8_t*>();
@@ -320,7 +318,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
     auto read = [&](const InstructionType* ptr) -> InstructionType {
         InstructionType value = *ptr;
 #if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
-        unsigned index = (bitwise_cast<uint8_t*>(ptr) - inData) / 4;
+        unsigned index = (std::bit_cast<uint8_t*>(ptr) - inData) / 4;
         uint32_t hash = verifyUncompactedHash.update(value, index);
         RELEASE_ASSERT(inHashes[index] == hash);
 #endif
@@ -360,7 +358,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
             const uint8_t* target;
             const intptr_t to = linkRecord.to(&macroAssembler.m_assembler);
             if (linkRecord.isThunk())
-                target = bitwise_cast<uint8_t*>(to);
+                target = std::bit_cast<uint8_t*>(to);
             else if (to >= linkRecord.from())
                 target = codeOutData + to - offset; // Compensate for what we have collapsed so far
             else
@@ -387,13 +385,13 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 
     // Copy everything after the last jump
     {
-        InstructionType* dst = bitwise_cast<InstructionType*>(outData + writePtr);
-        InstructionType* src = bitwise_cast<InstructionType*>(inData + readPtr);
+        InstructionType* dst = std::bit_cast<InstructionType*>(outData + writePtr);
+        InstructionType* src = std::bit_cast<InstructionType*>(inData + readPtr);
         size_t bytes = initialSize - readPtr;
 
-        RELEASE_ASSERT(bitwise_cast<uintptr_t>(dst) % sizeof(InstructionType) == 0);
-        RELEASE_ASSERT(bitwise_cast<uintptr_t>(src) % sizeof(InstructionType) == 0);
-        RELEASE_ASSERT(bytes % sizeof(InstructionType) == 0);
+        RELEASE_ASSERT(!(std::bit_cast<uintptr_t>(dst) % sizeof(InstructionType)));
+        RELEASE_ASSERT(!(std::bit_cast<uintptr_t>(src) % sizeof(InstructionType)));
+        RELEASE_ASSERT(!(bytes % sizeof(InstructionType)));
 
         for (size_t i = 0; i < bytes; i += sizeof(InstructionType)) {
             InstructionType insn = read(src++);
@@ -410,7 +408,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
         const intptr_t to = linkRecord.to(&macroAssembler.m_assembler);
         uint8_t* target = nullptr;
         if (linkRecord.isThunk())
-            target = bitwise_cast<uint8_t*>(to);
+            target = std::bit_cast<uint8_t*>(to);
         else
             target = codeOutData + to - executableOffsetFor(to);
         if (g_jscConfig.useFastJITPermissions)
@@ -439,7 +437,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 #if ENABLE(JIT)
     if (g_jscConfig.useFastJITPermissions) {
         ASSERT(codeOutData == outData);
-        if (UNLIKELY(Options::dumpJITMemoryPath()))
+        if (Options::dumpJITMemoryPath()) [[unlikely]]
             dumpJITMemory(outData, outData, m_size);
     } else {
         ASSERT(codeOutData != outData);
@@ -469,7 +467,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     // Ensure that the end of the last invalidation point does not extend beyond the end of the buffer.
-    macroAssembler.padBeforePatch();
+    macroAssembler.label();
 
 #if ENABLE(JIT)
 #if !ENABLE(BRANCH_COMPACTION)
@@ -533,7 +531,9 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort e
 
 void LinkBuffer::linkComments(MacroAssembler& assembler)
 {
-    if (LIKELY(!Options::needDisassemblySupport()) || !m_executableMemory)
+    if (!Options::needDisassemblySupport()) [[likely]]
+        return;
+    if (!m_executableMemory)
         return;
     AssemblyCommentRegistry::CommentMap map;
     for (auto& comment : assembler.m_comments) {
@@ -685,5 +685,7 @@ void LinkBuffer::dumpProfileStatistics(std::optional<PrintStream*> outStream)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

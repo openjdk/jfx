@@ -29,10 +29,11 @@
 #include "Document.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -107,7 +108,7 @@ void MockPageOverlayClient::drawRect(PageOverlay& overlay, GraphicsContext& cont
 bool MockPageOverlayClient::mouseEvent(PageOverlay& overlay, const PlatformMouseEvent& event)
 {
     if (auto* localMainFrame = dynamicDowncast<LocalFrame>(overlay.page()->mainFrame())) {
-        localMainFrame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Debug,
+        localMainFrame->protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Debug,
             makeString("MockPageOverlayClient::mouseEvent location ("_s, event.position().x(), ", "_s, event.position().y(), ')'));
     }
     return false;

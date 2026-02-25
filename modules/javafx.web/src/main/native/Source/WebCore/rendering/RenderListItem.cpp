@@ -24,6 +24,7 @@
 #include "config.h"
 #include "RenderListItem.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSFontSelector.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
@@ -34,6 +35,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
@@ -80,7 +82,6 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     auto fontDescription = style().fontDescription();
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
     markerStyle.setFontDescription(WTFMove(fontDescription));
-    markerStyle.fontCascade().update(&document().fontSelector());
     markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
     markerStyle.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
     markerStyle.setTextWrapMode(TextWrapMode::NoWrap);
@@ -96,9 +97,9 @@ bool isHTMLListElement(const Node& node)
 // Returns the enclosing list with respect to the DOM order.
 static Element* enclosingList(const RenderListItem& listItem)
 {
-    auto& element = listItem.element();
+    auto* element = listItem.element();
     auto* pseudoElement = dynamicDowncast<PseudoElement>(element);
-    auto* parent = pseudoElement ? pseudoElement->hostElement() : element.parentElement();
+    auto* parent = pseudoElement ? pseudoElement->hostElement() : element->parentElement();
     for (auto* ancestor = parent; ancestor; ancestor = ancestor->parentElement()) {
         if (isHTMLListElement(*ancestor) || (ancestor->renderer() && ancestor->renderer()->shouldApplyStyleContainment()))
             return ancestor;
@@ -145,7 +146,7 @@ static RenderListItem* nextListItemHelper(const Element& list, const Element& el
 
 static inline RenderListItem* nextListItem(const Element& list, const RenderListItem& item)
 {
-    return nextListItemHelper(list, item.element());
+    return nextListItemHelper(list, *item.element());
 }
 
 static inline RenderListItem* firstListItem(const Element& list)
@@ -155,7 +156,7 @@ static inline RenderListItem* firstListItem(const Element& list)
 
 static RenderListItem* previousListItem(const Element& list, const RenderListItem& item)
 {
-    auto* current = &item.element();
+    auto* current = item.element();
     auto advance = [&] {
         current = ElementTraversal::previousIncludingPseudo(*current, &list);
     };
@@ -257,32 +258,22 @@ void RenderListItem::updateValue()
 {
         m_value = std::nullopt;
         if (m_marker)
-            m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 }
 
 void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
 
-    if (!oldStyle || oldStyle->counterDirectives().map.get("list-item"_s) == style().counterDirectives().map.get("list-item"_s))
-        return;
-
+    if (diff == StyleDifference::Layout && oldStyle && oldStyle->counterDirectives().map.get("list-item"_s) != style().counterDirectives().map.get("list-item"_s))
     counterDirectivesChanged();
-}
-
-void RenderListItem::layout()
-{
-    StackStats::LayoutCheckPoint layoutCheckPoint;
-    ASSERT(needsLayout());
-
-    RenderBlockFlow::layout();
 }
 
 void RenderListItem::computePreferredLogicalWidths()
 {
-    // FIXME: RenderListMarker::updateMargins() mutates margin style which affects preferred widths.
-    if (m_marker && m_marker->preferredLogicalWidthsDirty())
-        m_marker->updateMarginsAndContent();
+    // FIXME: RenderListMarker::updateInlineMargins() mutates margin style which affects preferred widths.
+    if (m_marker && m_marker->needsPreferredLogicalWidthsUpdate())
+        m_marker->updateInlineMarginsAndContent();
 
     RenderBlockFlow::computePreferredLogicalWidths();
 }
@@ -295,14 +286,14 @@ void RenderListItem::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     RenderBlockFlow::paint(paintInfo, paintOffset);
 }
 
-StringView RenderListItem::markerTextWithoutSuffix() const
+String RenderListItem::markerTextWithoutSuffix() const
 {
     if (!m_marker)
         return { };
     return m_marker->textWithoutSuffix();
 }
 
-StringView RenderListItem::markerTextWithSuffix() const
+String RenderListItem::markerTextWithSuffix() const
 {
     if (!m_marker)
         return { };
@@ -312,7 +303,7 @@ StringView RenderListItem::markerTextWithSuffix() const
 void RenderListItem::counterDirectivesChanged()
 {
     if (m_marker)
-        m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 
     updateValue();
     auto* list = enclosingList(*this);

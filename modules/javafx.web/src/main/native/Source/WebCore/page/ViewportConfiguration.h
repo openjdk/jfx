@@ -31,6 +31,7 @@
 #include "ViewportArguments.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -39,7 +40,8 @@ class TextStream;
 namespace WebCore {
 
 class ViewportConfiguration {
-    WTF_MAKE_NONCOPYABLE(ViewportConfiguration); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ViewportConfiguration);
+    WTF_MAKE_NONCOPYABLE(ViewportConfiguration);
 public:
     // FIXME: unify with ViewportArguments.
     struct Parameters {
@@ -58,6 +60,9 @@ public:
         bool initialScaleIsSet { false };
 
         bool ignoreInitialScaleForLayoutWidth { false };
+
+        bool shouldHonorMinimumEffectiveDeviceWidthFromClient { true };
+        bool minimumScaleDoesNotAdaptToContent { false };
 
         friend bool operator==(const Parameters&, const Parameters&) = default;
     };
@@ -126,6 +131,7 @@ public:
 
     void setPrefersHorizontalScrollingBelowDesktopViewportWidths(bool value) { m_prefersHorizontalScrollingBelowDesktopViewportWidths = value; }
     void setCanIgnoreViewportArgumentsToAvoidExcessiveZoom(bool value) { m_canIgnoreViewportArgumentsToAvoidExcessiveZoom = value; }
+    void setCanIgnoreViewportArgumentsToAvoidEnlargedView(bool value) { m_canIgnoreViewportArgumentsToAvoidEnlargedView = value; }
 
     WEBCORE_EXPORT IntSize layoutSize() const;
     WEBCORE_EXPORT int layoutWidth() const;
@@ -143,6 +149,9 @@ public:
     WEBCORE_EXPORT Parameters nativeWebpageParameters();
     static Parameters nativeWebpageParametersWithoutShrinkToFit();
     static Parameters nativeWebpageParametersWithShrinkToFit();
+#if ENABLE(PDF_PLUGIN)
+    WEBCORE_EXPORT static Parameters pluginDocumentParameters();
+#endif
     WEBCORE_EXPORT static Parameters webpageParameters();
     WEBCORE_EXPORT static Parameters textDocumentParameters();
     WEBCORE_EXPORT static Parameters imageDocumentParameters();
@@ -175,13 +184,13 @@ private:
     constexpr double forceAlwaysUserScalableMaximumScale() const
     {
         const double forceAlwaysUserScalableMaximumScaleIgnoringLayoutScaleFactor = 5;
-        return forceAlwaysUserScalableMaximumScaleIgnoringLayoutScaleFactor * effectiveLayoutSizeScaleFactor();
+        return std::max(m_configuration.maximumScale, forceAlwaysUserScalableMaximumScaleIgnoringLayoutScaleFactor) * effectiveLayoutSizeScaleFactor();
     }
 
     constexpr double forceAlwaysUserScalableMinimumScale() const
     {
         const double forceAlwaysUserScalableMinimumScaleIgnoringLayoutScaleFactor = 1;
-        return forceAlwaysUserScalableMinimumScaleIgnoringLayoutScaleFactor * effectiveLayoutSizeScaleFactor();
+        return std::min(m_configuration.minimumScale, forceAlwaysUserScalableMinimumScaleIgnoringLayoutScaleFactor) * effectiveLayoutSizeScaleFactor();
     }
 
     constexpr double effectiveLayoutSizeScaleFactor() const
@@ -210,6 +219,8 @@ private:
     bool m_isKnownToLayOutWiderThanViewport { false };
     bool m_prefersHorizontalScrollingBelowDesktopViewportWidths { false };
     bool m_canIgnoreViewportArgumentsToAvoidExcessiveZoom { false };
+    bool m_canIgnoreViewportArgumentsToAvoidEnlargedView { false };
+    bool m_minimumEffectiveDeviceWidthWasSetByClient { false };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ViewportConfiguration::Parameters&);

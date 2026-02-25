@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,10 @@
 #include <mutex>
 #include <wtf/MainThread.h>
 
+#if PLATFORM(COCOA)
+#include "objc_runtime.h"
+#endif
+
 namespace WebCore {
 using namespace JSC;
 
@@ -65,6 +69,9 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
 
 JSHeapData::JSHeapData(Heap& heap)
     : m_runtimeArrayHeapCellType(JSC::IsoHeapCellType::Args<RuntimeArray>())
+#if PLATFORM(COCOA)
+    , m_objcFallbackObjectImpHeapCellType(JSC::IsoHeapCellType::Args<JSC::Bindings::ObjcFallbackObjectImp>())
+#endif
     , m_observableArrayHeapCellType(JSC::IsoHeapCellType::Args<JSObservableArray>())
     , m_runtimeObjectHeapCellType(JSC::IsoHeapCellType::Args<JSC::Bindings::RuntimeObject>())
     , m_windowProxyHeapCellType(JSC::IsoHeapCellType::Args<JSWindowProxy>())
@@ -85,12 +92,15 @@ JSHeapData::JSHeapData(Heap& heap)
     , m_domNamespaceObjectSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, JSDOMObject)
     , m_domWindowPropertiesSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, JSDOMWindowProperties)
     , m_runtimeArraySpace ISO_SUBSPACE_INIT(heap, m_runtimeArrayHeapCellType, RuntimeArray)
+#if PLATFORM(COCOA)
+    , m_objcFallbackObjectImpSpace ISO_SUBSPACE_INIT(heap, m_objcFallbackObjectImpHeapCellType, JSC::Bindings::ObjcFallbackObjectImp)
+#endif
     , m_observableArraySpace ISO_SUBSPACE_INIT(heap, m_observableArrayHeapCellType, JSObservableArray)
     , m_runtimeMethodSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, RuntimeMethod) // Hash:0xf70c4a85
     , m_runtimeObjectSpace ISO_SUBSPACE_INIT(heap, m_runtimeObjectHeapCellType, JSC::Bindings::RuntimeObject)
     , m_windowProxySpace ISO_SUBSPACE_INIT(heap, m_windowProxyHeapCellType, JSWindowProxy)
     , m_idbSerializationSpace ISO_SUBSPACE_INIT(heap, m_heapCellTypeForJSIDBSerializationGlobalObject, JSIDBSerializationGlobalObject)
-    , m_subspaces(makeUnique<ExtendedDOMIsoSubspaces>())
+    , m_subspaces(makeUniqueRef<ExtendedDOMIsoSubspaces>())
 {
 }
 
@@ -120,12 +130,15 @@ JSVMClientData::JSVMClientData(VM& vm)
     , CLIENT_ISO_SUBSPACE_INIT(m_domNamespaceObjectSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_domWindowPropertiesSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeArraySpace)
+#if PLATFORM(COCOA)
+    , CLIENT_ISO_SUBSPACE_INIT(m_objcFallbackObjectImpSpace)
+#endif
     , CLIENT_ISO_SUBSPACE_INIT(m_observableArraySpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeMethodSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeObjectSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_windowProxySpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_idbSerializationSpace)
-    , m_clientSubspaces(makeUnique<ExtendedDOMClientIsoSubspaces>())
+    , m_clientSubspaces(makeUniqueRef<ExtendedDOMClientIsoSubspaces>())
 {
 }
 
@@ -155,26 +168,26 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
     // is ready to start evaluating JavaScript. For example, Web Inspector waits for the main world
     // change to clear any injected scripts and debugger/breakpoint state.
 
-    auto& mainNormalWorld = mainThreadNormalWorld();
+    auto& mainNormalWorld = mainThreadNormalWorldSingleton();
 
     // Add main normal world.
     if (m_worldSet.contains(&mainNormalWorld))
         worlds.append(mainNormalWorld);
 
     // Add other normal worlds.
-    for (auto* world : m_worldSet) {
+    for (RefPtr world : m_worldSet) {
         if (world->type() != DOMWrapperWorld::Type::Normal)
             continue;
         if (world == &mainNormalWorld)
             continue;
-        worlds.append(*world);
+        worlds.append(world.releaseNonNull());
     }
 
     // Add non-normal worlds.
-    for (auto* world : m_worldSet) {
+    for (RefPtr world : m_worldSet) {
         if (world->type() == DOMWrapperWorld::Type::Normal)
             continue;
-        worlds.append(*world);
+        worlds.append(world.releaseNonNull());
     }
 }
 
@@ -201,7 +214,7 @@ String JSVMClientData::overrideSourceURL(const JSC::StackFrame& frame, const Str
     if (!globalObject->inherits<JSDOMWindowBase>())
         return nullString();
 
-    auto* document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal();
+    RefPtr document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().documentIfLocal();
     if (!document)
         return nullString();
 

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(RISCV64)
 
 #include "AbstractMacroAssembler.h"
@@ -655,6 +657,14 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void lshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        move(imm, temp.data());
+        m_assembler.sllwInsn(dest, temp.data(), shiftAmount);
+        m_assembler.maskRegister<32>(dest);
+    }
+
     void lshift32(Address src, RegisterID shiftAmount, RegisterID dest)
     {
         auto temp = temps<Data>();
@@ -672,6 +682,13 @@ public:
         m_assembler.sllInsn(dest, src, shiftAmount);
     }
 
+    void lshift64(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        move(imm, temp.data());
+        lshift64(temp.data(), shiftAmount, dest);
+    }
+
     void lshift64(TrustedImm32 shiftAmount, RegisterID dest)
     {
         lshift64(dest, shiftAmount, dest);
@@ -679,7 +696,7 @@ public:
 
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.slliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
@@ -713,6 +730,14 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void rshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        move(imm, temp.data());
+        m_assembler.srawInsn(dest, temp.data(), shiftAmount);
+        m_assembler.maskRegister<32>(dest);
+    }
+
     void rshift64(RegisterID shiftAmount, RegisterID dest)
     {
         rshift64(dest, shiftAmount, dest);
@@ -730,7 +755,7 @@ public:
 
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.sraiInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
@@ -754,6 +779,14 @@ public:
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.srliwInsn(dest, src, uint32_t(imm.m_value & ((1 << 5) - 1)));
+        m_assembler.maskRegister<32>(dest);
+    }
+
+    void urshift32(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        move(imm, temp.data());
+        m_assembler.srlwInsn(dest, temp.data(), shiftAmount);
         m_assembler.maskRegister<32>(dest);
     }
 
@@ -781,7 +814,7 @@ public:
 
     void urshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        if (UNLIKELY(!imm.m_value))
+        if (!imm.m_value) [[unlikely]]
             return move(src, dest);
         m_assembler.srliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
     }
@@ -1444,6 +1477,9 @@ public:
 
     void and32(TrustedImm32 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return zeroExtend32ToWord(op2, dest);
+
         if (!Imm::isValid<Imm::IType>(imm.m_value)) {
             auto temp = temps<Data>();
             loadImmediate(imm, temp.data());
@@ -1479,6 +1515,9 @@ public:
 
     void and64(TrustedImm32 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(op2, dest);
+
         if (Imm::isValid<Imm::IType>(imm.m_value)) {
             m_assembler.andiInsn(dest, op2, Imm::I(imm.m_value));
             return;
@@ -1496,6 +1535,9 @@ public:
 
     void and64(TrustedImm64 imm, RegisterID op2, RegisterID dest)
     {
+        if (imm.m_value == -1)
+            return move(op2, dest);
+
         if (Imm::isValid<Imm::IType>(imm.m_value)) {
             m_assembler.andiInsn(dest, op2, Imm::I(imm.m_value));
             return;
@@ -1846,6 +1888,26 @@ public:
     void move(TrustedImmPtr imm, RegisterID dest)
     {
         loadImmediate(imm, dest);
+    }
+
+    void move32ToFloat(TrustedImm32 imm, FPRegisterID dest)
+    {
+        if (!imm.m_value) {
+            moveZeroToFloat(dest);
+            return;
+        }
+        move(imm, scratchRegister());
+        move32ToFloat(scratchRegister(), dest);
+    }
+
+    void move64ToDouble(TrustedImm64 imm, FPRegisterID dest)
+    {
+        if (!imm.m_value) {
+            moveZeroToDouble(dest);
+            return;
+        }
+        move(imm, scratchRegister());
+        move64ToDouble(scratchRegister(), dest);
     }
 
     void swap(RegisterID reg1, RegisterID reg2)
@@ -3372,6 +3434,16 @@ public:
         roundFP<64, RISCV64Assembler::FPRoundingMode::RDN>(src, dest);
     }
 
+    void truncDouble(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroDouble(src, dst);
+    }
+
+    void truncFloat(FPRegisterID src, FPRegisterID dst)
+    {
+        roundTowardZeroFloat(src, dst);
+    }
+
     void roundTowardNearestIntFloat(FPRegisterID src, FPRegisterID dest)
     {
         roundFP<32, RISCV64Assembler::FPRoundingMode::RNE>(src, dest);
@@ -4152,65 +4224,76 @@ public:
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void loadFloat16(BaseIndex address, FPRegisterID dest)
     {
         UNUSED_PARAM(address);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void loadFloat16(TrustedImmPtr address, FPRegisterID dest)
     {
         UNUSED_PARAM(address);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void storeFloat16(FPRegisterID src, Address address)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(address);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void storeFloat16(FPRegisterID src, BaseIndex address)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(address);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void convertFloat16ToDouble(FPRegisterID src, FPRegisterID dest)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void convertDoubleToFloat16(FPRegisterID src, FPRegisterID dest)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void moveZeroToFloat16(FPRegisterID reg)
     {
         UNUSED_PARAM(reg);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void move16ToFloat16(RegisterID src, FPRegisterID dest)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void move16ToFloat16(TrustedImm32 imm, FPRegisterID dest)
     {
         UNUSED_PARAM(imm);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
     void moveFloat16To16(FPRegisterID src, RegisterID dest)
     {
         UNUSED_PARAM(src);
         UNUSED_PARAM(dest);
         UNREACHABLE_FOR_PLATFORM();
     }
+
 private:
     enum class ArithmeticOperation {
         Addition,
@@ -4784,16 +4867,6 @@ private:
 
         end.link(this);
     }
-
-
-
-
-
-
-
-
-
-
 
 };
 

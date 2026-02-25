@@ -25,7 +25,10 @@
 #include "ExceptionHelpers.h"
 #include "JSBigInt.h"
 #include "JSGlobalObject.h"
+#include "JSString.h"
 #include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -150,10 +153,10 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, JSS
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    unsigned length1 = s1->length();
+    unsigned length1 = s1 ? s1->length() : 0;
     if (!length1)
         return s2;
-    unsigned length2 = s2->length();
+    unsigned length2 = s2 ? s2->length() : 0;
     if (!length2)
         return s1;
     static_assert(JSString::MaxLength == std::numeric_limits<int32_t>::max());
@@ -170,15 +173,15 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, JSS
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    unsigned length1 = s1->length();
+    unsigned length1 = s1 ? s1->length() : 0;
     if (!length1)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s2, s3));
 
-    unsigned length2 = s2->length();
+    unsigned length2 = s2 ? s2->length() : 0;
     if (!length2)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s1, s3));
 
-    unsigned length3 = s3->length();
+    unsigned length3 = s3 ? s3->length() : 0;
     if (!length3)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s1, s2));
 
@@ -551,7 +554,7 @@ ALWAYS_INLINE JSValue jsAddNonNumber(JSGlobalObject* globalObject, JSValue v1, J
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(!v1.isNumber() || !v2.isNumber());
 
-    if (LIKELY(v1.isString() && !v2.isObject())) {
+    if (v1.isString() && !v2.isObject()) [[likely]] {
         if (v2.isString())
             RELEASE_AND_RETURN(scope, jsString(globalObject, asString(v1), asString(v2)));
         String s2 = v2.toWTFString(globalObject);
@@ -805,7 +808,7 @@ ALWAYS_INLINE JSValue jsURShift(JSGlobalObject* globalObject, JSValue left, JSVa
     std::optional<uint32_t> rightUint32 = right.toUInt32AfterToNumeric(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!leftUint32 || !rightUint32)) {
+    if (!leftUint32 || !rightUint32) [[unlikely]] {
         throwTypeError(globalObject, scope, "BigInt does not support >>> operator"_s);
         return { };
     }
@@ -913,3 +916,5 @@ ALWAYS_INLINE EncodedJSValue getByValWithIndex(JSGlobalObject* globalObject, JSC
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

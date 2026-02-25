@@ -34,8 +34,11 @@
 #include "Navigator.h"
 #include "Page.h"
 #include "RequestCookieConsentOptions.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorCookieConsent);
 
 void NavigatorCookieConsent::requestCookieConsent(Navigator& navigator, RequestCookieConsentOptions&& options, Ref<DeferredPromise>&& promise)
 {
@@ -47,7 +50,7 @@ void NavigatorCookieConsent::requestCookieConsent(RequestCookieConsentOptions&& 
     // FIXME: Support the 'More info' option.
     UNUSED_PARAM(options);
 
-    RefPtr frame = m_navigator.frame();
+    RefPtr frame = m_navigator->frame();
     if (!frame || !frame->isMainFrame() || !frame->page()) {
         promise->reject(ExceptionCode::NotAllowedError);
         return;
@@ -70,7 +73,7 @@ void NavigatorCookieConsent::requestCookieConsent(RequestCookieConsentOptions&& 
 
 NavigatorCookieConsent& NavigatorCookieConsent::from(Navigator& navigator)
 {
-    if (auto supplement = static_cast<NavigatorCookieConsent*>(Supplement<Navigator>::from(&navigator, supplementName())))
+    if (auto supplement = downcast<NavigatorCookieConsent>(Supplement<Navigator>::from(&navigator, supplementName())))
         return *supplement;
 
     auto newSupplement = makeUnique<NavigatorCookieConsent>(navigator);

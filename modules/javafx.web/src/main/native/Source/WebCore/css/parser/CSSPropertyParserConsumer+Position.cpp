@@ -27,9 +27,14 @@
 
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
+#include "CSSPositionValue.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
@@ -38,242 +43,662 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
+using namespace CSS::Literals;
+
 // MARK: <position>
 // https://drafts.csswg.org/css-values/#position
 
-// <position> = [
-//   [ left | center | right ] || [ top | center | bottom ]
-// |
-//   [ left | center | right | <length-percentage> ]
-//   [ top | center | bottom | <length-percentage> ]?
-// |
-//   [ [ left | right ] <length-percentage> ] &&
-//   [ [ top | bottom ] <length-percentage> ]
+// <position> = <position-one> | <position-two> | <position-four>
 
 // MARK: <bg-position>
 // https://drafts.csswg.org/css-backgrounds-3/#propdef-background-position
 
 // background-position has special parsing rules, allowing a 3-value syntax:
 //
-// <bg-position> =  [ left | center | right | top | bottom | <length-percentage> ]
+// <bg-position> = <position-one> | <position-two> | <bg-position-three> | <position-four>
+
+// Sub-productions
+
+// <position-one> = [ left | center | right | top | bottom | x-start | x-end | y-start | y-end | <length-percentage> ]
+//
+// <position-two> = [
+//   [ left | center | right | x-start | x-end ] &&
+//   [ top | center | bottom | y-start | y-end ]
 // |
-//   [ left | center | right | <length-percentage> ]
-//   [ top | center | bottom | <length-percentage> ]
+//   [ left | center | right | x-start | x-end | <length-percentage> ]
+//   [ top | center | bottom | y-start | y-end | <length-percentage> ]
+// ]
+//
+// <bg-position-three> = [
+//   [ [        left |  right | x-start | x-end ] <length-percentage> ] &&
+//   [ center |  top | bottom | y-start | y-end ]
 // |
-//   [ center | [ left | right ] <length-percentage>? ] &&
-//   [ center | [ top | bottom ] <length-percentage>? ]
+//   [ center | left |  right | x-start | x-end ] &&
+//   [ [         top | bottom | y-start | y-end ] <length-percentage> ]
+// ]
+//
+// <position-four> = [
+//   [ [ left | right | x-start | x-end ] <length-percentage> ] &&
+//   [ [ top | bottom | y-start | y-end ] <length-percentage> ]
+// ]
 
-static RefPtr<CSSPrimitiveValue> consumePositionComponent(CSSParserTokenRange& range, CSSParserMode parserMode, UnitlessQuirk unitless, NegativePercentagePolicy negativePercentagePolicy = NegativePercentagePolicy::Forbid)
+// MARK: Unresolved Position
+
+using PositionUnresolvedComponent = Variant<
+    // Horizontal
+    CSS::Keyword::Left,
+    CSS::Keyword::Right,
+    CSS::Keyword::XStart,
+    CSS::Keyword::XEnd,
+
+    // Vertical
+    CSS::Keyword::Top,
+    CSS::Keyword::Bottom,
+    CSS::Keyword::YStart,
+    CSS::Keyword::YEnd,
+
+    // Any Axis
+    CSS::Keyword::Center,
+    CSS::LengthPercentage<>
+>;
+
+// MARK: Predicate matching concepts
+
+template<typename T> concept IsHorizontalOnlyComponent =
+       std::same_as<T, CSS::Keyword::Left>
+    || std::same_as<T, CSS::Keyword::Right>
+    || std::same_as<T, CSS::Keyword::XStart>
+    || std::same_as<T, CSS::Keyword::XEnd>;
+
+template<typename T> concept IsHorizontalSecondComponent =
+       IsHorizontalOnlyComponent<T>
+    || std::same_as<T, CSS::Keyword::Center>;
+
+template<typename T> concept IsVerticalOnlyComponent =
+       std::same_as<T, CSS::Keyword::Top>
+    || std::same_as<T, CSS::Keyword::Bottom>
+    || std::same_as<T, CSS::Keyword::YStart>
+    || std::same_as<T, CSS::Keyword::YEnd>;
+
+template<typename T> concept IsVerticalSecondComponent =
+       IsVerticalOnlyComponent<T>
+    || std::same_as<T, CSS::Keyword::Center>
+    || std::same_as<T, CSS::LengthPercentage<>>;
+
+static std::optional<PositionUnresolvedComponent> consumePositionUnresolvedComponent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    if (range.peek().type() == IdentToken)
-        return consumeIdent<CSSValueLeft, CSSValueTop, CSSValueBottom, CSSValueRight, CSSValueCenter>(range);
-    return consumeLengthOrPercent(range, parserMode, ValueRange::All, unitless, UnitlessZeroQuirk::Allow, negativePercentagePolicy);
-}
-
-static bool isHorizontalPositionKeywordOnly(const CSSPrimitiveValue& value)
-{
-    return value.isValueID() && (value.valueID() == CSSValueLeft || value.valueID() == CSSValueRight);
-}
-
-static bool isVerticalPositionKeywordOnly(const CSSPrimitiveValue& value)
-{
-    return value.isValueID() && (value.valueID() == CSSValueTop || value.valueID() == CSSValueBottom);
-}
-
-static PositionCoordinates positionFromOneValue(CSSPrimitiveValue& value)
-{
-    bool valueAppliesToYAxisOnly = isVerticalPositionKeywordOnly(value);
-    if (valueAppliesToYAxisOnly)
-        return { CSSPrimitiveValue::create(CSSValueCenter), value };
-    return { value, CSSPrimitiveValue::create(CSSValueCenter) };
-}
-
-static std::optional<PositionCoordinates> positionFromTwoValues(CSSPrimitiveValue& value1, CSSPrimitiveValue& value2)
-{
-    bool mustOrderAsXY = isHorizontalPositionKeywordOnly(value1) || isVerticalPositionKeywordOnly(value2) || !value1.isValueID() || !value2.isValueID();
-    bool mustOrderAsYX = isVerticalPositionKeywordOnly(value1) || isHorizontalPositionKeywordOnly(value2);
-    if (mustOrderAsXY && mustOrderAsYX)
-        return std::nullopt;
-    if (mustOrderAsYX)
-        return PositionCoordinates { value2, value1 };
-    return PositionCoordinates { value1, value2 };
-}
-
-static std::optional<PositionCoordinates> backgroundPositionFromThreeValues(std::array<RefPtr<CSSPrimitiveValue>, 5>&& values)
-{
-    RefPtr<CSSValue> resultX;
-    RefPtr<CSSValue> resultY;
-
-    RefPtr<CSSPrimitiveValue> center;
-    for (int i = 0; values[i]; ++i) {
-        auto& currentValue = values[i];
-        if (!currentValue->isValueID())
-            return std::nullopt;
-
-        auto id = currentValue->valueID();
-        if (id == CSSValueCenter) {
-            if (center)
-                return std::nullopt;
-            center = WTFMove(currentValue);
-            continue;
-        }
-
-        RefPtr<CSSValue> result;
-        if (auto& nextValue = values[i + 1]; nextValue && !nextValue->isValueID()) {
-            result = CSSValuePair::create(currentValue.releaseNonNull(), nextValue.releaseNonNull());
-            ++i;
-        } else
-            result = WTFMove(currentValue);
-
-        if (id == CSSValueLeft || id == CSSValueRight) {
-            if (resultX)
-                return std::nullopt;
-            resultX = result;
-        } else {
-            ASSERT(id == CSSValueTop || id == CSSValueBottom);
-            if (resultY)
-                return std::nullopt;
-            resultY = result;
-        }
-    }
-
-    if (center) {
-        ASSERT(resultX || resultY);
-        if (resultX && resultY)
-            return std::nullopt;
-        if (!resultX)
-            resultX = WTFMove(center);
-        else
-            resultY = WTFMove(center);
-    }
-
-    return { { resultX.releaseNonNull(), resultY.releaseNonNull() } };
-}
-
-static std::optional<PositionCoordinates> positionFromFourValues(std::array<RefPtr<CSSPrimitiveValue>, 5>&& values)
-{
-    RefPtr<CSSValue> resultX;
-    RefPtr<CSSValue> resultY;
-
-    for (int i = 0; values[i]; ++i) {
-        auto& currentValue = values[i];
-        if (!currentValue->isValueID())
-            return std::nullopt;
-
-        auto id = currentValue->valueID();
-        if (id == CSSValueCenter)
-            return std::nullopt;
-
-        RefPtr<CSSValue> result;
-        if (auto& nextValue = values[i + 1]; nextValue && !nextValue->isValueID()) {
-            result = CSSValuePair::create(currentValue.releaseNonNull(), nextValue.releaseNonNull());
-            ++i;
-        } else
-            result = WTFMove(currentValue);
-
-        if (id == CSSValueLeft || id == CSSValueRight) {
-            if (resultX)
-                return std::nullopt;
-            resultX = result;
-        } else {
-            ASSERT(id == CSSValueTop || id == CSSValueBottom);
-            if (resultY)
-                return std::nullopt;
-            resultY = result;
+    if (range.peek().type() == IdentToken) {
+        switch (range.peek().id()) {
+        case CSSValueLeft:
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::Left { } };
+        case CSSValueRight:
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::Right { } };
+        case CSSValueXStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::XStart { } };
+        case CSSValueXEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::XEnd { } };
+        case CSSValueBottom:
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::Bottom { } };
+        case CSSValueTop:
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::Top { } };
+        case CSSValueYStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::YStart { } };
+        case CSSValueYEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::YEnd { } };
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return PositionUnresolvedComponent { CSS::Keyword::Center { } };
+        default:
+            return { };
         }
     }
 
-    return PositionCoordinates { resultX.releaseNonNull(), resultY.releaseNonNull() };
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+        return PositionUnresolvedComponent { WTFMove(*lengthPercentage) };
+    return { };
 }
 
-// FIXME: This may consume from the range upon failure. The background
-// shorthand works around it, but we should just fix it here.
-std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange& range, CSSParserMode parserMode, UnitlessQuirk unitless, PositionSyntax positionSyntax, NegativePercentagePolicy negativePercentagePolicy)
+static std::optional<CSS::Position> positionUnresolvedFromOneComponent(PositionUnresolvedComponent&& component)
 {
-    auto value1 = consumePositionComponent(range, parserMode, unitless, negativePercentagePolicy);
-    if (!value1)
-        return std::nullopt;
+    // <position-one> = [ left | center | right | top | bottom | x-start | x-end | y-start | y-end | <length-percentage> ]
 
-    auto value2 = consumePositionComponent(range, parserMode, unitless, negativePercentagePolicy);
-    if (!value2)
-        return positionFromOneValue(*value1);
-
-    auto value3 = consumePositionComponent(range, parserMode, unitless, negativePercentagePolicy);
-    if (!value3)
-        return positionFromTwoValues(*value1, *value2);
-
-    auto value4 = consumePositionComponent(range, parserMode, unitless, negativePercentagePolicy);
-
-    std::array<RefPtr<CSSPrimitiveValue>, 5> values {
-        WTFMove(value1),
-        WTFMove(value2),
-        WTFMove(value3),
-        value4.copyRef(),
-        nullptr
-    };
-
-    if (value4)
-        return positionFromFourValues(WTFMove(values));
-
-    if (positionSyntax != PositionSyntax::BackgroundPosition)
-        return std::nullopt;
-
-    return backgroundPositionFromThreeValues(WTFMove(values));
+    return WTF::switchOn(WTFMove(component),
+        []<IsHorizontalOnlyComponent C>(C&& component) -> std::optional<CSS::Position> {
+            return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component) }, { CSS::Keyword::Center { } } };
+        },
+        []<IsVerticalOnlyComponent C>(C&& component) -> std::optional<CSS::Position> {
+            return CSS::TwoComponentPositionHorizontalVertical { { CSS::Keyword::Center { } }, { WTFMove(component) } };
+        },
+        [](CSS::Keyword::Center&&) -> std::optional<CSS::Position> {
+            return CSS::TwoComponentPositionHorizontalVertical { { CSS::Keyword::Center { } }, { CSS::Keyword::Center { } } };
+        },
+        [](CSS::LengthPercentage<>&& component) -> std::optional<CSS::Position> {
+            return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component) }, { CSS::Keyword::Center { } } };
+        }
+    );
 }
 
-RefPtr<CSSValue> consumePosition(CSSParserTokenRange& range, CSSParserMode parserMode, UnitlessQuirk unitless, PositionSyntax positionSyntax)
+static std::optional<CSS::Position> positionUnresolvedFromTwoComponents(PositionUnresolvedComponent&& component1, PositionUnresolvedComponent&& component2)
 {
-    if (auto coordinates = consumePositionCoordinates(range, parserMode, unitless, positionSyntax))
-        return CSSValuePair::createNoncoalescing(WTFMove(coordinates->x), WTFMove(coordinates->y));
+    // <position-two> = [
+    //   [ left | center | right | x-start | x-end ] &&
+    //   [ top | center | bottom | y-start | y-end ]
+    // |
+    //   [ left | center | right | x-start | x-end | <length-percentage> ]
+    //   [ top | center | bottom | y-start | y-end | <length-percentage> ]
+    // ]
+
+    return WTF::switchOn(WTFMove(component1),
+        [&]<IsHorizontalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component2` must be in the set [ top | center | bottom | y-start | y-end | <length-percentage> ]
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsVerticalSecondComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component1) }, { WTFMove(component2) } };
+                },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&]<IsVerticalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component2` must be in the set [ left | center | right | x-start | x-end ] (NOTE: <length-percentage> is NOT allowed).
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsHorizontalSecondComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component2) }, { WTFMove(component1) } };
+        },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&](CSS::Keyword::Center&& component1) -> std::optional<CSS::Position> {
+            // `component2` can be anything.
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsHorizontalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component2) }, { WTFMove(component1) } };
+        },
+                [&]<IsVerticalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component1) }, { WTFMove(component2) } };
+        },
+                [&](CSS::Keyword::Center&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component1) }, { WTFMove(component2) } };
+                },
+                [&](CSS::LengthPercentage<>&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component1) }, { WTFMove(component2) } };
+        }
+    );
+        },
+        [&](CSS::LengthPercentage<>&& component1) -> std::optional<CSS::Position> {
+            // `component2` must be in the set [ top | center | bottom | y-start | y-end | <length-percentage> ]
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsVerticalSecondComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::TwoComponentPositionHorizontalVertical { { WTFMove(component1) }, { WTFMove(component2) } };
+                },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        }
+    );
+}
+
+static std::optional<CSS::Position> positionUnresolvedFromThreeComponents(PositionUnresolvedComponent&& component1, PositionUnresolvedComponent&& component2, PositionUnresolvedComponent&& component3)
+{
+    // Special case only for <bg-position> productions.
+
+    // <bg-position-three> = [
+    //   [ [        left |  right | x-start | x-end ] <length-percentage> ] &&
+    //   [ center |  top | bottom | y-start | y-end ]
+    // |
+    //   [ center | left |  right | x-start | x-end ] &&
+    //   [ [         top | bottom | y-start | y-end ] <length-percentage> ]
+    // ]
+
+    return WTF::switchOn(WTFMove(component1),
+        [&]<IsHorizontalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component2` must be in the set [ top | bottom | y-start | y-end | <length-percentage> ]
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsVerticalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    // `component3` must be <length-percentage>
+                    if (!WTF::holdsAlternative<CSS::LengthPercentage<>>(component3))
+                        return { };
+                    return CSS::ThreeComponentPositionHorizontalVerticalLengthSecond {
+                        { { WTFMove(component1) } },
+                        { { WTFMove(component2), std::get<CSS::LengthPercentage<>>(component3) } },
+                    };
+        },
+                [&](CSS::LengthPercentage<>&& component2) -> std::optional<CSS::Position> {
+                    // `component3` must be in the set [ center | top | bottom | y-start | y-end ]
+                    return WTF::switchOn(WTFMove(component3),
+                        [&]<IsVerticalOnlyComponent C3>(C3&& component3) -> std::optional<CSS::Position> {
+                            return CSS::ThreeComponentPositionHorizontalVerticalLengthFirst {
+                                { { WTFMove(component1), WTFMove(component2) } },
+                                { { WTFMove(component3) } },
+                            };
+        },
+                        [&](CSS::Keyword::Center&& component3) -> std::optional<CSS::Position> {
+                            return CSS::ThreeComponentPositionHorizontalVerticalLengthFirst {
+                                { { WTFMove(component1), WTFMove(component2) } },
+                                { { WTFMove(component3) } },
+                            };
+                        },
+                        [](auto&&) -> std::optional<CSS::Position> {
+                            return { };
+        }
+    );
+                },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&]<IsVerticalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component2` must be in the set [ left | right | x-start | x-end | <length-percentage> ]
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsHorizontalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    // `component3` must be <length-percentage>
+                    if (!WTF::holdsAlternative<CSS::LengthPercentage<>>(component3))
+                        return { };
+                    return CSS::ThreeComponentPositionHorizontalVerticalLengthFirst {
+                        { { WTFMove(component2), std::get<CSS::LengthPercentage<>>(component3) } },
+                        { { WTFMove(component1) } },
+                    };
+        },
+                [&](CSS::LengthPercentage<>&& component2) -> std::optional<CSS::Position> {
+                    // `component3` must be in the set [ center | left | right | x-start | x-end ]
+                    return WTF::switchOn(WTFMove(component3),
+                        [&]<IsHorizontalOnlyComponent C3>(C3&& component3) -> std::optional<CSS::Position> {
+                            return CSS::ThreeComponentPositionHorizontalVerticalLengthSecond {
+                                { { WTFMove(component3) } },
+                                { { WTFMove(component1), WTFMove(component2) } },
+                            };
+                        },
+                        [&](CSS::Keyword::Center&& component3) -> std::optional<CSS::Position> {
+                            return CSS::ThreeComponentPositionHorizontalVerticalLengthSecond {
+                                { { WTFMove(component3) } },
+                                { { WTFMove(component1), WTFMove(component2) } },
+                            };
+                        },
+                        [](auto&&) -> std::optional<CSS::Position> {
+                            return { };
+        }
+    );
+                },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&](CSS::Keyword::Center&& component1) -> std::optional<CSS::Position> {
+            // `component3` must be <length-percentage>
+            if (!WTF::holdsAlternative<CSS::LengthPercentage<>>(component3))
+                return { };
+
+            // `component2` must be in the set [ left | right | x-start | x-end | top | bottom | y-start | y-end ]
+            return WTF::switchOn(WTFMove(component2),
+                [&]<IsHorizontalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::ThreeComponentPositionHorizontalVerticalLengthFirst {
+                        { { WTFMove(component2), std::get<CSS::LengthPercentage<>>(component3) } },
+                        { { WTFMove(component1) } },
+                    };
+                },
+                [&]<IsVerticalOnlyComponent C2>(C2&& component2) -> std::optional<CSS::Position> {
+                    return CSS::ThreeComponentPositionHorizontalVerticalLengthSecond {
+                        { { WTFMove(component1) } },
+                        { { WTFMove(component2), std::get<CSS::LengthPercentage<>>(component3) } },
+                    };
+                },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&](CSS::LengthPercentage<>&&) -> std::optional<CSS::Position> {
+            // `<length-percentage>` is invalid for the first component of three component position values.
+            return { };
+        }
+    );
+}
+
+static std::optional<CSS::Position> positionUnresolvedFromFourComponents(PositionUnresolvedComponent&& component1, PositionUnresolvedComponent&& component2, PositionUnresolvedComponent&& component3, PositionUnresolvedComponent&& component4)
+{
+    // <position-four> = [
+    //   [ [ left | right | x-start | x-end ] <length-percentage> ] &&
+    //   [ [ top | bottom | y-start | y-end ] <length-percentage> ]
+    // ]
+
+    // `component2` and `component4` must be <length-percentage>
+    if (!WTF::holdsAlternative<CSS::LengthPercentage<>>(component2) || !WTF::holdsAlternative<CSS::LengthPercentage<>>(component4))
+        return { };
+
+    return WTF::switchOn(WTFMove(component1),
+        [&]<IsHorizontalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component3` must be in the set [ top | bottom | y-start | y-end ]
+            return WTF::switchOn(WTFMove(component3),
+                [&]<IsVerticalOnlyComponent C3>(C3&& component3) -> std::optional<CSS::Position> {
+                    return CSS::FourComponentPositionHorizontalVertical {
+                        { { WTFMove(component1), std::get<CSS::LengthPercentage<>>(component2) } },
+                        { { WTFMove(component3), std::get<CSS::LengthPercentage<>>(component4) } },
+                    };
+        },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+            );
+        },
+        [&]<IsVerticalOnlyComponent C1>(C1&& component1) -> std::optional<CSS::Position> {
+            // `component3` must be in the set [ left | right | x-start | x-end ]
+            return WTF::switchOn(WTFMove(component3),
+                [&]<IsHorizontalOnlyComponent C3>(C3&& component3) -> std::optional<CSS::Position> {
+                    return CSS::FourComponentPositionHorizontalVertical {
+                        { { WTFMove(component3), std::get<CSS::LengthPercentage<>>(component4) } },
+                        { { WTFMove(component1), std::get<CSS::LengthPercentage<>>(component2) } },
+                    };
+        },
+                [](auto&&) -> std::optional<CSS::Position> {
+                    return { };
+                }
+    );
+        },
+        [&](CSS::Keyword::Center&&) -> std::optional<CSS::Position> {
+            // `center` is invalid for the first component of four component position values.
+            return { };
+        },
+        [&](CSS::LengthPercentage<>&&) -> std::optional<CSS::Position> {
+            // `<length-percentage>` is invalid for the first component of four component position values.
+            return { };
+        }
+    );
+}
+
+std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    auto rangeCopy = range;
+
+    auto component1 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component1)
+        return { };
+
+    auto component2 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component2) {
+        auto position = positionUnresolvedFromOneComponent(WTFMove(*component1));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto component3 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component3) {
+        auto position = positionUnresolvedFromTwoComponents(WTFMove(*component1), WTFMove(*component2));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto component4 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component4)
+        return { };
+
+    auto position = positionUnresolvedFromFourComponents(WTFMove(*component1), WTFMove(*component2), WTFMove(*component3), WTFMove(*component4));
+    if (!position)
+        return { };
+    range = rangeCopy;
+    return position;
+}
+
+std::optional<CSS::Position> consumeBackgroundPositionUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    auto rangeCopy = range;
+
+    auto component1 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component1)
+        return { };
+
+    auto component2 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component2) {
+        auto position = positionUnresolvedFromOneComponent(WTFMove(*component1));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto component3 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component3) {
+        auto position = positionUnresolvedFromTwoComponents(WTFMove(*component1), WTFMove(*component2));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto component4 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component4) {
+        auto position = positionUnresolvedFromThreeComponents(WTFMove(*component1), WTFMove(*component2), WTFMove(*component3));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto position = positionUnresolvedFromFourComponents(WTFMove(*component1), WTFMove(*component2), WTFMove(*component3), WTFMove(*component4));
+    if (!position)
+        return { };
+    range = rangeCopy;
+    return position;
+}
+
+std::optional<CSS::PositionX> consumePositionXUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (range.peek().type() == IdentToken) {
+        switch (range.peek().id()) {
+        case CSSValueLeft:
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionX { CSS::FourComponentPositionHorizontal { { CSS::Keyword::Left { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionX { CSS::TwoComponentPositionHorizontal { CSS::Keyword::Left { } } };
+        case CSSValueRight:
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionX { CSS::FourComponentPositionHorizontal { { CSS::Keyword::Right { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionX { CSS::TwoComponentPositionHorizontal { CSS::Keyword::Right { } } };
+        case CSSValueXStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionX { CSS::FourComponentPositionHorizontal { { CSS::Keyword::XStart { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionX { CSS::TwoComponentPositionHorizontal { CSS::Keyword::XStart { } } };
+        case CSSValueXEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionX { CSS::FourComponentPositionHorizontal { { CSS::Keyword::XEnd { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionX { CSS::TwoComponentPositionHorizontal { CSS::Keyword::XEnd { } } };
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return CSS::PositionX { CSS::TwoComponentPositionHorizontal { CSS::Keyword::Center { } } };
+        default:
+            return { };
+        }
+    }
+
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+        return CSS::PositionX { CSS::TwoComponentPositionHorizontal { WTFMove(*lengthPercentage) } };
+    return { };
+}
+
+std::optional<CSS::PositionY> consumePositionYUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (range.peek().type() == IdentToken) {
+        switch (range.peek().id()) {
+        case CSSValueTop:
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionY { CSS::FourComponentPositionVertical { { CSS::Keyword::Top { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionY { CSS::TwoComponentPositionVertical { CSS::Keyword::Top { } } };
+        case CSSValueBottom:
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionY { CSS::FourComponentPositionVertical { { CSS::Keyword::Bottom { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionY { CSS::TwoComponentPositionVertical { CSS::Keyword::Bottom { } } };
+        case CSSValueYStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionY { CSS::FourComponentPositionVertical { { CSS::Keyword::YStart { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionY { CSS::TwoComponentPositionVertical { CSS::Keyword::YStart { } } };
+        case CSSValueYEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+                return CSS::PositionY { CSS::FourComponentPositionVertical { { CSS::Keyword::YEnd { }, WTFMove(*lengthPercentage) } } };
+            return CSS::PositionY { CSS::TwoComponentPositionVertical { CSS::Keyword::YEnd { } } };
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return CSS::PositionY { CSS::TwoComponentPositionVertical { CSS::Keyword::Center { } } };
+        default:
+            return { };
+        }
+    }
+
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+        return CSS::PositionY { CSS::TwoComponentPositionVertical { WTFMove(*lengthPercentage) } };
+    return { };
+}
+
+std::optional<CSS::Position> consumeOneOrTwoComponentPositionUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    auto rangeCopy = range;
+
+    auto component1 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component1)
+        return { };
+
+    auto component2 = consumePositionUnresolvedComponent(rangeCopy, state);
+    if (!component2) {
+        auto position = positionUnresolvedFromOneComponent(WTFMove(*component1));
+        if (!position)
+            return { };
+        range = rangeCopy;
+        return position;
+    }
+
+    auto position = positionUnresolvedFromTwoComponents(WTFMove(*component1), WTFMove(*component2));
+    if (!position)
+        return { };
+    range = rangeCopy;
+    return position;
+}
+
+std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHorizontalUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (range.peek().type() == IdentToken) {
+        switch (range.peek().id()) {
+        case CSSValueLeft:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionHorizontal { CSS::Keyword::Left { } };
+        case CSSValueRight:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionHorizontal { CSS::Keyword::Right { } };
+        case CSSValueXStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionHorizontal { CSS::Keyword::XStart { } };
+        case CSSValueXEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionHorizontal { CSS::Keyword::XEnd { } };
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionHorizontal { CSS::Keyword::Center { } };
+        default:
+            return { };
+        }
+    }
+
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+        return CSS::TwoComponentPositionHorizontal { WTFMove(*lengthPercentage) };
+    return { };
+}
+
+std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVerticalUnresolved(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (range.peek().type() == IdentToken) {
+        switch (range.peek().id()) {
+        case CSSValueBottom:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionVertical { CSS::Keyword::Bottom { } };
+        case CSSValueTop:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionVertical { CSS::Keyword::Top { } };
+        case CSSValueYStart:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionVertical { CSS::Keyword::YStart { } };
+        case CSSValueYEnd:
+            if (!state.context.cssAxisRelativePositionKeywordsEnabled)
+                return { };
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionVertical { CSS::Keyword::YEnd { } };
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return CSS::TwoComponentPositionVertical { CSS::Keyword::Center { } };
+        default:
+            return { };
+        }
+    }
+
+    if (auto lengthPercentage = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state))
+        return CSS::TwoComponentPositionVertical { WTFMove(*lengthPercentage) };
+    return { };
+}
+
+// MARK: CSSValue
+
+RefPtr<CSSValue> consumePosition(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    if (auto position = consumePositionUnresolved(range, state))
+        return CSSPositionValue::create(WTFMove(*position));
     return nullptr;
 }
 
-std::optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange& range, CSSParserMode parserMode, UnitlessQuirk unitless)
+RefPtr<CSSValue> consumePositionX(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    auto value1 = consumePositionComponent(range, parserMode, unitless);
-    if (!value1)
-        return std::nullopt;
-    auto value2 = consumePositionComponent(range, parserMode, unitless);
-    if (!value2)
-        return positionFromOneValue(*value1);
-    return positionFromTwoValues(*value1, *value2);
+    if (auto positionX = consumePositionXUnresolved(range, state))
+        return CSSPositionXValue::create(WTFMove(*positionX));
+    return nullptr;
 }
 
-static RefPtr<CSSValue> consumeSingleAxisPosition(CSSParserTokenRange& range, CSSParserMode parserMode, BoxOrient orientation)
+RefPtr<CSSValue> consumePositionY(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    RefPtr<CSSPrimitiveValue> value1;
-
-    if (range.peek().type() == IdentToken) {
-        switch (orientation) {
-        case BoxOrient::Horizontal:
-            value1 = consumeIdent<CSSValueLeft, CSSValueRight, CSSValueCenter>(range);
-            break;
-        case BoxOrient::Vertical:
-            value1 = consumeIdent<CSSValueTop, CSSValueBottom, CSSValueCenter>(range);
-            break;
-        }
-        if (!value1)
-            return nullptr;
-
-        if (value1->valueID() == CSSValueCenter)
-            return value1;
-    }
-
-    auto value2 = consumeLengthOrPercent(range, parserMode);
-    if (value1 && value2)
-        return CSSValuePair::create(value1.releaseNonNull(), value2.releaseNonNull());
-
-    return value1 ? value1 : value2;
-}
-
-RefPtr<CSSValue> consumePositionX(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    return consumeSingleAxisPosition(range, context.mode, BoxOrient::Horizontal);
-}
-
-RefPtr<CSSValue> consumePositionY(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    return consumeSingleAxisPosition(range, context.mode, BoxOrient::Vertical);
+    if (auto positionY = consumePositionYUnresolved(range, state))
+        return CSSPositionYValue::create(WTFMove(*positionY));
+    return nullptr;
 }
 
 } // namespace CSSPropertyParserHelpers

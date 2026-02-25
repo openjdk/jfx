@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2008, 2011, 2014-2016 Apple Inc. All Rights Reserved.
+ * Copyright (c) 2010-2023 Google Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,10 +41,10 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
-#include "ScrollbarColor.h"
-#include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
+#include "StyleScrollbarGutter.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -58,8 +58,10 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SameSizeAsSc
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollableArea);
+
 struct SameSizeAsScrollableArea final : public CanMakeWeakPtr<SameSizeAsScrollableArea> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SameSizeAsScrollableArea);
 
     ~SameSizeAsScrollableArea() { }
     SameSizeAsScrollableArea() { }
@@ -129,7 +131,7 @@ float ScrollableArea::adjustVerticalPageScrollStepForFixedContent(float step)
 
 bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granularity, unsigned stepCount)
 {
-    auto* scrollbar = scrollbarForDirection(direction);
+    RefPtr scrollbar = scrollbarForDirection(direction);
     if (!scrollbar)
         return false;
 
@@ -178,10 +180,10 @@ void ScrollableArea::endKeyboardScroll(bool immediate)
         setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
 }
 
-void ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
+bool ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithoutAnimation " << position);
-    scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
+    return scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
 }
 
 void ScrollableArea::scrollToPositionWithAnimation(const FloatPoint& position, const ScrollPositionChangeOptions& options)
@@ -263,6 +265,7 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
         scrollbarsController().notifyContentAreaScrolled(scrollPosition() - oldPosition);
         invalidateScrollAnchoringElement();
         updateScrollAnchoringElement();
+        updateAnchorPositionedAfterScroll();
     }
 }
 
@@ -394,12 +397,12 @@ void ScrollableArea::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation 
     setScrollbarOverlayStyle(scrollbarOverlayStyle());
 }
 
-void ScrollableArea::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
+void ScrollableArea::willRemoveScrollbar(Scrollbar& scrollbar, ScrollbarOrientation orientation)
 {
     if (orientation == ScrollbarOrientation::Vertical)
-        scrollbarsController().willRemoveVerticalScrollbar(scrollbar);
+        scrollbarsController().willRemoveVerticalScrollbar(&scrollbar);
     else
-        scrollbarsController().willRemoveHorizontalScrollbar(scrollbar);
+        scrollbarsController().willRemoveHorizontalScrollbar(&scrollbar);
 }
 
 void ScrollableArea::contentsResized()
@@ -456,7 +459,7 @@ void ScrollableArea::invalidateScrollbars()
 bool ScrollableArea::useDarkAppearanceForScrollbars() const
 {
     // If dark appearance is used or the overlay style is light (because of a dark page background), set the dark appearance.
-    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyleLight;
+    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyle::Light;
 }
 
 void ScrollableArea::invalidateScrollbar(Scrollbar& scrollbar, const IntRect& rect)
@@ -548,9 +551,9 @@ Color ScrollableArea::scrollbarTrackColorStyle() const
     return { };
 }
 
-ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
+Style::ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
 {
-    return { };
+    return CSS::Keyword::Auto { };
 }
 
 const LayoutScrollSnapOffsetsInfo* ScrollableArea::snapOffsetsInfo() const
@@ -912,10 +915,8 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
             // then treat it as fully visible to avoid unnecessary horizontal scrolling
             scrollX = alignX.getVisibleBehavior();
         } else if (intersectWidth == visibleBounds.width()) {
-            // If the rect is bigger than the visible area, don't bother trying to center. Other alignments will work.
+            // The rect is bigger than the visible area.
             scrollX = alignX.getVisibleBehavior();
-            if (scrollX == ScrollAlignment::Behavior::AlignCenter)
-                scrollX = ScrollAlignment::Behavior::NoScroll;
         } else if (intersectWidth > 0)
             // If the rectangle is partially visible, but not above the minimum threshold, use the specified partial behavior
             scrollX = alignX.getPartialBehavior();
@@ -954,10 +955,8 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
             // If the rectangle is fully visible, use the specified visible behavior.
             scrollY = alignY.getVisibleBehavior();
         } else if (intersectHeight == visibleBounds.height()) {
-            // If the rect is bigger than the visible area, don't bother trying to center. Other alignments will work.
+            // The rect is bigger than the visible area.
             scrollY = alignY.getVisibleBehavior();
-            if (scrollY == ScrollAlignment::Behavior::AlignCenter)
-                scrollY = ScrollAlignment::Behavior::NoScroll;
         } else if (intersectHeight > 0)
             // If the rectangle is partially visible, use the specified partial behavior
             scrollY = alignY.getPartialBehavior();
@@ -1003,10 +1002,18 @@ FloatSize ScrollableArea::deltaForPropagation(const FloatSize& biasedDelta) cons
 
 bool ScrollableArea::shouldBlockScrollPropagation(const FloatSize& biasedDelta) const
 {
-    return ((horizontalOverscrollBehaviorPreventsPropagation() || verticalOverscrollBehaviorPreventsPropagation())
-        && ((horizontalOverscrollBehaviorPreventsPropagation() && verticalOverscrollBehaviorPreventsPropagation())
-        || (horizontalOverscrollBehaviorPreventsPropagation() && !biasedDelta.height()) || (verticalOverscrollBehaviorPreventsPropagation()
-        && !biasedDelta.width())));
+    bool preventsHorizontalPropagation = horizontalOverscrollBehaviorPreventsPropagation();
+    bool preventsVerticalPropagation = verticalOverscrollBehaviorPreventsPropagation();
+    if (preventsHorizontalPropagation && preventsVerticalPropagation)
+        return true;
+
+    if (preventsHorizontalPropagation)
+        return !biasedDelta.height();
+
+    if (preventsVerticalPropagation)
+        return !biasedDelta.width();
+
+    return false;
 }
 
 ScrollingNodeID ScrollableArea::scrollingNodeIDForTesting()
@@ -1016,7 +1023,7 @@ ScrollingNodeID ScrollableArea::scrollingNodeIDForTesting()
     auto testingNodeID = scrollingNodeID();
     if (!testingNodeID)
         m_scrollingNodeIDForTesting = testingNodeID = ScrollingNodeID::generate();
-    return testingNodeID;
+    return *testingNodeID;
 }
 
 } // namespace WebCore

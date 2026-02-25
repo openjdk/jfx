@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 Apple Inc.
+ * Copyright (C) 2003 Apple Inc. All rights reserved.
  *
  * Portions are Copyright (C) 1998 Netscape Communications Corporation.
  *
@@ -46,14 +46,18 @@
 #include "Length.h"
 #include "RenderStyleConstants.h"
 #include "Timer.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class RenderLayer;
 
 // This class handles the auto-scrolling for <marquee>
-class RenderMarquee final {
-    WTF_MAKE_NONCOPYABLE(RenderMarquee); WTF_MAKE_FAST_ALLOCATED;
+class RenderMarquee final : public CanMakeCheckedPtr<RenderMarquee> {
+    WTF_MAKE_TZONE_ALLOCATED(RenderMarquee);
+    WTF_MAKE_NONCOPYABLE(RenderMarquee);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMarquee);
 public:
     explicit RenderMarquee(RenderLayer*);
     ~RenderMarquee();
@@ -80,7 +84,7 @@ private:
 
     void timerFired();
 
-    RenderLayer* m_layer;
+    const CheckedPtr<RenderLayer> m_layer;
     Timer m_timer;
     int m_currentLoop { 0 };
     int m_totalLoops { 0 };

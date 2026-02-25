@@ -26,6 +26,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
 namespace Cpp {
@@ -61,5 +64,7 @@ struct CryptoOperationReturnValue {
 } // Cpp
 
 #ifndef __swift__
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include "PALSwift-Generated.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif

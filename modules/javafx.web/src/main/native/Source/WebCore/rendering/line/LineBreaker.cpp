@@ -49,7 +49,7 @@ LegacyInlineIterator LineBreaker::nextLineBreak(InlineBidiResolver& resolver, Li
 
     bool appliedStartWidth = resolver.position().offset();
 
-    LineWidth width(m_block, lineInfo.isFirstLine());
+    LineWidth width(m_block);
 
     skipLeadingWhitespace(resolver, lineInfo);
 

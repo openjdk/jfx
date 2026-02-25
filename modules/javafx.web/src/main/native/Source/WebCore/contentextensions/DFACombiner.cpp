@@ -184,7 +184,7 @@ private:
     Vector<uint64_t, 0, ContentExtensionsOverflowHandler> m_unprocessedNodes;
 };
 
-void DFACombiner::combineDFAs(unsigned minimumSize, const Function<void(DFA&&)>& handler)
+void DFACombiner::combineDFAs(unsigned minimumSize, NOESCAPE const Function<void(DFA&&)>& handler)
 {
     if (m_dfas.isEmpty())
         return;
@@ -192,7 +192,7 @@ void DFACombiner::combineDFAs(unsigned minimumSize, const Function<void(DFA&&)>&
     for (unsigned i = m_dfas.size(); i--;) {
         if (m_dfas[i].graphSize() > minimumSize) {
             handler(WTFMove(m_dfas[i]));
-            m_dfas.remove(i);
+            m_dfas.removeAt(i);
         }
     }
 

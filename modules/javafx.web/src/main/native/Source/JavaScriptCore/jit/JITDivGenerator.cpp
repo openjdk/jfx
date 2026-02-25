@@ -89,7 +89,7 @@ void JITDivGenerator::generateFastPath(CCallHelpers& jit)
     }
 
     if (safeReciprocal) {
-        jit.move(CCallHelpers::Imm64(bitwise_cast<int64_t>(*safeReciprocal)), m_scratchGPR);
+        jit.move(CCallHelpers::Imm64(std::bit_cast<int64_t>(*safeReciprocal)), m_scratchGPR);
         jit.move64ToDouble(m_scratchGPR, m_rightFPR);
 
         jit.mulDouble(m_rightFPR, m_leftFPR);
@@ -123,7 +123,6 @@ void JITDivGenerator::generateFastPath(CCallHelpers& jit)
 #if USE(JSVALUE64)
     jit.moveDoubleTo64(m_leftFPR, m_scratchGPR);
     CCallHelpers::Jump notDoubleZero = jit.branchTest64(CCallHelpers::NonZero, m_scratchGPR);
-
     jit.move(GPRInfo::numberTagRegister, m_result.payloadGPR());
     m_endJumpList.append(jit.jump());
 

@@ -35,6 +35,7 @@
 
 #include "ActiveDOMObject.h"
 #include "DocumentFragment.h"
+#include "EventTargetInterfaces.h"
 #include "HTMLElement.h"
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
@@ -68,6 +69,9 @@ private:
 class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TextTrackCue);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
 
     void didMoveToNewDocument(Document&);
@@ -120,10 +124,6 @@ public:
 
     String toJSONString() const;
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
     virtual void setFontSize(int fontSize, bool important);
     virtual void updateDisplayTree(const MediaTime&) { }
@@ -142,6 +142,7 @@ protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
 
     virtual void toJSON(JSON::Object&) const;
 

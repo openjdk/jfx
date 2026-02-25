@@ -42,6 +42,8 @@ public:
     WEBCORE_EXPORT PublicSuffix publicSuffix(const URL&) const;
     WEBCORE_EXPORT String topPrivatelyControlledDomain(StringView host) const;
     WEBCORE_EXPORT void clearHostTopPrivatelyControlledDomainCache();
+    WEBCORE_EXPORT String topPrivatelyControlledDomainWithoutPublicSuffix(StringView host) const;
+    WEBCORE_EXPORT String domainWithoutPublicSuffix(StringView domain) const;
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT void enablePublicSuffixCache();

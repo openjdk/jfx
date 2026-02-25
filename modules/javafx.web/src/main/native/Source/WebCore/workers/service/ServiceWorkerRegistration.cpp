@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,15 @@
 #include "config.h"
 #include "ServiceWorkerRegistration.h"
 
+#include "CookieChangeSubscription.h"
+#include "CookieStoreGetOptions.h"
 #include "CookieStoreManager.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSNotification.h"
@@ -40,7 +44,6 @@
 #include "NotificationClient.h"
 #include "NotificationPermission.h"
 #include "PushEvent.h"
-#include "PushNotificationEvent.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -48,6 +51,7 @@
 #include "WebCoreOpaqueRoot.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
 
 #define REGISTRATION_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorkerRegistration::" fmt, this, ##__VA_ARGS__)
 #define REGISTRATION_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ServiceWorker, "%p - ServiceWorkerRegistration::" fmt, this, ##__VA_ARGS__)
@@ -58,12 +62,12 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorkerRegistration);
 
 Ref<ServiceWorkerRegistration> ServiceWorkerRegistration::getOrCreate(ScriptExecutionContext& context, Ref<ServiceWorkerContainer>&& container, ServiceWorkerRegistrationData&& data)
 {
-    if (auto* registration = container->registration(data.identifier)) {
+    if (RefPtr registration = container->registration(data.identifier)) {
         ASSERT(!registration->isContextStopped());
-        return *registration;
+        return registration.releaseNonNull();
     }
 
-    auto registration = adoptRef(*new ServiceWorkerRegistration(context, WTFMove(container), WTFMove(data)));
+    Ref registration = adoptRef(*new ServiceWorkerRegistration(context, WTFMove(container), WTFMove(data)));
     registration->suspendIfNeeded();
     return registration;
 }
@@ -153,13 +157,13 @@ void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto* newestWorker = getNewestWorker();
+    RefPtr newestWorker = getNewestWorker();
     if (!newestWorker) {
         promise->reject(Exception(ExceptionCode::InvalidStateError, "newestWorker is null"_s));
         return;
     }
 
-    if (auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext()); serviceWorkerGlobalScope && serviceWorkerGlobalScope->serviceWorker().state() == ServiceWorkerState::Installing) {
+    if (RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext()); serviceWorkerGlobalScope && serviceWorkerGlobalScope->serviceWorker().state() == ServiceWorkerState::Installing) {
         promise->reject(Exception(ExceptionCode::InvalidStateError, "service worker is installing"_s));
         return;
     }
@@ -187,14 +191,14 @@ void ServiceWorkerRegistration::subscribeToPushService(const Vector<uint8_t>& ap
     m_container->subscribeToPushService(*this, applicationServerKey, WTFMove(promise));
 }
 
-void ServiceWorkerRegistration::unsubscribeFromPushService(PushSubscriptionIdentifier subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
+void ServiceWorkerRegistration::unsubscribeFromPushService(std::optional<PushSubscriptionIdentifier> subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
 {
     if (isContextStopped()) {
         promise.reject(Exception(ExceptionCode::InvalidStateError));
         return;
     }
 
-    m_container->unsubscribeFromPushService(identifier(), subscriptionIdentifier, WTFMove(promise));
+    m_container->unsubscribeFromPushService(identifier(), *subscriptionIdentifier, WTFMove(promise));
 }
 
 void ServiceWorkerRegistration::getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
@@ -308,23 +312,24 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
 
     RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(context);
 
-    // If we're handling a PushNotificationEvent, this Notification will override the proposed notification
+    // If we're handling a DeclarativePushEvent, this Notification will override the proposed notification
     // instead of being shown directly.
     if (serviceWorkerGlobalScope) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        if (RefPtr pushNotificationEvent = serviceWorkerGlobalScope->pushNotificationEvent()) {
+        if (RefPtr declarativePushEvent = serviceWorkerGlobalScope->declarativePushEvent()) {
             auto notification = notificationResult.releaseReturnValue();
-            if (!notification->defaultAction().isValid()) {
-                promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url"_s });
+            if (!notification->navigate().isValid()) {
+                promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `push` event did not include NotificationOptions that specify a valid defaultAction url"_s });
                 return;
             }
 
-            pushNotificationEvent->setUpdatedNotificationData(notification->data());
+            declarativePushEvent->setUpdatedNotification(notification.ptr());
+            promise->resolve();
             return;
         }
 #endif
 
-        if (auto* pushEvent = serviceWorkerGlobalScope->pushEvent()) {
+        if (RefPtr pushEvent = serviceWorkerGlobalScope->pushEvent()) {
             auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(promise->globalObject());
             auto& jsPromise = *JSC::jsCast<JSC::JSPromise*>(promise->promise());
             pushEvent->waitUntil(DOMPromise::create(globalObject, jsPromise));
@@ -352,8 +357,74 @@ void ServiceWorkerRegistration::getNotifications(const GetNotificationOptions& f
 CookieStoreManager& ServiceWorkerRegistration::cookies()
 {
     if (!m_cookieStoreManager)
-        m_cookieStoreManager = CookieStoreManager::create();
+        m_cookieStoreManager = CookieStoreManager::create(*this);
     return *m_cookieStoreManager;
+}
+
+void ServiceWorkerRegistration::addCookieChangeSubscriptions(Vector<CookieStoreGetOptions>&& subscriptions, Ref<DeferredPromise>&& promise)
+{
+    if (isContextStopped()) {
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "The script execution context is not currently running"_s });
+        return;
+    }
+
+    Vector<CookieChangeSubscription> cookieChangeSubscriptions;
+    cookieChangeSubscriptions.reserveInitialCapacity(subscriptions.size());
+    for (auto& subscription : subscriptions) {
+        // FIXME: Fall back to scope url since spec does not specify an alternative and WPT layout tests expect this behavior (https://github.com/WICG/cookie-store/issues/236).
+        String url;
+        if (subscription.url.isNull())
+            url = scope();
+        else {
+            url = scriptExecutionContext()->completeURL(subscription.url).string();
+            if (!url.startsWith(scope())) {
+                promise->reject(Exception { ExceptionCode::TypeError, "The service worker cannot subcribe to cookie changes for URLs outside of its scope"_s });
+                return;
+            }
+        }
+
+        cookieChangeSubscriptions.append({ WTFMove(subscription.name), WTFMove(url) });
+    }
+
+    m_container->addCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
+}
+
+void ServiceWorkerRegistration::removeCookieChangeSubscriptions(Vector<CookieStoreGetOptions>&& subscriptions, Ref<DeferredPromise>&& promise)
+{
+    if (isContextStopped()) {
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "The script execution context is not currently running"_s });
+        return;
+    }
+
+    Vector<CookieChangeSubscription> cookieChangeSubscriptions;
+    cookieChangeSubscriptions.reserveInitialCapacity(subscriptions.size());
+    for (auto& subscription : subscriptions) {
+        // FIXME: Fall back to scope url since spec does not specify an alternative and WPT layout tests expect this behavior (https://github.com/WICG/cookie-store/issues/236).
+        String url;
+        if (subscription.url.isNull())
+            url = scope();
+        else {
+            url = scriptExecutionContext()->completeURL(subscription.url).string();
+            if (!url.startsWith(scope())) {
+                promise->reject(Exception { ExceptionCode::TypeError, "The service worker cannot unsubcribe from cookie changes for URLs outside of its scope"_s });
+                return;
+            }
+        }
+
+        cookieChangeSubscriptions.append({ WTFMove(subscription.name), WTFMove(url) });
+    }
+
+    m_container->removeCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
+}
+
+void ServiceWorkerRegistration::cookieChangeSubscriptions(Ref<DeferredPromise>&& promise)
+{
+    if (isContextStopped()) {
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "The script execution context is not currently running"_s });
+        return;
+    }
+
+    m_container->cookieChangeSubscriptions(identifier(), WTFMove(promise));
 }
 
 } // namespace WebCore

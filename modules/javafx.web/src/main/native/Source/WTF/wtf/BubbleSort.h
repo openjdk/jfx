@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,8 @@
  */
 
 #pragma once
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -96,3 +98,5 @@ void bubbleSort(IteratorType begin, IteratorType end)
 } // namespace WTF
 
 using WTF::bubbleSort;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

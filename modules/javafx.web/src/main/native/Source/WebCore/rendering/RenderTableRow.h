@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -49,9 +50,6 @@ public:
 
     void paintOutlineForRowIfNeeded(PaintInfo&, const LayoutPoint&);
 
-    static RenderPtr<RenderTableRow> createAnonymousWithParentRenderer(const RenderTableSection&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     void setRowIndex(unsigned);
     bool rowIndexWasSet() const { return m_rowIndex != unsetRowIndex; }
     unsigned rowIndex() const;
@@ -67,16 +65,22 @@ public:
 
     void didInsertTableCell(RenderTableCell& child, RenderObject* beforeChild);
 
+    // Whether a row has opaque background depends on many factors, e.g. border spacing, border collapsing, missing cells, etc.
+    // For simplicity, just conservatively assume all table rows are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
+
 private:
     static RenderPtr<RenderTableRow> createTableRowWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s; }
+    ASCIILiteral renderName() const override;
     bool canHaveChildren() const override { return true; }
     void willBeRemovedFromTree() override;
     void layout() override;
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
     RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { }
 
     bool requiresLayer() const final;
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -93,7 +97,7 @@ private:
 
 inline void RenderTableRow::setRowIndex(unsigned rowIndex)
 {
-    if (UNLIKELY(rowIndex > maxRowIndex))
+    if (rowIndex > maxRowIndex) [[unlikely]]
         CRASH();
     m_rowIndex = rowIndex;
 }

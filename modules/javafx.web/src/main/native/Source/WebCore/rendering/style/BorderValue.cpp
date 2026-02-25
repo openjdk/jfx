@@ -4,6 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2003, 2005, 2006, 2007, 2008, 2022 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,23 +26,24 @@
 #include "config.h"
 #include "BorderValue.h"
 
-namespace WebCore {
+#include "StylePrimitiveNumericTypes+Logging.h"
+#include <wtf/text/TextStream.h>
 
-BorderValue::BorderValue()
-    : m_color(StyleColor::currentColor())
-    , m_style(static_cast<unsigned>(BorderStyle::None))
-    , m_isAuto(static_cast<unsigned>(OutlineIsAuto::Off))
-{
-}
+namespace WebCore {
 
 bool BorderValue::isTransparent() const
 {
-    return m_color.isAbsoluteColor() && m_color.absoluteColor().isValid() && !m_color.absoluteColor().isVisible();
+    return m_color.isResolvedColor() && m_color.resolvedColor().isValid() && !m_color.resolvedColor().isVisible();
 }
 
 bool BorderValue::isVisible() const
 {
     return nonZero() && !isTransparent() && style() != BorderStyle::Hidden;
+}
+
+TextStream& operator<<(TextStream& ts, const BorderValue& borderValue)
+{
+    return ts << borderValue.width() << ' ' << borderValue.style() << ' ' << borderValue.color();
 }
 
 } // namespace WebCore

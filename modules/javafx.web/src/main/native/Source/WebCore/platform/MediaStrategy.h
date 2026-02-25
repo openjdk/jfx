@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,12 @@
 
 #pragma once
 
+#if PLATFORM(COCOA) && ENABLE(MEDIA_RECORDER)
+#include "MediaRecorderPrivateWriter.h"
+#endif
+#include "NativeImage.h"
 #include "NowPlayingManager.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -34,12 +39,14 @@ class AudioDestination;
 class AudioIOCallback;
 class CDMFactory;
 class NowPlayingManager;
+class VideoFrame;
+
+struct AudioDestinationCreationOptions;
 
 class WEBCORE_EXPORT MediaStrategy {
 public:
 #if ENABLE(WEB_AUDIO)
-    virtual Ref<AudioDestination> createAudioDestination(
-        AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) = 0;
+    virtual Ref<AudioDestination> createAudioDestination(const AudioDestinationCreationOptions&) = 0;
 #endif
     virtual std::unique_ptr<NowPlayingManager> createNowPlayingManager() const;
     void resetMediaEngines();
@@ -49,10 +56,25 @@ public:
     bool mockMediaSourceEnabled() const;
     static void addMockMediaSourceEngine();
 #endif
+
+#if ENABLE(VIDEO)
+    virtual void nativeImageFromVideoFrame(const VideoFrame&, CompletionHandler<void(std::optional<RefPtr<NativeImage>>&&)>&&);
+#endif
+
+    virtual bool enableWebMMediaPlayer() const { return true; }
+    virtual bool isWebMediaStrategy() const { return false; }
+
 protected:
     MediaStrategy();
     virtual ~MediaStrategy();
     bool m_mockMediaSourceEnabled { false };
 };
+
+#if ENABLE(VIDEO)
+inline void MediaStrategy::nativeImageFromVideoFrame(const VideoFrame&, CompletionHandler<void(std::optional<RefPtr<NativeImage>>&&)>&& completionHandler)
+{
+    completionHandler(std::nullopt);
+}
+#endif
 
 } // namespace WebCore

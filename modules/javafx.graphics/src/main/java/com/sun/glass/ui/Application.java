@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -670,6 +670,8 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
+    protected abstract void _showDocument(final String uri);
+
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses
         return false;
@@ -709,6 +711,12 @@ public abstract class Application {
     public final boolean supportsUnifiedWindows() {
         checkEventThread();
         return _supportsUnifiedWindows();
+    }
+
+    protected abstract boolean _supportsExtendedWindows();
+    public final boolean supportsExtendedWindows() {
+        checkEventThread();
+        return _supportsExtendedWindows();
     }
 
     protected boolean _supportsSystemMenu() {
@@ -820,5 +828,9 @@ public abstract class Application {
     public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
                                                   long handle, Runnable closeWindow) {
         _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
+    }
+
+    public void showDocument(String uri) {
+        _showDocument(uri);
     }
 }

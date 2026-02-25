@@ -29,7 +29,7 @@
 #include "pas_log.h"
 #include "pas_race_test_hooks.h"
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 
@@ -117,13 +117,15 @@ PAS_END_EXTERN_C;
 
 #elif PAS_OS(DARWIN) /* !PAS_USE_SPINLOCKS */
 
-#if defined(__has_include) && __has_include(<os/lock_private.h>) && (defined(LIBPAS) || defined(PAS_BMALLOC)) && (!defined(OS_UNFAIR_LOCK_INLINE) || OS_UNFAIR_LOCK_INLINE)
+
+#if defined(__has_include) && __has_include(<os/lock_private.h>) && (defined(LIBPAS) || defined(PAS_BMALLOC))
 #define PAS_USE_ULOCK_SPI 1
 #define PAS_USE_ULOCK_FLAGS_API 0
-#ifndef OS_UNFAIR_LOCK_INLINE
-#define OS_UNFAIR_LOCK_INLINE 1
+#if !defined(OS_UNFAIR_LOCK_INLINE) || !OS_UNFAIR_LOCK_INLINE
+#error "OS_UNFAIR_LOCK_INLINE needs to be enabled."
 #endif
 #include <os/lock_private.h>
+
 #else
 #define PAS_USE_ULOCK_SPI 0
 #include <os/lock.h>
@@ -385,7 +387,7 @@ static inline bool pas_lock_lock_with_mode(pas_lock* lock,
         pas_lock_lock(lock);
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -443,7 +445,7 @@ static PAS_ALWAYS_INLINE pas_lock* pas_lock_for_switch_conditionally(pas_lock* l
     case pas_lock_is_not_held:
         return lock;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

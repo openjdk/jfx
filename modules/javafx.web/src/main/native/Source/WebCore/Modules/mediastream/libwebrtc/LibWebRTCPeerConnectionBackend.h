@@ -28,6 +28,7 @@
 
 #include "PeerConnectionBackend.h"
 #include "RealtimeMediaSource.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class LibWebRTCPeerConnectionBackend;
@@ -60,12 +61,13 @@ class RealtimeOutgoingAudioSource;
 class RealtimeOutgoingVideoSource;
 
 class LibWebRTCPeerConnectionBackend final : public PeerConnectionBackend {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCPeerConnectionBackend);
 public:
     LibWebRTCPeerConnectionBackend(RTCPeerConnection&, LibWebRTCProvider&);
     ~LibWebRTCPeerConnectionBackend();
 
     bool shouldEnableWebRTCL4S() const;
+
 private:
     void close() final;
     void doCreateOffer(RTCOfferOptions&&) final;
@@ -90,6 +92,7 @@ private:
     friend class LibWebRTCMediaEndpoint;
     friend class LibWebRTCRtpSenderBackend;
     RTCPeerConnection& connection() { return m_peerConnection; }
+    Ref<RTCPeerConnection> protectedConnection() { return m_peerConnection.get(); }
 
     void getStatsSucceeded(const DeferredPromise&, Ref<RTCStatsReport>&&);
 
@@ -123,7 +126,7 @@ private:
     void disableICECandidateFiltering() final;
     bool isNegotiationNeeded(uint32_t) const final;
 
-    Ref<LibWebRTCMediaEndpoint> m_endpoint;
+    const Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };
     bool m_isRemoteDescriptionSet { false };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
  * Copyright (C) 2007, 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2007 Holger Hans Peter Freyther
@@ -205,7 +205,7 @@ String FontPlatformData::familyName() const
 {
     FcChar8* family = nullptr;
     FcPatternGetString(m_pattern.get(), FC_FAMILY, 0, &family);
-    return String::fromUTF8(span8(reinterpret_cast<const char*>(family)));
+    return String::fromUTF8(unsafeSpan8(reinterpret_cast<const char*>(family)));
 }
 
 Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames shouldLocalizeAxisNames) const
@@ -299,7 +299,7 @@ RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
 
     Vector<uint8_t> data(tableSize);
     FT_ULong expectedTableSize = tableSize;
-    FT_Error error = FT_Load_Sfnt_Table(freeTypeFace, tag, 0, reinterpret_cast<FT_Byte*>(data.data()), &tableSize);
+    FT_Error error = FT_Load_Sfnt_Table(freeTypeFace, tag, 0, reinterpret_cast<FT_Byte*>(data.mutableSpan().data()), &tableSize);
     if (error || tableSize != expectedTableSize)
         return nullptr;
 
@@ -351,12 +351,24 @@ FontPlatformData FontPlatformData::create(const Attributes& data, const FontCust
         fontFace = adoptRef(cairo_ft_font_face_create_for_pattern(pattern));
     }
 
-    return FontPlatformData(fontFace.get(), adoptRef(pattern), data.m_size, fixedWidth, data.m_syntheticBold, data.m_syntheticOblique, data.m_orientation, custom);
+    return FontPlatformData(fontFace.get(), pattern, data.m_size, fixedWidth, data.m_syntheticBold, data.m_syntheticOblique, data.m_orientation, custom);
 }
 
 FontPlatformData::Attributes FontPlatformData::attributes() const
 {
     return Attributes(m_size, m_orientation, m_widthVariant, m_textRenderingMode, m_syntheticBold, m_syntheticOblique);
+}
+
+std::optional<FontPlatformData> FontPlatformData::fromIPCData(float, FontOrientation&&, FontWidthVariant&&, TextRenderingMode&&, bool, bool, IPCData&&)
+{
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
+
+FontPlatformData::IPCData FontPlatformData::toIPCData() const
+{
+    ASSERT_NOT_REACHED();
+    return FontPlatformSerializedData { };
 }
 
 } // namespace WebCore

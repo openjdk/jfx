@@ -26,7 +26,9 @@
 #pragma once
 
 #include "FloatPoint.h"
+#include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -64,25 +66,22 @@ struct VelocityData  {
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const VelocityData&);
 
 class HistoricalVelocityData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HistoricalVelocityData);
 public:
     HistoricalVelocityData() = default;
 
     WEBCORE_EXPORT VelocityData velocityForNewData(FloatPoint newPosition, double scale, MonotonicTime);
-    void clear() { m_historySize = 0; }
+    void clear() { m_positionHistory.clear(); }
 
 private:
     static constexpr unsigned maxHistoryDepth = 3;
-
-    unsigned m_historySize { 0 };
-    unsigned m_latestDataIndex { 0 };
-    MonotonicTime m_lastAppendTimestamp;
 
     struct Data {
         MonotonicTime timestamp;
         FloatPoint position;
         double scale;
-    } m_positionHistory[maxHistoryDepth];
+    };
+    Deque<Data, maxHistoryDepth> m_positionHistory;
 };
 
 } // namespace WebCore

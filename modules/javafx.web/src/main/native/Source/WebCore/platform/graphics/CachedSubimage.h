@@ -27,7 +27,7 @@
 
 #include "FloatRect.h"
 #include "ImageTypes.h"
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,7 +36,7 @@ class ImageBuffer;
 struct ImagePaintingOptions;
 
 class CachedSubimage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CachedSubimage);
 public:
     static std::unique_ptr<CachedSubimage> create(GraphicsContext&, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect);
     static std::unique_ptr<CachedSubimage> createPixelated(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect);
@@ -57,7 +57,7 @@ public:
     static constexpr float maxArea = maxSide * maxSide;
 
 private:
-    Ref<ImageBuffer> m_imageBuffer;
+    const Ref<ImageBuffer> m_imageBuffer;
     FloatSize m_scaleFactor;
     FloatRect m_destinationRect;
     FloatRect m_sourceRect;

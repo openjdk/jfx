@@ -27,6 +27,7 @@
 #include "config.h"
 #include "TextCheckingHelper.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "EditorClient.h"
@@ -260,7 +261,7 @@ auto TextCheckingHelper::findMisspelledWords(Operation operation) const -> std::
         auto misspellingRange = resolveCharacterRange(m_range, CharacterRange(currentChunkOffset + misspellingLocation, misspellingLength));
 
         if (operation == Operation::MarkAll)
-            addMarker(misspellingRange, DocumentMarker::Type::Spelling);
+            addMarker(misspellingRange, DocumentMarkerType::Spelling);
 
         if (first.first.word.isNull()) {
             first = {
@@ -284,7 +285,7 @@ auto TextCheckingHelper::findFirstMisspelledWord() const -> MisspelledWord
     return findMisspelledWords(Operation::FindFirst).first;
 }
 
-auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const -> std::variant<MisspelledWord, UngrammaticalPhrase>
+auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const -> Variant<MisspelledWord, UngrammaticalPhrase>
 {
     if (!unifiedTextCheckerEnabled())
         return { };
@@ -292,7 +293,7 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
     if (platformOrClientDrivenTextCheckerEnabled())
         return { };
 
-    std::variant<MisspelledWord, UngrammaticalPhrase> firstFoundItem;
+    Variant<MisspelledWord, UngrammaticalPhrase> firstFoundItem;
     GrammarDetail grammarDetail;
 
     String misspelledWord;
@@ -431,7 +432,7 @@ int TextCheckingHelper::findUngrammaticalPhrases(Operation operation, const Vect
 
         if (operation == Operation::MarkAll) {
             auto badGrammarRange = resolveCharacterRange(m_range, { badGrammarPhraseLocation - startOffset + detail->range.location, detail->range.length });
-            addMarker(badGrammarRange, DocumentMarker::Type::Grammar, detail->userDescription);
+            addMarker(badGrammarRange, DocumentMarkerType::Grammar, detail->userDescription);
         }
 
         // Remember this detail only if it's earlier than our current candidate (the details aren't in a guaranteed order)

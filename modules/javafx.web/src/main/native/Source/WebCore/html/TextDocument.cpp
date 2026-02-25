@@ -26,6 +26,7 @@
 #include "TextDocument.h"
 
 #include "CSSTokenizerInputStream.h"
+#include "DocumentInlines.h"
 #include "TextDocumentParser.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -33,7 +34,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextDocument);
 
-TextDocument::TextDocument(LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier identifier)
+TextDocument::TextDocument(LocalFrame* frame, const Settings& settings, const URL& url, std::optional<ScriptExecutionContextIdentifier> identifier)
     : HTMLDocument(frame, settings, url, identifier, { DocumentClass::Text })
 {
     setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);

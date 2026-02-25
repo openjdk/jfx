@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,12 +36,14 @@
 #include <wtf/StackTrace.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitorMarkedBlockData, VerifierSlotVisitor::MarkedBlockData);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitorOpaqueRootData, VerifierSlotVisitor::OpaqueRootData);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(VerifierSlotVisitorPreciseAllocationData, VerifierSlotVisitor::PreciseAllocationData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::MarkedBlockData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::OpaqueRootData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VerifierSlotVisitor::PreciseAllocationData);
 
 using MarkerData = VerifierSlotVisitor::MarkerData;
 
@@ -103,7 +105,7 @@ void VerifierSlotVisitor::OpaqueRootData::addMarkerData(MarkerData&& marker)
 }
 
 VerifierSlotVisitor::VerifierSlotVisitor(JSC::Heap& heap)
-    : Base(heap, "Verifier", m_opaqueRootStorage)
+    : Base(heap, "Verifier"_s, m_opaqueRootStorage)
 {
     m_needsExtraOpaqueRootHandling = true;
 }
@@ -171,12 +173,12 @@ void VerifierSlotVisitor::appendUnbarriered(JSCell* cell)
     if (!cell)
         return;
 
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(isMarked(cell->preciseAllocation(), cell)))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (isMarked(cell->preciseAllocation(), cell)) [[likely]]
             return;
     } else {
         MarkedBlock& block = cell->markedBlock();
-        if (LIKELY(isMarked(block, cell)))
+        if (isMarked(block, cell)) [[likely]]
             return;
     }
 
@@ -322,7 +324,7 @@ bool VerifierSlotVisitor::isFirstVisit() const
 
 bool VerifierSlotVisitor::isMarked(const void* rawCell) const
 {
-    HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
+    HeapCell* cell = std::bit_cast<HeapCell*>(rawCell);
     if (cell->isPreciseAllocation())
         return isMarked(cell->preciseAllocation(), cell);
     return isMarked(cell->markedBlock(), cell);
@@ -346,7 +348,7 @@ bool VerifierSlotVisitor::isMarked(MarkedBlock& block, HeapCell* cell) const
 
 void VerifierSlotVisitor::markAuxiliary(const void* base)
 {
-    HeapCell* cell = bitwise_cast<HeapCell*>(base);
+    HeapCell* cell = std::bit_cast<HeapCell*>(base);
 
     ASSERT(cell->heap() == heap());
     testAndSetMarked(cell);
@@ -359,7 +361,7 @@ bool VerifierSlotVisitor::mutatorIsStopped() const
 
 bool VerifierSlotVisitor::testAndSetMarked(const void* rawCell)
 {
-    HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
+    HeapCell* cell = std::bit_cast<HeapCell*>(rawCell);
     if (cell->isPreciseAllocation())
         return testAndSetMarked(cell->preciseAllocation());
     return testAndSetMarked(cell->markedBlock(), cell);
@@ -370,7 +372,7 @@ bool VerifierSlotVisitor::testAndSetMarked(PreciseAllocation& allocation)
     std::unique_ptr<PreciseAllocationData>& data = m_preciseAllocationMap.add(&allocation, nullptr).iterator->value;
     if (!data) {
         data = makeUnique<PreciseAllocationData>(&allocation);
-        if (UNLIKELY(Options::verboseVerifyGC()))
+        if (Options::verboseVerifyGC()) [[unlikely]]
             data->addMarkerData({ referrer(), StackTrace::captureStackTrace(maxMarkingStackFramesToCapture, 2) });
         return false;
     }
@@ -380,7 +382,7 @@ bool VerifierSlotVisitor::testAndSetMarked(PreciseAllocation& allocation)
 bool VerifierSlotVisitor::testAndSetMarked(MarkedBlock& block, HeapCell* cell)
 {
     MarkedBlockData* data = block.verifierMemo<MarkedBlockData*>();
-    if (UNLIKELY(!data)) {
+    if (!data) [[unlikely]] {
         std::unique_ptr<MarkedBlockData>& entryData = m_markedBlockMap.add(&block, nullptr).iterator->value;
         RELEASE_ASSERT(!entryData);
         entryData = makeUnique<MarkedBlockData>(&block);
@@ -390,8 +392,10 @@ bool VerifierSlotVisitor::testAndSetMarked(MarkedBlock& block, HeapCell* cell)
 
     unsigned atomNumber = block.atomNumber(cell);
     bool alreadySet = data->testAndSetMarked(atomNumber);
-    if (!alreadySet && UNLIKELY(Options::verboseVerifyGC()))
+    if (!alreadySet) {
+        if (Options::verboseVerifyGC()) [[unlikely]]
         data->addMarkerData(atomNumber, { referrer(), StackTrace::captureStackTrace(maxMarkingStackFramesToCapture, 2) });
+    }
     return alreadySet;
 }
 
@@ -416,3 +420,5 @@ void VerifierSlotVisitor::visitChildren(const JSCell* cell)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

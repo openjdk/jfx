@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,11 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <wtf/PointerComparison.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceRequestBase);
 
 #if PLATFORM(IOS_FAMILY)
 double ResourceRequestBase::s_defaultTimeoutInterval = INT_MAX;
@@ -94,8 +97,8 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
         ASSERT(encodingCount <= 3);
         setResponseContentDispositionEncodingFallbackArray(encoding1, encoding2, encoding3);
     }
-    if (other.m_httpBody)
-        setHTTPBody(other.m_httpBody->isolatedCopy());
+    if (RefPtr httpBody = other.m_httpBody)
+        setHTTPBody(httpBody->isolatedCopy());
     setAllowCookies(other.m_requestData.m_allowCookies);
     setIsAppInitiated(other.isAppInitiated());
     setPrivacyProxyFailClosedForUnreachableNonMainHosts(other.privacyProxyFailClosedForUnreachableNonMainHosts());
@@ -125,11 +128,11 @@ const URL& ResourceRequestBase::url() const
     return m_requestData.m_url;
 }
 
-void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
+void ResourceRequestBase::setURL(URL&& url, bool didFilterLinkDecoration)
 {
     updateResourceRequest();
 
-    m_requestData.m_url = url;
+    m_requestData.m_url = WTFMove(url);
     m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
 
     m_platformRequestUpdated = false;
@@ -284,6 +287,11 @@ void ResourceRequestBase::setTimeoutInterval(double timeoutInterval)
     m_platformRequestUpdated = false;
 }
 
+void ResourceRequestBase::resetTimeoutInterval()
+{
+    setTimeoutInterval(s_defaultTimeoutInterval);
+}
+
 const URL& ResourceRequestBase::firstPartyForCookies() const
 {
     updateResourceRequest();
@@ -433,7 +441,7 @@ void ResourceRequestBase::clearPurpose()
 {
     updateResourceRequest();
 
-    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::Purpose);
+    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::SecPurpose);
 
     m_platformRequestUpdated = false;
 }

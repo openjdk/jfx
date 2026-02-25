@@ -28,7 +28,7 @@
     Exposed=Window,
     JSGenerateToJSObject
 ] interface ScrollTimeline : AnimationTimeline {
-    constructor(optional ScrollTimelineOptions options = {});
-    readonly attribute Element? source;
+    [CallWith=CurrentDocument] constructor(optional ScrollTimelineOptions options = {});
+    [ImplementedAs=bindingsSource] readonly attribute Element? source;
     readonly attribute ScrollAxis axis;
 };

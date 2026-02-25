@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,12 +51,62 @@ Structure* createIteratorResultObjectStructure(VM&, JSGlobalObject&);
 JS_EXPORT_PRIVATE JSValue iteratorMethod(JSGlobalObject*, JSObject*);
 JS_EXPORT_PRIVATE IterationRecord iteratorForIterable(JSGlobalObject*, JSObject*, JSValue iteratorMethod);
 JS_EXPORT_PRIVATE IterationRecord iteratorForIterable(JSGlobalObject*, JSValue iterable);
+JS_EXPORT_PRIVATE IterationRecord iteratorDirect(JSGlobalObject*, JSValue);
 
 JS_EXPORT_PRIVATE JSValue iteratorMethod(JSGlobalObject*, JSObject*);
 JS_EXPORT_PRIVATE bool hasIteratorMethod(JSGlobalObject*, JSValue);
 
 JS_EXPORT_PRIVATE IterationMode getIterationMode(VM&, JSGlobalObject*, JSValue iterable);
 JS_EXPORT_PRIVATE IterationMode getIterationMode(VM&, JSGlobalObject*, JSValue iterable, JSValue symbolIterator);
+
+template<typename CallBackType>
+static ALWAYS_INLINE void forEachInFastArray(JSGlobalObject* globalObject, JSValue iterable, JSArray* array, const CallBackType& callback)
+{
+    UNUSED_PARAM(iterable);
+
+    auto& vm = getVM(globalObject);
+    ASSERT(getIterationMode(vm, globalObject, iterable) == IterationMode::FastArray);
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+        for (unsigned index = 0; index < array->length(); ++index) {
+            JSValue nextValue = array->getIndex(globalObject, index);
+            RETURN_IF_EXCEPTION(scope, void());
+            callback(vm, globalObject, nextValue);
+        if (scope.exception()) [[unlikely]] {
+                scope.release();
+                JSArrayIterator* iterator = JSArrayIterator::create(vm, globalObject->arrayIteratorStructure(), array, IterationKind::Values);
+                iterator->internalField(JSArrayIterator::Field::Index).setWithoutWriteBarrier(jsNumber(index + 1));
+                iteratorClose(globalObject, iterator);
+                return;
+            }
+        }
+}
+
+template<typename CallBackType>
+static ALWAYS_INLINE void forEachInIterationRecord(JSGlobalObject* globalObject, IterationRecord iterationRecord, const CallBackType& callback)
+{
+    auto& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    while (true) {
+        JSValue next = iteratorStep(globalObject, iterationRecord);
+        if (scope.exception()) [[unlikely]]
+            return;
+        if (next.isFalse())
+            return;
+
+        JSValue nextValue = iteratorValue(globalObject, next);
+        RETURN_IF_EXCEPTION(scope, void());
+
+        callback(vm, globalObject, nextValue);
+        if (scope.exception()) [[unlikely]] {
+            scope.release();
+            iteratorClose(globalObject, iterationRecord.iterator);
+            return;
+        }
+    }
+}
 
 template<typename CallBackType>
 void forEachInIterable(JSGlobalObject* globalObject, JSValue iterable, const CallBackType& callback)
@@ -66,38 +116,15 @@ void forEachInIterable(JSGlobalObject* globalObject, JSValue iterable, const Cal
 
     if (getIterationMode(vm, globalObject, iterable) == IterationMode::FastArray) {
         auto* array = jsCast<JSArray*>(iterable);
-        for (unsigned index = 0; index < array->length(); ++index) {
-            JSValue nextValue = array->getIndex(globalObject, index);
-            RETURN_IF_EXCEPTION(scope, void());
-            callback(vm, globalObject, nextValue);
-            if (UNLIKELY(scope.exception())) {
-                scope.release();
-                JSArrayIterator* iterator = JSArrayIterator::create(vm, globalObject->arrayIteratorStructure(), array, IterationKind::Values);
-                iterator->internalField(JSArrayIterator::Field::Index).setWithoutWriteBarrier(jsNumber(index + 1));
-                iteratorClose(globalObject, iterator);
-                return;
-            }
-        }
+        forEachInFastArray(globalObject, iterable, array, callback);
+        RETURN_IF_EXCEPTION(scope, void());
         return;
     }
 
     IterationRecord iterationRecord = iteratorForIterable(globalObject, iterable);
     RETURN_IF_EXCEPTION(scope, void());
-    while (true) {
-        JSValue next = iteratorStep(globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
-            return;
-
-        JSValue nextValue = iteratorValue(globalObject, next);
-        RETURN_IF_EXCEPTION(scope, void());
-
-        callback(vm, globalObject, nextValue);
-        if (UNLIKELY(scope.exception())) {
-            scope.release();
-            iteratorClose(globalObject, iterationRecord.iterator);
-            return;
-        }
-    }
+    scope.release();
+    forEachInIterationRecord(globalObject, iterationRecord, callback);
 }
 
 template<typename CallBackType>
@@ -112,7 +139,7 @@ void forEachInIterable(JSGlobalObject& globalObject, JSObject* iterable, JSValue
             JSValue nextValue = array->getIndex(&globalObject, index);
             RETURN_IF_EXCEPTION(scope, void());
             callback(vm, globalObject, nextValue);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 scope.release();
                 JSArrayIterator* iterator = JSArrayIterator::create(vm, globalObject.arrayIteratorStructure(), array, IterationKind::Values);
                 iterator->internalField(JSArrayIterator::Field::Index).setWithoutWriteBarrier(jsNumber(index + 1));
@@ -127,19 +154,33 @@ void forEachInIterable(JSGlobalObject& globalObject, JSObject* iterable, JSValue
     RETURN_IF_EXCEPTION(scope, void());
     while (true) {
         JSValue next = iteratorStep(&globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
+        if (scope.exception()) [[unlikely]]
+            return;
+        if (next.isFalse())
             return;
 
         JSValue nextValue = iteratorValue(&globalObject, next);
         RETURN_IF_EXCEPTION(scope, void());
 
         callback(vm, globalObject, nextValue);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.release();
             iteratorClose(&globalObject, iterationRecord.iterator);
             return;
         }
     }
+}
+
+template<typename CallBackType>
+void forEachInIteratorProtocol(JSGlobalObject* globalObject, JSValue iterable, const CallBackType& callback)
+{
+    auto& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    IterationRecord iterationRecord = iteratorDirect(globalObject, iterable);
+    RETURN_IF_EXCEPTION(scope, void());
+    scope.release();
+    forEachInIterationRecord(globalObject, iterationRecord, callback);
 }
 
 } // namespace JSC

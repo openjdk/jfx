@@ -26,23 +26,27 @@
 #include "ContainerQueryParser.h"
 
 #include "CSSPrimitiveValue.h"
-#include "CSSPropertyParser.h"
-#include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParsing.h"
 #include "ContainerQueryFeatures.h"
 #include "MediaQueryParserContext.h"
 
 namespace WebCore {
 namespace CQ {
 
+Vector<const MQ::FeatureSchema*> ContainerQueryParser::featureSchemas()
+{
+    return Features::allSchemas();
+}
+
 std::optional<ContainerQuery> ContainerQueryParser::consumeContainerQuery(CSSParserTokenRange& range, const MediaQueryParserContext& context)
 {
     auto consumeName = [&] {
         if (range.peek().type() == LeftParenthesisToken || range.peek().type() == FunctionToken)
             return nullAtom();
-        auto nameValue = CSSPropertyParserHelpers::consumeSingleContainerName(range);
-        if (!nameValue)
+        RefPtr nameValue = CSSPropertyParsing::consumeSingleContainerName(range);
+        if (RefPtr namePrimitive = dynamicDowncast<CSSPrimitiveValue>(nameValue))
+            return AtomString { namePrimitive->stringValue() };
             return nullAtom();
-        return AtomString { nameValue->stringValue() };
     };
 
     auto name = consumeName();
@@ -70,22 +74,10 @@ bool ContainerQueryParser::isValidFunctionId(CSSValueID functionId)
 
 const MQ::FeatureSchema* ContainerQueryParser::schemaForFeatureName(const AtomString& name, const MediaQueryParserContext& context, State& state)
 {
-    if (state.inFunctionId == CSSValueStyle && context.cssStyleQueriesEnabled)
+    if (state.inFunctionId == CSSValueStyle)
         return &Features::style();
 
     return GenericMediaQueryParser<ContainerQueryParser>::schemaForFeatureName(name, context, state);
-}
-
-Vector<const MQ::FeatureSchema*> ContainerQueryParser::featureSchemas()
-{
-    return {
-        &Features::width(),
-        &Features::height(),
-        &Features::inlineSize(),
-        &Features::blockSize(),
-        &Features::aspectRatio(),
-        &Features::orientation(),
-    };
 }
 
 }

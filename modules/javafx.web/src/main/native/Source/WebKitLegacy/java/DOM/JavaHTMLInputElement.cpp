@@ -29,6 +29,7 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/NodeList.h>
 #include <WebCore/JSExecState.h>
@@ -76,12 +77,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getAutoco
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->autocomplete());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getAutofocusImpl(JNIEnv*, jclass, jlong peer)
@@ -156,34 +151,16 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormAc
     return JavaReturn<String>(env, IMPL->formAction());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setFormActionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormAction(AtomString{String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormEnctypeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->formEnctype());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setFormEnctypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormEnctype(AtomString {String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormMethodImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->formMethod());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setFormMethodImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormMethod(AtomString { String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormNoValidateImpl(JNIEnv*, jclass, jlong peer)
@@ -214,12 +191,6 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getHeightImp
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->height();
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setHeightImpl(JNIEnv*, jclass, jlong peer, jint value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setHeight(value);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getIndeterminateImpl(JNIEnv*, jclass, jlong peer)
@@ -384,24 +355,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getTypeIm
     return JavaReturn<String>(env, IMPL->type());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setType(AtomString{String(env, value)});
-}
-
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getDefaultValueImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->defaultValue());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setDefaultValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setDefaultValue(AtomString{String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getValueImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
@@ -445,12 +398,6 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getWidthImpl
     return IMPL->width();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setWidthImpl(JNIEnv*, jclass, jlong peer, jint value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setWidth(value);
-}
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
@@ -491,18 +438,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setUseMapImp
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::usemapAttr, AtomString {String(env, value)});
-}
-
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getIncrementalImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->hasAttribute(WebCore::HTMLNames::incrementalAttr);
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_setIncrementalImpl(JNIEnv*, jclass, jlong peer, jboolean value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setBooleanAttribute(WebCore::HTMLNames::incrementalAttr, value);
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLInputElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)

@@ -31,15 +31,15 @@
 
 #pragma once
 
+#include "WorkerOrWorkletGlobalScope.h"
 #include <JavaScriptCore/Debugger.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class WorkerOrWorkletGlobalScope;
-
 class WorkerDebugger final : public JSC::Debugger {
     WTF_MAKE_NONCOPYABLE(WorkerDebugger);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WorkerDebugger);
 public:
     WorkerDebugger(WorkerOrWorkletGlobalScope&);
     ~WorkerDebugger() override = default;
@@ -53,7 +53,7 @@ private:
     void runEventLoopWhilePaused() final;
     void reportException(JSC::JSGlobalObject*, JSC::Exception*) const final;
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    WeakRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

@@ -59,7 +59,8 @@ inline bool shouldCollapseWhiteSpace(const RenderStyle* style, const LineInfo& l
     // If a space (U+0020) at the end of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line', it is also removed.
     // If spaces (U+0020) or tabs (U+0009) at the end of a line have 'white-space' set to 'pre-wrap', UAs may visually collapse them.
     return style->collapseWhiteSpace()
-        || (whitespacePosition == TrailingWhitespace && style->whiteSpace() == WhiteSpace::PreWrap && !lineInfo.isEmpty());
+        || (whitespacePosition == TrailingWhitespace && style->whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve
+            && style->textWrapMode() == TextWrapMode::Wrap && !lineInfo.isEmpty());
 }
 
 inline bool skipNonBreakingSpace(const LegacyInlineIterator& it, const LineInfo& lineInfo)
@@ -90,8 +91,9 @@ inline bool requiresLineBox(const LegacyInlineIterator& it, const LineInfo& line
     if (!shouldCollapseWhiteSpace(&it.renderer()->style(), lineInfo, whitespacePosition))
         return true;
 
-    UChar current = it.current();
-    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && (current != '\n' || it.renderer()->preservesNewline()) && !skipNonBreakingSpace(it, lineInfo);
+    char16_t current = it.current();
+    auto preservesNewline = !it.renderer()->isRenderSVGInlineText() && it.renderer()->style().preserveNewline();
+    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && (current != '\n' || preservesNewline) && !skipNonBreakingSpace(it, lineInfo);
     return notJustWhitespace || rendererIsEmptyInline;
 }
 

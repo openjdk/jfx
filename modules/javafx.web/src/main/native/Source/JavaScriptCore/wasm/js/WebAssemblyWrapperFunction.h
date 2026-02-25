@@ -45,14 +45,15 @@ public:
 
     DECLARE_INFO;
 
-    static WebAssemblyWrapperFunction* create(VM&, JSGlobalObject*, Structure*, JSObject*, unsigned importIndex, JSWebAssemblyInstance*, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    DECLARE_VISIT_CHILDREN;
+
+    static WebAssemblyWrapperFunction* create(VM&, JSGlobalObject*, Structure*, JSObject*, unsigned importIndex, JSWebAssemblyInstance*, Wasm::TypeIndex, RefPtr<const Wasm::RTT>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     JSObject* function() { return m_function.get(); }
 
 private:
-    WebAssemblyWrapperFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, JSObject* function, WasmToWasmImportableFunction);
-    DECLARE_VISIT_CHILDREN;
+    WebAssemblyWrapperFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, JSObject* function, Wasm::WasmOrJSImportableFunction&&, Wasm::WasmOrJSImportableFunctionCallLinkInfo*);
 
     WriteBarrier<JSObject> m_function;
 };

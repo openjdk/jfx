@@ -26,6 +26,7 @@
 #include "garray.h"
 #include "genviron.h"
 #include "ghash.h"
+#include "glib-private.h"
 #include "gmessages.h"
 #include "gstrfuncs.h"
 #include "gthread.h"
@@ -175,8 +176,8 @@ charset_cache_free (gpointer data)
  * @charset: (out) (optional) (transfer none): return location for character set
  *   name, or %NULL.
  *
- * Obtains the character set for the [current locale][setlocale]; you
- * might use this character set as an argument to g_convert(), to convert
+ * Obtains the character set for the [current locale](running.html#locale);
+ * you might use this character set as an argument to g_convert(), to convert
  * from the current locale's encoding to some other encoding. (Frequently
  * g_locale_to_utf8() and g_locale_from_utf8() are nice shortcuts, though.)
  *
@@ -536,6 +537,7 @@ enum
 };
 
 /* Break an X/Open style locale specification into components
+ * e.g. `en_GB` or `uz_UZ.utf8@cyrillic`
  */
 static guint
 explode_locale (const gchar *locale,
@@ -562,7 +564,7 @@ explode_locale (const gchar *locale,
   else
     at_pos = locale + strlen (locale);
 
-  if (dot_pos)
+  if (dot_pos && dot_pos < at_pos)
     {
       mask |= COMPONENT_CODESET;
       *codeset = g_strndup (dot_pos, at_pos - dot_pos);
@@ -570,7 +572,7 @@ explode_locale (const gchar *locale,
   else
     dot_pos = at_pos;
 
-  if (uscore_pos)
+  if (uscore_pos && uscore_pos < dot_pos)
     {
       mask |= COMPONENT_TERRITORY;
       *territory = g_strndup (uscore_pos, dot_pos - uscore_pos);
@@ -578,6 +580,7 @@ explode_locale (const gchar *locale,
   else
     uscore_pos = dot_pos;
 
+  g_assert (uscore_pos >= locale);
   *language = g_strndup (locale, uscore_pos - locale);
 
   return mask;
@@ -807,6 +810,7 @@ g_get_language_names_with_category (const gchar *category_name)
       cache = g_hash_table_new_full (g_str_hash, g_str_equal,
                                      g_free, language_names_cache_free);
       g_private_set (&cache_private, cache);
+      g_ignore_leak (cache);
     }
 
   languages = guess_category_value (category_name);
@@ -835,6 +839,7 @@ g_get_language_names_with_category (const gchar *category_name)
       name_cache->languages = g_strdup (languages);
       name_cache->language_names = (gchar **) g_ptr_array_free (array, FALSE);
       g_hash_table_insert (cache, g_strdup (category_name), name_cache);
+      g_ignore_leak (name_cache);
     }
 
   return (const gchar * const *) name_cache->language_names;

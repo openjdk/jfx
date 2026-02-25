@@ -28,7 +28,6 @@
 
 #include "pas_bitfit_page_inlines.h"
 #include "pas_deallocation_mode.h"
-#include "pas_debug_heap.h"
 #include "pas_get_page_base_and_kind_for_small_other_in_fast_megapage.h"
 #include "pas_heap_config.h"
 #include "pas_heap_lock.h"
@@ -36,6 +35,7 @@
 #include "pas_large_heap.h"
 #include "pas_malloc_stack_logging.h"
 #include "pas_segregated_page_inlines.h"
+#include "pas_system_heap.h"
 #include "pas_thread_local_cache.h"
 #include "pas_utils.h"
 
@@ -98,13 +98,13 @@ static PAS_ALWAYS_INLINE bool pas_try_deallocate_not_small_exclusive_segregated(
                 begin);
             return true;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return false;
         }
     }
 
-    if (pas_debug_heap_is_enabled(config.kind)) {
-        pas_debug_heap_free((void*)begin);
+    if (pas_system_heap_is_enabled(config.kind)) {
+        pas_system_heap_free((void*)begin);
         return true;
     }
     pas_msl_free_logging((void*)begin);
@@ -190,13 +190,13 @@ static PAS_ALWAYS_INLINE bool pas_try_deallocate(void* ptr,
                                                  pas_heap_config config,
                                                  pas_deallocation_mode deallocation_mode)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
 
     pas_thread_local_cache* thread_local_cache;
     uintptr_t begin;
 
     begin = (uintptr_t)ptr;
-    PAS_PROFILE(TRY_DEALLOCATE, begin);
+    PAS_PROFILE(TRY_DEALLOCATE, &config, begin);
     ptr = (void*)begin;
 
     if (verbose)

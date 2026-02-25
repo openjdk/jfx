@@ -34,23 +34,22 @@ namespace WebCore {
 
 class AccessibilityLabel final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityLabel> create(RenderObject&);
+    static Ref<AccessibilityLabel> create(AXID, RenderObject&, AXObjectCache&);
     virtual ~AccessibilityLabel();
 
-    bool containsOnlyStaticText() const;
+    bool containsOnlyStaticText() const final;
 private:
-    explicit AccessibilityLabel(RenderObject&);
-    bool computeAccessibilityIsIgnored() const final;
+    explicit AccessibilityLabel(AXID, RenderObject&, AXObjectCache&);
+    bool computeIsIgnored() const final { return isIgnoredByDefault(); }
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Label; }
 
     bool isAccessibilityLabelInstance() const final { return true; }
     String stringValue() const final;
-    void updateChildrenIfNecessary() final;
+    void addChildren() final;
     void clearChildren() final;
-    void insertChild(AXCoreObject*, unsigned, DescendIfIgnored = DescendIfIgnored::Yes) final;
-    bool m_containsOnlyStaticTextDirty : 1;
-    bool m_containsOnlyStaticText : 1;
+    mutable bool m_containsOnlyStaticTextDirty : 1;
+    mutable bool m_containsOnlyStaticText : 1;
 };
 
 } // namespace WebCore

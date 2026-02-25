@@ -9,10 +9,12 @@ if (WIN32)
 
         win/CPUTimeWin.cpp
         win/DbgHelperWin.cpp
+        win/FileHandleWin.cpp
         win/FileSystemWin.cpp
         win/LanguageWin.cpp
         win/LoggingWin.cpp
         win/MainThreadWin.cpp
+        win/MappedFileDataWin.cpp
         win/OSAllocatorWin.cpp
         win/PathWalker.cpp
         win/SignalsWin.cpp
@@ -49,15 +51,17 @@ else ()
     if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
         list(APPEND WTF_SOURCES
             glib/FileSystemGlib.cpp
-        )
-    else ()
-        list(APPEND WTF_SOURCES
-            posix/FileSystemPOSIX.cpp
-
-            unix/UniStdExtrasUnix.cpp
+            glib/Sandbox.cpp
         )
     endif ()
 
+        list(APPEND WTF_SOURCES
+        posix/FileHandlePOSIX.cpp
+            posix/FileSystemPOSIX.cpp
+        posix/MappedFileDataPOSIX.cpp
+
+            unix/UniStdExtrasUnix.cpp
+        )
 endif ()
 
 if (WIN32)
@@ -107,13 +111,25 @@ else ()
 endif ()
 
 if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
+    list(APPEND WTF_PUBLIC_HEADERS
+        glib/GRefPtr.h
+        glib/GTypedefs.h
+        glib/RunLoopSourcePriority.h
+    )
     list(APPEND WTF_SOURCES
         glib/GRefPtr.cpp
         glib/RunLoopGLib.cpp
     )
     if (ENABLE_REMOTE_INSPECTOR)
+        list(APPEND WTF_PUBLIC_HEADERS
+            glib/GSocketMonitor.h
+            glib/GSpanExtras.h
+            glib/GUniquePtr.h
+            glib/SocketConnection.h
+        )
         list(APPEND WTF_SOURCES
             glib/GSocketMonitor.cpp
+            glib/GSpanExtras.cpp
             glib/SocketConnection.cpp
         )
     endif ()

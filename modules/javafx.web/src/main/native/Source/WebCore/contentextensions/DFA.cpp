@@ -29,6 +29,7 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "DFAMinimizer.h"
+#include <ranges>
 #include <wtf/DataLog.h>
 
 namespace WebCore {
@@ -106,7 +107,7 @@ static void printTransitions(const DFA& dfa, unsigned sourceNodeId)
         dataLogF("        %d -> %d [label=\"", sourceNodeId, transitionPerTarget.key);
 
         Vector<uint16_t> incomingCharacters = transitionPerTarget.value;
-        std::sort(incomingCharacters.begin(), incomingCharacters.end());
+        std::ranges::sort(incomingCharacters);
 
         char rangeStart = incomingCharacters.first();
         char rangeEnd = rangeStart;

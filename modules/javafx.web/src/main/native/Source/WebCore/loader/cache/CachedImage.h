@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -26,7 +26,6 @@
 #include "Image.h"
 #include "ImageObserver.h"
 #include "IntRect.h"
-#include "IntSizeHash.h"
 #include "LayoutSize.h"
 #include "SVGImageCache.h"
 #include <wtf/HashMap.h>
@@ -97,6 +96,8 @@ public:
     LayoutSize unclampedImageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType = UsedSize) const;
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
+    bool hasHDRContent() const;
+
     bool isManuallyCached() const { return m_isManuallyCached; }
     RevalidationDecision makeRevalidationDecision(CachePolicy) const override;
     void load(CachedResourceLoader&) override;
@@ -115,16 +116,10 @@ public:
     bool isVisibleInViewport(const Document&) const;
     bool allowsAnimation(const Image&) const;
 
-    bool layerBasedSVGEngineEnabled() const { return m_layerBasedSVGEngineEnabled; }
-
 private:
     void clear();
 
-    CachedImage(CachedImage&, const ResourceRequest&, PAL::SessionID);
-
     void setBodyDataFrom(const CachedResource&) final;
-
-    bool isPDFResource() const;
 
     void createImage();
     void clearImage();
@@ -147,7 +142,7 @@ private:
     EncodedDataStatus updateImageData(bool allDataReceived);
     void updateData(const SharedBuffer&) override;
     void error(CachedResource::Status) override;
-    void responseReceived(const ResourceResponse&) override;
+    void responseReceived(ResourceResponse&&) override;
 
     // For compatibility, images keep loading even if there are HTTP errors.
     bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
@@ -174,10 +169,11 @@ private:
         bool canDestroyDecodedData(const Image&) const final;
         void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) final;
         void changedInRect(const Image&, const IntRect*) final;
+        void imageContentChanged(const Image&) final;
         void scheduleRenderingUpdate(const Image&) final;
 
         bool allowsAnimation(const Image&) const final;
-        bool layerBasedSVGEngineEnabled() const final { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).m_layerBasedSVGEngineEnabled : false; }
+        const Settings* settings() final { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).m_settings.get() : nullptr; }
 
         WeakHashSet<CachedImage> m_cachedImages;
     };
@@ -188,6 +184,7 @@ private:
     bool canDestroyDecodedData(const Image&) const;
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid);
     void changedInRect(const Image&, const IntRect*);
+    void imageContentChanged(const Image&);
     void scheduleRenderingUpdate(const Image&);
 
     void updateBufferInternal(const FragmentedSharedBuffer&);
@@ -212,13 +209,13 @@ private:
     MonotonicTime m_lastUpdateImageDataTime;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_skippingRevalidationDocument;
+    RefPtr<const Settings> m_settings;
 
     static constexpr unsigned maxUpdateImageDataCount = 4;
     unsigned m_updateImageDataCount : 3;
     bool m_isManuallyCached : 1;
     bool m_shouldPaintBrokenImage : 1;
     bool m_forceUpdateImageDataEnabledForTesting : 1;
-    bool m_layerBasedSVGEngineEnabled : 1 { false };
     bool m_allowsOrientationOverride : 1;
 };
 

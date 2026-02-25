@@ -32,10 +32,13 @@
 #include "HTMLFormElement.h"
 #include "NodeRareData.h"
 #include "ValidationMessage.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FormAssociatedCustomElement);
 
 using namespace HTMLNames;
 
@@ -65,7 +68,7 @@ ExceptionOr<void> FormAssociatedCustomElement::setValidity(ValidityStateFlags va
     m_validityStateFlags = validityStateFlags;
     setCustomValidity(validityStateFlags.isValid() ? emptyString() : WTFMove(message));
 
-    if (validationAnchor && !validationAnchor->isDescendantOrShadowDescendantOf(*m_element))
+    if (validationAnchor && !m_element->isShadowIncludingInclusiveAncestorOf(*validationAnchor))
         return Exception { ExceptionCode::NotFoundError };
 
     m_validationAnchor = validationAnchor;
@@ -99,7 +102,8 @@ void FormAssociatedCustomElement::setFormValue(CustomElementFormValue&& submissi
 HTMLElement* FormAssociatedCustomElement::validationAnchorElement()
 {
     ASSERT(m_element->isDefinedCustomElement());
-    return m_validationAnchor.get();
+    auto anchor = m_validationAnchor.get();
+    return anchor ? anchor : m_element.get();
 }
 
 bool FormAssociatedCustomElement::computeValidity() const

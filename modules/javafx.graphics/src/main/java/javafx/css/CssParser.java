@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
@@ -34,6 +36,8 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
+import com.sun.javafx.css.media.MediaQueryParser;
+import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -71,6 +75,7 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.effect.BlurType;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
@@ -118,6 +123,15 @@ import java.util.Stack;
  * @since 9
  */
 final public class CssParser {
+
+    static {
+        CssParserHelper.setAccessor(new CssParserHelper.Accessor() {
+            @Override
+            public Size parseSize(Token token) {
+                return sizeImpl(token);
+            }
+        });
+    }
 
     /**
      * Constructs a {@code CssParser}.
@@ -288,6 +302,7 @@ final public class CssParser {
                 if (declarations != null && !declarations.isEmpty()) {
                     final Selector selector = Selector.getUniversalSelector();
                     final Rule rule = new Rule(
+                        null, // inline styles don't have media rules
                         Collections.singletonList(selector),
                         declarations
                     );
@@ -570,6 +585,21 @@ final public class CssParser {
     }
 
     private Size size(final Token token) throws ParseException {
+        Size size = sizeImpl(token);
+        if (size == null) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
+                LOGGER.finest("Expected \'<number>\'");
+            }
+
+            ParseException re = new ParseException("Expected \'<number>\'", token, this);
+            reportError(createError(re.toString()));
+            throw re;
+        }
+
+        return size;
+    }
+
+    private static Size sizeImpl(final Token token) {
         SizeUnits units = SizeUnits.PX;
         // Amount to trim off the suffix, if any. Most are 2 chars.
         int trim = 2;
@@ -633,12 +663,7 @@ final public class CssParser {
             units = SizeUnits.MS;
             break;
         default:
-            if (LOGGER.isLoggable(Level.FINEST)) {
-                LOGGER.finest("Expected \'<number>\'");
-            }
-            ParseException re = new ParseException("Expected \'<number>\'",token, this);
-            reportError(createError(re.toString()));
-            throw re;
+            return null;
         }
         // TODO: Handle NumberFormatException
         return new Size(
@@ -4059,8 +4084,13 @@ final public class CssParser {
                 Term arg = term.firstArg;
 
                 for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
-                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER
-                            || (args[j] = Double.parseDouble(arg.token.getText())) < 0 || args[j] > 1) {
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg != null ? arg : term,  "Expected \'<number>\'");
+                    } else {
+                        args[j] = Double.parseDouble(arg.token.getText());
+                    }
+
+                    if (j % 2 == 0 && (args[j] < 0 || args[j] > 1)) {
                         error(arg != null ? arg : term,  "Expected \'<number [0,1]>\'");
                     }
                 }
@@ -4095,6 +4125,43 @@ final public class CssParser {
                     }, InterpolatorConverter.getInstance());
             }
 
+            case "linear(" -> {
+                List<Point2D> args = new ArrayList<>();
+
+                for (Term arg = term.firstArg; arg != null; arg = arg.nextArg) {
+                    double inputValue = Double.NaN;
+                    double outputValue = Double.NaN;
+
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg, "Expected \'<number>\'");
+                    } else {
+                        outputValue = Double.parseDouble(arg.token.getText());
+                    }
+
+                    // 0, 1, or 2 <percentage>s
+                    for (int i = 0; i < 2; ++i) {
+                        Term next = arg.nextInSeries;
+                        if (next != null) {
+                            if (next.token == null || next.token.getType() != CssLexer.PERCENTAGE) {
+                                error(next, "Expected \'<percentage>\'");
+                            } else {
+                                inputValue = size(next.token).getValue() / 100.0;
+                            }
+
+                            arg = next;
+                            args.add(new Point2D(inputValue, outputValue));
+                        } else if (i == 0) {
+                            args.add(new Point2D(inputValue, outputValue));
+                        }
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
             default -> {
                 yield new ParsedValueImpl<>(
                     new ParsedValueImpl(term.token.getText(), null),
@@ -4103,11 +4170,11 @@ final public class CssParser {
         };
     }
 
-    // https://www.w3.org/TR/css-easing-1/#easing-functions
-    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    // https://www.w3.org/TR/css-easing-2/#easing-functions
+    // <easing-function> = linear | <linear-easing-function> | <cubic-bezier-easing-function> | <step-easing-function>
     private boolean isEasingFunction(Token token) throws ParseException {
         return token != null && switch (token.getText()) {
-            case "linear" -> true;
+            case "linear", "linear(" -> true;
             case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
             case "step-start", "step-end", "steps(" -> true;
             case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;
@@ -4152,6 +4219,8 @@ final public class CssParser {
     private static Stack<String> imports;
 
     private void parse(Stylesheet stylesheet, CssLexer lexer) {
+        MediaRule mediaRule = null;
+        int expectedRBraces = 0;
 
         // need to read the first token
         currentToken = nextToken(lexer);
@@ -4235,11 +4304,45 @@ final public class CssParser {
 
                 continue;
 
+            } else if ("media".equals(keyword)) {
+                mediaRule = mediaRule(lexer, mediaRule);
+
+                if (currentToken != null) {
+                    if (currentToken.getType() == CssLexer.LBRACE) {
+                        expectedRBraces++;
+                    }
+
+                    currentToken = nextToken(lexer);
+                    break; // break out of the loop here, as we might encounter a selector next
+                }
+            } else {
+                // Skip the unexpected at-rule.
+                skipAtRule(lexer);
             }
         }
 
         while ((currentToken != null) &&
                (currentToken.getType() != Token.EOF)) {
+
+            if (currentToken.getType() == CssLexer.AT_KEYWORD) {
+                currentToken = lexer.nextToken();
+                String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
+                if ("media".equals(keyword)) {
+                    mediaRule = mediaRule(lexer, mediaRule);
+
+                    if (currentToken != null) {
+                        if (currentToken.getType() == CssLexer.LBRACE) {
+                            expectedRBraces++;
+                        }
+
+                        currentToken = nextToken(lexer);
+                        continue;
+                    }
+                } else {
+                    // Skip the unexpected at-rule.
+                    skipAtRule(lexer);
+                }
+            }
 
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;
@@ -4282,12 +4385,80 @@ final public class CssParser {
                 return;
             }
 
-            stylesheet.getRules().add(new Rule(selectors, declarations));
+            stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
 
+            Token lastToken = currentToken;
             currentToken = nextToken(lexer);
 
+            while (expectedRBraces > 0 && currentToken != null && currentToken.getType() == CssLexer.RBRACE) {
+                mediaRule = mediaRule.getParent();
+                lastToken = currentToken;
+                currentToken = nextToken(lexer);
+                expectedRBraces--;
+            }
+
+            if (expectedRBraces > 0 && currentToken != null && currentToken.getType() == Token.EOF) {
+                String msg = String.format("Expected RBRACE at [%d,%d]", lastToken.getLine(), lastToken.getOffset() + 1);
+                ParseError error = createError(msg);
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+
+                reportError(error);
+                currentToken = null;
+                return;
+            }
         }
+
         currentToken = null;
+    }
+
+    private void skipAtRule(CssLexer lexer) {
+        String msg = MessageFormat.format(
+            "Unexpected at-rule [{0,number,#},{1,number,#}]",
+            currentToken.getLine(), currentToken.getOffset());
+
+        ParseError error = createError(msg);
+        if (LOGGER.isLoggable(Level.WARNING)) {
+            LOGGER.warning(error.toString());
+        }
+
+        reportError(error);
+
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.RBRACE) {
+            // Skip forward to the next SEMI or RBRACE.
+        }
+    }
+
+    private MediaRule mediaRule(CssLexer lexer, MediaRule mediaRule) {
+        // The media query expression contains all tokens (except for WS and NL) up to the
+        // next SEMI or LBRACE. We collect all of these tokens and hand them over to the
+        // special-purpose MediaQueryParser.
+        List<Token> mediaQueryTokens = new ArrayList<>();
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.LBRACE) {
+            if (currentToken.getType() != CssLexer.WS && currentToken.getType() != CssLexer.NL) {
+                mediaQueryTokens.add(currentToken);
+            }
+        }
+
+        var mediaQueryParser = new MediaQueryParser((token, errorMsg) -> {
+            String formattedErrorMsg = token != null
+                ? String.format("%s at [%d,%d]", errorMsg, token.getLine(), token.getOffset())
+                : errorMsg;
+
+            ParseError error = createError(formattedErrorMsg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+
+            reportError(error);
+        });
+
+        return new MediaRule(mediaQueryParser.parseMediaQueryList(mediaQueryTokens), mediaRule);
     }
 
     private FontFace fontFace(CssLexer lexer) {

@@ -31,6 +31,7 @@
 #include "GraphicsContext.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -45,13 +46,23 @@ RenderMathMLSpace::RenderMathMLSpace(MathMLSpaceElement& element, RenderStyle&& 
 
 RenderMathMLSpace::~RenderMathMLSpace() = default;
 
+MathMLSpaceElement& RenderMathMLSpace::element() const
+{
+    return static_cast<MathMLSpaceElement&>(nodeForNonAnonymous());
+}
+
 void RenderMathMLSpace::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
-    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth() + borderAndPaddingLogicalWidth();
+    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth();
 
-    setPreferredLogicalWidthsDirty(false);
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::CalculatePreferredLogicalWidth);
+    applySizeToMathContent(LayoutPhase::CalculatePreferredLogicalWidth, sizes);
+
+    adjustPreferredLogicalWidthsForBorderAndPadding();
+
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutUnit RenderMathMLSpace::spaceWidth() const
@@ -74,19 +85,28 @@ void RenderMathMLSpace::getSpaceHeightAndDepth(LayoutUnit& height, LayoutUnit& d
     }
 }
 
-void RenderMathMLSpace::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLSpace::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     recomputeLogicalWidth();
 
-    setLogicalWidth(spaceWidth() + borderAndPaddingLogicalWidth());
+    setLogicalWidth(spaceWidth());
     LayoutUnit height, depth;
     getSpaceHeightAndDepth(height, depth);
-    setLogicalHeight(height + depth + borderAndPaddingLogicalHeight());
+    setLogicalHeight(height + depth);
+
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::Layout);
+    applySizeToMathContent(LayoutPhase::Layout, sizes);
+
+    adjustLayoutForBorderAndPadding();
 
     updateScrollInfoAfterLayout();
 

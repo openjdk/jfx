@@ -39,7 +39,7 @@
  * GSList:
  * @data: holds the element's data, which can be a pointer to any kind
  *        of data, or any integer value using the
- *        [Type Conversion Macros][glib-Type-Conversion-Macros]
+ *        [Type Conversion Macros](conversion-macros.html#conversion-macros)
  * @next: contains the link to the next element in the list.
  *
  * The #GSList struct is used for each element in the singly-linked

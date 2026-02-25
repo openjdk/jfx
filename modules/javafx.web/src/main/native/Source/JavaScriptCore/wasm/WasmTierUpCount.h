@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,12 +71,12 @@ public:
     Vector<uint32_t>& outerLoops() { return m_outerLoops; }
     Lock& getLock() { return m_lock; }
 
-    OSREntryData& addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&&);
+    OSREntryData& addOSREntryData(FunctionCodeIndex functionIndex, uint32_t loopIndex, StackMap&&);
     OSREntryData& osrEntryData(uint32_t loopIndex);
 
-    void optimizeAfterWarmUp(uint32_t functionIndex)
+    void optimizeAfterWarmUp(FunctionCodeIndex functionIndex)
     {
-        dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing after warm-up.");
+        dataLogLnIf(Options::verboseOSR(), "\t[", functionIndex, "] OMG-optimizing after warm-up.");
         setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp());
     }
 
@@ -85,38 +85,38 @@ public:
         return checkIfThresholdCrossedAndSet(nullptr);
     }
 
-    void dontOptimizeAnytimeSoon(uint32_t functionIndex)
+    void dontOptimizeAnytimeSoon(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": Not OMG-optimizing anytime soon.");
         deferIndefinitely();
     }
 
-    void optimizeNextInvocation(uint32_t functionIndex)
+    void optimizeNextInvocation(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing next invocation.");
         setNewThreshold(0);
     }
 
-    void optimizeSoon(uint32_t functionIndex)
+    void optimizeSoon(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing soon.");
         // FIXME: Need adjustment once we get more information about wasm functions.
         setNewThreshold(Options::thresholdForOMGOptimizeSoon());
     }
 
-    void setOptimizationThresholdBasedOnCompilationResult(uint32_t functionIndex, CompilationResult result)
+    void setOptimizationThresholdBasedOnCompilationResult(FunctionCodeIndex functionIndex, CompilationResult result)
     {
         switch (result) {
-        case CompilationSuccessful:
+        case CompilationResult::CompilationSuccessful:
             optimizeNextInvocation(functionIndex);
             return;
-        case CompilationFailed:
+        case CompilationResult::CompilationFailed:
             dontOptimizeAnytimeSoon(functionIndex);
             return;
-        case CompilationDeferred:
+        case CompilationResult::CompilationDeferred:
             optimizeAfterWarmUp(functionIndex);
             return;
-        case CompilationInvalidated:
+        case CompilationResult::CompilationInvalidated:
             // This is weird - it will only happen in cases when the DFG code block (i.e.
             // the code block that this JITCode belongs to) is also invalidated. So it
             // doesn't really matter what we do. But, we do the right thing anyway. Note
@@ -145,4 +145,4 @@ public:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)

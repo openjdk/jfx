@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CSSSelector.h"
+#include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -55,7 +55,9 @@ enum class MatchElement : uint8_t {
     HasSibling,
     HasSiblingDescendant,
     HasAnySibling,
-    HasNonSubject, // FIXME: This is a catch-all for cases where :has() is in a non-subject position.
+    HasChildParent,
+    HasChildAncestor,
+    HasNonSubject, // FIXME: This is a catch-all for the rest of cases where :has() is in a non-subject position.
     HasScopeBreaking, // FIXME: This is a catch-all for cases where :has() contains a scope breaking sub-selector like, like :has(:is(.x .y)).
     Host,
     HostChild
@@ -85,9 +87,9 @@ struct RuleFeature : public RuleAndSelector {
 static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frequently allocated object. Keep it small.");
 
 struct RuleFeatureWithInvalidationSelector : public RuleFeature {
-    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, const CSSSelector* invalidationSelector);
+    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, CSSSelectorList&& invalidationSelector);
 
-    const CSSSelector* invalidationSelector { nullptr };
+    CSSSelectorList invalidationSelector;
 };
 #pragma pack(pop)
 
@@ -111,8 +113,6 @@ struct RuleFeatureSet {
     HashSet<AtomString> attributeLowercaseLocalNamesInRules;
     HashSet<AtomString> attributeLocalNamesInRules;
     HashSet<AtomString> contentAttributeNamesInRules;
-    Vector<RuleAndSelector> siblingRules;
-    Vector<RuleAndSelector> uncommonAttributeRules;
 
     HashMap<AtomString, std::unique_ptr<RuleFeatureVector>> idRules;
     HashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
@@ -130,11 +130,10 @@ struct RuleFeatureSet {
 
     bool usesFirstLineRules { false };
     bool usesFirstLetterRules { false };
+    bool hasStartingStyleRules { false };
 
 private:
     struct SelectorFeatures {
-        bool hasSiblingSelector { false };
-
         using InvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation>;
         using HasInvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation, DoesBreakScope>;
 

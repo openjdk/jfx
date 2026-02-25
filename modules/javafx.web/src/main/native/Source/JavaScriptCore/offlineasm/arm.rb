@@ -576,6 +576,14 @@ class Instruction
             $asm.puts "ldrsh.w #{armFlippedOperands(operands)}"
         when "storeh"
             $asm.puts "strh #{armOperands(operands)}"
+        when "transferi", "transferp"
+            tmp = ARM_EXTRA_GPRS[-1]
+            $asm.puts "ldr #{tmp.armOperand}, #{operands[0].armOperand}"
+            $asm.puts "str #{tmp.armOperand}, #{operands[1].armOperand}"
+        when "transferq"
+            tmp1, tmp2 = ARM_EXTRA_GPRS[-2..-1]
+            $asm.puts "ldp #{tmp1.armOperand}, #{tmp2.armOperand}, #{operands[0].armOperand}"
+            $asm.puts "stp #{tmp1.armOperand}, #{tmp2.armOperand}, #{operands[1].armOperand}"
         when "loadlinkb"
             $asm.puts "ldrexb #{armFlippedOperands(operands)}"
         when "loadlinkh"
@@ -688,7 +696,7 @@ class Instruction
         when "bdneq"
             $asm.puts "vcmpe.f64 #{armOperands(operands[0..1])}"
             $asm.puts "vmrs apsr_nzcv, fpscr"
-            isUnordered = LocalLabel.unique("bdneq")
+            isUnordered = LocalLabel.unique(codeOrigin, "bdneq")
             $asm.puts "bvs #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
             $asm.puts "bne #{operands[2].asmLabel}"
             isUnordered.lower("ARM")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +32,11 @@
 #include "RenderMathMLFencedOperator.h"
 #include "RenderStyleSetters.h"
 #include "RenderTreeBuilderBlock.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::MathML);
 
 RenderTreeBuilder::MathML::MathML(RenderTreeBuilder& builder)
     : m_builder(builder)
@@ -83,7 +86,7 @@ void RenderTreeBuilder::MathML::attach(RenderMathMLFenced& parent, RenderPtr<Ren
         // |count| is now the number of element children that will be before our new separator, i.e. it's the 1-based index of the separator.
 
         if (count > 0) {
-            UChar separator;
+            char16_t separator;
 
             // Use the last separator if we've run out of specified separators.
             if (count > separators->length())

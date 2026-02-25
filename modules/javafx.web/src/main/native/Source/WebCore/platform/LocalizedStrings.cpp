@@ -27,6 +27,7 @@
 #include "config.h"
 #include "LocalizedStrings.h"
 
+#include "DateComponents.h"
 #include "IntSize.h"
 #include "NotImplemented.h"
 #include <wtf/MathExtras.h>
@@ -66,9 +67,9 @@ String formatLocalizedString(const wchar_t* format, ...)
     va_start(arguments, format);
     int len = _vscwprintf(format, arguments);
     Vector<wchar_t> buffer(len + 1);
-    _vsnwprintf(buffer.data(), len + 1, format, arguments);
+    _vsnwprintf(buffer.mutableSpan().data(), len + 1, format, arguments);
     va_end(arguments);
-    return { buffer.data() };
+    return { buffer.span().data() };
 }
 #else
 // Because |format| is used as the second parameter to va_start, it cannot be a reference
@@ -91,19 +92,17 @@ String formatLocalizedString(const char* format, ...)
 #if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
-    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
+    static LazyNeverDestroyed<RetainPtr<CFBundleRef>> bundle;
+    static std::once_flag flag;
+    std::call_once(flag, [&] mutable {
+        bundle.construct(CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore")));
+    });
     ASSERT(bundle.get());
     return bundle.get().get();
 }
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
-#if !PLATFORM(IOS_FAMILY)
-    // Can be called on a dispatch queue when initializing strings on iOS.
-    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
-    ASSERT(isMainThread());
-#endif
-
     static CFStringRef notFound = CFSTR("localized string not found");
 
     auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
@@ -507,14 +506,33 @@ String contextMenuItemTagTranslate(const String& selectedString)
 #if ENABLE(WRITING_TOOLS)
 String contextMenuItemTagWritingTools()
 {
+#if ENABLE(TOP_LEVEL_WRITING_TOOLS_CONTEXT_MENU_ITEMS)
+    return WEB_UI_STRING("Show Writing Tools", "Writing Tools context menu item");
+#else
     return WEB_UI_STRING("Writing Tools", "Writing Tools context menu item");
+#endif
+}
+
+String contextMenuItemTagProofread()
+{
+    return WEB_UI_STRING("Proofread", "Proofread context menu item");
+}
+
+String contextMenuItemTagRewrite()
+{
+    return WEB_UI_STRING("Rewrite", "Rewrite context menu item");
+}
+
+String contextMenuItemTagSummarize()
+{
+    return WEB_UI_STRING("Summarize", "Summarize context menu item");
 }
 #endif
 
 #if ENABLE(UNIFIED_PDF)
-String contextMenuItemPDFOpenWithPreview()
+String contextMenuItemPDFOpenWithDefaultViewer(const String& appName)
 {
-    return WEB_UI_STRING("Open with Preview", "Open with Preview context menu item");
+    return WEB_UI_FORMAT_STRING("Open with %@", "Open with default PDF viewer context menu item", appName.createCFString().get());
 }
 #endif
 
@@ -599,6 +617,13 @@ String searchMenuClearRecentSearchesText()
 
 #endif // !PLATFORM(IOS_FAMILY)
 
+#if ENABLE(MEDIA_STREAM)
+String defaultSystemSpeakerLabel()
+{
+    return WEB_UI_STRING("Default", "label for the default system speaker");
+}
+#endif
+
 String AXWebAreaText()
 {
     return WEB_UI_STRING("HTML content", "accessibility role description for web area");
@@ -661,7 +686,12 @@ String AXSummaryText()
 
 String AXFooterRoleDescriptionText()
 {
-    return WEB_UI_STRING("footer", "accessibility role description for a footer");
+    return WEB_UI_STRING("section footer", "accessibility role description for a footer");
+}
+
+String AXHeaderRoleDescriptionText()
+{
+    return WEB_UI_STRING("section header", "accessibility role description for a header");
 }
 
 String AXSuggestionRoleDescriptionText()
@@ -809,6 +839,8 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
     if (ariaType == "ARIALandmarkContentInfo"_s)
         return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
+    if (ariaType == "ARIALandmarkForm"_s)
+        return WEB_UI_STRING("form", "An ARIA accessibility group that acts as a form region.");
     if (ariaType == "ARIALandmarkMain"_s)
         return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
     if (ariaType == "ARIALandmarkNavigation"_s)
@@ -817,6 +849,10 @@ String AXARIAContentGroupText(StringView ariaType)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
     if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIASectionFooter"_s)
+        return WEB_UI_STRING("section footer", "An ARIA accessibility group that acts as a footer region.");
+    if (ariaType == "ARIASectionHeader"_s)
+        return WEB_UI_STRING("section header", "An ARIA accessibility group that acts as a header region.");
     if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
     if (ariaType == "ARIATabPanel"_s)
@@ -1042,7 +1078,7 @@ String imageTitle(const String& filename, const IntSize& size)
 
     return WEB_UI_FORMAT_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.createCFString().get(), widthString.get(), heightString.get());
 #elif PLATFORM(WIN)
-    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().data(), size.width(), size.height());
+    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.wideCharacters().span().data(), size.width(), size.height());
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
@@ -1454,22 +1490,7 @@ String contextMenuItemTagShowMediaStats()
 
 #endif // ENABLE(VIDEO)
 
-String snapshottedPlugInLabelTitle()
-{
-    return WEB_UI_STRING("Snapshotted Plug-In", "Title of the label to show on a snapshotted plug-in");
-}
-
-String snapshottedPlugInLabelSubtitle()
-{
-    return WEB_UI_STRING("Click to restart", "Subtitle of the label to show on a snapshotted plug-in");
-}
-
-String useBlockedPlugInContextMenuTitle()
-{
-    return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
-}
-
-#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
@@ -1534,9 +1555,11 @@ String datePickerYearLabelTitle()
 
 #if ENABLE(INPUT_TYPE_WEEK_PICKER)
 
-String inputWeekLabel()
+String inputWeekLabel(const DateComponents& dateComponents)
 {
-    return WEB_UI_STRING_KEY("Week", "Week", "Week label for week of year input type");
+    int week = dateComponents.week();
+    int year = dateComponents.fullYear();
+    return WEB_UI_FORMAT_STRING("Week %1$d, %2$d", "Week of year input type label with week number and year", week, year);
 }
 
 #endif
@@ -1582,9 +1605,21 @@ String pdfPasswordFormInvalidPasswordSubtitle()
     return WEB_UI_STRING("Invalid Password", "Message when a PDF fails to unlock with the given password");
 }
 
-String contextMenuItemTagCopyLinkToHighlight()
+String contextMenuItemTagCopyLinkWithHighlight()
 {
-    return WEB_UI_STRING("Copy Link to Highlight", "Copy link to highlight context menu item");
+    return WEB_UI_STRING("Copy Link with Highlight", "Copy link with highlight context menu item");
 }
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+String fullscreenControllerViewSpatial()
+{
+    return WEB_UI_STRING("View Spatial", "Title for View Spatial action button while in fullscreen");
+}
+
+String fullscreenControllerViewImmersive()
+{
+    return WEB_UI_STRING("View Immersive", "Title for View Immersive action button while in fullscreen");
+}
+#endif
 
 } // namespace WebCore

@@ -27,6 +27,7 @@
 #include "DFABytecodeInterpreter.h"
 
 #include "ContentExtensionsDebugging.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -36,8 +37,7 @@ namespace WebCore::ContentExtensions {
 template <typename IntType>
 static IntType getBits(std::span<const uint8_t> bytecode, uint32_t index)
 {
-    ASSERT(index + sizeof(IntType) <= bytecode.size());
-    return *reinterpret_cast<const IntType*>(bytecode.data() + index);
+    return reinterpretCastSpanStartTo<const IntType>(bytecode.subspan(index));
 }
 
 static uint32_t get24BitsUnsigned(std::span<const uint8_t> bytecode, uint32_t index)
@@ -127,6 +127,8 @@ static ResourceFlags consumeResourceFlagsAndInstruction(std::span<const uint8_t>
         return consumeInteger<uint16_t>(bytecode, programCounter);
     case DFABytecodeFlagsSize::UInt24:
         return consume24BitUnsignedInteger(bytecode, programCounter);
+    case DFABytecodeFlagsSize::UInt32:
+        return consumeInteger<uint32_t>(bytecode, programCounter);
     }
     ASSERT_NOT_REACHED();
     return 0;
@@ -190,13 +192,15 @@ void DFABytecodeInterpreter::interpretTestFlagsAndAppendAction(uint32_t& program
     ResourceFlags loadTypeFlags = flagsToCheck & LoadTypeMask;
     ResourceFlags loadContextFlags = flagsToCheck & LoadContextMask;
     ResourceFlags resourceTypeFlags = flagsToCheck & ResourceTypeMask;
+    ResourceFlags requestMethodFlags = flagsToCheck & RequestMethodMask;
 
     bool loadTypeMatches = loadTypeFlags ? (loadTypeFlags & flags) : true;
     bool loadContextMatches = loadContextFlags ? (loadContextFlags & flags) : true;
     bool resourceTypeMatches = resourceTypeFlags ? (resourceTypeFlags & flags) : true;
+    bool requestMethodMatches = requestMethodFlags ? (requestMethodFlags == (flags & RequestMethodMask)) : true;
 
     auto actionWithoutFlags = consumeAction(m_bytecode, programCounter, instructionLocation);
-    if (loadTypeMatches && loadContextMatches && resourceTypeMatches) {
+    if (loadTypeMatches && loadContextMatches && resourceTypeMatches && requestMethodMatches) {
         uint64_t actionAndFlags = (static_cast<uint64_t>(flagsToCheck) << 32) | static_cast<uint64_t>(actionWithoutFlags);
         actions.add(actionAndFlags);
     }
@@ -246,11 +250,12 @@ auto DFABytecodeInterpreter::interpret(const String& urlString, ResourceFlags fl
 {
     CString urlCString;
     std::span<const LChar> url;
-    if (LIKELY(urlString.is8Bit()))
+    if (urlString.is8Bit()) [[likely]]
         url = urlString.span8();
     else {
+        // FIXME: Stuffing a UTF-8 string into a Latin1 buffer seems wrong.
         urlCString = urlString.utf8();
-        url = urlCString.span();
+        url = byteCast<LChar>(urlCString.span());
     }
     ASSERT(url.data());
 

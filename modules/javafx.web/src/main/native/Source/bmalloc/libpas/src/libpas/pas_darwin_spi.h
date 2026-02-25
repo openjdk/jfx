@@ -27,13 +27,28 @@
 #define PAS_DARWIN_SPI_H
 
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 #if PAS_OS(DARWIN)
 #if defined(__has_include) && __has_include(<pthread/private.h>)
+
+// FIXME: rdar://140431798 Remove PAS_{BEGIN/END}_EXTERN_C when WebKit does not need to support the platform versions anymore.
+#if !((PAS_PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) \
+    || (PAS_PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400) \
+    || (PAS_PLATFORM(APPLETV) && __TV_OS_VERSION_MAX_ALLOWED >= 180400) \
+    || (PAS_PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED >= 110400) \
+    || (PAS_PLATFORM(VISION) && __VISION_OS_VERSION_MAX_ALLOWED >= 20040))
 PAS_BEGIN_EXTERN_C;
+#endif
 #include <pthread/private.h>
+#if !((PAS_PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150400) \
+    || (PAS_PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 180400) \
+    || (PAS_PLATFORM(APPLETV) && __TV_OS_VERSION_MAX_ALLOWED >= 180400) \
+    || (PAS_PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED >= 110400) \
+    || (PAS_PLATFORM(VISION) && __VISION_OS_VERSION_MAX_ALLOWED >= 20040))
 PAS_END_EXTERN_C;
+#endif
+
 #define PAS_HAVE_PTHREAD_PRIVATE 1
 #else
 PAS_BEGIN_EXTERN_C;
@@ -70,15 +85,32 @@ VM_FLAGS_ALIAS_MASK);
 #define pas_stack_logging_flag_zone        8    /* NSZoneMalloc, etc... */
 #define pas_stack_logging_flag_cleared    64    /* for NewEmptyHandle */
 
+PAS_END_EXTERN_C;
+
+// In a build using clang modules, we must never redeclare items
+// from other headers, but instead include those headers.
+#if defined(__has_include) && __has_include(<stack_logging.h>)
+#include <stack_logging.h>
+#else
+// But, we want to ensure these symbols are available even
+// in the case that we don't have such headers available.
+
+PAS_BEGIN_EXTERN_C;
+
 typedef void(malloc_logger_t)(uint32_t type,
                               uintptr_t arg1,
                               uintptr_t arg2,
                               uintptr_t arg3,
                               uintptr_t result,
                               uint32_t num_hot_frames_to_skip);
+// FIXME: Workaround for rdar://119319825
+#if !defined(__swift__)
 extern malloc_logger_t* malloc_logger;
+#endif
 
 PAS_END_EXTERN_C;
+
+#endif /* defined(__has_include) && __has_include(<stack_logging.h>) */
 
 #endif /* PAS_OS(DARWIN) */
 

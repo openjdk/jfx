@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,12 @@
 #include <WebCore/NativeImage.h>
 #include <WebGPU/WebGPUExt.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/spi/cocoa/IOSurfaceSPI.h>
 
 namespace WebCore::WebGPU {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CompositorIntegrationImpl);
 
 CompositorIntegrationImpl::CompositorIntegrationImpl(ConvertToBackingContext& convertToBackingContext)
     : m_convertToBackingContext(convertToBackingContext)
@@ -48,12 +51,22 @@ CompositorIntegrationImpl::CompositorIntegrationImpl(ConvertToBackingContext& co
 
 CompositorIntegrationImpl::~CompositorIntegrationImpl() = default;
 
-void CompositorIntegrationImpl::prepareForDisplay(CompletionHandler<void()>&& completionHandler)
+void CompositorIntegrationImpl::prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&& completionHandler)
 {
-    if (auto* presentationContext = m_presentationContext.get())
-        presentationContext->present();
+    if (RefPtr presentationContext = m_presentationContext)
+        presentationContext->present(frameIndex);
 
     m_onSubmittedWorkScheduledCallback(WTFMove(completionHandler));
+}
+
+void CompositorIntegrationImpl::updateContentsHeadroom(float headroom)
+{
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    for (auto& ioSurface : m_renderBuffers)
+        ioSurface->setContentEDRHeadroom(headroom);
+#else
+    UNUSED_PARAM(headroom);
+#endif
 }
 
 #if PLATFORM(COCOA)
@@ -62,26 +75,35 @@ Vector<MachSendRight> CompositorIntegrationImpl::recreateRenderBuffers(int width
     m_renderBuffers.clear();
     m_device = device;
 
-    if (auto* presentationContext = m_presentationContext.get()) {
-        static_cast<PresentationContext*>(presentationContext)->unconfigure();
+    if (RefPtr presentationContext = m_presentationContext) {
+        static_cast<PresentationContext*>(presentationContext.get())->unconfigure();
         presentationContext->setSize(width, height);
     }
 
     constexpr int max2DTextureSize = 16384;
     width = std::max(1, std::min(max2DTextureSize, width));
     height = std::max(1, std::min(max2DTextureSize, height));
-    bool isRGBA = (textureFormat == TextureFormat::Rgba8unorm || textureFormat == TextureFormat::Rgba8unormSRGB);
     IOSurface::Format colorFormat;
-    if (isRGBA)
+    switch (textureFormat) {
+    case TextureFormat::Rgba8unorm:
+    case TextureFormat::Rgba8unormSRGB:
         colorFormat = alphaMode == AlphaPremultiplication::Unpremultiplied ? IOSurface::Format::RGBX : IOSurface::Format::RGBA;
-    else
+        break;
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    case TextureFormat::Rgba16float:
+        colorFormat = IOSurface::Format::RGBA16F;
+        break;
+#endif
+    default:
         colorFormat = alphaMode == AlphaPremultiplication::Unpremultiplied ? IOSurface::Format::BGRX : IOSurface::Format::BGRA;
+        break;
+    }
 
-    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::Default, colorFormat))
+    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::WebGPU, colorFormat))
         m_renderBuffers.append(makeUniqueRefFromNonNullUniquePtr(WTFMove(buffer)));
-    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::Default, colorFormat))
+    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::WebGPU, colorFormat))
         m_renderBuffers.append(makeUniqueRefFromNonNullUniquePtr(WTFMove(buffer)));
-    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::Default, colorFormat))
+    if (auto buffer = WebCore::IOSurface::create(nullptr, WebCore::IntSize(width, height), colorSpace, IOSurface::Name::WebGPU, colorFormat))
         m_renderBuffers.append(makeUniqueRefFromNonNullUniquePtr(WTFMove(buffer)));
 
     {
@@ -103,14 +125,24 @@ void CompositorIntegrationImpl::withDisplayBufferAsNativeImage(uint32_t bufferIn
         return completion(nullptr);
 
     RefPtr<NativeImage> displayImage;
-    if (auto* presentationContextPtr = m_presentationContext.get())
-        displayImage = presentationContextPtr->getMetalTextureAsNativeImage(bufferIndex);
+    bool isIOSurfaceSupportedFormat = false;
+    if (RefPtr presentationContextPtr = m_presentationContext)
+        displayImage = presentationContextPtr->getMetalTextureAsNativeImage(bufferIndex, isIOSurfaceSupportedFormat);
 
     if (!displayImage) {
-    auto& renderBuffer = m_renderBuffers[bufferIndex];
-    RetainPtr<CGContextRef> cgContext = renderBuffer->createPlatformContext();
-    if (cgContext)
-        displayImage = NativeImage::create(renderBuffer->createImage(cgContext.get()));
+        if (!isIOSurfaceSupportedFormat)
+            return completion(nullptr);
+
+        auto& renderBuffer = m_renderBuffers[bufferIndex];
+        std::optional<CGImageAlphaInfo> alphaInfo;
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+        if (renderBuffer->pixelFormat() == IOSurface::Format::RGBA16F)
+            alphaInfo = kCGImageAlphaNoneSkipLast;
+#endif
+        RetainPtr<CGContextRef> cgContext = renderBuffer->createPlatformContext(0, alphaInfo);
+
+        if (cgContext)
+            displayImage = NativeImage::create(renderBuffer->createImage(cgContext.get()));
     }
 
     if (!displayImage)

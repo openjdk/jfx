@@ -27,7 +27,7 @@
 
 #include <wtf/KeyValuePair.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -44,8 +44,9 @@ class Navigator;
 class PasteboardCustomData;
 class ScriptExecutionContext;
 struct PasteboardItemInfo;
+template<typename> class ExceptionOr;
 
-class ClipboardItem : public RefCounted<ClipboardItem> {
+class ClipboardItem : public RefCountedAndCanMakeWeakPtr<ClipboardItem> {
 public:
     ~ClipboardItem();
 
@@ -55,12 +56,13 @@ public:
         PresentationStyle presentationStyle { PresentationStyle::Unspecified };
     };
 
-    static Ref<ClipboardItem> create(Vector<KeyValuePair<String, Ref<DOMPromise>>>&&, const Options&);
+    static ExceptionOr<Ref<ClipboardItem>> create(Vector<KeyValuePair<String, Ref<DOMPromise>>>&&, const Options&);
     static Ref<ClipboardItem> create(Clipboard&, const PasteboardItemInfo&);
     static Ref<Blob> blobFromString(ScriptExecutionContext*, const String& stringData, const String& type);
 
     Vector<String> types() const;
     void getType(const String&, Ref<DeferredPromise>&&);
+    static bool supports(const String& type);
 
     void collectDataForWriting(Clipboard& destination, CompletionHandler<void(std::optional<PasteboardCustomData>)>&&);
 
@@ -74,7 +76,7 @@ private:
 
     WeakPtr<Clipboard, WeakPtrImplWithEventTargetData> m_clipboard;
     WeakPtr<Navigator> m_navigator;
-    std::unique_ptr<ClipboardItemDataSource> m_dataSource;
+    const UniqueRef<ClipboardItemDataSource> m_dataSource;
     PresentationStyle m_presentationStyle { PresentationStyle::Unspecified };
 };
 

@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #if OS(DARWIN)
 
 #import <sandbox.h>
@@ -34,6 +36,7 @@
 #else
 enum sandbox_filter_type {
     SANDBOX_FILTER_NONE,
+    SANDBOX_FILTER_PATH,
     SANDBOX_FILTER_GLOBAL_NAME = 2,
     SANDBOX_FILTER_PREFERENCE_DOMAIN = 6,
     SANDBOX_FILTER_XPC_SERVICE_NAME = 12,

@@ -36,6 +36,7 @@
 #include "SecurityOriginData.h"
 #include <wtf/HashCountedSet.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URLHash.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -53,11 +54,12 @@ struct PolicyContainer;
 
 // BlobRegistryImpl is not thread-safe. It should only be called from main thread.
 class WEBCORE_EXPORT BlobRegistryImpl {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(BlobRegistryImpl, WEBCORE_EXPORT);
 public:
     virtual ~BlobRegistryImpl();
 
-    BlobData* getBlobDataFromURL(const URL&, const std::optional<SecurityOriginData>& topOrigin = std::nullopt) const;
+    BlobData* blobDataFromURL(const URL&, const std::optional<SecurityOriginData>& topOrigin = std::nullopt) const;
+    RefPtr<BlobData> protectedBlobDataFromURL(const URL&, const std::optional<SecurityOriginData>& topOrigin = std::nullopt) const;
 
     Ref<ResourceHandle> createResourceHandle(const ResourceRequest&, ResourceHandleClient*);
 
@@ -87,7 +89,6 @@ public:
     Vector<RefPtr<BlobDataFileReference>> filesInBlob(const URL&, const std::optional<WebCore::SecurityOriginData>& topOrigin = std::nullopt) const;
 
     void setFileDirectory(String&&);
-    void setPartitioningEnabled(bool);
 
 private:
     void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType, const PolicyContainer&, const std::optional<SecurityOriginData>& topOrigin = std::nullopt);
@@ -97,7 +98,7 @@ private:
     HashCountedSet<String> m_blobReferences;
     MemoryCompactRobinHoodHashMap<String, RefPtr<BlobData>> m_blobs;
     using URLToTopOriginHashMap = MemoryCompactRobinHoodHashMap<String, WebCore::SecurityOriginData>;
-    std::optional<URLToTopOriginHashMap> m_allowedBlobURLTopOrigins;
+    URLToTopOriginHashMap m_allowedBlobURLTopOrigins;
     String m_fileDirectory;
 #if PLATFORM(JAVA)
     friend class WebBlobRegistry;

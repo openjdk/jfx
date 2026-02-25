@@ -96,7 +96,7 @@ static ExceptionOr<JSC::JSValue> invokeTransformStreamFunction(JSC::JSGlobalObje
 
 ExceptionOr<CreateInternalTransformStreamResult> createInternalTransformStream(JSDOMGlobalObject& globalObject, JSC::JSValue transformer, JSC::JSValue writableStrategy, JSC::JSValue readableStrategy)
 {
-    auto* clientData = static_cast<JSVMClientData*>(globalObject.vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
     auto& privateName = clientData->builtinFunctions().transformStreamInternalsBuiltins().createInternalTransformStreamFromTransformerPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -106,14 +106,14 @@ ExceptionOr<CreateInternalTransformStreamResult> createInternalTransformStream(J
     ASSERT(!arguments.hasOverflowed());
 
     auto result = invokeTransformStreamFunction(globalObject, privateName, arguments);
-    if (UNLIKELY(result.hasException()))
+    if (result.hasException()) [[unlikely]]
         return result.releaseException();
 
     JSC::VM& vm = globalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto resultsConversionResult = convert<IDLSequence<IDLObject>>(globalObject, result.returnValue());
-    if (UNLIKELY(resultsConversionResult.hasException(scope)))
+    if (resultsConversionResult.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     auto results = resultsConversionResult.releaseReturnValue();

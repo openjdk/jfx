@@ -43,7 +43,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
 {
     auto scope = DECLARE_CATCH_SCOPE(vm);
     CallFrame* topJSCallFrame = vm.topJSCallFrame();
-    if (UNLIKELY(Options::breakOnThrow())) {
+    if (Options::breakOnThrow()) [[unlikely]] {
         CodeBlock* codeBlock = topJSCallFrame->isNativeCalleeFrame() ? nullptr : topJSCallFrame->codeBlock();
         dataLog("In call frame ", RawPointer(topJSCallFrame), " for code block ", codeBlock, "\n");
         WTFBreakpointTrap();
@@ -86,7 +86,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
     } else
         catchRoutine = LLInt::handleUncaughtException(vm).code().taggedPtr();
 
-    ASSERT(bitwise_cast<uintptr_t>(callFrame) < bitwise_cast<uintptr_t>(vm.topEntryFrame));
+    ASSERT(std::bit_cast<uintptr_t>(callFrame) < std::bit_cast<uintptr_t>(vm.topEntryFrame));
 
     assertIsTaggedWith<ExceptionHandlerPtrTag>(catchRoutine);
     vm.callFrameForCatch = callFrame;

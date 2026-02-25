@@ -29,6 +29,7 @@
 #include "config.h"
 #include "XPathParser.h"
 
+#include "ExceptionOr.h"
 #include "XPathEvaluator.h"
 #include "XPathNSResolver.h"
 #include "XPathPath.h"
@@ -48,7 +49,7 @@ namespace XPath {
 
 struct Parser::Token {
     int type;
-    using TokenValue = std::variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
+    using TokenValue = Variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
     TokenValue value;
 
     Token() = delete;
@@ -68,7 +69,7 @@ struct Parser::Token {
 
 enum XMLCat { NameStart, NameCont, NotPartOfName };
 
-static XMLCat charCat(UChar character)
+static XMLCat charCat(char16_t character)
 {
     if (character == '_')
         return NameStart;
@@ -168,7 +169,7 @@ char Parser::peekAheadHelper()
 {
     if (m_nextPos + 1 >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos + 1];
+    char16_t next = m_data[m_nextPos + 1];
     if (next >= 0xff)
         return 0;
     return next;
@@ -178,7 +179,7 @@ char Parser::peekCurHelper()
 {
     if (m_nextPos >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos];
+    char16_t next = m_data[m_nextPos];
     if (next >= 0xff)
         return 0;
     return next;
@@ -186,7 +187,7 @@ char Parser::peekCurHelper()
 
 Parser::Token Parser::lexString()
 {
-    UChar delimiter = m_data[m_nextPos];
+    char16_t delimiter = m_data[m_nextPos];
     int startPos = m_nextPos + 1;
 
     for (m_nextPos = startPos; m_nextPos < m_data.length(); ++m_nextPos) {
@@ -210,7 +211,7 @@ Parser::Token Parser::lexNumber()
 
     // Go until end or a non-digits character.
     for (; m_nextPos < m_data.length(); ++m_nextPos) {
-        UChar aChar = m_data[m_nextPos];
+        char16_t aChar = m_data[m_nextPos];
         if (aChar >= 0xff) break;
 
         if (!isASCIIDigit(aChar)) {
@@ -300,22 +301,22 @@ inline Parser::Token Parser::nextTokenInternal()
     case '-':
         return makeTokenAndAdvance(MINUS);
     case '=':
-        return makeTokenAndAdvance(EQOP, EqTestOp::OP_EQ);
+        return makeTokenAndAdvance(EQOP, EqTestOp::Opcode::Eq);
     case '!':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(EQOP, EqTestOp::OP_NE, 2);
+            return makeTokenAndAdvance(EQOP, EqTestOp::Opcode::Ne, 2);
         return Token(XPATH_ERROR);
     case '<':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(RELOP, EqTestOp::OP_LE, 2);
-        return makeTokenAndAdvance(RELOP, EqTestOp::OP_LT);
+            return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Le, 2);
+        return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Lt);
     case '>':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(RELOP, EqTestOp::OP_GE, 2);
-        return makeTokenAndAdvance(RELOP, EqTestOp::OP_GT);
+            return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Ge, 2);
+        return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Gt);
     case '*':
         if (isBinaryOperatorContext())
-            return makeTokenAndAdvance(MULOP, NumericOp::OP_Mul);
+            return makeTokenAndAdvance(MULOP, NumericOp::Opcode::Mul);
         ++m_nextPos;
         return Token(NAMETEST, "*"_s);
     case '$': { // $ QName
@@ -339,9 +340,9 @@ inline Parser::Token Parser::nextTokenInternal()
         if (name == "or"_s)
             return Token(OR);
         if (name == "mod"_s)
-            return Token(MULOP, NumericOp::OP_Mod);
+            return Token(MULOP, NumericOp::Opcode::Mod);
         if (name == "div"_s)
-            return Token(MULOP, NumericOp::OP_Div);
+            return Token(MULOP, NumericOp::Opcode::Div);
     }
 
     // See whether we are at a :

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,16 +39,17 @@ class PathStream;
 class PathJava final : public PathImpl {
 public:
     static Ref<PathJava> create();
-    static Ref<PathJava> create(const PathSegment&);
-    static Ref<PathJava> create(const PathStream&);
+    static Ref<PathJava> create(std::span<const PathSegment> segments);
     static Ref<PathJava> create(RefPtr<RQRef>&&, RefPtr<PathStream>&& = nullptr);
 
     PathJava();
     PathJava(RefPtr<RQRef>&&, RefPtr<PathStream>&&);
 
     PlatformPathPtr platformPath() const;
+    static PlatformPathPtr emptyPlatformPath();
 
     void addPath(const PathJava&, const AffineTransform&);
+    bool definitelyEqual(const PathImpl&) const final;
 
     bool applyElements(const PathElementApplier&) const final;
 
@@ -72,11 +73,12 @@ private:
     void add(PathEllipseInRect) final;
     void add(PathRect) final;
     void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
     void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;
 
-    bool isEmpty() const final;
+    bool isEmpty() const;
 
     FloatPoint currentPoint() const final;
 

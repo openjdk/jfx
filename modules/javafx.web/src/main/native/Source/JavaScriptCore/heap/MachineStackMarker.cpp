@@ -29,6 +29,8 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MachineThreads);
@@ -66,7 +68,7 @@ static inline int osRedZoneAdjustment()
 static std::pair<void*, size_t> captureStack(Thread& thread, void* stackTop)
 {
     char* begin = reinterpret_cast_ptr<char*>(thread.stack().origin());
-    char* end = bitwise_cast<char*>(WTF::roundUpToMultipleOf<sizeof(void*)>(reinterpret_cast<uintptr_t>(stackTop)));
+    char* end = std::bit_cast<char*>(WTF::roundUpToMultipleOf<sizeof(void*)>(reinterpret_cast<uintptr_t>(stackTop)));
     ASSERT(begin >= end);
 
     char* endWithRedZone = end + osRedZoneAdjustment();
@@ -114,7 +116,7 @@ void MachineThreads::tryCopyOtherThreadStack(const ThreadSuspendLocker& locker, 
     // This is a workaround for <rdar://problem/27607384>. libdispatch recycles work
     // queue threads without running pthread exit destructors. This can cause us to scan a
     // thread during work queue initialization, when the stack pointer is null.
-    if (UNLIKELY(!MachineContext::stackPointer(registers))) {
+    if (!MachineContext::stackPointer(registers)) [[unlikely]] {
         *size = 0;
         return;
     }
@@ -141,7 +143,7 @@ bool MachineThreads::tryCopyOtherThreadStacks(const AbstractLocker& locker, void
 
     *size = 0;
 
-    Thread& currentThread = Thread::current();
+    auto& currentThread = Thread::currentSingleton();
     const ListHashSet<Ref<Thread>>& threads = m_threadGroup->threads(locker);
     BitVector isSuspended(threads.size());
 
@@ -227,3 +229,5 @@ NEVER_INLINE int callWithCurrentThreadState(const ScopedLambda<void(CurrentThrea
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

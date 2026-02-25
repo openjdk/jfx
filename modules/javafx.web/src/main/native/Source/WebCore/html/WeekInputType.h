@@ -30,13 +30,14 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_WEEK)
-
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WeekInputType final : public BaseDateAndTimeInputType {
+    WTF_MAKE_TZONE_ALLOCATED(WeekInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WeekInputType);
 public:
     static Ref<WeekInputType> create(HTMLInputElement& element)
     {
@@ -65,5 +66,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(WeekInputType, Type::Week)
-
-#endif // ENABLE(INPUT_TYPE_WEEK)

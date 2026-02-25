@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 #include <wtf/Box.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/Markable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
 #include <wtf/persistence/PersistentCoders.h>
@@ -61,17 +62,17 @@ static_assert(static_cast<unsigned>(WasPrivateRelayed::Yes) <= ((1U << bitWidthO
 
 enum class ResourceResponseBaseType : uint8_t { Basic, Cors, Default, Error, Opaque, Opaqueredirect };
 enum class ResourceResponseBaseTainting : uint8_t { Basic, Cors, Opaque, Opaqueredirect };
-enum class ResourceResponseBaseSource : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
+enum class ResourceResponseSource : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
 
 // Do not use this class directly, use the class ResourceResponse instead
 class ResourceResponseBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ResourceResponseBase, WEBCORE_EXPORT);
 public:
     using Type = ResourceResponseBaseType;
     static constexpr unsigned bitWidthOfType = 3;
     using Tainting = ResourceResponseBaseTainting;
     static constexpr unsigned bitWidthOfTainting = 2;
-    using Source = ResourceResponseBaseSource;
+    using Source = ResourceResponseSource;
     static constexpr unsigned bitWidthOfSource = 4;
 
     static bool isRedirectionStatusCode(int code) { return code == 301 || code == 302 || code == 303 || code == 307 || code == 308; }
@@ -86,7 +87,7 @@ public:
     WEBCORE_EXPORT bool isSuccessful() const;
 
     WEBCORE_EXPORT const URL& url() const;
-    WEBCORE_EXPORT void setURL(const URL&);
+    WEBCORE_EXPORT void setURL(URL&&);
 
     WEBCORE_EXPORT const String& mimeType() const;
     WEBCORE_EXPORT void setMimeType(String&&);
@@ -136,6 +137,8 @@ public:
     WEBCORE_EXPORT String suggestedFilename() const;
     WEBCORE_EXPORT static String sanitizeSuggestedFilename(const String&);
 
+    bool isNosniff() const;
+
     WEBCORE_EXPORT void includeCertificateInfo(std::span<const std::byte> = { }) const;
     void setCertificateInfo(CertificateInfo&& info) { m_certificateInfo = WTFMove(info); }
     const std::optional<CertificateInfo>& certificateInfo() const { return m_certificateInfo; };
@@ -143,6 +146,8 @@ public:
     void setUsedLegacyTLS(UsedLegacyTLS used) { m_usedLegacyTLS = used; }
     bool wasPrivateRelayed() const { return m_wasPrivateRelayed == WasPrivateRelayed::Yes; }
     void setWasPrivateRelayed(WasPrivateRelayed privateRelayed) { m_wasPrivateRelayed = privateRelayed; }
+    void setProxyName(String&& proxyName) { m_proxyName = WTFMove(proxyName); }
+    const String& proxyName() const { return m_proxyName; }
 
     // These functions return parsed values of the corresponding response headers.
     WEBCORE_EXPORT bool cacheControlContainsNoCache() const;
@@ -215,7 +220,7 @@ public:
 
     WEBCORE_EXPORT static ResourceResponse dataURLResponse(const URL&, const DataURLDecoder::Result&);
 
-    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResourceResponseData>);
+    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResourceResponseData>&&);
 
     WEBCORE_EXPORT std::optional<ResourceResponseData> getResponseData() const;
 
@@ -227,7 +232,7 @@ protected:
     };
 
     WEBCORE_EXPORT ResourceResponseBase();
-    WEBCORE_EXPORT ResourceResponseBase(const URL&, const String& mimeType, long long expectedLength, const String& textEncodingName);
+    WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, String&& textEncodingName);
 
     WEBCORE_EXPORT void lazyInit(InitLevel) const;
 
@@ -261,10 +266,11 @@ protected:
     unsigned m_initLevel : 3; // Controlled by ResourceResponse.
     mutable UsedLegacyTLS m_usedLegacyTLS : bitWidthOfUsedLegacyTLS { UsedLegacyTLS::No };
     mutable WasPrivateRelayed m_wasPrivateRelayed : bitWidthOfWasPrivateRelayed { WasPrivateRelayed::No };
+    String m_proxyName;
 
 private:
     friend struct WTF::Persistence::Coder<ResourceResponse>;
-    mutable Markable<Seconds, Seconds::MarkableTraits> m_age;
+    mutable Markable<Seconds> m_age;
     mutable Markable<WallTime> m_date;
     mutable Markable<WallTime> m_expires;
     mutable Markable<WallTime> m_lastModified;
@@ -291,7 +297,7 @@ struct ResourceResponseData {
     ResourceResponseData() = default;
     ResourceResponseData(ResourceResponseData&&) = default;
     ResourceResponseData& operator=(ResourceResponseData&&) = default;
-    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseBaseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
+    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
         : url(WTFMove(url))
         , mimeType(WTFMove(mimeType))
         , expectedContentLength(expectedContentLength)
@@ -307,6 +313,7 @@ struct ResourceResponseData {
         , isRedirected(isRedirected)
         , usedLegacyTLS(usedLegacyTLS)
         , wasPrivateRelayed(wasPrivateRelayed)
+        , proxyName(WTFMove(proxyName))
         , isRangeRequested(isRangeRequested)
         , certificateInfo(certificateInfo)
     {
@@ -329,6 +336,7 @@ struct ResourceResponseData {
     bool isRedirected;
     UsedLegacyTLS usedLegacyTLS;
     WasPrivateRelayed wasPrivateRelayed;
+    String proxyName;
     bool isRangeRequested;
     std::optional<CertificateInfo> certificateInfo;
 };

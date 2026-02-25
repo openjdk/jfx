@@ -39,7 +39,7 @@ MessagePortChannelProviderImpl::~MessagePortChannelProviderImpl()
     ASSERT_NOT_REACHED();
 }
 
-void MessagePortChannelProviderImpl::createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote)
+void MessagePortChannelProviderImpl::createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote, bool)
 {
     ensureOnMainThread([weakRegistry = WeakPtr { m_registry }, local, remote] {
         if (CheckedPtr registry = weakRegistry.get())

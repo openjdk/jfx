@@ -31,7 +31,7 @@ class RenderReplaced : public RenderBox {
 public:
     virtual ~RenderReplaced();
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ShouldComputePreferred::ComputeActual) const override;
     LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
 
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
@@ -43,11 +43,13 @@ public:
     FloatSize intrinsicRatio() const;
 
     bool isContentLikelyVisibleInViewport();
-    bool needsPreferredWidthsRecalculation() const override;
+    bool shouldInvalidatePreferredWidths() const override;
 
     double computeIntrinsicAspectRatio() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+    virtual std::pair<FloatSize, FloatSize> computeIntrinsicSizeAndPreferredAspectRatio() const;
+
+    virtual bool paintsContent() const { return true; }
 
 protected:
     RenderReplaced(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag> = { });
@@ -74,8 +76,12 @@ protected:
 
     void willBeDestroyed() override;
 
+    virtual void layoutShadowContent(const LayoutSize&);
+
 private:
     LayoutUnit computeConstrainedLogicalWidth() const;
+
+    void computeAspectRatioAdjustedIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 
     virtual RenderBox* embeddedContentBox() const { return 0; }
     ASCIILiteral renderName() const override { return "RenderReplaced"_s; }
@@ -103,7 +109,6 @@ private:
     bool hasReplacedLogicalHeight() const;
 
     mutable LayoutSize m_intrinsicSize;
-    mutable FloatSize m_intrinsicRatio;
 };
 
 } // namespace WebCore

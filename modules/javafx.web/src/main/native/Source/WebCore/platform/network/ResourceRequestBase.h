@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  * Copyright (C) 2009, 2012 Google Inc. All rights reserved.
  *
@@ -33,6 +33,7 @@
 #include "IntRect.h"
 #include "ResourceLoadPriority.h"
 #include <wtf/EnumTraits.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -59,7 +60,7 @@ enum class ShouldUpgradeLocalhostAndIPAddress : bool { No, Yes };
 
 // Do not use this type directly.  Use ResourceRequest instead.
 class ResourceRequestBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ResourceRequestBase);
 public:
 
     enum class SameSiteDisposition : uint8_t { Unspecified, SameSite, CrossSite };
@@ -67,13 +68,13 @@ public:
     struct RequestData {
         RequestData() { }
 
-        RequestData(const URL& url, const URL& firstPartyForCookies, double timeoutInterval, const String& httpMethod, const HTTPHeaderMap& httpHeaderFields, const Vector<String>& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
-            : m_url(url)
-            , m_firstPartyForCookies(firstPartyForCookies)
+        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, ResourceRequestCachePolicy cachePolicy, SameSiteDisposition sameSiteDisposition, ResourceLoadPriority priority, ResourceRequestRequester requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false)
+            : m_url(WTFMove(url))
+            , m_firstPartyForCookies(WTFMove(firstPartyForCookies))
             , m_timeoutInterval(timeoutInterval)
-            , m_httpMethod(httpMethod)
-            , m_httpHeaderFields(httpHeaderFields)
-            , m_responseContentDispositionEncodingFallbackArray(responseContentDispositionEncodingFallbackArray)
+            , m_httpMethod(WTFMove(httpMethod))
+            , m_httpHeaderFields(WTFMove(httpHeaderFields))
+            , m_responseContentDispositionEncodingFallbackArray(WTFMove(responseContentDispositionEncodingFallbackArray))
             , m_cachePolicy(cachePolicy)
             , m_sameSiteDisposition(sameSiteDisposition)
             , m_priority(priority)
@@ -89,8 +90,8 @@ public:
         {
         }
 
-        RequestData(const URL& url, ResourceRequestCachePolicy cachePolicy)
-            : m_url(url)
+        RequestData(URL&& url, ResourceRequestCachePolicy cachePolicy)
+            : m_url(WTFMove(url))
             , m_cachePolicy(cachePolicy)
         {
         }
@@ -132,7 +133,7 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
 
     WEBCORE_EXPORT const URL& url() const;
-    WEBCORE_EXPORT void setURL(const URL&, bool didFilterLinkDecoration = false);
+    WEBCORE_EXPORT void setURL(URL&&, bool didFilterLinkDecoration = false);
 
     void redirectAsGETIfNeeded(const ResourceRequestBase &, const ResourceResponse&);
 
@@ -146,6 +147,7 @@ public:
 
     WEBCORE_EXPORT double timeoutInterval() const; // May return 0 when using platform default.
     WEBCORE_EXPORT void setTimeoutInterval(double);
+    WEBCORE_EXPORT void resetTimeoutInterval();
 
     WEBCORE_EXPORT const URL& firstPartyForCookies() const;
     WEBCORE_EXPORT void setFirstPartyForCookies(const URL&);
@@ -297,8 +299,8 @@ protected:
     {
     }
 
-    ResourceRequestBase(const URL& url, ResourceRequestCachePolicy policy)
-        : m_requestData({ url, policy })
+    ResourceRequestBase(URL&& url, ResourceRequestCachePolicy policy)
+        : m_requestData({ WTFMove(url), policy })
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)

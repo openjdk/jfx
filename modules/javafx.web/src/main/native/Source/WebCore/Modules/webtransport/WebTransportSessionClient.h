@@ -25,16 +25,28 @@
 
 #pragma once
 
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
+class Exception;
+class ReadableStreamSource;
+class WebTransportReceiveStreamSource;
+
+struct WebTransportBidirectionalStreamConstructionParameters;
+struct WebTransportStreamIdentifierType;
+
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+
 class WebTransportSessionClient : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebTransportSessionClient> {
 public:
     virtual ~WebTransportSessionClient() { }
-    virtual void receiveDatagram(std::span<const uint8_t>) = 0;
-    virtual void receiveIncomingUnidirectionalStream() = 0;
-    virtual void receiveBidirectionalStream() = 0;
+    virtual void receiveDatagram(std::span<const uint8_t>, bool, std::optional<Exception>&&) = 0;
+    virtual void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier) = 0;
+    virtual void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) = 0;
+    virtual void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool, std::optional<Exception>&&) = 0;
+    virtual void networkProcessCrashed() = 0;
 };
 
 }

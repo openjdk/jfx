@@ -33,10 +33,12 @@
 #include <wtf/text/StringBuilder.h>
 
 #if OS(WINDOWS)
-#include <crtdbg.h>
 #include <mmsystem.h>
 #include <windows.h>
+#include <wtf/win/WTFCRTDebug.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 const int MaxLineLength = 100 * 1024;
 
@@ -106,8 +108,6 @@ public:
 
     DECLARE_INFO;
 
-    static constexpr bool needsDestructor = true;
-
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
         return Structure::create(vm, nullptr, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
@@ -155,14 +155,7 @@ int main(int argc, char** argv)
     // error mode here to work around Cygwin's behavior. See <http://webkit.org/b/55222>.
     ::SetErrorMode(0);
 
-#if defined(_DEBUG)
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-#endif
+    WTF::disableCRTDebugAssertDialog();
 
     timeBeginPeriod(1);
 #endif
@@ -225,7 +218,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
     bool escape = false;
 
     for (int i = 0; i < bufferLength; ++i) {
-        UChar c = buffer[i];
+        char16_t c = buffer[i];
 
         if (escape) {
             switch (c) {
@@ -265,7 +258,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
                 unsigned int charValue;
                 if (sscanf(buffer+i+1, "%04x", &charValue) != 1)
                     return -1;
-                c = static_cast<UChar>(charValue);
+                c = static_cast<char16_t>(charValue);
                 i += 4;
                 break;
             }
@@ -413,7 +406,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
         unsigned int lineNumber = 0;
         const char* regexpError = nullptr;
 
-        while ((linePtr = fgets(lineBuffer.data(), MaxLineLength, testCasesFile))) {
+        while ((linePtr = fgets(lineBuffer.mutableSpan().data(), MaxLineLength, testCasesFile))) {
             lineLength = strlen(linePtr);
             if (linePtr[lineLength - 1] == '\n') {
                 linePtr[lineLength - 1] = '\0';
@@ -470,7 +463,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
 
 #define RUNNING_FROM_XCODE 0
 
-static NO_RETURN void printUsageStatement(bool help = false)
+[[noreturn]] static void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: regexp_test [options] file\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");
@@ -516,3 +509,5 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     return main(argc, const_cast<char**>(argv));
 }
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

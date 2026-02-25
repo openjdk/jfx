@@ -44,6 +44,7 @@
 #include "StaticRange.h"
 #include "TextIndicator.h"
 #include "TextIterator.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 
 namespace WebCore {
@@ -69,7 +70,7 @@ static std::pair<RefPtr<Node>, size_t> findNodeStartingAtPathComponentIndex(cons
     if (initialIndexToFollow >= path.size())
         return { nullptr, initialIndexToFollow };
 
-    RefPtr currentNode = &initialNode;
+    RefPtr currentNode = initialNode;
     size_t currentPathIndex = initialIndexToFollow;
     for (; currentPathIndex < path.size(); ++currentPathIndex) {
         auto& component = path[currentPathIndex];
@@ -77,7 +78,7 @@ static std::pair<RefPtr<Node>, size_t> findNodeStartingAtPathComponentIndex(cons
         if (!nextNode)
             return { nullptr, currentPathIndex };
 
-        auto* chararacterData = dynamicDowncast<CharacterData>(*nextNode);
+        RefPtr chararacterData = dynamicDowncast<CharacterData>(*nextNode);
         if (chararacterData && chararacterData->data() != component.textData)
             return { nullptr, currentPathIndex };
 
@@ -88,10 +89,14 @@ static std::pair<RefPtr<Node>, size_t> findNodeStartingAtPathComponentIndex(cons
 
 static RefPtr<Node> findNode(const AppHighlightRangeData::NodePath& path, Document& document)
 {
-    if (path.isEmpty() || !document.body())
+    if (path.isEmpty())
         return nullptr;
 
-    auto [foundNode, nextIndex] = findNodeStartingAtPathComponentIndex(path, *document.body(), 0);
+    RefPtr body = document.body();
+    if (!body)
+        return nullptr;
+
+    auto [foundNode, nextIndex] = findNodeStartingAtPathComponentIndex(path, *body, 0);
     if (foundNode)
         return foundNode;
 
@@ -194,8 +199,8 @@ static AppHighlightRangeData::NodePathComponent createNodePathComponent(const No
 static AppHighlightRangeData::NodePath makeNodePath(RefPtr<Node>&& node)
 {
     AppHighlightRangeData::NodePath components;
-    auto body = node->document().body();
-    for (auto ancestor = node; ancestor && ancestor != body; ancestor = ancestor->parentNode())
+    RefPtr body = node->protectedDocument()->body();
+    for (RefPtr ancestor = node; ancestor && ancestor != body; ancestor = ancestor->parentNode())
         components.append(createNodePathComponent(*ancestor));
     components.reverse();
     return { components };
@@ -216,12 +221,24 @@ static AppHighlightRangeData createAppHighlightRangeData(const StaticRange& rang
     };
 }
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AppHighlightStorage);
+
 AppHighlightStorage::AppHighlightStorage(Document& document)
     : m_document(document)
 {
 }
 
 AppHighlightStorage::~AppHighlightStorage() = default;
+
+bool AppHighlightStorage::shouldRestoreHighlights(MonotonicTime timestamp)
+{
+    static constexpr auto highlightRestorationCheckDelay = 1_s;
+    if (timestamp - m_timeAtLastRangeSearch < highlightRestorationCheckDelay)
+        return false;
+
+    m_timeAtLastRangeSearch = timestamp;
+    return true;
+}
 
 void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range, CompletionHandler<void(AppHighlight&&)>&& completionHandler)
 {
@@ -235,7 +252,7 @@ void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range, Completion
     completionHandler(WTFMove(highlight));
 }
 
-void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuffer>&& buffer, ScrollToHighlight scroll)
+void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<SharedBuffer>&& buffer, ScrollToHighlight scroll)
 {
     auto appHighlightRangeData = AppHighlightRangeData::create(buffer);
     if (!appHighlightRangeData)
@@ -253,24 +270,22 @@ void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuf
 
 bool AppHighlightStorage::attemptToRestoreHighlightAndScroll(AppHighlightRangeData& highlight, ScrollToHighlight scroll)
 {
-    if (!m_document)
+    RefPtr document = m_document.get();
+    if (!document)
         return false;
 
-    RefPtr strongDocument = m_document.get();
-
-    auto range = findRange(highlight, *strongDocument);
-
+    auto range = findRange(highlight, *document);
     if (!range)
         return false;
 
-    strongDocument->appHighlightRegistry().addAnnotationHighlightWithRange(StaticRange::create(*range));
+    document->protectedAppHighlightRegistry()->addAnnotationHighlightWithRange(StaticRange::create(*range));
 
     if (scroll == ScrollToHighlight::Yes) {
         auto textIndicator = TextIndicator::createWithRange(range.value(), { TextIndicatorOption::DoNotClipToVisibleRect }, WebCore::TextIndicatorPresentationTransition::Bounce);
         if (textIndicator)
             m_document->page()->chrome().client().setTextIndicator(textIndicator->data());
 
-        TemporarySelectionChange selectionChange(*strongDocument, { *range }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered });
+        TemporarySelectionChange selectionChange(*document, { *range }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered });
     }
 
     return true;

@@ -50,7 +50,7 @@ WEBCORE_EXPORT FloatRect unionRectIgnoringZeroRects(const Vector<FloatRect>&);
 FloatPoint mapPoint(FloatPoint, const FloatRect& srcRect, const FloatRect& destRect);
 
 // Map rect from srcRect to an equivalent rect in destRect.
-FloatRect mapRect(const FloatRect&, const FloatRect& srcRect, const FloatRect& destRect);
+WEBCORE_EXPORT FloatRect mapRect(const FloatRect&, const FloatRect& srcRect, const FloatRect& destRect);
 
 WEBCORE_EXPORT FloatRect largestRectWithAspectRatioInsideRect(float aspectRatio, const FloatRect&);
 WEBCORE_EXPORT FloatRect smallestRectWithAspectRatioAroundRect(float aspectRatio, const FloatRect&);
@@ -103,6 +103,8 @@ float toRelatedAcuteAngle(float angle);
 
 float normalizeAngleInRadians(float radians);
 
+WEBCORE_EXPORT FloatRect scaledRectAtOrigin(const FloatRect& sourceRect, float scale, const FloatPoint& origin);
+
 struct RotatedRect {
     FloatPoint center;
     FloatSize size;
@@ -110,6 +112,16 @@ struct RotatedRect {
 };
 
 WEBCORE_EXPORT RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad&, std::optional<float> minRotationInRadians = std::nullopt);
+
+static inline float min3(float a, float b, float c)
+{
+    return std::min(std::min(a, b), c);
+}
+
+static inline float max3(float a, float b, float c)
+{
+    return std::max(std::max(a, b), c);
+}
 
 static inline float min4(float a, float b, float c, float d)
 {

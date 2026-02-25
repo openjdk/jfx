@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2009 Google, Inc. All rights reserved.
  *
@@ -50,7 +50,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
 
 class JSHeapData {
     WTF_MAKE_NONCOPYABLE(JSHeapData);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSHeapData, JSHeapData);
     friend class JSVMClientData;
 public:
     JSHeapData(JSC::Heap&);
@@ -58,7 +58,7 @@ public:
     static JSHeapData* ensureHeapData(JSC::Heap&);
 
     Lock& lock() { return m_lock; }
-    ExtendedDOMIsoSubspaces& subspaces() { return *m_subspaces.get(); }
+    ExtendedDOMIsoSubspaces& subspaces() { return m_subspaces; }
 
     Vector<JSC::IsoSubspace*>& outputConstraintSpaces() { return m_outputConstraintSpaces; }
 
@@ -73,6 +73,9 @@ private:
     Lock m_lock;
 
     JSC::IsoHeapCellType m_runtimeArrayHeapCellType;
+#if PLATFORM(COCOA)
+    JSC::IsoHeapCellType m_objcFallbackObjectImpHeapCellType;
+#endif
     JSC::IsoHeapCellType m_observableArrayHeapCellType;
     JSC::IsoHeapCellType m_runtimeObjectHeapCellType;
     JSC::IsoHeapCellType m_windowProxyHeapCellType;
@@ -96,13 +99,16 @@ private:
     JSC::IsoSubspace m_domNamespaceObjectSpace;
     JSC::IsoSubspace m_domWindowPropertiesSpace;
     JSC::IsoSubspace m_runtimeArraySpace;
+#if PLATFORM(COCOA)
+    JSC::IsoSubspace m_objcFallbackObjectImpSpace;
+#endif
     JSC::IsoSubspace m_observableArraySpace;
     JSC::IsoSubspace m_runtimeMethodSpace;
     JSC::IsoSubspace m_runtimeObjectSpace;
     JSC::IsoSubspace m_windowProxySpace;
     JSC::IsoSubspace m_idbSerializationSpace;
 
-    std::unique_ptr<ExtendedDOMIsoSubspaces> m_subspaces;
+    const UniqueRef<ExtendedDOMIsoSubspaces> m_subspaces;
     Vector<JSC::IsoSubspace*> m_outputConstraintSpaces;
 };
 
@@ -116,7 +122,7 @@ public:
 
 class JSVMClientData : public JSC::VM::ClientData {
     WTF_MAKE_NONCOPYABLE(JSVMClientData);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(JSVMClientData, JSVMClientData);
     friend class VMWorldIterator;
 
 public:
@@ -126,7 +132,7 @@ public:
 
     WEBCORE_EXPORT static void initNormalWorld(JSC::VM*, WorkerThreadType);
 
-    DOMWrapperWorld& normalWorld() { return *m_normalWorld; }
+    DOMWrapperWorld& normalWorldSingleton() { return *m_normalWorld; }
 
     void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 
@@ -154,17 +160,22 @@ public:
     JSC::GCClient::IsoSubspace& domNamespaceObjectSpace() { return m_domNamespaceObjectSpace; }
     JSC::GCClient::IsoSubspace& domWindowPropertiesSpace() { return m_domWindowPropertiesSpace; }
     JSC::GCClient::IsoSubspace& runtimeArraySpace() { return m_runtimeArraySpace; }
+#if PLATFORM(COCOA)
+    JSC::GCClient::IsoSubspace& objcFallbackObjectImpSpace() { return m_objcFallbackObjectImpSpace; }
+#endif
     JSC::GCClient::IsoSubspace& observableArraySpace() { return m_observableArraySpace; }
     JSC::GCClient::IsoSubspace& runtimeMethodSpace() { return m_runtimeMethodSpace; }
     JSC::GCClient::IsoSubspace& runtimeObjectSpace() { return m_runtimeObjectSpace; }
     JSC::GCClient::IsoSubspace& windowProxySpace() { return m_windowProxySpace; }
     JSC::GCClient::IsoSubspace& idbSerializationSpace() { return m_idbSerializationSpace; }
 
-    ExtendedDOMClientIsoSubspaces& clientSubspaces() { return *m_clientSubspaces.get(); }
+    ExtendedDOMClientIsoSubspaces& clientSubspaces() { return m_clientSubspaces; }
 
     void addClient(JSVMClientDataClient& client) { m_clients.add(client); }
 
 private:
+    bool isWebCoreJSClientData() const final { return true; }
+
     HashSet<DOMWrapperWorld*> m_worldSet;
     RefPtr<DOMWrapperWorld> m_normalWorld;
 
@@ -177,24 +188,34 @@ private:
     JSC::GCClient::IsoSubspace m_domNamespaceObjectSpace;
     JSC::GCClient::IsoSubspace m_domWindowPropertiesSpace;
     JSC::GCClient::IsoSubspace m_runtimeArraySpace;
+#if PLATFORM(COCOA)
+    JSC::GCClient::IsoSubspace m_objcFallbackObjectImpSpace;
+#endif
     JSC::GCClient::IsoSubspace m_observableArraySpace;
     JSC::GCClient::IsoSubspace m_runtimeMethodSpace;
     JSC::GCClient::IsoSubspace m_runtimeObjectSpace;
     JSC::GCClient::IsoSubspace m_windowProxySpace;
     JSC::GCClient::IsoSubspace m_idbSerializationSpace;
 
-    std::unique_ptr<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
+    const UniqueRef<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
 
     WeakHashSet<JSVMClientDataClient> m_clients;
 };
 
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::JSVMClientData)
+static bool isType(const JSC::VM::ClientData& clientData) { return clientData.isWebCoreJSClientData(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebCore {
 
 enum class UseCustomHeapCellType : bool { No, Yes };
 
 template<typename T, UseCustomHeapCellType useCustomHeapCellType, typename GetClient, typename SetClient, typename GetServer, typename SetServer>
-ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)
+ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, ASCIILiteral name, GetClient getClient, SetClient setClient, GetServer getServer, SetServer setServer, JSC::HeapCellType& (*getCustomHeapCellType)(JSHeapData&) = nullptr)
 {
-    auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);
+    auto& clientData = *downcast<JSVMClientData>(vm.clientData);
     auto& clientSubspaces = clientData.clientSubspaces();
     if (auto* clientSpace = getClient(clientSubspaces))
         return clientSpace;
@@ -207,14 +228,14 @@ ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient
     if (!space) {
         JSC::Heap& heap = vm.heap;
         std::unique_ptr<JSC::IsoSubspace> uniqueSubspace;
-        static_assert(useCustomHeapCellType == UseCustomHeapCellType::Yes || std::is_base_of_v<JSC::JSDestructibleObject, T> || !T::needsDestruction);
+        static_assert(useCustomHeapCellType == UseCustomHeapCellType::Yes || std::is_base_of_v<JSC::JSDestructibleObject, T> || T::needsDestruction == JSC::DoesNotNeedDestruction);
         if constexpr (useCustomHeapCellType == UseCustomHeapCellType::Yes)
-            uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, getCustomHeapCellType(heapData), T);
+            uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, getCustomHeapCellType(heapData), T, name);
         else {
             if constexpr (std::is_base_of_v<JSC::JSDestructibleObject, T>)
-                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, heap.destructibleObjectHeapCellType, T);
+                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, heap.destructibleObjectHeapCellType, T, name);
             else
-                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, T);
+                uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT_WITH_NAME(heap, heap.cellHeapCellType, T, name);
         }
         space = uniqueSubspace.get();
         setServer(subspaces, WTFMove(uniqueSubspace));
@@ -237,7 +258,7 @@ IGNORE_WARNINGS_END
 
 ALWAYS_INLINE WebCoreBuiltinNames& builtinNames(JSC::VM& vm)
 {
-    return static_cast<JSVMClientData*>(vm.clientData)->builtinNames();
+    return downcast<JSVMClientData>(vm.clientData)->builtinNames();
 }
 
 } // namespace WebCore

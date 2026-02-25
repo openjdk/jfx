@@ -30,6 +30,7 @@
 #include "CanvasRenderingContext.h"
 #include "Chrome.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "GraphicsClient.h"
 #include "GraphicsContext.h"
@@ -38,8 +39,10 @@
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
 #include "IntRect.h"
+#include "NoiseInjectionPolicy.h"
+#include "RenderElementInlines.h"
+#include "ScriptTrackingPrivacyCategory.h"
 #include "StyleCanvasImage.h"
-#include "RenderElement.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
@@ -47,6 +50,7 @@
 #include <JavaScriptCore/JSLock.h>
 #include <atomic>
 #include <wtf/Vector.h>
+#include <wtf/WeakRandom.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -54,9 +58,18 @@ namespace WebCore {
 constexpr InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Low;
 static std::optional<size_t> maxCanvasAreaForTesting;
 
-CanvasBase::CanvasBase(IntSize size, const std::optional<NoiseInjectionHashSalt>& noiseHashSalt)
-    : m_size(size)
-    , m_canvasNoiseHashSalt(noiseHashSalt)
+static std::optional<uint64_t> canvasNoiseHashSaltIfNeeded(ScriptExecutionContext& context)
+{
+    auto policies = context.noiseInjectionPolicies();
+    if (policies.contains(NoiseInjectionPolicy::Minimal)
+        || (policies.contains(NoiseInjectionPolicy::Enhanced) && context.requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::Canvas)))
+        return context.noiseInjectionHashSalt();
+    return { };
+}
+
+CanvasBase::CanvasBase(IntSize size, ScriptExecutionContext& context)
+    : m_size { size }
+    , m_canvasNoiseHashSalt { canvasNoiseHashSaltIfNeeded(context) }
 {
 }
 
@@ -241,18 +254,20 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
     IntSize oldSize = m_size;
     size_t oldMemoryCost = m_imageBufferMemoryCost.load(std::memory_order_relaxed);
     size_t newMemoryCost = 0;
-    if (m_imageBuffer) {
-        m_size = m_imageBuffer->truncatedLogicalSize();
-        newMemoryCost = m_imageBuffer->memoryCost();
-        m_imageBuffer->context().setShadowsIgnoreTransforms(true);
-        m_imageBuffer->context().setImageInterpolationQuality(defaultInterpolationQuality);
-        m_imageBuffer->context().setStrokeThickness(1);
-        m_contextStateSaver = makeUnique<GraphicsContextStateSaver>(m_imageBuffer->context());
+    if (RefPtr imageBuffer = m_imageBuffer) {
+        m_size = imageBuffer->truncatedLogicalSize();
+        newMemoryCost = imageBuffer->memoryCost();
+        imageBuffer->context().setShadowsIgnoreTransforms(true);
+        imageBuffer->context().setImageInterpolationQuality(defaultInterpolationQuality);
+        imageBuffer->context().setStrokeThickness(1);
+        m_contextStateSaver = makeUnique<GraphicsContextStateSaver>(imageBuffer->context());
     }
     m_imageBufferMemoryCost.store(newMemoryCost, std::memory_order_relaxed);
     if (newMemoryCost) {
-        JSC::JSLockHolder lock(scriptExecutionContext()->vm());
-        scriptExecutionContext()->vm().heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), newMemoryCost);
+        if (RefPtr scriptExecutionContext = this->scriptExecutionContext()) {
+            JSC::JSLockHolder lock(scriptExecutionContext->vm());
+            scriptExecutionContext->vm().heap.reportExtraMemoryAllocated(static_cast<JSCell*>(nullptr), newMemoryCost);
+        }
     }
     if (auto* context = renderingContext()) {
         if (oldSize != m_size)
@@ -270,13 +285,14 @@ bool CanvasBase::shouldAccelerate(const IntSize& size) const
 
 bool CanvasBase::shouldAccelerate(uint64_t area) const
 {
-#if USE(IOSURFACE_CANVAS_BACKING_STORE) || USE(SKIA)
-    if (!scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing)
+    RefPtr scriptExecutionContext = this->scriptExecutionContext();
+#if USE(CA) || USE(SKIA)
+    if (!scriptExecutionContext->settingsValues().canvasUsesAcceleratedDrawing)
         return false;
-    if (area < scriptExecutionContext()->settingsValues().minimumAccelerated2DContextArea)
+    if (area < scriptExecutionContext->settingsValues().minimumAccelerated2DContextArea)
         return false;
 #if PLATFORM(GTK)
-    if (!scriptExecutionContext()->settingsValues().acceleratedCompositingEnabled)
+    if (!scriptExecutionContext->settingsValues().acceleratedCompositingEnabled)
         return false;
 #endif
     return true;
@@ -289,26 +305,28 @@ bool CanvasBase::shouldAccelerate(uint64_t area) const
 RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer() const
 {
     uint64_t area = size().unclampedArea();
+    RefPtr scriptExecutionContext = this->scriptExecutionContext();
     if (!area)
         return nullptr;
     if (area > maxCanvasArea()) {
         auto message = makeString("Canvas area exceeds the maximum limit (width * height > "_s, maxCanvasArea(), ")."_s);
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
+        scriptExecutionContext->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
         return nullptr;
     }
 
     auto* context = renderingContext();
-    auto colorSpace = context ? context->colorSpace() : DestinationColorSpace::SRGB();
-    auto pixelFormat = context ? context->pixelFormat() : ImageBufferPixelFormat::BGRA8;
     bool willReadFrequently = context ? context->willReadFrequently() : false;
 
-    OptionSet<ImageBufferOptions> bufferOptions;
-    if (!willReadFrequently && shouldAccelerate(area))
-        bufferOptions.add(ImageBufferOptions::Accelerated);
-    if (context)
-        bufferOptions = context->adjustImageBufferOptionsForTesting(bufferOptions);
+    RenderingMode renderingMode;
+    if (auto renderingModeForTesting = context ? context->renderingModeForTesting() : std::nullopt)
+        renderingMode = *renderingModeForTesting;
+    else
+        renderingMode = !willReadFrequently && shouldAccelerate(area) ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
 
-    return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, scriptExecutionContext()->graphicsClient());
+    auto colorSpace = context ? context->colorSpace() : DestinationColorSpace::SRGB();
+    auto pixelFormat = context ? context->pixelFormat() : ImageBufferPixelFormat::BGRA8;
+
+    return ImageBuffer::create(size(), renderingMode, RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, scriptExecutionContext->graphicsClient());
 }
 
 bool CanvasBase::shouldInjectNoiseBeforeReadback() const
@@ -353,6 +371,29 @@ bool CanvasBase::postProcessPixelBufferResults(Ref<PixelBuffer>&& pixelBuffer) c
     if (m_canvasNoiseHashSalt)
         return m_canvasNoiseInjection.postProcessPixelBufferResults(std::forward<Ref<PixelBuffer>>(pixelBuffer), *m_canvasNoiseHashSalt);
     return false;
+}
+
+RefPtr<ImageBuffer> CanvasBase::createImageForNoiseInjection() const
+{
+    RefPtr context = canvasBaseScriptExecutionContext();
+    if (!context)
+        return { };
+
+    auto seed = static_cast<unsigned>(context->noiseInjectionHashSalt().value_or(0));
+    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    if (!buffer)
+        return { };
+
+    auto componentValues = WeakRandom { seed }.getUint32();
+    auto fillColor = SRGBA<uint8_t> {
+        static_cast<uint8_t>((componentValues >> 24) & 0xFF),
+        static_cast<uint8_t>((componentValues >> 16) & 0xFF),
+        static_cast<uint8_t>((componentValues >> 8) & 0xFF),
+        static_cast<uint8_t>(componentValues & 0xFF),
+    };
+    buffer->context().setFillColor(fillColor);
+    buffer->context().fillRect({ IntPoint { }, size() });
+    return buffer;
 }
 
 void CanvasBase::resetGraphicsContextState() const

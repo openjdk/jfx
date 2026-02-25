@@ -157,6 +157,9 @@ struct _GstBufferPoolClass {
    * Start the bufferpool. The default implementation will preallocate
    * min-buffers buffers and put them in the queue.
    *
+   * Subclasses do not need to chain up to the parent's default implementation
+   * if they don't want min-buffers based preallocation.
+   *
    * Returns: whether the pool could be started.
    */
   gboolean       (*start)          (GstBufferPool *pool);

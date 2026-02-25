@@ -27,6 +27,7 @@
 
 #include "RenderStyleConstants.h"
 #include "RenderTreeUpdater.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,14 +35,14 @@ class Element;
 class RenderQuote;
 
 class RenderTreeUpdater::ViewTransition {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ViewTransition);
 public:
     ViewTransition(RenderTreeUpdater&);
 
-    void updatePseudoElementTree(RenderElement&, StyleDifference minimalStyleDifference);
+    void updatePseudoElementTree(RenderElement*, StyleDifference minimalStyleDifference);
 private:
-    void buildPseudoElementGroup(const AtomString&, RenderElement&, RenderObject* = nullptr);
-    void updatePseudoElementGroup(const RenderStyle&, RenderElement&, RenderElement&, StyleDifference minimalStyleDifference);
+    void buildPseudoElementGroup(RenderBlockFlow& viewTransitionRoot, const AtomString&, RenderElement&, RenderObject* = nullptr);
+    void updatePseudoElementGroup(const RenderStyle&, RenderBox&, RenderElement&, StyleDifference minimalStyleDifference);
     RenderTreeUpdater& m_updater;
 };
 

@@ -27,6 +27,7 @@
 #include "DragActions.h"
 #include "DragImage.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -64,9 +65,8 @@ public:
     void setEffectAllowed(const String&);
 
     DataTransferItemList& items(Document&);
-    Vector<String> types() const;
-
-    Vector<String> typesForItemList() const;
+    Vector<String> types(Document&) const;
+    Vector<String> typesForItemList(Document&) const;
 
     FileList& files(Document*) const;
     FileList& files(Document&) const;
@@ -88,7 +88,7 @@ public:
     bool canWriteData() const;
 
     bool hasFileOfType(const String&);
-    bool hasStringOfType(const String&);
+    bool hasStringOfType(Document&, const String&);
 
     Pasteboard& pasteboard() { return *m_pasteboard; }
     void commitToPasteboard(Pasteboard&);
@@ -107,8 +107,8 @@ public:
     void setDestinationOperationMask(OptionSet<DragOperation>);
 
     void setDragHasStarted() { m_shouldUpdateDragImage = true; }
-    DragImageRef createDragImage(IntPoint& dragLocation) const;
-    void updateDragImage();
+    DragImageRef createDragImage(const Document*, IntPoint& dragLocation) const;
+    void updateDragImage(const Document*);
     RefPtr<Element> dragImageElement() const;
 
     void moveDragState(Ref<DataTransfer>&&);
@@ -131,7 +131,12 @@ private:
 
     bool allowsFileAccess() const
     {
+#if PLATFORM(COCOA)
         return !forDrag() || forFileDrag();
+#else
+        // Check https://webkit.org/b/271957 before allowing file access for your port.
+        return false;
+#endif
     }
 
 #if ENABLE(DRAG_SUPPORT)
@@ -146,13 +151,13 @@ private:
     bool shouldSuppressGetAndSetDataToAvoidExposingFilePaths() const;
 
     enum class AddFilesType : bool { No, Yes };
-    Vector<String> types(AddFilesType) const;
+    Vector<String> types(Document&, AddFilesType) const;
     Vector<Ref<File>> filesFromPasteboardAndItemList(ScriptExecutionContext*) const;
 
     String m_originIdentifier;
     StoreMode m_storeMode;
     std::unique_ptr<Pasteboard> m_pasteboard;
-    std::unique_ptr<DataTransferItemList> m_itemList;
+    const std::unique_ptr<DataTransferItemList> m_itemList;
 
     mutable RefPtr<FileList> m_fileList;
 

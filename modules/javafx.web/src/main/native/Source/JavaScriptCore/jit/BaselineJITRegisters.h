@@ -47,10 +47,15 @@ namespace CallDirectEval {
 #if USE(JSVALUE64)
         static constexpr GPRReg scopeGPR { GPRInfo::regT1 };
         static constexpr JSValueRegs thisValueJSR { GPRInfo::regT2 };
+        static constexpr GPRReg codeBlockGPR { GPRInfo::regT3 };
+        static constexpr GPRReg bytecodeIndexGPR { GPRInfo::regT4 };
 #else
         static constexpr GPRReg scopeGPR { GPRInfo::regT1 };
         static constexpr JSValueRegs thisValueJSR { JSRInfo::jsRegT32 };
+        static constexpr GPRReg codeBlockGPR { GPRInfo::regT4 };
+        static constexpr GPRReg bytecodeIndexGPR { GPRInfo::regT5 };
 #endif
+        static_assert(noOverlap(calleeFrameGPR, scopeGPR, thisValueJSR, codeBlockGPR, bytecodeIndexGPR), "Required for call to slow operation");
     }
 }
 
@@ -76,6 +81,13 @@ namespace Instanceof {
     static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
     static_assert(noOverlap(stubInfoGPR, valueJSR, protoJSR, GPRInfo::handlerGPR, scratch1GPR), "Required for call to slow operation");
     static_assert(noOverlap(resultJSR, stubInfoGPR));
+
+    namespace Custom {
+        static constexpr GPRReg globalObjectGPR = stubInfoGPR;
+        static constexpr JSValueRegs valueJSR = Instanceof::valueJSR;
+        static constexpr GPRReg constructorGPR = scratch1GPR;
+        static constexpr JSValueRegs hasInstanceJSR = protoJSR;
+    }
 }
 
 namespace JFalse {

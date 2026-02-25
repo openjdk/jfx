@@ -31,19 +31,17 @@
 
 namespace WebCore {
 
-class LineLayoutState;
 class LogicalSelectionOffsetCaches;
 class RenderInline;
 class RenderText;
 
-struct BidiRun;
 struct PaintInfo;
 struct RenderBlockRareData;
 
 using TrackedRendererListHashSet = SingleThreadWeakListHashSet<RenderBox>;
 
 enum CaretType { CursorCaret, DragCaret };
-enum ContainingBlockState { NewContainingBlock, SameContainingBlock };
+enum class RelayoutChildren : bool { No, Yes };
 
 enum TextRunFlag {
     DefaultTextRunFlags = 0,
@@ -57,7 +55,9 @@ class RenderBlock : public RenderBox {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBlock);
 public:
-    friend class LineLayoutState;
+    // FIXME: This is temporary to allow us to move code from RenderBlock into RenderBlockFlow that accesses member variables that we haven't moved out of
+    // RenderBlock yet.
+    friend class RenderBlockFlow;
     virtual ~RenderBlock();
 
 protected:
@@ -65,40 +65,32 @@ protected:
     RenderBlock(Type, Document&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags = { });
 
 public:
-    // These two functions are overridden for inline-block.
-    LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
-
-    LayoutUnit minLineHeightForReplacedRenderer(bool isFirstLine, LayoutUnit replacedHeight) const;
-
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual void deleteLines();
 
-    virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu);
+    virtual void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu);
 
-    void insertPositionedObject(RenderBox&);
-    static void removePositionedObject(const RenderBox&);
-    void removePositionedObjects(const RenderBlock*, ContainingBlockState = SameContainingBlock);
+    void addOutOfFlowBox(RenderBox&);
+    static void removeOutOfFlowBox(const RenderBox&);
+    enum class ContainingBlockState : bool { NewContainingBlock, SameContainingBlock };
+    void removeOutOfFlowBoxes(const RenderBlock*, ContainingBlockState = ContainingBlockState::SameContainingBlock);
 
-    TrackedRendererListHashSet* positionedObjects() const;
-    bool hasPositionedObjects() const
+    TrackedRendererListHashSet* outOfFlowBoxes() const;
+    bool hasOutOfFlowBoxes() const
     {
-        auto* objects = positionedObjects();
-        return objects && !objects->isEmptyIgnoringNullReferences();
+        auto* renderers = outOfFlowBoxes();
+        return renderers && !renderers->isEmptyIgnoringNullReferences();
     }
-
     void addPercentHeightDescendant(RenderBox&);
     static void removePercentHeightDescendant(RenderBox&);
     TrackedRendererListHashSet* percentHeightDescendants() const;
     bool hasPercentHeightDescendants() const
     {
-        auto* objects = percentHeightDescendants();
-        return objects && !objects->isEmptyIgnoringNullReferences();
+        auto* renderers = percentHeightDescendants();
+        return renderers && !renderers->isEmptyIgnoringNullReferences();
     }
     static bool hasPercentHeightContainerMap();
-    static bool hasPercentHeightDescendant(RenderBox&);
     static void clearPercentHeightDescendantsFrom(RenderBox&);
-    static void removePercentHeightDescendantIfNeeded(RenderBox&);
 
     bool isContainingBlockAncestorFor(RenderObject&) const;
 
@@ -115,44 +107,17 @@ public:
 
     virtual bool shouldChildInlineMarginContributeToContainerIntrinsicSize(MarginTrimType /* marginSide */, const RenderElement&) const { return true; }
 
-    void markPositionedObjectsForLayout();
+    void markOutOfFlowBoxesForLayout();
     void markForPaginationRelayoutIfNeeded() override;
 
     // FIXME-BLOCKFLOW: Remove virtualizaion when all of the line layout code has been moved out of RenderBlock
     virtual bool containsFloats() const { return false; }
 
-    // Versions that can compute line offsets with the fragment and page offset passed in. Used for speed to avoid having to
-    // compute the fragment all over again when you already know it.
-    LayoutUnit availableLogicalWidthForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return std::max<LayoutUnit>(0, logicalRightOffsetForLineInFragment(position, fragment, logicalHeight)
-            - logicalLeftOffsetForLineInFragment(position, fragment, logicalHeight));
-    }
-    LayoutUnit logicalRightOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return adjustLogicalRightOffsetForLine(logicalRightFloatOffsetForLine(position, logicalRightOffsetForContent(fragment), logicalHeight));
-    }
-    LayoutUnit logicalLeftOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return adjustLogicalLeftOffsetForLine(logicalLeftFloatOffsetForLine(position, logicalLeftOffsetForContent(fragment), logicalHeight));
-    }
-    inline LayoutUnit startOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer*, LayoutUnit logicalHeight = 0_lu) const;
-    inline LayoutUnit endOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer*, LayoutUnit logicalHeight = 0_lu) const;
-
-    LayoutUnit availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return availableLogicalWidthForLineInFragment(position, fragmentAtBlockOffset(position), logicalHeight);
-    }
-    LayoutUnit logicalRightOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return adjustLogicalRightOffsetForLine(logicalRightFloatOffsetForLine(position, logicalRightOffsetForContent(position), logicalHeight));
-    }
-    LayoutUnit logicalLeftOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const
-    {
-        return adjustLogicalLeftOffsetForLine(logicalLeftFloatOffsetForLine(position, logicalLeftOffsetForContent(position), logicalHeight));
-    }
-    inline LayoutUnit startOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
-    inline LayoutUnit endOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
+    inline LayoutUnit availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
+    LayoutUnit logicalRightOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
+    LayoutUnit logicalLeftOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight = 0_lu) const;
+    inline LayoutUnit startOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
+    inline LayoutUnit endOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const;
 
     LayoutUnit textIndentOffset() const;
 
@@ -167,14 +132,12 @@ public:
     LayoutRect logicalRectToPhysicalRect(const LayoutPoint& physicalPosition, const LayoutRect& logicalRect);
 
     void addContinuationWithOutline(RenderInline*);
-    bool paintsContinuationOutline(RenderInline*);
+#if ASSERT_ENABLED
+    bool paintsContinuationOutline(const RenderInline&);
+#endif
 
-    static RenderPtr<RenderBlock> createAnonymousWithParentRendererAndDisplay(const RenderBox& parent, DisplayType = DisplayType::Block);
-    RenderPtr<RenderBlock> createAnonymousBlock(DisplayType = DisplayType::Block) const;
-
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
-    static inline bool shouldSkipCreatingRunsForObject(RenderObject&);
+    bool establishesIndependentFormattingContext() const;
+    bool createsNewFormattingContext() const;
 
     static TextRun constructTextRun(StringView, const RenderStyle&,
         ExpansionBehavior = ExpansionBehavior::defaultBehavior(), TextRunFlags = DefaultTextRunFlags);
@@ -188,7 +151,7 @@ public:
         ExpansionBehavior = ExpansionBehavior::defaultBehavior());
     static TextRun constructTextRun(std::span<const LChar> characters, const RenderStyle&,
         ExpansionBehavior = ExpansionBehavior::defaultBehavior());
-    static TextRun constructTextRun(std::span<const UChar> characters, const RenderStyle&,
+    static TextRun constructTextRun(std::span<const char16_t> characters, const RenderStyle&,
         ExpansionBehavior = ExpansionBehavior::defaultBehavior());
 
     LayoutUnit paginationStrut() const;
@@ -227,57 +190,35 @@ public:
     LayoutUnit logicalLeftForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.x() : child.y(); }
     void setLogicalLeftForChild(RenderBox& child, LayoutUnit logicalLeft, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
     void setLogicalTopForChild(RenderBox& child, LayoutUnit logicalTop, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
-    LayoutUnit marginBeforeForChild(const RenderBoxModelObject& child) const { return child.marginBefore(&style()); }
-    LayoutUnit marginAfterForChild(const RenderBoxModelObject& child) const { return child.marginAfter(&style()); }
-    LayoutUnit marginStartForChild(const RenderBoxModelObject& child) const { return child.marginStart(&style()); }
-    LayoutUnit marginEndForChild(const RenderBoxModelObject& child) const { return child.marginEnd(&style()); }
-    void setMarginStartForChild(RenderBox& child, LayoutUnit value) const { child.setMarginStart(value, &style()); }
-    void setMarginEndForChild(RenderBox& child, LayoutUnit value) const { child.setMarginEnd(value, &style()); }
-    void setMarginBeforeForChild(RenderBox& child, LayoutUnit value) const { child.setMarginBefore(value, &style()); }
-    void setMarginAfterForChild(RenderBox& child, LayoutUnit value) const { child.setMarginAfter(value, &style()); }
+    LayoutUnit marginBeforeForChild(const RenderBoxModelObject& child) const { return child.marginBefore(writingMode()); }
+    LayoutUnit marginAfterForChild(const RenderBoxModelObject& child) const { return child.marginAfter(writingMode()); }
+    LayoutUnit marginStartForChild(const RenderBoxModelObject& child) const { return child.marginStart(writingMode()); }
+    LayoutUnit marginEndForChild(const RenderBoxModelObject& child) const { return child.marginEnd(writingMode()); }
+    void setMarginStartForChild(RenderBox& child, LayoutUnit value) const { child.setMarginStart(value, writingMode()); }
+    void setMarginEndForChild(RenderBox& child, LayoutUnit value) const { child.setMarginEnd(value, writingMode()); }
+    void setMarginBeforeForChild(RenderBox& child, LayoutUnit value) const { child.setMarginBefore(value, writingMode()); }
+    void setMarginAfterForChild(RenderBox& child, LayoutUnit value) const { child.setMarginAfter(value, writingMode()); }
     void setTrimmedMarginForChild(RenderBox& child, MarginTrimType);
     LayoutUnit collapsedMarginBeforeForChild(const RenderBox& child) const;
     LayoutUnit collapsedMarginAfterForChild(const RenderBox& child) const;
 
-    void getFirstLetter(RenderObject*& firstLetter, RenderElement*& firstLetterContainer, RenderObject* skipObject = nullptr);
+    std::pair<RenderObject*, RenderElement*> firstLetterAndContainer(RenderObject* skipThisAsFirstLetter = nullptr);
 
     virtual void scrollbarsChanged(bool /*horizontalScrollbarChanged*/, bool /*verticalScrollbarChanged*/) { }
 
-    LayoutUnit logicalLeftOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit logicalRightOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit availableLogicalWidthForContent(RenderFragmentContainer* fragment) const
+    LayoutUnit availableLogicalWidthForContent() const
     {
-        return std::max<LayoutUnit>(0, logicalRightOffsetForContent(fragment) - logicalLeftOffsetForContent(fragment));
+        return std::max(0_lu, logicalRightOffsetForContent() - logicalLeftOffsetForContent());
     }
-    inline LayoutUnit startOffsetForContent(RenderFragmentContainer*) const;
-    inline LayoutUnit endOffsetForContent(RenderFragmentContainer*) const;
-    LayoutUnit logicalLeftOffsetForContent(LayoutUnit blockOffset) const
-    {
-        return logicalLeftOffsetForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    LayoutUnit logicalRightOffsetForContent(LayoutUnit blockOffset) const
-    {
-        return logicalRightOffsetForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    LayoutUnit availableLogicalWidthForContent(LayoutUnit blockOffset) const
-    {
-        return availableLogicalWidthForContent(fragmentAtBlockOffset(blockOffset));
-    }
-    inline LayoutUnit startOffsetForContent(LayoutUnit blockOffset) const;
-    inline LayoutUnit endOffsetForContent(LayoutUnit blockOffset) const;
-    inline LayoutUnit logicalLeftOffsetForContent() const;
-    inline LayoutUnit logicalRightOffsetForContent() const;
-    inline LayoutUnit startOffsetForContent() const;
-    inline LayoutUnit endOffsetForContent() const;
+    LayoutUnit logicalLeftOffsetForContent() const;
+    LayoutUnit logicalRightOffsetForContent() const;
+    LayoutUnit startOffsetForContent() const;
+    LayoutUnit endOffsetForContent() const;
 
     LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
     LayoutUnit logicalRightSelectionOffset(RenderBlock& rootBlock, LayoutUnit position, const LogicalSelectionOffsetCaches&);
 
-#if ASSERT_ENABLED
-    void checkPositionedObjectsNeedLayout();
-#endif
-
-    void updateHitTestResult(HitTestResult&, const LayoutPoint&) override;
+    void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
 
     bool canHaveChildren() const override { return true; }
     virtual bool canDropAnonymousBlockChild() const { return true; }
@@ -290,23 +231,44 @@ public:
     std::optional<LayoutUnit> availableLogicalHeightForPercentageComputation() const;
     bool hasDefiniteLogicalHeight() const;
 
-    virtual bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const { return false; }
-
     static String updateSecurityDiscCharacters(const RenderStyle&, String&&);
 
     virtual bool hasLineIfEmpty() const;
 
     void updateDescendantTransformsAfterLayout();
 
+    virtual bool canPerformSimplifiedLayout() const;
+
+    LayoutUnit offsetFromLogicalTopOfFirstPage() const override;
+    RenderFragmentContainer* fragmentAtBlockOffset(LayoutUnit) const;
+
+    virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
+    void clearLayoutOverflow();
+
+    // Adjust from painting offsets to the local coords of this renderer
+    void offsetForContents(LayoutPoint&) const;
+
+    enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
+    RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
+    virtual void layoutExcludedChildren(RelayoutChildren);
+    virtual bool computePreferredWidthsForExcludedChildren(LayoutUnit&, LayoutUnit&) const;
+
+    void adjustBorderBoxRectForPainting(LayoutRect&) override;
+    LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
+
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
+
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
+    bool establishesIndependentFormattingContextIgnoringDisplayType(const RenderStyle&) const;
 
     void layout() override;
 
-    void layoutPositionedObjects(bool relayoutChildren, bool fixedPositionObjectsOnly = false);
-    virtual void layoutPositionedObject(RenderBox&, bool relayoutChildren, bool fixedPositionObjectsOnly);
+    void layoutOutOfFlowBoxes(RelayoutChildren, bool fixedPositionObjectsOnly = false);
+    virtual void layoutOutOfFlowBox(RenderBox&, RelayoutChildren, bool fixedPositionObjectsOnly);
 
-    void markFixedPositionObjectForLayoutIfNeeded(RenderBox& child);
+    void markFixedPositionBoxForLayoutIfNeeded(RenderBox& child);
 
     LayoutUnit marginIntrinsicLogicalWidthForChild(RenderBox&) const;
 
@@ -323,7 +285,6 @@ protected:
 
     std::optional<LayoutUnit> firstLineBaseline() const override;
     std::optional<LayoutUnit> lastLineBaseline() const override;
-    std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const override;
 
     // Delay updating scrollbars until endAndCommitUpdateScrollInfoAfterLayoutTransaction() is called. These functions are used
     // when a flexbox is laying out its descendants. If multiple calls are made to beginUpdateScrollInfoAfterLayoutTransaction()
@@ -338,7 +299,6 @@ protected:
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    virtual bool canPerformSimplifiedLayout() const;
     bool simplifiedLayout();
     virtual void simplifiedNormalFlowLayout();
 
@@ -348,33 +308,13 @@ protected:
 
     String debugDescription() const override;
 
-public:
-    virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
-    void clearLayoutOverflow();
-
-    // Adjust from painting offsets to the local coords of this renderer
-    void offsetForContents(LayoutPoint&) const;
-
-    enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
-    RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
-    virtual void layoutExcludedChildren(bool /*relayoutChildren*/);
-    virtual bool computePreferredWidthsForExcludedChildren(LayoutUnit&, LayoutUnit&) const;
-
-    void adjustBorderBoxRectForPainting(LayoutRect&) override;
-    LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
-    bool isInlineBlockOrInlineTable() const final { return isInline() && isReplacedOrInlineBlock(); }
-
-    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
-    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
-
-protected:
     virtual bool isPointInOverflowControl(HitTestResult&, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset);
 
     virtual void addOverflowFromChildren();
     // FIXME-BLOCKFLOW: Remove virtualization when all callers have moved to RenderBlockFlow
     virtual void addOverflowFromInlineChildren() { }
     void addOverflowFromBlockChildren();
-    void addOverflowFromPositionedObjects();
+    void addOverflowFromOutOfFlowBoxes();
     void addVisualOverflowFromTheme();
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
@@ -385,17 +325,19 @@ protected:
     void estimateFragmentRangeForBoxChild(const RenderBox&) const;
     bool updateFragmentRangeForBoxChild(const RenderBox&) const;
 
-    void updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, RenderBox&);
+    void updateBlockChildDirtyBitsBeforeLayout(RelayoutChildren, RenderBox&);
 
-    void preparePaginationBeforeBlockLayout(bool&);
+    void preparePaginationBeforeBlockLayout(RelayoutChildren&);
 
-    void computeChildPreferredLogicalWidths(RenderObject&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
+    void computeChildPreferredLogicalWidths(RenderBox&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
 
-    virtual void computeChildIntrinsicLogicalWidths(RenderObject&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
+    virtual void computeChildIntrinsicLogicalWidths(RenderBox&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
+
+    RenderBlockRareData& ensureBlockRareData();
+    RenderBlockRareData* blockRareData() const;
+    bool recomputeLogicalWidth();
 
 private:
-    static RenderPtr<RenderBlock> createAnonymousBlockWithStyleAndDisplay(Document&, const RenderStyle&, DisplayType);
-
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit, LayoutUnit fixedOffset, LayoutUnit) const { return fixedOffset; };
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
@@ -447,40 +389,21 @@ private:
         LayoutUnit lastLogicalTop, LayoutUnit lastLogicalLeft, LayoutUnit lastLogicalRight, LayoutUnit logicalBottom, const LogicalSelectionOffsetCaches&, const PaintInfo*);
 
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
-    virtual void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
-    friend class LogicalSelectionOffsetCaches;
+    virtual void clipOutFloatingBoxes(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
 
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 
-    // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
-    virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*);
-
-    RenderPtr<RenderBlock> clone() const;
+    virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint&, HitTestSource);
 
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 
-    void removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle);
-
     void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 
-protected:
-    void dirtyForLayoutFromPercentageHeightDescendants();
+    void paintDebugBoxShadowIfApplicable(GraphicsContext&, const LayoutRect&) const;
 
-    RenderBlockRareData& ensureBlockRareData();
-    RenderBlockRareData* getBlockRareData() const;
-
-protected:
-    bool recomputeLogicalWidth();
-
-public:
-    LayoutUnit offsetFromLogicalTopOfFirstPage() const override;
-    RenderFragmentContainer* fragmentAtBlockOffset(LayoutUnit) const;
-
-    // FIXME: This is temporary to allow us to move code from RenderBlock into RenderBlockFlow that accesses member variables that we haven't moved out of
-    // RenderBlock yet.
-    friend class RenderBlockFlow;
-    // FIXME-BLOCKFLOW: Remove this when the line layout stuff has all moved out of RenderBlock
-    friend class LineBreaker;
+    bool contentBoxLogicalWidthChanged(const RenderStyle&, const RenderStyle&);
+    bool paddingBoxLogicaHeightChanged(const RenderStyle& oldStyle, const RenderStyle& newStyle);
+    bool scrollbarWidthDidChange(const RenderStyle&, const RenderStyle&, ScrollbarOrientation);
 
 private:
     // Used to store state between styleWillChange and styleDidChange
@@ -490,21 +413,6 @@ private:
 LayoutUnit blockDirectionOffset(RenderBlock& rootBlock, const LayoutSize& offsetFromRootBlock);
 LayoutUnit inlineDirectionOffset(RenderBlock& rootBlock, const LayoutSize& offsetFromRootBlock);
 VisiblePosition positionForPointRespectingEditingBoundaries(RenderBlock&, RenderBox&, const LayoutPoint&, HitTestSource);
-
-inline RenderPtr<RenderBlock> RenderBlock::createAnonymousWithParentRendererAndDisplay(const RenderBox& parent, DisplayType display)
-{
-    return createAnonymousBlockWithStyleAndDisplay(parent.document(), parent.style(), display);
-}
-
-inline RenderPtr<RenderBox> RenderBlock::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return createAnonymousBlockWithStyleAndDisplay(document(), renderer.style(), style().display());
-}
-
-inline RenderPtr<RenderBlock> RenderBlock::createAnonymousBlock(DisplayType display) const
-{
-    return createAnonymousBlockWithStyleAndDisplay(document(), style(), display);
-}
 
 } // namespace WebCore
 

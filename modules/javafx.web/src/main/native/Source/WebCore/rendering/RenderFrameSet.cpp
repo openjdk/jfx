@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc.
+ * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,6 +41,7 @@
 #include "RenderFrame.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>
@@ -152,8 +153,7 @@ void RenderFrameSet::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 void RenderFrameSet::GridAxis::resize(int size)
 {
     m_sizes.resize(size);
-    m_deltas.resize(size);
-    m_deltas.fill(0);
+    m_deltas.fill(0, size);
 
     // To track edges for resizability and borders, we need to be (size + 1). This is because a parent frameset
     // may ask us for information about our left/top/right/bottom edges in order to make its own decisions about
@@ -162,13 +162,13 @@ void RenderFrameSet::GridAxis::resize(int size)
     m_allowBorder.resize(size + 1);
 }
 
-void RenderFrameSet::layOutAxis(GridAxis& axis, const Length* grid, int availableLen)
+void RenderFrameSet::layOutAxis(GridAxis& axis, std::span<const Length> grid, int availableLen)
 {
     availableLen = std::max(availableLen, 0);
 
-    int* gridLayout = axis.m_sizes.data();
+    auto gridLayout = axis.m_sizes.mutableSpan();
 
-    if (!grid) {
+    if (grid.empty()) {
         gridLayout[0] = availableLen;
         return;
     }
@@ -339,7 +339,7 @@ void RenderFrameSet::layOutAxis(GridAxis& axis, const Length* grid, int availabl
 
     // now we have the final layout, distribute the delta over it
     bool worked = true;
-    int* gridDelta = axis.m_deltas.data();
+    auto gridDelta = axis.m_deltas.mutableSpan();
     for (int i = 0; i < gridLen; ++i) {
         if (gridLayout[i] && gridLayout[i] + gridDelta[i] <= 0)
             worked = false;

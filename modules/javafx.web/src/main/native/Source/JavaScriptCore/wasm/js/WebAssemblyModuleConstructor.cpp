@@ -41,7 +41,6 @@
 #include "ObjectConstructor.h"
 #include "WasmModule.h"
 #include "WasmModuleInformation.h"
-#include "WasmTypeDefinitionInlines.h"
 #include "WebAssemblyModulePrototype.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/MakeString.h>
@@ -73,7 +72,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleCustomSections, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return JSValue::encode(throwException(globalObject, throwScope, createNotEnoughArgumentsError(globalObject)));
 
     JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(callFrame->uncheckedArgument(0));
@@ -119,7 +118,7 @@ static JSObject* createTypeReflectionObject(JSGlobalObject* globalObject, JSWebA
     case Wasm::ExternalKind::Function: {
         typeObj = constructEmptyObject(globalObject, globalObject->objectPrototype(), 2);
 
-        Wasm::TypeIndex typeIndex = module->moduleInformation().typeIndexFromFunctionIndexSpace(impOrExp.kindIndex);
+        Wasm::TypeIndex typeIndex = module->moduleInformation().typeIndexFromFunctionIndexSpace(Wasm::FunctionSpaceIndex(impOrExp.kindIndex));
         const auto& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex);
 
         JSArray* functionParametersTypes = constructEmptyArray(globalObject, nullptr);
@@ -300,7 +299,7 @@ JSWebAssemblyModule* WebAssemblyModuleConstructor::createModule(JSGlobalObject* 
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     auto result = Wasm::Module::validateSync(vm, WTFMove(buffer));
-    if (UNLIKELY(!result.has_value())) {
+    if (!result.has_value()) [[unlikely]] {
         throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
         return nullptr;
     }

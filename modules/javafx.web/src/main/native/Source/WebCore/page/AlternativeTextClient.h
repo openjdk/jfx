@@ -27,8 +27,9 @@
 
 #include "DictationContext.h"
 #include "FloatRect.h"
+#include "FrameIdentifier.h"
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,12 +56,12 @@ enum class AutocorrectionResponse : uint8_t {
 };
 
 class AlternativeTextClient : public CanMakeCheckedPtr<AlternativeTextClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AlternativeTextClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AlternativeTextClient);
 public:
     virtual ~AlternativeTextClient() = default;
 #if USE(AUTOCORRECTION_PANEL)
-    virtual void showCorrectionAlternative(AlternativeTextType, const FloatRect& boundingBoxOfReplacedString, const String& replacedString, const String& replacmentString, const Vector<String>& alternativeReplacementStrings) = 0;
+    virtual void showCorrectionAlternative(AlternativeTextType, const FloatRect& boundingBoxOfReplacedString, const String& replacedString, const String& replacmentString, const Vector<String>& alternativeReplacementStrings, FrameIdentifier) = 0;
     virtual void dismissAlternative(ReasonForDismissingAlternativeText) = 0;
     virtual String dismissAlternativeSoon(ReasonForDismissingAlternativeText) = 0;
     virtual void recordAutocorrectionResponse(AutocorrectionResponse, const String& replacedString, const String& replacementString) = 0;

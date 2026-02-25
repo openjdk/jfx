@@ -69,6 +69,7 @@ public:
     void didIterateCursor(const IDBResultData&);
 
     void fireVersionChangeEvent(UniqueIDBDatabaseConnection&, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
+    void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
     void didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError&);
     void didCloseFromServer(UniqueIDBDatabaseConnection&, const IDBError&);
 
@@ -85,7 +86,7 @@ public:
 private:
     IDBConnectionToClient(IDBConnectionToClientDelegate&);
 
-    IDBConnectionToClientDelegate* m_delegate;
+    CheckedPtr<IDBConnectionToClientDelegate> m_delegate;
     HashSet<UniqueIDBDatabaseConnection*> m_databaseConnections;
     bool m_isClosed { false };
 };

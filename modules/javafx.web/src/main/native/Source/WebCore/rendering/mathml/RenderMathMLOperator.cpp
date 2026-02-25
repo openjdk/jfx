@@ -191,7 +191,7 @@ void RenderMathMLOperator::resetStretchSize()
 
 void RenderMathMLOperator::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     LayoutUnit preferredWidth;
 
@@ -214,27 +214,31 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
 
     m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
-void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight)
+void RenderMathMLOperator::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     LayoutUnit leadingSpaceValue = leadingSpace();
     LayoutUnit trailingSpaceValue = trailingSpace();
 
     if (useMathOperator()) {
         recomputeLogicalWidth();
-        for (auto child = firstChildBox(); child; child = child->nextSiblingBox())
+        for (auto child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox())
             child->layoutIfNeeded();
         setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue + borderAndPaddingLogicalWidth());
         setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent() + borderAndPaddingLogicalHeight());
 
-        layoutPositionedObjects(relayoutChildren);
+        layoutOutOfFlowBoxes(relayoutChildren);
     } else {
         // We first do the normal layout without spacing.
         // No need to handle padding/border/margin here, RenderMathMLToken::layoutBlock takes care of them.
@@ -245,9 +249,7 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
         setLogicalWidth(width);
 
         // We then move the children to take spacing into account.
-        LayoutPoint horizontalShift(style().direction() == TextDirection::LTR ? leadingSpaceValue : -leadingSpaceValue, 0_lu);
-        for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
-            child->setLocation(child->location() + horizontalShift);
+        shiftInFlowChildren(writingMode().isBidiLTR() ? leadingSpaceValue : -leadingSpaceValue, 0_lu);
     }
 
     updateScrollInfoAfterLayout();
@@ -294,6 +296,7 @@ void RenderMathMLOperator::styleDidChange(StyleDifference diff, const RenderStyl
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
     m_mathOperator.reset(style());
+    resetStretchSize();
 
     // MathML displaystyle can affect isLargeOperatorInDisplayStyle()
     if (oldStyle && style().mathStyle() != oldStyle->mathStyle() && !isAnonymous())
@@ -322,7 +325,7 @@ void RenderMathMLOperator::paint(PaintInfo& info, const LayoutPoint& paintOffset
         return;
 
     LayoutPoint operatorTopLeft = paintOffset + location();
-    operatorTopLeft.move((style().isLeftToRightDirection() ? leadingSpace() : trailingSpace()) + borderLeft() + paddingLeft(), borderAndPaddingBefore());
+    operatorTopLeft.move((writingMode().isBidiLTR() ? leadingSpace() : trailingSpace()) + borderLeft() + paddingLeft(), borderAndPaddingBefore());
 
     m_mathOperator.paint(style(), info, operatorTopLeft);
 }

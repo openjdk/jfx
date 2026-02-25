@@ -64,7 +64,7 @@ Ref<FormData> FormData::create(std::span<const uint8_t> data)
 
 Ref<FormData> FormData::create(const CString& string)
 {
-    return create(string.span());
+    return create(byteCast<uint8_t>(string.span()));
 }
 
 Ref<FormData> FormData::create(Vector<uint8_t>&& vector)
@@ -133,7 +133,7 @@ unsigned FormData::imageOrMediaFilesCount() const
     return imageOrMediaFilesCount;
 }
 
-uint64_t FormDataElement::lengthInBytes(const Function<uint64_t(const URL&)>& blobSize) const
+uint64_t FormDataElement::lengthInBytes(NOESCAPE const Function<uint64_t(const URL&)>& blobSize) const
 {
     return WTF::switchOn(data,
         [] (const Vector<uint8_t>& bytes) {
@@ -249,8 +249,8 @@ void FormData::appendMultiPartKeyValuePairItems(const DOMFormData& formData)
         Vector<uint8_t> header;
         FormDataBuilder::beginMultiPartHeader(header, m_boundary.span(), normalizedName);
 
-        if (std::holds_alternative<RefPtr<File>>(item.data))
-            appendMultiPartFileValue(*std::get<RefPtr<File>>(item.data), header, encoding);
+        if (auto* file = std::get_if<RefPtr<File>>(&item.data))
+            appendMultiPartFileValue(Ref { **file }, header, encoding);
         else
             appendMultiPartStringValue(std::get<String>(item.data), header, encoding);
 
@@ -308,7 +308,7 @@ static void appendBlobResolved(BlobRegistryImpl* blobRegistry, FormData& formDat
         return;
     }
 
-    auto* blobData = blobRegistry->getBlobDataFromURL(url);
+    RefPtr blobData = blobRegistry->blobDataFromURL(url);
     if (!blobData) {
         LOG_ERROR("Could not get blob data from a registry");
         return;
@@ -317,10 +317,11 @@ static void appendBlobResolved(BlobRegistryImpl* blobRegistry, FormData& formDat
     for (const auto& blobItem : blobData->items()) {
         if (blobItem.type() == BlobDataItem::Type::Data) {
             ASSERT(blobItem.data());
-            formData.appendData(blobItem.data()->span().subspan(blobItem.offset(), blobItem.length()));
-        } else if (blobItem.type() == BlobDataItem::Type::File)
-            formData.appendFileRange(blobItem.file()->path(), blobItem.offset(), blobItem.length(), blobItem.file()->expectedModificationTime());
-        else
+            formData.appendData(blobItem.protectedData()->span().subspan(blobItem.offset(), blobItem.length()));
+        } else if (blobItem.type() == BlobDataItem::Type::File) {
+            RefPtr file = blobItem.file();
+            formData.appendFileRange(file->path(), blobItem.offset(), blobItem.length(), file->expectedModificationTime());
+        } else
             ASSERT_NOT_REACHED();
     }
 }

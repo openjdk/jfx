@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FontGenericFamilies.h"
 #include "InternalSettingsGenerated.h"
 #include "Settings.h"
@@ -34,6 +33,7 @@
 namespace WebCore {
 
 class Page;
+template<typename> class ExceptionOr;
 
 class InternalSettings : public InternalSettingsGenerated {
 public:
@@ -89,7 +89,6 @@ public:
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
 
     bool vp9DecoderEnabled() const;
-    bool mediaSourceInlinePaintingEnabled() const;
 
     ExceptionOr<void> setShouldManageAudioSessionCategory(bool);
 

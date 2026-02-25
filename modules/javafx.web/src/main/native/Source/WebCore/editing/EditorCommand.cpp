@@ -29,6 +29,7 @@
 #include "config.h"
 #include "Editor.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSValueList.h"
 #include "Chrome.h"
@@ -479,9 +480,9 @@ static bool executeInsertHTML(LocalFrame& frame, Event*, EditorCommandSource, co
 static bool executeInsertImage(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
     // FIXME: If userInterface is true, we should display a dialog box and let the user choose a local image.
-    Ref<HTMLImageElement> image = HTMLImageElement::create(*frame.document());
+    Ref image = HTMLImageElement::create(*frame.document());
     if (!value.isEmpty())
-        image->setSrc(AtomString { value });
+        image->setAttributeWithoutSynchronization(srcAttr, AtomString { value });
     return executeInsertNode(frame, WTFMove(image));
 }
 
@@ -532,9 +533,9 @@ static bool executeInsertTab(LocalFrame& frame, Event* event, EditorCommandSourc
     return targetFrame(frame, event)->eventHandler().handleTextInputEvent("\t"_s, event);
 }
 
-static bool executeInsertText(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
+static bool executeInsertText(LocalFrame& frame, Event* event, EditorCommandSource, const String& value)
 {
-    TypingCommand::insertText(*frame.document(), value, { });
+    TypingCommand::insertText(*frame.document(), value, event, { });
     return true;
 }
 
@@ -1896,9 +1897,13 @@ Editor::Command::Command(const EditorInternalCommand* command, EditorCommandSour
     : m_command(command)
     , m_source(source)
     , m_document(command ? &document : nullptr)
-    , m_frame(command ? document.frame() : nullptr)
 {
     ASSERT(command || !m_document);
+}
+
+RefPtr<LocalFrame> Editor::Command::frame() const
+{
+    return m_document ? m_document->frame() : nullptr;
 }
 
 bool Editor::Command::execute(const String& parameter, Event* triggeringEvent) const
@@ -1910,10 +1915,13 @@ bool Editor::Command::execute(const String& parameter, Event* triggeringEvent) c
     }
 
     m_document->updateLayoutIgnorePendingStylesheets();
-    if (m_document->frame() != m_frame)
+    RefPtr frame = this->frame();
+    if (m_document->frame() != frame.get())
+        return false;
+    if (!frame)
         return false;
 
-    return m_command->execute(*m_frame, triggeringEvent, m_source, parameter);
+    return m_command->execute(*frame, triggeringEvent, m_source, parameter);
 }
 
 bool Editor::Command::execute(Event* triggeringEvent) const
@@ -1930,7 +1938,8 @@ bool Editor::Command::isSupported() const
         return true;
     case EditorCommandSource::DOM:
     case EditorCommandSource::DOMWithUserInterface:
-        return m_command->isSupportedFromDOM(m_frame.get());
+        RefPtr frame = this->frame();
+        return m_command->isSupportedFromDOM(frame.get());
     }
     ASSERT_NOT_REACHED();
     return false;
@@ -1938,25 +1947,28 @@ bool Editor::Command::isSupported() const
 
 bool Editor::Command::isEnabled(Event* triggeringEvent) const
 {
-    if (!isSupported() || !m_frame)
+    RefPtr frame = this->frame();
+    if (!isSupported() || !frame)
         return false;
-    return m_command->isEnabled(*m_frame, triggeringEvent, m_source);
+    return m_command->isEnabled(*frame, triggeringEvent, m_source);
 }
 
 TriState Editor::Command::state(Event* triggeringEvent) const
 {
-    if (!isSupported() || !m_frame)
+    RefPtr frame = this->frame();
+    if (!isSupported() || !frame)
         return TriState::False;
-    return m_command->state(*m_frame, triggeringEvent);
+    return m_command->state(*frame, triggeringEvent);
 }
 
 String Editor::Command::value(Event* triggeringEvent) const
 {
-    if (!isSupported() || !m_frame)
+    RefPtr frame = this->frame();
+    if (!isSupported() || !frame)
         return String();
     if (m_command->value == valueNull && m_command->state != stateNone)
-        return m_command->state(*m_frame, triggeringEvent) == TriState::True ? "true"_s : "false"_s;
-    return m_command->value(*m_frame, triggeringEvent);
+        return m_command->state(*frame, triggeringEvent) == TriState::True ? "true"_s : "false"_s;
+    return m_command->value(*frame, triggeringEvent);
 }
 
 bool Editor::Command::isTextInsertion() const
@@ -1966,9 +1978,10 @@ bool Editor::Command::isTextInsertion() const
 
 bool Editor::Command::allowExecutionWhenDisabled() const
 {
-    if (!isSupported() || !m_frame)
+    RefPtr frame = this->frame();
+    if (!isSupported() || !frame)
         return false;
-    return m_command->allowExecutionWhenDisabled(*m_frame, m_source);
+    return m_command->allowExecutionWhenDisabled(*frame, m_source);
 }
 
 } // namespace WebCore

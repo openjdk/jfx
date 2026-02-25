@@ -27,6 +27,7 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "EventTargetInterfaces.h"
 #include "PlatformSpeechSynthesisUtterance.h"
 #include "PlatformSpeechSynthesizer.h"
 #include "SpeechSynthesisClient.h"
@@ -48,7 +49,6 @@ public:
     static Ref<SpeechSynthesis> create(ScriptExecutionContext&);
     virtual ~SpeechSynthesis();
 
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
@@ -67,14 +67,13 @@ public:
     WEBCORE_EXPORT void setPlatformSynthesizer(Ref<PlatformSpeechSynthesizer>&&);
 
     // Restrictions to change default behaviors.
-    enum BehaviorRestrictionFlags {
-        NoRestrictions = 0,
-        RequireUserGestureForSpeechStartRestriction = 1 << 0,
+    enum class BehaviorRestrictionFlags : uint8_t {
+        RequireUserGestureForSpeechStart = 1 << 0,
     };
-    typedef unsigned BehaviorRestrictions;
+    using BehaviorRestrictions = OptionSet<BehaviorRestrictionFlags>;
 
-    bool userGestureRequiredForSpeechStart() const { return m_restrictions & RequireUserGestureForSpeechStartRestriction; }
-    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
+    bool userGestureRequiredForSpeechStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequireUserGestureForSpeechStart); }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.remove(restriction); }
     WEBCORE_EXPORT void simulateVoicesListChange();
 
 private:
@@ -113,6 +112,7 @@ private:
     void eventListenersDidChange() final;
 
     PlatformSpeechSynthesizer& ensurePlatformSpeechSynthesizer();
+    Ref<PlatformSpeechSynthesizer> ensureProtectedPlatformSpeechSynthesizer();
 
     RefPtr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
     std::optional<Vector<Ref<SpeechSynthesisVoice>>> m_voiceList;
@@ -125,5 +125,15 @@ private:
 };
 
 } // namespace WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::SpeechSynthesis::BehaviorRestrictionFlags> {
+    using values = EnumValues<
+        WebCore::SpeechSynthesis::BehaviorRestrictionFlags,
+        WebCore::SpeechSynthesis::BehaviorRestrictionFlags::RequireUserGestureForSpeechStart
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

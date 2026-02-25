@@ -32,8 +32,9 @@
 namespace WebCore {
 
 class DOMPromise;
+template<typename> class ExceptionOr;
 
-class ExtendableEvent : public Event, public CanMakeWeakPtr<ExtendableEvent> {
+class ExtendableEvent : public Event {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ExtendableEvent);
 public:
     static Ref<ExtendableEvent> create(const AtomString& type, const ExtendableEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
@@ -53,10 +54,12 @@ protected:
     ExtendableEvent(enum EventInterfaceType, const AtomString&, CanBubble, IsCancelable);
 
     void addExtendLifetimePromise(Ref<DOMPromise>&&);
+    bool isWaiting() const { return m_isWaiting; }
 
 private:
     unsigned m_pendingPromiseCount { 0 };
     HashSet<Ref<DOMPromise>> m_extendLifetimePromises;
+    bool m_isWaiting { true };
     Function<void(HashSet<Ref<DOMPromise>>&&)> m_whenAllExtendLifetimePromisesAreSettledHandler;
 };
 

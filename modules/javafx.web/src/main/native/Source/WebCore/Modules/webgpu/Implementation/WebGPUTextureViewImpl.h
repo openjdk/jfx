@@ -30,13 +30,14 @@
 #include "WebGPUPtr.h"
 #include "WebGPUTextureView.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class TextureViewImpl final : public TextureView {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextureViewImpl);
 public:
     static Ref<TextureViewImpl> create(WebGPUPtr<WGPUTextureView>&& textureView, ConvertToBackingContext& convertToBackingContext)
     {
@@ -60,7 +61,7 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUTextureView> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

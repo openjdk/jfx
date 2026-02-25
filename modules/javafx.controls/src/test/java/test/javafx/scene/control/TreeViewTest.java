@@ -752,6 +752,8 @@ public class TreeViewTest {
 
         TreeView<Person> tree = new TreeView<>(root);
 
+        stageLoader = new StageLoader(tree);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 6); // rows 0 - 6 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 6, -1); // rows 6+ should be empty
 
@@ -760,6 +762,7 @@ public class TreeViewTest {
         root.getChildren().setAll(
                 new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
                 new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
@@ -789,6 +792,8 @@ public class TreeViewTest {
         rootNode.getChildren().setAll(nodeList);
 
         TreeView<String> treeView = new TreeView<>(rootNode);
+
+        stageLoader = new StageLoader(treeView);
 
         final double indent = PlatformImpl.isCaspian() ? 31 :
                         PlatformImpl.isModena()  ? 35 :
@@ -990,6 +995,7 @@ public class TreeViewTest {
         treeView.setShowRoot(false);
         root.getChildren().setAll(persons);
 
+        stageLoader = new StageLoader(treeView);
         Toolkit.getToolkit().firePulse();
 
         // we want the vertical scrollbar
@@ -1126,6 +1132,8 @@ public class TreeViewTest {
                 CheckBoxTreeCell.forTreeView(
                         param -> new ReadOnlyBooleanWrapper(true)));
 
+        stageLoader = new StageLoader(treeView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(treeView, 0, 1);
@@ -1139,6 +1147,8 @@ public class TreeViewTest {
         installChildren();
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 1);
         assertEquals(child1.getValue(), cell.getText());
@@ -1159,6 +1169,8 @@ public class TreeViewTest {
     @Test public void test_rt31404() {
         installChildren();
 
+        stageLoader = new StageLoader(treeView);
+
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getText());
 
@@ -1169,6 +1181,8 @@ public class TreeViewTest {
 
     @Test public void test_rt31471() {
         installChildren();
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getItem());
@@ -1244,6 +1258,8 @@ public class TreeViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(treeView);
 
         // First two four have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -1846,6 +1862,8 @@ public class TreeViewTest {
         textFieldTreeView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
         });
+
+        stageLoader = new StageLoader(textFieldTreeView);
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
         assertNull(cell0.getGraphic());
@@ -2786,7 +2804,7 @@ public class TreeViewTest {
 
         FocusModel<TreeItem<String>> fm = stringTreeView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTreeView);
+        stageLoader = new StageLoader(stringTreeView);
 
         // test pre-conditions
         assertTrue(sm.isEmpty());
@@ -2826,8 +2844,6 @@ public class TreeViewTest {
         assertNotNull(anchor);
         assertTrue(TreeCellBehavior.hasNonDefaultAnchor(stringTreeView));
         assertEquals(1, (int)anchor);
-
-        sl.dispose();
     }
 
     private final ObservableList<TreeItem<String>> rt_39256_list = FXCollections.observableArrayList();
@@ -4142,7 +4158,9 @@ public class TreeViewTest {
         rootNode.getChildren().addAll(generateChildren(1));
         TreeView<String> treeView = new TreeView<>(rootNode);
         treeView.scrollTo(100);
-        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+
+        stageLoader = new StageLoader(treeView);
+
         Toolkit.getToolkit().firePulse();
         rootNode.getChildren().get(1).setExpanded(false);
         Toolkit.getToolkit().firePulse();
@@ -4219,6 +4237,65 @@ public class TreeViewTest {
             assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
                     "Cell does not contain graphic for index: " + cellIndex);
         }
+    }
+
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger creationCounter = new AtomicInteger();
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(new Person("text")));
+        treeView.setCellFactory(_ -> {
+            creationCounter.incrementAndGet();
+            return new TreeCell<>();
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(creationCounter.get() > 0);
+        creationCounter.set(0);
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, creationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(person));
+        treeView.setCellFactory(_ -> new TreeCell<>() {
+            @Override
+            protected void updateItem(Person item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item.getFirstName());
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(initialName, cell.getText());
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(newName, cell.getText());
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {

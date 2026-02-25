@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "Blob.h"
 #include "CSSStyleImageValue.h"
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "EventLoop.h"
 #include "ExceptionCode.h"
 #include "ExceptionOr.h"
@@ -50,17 +51,22 @@
 #include "LocalFrameView.h"
 #include "RenderElement.h"
 #include "SVGImageElement.h"
+#include "ScriptExecutionContextInlines.h"
 #include "SharedBuffer.h"
 #include "WebCodecsVideoFrame.h"
 #include "WorkerClient.h"
 #include "WorkerGlobalScope.h"
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(OFFSCREEN_CANVAS)
 #include "OffscreenCanvas.h"
+#endif
+
+#if USE(SKIA)
+#include "GLFence.h"
+#include "GraphicsContextSkia.h"
 #endif
 
 namespace WebCore {
@@ -80,11 +86,16 @@ DetachedImageBitmap::~DetachedImageBitmap() = default;
 
 DetachedImageBitmap& DetachedImageBitmap::operator=(DetachedImageBitmap&&) = default;
 
+size_t DetachedImageBitmap::memoryCost() const
+{
+    return m_bitmap->memoryCost();
+}
+
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ImageBitmap);
 
 static inline RenderingMode bufferRenderingMode(ScriptExecutionContext& scriptExecutionContext)
 {
-#if USE(IOSURFACE_CANVAS_BACKING_STORE) || USE(SKIA)
+#if USE(CA) || USE(SKIA)
     static RenderingMode defaultRenderingMode = RenderingMode::Accelerated;
 #else
     static RenderingMode defaultRenderingMode = RenderingMode::Unaccelerated;
@@ -131,8 +142,7 @@ RefPtr<ImageBuffer> ImageBitmap::createImageBuffer(ScriptExecutionContext& scrip
         imageBufferColorSpace = DestinationColorSpace::SRGB();
 #endif
     }
-    auto bufferOptions = bufferOptionsForRendingMode(renderingMode);
-    return ImageBuffer::create(size, RenderingPurpose::Canvas, resolutionScale, *imageBufferColorSpace, ImageBufferPixelFormat::BGRA8, bufferOptions, scriptExecutionContext.graphicsClient());
+    return ImageBuffer::create(size, renderingMode, RenderingPurpose::Canvas, resolutionScale, *imageBufferColorSpace, ImageBufferPixelFormat::BGRA8, scriptExecutionContext.graphicsClient());
 }
 
 void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutionContext, ImageBitmap::Source&& source, ImageBitmapOptions&& options, ImageBitmapCompletionHandler&& completionHandler)
@@ -161,11 +171,16 @@ RefPtr<ImageBuffer> ImageBitmap::createImageBuffer(ScriptExecutionContext& scrip
     return createImageBuffer(scriptExecutionContext, size, bufferRenderingMode(scriptExecutionContext), colorSpace, resolutionScale);
 }
 
+ImageBuffer* ImageBitmap::buffer() const
+{
+    return m_bitmap.get();
+}
+
 std::optional<DetachedImageBitmap> ImageBitmap::detach()
 {
     if (!m_bitmap)
         return std::nullopt;
-    RefPtr bitmap = std::exchange(m_bitmap, nullptr);
+    RefPtr bitmap = takeImageBuffer();
     if (!bitmap->hasOneRef())
         bitmap = bitmap->clone();
     std::unique_ptr serializedBitmap = ImageBuffer::sinkIntoSerializedImageBuffer(WTFMove(bitmap));
@@ -174,10 +189,21 @@ std::optional<DetachedImageBitmap> ImageBitmap::detach()
     return DetachedImageBitmap { makeUniqueRefFromNonNullUniquePtr(WTFMove(serializedBitmap)), originClean(), premultiplyAlpha(), forciblyPremultiplyAlpha() };
 }
 
+void ImageBitmap::close()
+{
+    takeImageBuffer();
+}
+
 #if USE(SKIA)
 void ImageBitmap::prepareForCrossThreadTransfer()
 {
     m_bitmap = ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(WTFMove(m_bitmap));
+    m_fence = m_bitmap->renderingMode() == RenderingMode::Accelerated ? GraphicsContextSkia::createAcceleratedRenderingFenceIfNeeded(m_bitmap->surface()) : nullptr;
+}
+
+void ImageBitmap::finalizeCrossThreadTransfer()
+{
+    m_bitmap = ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(WTFMove(m_bitmap), WTFMove(m_fence));
 }
 #endif
 
@@ -516,7 +542,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
     }
 
     FloatRect destRect(FloatPoint(), outputSize);
-    bitmapData->context().paintVideoFrame(*internalFrame, destRect, true);
+    bitmapData->context().drawVideoFrame(*internalFrame, destRect, ImageOrientation::Orientation::None, true);
 
     auto imageBitmap = create(bitmapData.releaseNonNull(), originClean);
     completionHandler(WTFMove(imageBitmap));
@@ -617,7 +643,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
     const bool originClean = !taintsOrigin(scriptExecutionContext.securityOrigin(), *video);
 
     // FIXME: Add support for pixel formats to ImageBitmap.
-    auto bitmapData = video->createBufferForPainting(outputSize, bufferRenderingMode(scriptExecutionContext), *colorSpace, ImageBufferPixelFormat::BGRA8);
+    auto bitmapData = video->createBufferForPainting(outputSize, bufferRenderingMode(scriptExecutionContext), *colorSpace, { ImageBufferPixelFormat::BGRA8 });
     if (!bitmapData) {
         completionHandler(createBlankImageBuffer(scriptExecutionContext, originClean));
         return;
@@ -727,6 +753,7 @@ public:
 
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* = nullptr, DecodingStatus = DecodingStatus::Invalid) override { }
     void changedInRect(const Image&, const IntRect* = nullptr) override { }
+    void imageContentChanged(const Image&) override { }
     void scheduleRenderingUpdate(const Image&) override { }
 
 private:
@@ -742,9 +769,8 @@ private:
 };
 
 class PendingImageBitmap final : public RefCounted<PendingImageBitmap>, public ActiveDOMObject, public FileReaderLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PendingImageBitmap);
 public:
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
@@ -826,6 +852,8 @@ private:
     RefPtr<ArrayBuffer> m_arrayBufferToProcess;
     RefPtr<PendingActivity<PendingImageBitmap>> m_pendingActivity;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PendingImageBitmap);
 
 void ImageBitmap::createFromBuffer(ScriptExecutionContext& scriptExecutionContext, Ref<ArrayBuffer>&& arrayBuffer, String mimeType, long long expectedContentLength, const URL& sourceURL, ImageBitmapOptions&& options, std::optional<IntRect> rect, ImageBitmapCompletionHandler&& completionHandler)
 {
@@ -909,7 +937,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
     const auto alphaPremultiplication = alphaPremultiplicationForPremultiplyAlpha(options.premultiplyAlpha);
     const bool premultiplyAlpha = alphaPremultiplication == AlphaPremultiplication::Premultiplied;
     if (sourceRectangle.returnValue().location().isZero() && sourceRectangle.returnValue().size() == imageData->size() && sourceRectangle.returnValue().size() == outputSize && options.orientation != ImageBitmapOptions::Orientation::FlipY) {
-        bitmapData->putPixelBuffer(imageData->pixelBuffer(), sourceRectangle.releaseReturnValue(), { }, alphaPremultiplication);
+        bitmapData->putPixelBuffer(imageData->byteArrayPixelBuffer().get(), sourceRectangle.releaseReturnValue(), { }, alphaPremultiplication);
 
         auto imageBitmap = create(bitmapData.releaseNonNull(), originClean, premultiplyAlpha);
         completionHandler(WTFMove(imageBitmap));
@@ -923,7 +951,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
         completionHandler(createBlankImageBuffer(scriptExecutionContext, true));
         return;
     }
-    tempBitmapData->putPixelBuffer(imageData->pixelBuffer(), IntRect(0, 0, imageData->width(), imageData->height()), { }, alphaPremultiplication);
+    tempBitmapData->putPixelBuffer(imageData->byteArrayPixelBuffer().get(), IntRect(0, 0, imageData->width(), imageData->height()), { }, alphaPremultiplication);
     FloatRect destRect(FloatPoint(), outputSize);
     bitmapData->context().drawImageBuffer(*tempBitmapData, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality), options.resolvedImageOrientation(ImageOrientation::Orientation::None) });
 
@@ -936,6 +964,7 @@ void ImageBitmap::createCompletionHandler(ScriptExecutionContext& scriptExecutio
 
 ImageBitmap::ImageBitmap(Ref<ImageBuffer> bitmap, bool originClean, bool premultiplyAlpha, bool forciblyPremultiplyAlpha)
     : m_bitmap(WTFMove(bitmap))
+    , m_memoryCost(m_bitmap->memoryCost())
     , m_originClean(originClean)
     , m_premultiplyAlpha(premultiplyAlpha)
     , m_forciblyPremultiplyAlpha(forciblyPremultiplyAlpha)
@@ -946,6 +975,7 @@ ImageBitmap::~ImageBitmap() = default;
 
 RefPtr<ImageBuffer> ImageBitmap::takeImageBuffer()
 {
+    m_memoryCost.store(0, std::memory_order_relaxed);
     return std::exchange(m_bitmap, nullptr);
 }
 
@@ -959,14 +989,9 @@ unsigned ImageBitmap::height() const
     return m_bitmap ? m_bitmap->truncatedLogicalSize().height() : 0;
 }
 
-void ImageBitmap::updateMemoryCost()
-{
-    m_memoryCost = m_bitmap ? m_bitmap->memoryCost() : 0;
-}
-
 size_t ImageBitmap::memoryCost() const
 {
-    return m_memoryCost;
+    return m_memoryCost.load(std::memory_order_relaxed);
 }
 
 } // namespace WebCore

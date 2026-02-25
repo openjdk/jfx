@@ -31,6 +31,7 @@
 #include "config.h"
 #include "ProgressShadowElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
 #include "RenderProgress.h"
@@ -59,8 +60,9 @@ HTMLProgressElement* ProgressShadowElement::progressElement() const
 
 bool ProgressShadowElement::rendererIsNeeded(const RenderStyle& style)
 {
-    RenderObject* progressRenderer = progressElement()->renderer();
-    return progressRenderer && !progressRenderer->style().hasUsedAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    if (CheckedPtr progressRenderer = progressElement()->renderer())
+        return !progressRenderer->style().hasUsedAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    return false;
 }
 
 ProgressInnerElement::ProgressInnerElement(Document& document)
@@ -75,7 +77,7 @@ RenderPtr<RenderElement> ProgressInnerElement::createElementRenderer(RenderStyle
 
 bool ProgressInnerElement::rendererIsNeeded(const RenderStyle& style)
 {
-    auto* progressRenderer = progressElement()->renderer();
+    CheckedPtr progressRenderer = progressElement()->renderer();
     return progressRenderer && !progressRenderer->style().hasUsedAppearance() && HTMLDivElement::rendererIsNeeded(style);
 }
 
@@ -91,7 +93,7 @@ ProgressValueElement::ProgressValueElement(Document& document)
 
 void ProgressValueElement::setInlineSizePercentage(double size)
 {
-    setInlineStyleProperty(CSSPropertyInlineSize, size, CSSUnitType::CSS_PERCENTAGE);
+    setInlineStyleProperty(CSSPropertyInlineSize, std::max(0.0, size), CSSUnitType::CSS_PERCENTAGE);
 }
 
 Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)

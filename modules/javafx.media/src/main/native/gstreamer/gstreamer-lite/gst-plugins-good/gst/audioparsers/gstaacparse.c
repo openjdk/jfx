@@ -555,6 +555,12 @@ gst_aac_parse_program_config_element (GstAacParse * aacparse,
   guint8 num_side_channel_elements;
   guint8 num_back_channel_elements;
   guint8 num_lfe_channel_elements;
+  guint8 program_config_skipping_data;
+  guint8 mixdown_present_skipflag;
+  guint8 is_cpe;
+  guint8 total_num_channel_elements;
+  guint8 total_num_channel;
+  guint8 channel_element_tag;
 
   if (!gst_bit_reader_get_bits_uint8 (br, &element_instance_tag, 4))
     return FALSE;
@@ -568,13 +574,55 @@ gst_aac_parse_program_config_element (GstAacParse * aacparse,
     return FALSE;
   if (!gst_bit_reader_get_bits_uint8 (br, &num_back_channel_elements, 4))
     return FALSE;
-  if (!gst_bit_reader_get_bits_uint8 (br, &num_lfe_channel_elements, 4))
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_lfe_channel_elements, 2))
     return FALSE;
-  GST_LOG_OBJECT (aacparse, "channels front %d side %d back %d lfe %d ",
-      num_front_channel_elements, num_side_channel_elements,
-      num_back_channel_elements, num_lfe_channel_elements);
-  *channels = num_front_channel_elements + num_side_channel_elements +
-      num_back_channel_elements + num_lfe_channel_elements;
+
+  // skip num_assoc_data_elements + num_valid_cc_elements
+  if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 7))
+    return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip mono_mixdown_element_number
+  if (mixdown_present_skipflag)
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 4))
+      return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip stereo_mixdown_element_number
+  if (mixdown_present_skipflag)
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 4))
+      return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip matrix_mixdown_idx + pseudo_surround_enable
+  if (mixdown_present_skipflag) {
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 3))
+      return FALSE;
+  }
+
+  total_num_channel_elements =
+      num_front_channel_elements + num_side_channel_elements +
+      num_back_channel_elements;
+
+  total_num_channel = total_num_channel_elements + num_lfe_channel_elements;
+  // If cpe (coupled), then each single channel element represents two channels
+  for (guint8 i = 0; i < total_num_channel_elements; i++) {
+    if (!gst_bit_reader_get_bits_uint8 (br, &is_cpe, 1))
+      return FALSE;
+    if (is_cpe)
+      total_num_channel += 1;
+    if (!gst_bit_reader_get_bits_uint8 (br, &channel_element_tag, 4))
+      return FALSE;
+  }
+
+  *channels = total_num_channel;
+  GST_LOG_OBJECT (aacparse, "total channels : %d", *channels);
 
   return TRUE;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,10 @@ class Element;
 ASCIILiteral inputTypeNameForEditingAction(EditAction);
 bool isInputMethodComposingForEditingAction(EditAction);
 
+using NodeSet = HashSet<Ref<Node>>;
+
+enum class AllowPasswordEcho : bool { No, Yes };
+
 class EditCommand : public RefCounted<EditCommand> {
 public:
     virtual ~EditCommand();
@@ -65,7 +69,6 @@ protected:
     explicit EditCommand(Ref<Document>&&, EditAction = EditAction::Unspecified);
     EditCommand(Ref<Document>&&, const VisibleSelection&, const VisibleSelection&);
 
-    Ref<Document> protectedDocument() const { return m_document.copyRef(); }
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
     CompositeEditCommand* parent() const { return m_parent.get(); }
@@ -78,7 +81,7 @@ protected:
     void postTextStateChangeNotification(AXTextEditType, const String&, const VisiblePosition&);
 
 private:
-    Ref<Document> m_document;
+    const Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
     WeakPtr<CompositeEditCommand> m_parent;
@@ -96,25 +99,22 @@ public:
     virtual void doReapply(); // calls doApply()
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Ref<Node>>&) = 0;
+    virtual void getNodesInCommand(NodeSet&) = 0;
 #endif
 
 protected:
     explicit SimpleEditCommand(Ref<Document>&&, EditAction = EditAction::Unspecified);
 
 #ifndef NDEBUG
-    void addNodeAndDescendants(Node*, HashSet<Ref<Node>>&);
+    void addNodeAndDescendants(Node*, NodeSet&);
 #endif
 
 private:
     bool isSimpleEditCommand() const override { return true; }
 };
 
-inline SimpleEditCommand* toSimpleEditCommand(EditCommand* command)
-{
-    ASSERT(command);
-    ASSERT_WITH_SECURITY_IMPLICATION(command->isSimpleEditCommand());
-    return static_cast<SimpleEditCommand*>(command);
-}
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SimpleEditCommand)
+    static bool isType(const WebCore::EditCommand& command) { return command.isSimpleEditCommand(); }
+SPECIALIZE_TYPE_TRAITS_END()

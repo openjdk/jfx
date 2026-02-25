@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,12 +24,20 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
-
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.Region;
 import java.lang.annotation.Native;
-
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -116,6 +124,7 @@ public abstract class Window {
     public static final int UNTITLED        = 0;
     public static final int TITLED          = 1 << 0;
     public static final int TRANSPARENT     = 1 << 1;
+    public static final int EXTENDED        = 1 << 2;
 
     // functional type: mutually exclusive
     /**
@@ -130,7 +139,7 @@ public abstract class Window {
      * Often used for floating toolbars. It has smaller than usual decorations
      * and doesn't display a taskbar button.
      */
-    @Native public static final int UTILITY         = 1 << 2;
+    @Native public static final int UTILITY         = 1 << 3;
     /**
      * A popup window.
      *
@@ -138,18 +147,18 @@ public abstract class Window {
      * default it may display a task-bar button. To hide it the window must be
      * owned.
      */
-    @Native public static final int POPUP           = 1 << 3;
+    @Native public static final int POPUP           = 1 << 4;
 
     // These affect window decorations as well as system menu actions,
     // so applicable to both decorated and undecorated windows
-    @Native public static final int CLOSABLE        = 1 << 4;
-    @Native public static final int MINIMIZABLE     = 1 << 5;
-    @Native public static final int MAXIMIZABLE     = 1 << 6;
+    @Native public static final int CLOSABLE        = 1 << 5;
+    @Native public static final int MINIMIZABLE     = 1 << 6;
+    @Native public static final int MAXIMIZABLE     = 1 << 7;
 
     /**
      * Indicates that the window trim will draw from right to left.
      */
-    @Native public static final int RIGHT_TO_LEFT     = 1 << 7;
+    @Native public static final int RIGHT_TO_LEFT     = 1 << 8;
 
     /**
      * Indicates that a window will have a client area textured the same way as the platform decorations
@@ -157,12 +166,17 @@ public abstract class Window {
      * This is supported not on all platforms, the client should check if the feature is supported by using
      * {@link com.sun.glass.ui.Application#supportsUnifiedWindows()}
      */
-    @Native public static final int UNIFIED = 1 << 8;
+    @Native public static final int UNIFIED = 1 << 9;
 
     /**
      * Indicates that the window is modal which affects whether the window is minimizable.
      */
-    @Native public static final int MODAL = 1 << 9;
+    @Native public static final int MODAL = 1 << 10;
+
+    /**
+     * Indicates that the window should use a dark window frame.
+     */
+    @Native public static final int DARK_FRAME = 1 << 11;
 
     final static public class State {
         @Native public static final int NORMAL = 1;
@@ -197,13 +211,11 @@ public abstract class Window {
     private final int styleMask;
     private final boolean isDecorated;
     private final boolean isPopup;
-    private boolean shouldStartUndecoratedMove = false;
 
     protected View view = null;
     protected Screen screen = null;
     private MenuBar menubar = null;
     private String title = "";
-    private UndecoratedMoveResizeHelper helper = null;
 
     private int state = State.NORMAL;
     private int level = Level.NORMAL;
@@ -237,13 +249,14 @@ public abstract class Window {
     protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask);
     protected Window(Window owner, Screen screen, int styleMask) {
         Application.checkEventThread();
-        switch (styleMask & (TITLED | TRANSPARENT)) {
+        switch (styleMask & (TITLED | TRANSPARENT | EXTENDED)) {
             case UNTITLED:
             case TITLED:
             case TRANSPARENT:
+            case EXTENDED:
                 break;
             default:
-                throw new RuntimeException("The visual kind should be UNTITLED, TITLED, or TRANSPARENT, but not a combination of these");
+                throw new RuntimeException("The visual kind should be UNTITLED, TITLED, TRANSPARENT, or EXTENDED, but not a combination of these");
         }
         switch (styleMask & (POPUP | UTILITY)) {
             case NORMAL:
@@ -252,6 +265,10 @@ public abstract class Window {
                 break;
             default:
                 throw new RuntimeException("The functional type should be NORMAL, POPUP, or UTILITY, but not a combination of these");
+        }
+
+        if ((styleMask & UNIFIED) != 0 && (styleMask & EXTENDED) != 0) {
+            throw new RuntimeException("UNIFIED and EXTENDED cannot be combined");
         }
 
         if (((styleMask & UNIFIED) != 0)
@@ -264,11 +281,11 @@ public abstract class Window {
             styleMask &= ~TRANSPARENT;
         }
 
-
         this.owner = owner;
         this.styleMask = styleMask;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
         this.isPopup = (this.styleMask & Window.POPUP) != 0;
+        this.isModal = (this.styleMask & Window.MODAL) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -283,6 +300,54 @@ public abstract class Window {
         if (this.ptr == 0L) {
             throw new RuntimeException("could not create platform window");
         }
+    }
+
+    /**
+     * Specifies the preferred header button height. Sub-classes can use this value in their header button
+     * visualization, but they are not required to accommodate the preferred height.
+     * <p>
+     * Implementations should choose a sensible default height for their header button visualization if
+     * {@link HeaderBar#USE_DEFAULT_SIZE} is specified.
+     */
+    private final DoubleProperty prefHeaderButtonHeight =
+        new SimpleDoubleProperty(this, "prefHeaderButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
+
+    public final ReadOnlyDoubleProperty prefHeaderButtonHeightProperty() {
+        return prefHeaderButtonHeight;
+    }
+
+    /**
+     * Sets the preferred header button height.
+     * <p>
+     * Note: Sub-classes must not use this method to change the preferred header button height.
+     *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
+     */
+    public final void setPrefHeaderButtonHeight(double height) {
+        prefHeaderButtonHeight.set(height);
+    }
+
+    /**
+     * Specifies the header button overlay. This property is managed by sub-classes that provide an overlay
+     * for header buttons. It is not required to use an overlay for header buttons; implementations can also
+     * use other ways of visualizing header buttons.
+     */
+    protected final ObjectProperty<Region> headerButtonOverlay =
+        new SimpleObjectProperty<>(this, "headerButtonOverlay");
+
+    public final ReadOnlyObjectProperty<Region> headerButtonOverlayProperty() {
+        return headerButtonOverlay;
+    }
+
+    /**
+     * Specifies the metrics for header buttons, which applications can use for layout purposes. This property
+     * is managed by sub-classes that support header buttons. Implementations are required to provide metrics
+     * for header buttons even if they don't use a header button overlay.
+     */
+    protected final ObjectProperty<HeaderButtonMetrics> headerButtonMetrics =
+        new SimpleObjectProperty<>(this, "headerButtonMetrics", HeaderButtonMetrics.EMPTY);
+
+    public final ReadOnlyObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
+        return headerButtonMetrics;
     }
 
     public boolean isClosed() {
@@ -375,9 +440,6 @@ public abstract class Window {
             // after we call view.setWindow(this); otherwise with UI scaling different than
             // 100% some platforms might display scenes wrong after Window was shown.
             _updateViewSize(this.ptr);
-            if (this.isDecorated == false) {
-                this.helper = new UndecoratedMoveResizeHelper();
-            }
         } else {
             _setView(this.ptr, null);
             this.view = null;
@@ -625,29 +687,27 @@ public abstract class Window {
     protected abstract boolean _setVisible(long ptr, boolean visible);
     public void setVisible(final boolean visible) {
         Application.checkEventThread();
-        if (this.isVisible != visible) {
-            if (!visible) {
-                if (getView() != null) {
-                    getView().setVisible(visible);
-                }
-                // Avoid native call if the window has been closed already
-                if (this.ptr != 0L) {
-                    this.isVisible = _setVisible(this.ptr, visible);
-                } else {
-                    this.isVisible = visible;
-                }
-                remove(this);
-            } else {
-                checkNotClosed();
-                this.isVisible = _setVisible(this.ptr, visible);
-
-                if (getView() != null) {
-                    getView().setVisible(this.isVisible);
-                }
-                add(this);
-
-                synthesizeViewMoveEvent();
+        if (!visible) {
+            if (getView() != null) {
+                getView().setVisible(visible);
             }
+            // Avoid native call if the window has been closed already
+            if (this.ptr != 0L) {
+                this.isVisible = _setVisible(this.ptr, visible);
+            } else {
+                this.isVisible = visible;
+            }
+            remove(this);
+        } else {
+            checkNotClosed();
+            this.isVisible = _setVisible(this.ptr, visible);
+
+            if (getView() != null) {
+                getView().setVisible(this.isVisible);
+            }
+            add(this);
+
+            synthesizeViewMoveEvent();
         }
     }
 
@@ -655,11 +715,9 @@ public abstract class Window {
     public boolean setResizable(final boolean resizable) {
         Application.checkEventThread();
         checkNotClosed();
-        if (this.isResizable != resizable) {
-            if (_setResizable(this.ptr, resizable)) {
-                this.isResizable = resizable;
-                synthesizeViewMoveEvent();
-            }
+        if (_setResizable(this.ptr, resizable)) {
+            this.isResizable = resizable;
+            synthesizeViewMoveEvent();
         }
         return isResizable;
     }
@@ -672,6 +730,14 @@ public abstract class Window {
     public boolean isUnifiedWindow() {
         //The UNIFIED flag is set only if it is supported
         return (this.styleMask & Window.UNIFIED) != 0;
+    }
+
+    public boolean isExtendedWindow() {
+        return (this.styleMask & Window.EXTENDED) != 0;
+    }
+
+    public boolean isUtilityWindow() {
+        return (this.styleMask & Window.UTILITY) != 0;
     }
 
     public boolean isTransparentWindow() {
@@ -927,6 +993,8 @@ public abstract class Window {
         return _setBackground(this.ptr, r, g, b);
     }
 
+    public void setDarkFrame(boolean value) {}
+
     public boolean isEnabled() {
         Application.checkEventThread();
         return this.disableCount == 0;
@@ -1097,43 +1165,6 @@ public abstract class Window {
         _toBack(this.ptr);
     }
 
-    // *****************************************************
-    // modality (prototype using native platform feature)
-    // *****************************************************
-    protected abstract void _enterModal(long ptr);
-    /**
-     * Enter modal state blocking everything except our window.
-     */
-    public void enterModal() {
-        checkNotClosed();
-        if (this.isModal == false) {
-            this.isModal = true;
-            _enterModal(this.ptr);
-        }
-    }
-
-    protected abstract void _enterModalWithWindow(long dialog, long window);
-    /**
-     * Enter modal state only blocking the given window.
-     * On Mac OS X this is done using a dialog sheet.
-     */
-    public void enterModal(final Window window) {
-        checkNotClosed();
-        if (this.isModal == false) {
-            this.isModal = true;
-            _enterModalWithWindow(this.ptr, window.getNativeHandle());
-        }
-    }
-
-    protected abstract void _exitModal(long ptr);
-    public void exitModal() {
-        checkNotClosed();
-        if (this.isModal == true) {
-            _exitModal(this.ptr);
-            this.isModal = false;
-        }
-    }
-
     public boolean isModal() {
         return this.isModal;
     }
@@ -1146,15 +1177,6 @@ public abstract class Window {
     public void setEventHandler(EventHandler eventHandler) {
         Application.checkEventThread();
         this.eventHandler = eventHandler;
-    }
-
-    /**
-     * Enables unconditional start of window move operation when
-     * mouse is dragged in the client area.
-     */
-    public void setShouldStartUndecoratedMove(boolean v) {
-        Application.checkEventThread();
-        this.shouldStartUndecoratedMove = v;
     }
 
     // *****************************************************
@@ -1214,11 +1236,6 @@ public abstract class Window {
             }
             this.width = width;
             this.height = height;
-
-            // update moveRect/resizeRect
-            if (this.helper != null){
-                this.helper.updateRectangles();
-            }
         }
         handleWindowEvent(System.nanoTime(), type);
 
@@ -1269,102 +1286,6 @@ public abstract class Window {
         }
     }
 
-    // *****************************************************
-    // programmatical move/resize
-    // *****************************************************
-    /** Sets "programmatical move" rectangle.
-     * The rectangle is measured from top of the View:
-     * width is View.width, height is size.
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public void setUndecoratedMoveRectangle(int size) {
-        Application.checkEventThread();
-        if (this.isDecorated == true) {
-            //throw new RuntimeException("setUndecoratedMoveRectangle is only valid for Undecorated Window");
-            System.err.println("Glass Window.setUndecoratedMoveRectangle is only valid for Undecorated Window. In the future this will be hard error.");
-            Thread.dumpStack();
-            return;
-        }
-
-        if (this.helper != null) {
-            this.helper.setMoveRectangle(size);
-        }
-    }
-    /** The method called only for undecorated windows
-     * x, y: mouse coordinates (in View space).
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public boolean shouldStartUndecoratedMove(final int x, final int y) {
-        Application.checkEventThread();
-        if (this.shouldStartUndecoratedMove == true) {
-            return true;
-        }
-        if (this.isDecorated == true) {
-            return false;
-        }
-
-        if (this.helper != null) {
-            return this.helper.shouldStartMove(x, y);
-        } else {
-            return false;
-        }
-    }
-
-    /** Sets "programmatical resize" rectangle.
-     * The rectangle is measured from top of the View:
-     * width is View.width, height is size.
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public void setUndecoratedResizeRectangle(int size) {
-        Application.checkEventThread();
-        if ((this.isDecorated == true) || (this.isResizable == false)) {
-            //throw new RuntimeException("setUndecoratedMoveRectangle is only valid for Undecorated Resizable Window");
-            System.err.println("Glass Window.setUndecoratedResizeRectangle is only valid for Undecorated Resizable Window. In the future this will be hard error.");
-            Thread.dumpStack();
-            return;
-        }
-
-        if (this.helper != null) {
-            this.helper.setResizeRectangle(size);
-        }
-    }
-
-    /** The method called only for undecorated windows
-     * x, y: mouse coordinates (in View space).
-     *
-     * throws RuntimeException for decorated window.
-     */
-    public boolean shouldStartUndecoratedResize(final int x, final int y) {
-        Application.checkEventThread();
-        if ((this.isDecorated == true) || (this.isResizable == false)) {
-            return false;
-        }
-
-        if (this.helper != null) {
-            return this.helper.shouldStartResize(x, y);
-        }  else {
-            return false;
-        }
-    }
-
-    /** Mouse event handler for processing programmatical resize/move
-     * (for undecorated windows only).
-     * Must be called by View.
-     * x & y are View coordinates.
-     * NOTE: it's package private!
-     * @return true if the event is processed by the window,
-     *         false if it has to be delivered to the app
-     */
-    boolean handleMouseEvent(int type, int button, int x, int y, int xAbs, int yAbs) {
-        if (this.isDecorated == false) {
-            return this.helper.handleMouseEvent(type, button, x, y, xAbs, yAbs);
-        }
-        return false;
-    }
-
     @Override
     public String toString() {
         Application.checkEventThread();
@@ -1397,143 +1318,6 @@ public abstract class Window {
         this.level = level;
         if (shouldHandleEvent()) {
             this.eventHandler.handleLevelEvent(level);
-        }
-    }
-
-    private class UndecoratedMoveResizeHelper {
-        TrackingRectangle moveRect = null;
-        TrackingRectangle resizeRect = null;
-
-        boolean inMove = false;         // we are in "move" mode
-        boolean inResize = false;       // we are in "resize" mode
-
-        int startMouseX, startMouseY;   // start mouse coords
-        int startX, startY;             // start window location (for move)
-        int startWidth, startHeight;    // start window size (for resize)
-
-        UndecoratedMoveResizeHelper() {
-            this.moveRect = new TrackingRectangle();
-            this.resizeRect = new TrackingRectangle();
-        }
-
-        void setMoveRectangle(final int size) {
-            this.moveRect.size = size;
-
-            this.moveRect.x = 0;
-            this.moveRect.y = 0;
-            this.moveRect.width = getWidth();
-            this.moveRect.height = this.moveRect.size;
-        }
-
-        boolean shouldStartMove(final int x, final int y) {
-            return this.moveRect.contains(x, y);
-        }
-
-        boolean inMove() {
-            return this.inMove;
-        }
-
-        void startMove(final int x, final int y) {
-            this.inMove = true;
-
-            this.startMouseX = x;
-            this.startMouseY = y;
-
-            this.startX = getX();
-            this.startY = getY();
-        }
-
-        void deltaMove(final int x, final int y) {
-            int deltaX = x - this.startMouseX;
-            int deltaY = y - this.startMouseY;
-
-            setPosition(this.startX + deltaX, this.startY + deltaY);
-        }
-
-        void stopMove() {
-            this.inMove = false;
-        }
-
-        void setResizeRectangle(final int size) {
-            this.resizeRect.size = size;
-
-            // set the rect (bottom right corner of the Window)
-            this.resizeRect.x = getWidth() - this.resizeRect.size;
-            this.resizeRect.y = getHeight() - this.resizeRect.size;
-            this.resizeRect.width = this.resizeRect.size;
-            this.resizeRect.height = this.resizeRect.size;
-        }
-
-        boolean shouldStartResize(final int x, final int y) {
-            return this.resizeRect.contains(x, y);
-        }
-
-        boolean inResize() {
-            return this.inResize;
-        }
-
-        void startResize(final int x, final int y) {
-            this.inResize = true;
-
-            this.startMouseX = x;
-            this.startMouseY = y;
-
-            this.startWidth = getWidth();
-            this.startHeight = getHeight();
-        }
-
-        void deltaResize(final int x, final int y) {
-            int deltaX = x - this.startMouseX;
-            int deltaY = y - this.startMouseY;
-
-            setSize(this.startWidth + deltaX, this.startHeight + deltaY);
-        }
-
-        protected void stopResize() {
-            this.inResize = false;
-        }
-
-        void updateRectangles() {
-            if (this.moveRect.size > 0) {
-                setMoveRectangle(this.moveRect.size);
-            }
-            if (this.resizeRect.size > 0) {
-                setResizeRectangle(this.resizeRect.size);
-            }
-        }
-
-        boolean handleMouseEvent(final int type, final int button, final int x, final int y, final int xAbs, final int yAbs) {
-            switch (type) {
-                case MouseEvent.DOWN:
-                    if (button == MouseEvent.BUTTON_LEFT) {
-                        if (shouldStartUndecoratedMove(x, y) == true) {
-                            startMove(xAbs, yAbs);
-                            return true;
-                        } else if (shouldStartUndecoratedResize(x, y) == true) {
-                            startResize(xAbs, yAbs);
-                            return true;
-                        }
-                    }
-                    break;
-
-                case MouseEvent.MOVE:
-                case MouseEvent.DRAG:
-                    if (inMove() == true) {
-                        deltaMove(xAbs, yAbs);
-                        return true;
-                    } else if (inResize() == true) {
-                        deltaResize(xAbs, yAbs);
-                        return true;
-                    }
-                    break;
-
-                case MouseEvent.UP:
-                    boolean wasProcessed = inMove() || inResize();
-                    stopResize();
-                    stopMove();
-                    return wasProcessed;
-            }
-            return false;
         }
     }
 

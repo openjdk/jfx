@@ -26,6 +26,7 @@
 #include "FilterEffectApplier.h"
 #include "FilterFunction.h"
 #include "FilterImageVector.h"
+#include <wtf/CheckedPtr.h>
 
 namespace WTF {
 class TextStream;
@@ -37,9 +38,10 @@ class Filter;
 class FilterEffectGeometry;
 class FilterResults;
 
-class FilterEffect : public FilterFunction {
+class FilterEffect : public FilterFunction, public CanMakeThreadSafeCheckedPtr<FilterEffect> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FilterEffect);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FilterEffect);
     using FilterFunction::apply;
-
 public:
     virtual bool operator==(const FilterEffect&) const;
 
@@ -49,7 +51,7 @@ public:
     unsigned numberOfImageInputs() const { return filterType() == FilterEffect::Type::SourceGraphic ? 1 : numberOfEffectInputs(); }
     FilterImageVector takeImageInputs(FilterImageVector& stack) const;
 
-    RefPtr<FilterImage> apply(const Filter&, const FilterImageVector& inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
+    RefPtr<FilterImage> apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
     FilterStyle createFilterStyle(GraphicsContext&, const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -71,15 +73,15 @@ protected:
     virtual FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const;
 
     // Solid black image with different alpha values.
-    virtual bool resultIsAlphaImage(const FilterImageVector&) const { return false; }
+    virtual bool resultIsAlphaImage(std::span<const Ref<FilterImage>>) const { return false; }
 
     virtual bool resultIsValidPremultiplied() const { return true; }
 
-    virtual const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const { return m_operatingColorSpace; }
+    virtual const DestinationColorSpace& resultColorSpace(std::span<const Ref<FilterImage>>) const { return m_operatingColorSpace; }
 
-    virtual void transformInputsColorSpace(const FilterImageVector& inputs) const;
+    virtual void transformInputsColorSpace(std::span<const Ref<FilterImage>> inputs) const;
 
-    void correctPremultipliedInputs(const FilterImageVector& inputs) const;
+    void correctPremultipliedInputs(std::span<const Ref<FilterImage>> inputs) const;
 
     std::unique_ptr<FilterEffectApplier> createApplier(const Filter&) const;
 

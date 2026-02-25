@@ -90,7 +90,7 @@ void ChildListMutationAccumulator::childAdded(Node& child)
         m_nextSibling = child.nextSibling();
     }
 
-    m_lastAdded = &child;
+    m_lastAdded = child;
     m_addedNodes.append(child);
 }
 
@@ -123,15 +123,10 @@ void ChildListMutationAccumulator::enqueueMutationRecord()
     ASSERT(hasObservers());
     ASSERT(!isEmpty());
 
-    Ref record = MutationRecord::createChildList(protectedTarget(), StaticNodeList::create(WTFMove(m_addedNodes)), StaticNodeList::create(WTFMove(m_removedNodes)), WTFMove(m_previousSibling), WTFMove(m_nextSibling));
+    Ref record = MutationRecord::createChildList(m_target, StaticNodeList::create(WTFMove(m_addedNodes)), StaticNodeList::create(WTFMove(m_removedNodes)), WTFMove(m_previousSibling), WTFMove(m_nextSibling));
     m_observers->enqueueMutationRecord(WTFMove(record));
     m_lastAdded = nullptr;
     ASSERT(isEmpty());
-}
-
-Ref<ContainerNode> ChildListMutationAccumulator::protectedTarget() const
-{
-    return m_target;
 }
 
 bool ChildListMutationAccumulator::isEmpty()

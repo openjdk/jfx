@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann (hausmann@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 #include "config.h"
 #include "HTMLFrameElementBase.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
@@ -96,21 +97,23 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
         return;
 
     auto frameName = getNameAttribute();
-    if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
+    if (frameName.isNull()) {
+        if (document().settings().needsFrameNameFallbackToIdQuirk()) [[unlikely]]
         frameName = getIdAttribute();
+    }
 
     auto completeURL = document().completeURL(m_frameURL);
-    auto finishOpeningURL = [this, weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {
-        if (!weakThis)
+    auto finishOpeningURL = [weakThis = WeakPtr { *this }, frameName, lockHistory, lockBackForwardList, parentFrame = WTFMove(parentFrame), completeURL] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        Ref protectedThis { *this };
-    if (shouldLoadFrameLazily()) {
-            parentFrame->loader().subframeLoader().createFrameIfNecessary(protectedThis.get(), frameName);
+        if (protectedThis->shouldLoadFrameLazily()) {
+            parentFrame->loader().subframeLoader().createFrameIfNecessary(*protectedThis, frameName);
         return;
     }
 
-        document().willLoadFrameElement(completeURL);
-    parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
+        protectedThis->document().willLoadFrameElement(completeURL);
+        parentFrame->loader().subframeLoader().requestFrame(*protectedThis, protectedThis->m_frameURL, frameName, lockHistory, lockBackForwardList);
     };
 
     document().quirks().triggerOptionalStorageAccessIframeQuirk(completeURL, WTFMove(finishOpeningURL));
@@ -123,9 +126,11 @@ void HTMLFrameElementBase::attributeChanged(const QualifiedName& name, const Ato
         if (newValue.isNull())
             setLocation(attributeWithoutSynchronization(srcAttr).string().trim(isASCIIWhitespace));
         else
-            setLocation("about:srcdoc"_s);
+            setLocation(aboutSrcDocURL().string());
     } else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
         setLocation(newValue.string().trim(isASCIIWhitespace));
+    else if (name == scrollingAttr && contentFrame())
+        protectedContentFrame()->updateScrollingMode();
     else
         HTMLFrameOwnerElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
@@ -153,14 +158,14 @@ void HTMLFrameElementBase::didFinishInsertingNode()
     if (!renderer())
         invalidateStyleAndRenderersForSubtree();
 
-    auto work = [this, weakThis = WeakPtr { *this }] {
-        if (!weakThis)
+    auto work = [weakThis = WeakPtr { *this }] {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        Ref<HTMLFrameElementBase> protectedThis { *this };
-        m_openingURLAfterInserting = true;
-        if (isConnected())
-            openURL();
-        m_openingURLAfterInserting = false;
+        protectedThis->m_openingURLAfterInserting = true;
+        if (protectedThis->isConnected())
+            protectedThis->openURL();
+        protectedThis->m_openingURLAfterInserting = false;
     };
     if (!m_openingURLAfterInserting)
         work();
@@ -170,7 +175,7 @@ void HTMLFrameElementBase::didFinishInsertingNode()
 
 void HTMLFrameElementBase::didAttachRenderers()
 {
-    if (RenderWidget* part = renderWidget()) {
+    if (CheckedPtr part = renderWidget()) {
         if (RefPtr frame = contentFrame())
             part->setWidget(frame->virtualView());
     }
@@ -208,7 +213,7 @@ bool HTMLFrameElementBase::supportsFocus() const
 void HTMLFrameElementBase::setFocus(bool received, FocusVisibility visibility)
 {
     HTMLFrameOwnerElement::setFocus(received, visibility);
-    if (Page* page = document().page()) {
+    if (RefPtr page = document().page()) {
         CheckedRef focusController { page->focusController() };
         if (received)
             focusController->setFocusedFrame(contentFrame());

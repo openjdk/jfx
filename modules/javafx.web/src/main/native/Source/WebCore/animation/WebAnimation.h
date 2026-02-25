@@ -28,12 +28,15 @@
 #include "ActiveDOMObject.h"
 #include "AnimationFrameRate.h"
 #include "AnimationFrameRatePreset.h"
+#include "CSSKeywordValue.h"
 #include "CSSNumericValue.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "Styleable.h"
+#include "TimelineRange.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
@@ -59,6 +62,9 @@ struct ResolutionContext;
 class WebAnimation : public RefCounted<WebAnimation>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebAnimation);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<WebAnimation> create(Document&, AnimationEffect*);
     static Ref<WebAnimation> create(Document&, AnimationEffect*, AnimationTimeline*);
     ~WebAnimation();
@@ -78,11 +84,14 @@ public:
     virtual void setBindingsEffect(RefPtr<AnimationEffect>&&);
     AnimationEffect* effect() const { return m_effect.get(); }
     void setEffect(RefPtr<AnimationEffect>&&);
+
+    virtual AnimationTimeline* bindingsTimeline() const { return timeline(); }
+    virtual void setBindingsTimeline(RefPtr<AnimationTimeline>&&);
     AnimationTimeline* timeline() const { return m_timeline.get(); }
     virtual void setTimeline(RefPtr<AnimationTimeline>&&);
 
-    std::optional<Seconds> currentTime(std::optional<Seconds> = std::nullopt) const;
-    ExceptionOr<void> setCurrentTime(std::optional<Seconds>);
+    std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) const;
+    ExceptionOr<void> setCurrentTime(std::optional<WebAnimationTime>);
 
     double playbackRate() const { return m_playbackRate + 0; }
     void setPlaybackRate(double);
@@ -92,7 +101,7 @@ public:
 
     enum class ReplaceState : uint8_t { Active, Removed, Persisted };
     ReplaceState replaceState() const { return m_replaceState; }
-    void setReplaceState(ReplaceState replaceState) { m_replaceState = replaceState; }
+    void setReplaceState(ReplaceState);
 
     bool pending() const { return hasPendingPauseTask() || hasPendingPlayTask(); }
 
@@ -113,12 +122,13 @@ public:
     void persist();
     ExceptionOr<void> commitStyles();
 
-    virtual std::optional<double> bindingsStartTime() const;
-    virtual ExceptionOr<void> setBindingsStartTime(const std::optional<CSSNumberish>&);
-    std::optional<Seconds> startTime() const { return m_startTime; }
-    void setStartTime(std::optional<Seconds>);
-    virtual std::optional<double> bindingsCurrentTime() const;
-    virtual ExceptionOr<void> setBindingsCurrentTime(const std::optional<CSSNumberish>&);
+    virtual std::optional<WebAnimationTime> bindingsStartTime() const { return startTime(); }
+    virtual ExceptionOr<void> setBindingsStartTime(const std::optional<WebAnimationTime>&);
+    std::optional<WebAnimationTime> startTime() const { return m_startTime; }
+    void setStartTime(std::optional<WebAnimationTime>);
+    virtual std::optional<WebAnimationTime> bindingsCurrentTime() const { return currentTime(); };
+    virtual ExceptionOr<void> setBindingsCurrentTime(const std::optional<WebAnimationTime>&);
+    std::optional<double> overallProgress() const;
     virtual PlayState bindingsPlayState() const { return playState(); }
     virtual ReplaceState bindingsReplaceState() const { return replaceState(); }
     virtual bool bindingsPending() const { return pending(); }
@@ -126,16 +136,26 @@ public:
     virtual FinishedPromise& bindingsFinished() { return finished(); }
     virtual ExceptionOr<void> bindingsPlay() { return play(); }
     virtual ExceptionOr<void> bindingsPause() { return pause(); }
-    std::optional<Seconds> holdTime() const { return m_holdTime; }
+    std::optional<WebAnimationTime> holdTime() const { return m_holdTime; }
 
-    virtual std::variant<FramesPerSecond, AnimationFrameRatePreset> bindingsFrameRate() const { return m_bindingsFrameRate; }
-    virtual void setBindingsFrameRate(std::variant<FramesPerSecond, AnimationFrameRatePreset>&&);
+    void setPendingStartTime(WebAnimationTime);
+
+    virtual Variant<FramesPerSecond, AnimationFrameRatePreset> bindingsFrameRate() const { return m_bindingsFrameRate; }
+    virtual void setBindingsFrameRate(Variant<FramesPerSecond, AnimationFrameRatePreset>&&);
     std::optional<FramesPerSecond> frameRate() const { return m_effectiveFrameRate; }
+
+    TimelineRangeValue bindingsRangeStart() const { return m_timelineRange.start.serialize(); }
+    TimelineRangeValue bindingsRangeEnd() const { return m_timelineRange.end.serialize(); }
+    virtual void setBindingsRangeStart(TimelineRangeValue&&);
+    virtual void setBindingsRangeEnd(TimelineRangeValue&&);
+    void setRangeStart(SingleTimelineRange);
+    void setRangeEnd(SingleTimelineRange);
+    const TimelineRange& range();
 
     bool needsTick() const;
     virtual void tick();
     WEBCORE_EXPORT Seconds timeToNextTick() const;
-    virtual OptionSet<AnimationImpact> resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    virtual OptionSet<AnimationImpact> resolve(RenderStyle& targetStyle, const Style::ResolutionContext&);
     void effectTargetDidChange(const std::optional<const Styleable>& previousTarget, const std::optional<const Styleable>& newTarget);
     void acceleratedStateDidChange();
     void willChangeRenderer();
@@ -150,7 +170,7 @@ public:
     bool isSuspended() const { return m_isSuspended; }
     bool isReplaceable() const;
     void remove();
-    void enqueueAnimationPlaybackEvent(const AtomString&, std::optional<Seconds> currentTime, std::optional<Seconds> scheduledTime);
+    void enqueueAnimationPlaybackEvent(const AtomString&, std::optional<WebAnimationTime> currentTime, std::optional<WebAnimationTime> scheduledTime);
 
     uint64_t globalPosition() const { return m_globalPosition; }
     void setGlobalPosition(uint64_t globalPosition) { m_globalPosition = globalPosition; }
@@ -159,13 +179,11 @@ public:
 
     std::optional<Seconds> convertAnimationTimeToTimelineTime(Seconds) const;
 
+    void progressBasedTimelineSourceDidChangeMetrics();
+
     // ContextDestructionObserver.
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void contextDestroyed() final;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 protected:
     explicit WebAnimation(Document&);
@@ -173,6 +191,7 @@ protected:
     void initialize();
     void enqueueAnimationEvent(Ref<AnimationEventBase>&&);
     virtual void animationDidFinish();
+    WebAnimationTime zeroTime() const;
 
 private:
     enum class DidSeek : bool { No, Yes };
@@ -181,14 +200,13 @@ private:
     enum class AutoRewind : bool { No, Yes };
     enum class TimeToRunPendingTask : uint8_t { NotScheduled, ASAP, WhenReady };
 
-    ExceptionOr<std::optional<Seconds>> validateCSSNumberishValue(const std::optional<CSSNumberish>&) const;
     void timingDidChange(DidSeek, SynchronouslyNotify, Silently = Silently::No);
     void updateFinishedState(DidSeek, SynchronouslyNotify);
-    Seconds effectEndTime() const;
+    WebAnimationTime effectEndTime() const;
     WebAnimation& readyPromiseResolve();
     WebAnimation& finishedPromiseResolve();
-    std::optional<Seconds> currentTime(RespectHoldTime, std::optional<Seconds> = std::nullopt) const;
-    ExceptionOr<void> silentlySetCurrentTime(std::optional<Seconds>);
+    std::optional<WebAnimationTime> currentTime(RespectHoldTime, UseCachedCurrentTime = UseCachedCurrentTime::Yes) const;
+    ExceptionOr<void> silentlySetCurrentTime(std::optional<WebAnimationTime>);
     void finishNotificationSteps();
     bool hasPendingPauseTask() const { return m_timeToRunPendingPauseTask != TimeToRunPendingTask::NotScheduled; }
     bool hasPendingPlayTask() const { return m_timeToRunPendingPlayTask != TimeToRunPendingTask::NotScheduled; }
@@ -203,6 +221,9 @@ private:
     double effectivePlaybackRate() const;
     void applyPendingPlaybackRate();
     void setEffectiveFrameRate(std::optional<FramesPerSecond>);
+    void autoAlignStartTime();
+    void maybeMarkAsReady();
+    bool isTimeValid(const std::optional<WebAnimationTime>&) const;
 
     // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
@@ -217,14 +238,17 @@ private:
 
     RefPtr<AnimationEffect> m_effect;
     RefPtr<AnimationTimeline> m_timeline;
+    RefPtr<CSSValue> m_specifiedRangeStart;
+    RefPtr<CSSValue> m_specifiedRangeEnd;
     UniqueRef<ReadyPromise> m_readyPromise;
     UniqueRef<FinishedPromise> m_finishedPromise;
-    Markable<Seconds, Seconds::MarkableTraits> m_previousCurrentTime;
-    Markable<Seconds, Seconds::MarkableTraits> m_startTime;
-    Markable<Seconds, Seconds::MarkableTraits> m_holdTime;
-    MarkableDouble m_pendingPlaybackRate;
+    std::optional<WebAnimationTime> m_previousCurrentTime;
+    std::optional<WebAnimationTime> m_startTime;
+    std::optional<WebAnimationTime> m_pendingStartTime;
+    std::optional<WebAnimationTime> m_holdTime;
+    Markable<double> m_pendingPlaybackRate;
     double m_playbackRate { 1 };
-    std::variant<FramesPerSecond, AnimationFrameRatePreset> m_bindingsFrameRate { AnimationFrameRatePreset::Auto };
+    Variant<FramesPerSecond, AnimationFrameRatePreset> m_bindingsFrameRate { AnimationFrameRatePreset::Auto };
     std::optional<FramesPerSecond> m_effectiveFrameRate;
     String m_id;
 
@@ -235,10 +259,12 @@ private:
     bool m_isRelevant;
     bool m_shouldSkipUpdatingFinishedStateWhenResolving;
     bool m_hasScheduledEventsDuringTick { false };
+    bool m_autoAlignStartTime { false };
     TimeToRunPendingTask m_timeToRunPendingPlayTask { TimeToRunPendingTask::NotScheduled };
     TimeToRunPendingTask m_timeToRunPendingPauseTask { TimeToRunPendingTask::NotScheduled };
     ReplaceState m_replaceState { ReplaceState::Active };
     uint64_t m_globalPosition { 0 };
+    TimelineRange m_timelineRange;
 };
 
 } // namespace WebCore

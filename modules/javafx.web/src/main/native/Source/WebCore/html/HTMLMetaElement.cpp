@@ -25,7 +25,7 @@
 #include "HTMLMetaElement.h"
 
 #include "Attribute.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -76,20 +76,20 @@ static bool isNameColorScheme(const AtomString& nameValue)
 
 bool HTMLMetaElement::mediaAttributeMatches()
 {
-    auto& document = this->document();
+    Ref document = this->document();
 
     if (!m_mediaQueryList) {
         auto mediaText = attributeWithoutSynchronization(mediaAttr).convertToASCIILowercase();
-        m_mediaQueryList = MQ::MediaQueryParser::parse(mediaText, { document });
+        m_mediaQueryList = MQ::MediaQueryParser::parse(mediaText, document->cssParserContext());
     }
 
     std::optional<RenderStyle> documentStyle;
-    if (document.hasLivingRenderTree())
+    if (document->hasLivingRenderTree())
         documentStyle = Style::resolveForDocument(document);
 
     AtomString mediaType;
-    if (auto* frame = document.frame()) {
-        if (auto* frameView = frame->view())
+    if (RefPtr frame = document->frame()) {
+        if (RefPtr frameView = frame->view())
             mediaType = frameView->mediaType();
     }
 
@@ -100,7 +100,7 @@ bool HTMLMetaElement::mediaAttributeMatches()
 const Color& HTMLMetaElement::contentColor()
 {
     if (!m_contentColor)
-        m_contentColor = CSSParser::parseColorWithoutContext(content());
+        m_contentColor = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(content());
     return *m_contentColor;
 }
 

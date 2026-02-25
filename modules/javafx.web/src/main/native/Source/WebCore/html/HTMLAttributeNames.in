@@ -12,6 +12,7 @@ align
 alink
 allow
 allowfullscreen
+alpha
 alt
 archive
 aria-activedescendant
@@ -23,6 +24,7 @@ aria-busy
 aria-checked
 aria-colcount
 aria-colindex
+aria-colindextext
 aria-colspan
 aria-controls
 aria-current
@@ -59,6 +61,7 @@ aria-required
 aria-roledescription
 aria-rowcount
 aria-rowindex
+aria-rowindextext
 aria-rowspan
 aria-selected
 aria-setsize
@@ -103,12 +106,12 @@ code
 codebase
 codetype
 color
+colorspace
 cols
 colspan
 command
 commandfor
 compact
-composite
 content
 contenteditable
 controls
@@ -134,6 +137,7 @@ dropzone
 enctype
 end
 enterkeyhint
+environmentmap
 event
 expanded
 exportparts
@@ -161,7 +165,6 @@ http-equiv
 id
 imagesizes
 imagesrcset
-incremental
 inert
 inputmode
 integrity
@@ -199,6 +202,7 @@ name
 nohref
 nomodule
 nonce
+noportal
 noresize
 noshade
 novalidate
@@ -217,6 +221,7 @@ onbeforecopy
 onbeforecut
 onbeforeinput
 onbeforeload
+onbeforematch
 onbeforepaste
 onbeforeprint
 onbeforetoggle
@@ -228,6 +233,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncommand
 oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
@@ -307,7 +313,7 @@ onrejectionhandled
 onreset
 onresize
 onscroll
-onsearch
+onscrollend
 onsecuritypolicyviolation
 onseeked
 onseeking
@@ -390,8 +396,10 @@ scrolling
 select
 selected
 shadowrootclonable
+shadowrootcustomelementregistry
 shadowrootdelegatesfocus
 shadowrootmode
+shadowrootreferencetarget
 shadowrootserializable
 shape
 size
@@ -403,6 +411,7 @@ src
 srcdoc
 srclang
 srcset
+stagemode
 standby
 start
 step

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 
 #include "AXCoreObject.h"
 #include "ActivityState.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
@@ -41,13 +40,13 @@ class AXIsolatedTree;
 #endif
 class AXObjectCache;
 
-using AXTreePtr = std::variant<std::nullptr_t, WeakPtr<AXObjectCache>
+using AXTreePtr = Variant<std::nullptr_t, WeakPtr<AXObjectCache>
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     , RefPtr<AXIsolatedTree>
 #endif
 >;
 
-using AXTreeWeakPtr = std::variant<WeakPtr<AXObjectCache>
+using AXTreeWeakPtr = Variant<WeakPtr<AXObjectCache>
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     , ThreadSafeWeakPtr<AXIsolatedTree>
 #endif
@@ -58,14 +57,17 @@ WEBCORE_EXPORT AXTreePtr findAXTree(Function<bool(AXTreePtr)>&&);
 
 template<typename T>
 class AXTreeStore {
+    // For now, we just disable direct instantiations of this class because it is not
+    // needed. Subclasses are expected to declare their own WTF_MAKE_TZONE_ALLOCATED.
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AXTreeStore);
     WTF_MAKE_NONCOPYABLE(AXTreeStore);
-    WTF_MAKE_FAST_ALLOCATED;
     friend WEBCORE_EXPORT AXTreePtr findAXTree(Function<bool(AXTreePtr)>&&);
 public:
     AXID treeID() const { return m_id; }
-    static WeakPtr<AXObjectCache> axObjectCacheForID(AXID);
+    static WeakPtr<AXObjectCache> axObjectCacheForID(std::optional<AXID>);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    static RefPtr<AXIsolatedTree> isolatedTreeForID(AXID);
+    static RefPtr<AXIsolatedTree> isolatedTreeForID(std::optional<AXID>);
+    static void applyPendingChangesForAllIsolatedTrees();
 #endif
 
 protected:
@@ -149,20 +151,20 @@ inline bool AXTreeStore<T>::contains(AXID axID)
 }
 
 template<typename T>
-inline WeakPtr<AXObjectCache> AXTreeStore<T>::axObjectCacheForID(AXID axID)
+inline WeakPtr<AXObjectCache> AXTreeStore<T>::axObjectCacheForID(std::optional<AXID> axID)
 {
-    return axID.isValid() ? liveTreeMap().get(axID) : nullptr;
+    return axID ? liveTreeMap().get(*axID) : nullptr;
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 template<typename T>
-inline RefPtr<AXIsolatedTree> AXTreeStore<T>::isolatedTreeForID(AXID axID)
+inline RefPtr<AXIsolatedTree> AXTreeStore<T>::isolatedTreeForID(std::optional<AXID> axID)
 {
-    if (!axID.isValid())
+    if (!axID)
         return nullptr;
 
     Locker locker { s_storeLock };
-    return isolatedTreeMap().get(axID).get();
+    return isolatedTreeMap().get(*axID).get();
 }
 #endif
 
@@ -189,17 +191,17 @@ inline AXID AXTreeStore<T>::generateNewID()
 {
     ASSERT(isMainThread());
 
-    AXID axID;
+    std::optional<AXID> axID;
     do {
         axID = AXID::generate();
-    } while (!axID.isValid() || liveTreeMap().contains(axID));
-    return axID;
+    } while (liveTreeMap().contains(*axID));
+    return *axID;
 }
 
 template<typename T>
 Lock AXTreeStore<T>::s_storeLock;
 
-inline AXTreePtr axTreeForID(AXID axID)
+inline AXTreePtr axTreeForID(std::optional<AXID> axID)
 {
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     if (!isMainThread())

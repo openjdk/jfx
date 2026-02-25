@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,12 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.tk.HeaderAreaType;
+
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -66,7 +69,7 @@ final class MacView extends View {
         return multiClickMaxY;
     }
 
-    @Override native protected int _getNativeFrameBuffer(long ptr);
+    @Override native protected long _getNativeFrameBuffer(long ptr);
     @Override native protected long _create(Map caps);
     @Override native protected int _getX(long ptr);
     @Override native protected int _getY(long ptr);
@@ -133,11 +136,6 @@ final class MacView extends View {
         return ptr;
     }
 
-    native protected long _getNativeLayer(long ptr);
-    public long getNativeLayer() {
-        return _getNativeLayer(getNativeView());
-    }
-
     protected void notifyInputMethodMac(String str, int attrib, int length,
                                             int cursor, int selStart, int selLength) {
         byte atts[] = new byte[1];
@@ -182,5 +180,25 @@ final class MacView extends View {
             }
         }
     }
-}
 
+    @Override
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
+                                                int modifiers, int clickCount) {
+        if (shouldHandleEvent() && type == MouseEvent.DOWN) {
+            var window = (MacWindow)getWindow();
+            double wx = x / window.getPlatformScaleX();
+            double wy = y / window.getPlatformScaleY();
+
+            View.EventHandler eventHandler = getEventHandler();
+            if (eventHandler != null && eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR) {
+                if (clickCount == 2) {
+                    window.performTitleBarDoubleClickAction();
+                } else if (clickCount == 1) {
+                    window.performWindowDrag();
+                }
+            }
+        }
+
+        return false;
+    }
+}

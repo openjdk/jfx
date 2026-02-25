@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -50,7 +51,7 @@ public:
 };
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const AbstractRange&);
-SimpleRange makeSimpleRange(const Ref<AbstractRange>&);
+WEBCORE_EXPORT SimpleRange makeSimpleRange(const Ref<AbstractRange>&);
 std::optional<SimpleRange> makeSimpleRange(const AbstractRange*);
 std::optional<SimpleRange> makeSimpleRange(const RefPtr<AbstractRange>&);
 

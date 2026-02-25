@@ -29,6 +29,9 @@
 #import <WebCore/CryptoClient.h>
 #import <wtf/TZoneMalloc.h>
 
+namespace WebCore {
+struct CryptoKeyData;
+}
 
 class WebCryptoClient:  public WebCore::CryptoClient {
     WTF_MAKE_TZONE_ALLOCATED(WebCryptoClient);
@@ -36,7 +39,8 @@ public:
     WebCryptoClient() = default;
     ~WebCryptoClient() = default;
     WebCryptoClient(WebView *);
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) const override;
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) const;
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(WebCore::CryptoKeyData&&) const override;
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) const override;
 private:
     __weak WebView * m_webView;

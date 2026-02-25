@@ -27,7 +27,7 @@
 #include "MediaCapabilities.h"
 
 #include "ContentType.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaCapabilitiesDecodingInfo.h"
@@ -52,21 +52,21 @@ static bool isValidMediaMIMEType(const ContentType& contentType)
     // A "bucket" MIME types is one whose container type does not uniquely specify a codec.
     // See: https://tools.ietf.org/html/rfc6381
     static constexpr ComparableASCIILiteral bucketMIMETypeArray[] = {
-        "application/mp21",
-        "application/mp4",
-        "audio/3gpp",
-        "audio/3gpp2",
-        "audio/mp4",
-        "audio/ogg",
-        "audio/vnd.apple.mpegurl",
-        "audio/webm",
-        "video/3gpp",
-        "video/3gpp2",
-        "video/mp4",
-        "video/ogg",
-        "video/quicktime",
-        "video/vnd.apple.mpegurl",
-        "video/webm",
+        "application/mp21"_s,
+        "application/mp4"_s,
+        "audio/3gpp"_s,
+        "audio/3gpp2"_s,
+        "audio/mp4"_s,
+        "audio/ogg"_s,
+        "audio/vnd.apple.mpegurl"_s,
+        "audio/webm"_s,
+        "video/3gpp"_s,
+        "video/3gpp2"_s,
+        "video/mp4"_s,
+        "video/ogg"_s,
+        "video/quicktime"_s,
+        "video/vnd.apple.mpegurl"_s,
+        "video/webm"_s,
     };
     static constexpr SortedArraySet bucketMIMETypes { bucketMIMETypeArray };
 
@@ -183,10 +183,14 @@ static void gatherDecodingInfo(Document& document, MediaDecodingConfiguration&& 
     configuration.canExposeVP9 = document.settings().vp9DecoderEnabled();
 #endif
 
+    RefPtr protectedPage = document.page();
+    if (protectedPage)
+        configuration.pageIdentifier = protectedPage->identifier();
+
 #if ENABLE(WEB_RTC)
     if (configuration.type == MediaDecodingType::WebRTC) {
-        if (auto* page = document.page())
-            page->webRTCProvider().createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
+        if (protectedPage)
+            protectedPage->webRTCProvider().createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
         return;
     }
 #endif

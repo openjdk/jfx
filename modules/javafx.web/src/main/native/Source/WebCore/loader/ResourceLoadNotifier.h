@@ -47,28 +47,29 @@ class ResourceRequest;
 class ResourceResponse;
 class SharedBuffer;
 
+enum class IsMainResourceLoad : bool;
+
 class ResourceLoadNotifier {
     WTF_MAKE_NONCOPYABLE(ResourceLoadNotifier);
 public:
     explicit ResourceLoadNotifier(LocalFrame&);
 
-    void didReceiveAuthenticationChallenge(ResourceLoader*, const AuthenticationChallenge&);
     void didReceiveAuthenticationChallenge(ResourceLoaderIdentifier, DocumentLoader*, const AuthenticationChallenge&);
 
-    void willSendRequest(ResourceLoader*, ResourceRequest&, const ResourceResponse& redirectResponse);
-    void didReceiveResponse(ResourceLoader*, const ResourceResponse&);
-    void didReceiveData(ResourceLoader*, const SharedBuffer&, int encodedDataLength);
-    void didFinishLoad(ResourceLoader*, const NetworkLoadMetrics&);
-    void didFailToLoad(ResourceLoader*, const ResourceError&);
+    void willSendRequest(ResourceLoader&, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse);
+    void didReceiveResponse(ResourceLoader&, ResourceLoaderIdentifier, const ResourceResponse&);
+    void didReceiveData(ResourceLoader&, ResourceLoaderIdentifier, const SharedBuffer&, int encodedDataLength);
+    void didFinishLoad(ResourceLoader&, ResourceLoaderIdentifier, const NetworkLoadMetrics&);
+    void didFailToLoad(ResourceLoader&, ResourceLoaderIdentifier, const ResourceError&);
 
-    void assignIdentifierToInitialRequest(ResourceLoaderIdentifier, DocumentLoader*, const ResourceRequest&);
+    void assignIdentifierToInitialRequest(ResourceLoaderIdentifier, IsMainResourceLoad, DocumentLoader*, const ResourceRequest&);
     void dispatchWillSendRequest(DocumentLoader*, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*, ResourceLoader* = nullptr);
     void dispatchDidReceiveResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&, ResourceLoader* = nullptr);
     void dispatchDidReceiveData(DocumentLoader*, ResourceLoaderIdentifier, const SharedBuffer*, int expectedDataLength, int encodedDataLength);
-    void dispatchDidFinishLoading(DocumentLoader*, ResourceLoaderIdentifier, const NetworkLoadMetrics&, ResourceLoader*);
-    void dispatchDidFailLoading(DocumentLoader*, ResourceLoaderIdentifier, const ResourceError&);
+    void dispatchDidFinishLoading(DocumentLoader*, IsMainResourceLoad, ResourceLoaderIdentifier, const NetworkLoadMetrics&, ResourceLoader*);
+    void dispatchDidFailLoading(DocumentLoader*, IsMainResourceLoad, ResourceLoaderIdentifier, const ResourceError&);
 
-    void sendRemainingDelegateMessages(DocumentLoader*, ResourceLoaderIdentifier, const ResourceRequest&, const ResourceResponse&, const SharedBuffer*, int expectedDataLength, int encodedDataLength, const ResourceError&);
+    void sendRemainingDelegateMessages(DocumentLoader*, IsMainResourceLoad, ResourceLoaderIdentifier, const ResourceRequest&, const ResourceResponse&, const SharedBuffer*, int expectedDataLength, int encodedDataLength, const ResourceError&);
 
     bool isInitialRequestIdentifier(ResourceLoaderIdentifier identifier)
     {

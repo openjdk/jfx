@@ -58,7 +58,7 @@ struct AuthenticatorAssertionResponseData {
     RefPtr<ArrayBuffer> userHandle;
 };
 
-using AuthenticatorResponseDataSerializableForm = std::variant<std::nullptr_t, AuthenticatorResponseBaseData, AuthenticatorAttestationResponseData, AuthenticatorAssertionResponseData>;
+using AuthenticatorResponseDataSerializableForm = Variant<std::nullptr_t, AuthenticatorResponseBaseData, AuthenticatorAttestationResponseData, AuthenticatorAssertionResponseData>;
 
 struct AuthenticatorResponseData {
     AuthenticatorResponseData() = default;

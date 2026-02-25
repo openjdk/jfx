@@ -43,6 +43,11 @@ struct ScreenData {
     bool screenSupportsExtendedColor { false };
     bool screenHasInvertedColors { false };
     bool screenSupportsHighDynamicRange { false };
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    bool suppressEDR { false };
+    float currentEDRHeadroom { 1 };
+    float maxEDRHeadroom { 1 };
+#endif
 #if PLATFORM(MAC)
     FloatSize screenSize; // In millimeters.
     bool screenIsMonochrome { false };
@@ -66,6 +71,12 @@ using ScreenDataMap = HashMap<PlatformDisplayID, ScreenData>;
 struct ScreenProperties {
     PlatformDisplayID primaryDisplayID { 0 };
     ScreenDataMap screenDataMap;
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    OptionSet<ContentsFormat> screenContentsFormatsForTesting;
+#endif
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(GTK)
+    bool screenHasTouchDevice { true };
+#endif
 };
 
 } // namespace WebCore

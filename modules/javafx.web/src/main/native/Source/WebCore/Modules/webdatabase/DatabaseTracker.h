@@ -29,7 +29,7 @@
 #pragma once
 
 #include "DatabaseDetails.h"
-#include "ExceptionOr.h"
+#include "DatabaseManagerClient.h"
 #include "SQLiteDatabase.h"
 #include "SecurityOriginData.h"
 #include "SecurityOriginHash.h"
@@ -37,6 +37,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/StringHash.h>
 
@@ -48,11 +49,13 @@ class DatabaseManagerClient;
 class OriginLock;
 class SecurityOrigin;
 class SecurityOriginData;
+template<typename> class ExceptionOr;
 
 enum class CurrentQueryBehavior { Interrupt, RunToCompletion };
 
 class DatabaseTracker {
-    WTF_MAKE_NONCOPYABLE(DatabaseTracker); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DatabaseTracker, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(DatabaseTracker);
 public:
     // FIXME: This is a hack so we can easily delete databases from the UI process in WebKit2.
     WEBCORE_EXPORT static std::unique_ptr<DatabaseTracker> trackerWithDatabasePath(const String& databasePath);
@@ -159,11 +162,11 @@ private:
     void deleteOriginLockFor(const SecurityOriginData&) WTF_REQUIRES_LOCK(m_databaseGuard);
 
     using DatabaseSet = HashSet<Database*>;
-    using DatabaseNameMap = HashMap<String, DatabaseSet*>;
-    using DatabaseOriginMap = HashMap<SecurityOriginData, DatabaseNameMap*>;
+    using DatabaseNameMap = HashMap<String, DatabaseSet>;
+    using DatabaseOriginMap = HashMap<SecurityOriginData, DatabaseNameMap>;
 
     Lock m_openDatabaseMapGuard;
-    mutable std::unique_ptr<DatabaseOriginMap> m_openDatabaseMap WTF_GUARDED_BY_LOCK(m_openDatabaseMapGuard);
+    mutable DatabaseOriginMap m_openDatabaseMap WTF_GUARDED_BY_LOCK(m_openDatabaseMapGuard);
 
     // This lock protects m_database, m_originLockMap, m_databaseDirectoryPath, m_originsBeingDeleted, m_beingCreated, and m_beingDeleted.
     Lock m_databaseGuard;

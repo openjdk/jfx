@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,39 +25,37 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <span>
-#include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
-class FormDataConsumer;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::FormDataConsumer> : std::true_type { };
-}
-
-namespace WebCore {
 
 class BlobLoader;
+class Exception;
 class FormData;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
-class FormDataConsumer : public CanMakeWeakPtr<FormDataConsumer> {
-    WTF_MAKE_FAST_ALLOCATED;
+class FormDataConsumer : public RefCountedAndCanMakeWeakPtr<FormDataConsumer> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FormDataConsumer, WEBCORE_EXPORT);
 public:
-    using Callback = Function<void(ExceptionOr<std::span<const uint8_t>>)>;
-    FormDataConsumer(const FormData&, ScriptExecutionContext&, Callback&&);
+    using Callback = Function<bool(ExceptionOr<std::span<const uint8_t>>)>;
+    static Ref<FormDataConsumer> create(const FormData& formData, ScriptExecutionContext& context, Callback&& callback) { return adoptRef(*new FormDataConsumer(formData, context, WTFMove(callback))); }
     WEBCORE_EXPORT ~FormDataConsumer();
 
+    void start() { read(); }
     void cancel();
 
+    bool hasPendingActivity() const { return !!m_blobLoader || m_isReadingFile; }
+
 private:
+    FormDataConsumer(const FormData&, ScriptExecutionContext&, Callback&&);
+
     void consumeData(const Vector<uint8_t>&);
     void consumeFile(const String&);
     void consumeBlob(const URL&);
@@ -67,13 +65,14 @@ private:
     void didFail(Exception&&);
     bool isCancelled() { return !m_context; }
 
-    Ref<FormData> m_formData;
+    const Ref<FormData> m_formData;
     RefPtr<ScriptExecutionContext> m_context;
     Callback m_callback;
 
     size_t m_currentElementIndex { 0 };
-    Ref<WorkQueue> m_fileQueue;
+    const Ref<WorkQueue> m_fileQueue;
     std::unique_ptr<BlobLoader> m_blobLoader;
+    bool m_isReadingFile { false };
 };
 
 } // namespace WebCore

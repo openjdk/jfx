@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
 #include "ExceptionOr.h"
 #include "NodeList.h"
 #include "SecurityOriginData.h"
 #include "SelectorCompiler.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -41,6 +41,10 @@ class CSSSelector;
 class ContainerNode;
 class Document;
 class Element;
+
+namespace Style {
+struct SelectorMatchingState;
+};
 
 class SelectorDataList {
 public:
@@ -61,8 +65,8 @@ private:
 #endif
     };
 
-    bool selectorMatches(const SelectorData&, Element&, const ContainerNode& rootNode) const;
-    Element* selectorClosest(const SelectorData&, Element&, const ContainerNode& rootNode) const;
+    bool selectorMatches(const SelectorData&, Element&, const ContainerNode& rootNode, Style::SelectorMatchingState* = nullptr) const;
+    Element* selectorClosest(const SelectorData&, Element&, const ContainerNode& rootNode, Style::SelectorMatchingState* = nullptr) const;
 
     template <typename OutputType> void execute(ContainerNode& rootNode, OutputType&) const;
     template <typename OutputType> void executeFastPathForIdSelector(const ContainerNode& rootNode, const SelectorData&, const CSSSelector* idSelector, OutputType&) const;
@@ -97,8 +101,8 @@ private:
 };
 
 class SelectorQuery {
+    WTF_MAKE_TZONE_ALLOCATED(SelectorQuery);
     WTF_MAKE_NONCOPYABLE(SelectorQuery);
-    WTF_MAKE_FAST_ALLOCATED;
 
 public:
     explicit SelectorQuery(CSSSelectorList&&);
@@ -116,7 +120,7 @@ private:
 };
 
 class SelectorQueryCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SelectorQueryCache);
 public:
     static SelectorQueryCache& singleton();
 

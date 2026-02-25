@@ -25,11 +25,9 @@
 
 #pragma once
 
-#include "AnimationEffect.h"
 #include "AnimationEffectTiming.h"
 #include "BasicEffectTiming.h"
 #include "ComputedEffectTiming.h"
-#include "ExceptionOr.h"
 #include "FillMode.h"
 #include "KeyframeEffectOptions.h"
 #include "OptionalEffectTiming.h"
@@ -37,17 +35,16 @@
 #include "TimingFunction.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Seconds.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class AnimationEffect : public RefCounted<AnimationEffect>, public CanMakeWeakPtr<AnimationEffect> {
+class AnimationEffect : public RefCountedAndCanMakeWeakPtr<AnimationEffect> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AnimationEffect);
 public:
     virtual ~AnimationEffect();
@@ -56,28 +53,33 @@ public:
     virtual bool isKeyframeEffect() const { return false; }
 
     EffectTiming getBindingsTiming() const;
-    BasicEffectTiming getBasicTiming(std::optional<Seconds> = std::nullopt) const;
-    ComputedEffectTiming getBindingsComputedTiming() const;
-    ComputedEffectTiming getComputedTiming(std::optional<Seconds> = std::nullopt) const;
-    ExceptionOr<void> bindingsUpdateTiming(std::optional<OptionalEffectTiming>);
-    ExceptionOr<void> updateTiming(std::optional<OptionalEffectTiming>);
+    BasicEffectTiming getBasicTiming();
+    ComputedEffectTiming getBindingsComputedTiming();
+    ComputedEffectTiming getComputedTiming(UseCachedCurrentTime = UseCachedCurrentTime::Yes);
+    ExceptionOr<void> bindingsUpdateTiming(Document&, std::optional<OptionalEffectTiming>);
+    ExceptionOr<void> updateTiming(Document&, std::optional<OptionalEffectTiming>);
 
     virtual void animationDidTick() { };
     virtual void animationDidChangeTimingProperties() { };
     virtual void animationWasCanceled() { };
     virtual void animationSuspensionStateDidChange(bool) { };
-    virtual void animationTimelineDidChange(AnimationTimeline*) { };
+    virtual void animationTimelineDidChange(const AnimationTimeline*);
     virtual void animationDidFinish() { };
+    virtual void animationPlaybackRateDidChange();
+    virtual void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&);
+    void animationRangeDidChange();
 
     AnimationEffectTiming timing() const { return m_timing; }
 
     WebAnimation* animation() const { return m_animation.get(); }
     virtual void setAnimation(WebAnimation*);
 
-    Seconds delay() const { return m_timing.delay; }
+    WebAnimationTime delay();
+    Seconds specifiedDelay() const { return m_timing.specifiedStartDelay; }
     void setDelay(const Seconds&);
 
-    Seconds endDelay() const { return m_timing.endDelay; }
+    WebAnimationTime endDelay();
+    Seconds specifiedEndDelay() const { return m_timing.specifiedEndDelay; }
     void setEndDelay(const Seconds&);
 
     FillMode fill() const { return m_timing.fill; }
@@ -89,8 +91,9 @@ public:
     double iterations() const { return m_timing.iterations; }
     ExceptionOr<void> setIterations(double);
 
-    Seconds iterationDuration() const { return m_timing.iterationDuration; }
-    void setIterationDuration(const Seconds&);
+    WebAnimationTime iterationDuration();
+    std::optional<Seconds> specifiedIterationDuration() const { return m_timing.specifiedIterationDuration; }
+    void setIterationDuration(const std::optional<Seconds>&);
 
     PlaybackDirection direction() const { return m_timing.direction; }
     void setDirection(PlaybackDirection);
@@ -98,12 +101,10 @@ public:
     TimingFunction* timingFunction() const { return m_timing.timingFunction.get(); }
     void setTimingFunction(const RefPtr<TimingFunction>&);
 
-    Seconds activeDuration() const { return m_timing.activeDuration; }
-    Seconds endTime() const { return m_timing.endTime; }
+    WebAnimationTime activeDuration();
+    WebAnimationTime endTime();
 
-    void updateStaticTimingProperties();
-
-    virtual Seconds timeToNextTick(const BasicEffectTiming&) const;
+    virtual Seconds timeToNextTick(const BasicEffectTiming&);
 
     virtual bool preventsAnimationReadiness() const { return false; }
 
@@ -114,11 +115,12 @@ protected:
     virtual std::optional<double> progressUntilNextStep(double) const;
 
 private:
-    std::optional<Seconds> localTime(std::optional<Seconds>) const;
-    double playbackRate() const;
+    AnimationEffectTiming::ResolutionData resolutionData(UseCachedCurrentTime = UseCachedCurrentTime::Yes) const;
+    void updateComputedTimingPropertiesIfNeeded();
 
     AnimationEffectTiming m_timing;
     WeakPtr<WebAnimation, WeakPtrImplWithEventTargetData> m_animation;
+    bool m_timingDidMutate { false };
 };
 
 } // namespace WebCore

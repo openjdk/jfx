@@ -230,7 +230,7 @@ void BBQJIT::emitModOrDiv(Value& lhs, Location lhsLocation, Value& rhs, Location
     auto lhsArg = Value::pinned(argType, lhsLocation);
     auto rhsArg = Value::pinned(argType, rhsLocation);
     consume(result);
-    emitCCall(modOrDiv, Vector<Value> { lhsArg, rhsArg }, result);
+    emitCCall(modOrDiv, ArgumentList { lhsArg, rhsArg }, result);
 }
 
 #define PREPARE_FOR_SHIFT
@@ -309,7 +309,7 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments)
 
     // Materialize address of native function and call register
     void* taggedFunctionPtr = tagCFunctionPtr<void*, OperationPtrTag>(function);
-    m_jit.move(TrustedImmPtr(bitwise_cast<uintptr_t>(taggedFunctionPtr)), wasmScratchGPR);
+    m_jit.move(TrustedImmPtr(std::bit_cast<uintptr_t>(taggedFunctionPtr)), wasmScratchGPR);
     m_jit.call(wasmScratchGPR, OperationPtrTag);
 }
 
@@ -338,7 +338,7 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     // Materialize address of native function and call register
     void* taggedFunctionPtr = tagCFunctionPtr<void*, OperationPtrTag>(function);
-    m_jit.move(TrustedImmPtr(bitwise_cast<uintptr_t>(taggedFunctionPtr)), wasmScratchGPR);
+    m_jit.move(TrustedImmPtr(std::bit_cast<uintptr_t>(taggedFunctionPtr)), wasmScratchGPR);
     m_jit.call(wasmScratchGPR, OperationPtrTag);
 
     Location resultLocation;
@@ -353,9 +353,11 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
     case TypeKind::Arrayref:
     case TypeKind::Structref:
     case TypeKind::Funcref:
+    case TypeKind::Exn:
     case TypeKind::Externref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -366,18 +368,18 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
     case TypeKind::Struct:
     case TypeKind::Func: {
         resultLocation = Location::fromGPR2(GPRInfo::returnValueGPR2, GPRInfo::returnValueGPR);
-        ASSERT(m_validGPRs.contains(GPRInfo::returnValueGPR, IgnoreVectors));
+        ASSERT(validGPRs().contains(GPRInfo::returnValueGPR, IgnoreVectors));
         break;
     }
     case TypeKind::F32:
     case TypeKind::F64: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::V128: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::Void:
@@ -387,11 +389,11 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     RegisterBinding currentBinding;
     if (resultLocation.isGPR())
-        currentBinding = m_gprBindings[resultLocation.asGPR()];
+        currentBinding = bindingFor(resultLocation.asGPR());
     else if (resultLocation.isFPR())
-        currentBinding = m_fprBindings[resultLocation.asFPR()];
+        currentBinding = bindingFor(resultLocation.asFPR());
     else if (resultLocation.isGPR2())
-        currentBinding = m_gprBindings[resultLocation.asGPRhi()];
+        currentBinding = bindingFor(resultLocation.asGPRhi());
     RELEASE_ASSERT(!currentBinding.isScratch());
 
     bind(result, resultLocation);
@@ -400,4 +402,4 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 } } } // namespace JSC::Wasm::BBQJITImpl
 
 #endif // USE(JSVALUE32_64)
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

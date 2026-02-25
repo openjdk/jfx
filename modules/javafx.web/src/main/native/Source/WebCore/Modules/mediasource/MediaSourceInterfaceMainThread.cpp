@@ -65,7 +65,7 @@ PlatformTimeRanges MediaSourceInterfaceMainThread::buffered() const
     return m_mediaSource->buffered();
 }
 
-Ref<TimeRanges> MediaSourceInterfaceMainThread::seekable() const
+PlatformTimeRanges MediaSourceInterfaceMainThread::seekable() const
 {
     return m_mediaSource->seekable();
 }
@@ -75,7 +75,7 @@ bool MediaSourceInterfaceMainThread::isStreamingContent() const
     if (RefPtr managedMediasource = dynamicDowncast<ManagedMediaSource>(m_mediaSource))
         return managedMediasource && managedMediasource->streamingAllowed() && managedMediasource->streaming();
     // We can assume that if we have active source buffers, later networking activity (such as stream or XHR requests) will be media related.
-    return m_mediaSource->activeSourceBuffers() && m_mediaSource->activeSourceBuffers()->length();
+    return m_mediaSource->activeSourceBuffers()->length();
 }
 
 bool MediaSourceInterfaceMainThread::attachToElement(WeakPtr<HTMLMediaElement>&& element)
@@ -92,6 +92,7 @@ void MediaSourceInterfaceMainThread::elementIsShuttingDown()
 {
     m_mediaSource->elementIsShuttingDown();
 }
+
 void MediaSourceInterfaceMainThread::openIfDeferredOpen()
 {
     m_mediaSource->openIfDeferredOpen();
@@ -110,6 +111,18 @@ void MediaSourceInterfaceMainThread::setAsSrcObject(bool set)
 void MediaSourceInterfaceMainThread::memoryPressure()
 {
     m_mediaSource->memoryPressure();
+}
+
+bool MediaSourceInterfaceMainThread::detachable() const
+{
+    return m_mediaSource->detachable();
+}
+
+void MediaSourceInterfaceMainThread::setLogIdentifier([[maybe_unused]] uint64_t identifier)
+{
+#if !RELEASE_LOG_DISABLED
+    m_mediaSource->setLogIdentifier(identifier);
+#endif
 }
 
 } // namespace WebCore

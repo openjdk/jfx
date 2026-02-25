@@ -32,11 +32,10 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
-#include <wtf/URL.h>
 #include "WebSocketChannelClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
+#include <wtf/URL.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -47,10 +46,14 @@ namespace WebCore {
 
 class Blob;
 class ThreadableWebSocketChannel;
+template<typename> class ExceptionOr;
 
 class WebSocket final : public RefCounted<WebSocket>, public EventTarget, public ActiveDOMObject, private WebSocketChannelClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebSocket);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ASCIILiteral subprotocolSeparator();
 
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url);
@@ -93,10 +96,6 @@ public:
     void setBinaryType(BinaryType);
 
     ScriptExecutionContext* scriptExecutionContext() const final;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit WebSocket(ScriptExecutionContext&);

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2010-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
+ * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,16 @@
 #include "IgnoreDestructiveWriteCountIncrementer.h"
 #include "InlineClassicScript.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MutationObserver.h"
 #include "NestingLevelIncrementer.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLScriptRunner);
 
 using namespace HTMLNames;
 

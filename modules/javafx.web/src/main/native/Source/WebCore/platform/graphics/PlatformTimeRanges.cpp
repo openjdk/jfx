@@ -27,11 +27,15 @@
 #include "PlatformTimeRanges.h"
 
 #include <math.h>
+#include <numeric>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformTimeRanges);
 
 PlatformTimeRanges::PlatformTimeRanges()
 {
@@ -199,10 +203,8 @@ MediaTime PlatformTimeRanges::minimumBufferedTime() const
 
 void PlatformTimeRanges::add(const MediaTime& start, const MediaTime& end, AddTimeRangeOption addTimeRangeOption)
 {
-#if !PLATFORM(MAC) // https://bugs.webkit.org/show_bug.cgi?id=180253
     ASSERT(start.isValid());
     ASSERT(end.isValid());
-#endif
     ASSERT(start <= end);
 
     auto startTime = start;
@@ -230,7 +232,7 @@ void PlatformTimeRanges::add(const MediaTime& start, const MediaTime& end, AddTi
         if (addedRange.isOverlappingRange(m_ranges[overlappingArcIndex]) || addedRange.isContiguousWithRange(m_ranges[overlappingArcIndex])) {
             // We need to merge the addedRange and that range.
             addedRange = addedRange.unionWithOverlappingOrContiguousRange(m_ranges[overlappingArcIndex]);
-            m_ranges.remove(overlappingArcIndex);
+            m_ranges.removeAt(overlappingArcIndex);
             overlappingArcIndex--;
         } else {
             // Check the case for which there is no more to do
@@ -373,7 +375,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
 
     first = 0;
     last = m_ranges.size() - 1;
-    middle = first + ((last - first) / 2);
+    middle = std::midpoint(first, last);
 
     while (first < last && middle > 0) {
         if (m_ranges[middle].isBeforeRange(range)) {
@@ -382,7 +384,7 @@ size_t PlatformTimeRanges::findLastRangeIndexBefore(const MediaTime& start, cons
         } else
             last = middle - 1;
 
-        middle = first + ((last - first) / 2);
+        middle = std::midpoint(first, last);
     }
     return index;
 }

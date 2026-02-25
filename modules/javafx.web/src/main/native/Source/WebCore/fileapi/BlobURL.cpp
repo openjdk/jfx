@@ -31,7 +31,7 @@
 #include "config.h"
 #include "BlobURL.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "SecurityOrigin.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/URL.h>
@@ -58,7 +58,7 @@ static const Document* blobOwner(const SecurityOrigin& blobOrigin)
         return nullptr;
 
     for (auto& document : Document::allDocuments()) {
-        if (document->securityOrigin().isSameOriginAs(blobOrigin))
+        if (document->protectedSecurityOrigin()->isSameOriginAs(blobOrigin))
             return document.ptr();
     }
     return nullptr;
@@ -77,7 +77,7 @@ bool BlobURL::isSecureBlobURL(const URL& url)
 
     // As per https://github.com/w3c/webappsec-mixed-content/issues/41, Blob URL is secure if the document that created it is secure.
     if (auto origin = ThreadableBlobRegistry::getCachedOrigin(url)) {
-        if (auto* document = blobOwner(*origin))
+        if (RefPtr document = blobOwner(*origin))
             return document->isSecureContext();
     }
     return SecurityOrigin::isSecure(getOriginURL(url));

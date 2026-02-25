@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,14 +67,15 @@ final class TokenStorage {
     private static final String REL_NAME_SECONDARY =
             ".awt/robot/screencast-tokens.properties";
 
+    private static final String REL_RD_NAME =
+            ".java/robot/remote-desktop-tokens.properties";
+
     private static final Properties PROPS = new Properties();
     private static final Path PROPS_PATH;
     private static final Path PROP_FILENAME;
 
     static {
-        Path propsPath = setupPath();
-
-        PROPS_PATH = propsPath;
+        PROPS_PATH = setupPath();
 
         if (PROPS_PATH != null) {
             PROP_FILENAME = PROPS_PATH.getFileName();
@@ -95,12 +96,19 @@ final class TokenStorage {
             return null;
         }
 
-        Path primaryPath = Path.of(userHome, REL_NAME);
-        Path secondaryPath = Path.of(userHome, REL_NAME_SECONDARY);
+        Path path;
+        Path secondaryPath = null;
 
-        Path path = Files.isWritable(secondaryPath) && !Files.isWritable(primaryPath)
-                ? secondaryPath
-                : primaryPath;
+        if (XdgDesktopPortal.isRemoteDesktop()) {
+            path = Path.of(userHome, REL_RD_NAME);
+        } else {
+            path = Path.of(userHome, REL_NAME);
+            secondaryPath = Path.of(userHome, REL_NAME_SECONDARY);
+        }
+
+        boolean copyFromSecondary = !Files.isWritable(path)
+                && secondaryPath != null && Files.isWritable(secondaryPath);
+
         Path workdir = path.getParent();
 
         if (!Files.isWritable(path)) {
@@ -138,7 +146,17 @@ final class TokenStorage {
             }
         }
 
-        if (Files.exists(path)) {
+        if (copyFromSecondary) {
+            if (SCREENCAST_DEBUG) {
+                System.out.println("Token storage: copying from the secondary location "
+                                        + secondaryPath);
+            }
+            synchronized (PROPS) {
+                if (readTokens(secondaryPath)) {
+                    store(path, "copy from the secondary location");
+                }
+            }
+        } else if (Files.exists(path)) {
             if (!setFilePermission(path)) {
                 return null;
             }
@@ -166,7 +184,7 @@ final class TokenStorage {
         return false;
     }
 
-    private static class WatcherThread extends Thread {
+    private static final class WatcherThread extends Thread {
         private final WatchService watcher;
 
         public WatcherThread(WatchService watchService) {
@@ -293,7 +311,7 @@ final class TokenStorage {
             }
 
             if (changed) {
-                store("save tokens");
+                store(PROPS_PATH, "save tokens");
             }
         }
     }
@@ -306,7 +324,7 @@ final class TokenStorage {
                 PROPS.clear();
                 PROPS.load(reader);
             }
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             if (SCREENCAST_DEBUG) {
                 System.err.printf("""
                         Token storage: failed to load property file %s
@@ -401,7 +419,7 @@ final class TokenStorage {
     }
 
     private static void removeMalformedRecords(Set<String> malformedRecords) {
-        if (!isWritable()
+        if (!isWritable(PROPS_PATH)
             || malformedRecords == null
             || malformedRecords.isEmpty()) {
             return;
@@ -415,17 +433,17 @@ final class TokenStorage {
                 }
             }
 
-            store("remove malformed records");
+            store(PROPS_PATH, "remove malformed records");
         }
     }
 
-    private static void store(String failMsg) {
-        if (!isWritable()) {
+    private static void store(Path path, String failMsg) {
+        if (!isWritable(path)) {
             return;
         }
 
         synchronized (PROPS) {
-            try (BufferedWriter writer = Files.newBufferedWriter(PROPS_PATH)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(path)) {
                 PROPS.store(writer, null);
             } catch (IOException e) {
                 if (SCREENCAST_DEBUG) {
@@ -436,13 +454,13 @@ final class TokenStorage {
         }
     }
 
-    private static boolean isWritable() {
-        if (PROPS_PATH == null
-            || (Files.exists(PROPS_PATH) && !Files.isWritable(PROPS_PATH))) {
+    private static boolean isWritable(Path path) {
+        if (path == null
+            || (Files.exists(path) && !Files.isWritable(path))) {
 
             if (SCREENCAST_DEBUG) {
                 System.err.printf(
-                        "Token storage: %s is not writable\n", PROPS_PATH);
+                        "Token storage: %s is not writable\n", path);
             }
             return false;
         } else {

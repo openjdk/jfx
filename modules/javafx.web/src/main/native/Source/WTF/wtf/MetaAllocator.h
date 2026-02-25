@@ -42,7 +42,7 @@ namespace WTF {
 #define ENABLE_META_ALLOCATOR_PROFILE 0
 
 class MetaAllocatorTracker {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MetaAllocatorTracker);
 public:
     void notify(MetaAllocatorHandle&);
     void release(MetaAllocatorHandle&);
@@ -88,7 +88,7 @@ public:
 
     // Atomic method for getting allocator statistics.
     struct Statistics {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Statistics);
         size_t bytesAllocated;
         size_t bytesReserved;
         size_t bytesCommitted;
@@ -189,9 +189,9 @@ private:
     unsigned m_logPageSize;
 
     Tree m_freeSpaceSizeMap;
-    HashMap<FreeSpacePtr, FreeSpaceNode*> m_freeSpaceStartAddressMap;
-    HashMap<FreeSpacePtr, FreeSpaceNode*> m_freeSpaceEndAddressMap;
-    HashMap<uintptr_t, size_t> m_pageOccupancyMap;
+    UncheckedKeyHashMap<FreeSpacePtr, FreeSpaceNode*> m_freeSpaceStartAddressMap;
+    UncheckedKeyHashMap<FreeSpacePtr, FreeSpaceNode*> m_freeSpaceEndAddressMap;
+    UncheckedKeyHashMap<uintptr_t, size_t> m_pageOccupancyMap;
 
     size_t m_bytesAllocated;
     size_t m_bytesReserved;

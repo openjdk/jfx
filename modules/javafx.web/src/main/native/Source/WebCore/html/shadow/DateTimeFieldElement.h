@@ -26,11 +26,10 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "HTMLDivElement.h"
 
 #include <wtf/GregorianDateTime.h>
+#include <wtf/ValueOrReference.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -84,7 +83,7 @@ public:
     virtual void setValueAsInteger(int, EventBehavior = DispatchNoEvent) = 0;
     virtual void stepDown() = 0;
     virtual void stepUp() = 0;
-    virtual String value() const = 0;
+    virtual ValueOrReference<String> value() const = 0;
     virtual String placeholderValue() const = 0;
 
 protected:
@@ -99,7 +98,7 @@ protected:
     virtual void handleBlurEvent(Event&);
 
 private:
-    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
 
     bool supportsFocus() const override;
 
@@ -112,5 +111,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

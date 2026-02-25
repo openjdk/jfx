@@ -33,8 +33,8 @@
 #include "ActiveDOMObject.h"
 #include "DOMException.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ExceptionCode.h"
-#include "ExceptionOr.h"
 #include "FileReaderLoader.h"
 #include "FileReaderLoaderClient.h"
 #include "FileReaderSync.h"
@@ -48,10 +48,14 @@ class ArrayBuffer;
 namespace WebCore {
 
 class Blob;
+template<typename> class ExceptionOr;
 
 class FileReader final : public RefCounted<FileReader>, public ActiveDOMObject, public EventTarget, private FileReaderLoaderClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FileReader);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<FileReader> create(ScriptExecutionContext&);
 
     virtual ~FileReader();
@@ -73,11 +77,7 @@ public:
     ReadyState readyState() const { return m_state; }
     DOMException* error() { return m_error.get(); }
     FileReaderLoader::ReadType readType() const { return m_readType; }
-    std::optional<std::variant<String, RefPtr<JSC::ArrayBuffer>>> result() const;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    std::optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> result() const;
 
 private:
     explicit FileReader(ScriptExecutionContext&);
@@ -91,7 +91,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    void enqueueTask(Function<void()>&&);
+    void enqueueTask(Function<void(FileReader&)>&&);
 
     void didStartLoading() final;
     void didReceiveData() final;
@@ -110,7 +110,7 @@ private:
     std::unique_ptr<FileReaderLoader> m_loader;
     RefPtr<DOMException> m_error;
     MonotonicTime m_lastProgressNotificationTime { MonotonicTime::nan() };
-    HashMap<uint64_t, Function<void()>> m_pendingTasks;
+    HashMap<uint64_t, Function<void(FileReader&)>> m_pendingTasks;
 };
 
 } // namespace WebCore

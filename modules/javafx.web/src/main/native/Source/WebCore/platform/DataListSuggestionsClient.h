@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(DATALIST_ELEMENT)
-
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -34,7 +33,9 @@ namespace WebCore {
 class IntRect;
 struct DataListSuggestion;
 
-class DataListSuggestionsClient {
+class DataListSuggestionsClient : public CanMakeCheckedPtr<DataListSuggestionsClient> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DataListSuggestionsClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DataListSuggestionsClient);
 public:
     virtual ~DataListSuggestionsClient() = default;
 
@@ -46,5 +47,3 @@ public:
 };
 
 }
-
-#endif // ENABLE(DATALIST_ELEMENT)

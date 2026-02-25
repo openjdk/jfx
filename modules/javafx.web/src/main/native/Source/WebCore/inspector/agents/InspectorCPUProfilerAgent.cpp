@@ -32,21 +32,24 @@
 #include "ResourceUsageThread.h"
 #include <JavaScriptCore/InspectorEnvironment.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorCPUProfilerAgent);
+
 InspectorCPUProfilerAgent::InspectorCPUProfilerAgent(PageAgentContext& context)
     : InspectorAgentBase("CPUProfiler"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::CPUProfilerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::CPUProfilerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::CPUProfilerBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
 InspectorCPUProfilerAgent::~InspectorCPUProfilerAgent() = default;
 
-void InspectorCPUProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorCPUProfilerAgent::didCreateFrontendAndBackend()
 {
     m_instrumentingAgents.setPersistentCPUProfilerAgent(this);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "StyleChange.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -44,7 +45,7 @@ namespace Style {
 
 struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
-    Change change { Change::None };
+    OptionSet<Change> changes { };
     bool recompositeLayer { false };
     bool mayNeedRebuildRoot { false };
 };
@@ -56,7 +57,7 @@ struct TextUpdate {
 };
 
 class Update final : public CanMakeCheckedPtr<Update> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Update);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Update);
 public:
     Update(Document&);
@@ -90,7 +91,7 @@ private:
     void addPossibleRoot(Element*);
     void addPossibleRebuildRoot(Element&, Element* parent);
 
-    Ref<Document> m_document;
+    const Ref<Document> m_document;
     ListHashSet<RefPtr<ContainerNode>> m_roots;
     ListHashSet<RefPtr<Element>> m_rebuildRoots;
     HashMap<RefPtr<const Element>, ElementUpdate> m_elements;

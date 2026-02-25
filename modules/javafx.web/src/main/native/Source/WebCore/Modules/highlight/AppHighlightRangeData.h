@@ -27,18 +27,19 @@
 
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 #if ENABLE(APP_HIGHLIGHTS)
 
-class FragmentedSharedBuffer;
+class SharedBuffer;
 
 class AppHighlightRangeData {
-WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AppHighlightRangeData, WEBCORE_EXPORT);
 public:
-    WEBCORE_EXPORT static std::optional<AppHighlightRangeData> create(const FragmentedSharedBuffer&);
+    WEBCORE_EXPORT static std::optional<AppHighlightRangeData> create(const SharedBuffer&);
     struct NodePathComponent {
         String identifier;
         String nodeName;
@@ -97,7 +98,7 @@ public:
     const NodePath& endContainer() const { return m_endContainer; }
     uint32_t endOffset() const { return m_endOffset; }
 
-    Ref<FragmentedSharedBuffer> toSharedBuffer() const;
+    Ref<SharedBuffer> toSharedBuffer() const;
 
 private:
     String m_identifier;

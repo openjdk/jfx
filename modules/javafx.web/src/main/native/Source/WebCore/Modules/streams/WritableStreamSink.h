@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferred.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/RefCounted.h>
@@ -37,6 +36,8 @@ class JSValue;
 }
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class WritableStreamSink : public RefCounted<WritableStreamSink> {
 public:

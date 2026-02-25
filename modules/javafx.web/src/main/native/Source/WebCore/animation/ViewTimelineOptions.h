@@ -32,10 +32,13 @@
 
 namespace WebCore {
 
+using ViewTimelineIndividualInset = Variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
+using ViewTimelineInsetValue = Variant<String, Vector<ViewTimelineIndividualInset>>;
+
 struct ViewTimelineOptions {
     RefPtr<Element> subject;
     ScrollAxis axis;
-    std::variant<String, Vector<std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>>> inset;
+    ViewTimelineInsetValue inset;
 };
 
 } // namespace WebCore

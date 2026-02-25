@@ -30,13 +30,14 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class DateTimeLocalInputType final : public BaseDateAndTimeInputType {
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeLocalInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeLocalInputType);
 public:
     static Ref<DateTimeLocalInputType> create(HTMLInputElement& element)
     {
@@ -56,7 +57,7 @@ private:
     StepRange createStepRange(AnyStepHandling) const final;
     std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;
@@ -66,5 +67,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(DateTimeLocalInputType, Type::DateTimeLocal)
-
-#endif

@@ -26,24 +26,30 @@
 #include "config.h"
 #include "CrashReporter.h"
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/spi/cocoa/CrashReporterClientSPI.h>
+#include <wtf/text/CString.h>
 
+#ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
+CRASHREPORTER_ANNOTATIONS_INITIALIZER()
+#else
 // Avoid having to link with libCrashReporterClient.a
 CRASH_REPORTER_CLIENT_HIDDEN
 struct crashreporter_annotations_t gCRAnnotations
     __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION)))
     = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0, 0 };
+#endif // CRASHREPORTER_ANNOTATIONS_INITIALIZER
 
 namespace WTF {
 void setCrashLogMessage(const char* message)
 {
     // We have to copy the string because CRSetCrashLogMessage doesn't.
-    char* copiedMessage = message ? strdup(message) : nullptr;
+    CString copiedMessage = message;
 
-    CRSetCrashLogMessage(copiedMessage);
+    CRSetCrashLogMessage(copiedMessage.data());
 
     // Delete the message from last time, so we don't keep leaking messages.
-    static char* previousCopiedCrashLogMessage;
-    std::free(std::exchange(previousCopiedCrashLogMessage, copiedMessage));
+    static NeverDestroyed<CString> previousCopiedCrashLogMessage;
+    previousCopiedCrashLogMessage.get() = WTFMove(copiedMessage);
 }
 }

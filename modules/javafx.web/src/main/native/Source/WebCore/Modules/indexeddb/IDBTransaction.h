@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 #pragma once
 
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
 #include "IDBGetAllRecordsData.h"
 #include "IDBGetRecordData.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBKeyRangeData.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBOpenDBRequest.h"
@@ -145,8 +147,8 @@ public:
     bool didDispatchAbortOrCommit() const { return m_didDispatchAbortOrCommit; }
 
     IDBClient::IDBConnectionProxy& connectionProxy();
-
     void connectionClosedFromServer(const IDBError&);
+    void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
 
     template<typename Visitor> void visitReferencedObjectStores(Visitor&) const;
 
@@ -193,13 +195,13 @@ private:
     void createIndexOnServer(IDBClient::TransactionOperation&, const IDBIndexInfo&);
     void didCreateIndexOnServer(const IDBResultData&);
 
-    void renameIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, const uint64_t& indexIdentifier, const String& newName);
+    void renameIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
     void didRenameIndexOnServer(const IDBResultData&);
 
     void clearObjectStoreOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier);
     void didClearObjectStoreOnServer(IDBRequest&, const IDBResultData&);
 
-    void putOrAddOnServer(IDBClient::TransactionOperation&, RefPtr<IDBKey>, RefPtr<SerializedScriptValue>, const IndexedDB::ObjectStoreOverwriteMode&);
+    void putOrAddOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&, RefPtr<IDBKey>&&, Ref<SerializedScriptValue>&&, const IndexedDB::ObjectStoreOverwriteMode&);
     void didPutOrAddOnServer(IDBRequest&, const IDBResultData&);
 
     void getRecordOnServer(IDBClient::TransactionOperation&, const IDBGetRecordData&);
@@ -237,7 +239,7 @@ private:
     void trySchedulePendingOperationTimer();
     void addCursorRequest(IDBRequest&);
 
-    Ref<IDBDatabase> m_database;
+    const Ref<IDBDatabase> m_database;
     IDBTransactionInfo m_info;
 
     IndexedDB::TransactionState m_state { IndexedDB::TransactionState::Inactive };
@@ -250,7 +252,7 @@ private:
     WeakHashSet<IDBRequest, WeakPtrImplWithEventTargetData> m_cursorRequests;
 
     Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
-    Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
+    Deque<RefPtr<IDBClient::TransactionOperation>> m_transactionOperationsInProgressQueue;
     Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
     HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
     HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;
@@ -277,18 +279,18 @@ public:
     TransactionActivator(IDBTransaction* transaction)
         : m_transaction(transaction)
     {
-        if (m_transaction)
-            m_transaction->activate();
+        if (transaction)
+            transaction->activate();
     }
 
     ~TransactionActivator()
     {
-        if (m_transaction)
-            m_transaction->deactivate();
+        if (RefPtr transaction = m_transaction)
+            transaction->deactivate();
     }
 
 private:
-    IDBTransaction* m_transaction;
+    RefPtr<IDBTransaction> m_transaction;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 #include "AXTreeStore.h"
 #include "AccessibilityObject.h"
 #include "SimpleRange.h"
+#include "StyleChange.h"
 #include "Timer.h"
 #include "VisibleUnits.h"
 #include <limits.h>
+#include <wtf/Compiler.h>
+#include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -51,15 +54,19 @@ class TextStream;
 namespace WebCore {
 
 class AXRemoteFrame;
+class AccessibilityNodeObject;
+class AccessibilityRenderObject;
 class AccessibilityTable;
 class AccessibilityTableCell;
 class Document;
 class HTMLAreaElement;
+class HTMLDetailsElement;
 class HTMLTableElement;
 class HTMLTextFormControlElement;
 class Node;
 class Page;
 class RenderBlock;
+class RenderImage;
 class RenderObject;
 class RenderStyle;
 class RenderText;
@@ -68,6 +75,7 @@ class Scrollbar;
 class ScrollView;
 class VisiblePosition;
 class Widget;
+enum class AXStreamOptions : uint16_t;
 
 struct CharacterOffset {
     RefPtr<Node> node;
@@ -99,7 +107,7 @@ struct CharacterOffset {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXComputedObjectAttributeCache);
 class AXComputedObjectAttributeCache {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXComputedObjectAttributeCache);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXComputedObjectAttributeCache, AXComputedObjectAttributeCache);
 public:
     AccessibilityObjectInclusion getIgnored(AXID) const;
     void setIgnored(AXID, AccessibilityObjectInclusion);
@@ -132,6 +140,25 @@ struct AXTreeData {
     String isolatedTree;
 };
 
+// When this is updated, WebCoreArgumentCoders.serialization.in must be updated as well.
+struct AXDebugInfo {
+    bool isAccessibilityEnabled;
+    bool isAccessibilityThreadInitialized;
+    String liveTree;
+    String isolatedTree;
+    uint64_t remoteTokenHash;
+    uint64_t webProcessLocalTokenHash;
+};
+
+#if PLATFORM(COCOA)
+struct AXTextChangeContext {
+    AXTextStateChangeIntent intent;
+    String deletedText;
+    String insertedText;
+    VisibleSelection selection;
+};
+#endif // PLATFORM(COCOA)
+
 class AccessibilityReplacedText {
 public:
     AccessibilityReplacedText() = default;
@@ -150,7 +177,10 @@ protected:
     macro(AutocorrectionOccured) \
     macro(AutofillTypeChanged) \
     macro(ARIAColumnIndexChanged) \
+    macro(ARIAColumnIndexTextChanged) \
+    macro(ARIARoleDescriptionChanged) \
     macro(ARIARowIndexChanged) \
+    macro(ARIARowIndexTextChanged) \
     macro(BrailleLabelChanged) \
     macro(BrailleRoleDescriptionChanged) \
     macro(CellSlotsChanged) \
@@ -159,22 +189,30 @@ protected:
     macro(ColumnCountChanged) \
     macro(ColumnIndexChanged) \
     macro(ColumnSpanChanged) \
+    macro(CommandChanged) \
+    macro(CommandForChanged) \
     macro(ContentEditableAttributeChanged) \
     macro(ControlledObjectsChanged) \
     macro(CurrentStateChanged) \
+    macro(DatetimeChanged) \
     macro(DescribedByChanged) \
     macro(DisabledStateChanged) \
+    macro(DraggableStateChanged) \
     macro(DropEffectChanged) \
     macro(ExtendedDescriptionChanged) \
     macro(FlowToChanged) \
     macro(FocusableStateChanged) \
     macro(FocusedUIElementChanged) \
+    macro(FontChanged) \
     macro(FrameLoadComplete) \
     macro(GrabbedStateChanged) \
     macro(HasPopupChanged) \
     macro(IdAttributeChanged) \
     macro(ImageOverlayChanged) \
+    macro(InertOrVisibilityChanged) \
+    macro(InputTypeChanged) \
     macro(IsAtomicChanged) \
+    macro(IsEditableWebAreaChanged) \
     macro(KeyShortcutsChanged) \
     macro(LabelChanged) \
     macro(LanguageChanged) \
@@ -188,7 +226,6 @@ protected:
     macro(PopoverTargetChanged) \
     macro(PositionInSetChanged) \
     macro(RoleChanged) \
-    macro(RoleDescriptionChanged) \
     macro(RowIndexChanged) \
     macro(RowSpanChanged) \
     macro(CellScopeChanged) \
@@ -197,12 +234,13 @@ protected:
     macro(SelectedStateChanged) \
     macro(SelectedTextChanged) \
     macro(SetSizeChanged) \
-    macro(TableHeadersChanged) \
+    macro(TextColorChanged) \
     macro(TextCompositionBegan) \
     macro(TextCompositionEnded) \
     macro(URLChanged) \
     macro(ValueChanged) \
     macro(VisibilityChanged) \
+    macro(VisitedStateChanged) \
     macro(ScrolledToAnchor) \
     macro(LiveRegionCreated) \
     macro(LiveRegionChanged) \
@@ -227,6 +265,7 @@ protected:
     macro(ReadOnlyStatusChanged) \
     macro(RequiredStatusChanged) \
     macro(SortDirectionChanged) \
+    macro(SpeakAsChanged) \
     macro(TextChanged) \
     macro(TextCompositionChanged) \
     macro(TextUnderElementChanged) \
@@ -247,8 +286,21 @@ protected:
     WEBCORE_AXNOTIFICATION_KEYS_DEFAULT(macro)
 #endif
 
+enum class AXNotification {
+#define WEBCORE_DEFINE_AXNOTIFICATION_ENUM(name) name,
+WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_DEFINE_AXNOTIFICATION_ENUM)
+#undef WEBCORE_DEFINE_AXNOTIFICATION_ENUM
+};
+
+enum class AXLoadingEvent : uint8_t {
+    Started,
+    Reloaded,
+    Failed,
+    Finished
+};
+
 #if !PLATFORM(COCOA)
-enum AXTextChange { AXTextInserted, AXTextDeleted, AXTextAttributesChanged };
+enum class AXTextChange : uint8_t { Inserted, Deleted, Replaced, AttributesChanged };
 #endif
 
 enum class PostTarget { Element, ObservableParent };
@@ -257,19 +309,22 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXObjectCache);
 class AXObjectCache final : public CanMakeWeakPtr<AXObjectCache>, public CanMakeCheckedPtr<AXObjectCache>
     , public AXTreeStore<AXObjectCache> {
     WTF_MAKE_NONCOPYABLE(AXObjectCache);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXObjectCache);
+    WTF_MAKE_TZONE_ALLOCATED(AXObjectCache);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AXObjectCache);
     friend class AXIsolatedTree;
     friend class AXTextMarker;
     friend WTF::TextStream& operator<<(WTF::TextStream&, AXObjectCache&);
 public:
-    explicit AXObjectCache(Document&);
+    explicit AXObjectCache(Page&, Document*);
     ~AXObjectCache();
 
-    // Returns the root object for the entire document.
-    WEBCORE_EXPORT AXCoreObject* rootObject();
+    String debugDescription() const;
+
     // Returns the root object for a specific frame.
-    WEBCORE_EXPORT AccessibilityObject* rootObjectForFrame(LocalFrame*);
+    WEBCORE_EXPORT AXCoreObject* rootObjectForFrame(LocalFrame&);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    WEBCORE_EXPORT void buildIsolatedTreeIfNeeded();
+#endif
 
     // Creation/retrieval of AX objects associated with a DOM or RenderTree object.
     inline AccessibilityObject* getOrCreate(RenderObject* renderer)
@@ -299,13 +354,21 @@ public:
     {
         return renderer ? get(*renderer) : nullptr;
     }
-    AccessibilityObject* get(RenderObject&) const;
+    inline AccessibilityObject* get(RenderObject& renderer) const
+    {
+        auto axID = m_renderObjectMapping.getOptional(renderer);
+        return axID ? m_objects.get(*axID) : nullptr;
+    }
 
     inline AccessibilityObject* get(Widget* widget) const
     {
         return widget ? get(*widget) : nullptr;
     }
-    AccessibilityObject* get(Widget&) const;
+    inline AccessibilityObject* get(Widget& widget) const
+    {
+        auto axID = m_widgetObjectMapping.getOptional(widget);
+        return axID ? m_objects.get(*axID) : nullptr;
+    }
 
     inline AccessibilityObject* get(Node* node) const
     {
@@ -313,16 +376,16 @@ public:
     }
     AccessibilityObject* get(Node&) const;
 
-    void remove(RenderObject*);
+    void remove(RenderObject&);
     void remove(Node&);
-    void remove(Widget*);
-    void remove(AXID);
+    void remove(Widget&);
+    void remove(std::optional<AXID>);
 
 #if !PLATFORM(COCOA) && !USE(ATSPI)
     void detachWrapper(AXCoreObject*, AccessibilityDetachmentType);
 #endif
 private:
-    using DOMObjectVariant = std::variant<std::nullptr_t, RenderObject*, Node*, Widget*>;
+    using DOMObjectVariant = Variant<std::nullptr_t, RenderObject*, Node*, Widget*>;
     void cacheAndInitializeWrapper(AccessibilityObject&, DOMObjectVariant = nullptr);
     void attachWrapper(AccessibilityObject&);
 
@@ -331,22 +394,48 @@ public:
     void setPageActivityState(OptionSet<ActivityState> state) { m_pageActivityState = state; }
     OptionSet<ActivityState> pageActivityState() const { return m_pageActivityState; }
 
-    void childrenChanged(Node*, Node* newChild = nullptr);
-    void childrenChanged(RenderObject*, RenderObject* newChild = nullptr);
+    inline void childrenChanged(Node& node)
+    {
+        if (!node.renderer()) {
+            // We only need to handle DOM changes for things that don't have renderers.
+            // If something does have a renderer, we would already get children-changed notifications
+            // from the render tree.
+            childrenChanged(get(node));
+        }
+    }
+    void childrenChanged(RenderObject&, RenderObject* newChild = nullptr);
     void childrenChanged(AccessibilityObject*);
+    void onDragElementChanged(Element* oldElement, Element* newElement);
+    void onEventListenerAdded(Node&, const AtomString& eventType);
+    void onEventListenerRemoved(Node&, const AtomString& eventType);
     void onFocusChange(Element* oldElement, Element* newElement);
+    void onInertOrVisibilityChange(RenderElement&);
     void onPopoverToggle(const HTMLElement&);
     void onScrollbarFrameRectChange(const Scrollbar&);
-    void onSelectedChanged(Node&);
+    void onSelectedChanged(Element&);
+    void onSelectedTextChanged(const VisiblePositionRange&, AccessibilityObject* = nullptr);
+    void onSlottedContentChange(const HTMLSlotElement&);
+    void onStyleChange(Element&, OptionSet<Style::Change>, const RenderStyle* oldStyle, const RenderStyle* newStyle);
+    void onStyleChange(RenderText&, StyleDifference, const RenderStyle* oldStyle, const RenderStyle& newStyle);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void onAccessibilityPaintStarted();
+    void onAccessibilityPaintFinished();
+    // Returns true if the font changes, requiring all descendants to update the Font property.
+    bool onFontChange(Element&, const RenderStyle*, const RenderStyle*);
+    // Returns true if the text color changes, requiring all descendants to update the TextColor property.
+    bool onTextColorChange(Element&, const RenderStyle*, const RenderStyle*);
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void onTextSecurityChanged(HTMLInputElement&);
     void onTitleChange(Document&);
     void onValidityChange(Element&);
     void onTextCompositionChange(Node&, CompositionState, bool, const String&, size_t, bool);
     void onWidgetVisibilityChanged(RenderWidget&);
     void valueChanged(Element&);
-    void checkedStateChanged(Node&);
-    void autofillTypeChanged(Node&);
-    void handleRoleChanged(AccessibilityObject&);
+    void checkedStateChanged(Element&);
+    void autofillTypeChanged(HTMLInputElement&);
+    void handleRoleChanged(AccessibilityObject&, AccessibilityRole previousRole);
+    void handleReferenceTargetChanged();
+    void handlePageEditibilityChanged(Document&);
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void columnIndexChanged(AccessibilityObject&);
@@ -358,8 +447,12 @@ public:
     // an AXNodeObject. This occurs when an Element with no renderer is
     // re-parented into a subtree that does have a renderer.
     void onRendererCreated(Element&);
+    // Similar to the above, but for when a RenderText is created for a Text node.
+    // We may have already created an AccessibilityNodeObject for the Text, so this
+    // method allows us to make any appropriate changes now that the Text has a renderer.
+    void onRendererCreated(Text&);
 #if PLATFORM(MAC)
-    void onSelectedTextChanged(const VisiblePositionRange&);
+    void onDocumentRenderTreeCreation(const Document&);
 #endif
 #if ENABLE(AX_THREAD_TEXT_APIS)
     void onTextRunsChanged(const RenderObject&);
@@ -374,7 +467,7 @@ public:
         AtomString oldValue;
         AtomString newValue;
     };
-    using DeferredCollection = std::variant<HashMap<Element*, String>
+    using DeferredCollection = Variant<HashMap<Element*, String>
         , HashSet<AXID>
         , ListHashSet<Node*>
         , ListHashSet<Ref<AccessibilityObject>>
@@ -386,12 +479,13 @@ public:
         , WeakHashSet<AccessibilityTable>
         , WeakHashSet<AccessibilityTableCell>
         , WeakListHashSet<Node, WeakPtrImplWithEventTargetData>
+        , WeakListHashSet<Element, WeakPtrImplWithEventTargetData>
         , WeakHashMap<Element, String, WeakPtrImplWithEventTargetData>>;
     void deferFocusedUIElementChangeIfNeeded(Node* oldFocusedNode, Node* newFocusedNode);
     void deferModalChange(Element&);
     void deferMenuListValueChange(Element*);
-    void deferNodeAddedOrRemoved(Node*);
-    void handleScrolledToAnchor(const Node* anchorNode);
+    void deferElementAddedOrRemoved(Element*);
+    void handleScrolledToAnchor(const Node& anchorNode);
     void onScrollbarUpdate(ScrollView&);
     void onRemoteFrameInitialized(AXRemoteFrame&);
 
@@ -399,11 +493,14 @@ public:
     Node* modalNode();
 
     void deferAttributeChangeIfNeeded(Element&, const QualifiedName&, const AtomString&, const AtomString&);
-    void recomputeIsIgnored(RenderObject*);
+    void recomputeIsIgnored(RenderObject&);
     void recomputeIsIgnored(Node*);
 
     static void enableAccessibility();
     static void disableAccessibility();
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT static bool isAppleInternalInstall();
+#endif
     static bool forceDeferredSpellChecking();
     static void setForceDeferredSpellChecking(bool);
 #if PLATFORM(MAC)
@@ -421,6 +518,12 @@ public:
     WEBCORE_EXPORT static bool accessibilityEnhancedUserInterfaceEnabled();
 #if ENABLE(AX_THREAD_TEXT_APIS)
     static bool useAXThreadTextApis() { return gAccessibilityThreadTextApisEnabled && !isMainThread(); }
+    static bool shouldCreateAXThreadCompatibleMarkers() { return gAccessibilityThreadTextApisEnabled && isIsolatedTreeEnabled(); }
+#endif
+
+#if PLATFORM(COCOA)
+    static void initializeUserDefaultValues();
+    static bool accessibilityDOMIdentifiersEnabled() { return gAccessibilityDOMIdentifiersEnabled; }
 #endif
 
     static bool forceInitialFrameCaching() { return gForceInitialFrameCaching; }
@@ -430,23 +533,25 @@ public:
 #endif
 
     const Element* rootAXEditableElement(const Node*);
-    bool nodeIsTextControl(const Node&);
+    bool elementIsTextControl(const Element&);
 
     AccessibilityObject* objectForID(const AXID id) const { return m_objects.get(id); }
-    template<typename U> Vector<RefPtr<AXCoreObject>> objectsForIDs(const U&) const;
-    Node* nodeForID(const AXID) const;
+    template<typename U> Vector<Ref<AXCoreObject>> objectsForIDs(const U&) const;
+    Node* nodeForID(std::optional<AXID>) const;
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void onPaint(const RenderObject&, IntRect&&) const;
     void onPaint(const Widget&, IntRect&&) const;
+    void onPaint(const RenderText&, size_t lineIndex);
 #else
     NO_RETURN_DUE_TO_ASSERT void onPaint(const RenderObject&, IntRect&&) const { ASSERT_NOT_REACHED(); }
     NO_RETURN_DUE_TO_ASSERT void onPaint(const Widget&, IntRect&&) const { ASSERT_NOT_REACHED(); }
+    NO_RETURN_DUE_TO_ASSERT void onPaint(const RenderText&, size_t) { ASSERT_NOT_REACHED(); }
 #endif
 
     // Text marker utilities.
-    std::optional<TextMarkerData> textMarkerDataForVisiblePosition(const VisiblePosition&);
-    TextMarkerData textMarkerDataForCharacterOffset(const CharacterOffset&);
+    std::optional<TextMarkerData> textMarkerDataForVisiblePosition(const VisiblePosition&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
+    TextMarkerData textMarkerDataForCharacterOffset(const CharacterOffset&, TextMarkerOrigin = TextMarkerOrigin::Unknown);
     TextMarkerData textMarkerDataForNextCharacterOffset(const CharacterOffset&);
     AXTextMarker nextTextMarker(const AXTextMarker&);
     TextMarkerData textMarkerDataForPreviousCharacterOffset(const CharacterOffset&);
@@ -491,12 +596,6 @@ public:
     // Index
     CharacterOffset characterOffsetForIndex(int, const AXCoreObject*);
 
-    enum AXNotification {
-#define WEBCORE_DEFINE_AXNOTIFICATION_ENUM(name) AX##name,
-    WEBCORE_AXNOTIFICATION_KEYS(WEBCORE_DEFINE_AXNOTIFICATION_ENUM)
-#undef WEBCORE_DEFINE_AXNOTIFICATION_ENUM
-    };
-
     void postNotification(RenderObject*, AXNotification, PostTarget = PostTarget::Element);
     void postNotification(Node*, AXNotification, PostTarget = PostTarget::Element);
     void postNotification(AccessibilityObject*, Document*, AXNotification, PostTarget = PostTarget::Element);
@@ -523,13 +622,6 @@ public:
     void postTextStateChangeNotification(const Position&, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postLiveRegionChangeNotification(AccessibilityObject&);
 
-    enum AXLoadingEvent {
-        AXLoadingStarted,
-        AXLoadingReloaded,
-        AXLoadingFailed,
-        AXLoadingFinished
-    };
-
     void frameLoadingEventNotification(LocalFrame*, AXLoadingEvent);
 
     void prepareForDocumentDestruction(const Document&);
@@ -539,9 +631,27 @@ public:
 
     AXComputedObjectAttributeCache* computedObjectAttributeCache() { return m_computedObjectAttributeCache.get(); }
 
-    Document& document() const { return const_cast<Document&>(m_document.get()); }
-    Ref<Document> protectedDocument() const;
+    Document* document() const { return m_document.get(); }
+    RefPtr<Document> protectedDocument() const;
     constexpr const std::optional<PageIdentifier>& pageID() const { return m_pageID; }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void objectBecameIgnored(const AccessibilityObject& object)
+    {
+        if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
+            tree->objectBecameIgnored(object);
+    }
+
+    void objectBecameUnignored(const AccessibilityObject& object)
+    {
+#if ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+        if (RefPtr tree = AXIsolatedTree::treeForPageID(m_pageID))
+            tree->objectBecameUnignored(object);
+#else
+        UNUSED_PARAM(object);
+#endif // ENABLE(INCLUDE_IGNORED_IN_CORE_AX_TREE)
+    }
+#endif // ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
 #if PLATFORM(MAC)
     static void setShouldRepostNotificationsForTests(bool);
@@ -559,18 +669,26 @@ public:
 
     static ASCIILiteral notificationPlatformName(AXNotification);
 
-    AXTreeData treeData();
+    WEBCORE_EXPORT AXTreeData treeData(std::optional<OptionSet<AXStreamOptions>> = std::nullopt);
 
     enum class UpdateRelations : bool { No, Yes };
     // Returns the IDs of the objects that relate to the given object with the specified relationship.
-    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelationType, UpdateRelations = UpdateRelations::Yes);
+    std::optional<ListHashSet<AXID>> relatedObjectIDsFor(const AXCoreObject&, AXRelation, UpdateRelations = UpdateRelations::Yes);
     void updateRelations(Element&, const QualifiedName&);
 
 #if PLATFORM(IOS_FAMILY)
-    void relayNotification(const String&, RetainPtr<NSData>);
+    void relayNotification(String&&, RetainPtr<NSData>&&);
 #endif
 
 #if PLATFORM(MAC)
+    AXCoreObject::AccessibilityChildrenVector sortedLiveRegions();
+    AXCoreObject::AccessibilityChildrenVector sortedNonRootWebAreas();
+    void deferSortForNewLiveRegion(Ref<AccessibilityObject>&&);
+    void queueUnsortedObject(Ref<AccessibilityObject>&&, PreSortedObjectType);
+    void addSortedObjects(Vector<Ref<AccessibilityObject>>&&, PreSortedObjectType);
+    void removeLiveRegion(AccessibilityObject&);
+    void initializeSortedIDLists();
+
     static bool clientIsInTestMode();
 #endif
 
@@ -579,33 +697,33 @@ public:
     void willUpdateObjectRegions() { m_geometryManager->willUpdateObjectRegions(); }
     WEBCORE_EXPORT static bool isIsolatedTreeEnabled();
     WEBCORE_EXPORT static void initializeAXThreadIfNeeded();
+    WEBCORE_EXPORT static bool isAXThreadInitialized();
+    WEBCORE_EXPORT RefPtr<AXIsolatedTree> getOrCreateIsolatedTree();
 private:
     static bool clientSupportsIsolatedTree();
-    AXCoreObject* isolatedTreeRootObject();
     // Propagates the root of the isolated tree back into the Core and WebKit.
-    void setIsolatedTreeRoot(AXCoreObject*);
+    void setIsolatedTree(Ref<AXIsolatedTree>);
     void setIsolatedTreeFocusedObject(AccessibilityObject*);
-    RefPtr<AXIsolatedTree> getOrCreateIsolatedTree();
     void buildIsolatedTree();
     void updateIsolatedTree(AccessibilityObject&, AXNotification);
     void updateIsolatedTree(AccessibilityObject*, AXNotification);
     void updateIsolatedTree(const Vector<std::pair<Ref<AccessibilityObject>, AXNotification>>&);
-    void updateIsolatedTree(AccessibilityObject*, AXPropertyName) const;
-    void updateIsolatedTree(AccessibilityObject&, AXPropertyName) const;
+    void updateIsolatedTree(AccessibilityObject*, AXProperty) const;
+    void updateIsolatedTree(AccessibilityObject&, AXProperty) const;
     void startUpdateTreeSnapshotTimer();
 #endif
 
 protected:
     void postPlatformNotification(AccessibilityObject&, AXNotification);
-    void platformHandleFocusedUIElementChanged(Node* oldFocusedNode, Node* newFocusedNode);
+    void platformHandleFocusedUIElementChanged(Element* oldFocus, Element* newFocus);
 
     void platformPerformDeferredCacheUpdate();
 
 #if PLATFORM(COCOA) || USE(ATSPI)
-    void postTextStateChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
+    void postTextSelectionChangePlatformNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
     void postTextStateChangePlatformNotification(AccessibilityObject*, AXTextEditType, const String&, const VisiblePosition&);
-    void postTextReplacementPlatformNotificationForTextControl(AccessibilityObject*, const String& deletedText, const String& insertedText);
     void postTextReplacementPlatformNotification(AccessibilityObject*, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&);
+    void postTextReplacementPlatformNotificationForTextControl(AccessibilityObject*, const String& deletedText, const String& insertedText);
 #else // PLATFORM(COCOA) || USE(ATSPI)
     static AXTextChange textChangeForEditType(AXTextEditType);
     void nodeTextChangePlatformNotification(AccessibilityObject*, AXTextChange, unsigned, const String&);
@@ -652,25 +770,26 @@ protected:
 private:
     AccessibilityObject* rootWebArea();
 
+    // Returns the object or nearest render-tree ancestor object that is already created (i.e.
+    // retrievable by |get|, not |getOrCreate|).
+    AccessibilityObject* getIncludingAncestors(RenderObject&) const;
+
     // The AX focus is more finegrained than the notion of focused Node. This method handles those cases where the focused AX object is a descendant or a sub-part of the focused Node.
     AccessibilityObject* focusedObjectForNode(Node*);
     static AccessibilityObject* focusedImageMapUIElement(HTMLAreaElement&);
-
-    AXID getAXID(AccessibilityObject&);
-    AXID generateNewObjectID() const;
 
     void notificationPostTimerFired();
 
     void liveRegionChangedNotificationPostTimerFired();
 
-    void focusCurrentModal();
-
     void performCacheUpdateTimerFired() { performDeferredCacheUpdate(ForceLayout::No); }
 
     void postTextStateChangeNotification(AccessibilityObject*, const AXTextStateChangeIntent&, const VisibleSelection&);
 
-    bool enqueuePasswordValueChangeNotification(AccessibilityObject&);
-    void passwordNotificationPostTimerFired();
+#if PLATFORM(COCOA)
+    bool enqueuePasswordNotification(AccessibilityObject&, AXTextChangeContext&&);
+    void passwordNotificationTimerFired();
+#endif
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void selectedTextRangeTimerFired();
@@ -687,12 +806,13 @@ private:
     void deferRowspanChange(AccessibilityObject*);
     void handleChildrenChanged(AccessibilityObject&);
     void handleAllDeferredChildrenChanged();
+    void handleInputTypeChanged(Element&);
     void handleRoleChanged(Element&, const AtomString&, const AtomString&);
-    void handleRoleDescriptionChanged(Element&);
-    void handleMenuOpened(Node&);
-    void handleLiveRegionCreated(Node&);
-    void handleMenuItemSelected(Node*);
-    void handleTabPanelSelected(Node*, Node*);
+    void handleARIARoleDescriptionChanged(Element&);
+    void handleMenuOpened(Element&);
+    void handleLiveRegionCreated(Element&);
+    void handleMenuItemSelected(Element*);
+    void handleTabPanelSelected(Element*, Element*);
     void handleRowCountChanged(AccessibilityObject*, Document*);
     void handleAttributeChange(Element*, const QualifiedName&, const AtomString&, const AtomString&);
     bool shouldProcessAttributeChange(Element*, const QualifiedName&);
@@ -700,9 +820,9 @@ private:
     void selectedChildrenChanged(RenderObject*);
     void handleScrollbarUpdate(ScrollView&);
     void handleActiveDescendantChange(Element&, const AtomString&, const AtomString&);
-    void handleAriaExpandedChange(Node&);
+    void handleAriaExpandedChange(Element&);
     enum class UpdateModal : bool { No, Yes };
-    void handleFocusedUIElementChanged(Node* oldFocusedNode, Node* newFocusedNode, UpdateModal = UpdateModal::Yes);
+    void handleFocusedUIElementChanged(Element* oldFocus, Element* newFocus, UpdateModal = UpdateModal::Yes);
     void handleMenuListValueChanged(Element&);
     void handleTextChanged(AccessibilityObject*);
     void handleRecomputeCellSlots(AccessibilityTable&);
@@ -713,23 +833,22 @@ private:
     // aria-modal or modal <dialog> related
     bool isModalElement(Element&) const;
     void findModalNodes();
-    enum class WillRecomputeFocus : bool { No, Yes };
-    void updateCurrentModalNode(WillRecomputeFocus = WillRecomputeFocus::No);
-    bool isNodeVisible(Node*) const;
+    void updateCurrentModalNode();
+    bool isNodeVisible(const Node*) const;
     bool modalElementHasAccessibleContent(Element&);
 
     // Relationships between objects.
     static Vector<QualifiedName>& relationAttributes();
-    static AXRelationType attributeToRelationType(const QualifiedName&);
+    static AXRelation attributeToRelationType(const QualifiedName&);
     enum class AddSymmetricRelation : bool { No, Yes };
-    static AXRelationType symmetricRelation(AXRelationType);
-    bool addRelation(Element&, Element&, AXRelationType);
-    bool addRelation(AccessibilityObject*, AccessibilityObject*, AXRelationType, AddSymmetricRelation = AddSymmetricRelation::Yes);
+    static AXRelation symmetricRelation(AXRelation);
+    bool addRelation(Element&, Element&, AXRelation);
+    bool addRelation(AccessibilityObject*, AccessibilityObject*, AXRelation, AddSymmetricRelation = AddSymmetricRelation::Yes);
     bool addRelation(Element&, const QualifiedName&);
     void addLabelForRelation(Element&);
-    bool removeRelation(Element&, AXRelationType);
+    bool removeRelation(Element&, AXRelation);
     void removeAllRelations(AXID);
-    void removeRelationByID(AXID originID, AXID targetID, AXRelationType);
+    void removeRelationByID(AXID originID, AXID targetID, AXRelation);
     void updateLabelFor(HTMLLabelElement&);
     void updateLabeledBy(Element*);
     void updateRelationsIfNeeded();
@@ -737,6 +856,7 @@ private:
     void relationsNeedUpdate(bool);
     void dirtyIsolatedTreeRelations();
     HashMap<AXID, AXRelations> relations();
+    HashMap<AXID, LineRange> mostRecentlyPaintedText();
     const HashSet<AXID>& relationTargetIDs();
     bool isDescendantOfRelatedNode(Node&);
 
@@ -745,17 +865,27 @@ private:
 #endif
 
     // Object creation.
-    Ref<AccessibilityObject> createObjectFromRenderer(RenderObject&);
+    Ref<AccessibilityRenderObject> createObjectFromRenderer(RenderObject&);
+    Ref<AccessibilityNodeObject> createFromNode(Node&);
 
-    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
+    const WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const std::optional<PageIdentifier> m_pageID; // constant for object's lifetime.
     OptionSet<ActivityState> m_pageActivityState;
     HashMap<AXID, Ref<AccessibilityObject>> m_objects;
 
-    // The pointers in these mapping HashMaps should never be dereferenced.
-    HashMap<SingleThreadWeakRef<RenderObject>, AXID> m_renderObjectMapping;
-    HashMap<SingleThreadWeakRef<Widget>, AXID> m_widgetObjectMapping;
-    HashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID> m_nodeObjectMapping;
+    WeakHashMap<RenderObject, AXID, SingleThreadWeakPtrImpl> m_renderObjectMapping;
+    WeakHashMap<Widget, AXID, SingleThreadWeakPtrImpl> m_widgetObjectMapping;
+    // FIXME: The type for m_nodeObjectMapping really should be:
+    // HashMap<WeakRef<Node, WeakPtrImplWithEventTargetData>, AXID>
+    // As this guarantees that we've called AXObjectCache::remove(Node&) for every node we store.
+    // However, in rare circumstances, we can add a node to this map, then later the document associated
+    // with the node loses its m_frame via detachFromFrame(). Then the node gets destroyed, but we can't
+    // clean it up from this map, since existingAXObjectCache fails due to the nullptr m_frame.
+    // This scenario seems extremely rare, and may only happen when the webpage is about to be destroyed anyways,
+    // so, go with WeakHashMap now until we find a completely safe solution based on document / frame lifecycles.
+    WeakHashMap<Node, AXID, WeakPtrImplWithEventTargetData> m_nodeObjectMapping;
+
+    WeakHashMap<RenderText, LineRange, SingleThreadWeakPtrImpl> m_mostRecentlyPaintedText;
 
     std::unique_ptr<AXComputedObjectAttributeCache> m_computedObjectAttributeCache;
 
@@ -771,17 +901,31 @@ private:
     static std::atomic<bool> gAccessibilityThreadTextApisEnabled;
 #endif
 
-    HashSet<AXID> m_idsInUse;
+#if PLATFORM(COCOA)
+    static std::atomic<bool> gAccessibilityDOMIdentifiersEnabled;
+#endif
 
     Timer m_notificationPostTimer;
     Vector<std::pair<Ref<AccessibilityObject>, AXNotification>> m_notificationsToPost;
 
-    Timer m_passwordNotificationPostTimer;
-
-    ListHashSet<Ref<AccessibilityObject>> m_passwordNotificationsToPost;
+#if PLATFORM(COCOA)
+    Timer m_passwordNotificationTimer;
+    Deque<std::pair<Ref<AccessibilityObject>, AXTextChangeContext>> m_passwordNotifications;
+#endif
 
     Timer m_liveRegionChangedPostTimer;
-    ListHashSet<Ref<AccessibilityObject>> m_liveRegionObjects;
+    ListHashSet<Ref<AccessibilityObject>> m_changedLiveRegions;
+
+#if PLATFORM(MAC)
+    // This block is PLATFORM(MAC) because the remote search API is currently only used on macOS.
+
+    // AX tree-order-sorted list of a few types of objects. This is useful because some assistive
+    // technologies send us frequent remote search requests for all the live regions or non-root webareas
+    // on the page.
+    bool m_sortedIDListsInitialized { false };
+    Vector<AXID> m_sortedLiveRegionIDs;
+    Vector<AXID> m_sortedNonRootWebAreaIDs;
+#endif // PLATFORM(MAC)
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_currentModalElement;
     // Multiple aria-modals behavior is undefined by spec. We keep them sorted based on DOM order here.
@@ -802,21 +946,24 @@ private:
     WeakListHashSet<Node, WeakPtrImplWithEventTargetData> m_deferredTextChangedList;
     WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredSelectedChildredChangedList;
     ListHashSet<Ref<AccessibilityObject>> m_deferredChildrenChangedList;
-    WeakListHashSet<Node, WeakPtrImplWithEventTargetData> m_deferredNodeAddedOrRemovedList;
+    WeakListHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredElementAddedOrRemovedList;
     WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredModalChangedList;
     WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_deferredMenuListChange;
     SingleThreadWeakHashSet<ScrollView> m_deferredScrollbarUpdateChangeList;
     WeakHashMap<Element, String, WeakPtrImplWithEventTargetData> m_deferredTextFormControlValue;
     Vector<AttributeChange> m_deferredAttributeChange;
-    std::optional<std::pair<WeakPtr<Node, WeakPtrImplWithEventTargetData>, WeakPtr<Node, WeakPtrImplWithEventTargetData>>> m_deferredFocusedNodeChange;
+    std::optional<std::pair<WeakPtr<Element, WeakPtrImplWithEventTargetData>, WeakPtr<Element, WeakPtrImplWithEventTargetData>>> m_deferredFocusedNodeChange;
     WeakHashSet<AccessibilityObject> m_deferredUnconnectedObjects;
+#if PLATFORM(MAC)
+    HashMap<PreSortedObjectType, Vector<Ref<AccessibilityObject>>, IntHash<PreSortedObjectType>, WTF::StrongEnumHashTraits<PreSortedObjectType>> m_deferredUnsortedObjects;
+#endif
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     Timer m_buildIsolatedTreeTimer;
     bool m_deferredRegenerateIsolatedTree { false };
-    Ref<AXGeometryManager> m_geometryManager;
+    const Ref<AXGeometryManager> m_geometryManager;
     DeferrableOneShotTimer m_selectedTextRangeTimer;
-    AXID m_lastDebouncedTextRangeObject;
+    Markable<AXID> m_lastDebouncedTextRangeObject;
 
     Timer m_updateTreeSnapshotTimer;
 #endif
@@ -833,33 +980,38 @@ private:
     HashMap<AXID, AXRelations> m_recentlyRemovedRelations;
 
 #if USE(ATSPI)
-    ListHashSet<RefPtr<AXCoreObject>> m_deferredParentChangedList;
+    ListHashSet<RefPtr<AccessibilityObject>> m_deferredParentChangedList;
 #endif
 
 #if PLATFORM(MAC)
-    AXID m_lastTextFieldAXID;
+    Markable<AXID> m_lastTextFieldAXID;
     VisibleSelection m_lastSelection;
 #endif
 };
 
+inline AXObjectCache* AccessibilityObject::axObjectCache() const
+{
+    return m_axObjectCache.get();
+}
+
 template<typename U>
-inline Vector<RefPtr<AXCoreObject>> AXObjectCache::objectsForIDs(const U& axIDs) const
+inline Vector<Ref<AXCoreObject>> AXObjectCache::objectsForIDs(const U& axIDs) const
 {
     ASSERT(isMainThread());
 
-    return WTF::compactMap(axIDs, [&](auto& axID) -> std::optional<RefPtr<AXCoreObject>> {
+    return WTF::compactMap(axIDs, [&](auto& axID) -> std::optional<Ref<AXCoreObject>> {
         if (auto* object = objectForID(axID))
-            return RefPtr { object };
+            return Ref { *object };
         return std::nullopt;
     });
 }
 
-inline Node* AXObjectCache::nodeForID(const AXID axID) const
+inline Node* AXObjectCache::nodeForID(std::optional<AXID> axID) const
 {
-    if (!axID.isValid())
+    if (!axID)
         return nullptr;
 
-    auto* object = m_objects.get(axID);
+    RefPtr object = m_objects.get(*axID);
     return object ? object->node() : nullptr;
 }
 
@@ -895,24 +1047,40 @@ public:
     ~AXAttributeCacheEnabler();
 
 private:
-    AXObjectCache* m_cache;
+    const WeakPtr<AXObjectCache> m_cache;
     bool m_wasAlreadyCaching { false };
 };
 
-bool nodeHasRole(Node*, StringView role);
-bool nodeHasCellRole(Node*);
-bool nodeHasTableRole(Node*);
+bool hasRole(Element&, StringView role);
+bool hasAnyRole(Element&, Vector<StringView>&& roles);
+bool hasAnyRole(Element*, Vector<StringView>&& roles);
+bool hasCellARIARole(Element&);
+bool hasPresentationRole(Element&);
+bool hasTableRole(Element&);
+bool isRowGroup(Element&);
+bool isRowGroup(Node*);
+ContainerNode* composedParentIgnoringDocumentFragments(Node&);
+ContainerNode* composedParentIgnoringDocumentFragments(Node*);
+
+ElementName elementName(Node*);
+ElementName elementName(Node&);
+
+RenderImage* toSimpleImage(RenderObject&);
 
 // Returns true if the element has an attribute that will result in an accname being computed.
 // https://www.w3.org/TR/accname-1.2/
 bool hasAccNameAttribute(Element&);
 
-// This will let you know if aria-hidden was explicitly set to false.
-bool isNodeAriaVisible(Node&);
-bool isNodeAriaVisible(Node*);
+bool isNodeFocused(Node&);
 
-bool isDOMHidden(const RenderStyle*);
+bool isRenderHidden(const RenderStyle*);
+// Checks both CSS display properties, and CSS visibility properties.
+bool isRenderHidden(const RenderStyle&);
+// Only checks CSS visibility properties.
+bool isVisibilityHidden(const RenderStyle&);
 
-WTF::TextStream& operator<<(WTF::TextStream&, AXObjectCache::AXNotification);
+WTF::TextStream& operator<<(WTF::TextStream&, AXNotification);
+
+void dumpAccessibilityTreeToStderr(Document&);
 
 } // namespace WebCore

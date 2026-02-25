@@ -41,6 +41,7 @@
 #include "WasmTierUpCount.h"
 #include <wtf/Box.h>
 #include <wtf/Expected.h>
+#include <wtf/SegmentedVector.h>
 
 namespace JSC {
 
@@ -69,9 +70,8 @@ struct CompilationContext {
     Box<PCToCodeOriginMap> pcToCodeOriginMap;
     Box<PCToCodeOriginMapBuilder> pcToCodeOriginMapBuilder;
     Vector<CCallHelpers::Label> catchEntrypoints;
+    SegmentedVector<OMGOrigin> origins;
 };
-
-void computePCToCodeOriginMap(CompilationContext&, LinkBuffer&);
 
 } // namespace Wasm
 

@@ -31,8 +31,6 @@
 #include "InlineIteratorLineBox.h"
 #include "PlacedFloats.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
-#include "RenderTableCell.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -138,7 +136,7 @@ std::pair<Vector<LineAdjustment>, std::optional<LayoutRestartLine>> computeAdjus
 
         if (adjustment.isFirstAfterPageBreak) {
             if (!lineIndex)
-                accumulatedOffset += inlineContent.clearGapBeforeFirstLine;
+                accumulatedOffset += inlineContent.clearGapBeforeFirstLine();
 
             if (flow.style().lineSnap() != LineSnap::None && blockLayoutState.lineGrid())
                 accumulatedOffset += computeFirstLineSnapAdjustment(inlineContent.displayContent().lines[lineIndex], *blockLayoutState.lineGrid());
@@ -163,7 +161,7 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
         return;
 
     auto writingMode = inlineContent.formattingContextRoot().style().writingMode();
-    auto isHorizontalWritingMode = WebCore::isHorizontalWritingMode(writingMode);
+    bool isHorizontalWritingMode = writingMode.isHorizontal();
 
     auto& displayContent = inlineContent.displayContent();
     for (size_t lineIndex = 0; lineIndex < displayContent.lines.size(); ++lineIndex) {
@@ -180,11 +178,7 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
         else
             box.moveHorizontally(offset);
     }
-
-    inlineContent.isPaginated = true;
-    inlineContent.firstLinePaginationOffset = adjustments[0].offset;
 }
 
 }
 }
-

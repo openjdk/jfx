@@ -28,6 +28,7 @@
 #include "InlineIteratorTextBox.h"
 #include "LayoutRect.h"
 #include "RegionContext.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class RenderText;
 class RenderView;
 
 class AccessibilityRegionContext final : public RegionContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AccessibilityRegionContext);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AccessibilityRegionContext);
 public:
     AccessibilityRegionContext() = default;
@@ -54,8 +55,9 @@ public:
             takeBounds(*renderInline, WTFMove(paintRect));
     };
     void takeBounds(const RenderInline&, LayoutRect&& /* paintRect */);
-    void takeBounds(const RenderText&, FloatRect /* paintRect */);
+    void takeBounds(const RenderText&, FloatRect /* paintRect */, size_t /* lineIndex */);
     void takeBounds(const RenderView&, LayoutPoint&& /* paintOffset */);
+    void takeBounds(const RenderLineBreak*, const LayoutPoint& /* paintOffset */);
 
     // This group of methods serves only as a notification that the given object is
     // being painted. From there, we construct the geometry we need ourselves

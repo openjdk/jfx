@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,11 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import javax.imageio.ImageIO;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -84,5 +87,20 @@ public class ImageTools {
         g.setFill(color);
         g.fillRect(0, 0, w, h);
         return c.snapshot(null, null);
+    }
+
+    /**
+     * Writes an Image to a byte array in PNG format.
+     *
+     * @param im source image
+     * @return byte array containing PNG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writePNG(Image im) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
+        // this might conflict with user-set value
+        ImageIO.setUseCache(false);
+        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
+        return out.toByteArray();
     }
 }

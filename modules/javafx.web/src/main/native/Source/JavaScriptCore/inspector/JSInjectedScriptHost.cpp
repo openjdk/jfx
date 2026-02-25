@@ -27,6 +27,7 @@
 #include "JSInjectedScriptHost.h"
 
 #include "ArrayPrototype.h"
+#include "BuiltinNames.h"
 #include "Completion.h"
 #include "DateInstance.h"
 #include "DeferGCInlines.h"
@@ -252,9 +253,15 @@ JSValue JSInjectedScriptHost::functionDetails(JSGlobalObject* globalObject, Call
 
     // FIXME: <https://webkit.org/b/87192> Web Inspector: Expose function scope / closure data
 
-    // FIXME: This should provide better details for JSBoundFunctions.
+    auto* targetFunction = function;
+    while (auto* boundFunction = jsDynamicCast<JSBoundFunction*>(targetFunction)) {
+        auto* nextTargetFunction = jsDynamicCast<JSFunction*>(boundFunction->targetFunction());
+        if (!nextTargetFunction) [[unlikely]]
+            break;
+        targetFunction = nextTargetFunction;
+    }
 
-    const SourceCode* sourceCode = function->sourceCode();
+    const SourceCode* sourceCode = targetFunction->sourceCode();
     if (!sourceCode)
         return jsUndefined();
 
@@ -381,6 +388,18 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
             return array;
         }
         return array;
+    }
+    if (JSArrowFunction* arrowFunction = jsDynamicCast<JSArrowFunction*>(value)) {
+        if (JSScope* jsScope = arrowFunction->scope()) {
+            unsigned index = 0;
+            JSArray* array = constructEmptyArray(globalObject, nullptr);
+            RETURN_IF_EXCEPTION(scope, JSValue());
+            JSValue thisObject = jsScope->get(globalObject, vm.propertyNames->builtinNames().thisPrivateName());
+            RETURN_IF_EXCEPTION(scope, JSValue());
+            array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "boundThis"_s, thisObject));
+            RETURN_IF_EXCEPTION(scope, JSValue());
+            return array;
+        }
     }
     if (JSRemoteFunction* remoteFunction = jsDynamicCast<JSRemoteFunction*>(value)) {
         unsigned index = 0;
@@ -736,7 +755,9 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
 
     for (unsigned i = 0; i < numberToFetch; ++i) {
         JSValue next = iteratorStep(globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
+        if (scope.exception()) [[unlikely]]
+            break;
+        if (next.isFalse())
             break;
 
         JSValue nextValue = iteratorValue(globalObject, next);
@@ -745,7 +766,7 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
         JSObject* entry = constructEmptyObject(globalObject);
         entry->putDirect(vm, Identifier::fromString(vm, "value"_s), nextValue);
         array->putDirectIndex(globalObject, i, entry);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.release();
             iteratorClose(globalObject, iterationRecord.iterator);
             break;
@@ -850,10 +871,10 @@ public:
         profiler.vm().heap.collectNow(Sync, CollectionScope::Full);
         profiler.setActiveHeapAnalyzer(nullptr);
 
-        HashSet<JSCell*> queue;
+        UncheckedKeyHashSet<JSCell*> queue;
 
         // Filter `m_holders` based on whether they're reachable from a non-Debugger root.
-        HashSet<JSCell*> visited;
+        UncheckedKeyHashSet<JSCell*> visited;
         for (auto* root : m_rootsToInclude)
             queue.add(root);
         while (auto* from = queue.takeAny()) {
@@ -885,7 +906,7 @@ public:
         });
     }
 
-    HashSet<JSCell*>& holders() { return m_holders; }
+    UncheckedKeyHashSet<JSCell*>& holders() { return m_holders; }
 
     void analyzeEdge(JSCell* from, JSCell* to, RootMarkReason reason) final
     {
@@ -896,11 +917,11 @@ public:
 
         if (from && from != to) {
             m_successors.ensure(from, [] {
-                return HashSet<JSCell*>();
+                return UncheckedKeyHashSet<JSCell*>();
             }).iterator->value.add(to);
 
             m_predecessors.ensure(to, [] {
-                return HashSet<JSCell*>();
+                return UncheckedKeyHashSet<JSCell*>();
             }).iterator->value.add(from);
 
             if (to == m_target)
@@ -926,7 +947,7 @@ public:
     {
         Indentation<4> indent;
 
-        HashSet<JSCell*> visited;
+        UncheckedKeyHashSet<JSCell*> visited;
 
         Function<void(JSCell*)> visit = [&] (auto* from) {
             auto isFirstVisit = visited.add(from).isNewEntry;
@@ -964,11 +985,11 @@ public:
 
 private:
     Lock m_mutex;
-    HashMap<JSCell*, HashSet<JSCell*>> m_predecessors;
-    HashMap<JSCell*, HashSet<JSCell*>> m_successors;
-    HashSet<JSCell*> m_rootsToInclude;
-    HashSet<JSCell*> m_rootsToIgnore;
-    HashSet<JSCell*> m_holders;
+    UncheckedKeyHashMap<JSCell*, UncheckedKeyHashSet<JSCell*>> m_predecessors;
+    UncheckedKeyHashMap<JSCell*, UncheckedKeyHashSet<JSCell*>> m_successors;
+    UncheckedKeyHashSet<JSCell*> m_rootsToInclude;
+    UncheckedKeyHashSet<JSCell*> m_rootsToIgnore;
+    UncheckedKeyHashSet<JSCell*> m_holders;
     const JSCell* m_target;
 };
 

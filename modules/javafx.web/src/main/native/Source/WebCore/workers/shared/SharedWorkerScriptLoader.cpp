@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,11 @@
 #include "WorkerInitializationData.h"
 #include "WorkerRunLoop.h"
 #include "WorkerScriptLoader.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerScriptLoader);
 
 SharedWorkerScriptLoader::SharedWorkerScriptLoader(URL&& url, SharedWorker& worker, WorkerOptions&& options)
     : m_options(WTFMove(options))
@@ -50,26 +53,28 @@ void SharedWorkerScriptLoader::load(CompletionHandler<void(WorkerFetchResult&&, 
     m_completionHandler = WTFMove(completionHandler);
 
     auto source = m_options.type == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
-    m_loader->loadAsynchronously(*m_worker->scriptExecutionContext(), ResourceRequest(m_url), source, m_worker->workerFetchOptions(m_options, FetchOptions::Destination::Sharedworker), ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective, ServiceWorkersMode::All, *this, WorkerRunLoop::defaultMode(), ScriptExecutionContextIdentifier::generate());
+    m_loader->loadAsynchronously(*m_worker->protectedScriptExecutionContext(), ResourceRequest(URL { m_url }), source, m_worker->workerFetchOptions(m_options, FetchOptions::Destination::Sharedworker), ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective, ServiceWorkersMode::All, *this, WorkerRunLoop::defaultMode(), ScriptExecutionContextIdentifier::generate());
 }
 
-void SharedWorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, ResourceLoaderIdentifier identifier, const ResourceResponse&)
+void SharedWorkerScriptLoader::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse&)
 {
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
-            InspectorInstrumentation::didReceiveScriptResponse(mainContext, identifier);
+            InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
     }
 }
 
-void SharedWorkerScriptLoader::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifier)
+void SharedWorkerScriptLoader::notifyFinished(std::optional<ScriptExecutionContextIdentifier> mainContextIdentifier)
 {
-    auto* scriptExecutionContext = m_worker->scriptExecutionContext();
+    RefPtr scriptExecutionContext = m_worker->scriptExecutionContext();
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends()) && scriptExecutionContext && !m_loader->failed()) {
-        ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier = m_loader->identifier(), script = m_loader->script().isolatedCopy()] (auto& mainContext) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+        if (scriptExecutionContext && !m_loader->failed()) {
+        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_loader->identifier(), script = m_loader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });
+        }
     }
 
     auto fetchResult = m_loader->fetchResult();

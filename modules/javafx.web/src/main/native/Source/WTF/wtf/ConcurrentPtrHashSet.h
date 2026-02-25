@@ -32,6 +32,8 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 // This is a concurrent hash-based set for pointers. It's optimized for:
@@ -54,7 +56,7 @@ namespace WTF {
 // focuses so much on cases where the table does not change.
 class ConcurrentPtrHashSet final {
     WTF_MAKE_NONCOPYABLE(ConcurrentPtrHashSet);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ConcurrentPtrHashSet);
 
 public:
     WTF_EXPORT_PRIVATE ConcurrentPtrHashSet();
@@ -90,7 +92,7 @@ public:
 
 private:
     struct Table {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Table);
 
         static std::unique_ptr<Table> create(unsigned size);
         void initializeStub();
@@ -182,3 +184,5 @@ private:
 } // namespace WTF
 
 using WTF::ConcurrentPtrHashSet;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

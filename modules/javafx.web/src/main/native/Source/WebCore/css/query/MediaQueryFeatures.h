@@ -26,8 +26,15 @@
 
 #include "MediaQuery.h"
 
-namespace WebCore::MQ {
+namespace WebCore {
 
+namespace Calculation {
+enum class Category : uint8_t;
+}
+
+struct ComputedStyleDependencies;
+
+namespace MQ {
 namespace Features {
 
 const FeatureSchema& animation();
@@ -73,9 +80,6 @@ const FeatureSchema& prefersColorScheme();
 
 Vector<const FeatureSchema*> allSchemas();
 
-std::optional<MediaQueryDynamicDependency> dynamicDependency(const FeatureSchema&);
-
-};
-
-}
-
+} // namespace Features
+} // namespace MQ
+} // namespace WebCore

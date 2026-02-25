@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,8 @@
 #include "JSCInlines.h"
 #include "VMTrapsInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo JSBoundFunction::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSBoundFunction) };
@@ -60,7 +62,7 @@ JSC_DEFINE_HOST_FUNCTION(boundThisNoArgsFunctionCall, (JSGlobalObject* globalObj
     ExecutableBase* executable = targetFunction->executable();
     if (executable->hasJITCodeForCall()) {
         // Force the executable to cache its arity entrypoint.
-        executable->entrypointFor(CodeForCall, MustCheckArity);
+        executable->entrypointFor(CodeSpecializationKind::CodeForCall, ArityCheckMode::MustCheckArity);
     }
     auto callData = JSC::getCallData(targetFunction);
     ASSERT(callData.type != CallData::Type::None);
@@ -86,7 +88,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionCall, (JSGlobalObject* globalObject, CallF
     }
     for (unsigned i = 0; i < callFrame->argumentCount(); ++i)
         args.append(callFrame->uncheckedArgument(i));
-    if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return encodedJSValue();
     }
@@ -106,7 +108,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, 
 
     JSObject* targetFunction = boundFunction->targetFunction();
     auto constructData = JSC::getConstructData(targetFunction);
-    if (UNLIKELY(constructData.type == CallData::Type::None))
+    if (constructData.type == CallData::Type::None) [[unlikely]]
         return throwVMError(globalObject, scope, createNotAConstructorError(globalObject, boundFunction));
 
     MarkedArgumentBuffer args;
@@ -122,7 +124,7 @@ JSC_DEFINE_HOST_FUNCTION(boundFunctionConstruct, (JSGlobalObject* globalObject, 
     }
     for (unsigned i = 0; i < callFrame->argumentCount(); ++i)
         args.append(callFrame->uncheckedArgument(i));
-    if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return encodedJSValue();
     }
@@ -150,10 +152,10 @@ inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFunction* targetJSFunction = jsDynamicCast<JSFunction*>(targetFunction);
-    if (LIKELY(targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()))
+    if (targetJSFunction && targetJSFunction->getPrototypeDirect() == globalObject->functionPrototype()) [[likely]]
         return globalObject->boundFunctionStructure();
 
-    JSValue prototype = targetFunction->getPrototype(vm, globalObject);
+    JSValue prototype = targetFunction->getPrototype(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     // We only cache the structure of the bound function if the bindee is a JSFunction since there
@@ -181,7 +183,7 @@ inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject
     return result;
 }
 
-JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction, JSValue boundThis, ArgList args, double length, JSString* nameMayBeNull)
+JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction, JSValue boundThis, ArgList args, double length, JSString* nameMayBeNull, const SourceCode& source)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -196,8 +198,8 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
             for (unsigned index = 0, size = args.size(); index < size; ++index)
                 boundArgs[index] = args.at(index);
         } else {
-            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), args.size());
-            if (UNLIKELY(!butterfly)) {
+            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), args.size());
+            if (!butterfly) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return nullptr;
             }
@@ -208,19 +210,19 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
     }
 
     bool isJSFunction = getJSFunction(targetFunction);
-    NativeExecutable* executable = vm.getBoundFunction(isJSFunction);
+    NativeExecutable* executable = vm.getBoundFunction(isJSFunction, source.provider()->sourceTaintedOrigin());
     Structure* structure = getBoundFunctionStructure(vm, globalObject, targetFunction);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm)) JSBoundFunction(vm, executable, globalObject, structure, targetFunction, boundThis, args.size(), boundArgs[0], boundArgs[1], boundArgs[2], nameMayBeNull, length);
+    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm)) JSBoundFunction(vm, executable, globalObject, structure, targetFunction, boundThis, args.size(), boundArgs[0], boundArgs[1], boundArgs[2], nameMayBeNull, length, source);
 
     function->finishCreation(vm);
     return function;
 }
 
-JSBoundFunction* JSBoundFunction::createRaw(VM& vm, JSGlobalObject* globalObject, JSFunction* targetFunction, unsigned boundArgsLength, JSValue boundThis, JSValue arg0, JSValue arg1, JSValue arg2)
+JSBoundFunction* JSBoundFunction::createRaw(VM& vm, JSGlobalObject* globalObject, JSFunction* targetFunction, unsigned boundArgsLength, JSValue boundThis, JSValue arg0, JSValue arg1, JSValue arg2, const SourceCode& source)
 {
-    NativeExecutable* executable = vm.getBoundFunction(/* isJSFunction */ true);
-    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm)) JSBoundFunction(vm, executable, globalObject, globalObject->boundFunctionStructure(), targetFunction, boundThis, boundArgsLength, arg0, arg1, arg2, nullptr, PNaN);
+    NativeExecutable* executable = vm.getBoundFunction(/* isJSFunction */ true, source.provider()->sourceTaintedOrigin());
+    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm)) JSBoundFunction(vm, executable, globalObject, globalObject->boundFunctionStructure(), targetFunction, boundThis, boundArgsLength, arg0, arg1, arg2, nullptr, PNaN, source);
     function->finishCreation(vm);
     return function;
 }
@@ -230,13 +232,14 @@ bool JSBoundFunction::customHasInstance(JSObject* object, JSGlobalObject* global
     return jsCast<JSBoundFunction*>(object)->m_targetFunction->hasInstance(globalObject, value);
 }
 
-JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction, JSValue boundThis, unsigned boundArgsLength, JSValue arg0, JSValue arg1, JSValue arg2, JSString* nameMayBeNull, double length)
+JSBoundFunction::JSBoundFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction, JSValue boundThis, unsigned boundArgsLength, JSValue arg0, JSValue arg1, JSValue arg2, JSString* nameMayBeNull, double length, const SourceCode& source)
     : Base(vm, executable, globalObject, structure)
     , m_targetFunction(targetFunction, WriteBarrierEarlyInit)
     , m_boundThis(boundThis, WriteBarrierEarlyInit)
     , m_nameMayBeNull(nameMayBeNull, WriteBarrierEarlyInit)
     , m_length(length)
     , m_boundArgsLength(boundArgsLength)
+    , m_isTainted(source.provider()->sourceTaintedOrigin() >= SourceTaintedOrigin::IndirectlyTainted)
 {
     m_boundArgs[0].setWithoutWriteBarrier(arg0);
     m_boundArgs[1].setWithoutWriteBarrier(arg1);
@@ -272,7 +275,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
         ASSERT(cursor->inherits<JSFunction>()); // If this is not JSFunction, we eagerly materialized the name.
         if (!cursor->inherits<JSBoundFunction>()) {
             terminal = jsCast<JSFunction*>(cursor)->originalName(globalObject);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 scope.clearException();
                 terminal = jsEmptyString(vm);
             }
@@ -287,11 +290,11 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
     }
 
     if (nestingCount) {
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         for (unsigned i = 0; i < nestingCount; ++i)
             builder.append("bound "_s);
         auto terminalString = terminal->value(globalObject); // Resolving rope.
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.clearException();
             terminal = jsEmptyString(vm);
         } else {
@@ -305,7 +308,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
     if (terminal) {
         terminal->value(globalObject); // Resolving rope.
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.clearException();
             terminal = jsEmptyString(vm);
         }
@@ -317,7 +320,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
 String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned nestingCount = 0;
     JSObject* cursor = m_targetFunction.get();
     String terminal;
@@ -339,7 +342,7 @@ String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
     if (!nestingCount)
         return terminal;
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     for (unsigned i = 0; i < nestingCount; ++i)
         builder.append("bound "_s);
     builder.append(WTFMove(terminal));
@@ -433,3 +436,5 @@ void JSBoundFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(JSBoundFunction);
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

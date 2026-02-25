@@ -78,11 +78,11 @@ PlatformTimeRanges MediaSourceInterfaceWorker::buffered() const
     return PlatformTimeRanges::emptyRanges();
 }
 
-Ref<TimeRanges> MediaSourceInterfaceWorker::seekable() const
+PlatformTimeRanges MediaSourceInterfaceWorker::seekable() const
 {
     if (RefPtr mediaSourcePrivate = m_handle->mediaSourcePrivate(); mediaSourcePrivate && !isClosed())
-        return TimeRanges::create(mediaSourcePrivate->seekable());
-    return TimeRanges::create();
+        return mediaSourcePrivate->seekable();
+    return { };
 }
 
 bool MediaSourceInterfaceWorker::isStreamingContent() const
@@ -118,6 +118,7 @@ void MediaSourceInterfaceWorker::elementIsShuttingDown()
         mediaSource.elementIsShuttingDown();
     });
 }
+
 void MediaSourceInterfaceWorker::openIfDeferredOpen()
 {
     ASSERT(m_handle->hasEverBeenAssignedAsSrcObject());
@@ -143,6 +144,20 @@ void MediaSourceInterfaceWorker::memoryPressure()
     m_handle->ensureOnDispatcher([](MediaSource& mediaSource) {
         mediaSource.memoryPressure();
     });
+}
+
+bool MediaSourceInterfaceWorker::detachable() const
+{
+    return m_handle->detachable();
+}
+
+void MediaSourceInterfaceWorker::setLogIdentifier([[maybe_unused]] uint64_t identifier)
+{
+#if !RELEASE_LOG_DISABLED
+    m_handle->ensureOnDispatcher([identifier](MediaSource& mediaSource) {
+        mediaSource.setLogIdentifier(identifier);
+    });
+#endif
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2010, 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
  * Copyright 2010, The Android Open Source Project
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 #if ENABLE(GEOLOCATION)
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserver.h"
 #include "Document.h"
 #include "GeolocationPosition.h"
 #include "GeolocationPositionError.h"
@@ -40,6 +41,7 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -52,19 +54,18 @@ class ScriptExecutionContext;
 class SecurityOrigin;
 struct PositionOptions;
 
-class Geolocation final : public ScriptWrappable, public RefCounted<Geolocation>, public CanMakeWeakPtr<Geolocation>, public ActiveDOMObject {
+class Geolocation final : public RefCountedAndCanMakeWeakPtr<Geolocation>, public ScriptWrappable, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Geolocation, WEBCORE_EXPORT);
     friend class GeoNotifier;
 public:
-    static Ref<Geolocation> create(Navigator&);
-    WEBCORE_EXPORT ~Geolocation();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
+    static Ref<Geolocation> create(Navigator&);
+    WEBCORE_EXPORT ~Geolocation();
+
     WEBCORE_EXPORT void resetAllGeolocationPermission();
-    Document* document() const { return downcast<Document>(scriptExecutionContext()); }
+    Document* document() const;
 
     void getCurrentPosition(Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
     int watchPosition(Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
@@ -74,6 +75,8 @@ public:
     const String& authorizationToken() const { return m_authorizationToken; }
     WEBCORE_EXPORT void resetIsAllowed();
     bool isAllowed() const { return m_allowGeolocation == Yes; }
+
+    bool hasBeenRequested() const { return m_hasBeenRequested; }
 
     void positionChanged();
     void setError(GeolocationError&);
@@ -160,6 +163,8 @@ private:
     Watchers m_watchers;
     GeoNotifierSet m_pendingForPermissionNotifiers;
     RefPtr<GeolocationPosition> m_lastPosition;
+
+    bool m_hasBeenRequested { false };
 
     enum { Unknown, InProgress, Yes, No } m_allowGeolocation { Unknown };
     String m_authorizationToken;

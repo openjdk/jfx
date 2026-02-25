@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,19 +37,20 @@ public:
     void assertionBOL() { }
     void assertionEOL() { }
     void assertionWordBoundary(bool) { }
-    void atomPatternCharacter(char32_t) { }
+    void atomPatternCharacter(char32_t, bool) { }
     void atomBuiltInCharacterClass(BuiltInCharacterClassID, bool) { }
     void atomCharacterClassBegin(bool = false) { }
-    void atomCharacterClassAtom(UChar) { }
-    void atomCharacterClassRange(UChar, UChar) { }
+    void atomCharacterClassAtom(char16_t) { }
+    void atomCharacterClassRange(char16_t, char16_t) { }
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
     void atomClassStringDisjunction(Vector<Vector<char32_t>>&) { }
     void atomCharacterClassSetOp(CharacterClassSetOp) { }
-    void atomCharacterClassPushNested() { }
-    void atomCharacterClassPopNested() { }
+    void atomCharacterClassPushNested(bool) { }
+    void atomCharacterClassPopNested(bool) { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
     void atomParentheticalAssertionBegin(bool, MatchDirection) { }
+    void atomParentheticalModifierBegin(OptionSet<Flags>, OptionSet<Flags>) { }
     void atomParenthesesEnd() { }
     void atomBackReference(unsigned) { }
     void atomNamedBackReference(const String&) { }
@@ -56,7 +58,11 @@ public:
     void quantifyAtom(unsigned, unsigned, bool) { }
     void disjunction(CreateDisjunctionPurpose) { }
     void resetForReparsing() { }
+
+    constexpr static bool abortedDueToError() { return false; }
+    constexpr static ErrorCode abortErrorCode() { return ErrorCode::NoError; }
 };
+static_assert(YarrSyntaxCheckable<SyntaxChecker>);
 
 ErrorCode checkSyntax(StringView pattern, StringView flags)
 {

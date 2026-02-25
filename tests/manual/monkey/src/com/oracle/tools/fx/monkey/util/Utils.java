@@ -26,9 +26,10 @@ package com.oracle.tools.fx.monkey.util;
 
 import java.lang.reflect.Array;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.function.BiConsumer;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -45,7 +46,7 @@ import javafx.stage.Window;
  * Monkey Tester Utilities
  */
 public class Utils {
-    private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat("0.###");
+    private static final DecimalFormat DOUBLE_FORMAT_2 = new DecimalFormat("0.##");
     private static final Random random = new Random();
 
     public static boolean isBlank(Object x) {
@@ -101,8 +102,8 @@ public class Utils {
         showDialog(owner, windowName, title, p);
     }
 
-    public static String fmt(double v) {
-        return DOUBLE_FORMAT.format(v);
+    public static String f2(double v) {
+        return DOUBLE_FORMAT_2.format(v);
     }
 
     public static String simpleName(Object x) {
@@ -135,5 +136,20 @@ public class Utils {
         T[] a = (T[])Array.newInstance(type, values.length + 1);
         System.arraycopy(values, 0, a, 1, values.length);
         return a;
+    }
+
+    public static void link(BooleanProperty ui, ReadOnlyBooleanProperty main, BooleanConsumer c) {
+        main.addListener((s, p, v) -> {
+            ui.set(v);
+        });
+        if (c != null) {
+            ui.addListener((s, p, v) -> {
+                if (main.get() != v) {
+                    c.consume(v);
+                }
+            });
+            boolean val = ui.get();
+            c.consume(val);
+        }
     }
 }

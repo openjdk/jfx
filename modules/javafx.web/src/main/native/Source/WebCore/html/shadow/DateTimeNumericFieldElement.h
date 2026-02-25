@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateTimeFieldElement.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/StringBuilder.h>
@@ -65,7 +63,7 @@ protected:
 private:
     // DateTimeFieldElement functions:
     void adjustMinInlineSize(RenderStyle&) const final;
-    String value() const final;
+    ValueOrReference<String> value() const final;
     String placeholderValue() const final;
     void handleKeyboardEvent(KeyboardEvent&) final;
     void handleBlurEvent(Event&) final;
@@ -84,5 +82,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

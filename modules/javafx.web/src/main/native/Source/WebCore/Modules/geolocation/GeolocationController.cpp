@@ -31,14 +31,17 @@
 #include "GeolocationClient.h"
 #include "GeolocationError.h"
 #include "GeolocationPositionData.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GeolocationController);
 
 GeolocationController::GeolocationController(Page& page, GeolocationClient& client)
     : m_page(page)
     , m_client(client)
 {
-    m_page.addActivityStateChangeObserver(*this);
+    page.addActivityStateChangeObserver(*this);
 }
 
 GeolocationController::~GeolocationController()
@@ -48,14 +51,24 @@ GeolocationController::~GeolocationController()
     // NOTE: We don't have to remove ourselves from page's ActivityStateChangeObserver set, since
     // we are supplement of the Page, and our destructor getting called means the page is being
     // torn down.
-
-    m_client.geolocationDestroyed();
+    RefPtr client = std::exchange(m_client, nullptr);
+    client->geolocationDestroyed(); // This will destroy the client.
 }
 
 void GeolocationController::didNavigatePage()
 {
     while (!m_observers.isEmpty())
         removeObserver(m_observers.begin()->get());
+}
+
+GeolocationClient& GeolocationController::client()
+{
+    return *m_client;
+}
+
+Ref<GeolocationClient> GeolocationController::protectedClient()
+{
+    return client();
 }
 
 void GeolocationController::addObserver(Geolocation& observer, bool enableHighAccuracy)
@@ -68,7 +81,7 @@ void GeolocationController::addObserver(Geolocation& observer, bool enableHighAc
 
     if (m_isUpdating) {
         if (!highAccuracyWasRequired && enableHighAccuracy)
-            m_client.setEnableHighAccuracy(true);
+            protectedClient()->setEnableHighAccuracy(true);
     } else
         startUpdatingIfNecessary();
 }
@@ -89,22 +102,22 @@ void GeolocationController::removeObserver(Geolocation& observer)
     if (m_observers.isEmpty())
         stopUpdatingIfNecessary();
     else if (highAccuracyWasRequired && !needsHighAccuracy())
-        m_client.setEnableHighAccuracy(false);
+        protectedClient()->setEnableHighAccuracy(false);
 }
 
 void GeolocationController::revokeAuthorizationToken(const String& authorizationToken)
 {
-    m_client.revokeAuthorizationToken(authorizationToken);
+    protectedClient()->revokeAuthorizationToken(authorizationToken);
 }
 
 void GeolocationController::requestPermission(Geolocation& geolocation)
 {
-    if (!m_page.isVisible()) {
+    if (!m_page->isVisible()) {
         m_pendingPermissionRequest.add(geolocation);
         return;
     }
 
-    m_client.requestPermission(geolocation);
+    protectedClient()->requestPermission(geolocation);
 }
 
 void GeolocationController::cancelPermissionRequest(Geolocation& geolocation)
@@ -112,7 +125,7 @@ void GeolocationController::cancelPermissionRequest(Geolocation& geolocation)
     if (m_pendingPermissionRequest.remove(geolocation))
         return;
 
-    m_client.cancelPermissionRequest(geolocation);
+    protectedClient()->cancelPermissionRequest(geolocation);
 }
 
 void GeolocationController::positionChanged(const std::optional<GeolocationPositionData>& position)
@@ -133,7 +146,7 @@ std::optional<GeolocationPositionData> GeolocationController::lastPosition()
     if (m_lastPosition)
         return m_lastPosition.value();
 
-    return m_client.lastPosition();
+    return protectedClient()->lastPosition();
 }
 
 void GeolocationController::activityStateDidChange(OptionSet<ActivityState> oldActivityState, OptionSet<ActivityState> newActivityState)
@@ -147,20 +160,21 @@ void GeolocationController::activityStateDidChange(OptionSet<ActivityState> oldA
             stopUpdatingIfNecessary();
     }
 
-    if (!m_page.isVisible())
+    if (!m_page->isVisible())
         return;
 
     auto pendedPermissionRequests = WTFMove(m_pendingPermissionRequest);
+    Ref client = this->client();
     for (auto& permissionRequest : pendedPermissionRequests)
-        m_client.requestPermission(permissionRequest.get());
+        client->requestPermission(permissionRequest.get());
 }
 
 void GeolocationController::startUpdatingIfNecessary()
 {
-    if (m_isUpdating || !m_page.isVisible() || m_observers.isEmpty())
+    if (m_isUpdating || !m_page->isVisible() || m_observers.isEmpty())
         return;
 
-    m_client.startUpdating((*m_observers.random())->authorizationToken(), needsHighAccuracy());
+    protectedClient()->startUpdating((*m_observers.random())->authorizationToken(), needsHighAccuracy());
     m_isUpdating = true;
 }
 
@@ -169,7 +183,7 @@ void GeolocationController::stopUpdatingIfNecessary()
     if (!m_isUpdating)
         return;
 
-    m_client.stopUpdating();
+    protectedClient()->stopUpdating();
     m_isUpdating = false;
 }
 

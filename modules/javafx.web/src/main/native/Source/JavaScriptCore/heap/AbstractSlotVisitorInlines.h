@@ -30,17 +30,19 @@
 #include "WeakInlines.h"
 #include "WriteBarrier.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 using ReferrerToken = AbstractSlotVisitor::ReferrerToken;
 
 inline ReferrerToken::ReferrerToken(HeapCell* cell)
-    : m_bits(bitwise_cast<uintptr_t>(cell) | HeapCellToken)
+    : m_bits(std::bit_cast<uintptr_t>(cell) | HeapCellToken)
 {
 }
 
 inline ReferrerToken::ReferrerToken(OpaqueRootTag, void* opaqueRoot)
-    : m_bits(bitwise_cast<uintptr_t>(opaqueRoot) | OpaqueRootToken)
+    : m_bits(std::bit_cast<uintptr_t>(opaqueRoot) | OpaqueRootToken)
 {
     ASSERT(opaqueRoot);
 }
@@ -52,12 +54,12 @@ inline ReferrerToken::ReferrerToken(RootMarkReason reason)
 
 inline HeapCell* ReferrerToken::asCell() const
 {
-    return isHeapCell() ? bitwise_cast<HeapCell*>(m_bits & ~tokenTypeMask) : nullptr;
+    return isHeapCell() ? std::bit_cast<HeapCell*>(m_bits & ~tokenTypeMask) : nullptr;
 }
 
 inline void* ReferrerToken::asOpaqueRoot() const
 {
-    return isOpaqueRoot() ? bitwise_cast<HeapCell*>(m_bits & ~tokenTypeMask) : nullptr;
+    return isOpaqueRoot() ? std::bit_cast<HeapCell*>(m_bits & ~tokenTypeMask) : nullptr;
 }
 
 inline RootMarkReason ReferrerToken::asRootMarkReason() const
@@ -128,7 +130,7 @@ inline bool AbstractSlotVisitor::addOpaqueRoot(void* ptr)
         return false;
     if (!m_opaqueRoots.add(ptr))
         return false;
-    if (UNLIKELY(m_needsExtraOpaqueRootHandling))
+    if (m_needsExtraOpaqueRootHandling) [[unlikely]]
         didAddOpaqueRoot(ptr);
     m_visitCount++;
     return true;
@@ -137,7 +139,7 @@ inline bool AbstractSlotVisitor::addOpaqueRoot(void* ptr)
 inline bool AbstractSlotVisitor::containsOpaqueRoot(void* ptr) const
 {
     bool found = m_opaqueRoots.contains(ptr);
-    if (UNLIKELY(found && m_needsExtraOpaqueRootHandling)) {
+    if (found && m_needsExtraOpaqueRootHandling) [[unlikely]] {
         auto* nonConstThis = const_cast<AbstractSlotVisitor*>(this);
         nonConstThis->didFindOpaqueRoot(ptr);
     }
@@ -228,3 +230,5 @@ ALWAYS_INLINE void AbstractSlotVisitor::reset()
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

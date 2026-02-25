@@ -52,7 +52,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSHTMLAllCollection, (JSGlobalObject* lexicalGlobal
     if (callFrame->argument(0).isUndefined())
         return JSValue::encode(jsNull());
 
-    AtomString nameOrIndex = callFrame->uncheckedArgument(0).toString(lexicalGlobalObject)->toAtomString(lexicalGlobalObject);
+    AtomString nameOrIndex = callFrame->uncheckedArgument(0).toString(lexicalGlobalObject)->toAtomString(lexicalGlobalObject).data;
     RETURN_IF_EXCEPTION(scope, { });
     RELEASE_AND_RETURN(scope, JSValue::encode(toJS<IDLNullable<IDLUnion<IDLInterface<HTMLCollection>, IDLInterface<Element>>>>(*lexicalGlobalObject, *castedThis->globalObject(), impl.namedOrIndexedItemOrItems(WTFMove(nameOrIndex)))));
 }
@@ -63,6 +63,7 @@ CallData JSHTMLAllCollection::getCallData(JSCell*)
     callData.type = CallData::Type::Native;
     callData.native.function = callJSHTMLAllCollection;
     callData.native.isBoundFunction = false;
+    callData.native.isWasm = false;
     return callData;
 }
 

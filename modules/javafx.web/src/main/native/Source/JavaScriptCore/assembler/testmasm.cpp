@@ -44,6 +44,8 @@
 #include <wtf/WTFProcess.h>
 #include <wtf/text/StringCommon.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 // We don't have a NO_RETURN_DUE_TO_EXIT, nor should we. That's ridiculous.
 static bool hiddenTruthBecauseNoReturnIsStupid() { return true; }
 
@@ -267,7 +269,7 @@ template<typename T, typename... Arguments>
 T invoke(const MacroAssemblerCodeRef<JSEntryPtrTag>& code, Arguments... arguments)
 {
     void* executableAddress = untagCFunctionPtr<JSEntryPtrTag>(code.code().taggedPtr());
-    T (SYSV_ABI *function)(Arguments...) = bitwise_cast<T(SYSV_ABI *)(Arguments...)>(executableAddress);
+    T (SYSV_ABI *function)(Arguments...) = std::bit_cast<T(SYSV_ABI *)(Arguments...)>(executableAddress);
 
 #if CPU(RISCV64)
     // RV64 calling convention requires all 32-bit values to be sign-extended into the whole register.
@@ -329,8 +331,8 @@ void testGetEffectiveAddress(size_t pointer, ptrdiff_t length, int32_t offset, C
 {
     CHECK_EQ(compileAndRun<size_t>([=] (CCallHelpers& jit) {
         emitFunctionPrologue(jit);
-        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(pointer)), GPRInfo::regT0);
-        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(length)), GPRInfo::regT1);
+        jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(pointer)), GPRInfo::regT0);
+        jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(length)), GPRInfo::regT1);
         jit.getEffectiveAddress(CCallHelpers::BaseIndex(GPRInfo::regT0, GPRInfo::regT1, scale, offset), GPRInfo::returnValueGPR);
         emitFunctionEpilogue(jit);
         jit.ret();
@@ -341,7 +343,7 @@ void testGetEffectiveAddress(size_t pointer, ptrdiff_t length, int32_t offset, C
 // Nan, should either yield 0 in dest or fail.
 void testBranchTruncateDoubleToInt32(double val, int32_t expected)
 {
-    const uint64_t valAsUInt = bitwise_cast<uint64_t>(val);
+    const uint64_t valAsUInt = std::bit_cast<uint64_t>(val);
 #if CPU(BIG_ENDIAN)
     const bool isBigEndian = true;
 #else
@@ -823,8 +825,8 @@ void testShiftAndAdd()
             emitFunctionPrologue(jit);
             jit.pushPair(scratchGPR, GPRInfo::argumentGPR3);
 
-            jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(basePointer)), baseGPR);
-            jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(index)), indexGPR);
+            jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(basePointer)), baseGPR);
+            jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(index)), indexGPR);
             jit.shiftAndAdd(baseGPR, indexGPR, shift, destGPR);
 
             jit.probeDebug([=] (Probe::Context& context) {
@@ -2357,7 +2359,7 @@ void testXorNotWithUnsignedRightShift64()
 void testStorePrePostIndex32()
 {
     int32_t nums[] = { 1, 2, 3 };
-    intptr_t addr = bitwise_cast<intptr_t>(&nums[1]);
+    intptr_t addr = std::bit_cast<intptr_t>(&nums[1]);
     int32_t index = sizeof(int32_t);
 
     auto test1 = [&] (int32_t src) {
@@ -2374,7 +2376,7 @@ void testStorePrePostIndex32()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int32_t* p1 = bitwise_cast<int32_t*>(test1(4));
+    int32_t* p1 = std::bit_cast<int32_t*>(test1(4));
     CHECK_EQ(*p1, 4);
     CHECK_EQ(*--p1, nums[1]);
 
@@ -2392,7 +2394,7 @@ void testStorePrePostIndex32()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int32_t* p2 = bitwise_cast<int32_t*>(test2(5));
+    int32_t* p2 = std::bit_cast<int32_t*>(test2(5));
     CHECK_EQ(*p2, 4);
     CHECK_EQ(*--p2, 5);
 }
@@ -2400,7 +2402,7 @@ void testStorePrePostIndex32()
 void testStorePrePostIndex64()
 {
     int64_t nums[] = { 1, 2, 3 };
-    intptr_t addr = bitwise_cast<intptr_t>(&nums[1]);
+    intptr_t addr = std::bit_cast<intptr_t>(&nums[1]);
     int32_t index = sizeof(int64_t);
 
     auto test1 = [&] (int64_t src) {
@@ -2417,7 +2419,7 @@ void testStorePrePostIndex64()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int64_t* p1 = bitwise_cast<int64_t*>(test1(4));
+    int64_t* p1 = std::bit_cast<int64_t*>(test1(4));
     CHECK_EQ(*p1, 4);
     CHECK_EQ(*--p1, nums[1]);
 
@@ -2435,7 +2437,7 @@ void testStorePrePostIndex64()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int64_t* p2 = bitwise_cast<int64_t*>(test2(5));
+    int64_t* p2 = std::bit_cast<int64_t*>(test2(5));
     CHECK_EQ(*p2, 4);
     CHECK_EQ(*--p2, 5);
 }
@@ -3828,6 +3830,38 @@ void testMoveDoubleConditionallyFloatSameArg(MacroAssembler::DoubleCondition con
     testMoveConditionallyFloatingPointSameArg(condition, testCode, arg1, floatOperands(), selectionA, selectionB);
 }
 
+void testSignExtend8To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend8To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int8Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
+void testSignExtend16To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend16To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int16Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
 void testSignExtend8To64()
 {
     auto code = compile([&] (CCallHelpers& jit) {
@@ -4504,7 +4538,7 @@ void testLoadStorePair64Double()
     };
 
     auto asInt64 = [] (double value) {
-        return bitwise_cast<int64_t>(value);
+        return std::bit_cast<int64_t>(value);
     };
 
     auto testStorePair0 = compile([&] (CCallHelpers& jit) {
@@ -4705,8 +4739,8 @@ void testProbeWritesArgumentRegisters()
             cpu.gpr(GPRInfo::argumentGPR2) = testWord(2);
             cpu.gpr(GPRInfo::argumentGPR3) = testWord(3);
 
-            cpu.fpr(FPRInfo::fpRegT0) = bitwise_cast<double>(testWord64(0));
-            cpu.fpr(FPRInfo::fpRegT1) = bitwise_cast<double>(testWord64(1));
+            cpu.fpr(FPRInfo::fpRegT0) = std::bit_cast<double>(testWord64(0));
+            cpu.fpr(FPRInfo::fpRegT1) = std::bit_cast<double>(testWord64(1));
         });
 
         // Validate that expected values were written.
@@ -4767,7 +4801,7 @@ void testProbePreservesGPRS()
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
         });
 
@@ -4865,7 +4899,7 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
 
 #if !(CPU(RISCV64))
@@ -4949,7 +4983,7 @@ void testProbeModifiesStackPointerToInsideProbeStateOnStack()
 #endif
     for (size_t offset = 0; offset < sizeof(Probe::State); offset += increment) {
         testProbeModifiesStackPointer([=] (Probe::Context& context) -> void* {
-            return reinterpret_cast<uint8_t*>(probeStateForContext(context)) + offset;
+            return static_cast<uint8_t*>(probeStateForContext(context)) + offset;
 
         });
     }
@@ -5043,7 +5077,7 @@ void testProbeModifiesStackValues()
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
 #if !CPU(RISCV64)
             originalState.spr(flagsSPR) = cpu.spr(flagsSPR);
@@ -5053,16 +5087,16 @@ void testProbeModifiesStackValues()
 
             // Ensure that we'll be writing over the regions of the stack where the Probe::State is.
             originalSP = cpu.sp();
-            newSP = reinterpret_cast<uintptr_t*>(probeStateForContext(context)) - numberOfExtraEntriesToWrite;
+            newSP = static_cast<uintptr_t*>(probeStateForContext(context)) - numberOfExtraEntriesToWrite;
             cpu.sp() = newSP;
 
             // Fill the stack with values.
-            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            uintptr_t* p = static_cast<uintptr_t*>(newSP);
             int count = 0;
             stack.set<double>(p++, 1.234567);
             if (is32Bit())
                 p++; // On 32-bit targets, a double takes up 2 uintptr_t.
-            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+            while (p < static_cast<uintptr_t*>(originalSP))
                 stack.set<uintptr_t>(p++, testWord(count++));
         });
 
@@ -5090,12 +5124,12 @@ void testProbeModifiesStackValues()
             CHECK_EQ(cpu.sp(), newSP);
 
             // Validate the stack values.
-            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            uintptr_t* p = static_cast<uintptr_t*>(newSP);
             int count = 0;
             CHECK_EQ(stack.get<double>(p++), 1.234567);
             if (is32Bit())
                 p++; // On 32-bit targets, a double takes up 2 uintptr_t.
-            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+            while (p < static_cast<uintptr_t*>(originalSP))
                 CHECK_EQ(stack.get<uintptr_t>(p++), testWord(count++));
         });
 
@@ -5188,8 +5222,8 @@ void testAndOrDouble()
         for (auto b : operands) {
             arg1 = a;
             arg2 = b;
-            uint64_t expectedResult = bitwise_cast<uint64_t>(arg1) & bitwise_cast<uint64_t>(arg2);
-            CHECK_EQ(bitwise_cast<uint64_t>(invoke<double>(andDouble)), expectedResult);
+            uint64_t expectedResult = std::bit_cast<uint64_t>(arg1) & std::bit_cast<uint64_t>(arg2);
+            CHECK_EQ(std::bit_cast<uint64_t>(invoke<double>(andDouble)), expectedResult);
         }
     }
 
@@ -5208,8 +5242,8 @@ void testAndOrDouble()
         for (auto b : operands) {
             arg1 = a;
             arg2 = b;
-            uint64_t expectedResult = bitwise_cast<uint64_t>(arg1) | bitwise_cast<uint64_t>(arg2);
-            CHECK_EQ(bitwise_cast<uint64_t>(invoke<double>(orDouble)), expectedResult);
+            uint64_t expectedResult = std::bit_cast<uint64_t>(arg1) | std::bit_cast<uint64_t>(arg2);
+            CHECK_EQ(std::bit_cast<uint64_t>(invoke<double>(orDouble)), expectedResult);
         }
     }
 }
@@ -5395,8 +5429,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint16_t array[] = { 1, 2, 0x7ff3, 4, 5, };
+        uint16_t array[] = { 1, 2, 0x7ff3, 0x8000, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x7ff3);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffff8000);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5407,6 +5444,9 @@ void testLoadBaseIndex()
         });
         uint16_t array[] = { UINT16_MAX - 1, UINT16_MAX - 2, UINT16_MAX - 3, UINT16_MAX - 4, static_cast<uint16_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // load8
@@ -5439,8 +5479,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint8_t array[] = { 1, 2, 0x73, 4, 5, };
+        uint8_t array[] = { 1, 2, 0x73, 0x80, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x73);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffffff80);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5451,6 +5494,9 @@ void testLoadBaseIndex()
         });
         uint8_t array[] = { UINT8_MAX - 1, UINT8_MAX - 2, UINT8_MAX - 3, UINT8_MAX - 4, static_cast<uint8_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // loadDouble
@@ -5942,8 +5988,9 @@ static void testBranchConvertDoubleToInt52()
 {
     auto toInt52 = compile([](CCallHelpers& jit) {
         emitFunctionPrologue(jit);
+        constexpr bool canIgnoreNegativeZero = false;
         CCallHelpers::JumpList failureCases;
-        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1);
+        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1, canIgnoreNegativeZero);
         auto done = jit.jump();
         failureCases.link(&jit);
         jit.move(CCallHelpers::TrustedImm64(1ULL << 52), GPRInfo::returnValueGPR);
@@ -5977,6 +6024,61 @@ static void testBranchConvertDoubleToInt52()
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(42.195))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(0.3))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(-0.1))), (1LL << 52));
+}
+#endif
+
+#if CPU(X86_64)
+#define CHECK_CODE_WAS_EMITTED(_jit, _emitter) do {                      \
+        size_t _beforeCodeSize = _jit.m_assembler.buffer().codeSize();   \
+        _emitter;                                                        \
+        size_t _afterCodeSize = _jit.m_assembler.buffer().codeSize();    \
+        if (_afterCodeSize > _beforeCodeSize)                            \
+            break;                                                       \
+        crashLock.lock();                                                \
+        dataLog("FAILED while testing " #_emitter ": expected it to emit code\n"); \
+        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "CHECK_CODE_WAS_EMITTED("#_jit ", " #_emitter ")"); \
+        CRASH();                                                         \
+    } while (false)
+
+static void testAtomicAndEmitsCode()
+{
+    // On x86, atomic (seqcst) RMW operations must emit a seqcst store (so a
+    // LOCK-prefixed store or a fence or something).
+    //
+    // This tests that the optimization to elide and'ing -1 must not be
+    // applied when the and is atomic.
+
+    auto test32 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto test64 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    uint64_t value = 42;
+
+    invoke<void>(test32, &value);
+    CHECK_EQ(value, 42);
+
+    invoke<void>(test64, &value);
+    CHECK_EQ(value, 42);
 }
 #endif
 
@@ -6215,6 +6317,8 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyDoubleSameArg);
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyFloatSameArg);
 
+    RUN(testSignExtend8To32());
+    RUN(testSignExtend16To32());
     RUN(testSignExtend8To64());
     RUN(testSignExtend16To64());
 #endif
@@ -6239,6 +6343,10 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testBranchIfNotType());
 #if CPU(X86_64) || CPU(ARM64)
     RUN(testBranchConvertDoubleToInt52());
+#endif
+
+#if CPU(X86_64)
+    RUN(testAtomicAndEmitsCode());
 #endif
 
     RUN(testOrImmMem());
@@ -6313,3 +6421,5 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     return main(argc, const_cast<char**>(argv));
 }
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

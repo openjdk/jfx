@@ -27,7 +27,10 @@
 #define PlatformContentFilter_h
 
 #include "SharedBuffer.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -48,8 +51,8 @@ class ResourceRequest;
 class ResourceResponse;
 class SharedBuffer;
 
-class PlatformContentFilter : public CanMakeWeakPtr<PlatformContentFilter> {
-    WTF_MAKE_FAST_ALLOCATED;
+class PlatformContentFilter : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformContentFilter> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformContentFilter);
     WTF_MAKE_NONCOPYABLE(PlatformContentFilter);
 
 public:
@@ -78,6 +81,15 @@ public:
     const std::optional<audit_token_t> hostProcessAuditToken() const { return m_hostProcessAuditToken; }
     void setHostProcessAuditToken(const std::optional<audit_token_t>& token) { m_hostProcessAuditToken = token; }
 #endif
+
+    struct FilterParameters {
+#if HAVE(WEBCONTENTRESTRICTIONS)
+        bool usesWebContentRestrictions { false };
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+        String webContentRestrictionsConfigurationPath { };
+#endif
+    };
 
 protected:
     PlatformContentFilter() = default;

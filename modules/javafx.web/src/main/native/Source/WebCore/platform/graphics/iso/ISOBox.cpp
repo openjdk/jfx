@@ -27,10 +27,13 @@
 #include "ISOBox.h"
 
 #include <JavaScriptCore/DataView.h>
+#include <wtf/TZoneMallocInlines.h>
 
 using JSC::DataView;
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ISOBox);
 
 ISOBox::ISOBox() = default;
 ISOBox::~ISOBox() = default;
@@ -91,7 +94,7 @@ bool ISOBox::parse(DataView& view, unsigned& offset)
     else if (!m_size)
         m_size = maximumPossibleSize;
 
-    if (m_boxType == "uuid") {
+    if (m_boxType == std::span { "uuid" }) {
         struct ExtendedType {
             uint8_t value[16];
         } extendedTypeStruct;

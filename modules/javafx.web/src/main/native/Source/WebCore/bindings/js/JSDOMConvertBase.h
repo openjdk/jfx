@@ -29,6 +29,7 @@
 #include "JSDOMExceptionHandling.h"
 #include <JavaScriptCore/Error.h>
 #include <concepts>
+#include <wtf/Compiler.h>
 
 namespace WebCore {
 
@@ -45,8 +46,10 @@ namespace Detail {
 
 template<typename T> inline T* getPtrOrRef(const T* p) { return const_cast<T*>(p); }
 template<typename T> inline T& getPtrOrRef(const T& p) { return const_cast<T&>(p); }
-template<typename T> inline T* getPtrOrRef(const RefPtr<T>& p) { return p.get(); }
-template<typename T> inline T& getPtrOrRef(const Ref<T>& p) { return p.get(); }
+template<typename T, typename PtrTraits, typename RefDerefTraits> inline T* getPtrOrRef(const RefPtr<T, PtrTraits, RefDerefTraits>& p) { return p.get(); }
+template<typename T, typename PtrTraits, typename RefDerefTraits> inline T& getPtrOrRef(const Ref<T, PtrTraits, RefDerefTraits>& p) { return p.get(); }
+template<typename T, typename WeakPtrImpl, typename PtrTraits> inline T* getPtrOrRef(const WeakPtr<T, WeakPtrImpl, PtrTraits>& p) { return p.get(); }
+template<typename T, typename WeakPtrImpl> inline T& getPtrOrRef(const WeakRef<T, WeakPtrImpl>& p) { return p.get(); }
 
 }
 
@@ -176,7 +179,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -185,7 +188,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return toJS<IDL>(lexicalGlobalObject, throwScope, valueOrFunctor());
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }
@@ -206,7 +209,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -215,7 +218,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return toJS<IDL>(lexicalGlobalObject, globalObject, throwScope, valueOrFunctor());
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }
@@ -236,7 +239,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSG
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -246,7 +249,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSG
 
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }

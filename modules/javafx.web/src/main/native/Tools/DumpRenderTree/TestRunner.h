@@ -360,10 +360,6 @@ public:
     const std::string& titleTextDirection() const { return m_titleTextDirection; }
     void setTitleTextDirection(const std::string& direction) { m_titleTextDirection = direction; }
 
-    // Custom full screen behavior.
-    void setHasCustomFullScreenBehavior(bool value) { m_customFullScreenBehavior = value; }
-    bool hasCustomFullScreenBehavior() const { return m_customFullScreenBehavior; }
-
     void setStorageDatabaseIdleInterval(double);
     void closeIdleLocalStorageDatabases();
 
@@ -396,7 +392,7 @@ public:
 
     void generateTestReport(JSStringRef message, JSStringRef group);
 
-    void setTopContentInset(double);
+    void setObscuredContentInsets(double top, double right, double bottom, double left);
 
     void setPageScaleFactor(double scaleFactor, long x, long y);
     static JSValueRef alwaysResolvePromise(JSContextRef);
@@ -463,7 +459,6 @@ private:
     bool m_shouldStayOnPageAfterHandlingBeforeUnload { false };
     // FIXME 81697: This variable most likely will be removed once we have migrated the tests from fast/notifications to http/tests/notifications.
     bool m_areLegacyWebNotificationPermissionRequestsIgnored { false };
-    bool m_customFullScreenBehavior { false };
     bool m_hasPendingWebNotificationClick { false };
     bool m_dumpJSConsoleLogInStdErr { false };
     bool m_didCancelClientRedirect { false };
@@ -497,7 +492,7 @@ private:
     };
 
     std::unique_ptr<WTR::UIScriptContext> m_UIScriptContext;
-    UIScriptInvocationData* m_pendingUIScriptInvocationData { nullptr };
+
 
     std::vector<std::string> m_openPanelFiles;
 #if PLATFORM(IOS_FAMILY)

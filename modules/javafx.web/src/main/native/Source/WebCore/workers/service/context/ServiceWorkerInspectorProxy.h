@@ -25,8 +25,11 @@
 
 #pragma once
 
+#include "ServiceWorkerDebuggable.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 // All of these methods should be called on the Main Thread.
 // Used to send messages to the WorkerInspector on the WorkerThread.
@@ -40,21 +43,21 @@ namespace WebCore {
 class ServiceWorkerThreadProxy;
 
 class ServiceWorkerInspectorProxy {
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerInspectorProxy);
     WTF_MAKE_NONCOPYABLE(ServiceWorkerInspectorProxy);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit ServiceWorkerInspectorProxy(ServiceWorkerThreadProxy&);
     ~ServiceWorkerInspectorProxy();
 
     void serviceWorkerTerminated();
 
-    void connectToWorker(Inspector::FrontendChannel&);
-    void disconnectFromWorker(Inspector::FrontendChannel&);
-    void sendMessageToWorker(String&&);
+    WEBCORE_EXPORT void connectToWorker(Inspector::FrontendChannel&, bool isAutomaticConnection = false, bool immediatelyPause = false);
+    WEBCORE_EXPORT void disconnectFromWorker(Inspector::FrontendChannel&);
+    WEBCORE_EXPORT void sendMessageToWorker(String&&);
     void sendMessageFromWorkerToFrontend(String&&);
 
 private:
-    ServiceWorkerThreadProxy& m_serviceWorkerThreadProxy;
+    ThreadSafeWeakPtr<ServiceWorkerThreadProxy> m_serviceWorkerThreadProxy;
     Inspector::FrontendChannel* m_channel { nullptr };
 };
 

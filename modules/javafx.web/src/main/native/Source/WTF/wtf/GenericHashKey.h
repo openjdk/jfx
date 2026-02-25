@@ -25,28 +25,28 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 
 template<typename Key, typename HashArg = DefaultHash<Key>>
 class GenericHashKey final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GenericHashKey);
 
     struct EmptyKey { };
     struct DeletedKey { };
 
 public:
     constexpr GenericHashKey(Key&& key)
-        : m_value(std::in_place_type_t<Key>(), WTFMove(key))
+        : m_value(InPlaceTypeT<Key>(), WTFMove(key))
     {
     }
 
     template<typename K>
     constexpr GenericHashKey(K&& key)
-        : m_value(std::in_place_type_t<Key>(), std::forward<K>(key))
+        : m_value(InPlaceTypeT<Key>(), std::forward<K>(key))
     {
     }
 
@@ -80,11 +80,12 @@ public:
     }
 
 private:
-    std::variant<Key, EmptyKey, DeletedKey> m_value;
+    Variant<Key, EmptyKey, DeletedKey> m_value;
 };
 
 template<typename K, typename H> struct HashTraits<GenericHashKey<K, H>> : GenericHashTraits<GenericHashKey<K, H>> {
     static GenericHashKey<K, H> emptyValue() { return GenericHashKey<K, H> { HashTableEmptyValue }; }
+    static bool isEmptyValue(const GenericHashKey<K, H>& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(GenericHashKey<K, H>& slot) { slot = GenericHashKey<K, H> { HashTableDeletedValue }; }
     static bool isDeletedValue(const GenericHashKey<K, H>& value) { return value.isHashTableDeletedValue(); }
 };

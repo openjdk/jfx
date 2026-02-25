@@ -26,9 +26,9 @@
 #include "config.h"
 #include "ImageBackingStore.h"
 
-IGNORE_CLANG_WARNINGS_BEGIN("cast-align")
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkPixmap.h>
-IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -36,7 +36,7 @@ PlatformImagePtr ImageBackingStore::image() const
 {
     m_pixels->ref();
     auto info = SkImageInfo::MakeN32(size().width(), size().height(), m_premultiplyAlpha ? kPremul_SkAlphaType : kUnpremul_SkAlphaType, SkColorSpace::MakeSRGB());
-    SkPixmap pixmap(info, m_pixelsPtr, info.minRowBytes64());
+    SkPixmap pixmap(info, m_pixelsSpan.data(), info.minRowBytes64());
     return SkImages::RasterFromPixmap(pixmap, [](const void*, void* context) {
         static_cast<DataSegment*>(context)->deref();
     }, m_pixels.get());

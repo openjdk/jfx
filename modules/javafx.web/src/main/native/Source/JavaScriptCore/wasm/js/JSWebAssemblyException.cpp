@@ -27,6 +27,7 @@
 #include "config.h"
 #include "JSWebAssemblyException.h"
 #include "WasmExceptionType.h"
+#include "WasmOps.h"
 #include "WasmTypeDefinition.h"
 
 #if ENABLE(WEBASSEMBLY)
@@ -47,11 +48,18 @@ Structure* JSWebAssemblyException::createStructure(VM& vm, JSGlobalObject* globa
     return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
 }
 
-JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, const Wasm::Tag& tag, FixedVector<uint64_t>&& payload)
+JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, Ref<const Wasm::Tag>&& tag, FixedVector<uint64_t>&& payload)
     : Base(vm, structure)
-    , m_tag(Ref { tag })
+    , m_tag(WTFMove(tag))
     , m_payload(WTFMove(payload))
 {
+}
+
+void JSWebAssemblyException::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
+    ASSERT(inherits(info()));
+    vm.heap.reportExtraMemoryAllocated(this, payload().byteSize());
 }
 
 template<typename Visitor>
@@ -64,9 +72,10 @@ void JSWebAssemblyException::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     unsigned offset = 0;
     for (unsigned i = 0; i < tagType.argumentCount(); ++i) {
         if (isRefType(tagType.argumentType(i)))
-            visitor.append(bitwise_cast<WriteBarrier<Unknown>>(exception->payload()[offset]));
+            visitor.append(std::bit_cast<WriteBarrier<Unknown>>(exception->payload()[offset]));
         offset += tagType.argumentType(i).kind == Wasm::TypeKind::V128 ? 2 : 1;
     }
+    visitor.reportExtraMemoryVisited(exception->payload().size());
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyException);
@@ -78,18 +87,22 @@ void JSWebAssemblyException::destroy(JSCell* cell)
 
 JSValue JSWebAssemblyException::getArg(JSGlobalObject* globalObject, unsigned i) const
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     const auto& tagType = tag().type();
     ASSERT(i < tagType.argumentCount());
 
-    // It feels like maybe we should throw an exception here, but as far as I can tell,
-    // the current draft spec just asserts that we can't getArg a v128. Maybe we can
-    // revisit this later.
-    RELEASE_ASSERT(tagType.argumentType(i).kind != Wasm::TypeKind::V128);
+    auto argTypeKind = tagType.argumentType(i).kind;
+    if (argTypeKind == Wasm::TypeKind::V128 || argTypeKind == Wasm::TypeKind::Exn) {
+        throwTypeError(globalObject, scope, "argument type cannot be a V128 or exnref");
+        return { };
+    }
 
     unsigned offset = 0;
     for (unsigned j = 0; j < i; ++j)
         offset += tagType.argumentType(j).kind == Wasm::TypeKind::V128 ? 2 : 1;
-    return toJSValue(globalObject, tagType.argumentType(i), payload()[offset]);
+    RELEASE_AND_RETURN(scope, toJSValue(globalObject, tagType.argumentType(i), payload()[offset]));
 }
 
 } // namespace JSC

@@ -31,7 +31,6 @@
 #include "CachedResourceClient.h"
 #include "CachedSVGDocumentClient.h"
 #include "CachedStyleSheetClient.h"
-#include "ExceptionOr.h"
 #include <JavaScriptCore/InspectorAuditAgent.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
@@ -42,6 +41,7 @@ namespace WebCore {
 
 class CachedResource;
 class Document;
+template<typename> class ExceptionOr;
 
 class InspectorAuditResourcesObject : public RefCounted<InspectorAuditResourcesObject> {
 public:
@@ -79,7 +79,10 @@ private:
     class InspectorAuditCachedFontClient : public CachedFontClient { };
     InspectorAuditCachedFontClient m_cachedFontClient;
 
-    class InspectorAuditCachedImageClient : public CachedImageClient { };
+    class InspectorAuditCachedImageClient final : public CachedImageClient {
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(InspectorAuditCachedImageClient);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorAuditCachedImageClient);
+    };
     InspectorAuditCachedImageClient m_cachedImageClient;
 
     class InspectorAuditCachedRawResourceClient : public CachedRawResourceClient { };

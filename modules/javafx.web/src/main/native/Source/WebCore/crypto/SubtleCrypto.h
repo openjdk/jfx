@@ -29,9 +29,8 @@
 #include "ContextDestructionObserver.h"
 #include "CryptoKeyFormat.h"
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
 
@@ -50,17 +49,17 @@ class CryptoKey;
 class DeferredPromise;
 
 enum class CryptoAlgorithmIdentifier : uint8_t;
-enum class CryptoKeyUsage;
+enum class CryptoKeyUsage : uint8_t;
 
-class SubtleCrypto : public ContextDestructionObserver, public RefCounted<SubtleCrypto>, public CanMakeWeakPtr<SubtleCrypto> {
+class SubtleCrypto : public RefCountedAndCanMakeWeakPtr<SubtleCrypto>, public ContextDestructionObserver {
 public:
     static Ref<SubtleCrypto> create(ScriptExecutionContext* context) { return adoptRef(*new SubtleCrypto(context)); }
     ~SubtleCrypto();
 
     using KeyFormat = CryptoKeyFormat;
 
-    using AlgorithmIdentifier = std::variant<JSC::Strong<JSC::JSObject>, String>;
-    using KeyDataVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, JsonWebKey>;
+    using AlgorithmIdentifier = Variant<JSC::Strong<JSC::JSObject>, String>;
+    using KeyDataVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, JsonWebKey>;
 
     void encrypt(JSC::JSGlobalObject&, AlgorithmIdentifier&&, CryptoKey&, BufferSource&& data, Ref<DeferredPromise>&&);
     void decrypt(JSC::JSGlobalObject&, AlgorithmIdentifier&&, CryptoKey&, BufferSource&& data, Ref<DeferredPromise>&&);
@@ -81,7 +80,7 @@ private:
     void addAuthenticatedEncryptionWarningIfNecessary(CryptoAlgorithmIdentifier);
     inline friend RefPtr<DeferredPromise> getPromise(DeferredPromise*, WeakPtr<SubtleCrypto>);
 
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
     HashMap<DeferredPromise*, Ref<DeferredPromise>> m_pendingPromises;
 };
 

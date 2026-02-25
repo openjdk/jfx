@@ -29,9 +29,12 @@
 #include "StyleFontSizeFunctions.h"
 
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontPlatformData);
 
 FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
     : m_isHashTableDeletedValue(true)
@@ -95,7 +98,12 @@ void FontPlatformData::updateSizeWithFontSizeAdjust(const FontSizeAdjust& fontSi
     if (!fontSizeAdjust.value)
         return;
 
-    auto tmpFont = FontCache::forCurrentThread().fontForPlatformData(*this);
+    if (!*fontSizeAdjust.value) {
+        updateSize(0);
+        return;
+    }
+
+    auto tmpFont = FontCache::forCurrentThread()->fontForPlatformData(*this);
     auto adjustedFontSize = Style::adjustedFontSize(computedSize, fontSizeAdjust, tmpFont->fontMetrics());
 
     if (adjustedFontSize == size())

@@ -163,7 +163,7 @@ Ref<MediaPromise> MockSourceBufferPrivate::appendInternal(Ref<SharedBuffer>&& da
             m_inputBuffer.clear();
             return MediaPromise::createAndReject(PlatformMediaError::ParsingError);
         }
-        m_inputBuffer.remove(0, boxLength);
+        m_inputBuffer.removeAt(0, boxLength);
     }
 
     return MediaPromise::createAndResolve();
@@ -174,8 +174,7 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
     SourceBufferPrivateClient::InitializationSegment segment;
     segment.duration = initBox.duration();
 
-    for (auto it = initBox.tracks().begin(); it != initBox.tracks().end(); ++it) {
-        const MockTrackBox& trackBox = *it;
+    for (auto& trackBox : initBox.tracks()) {
         if (trackBox.kind() == MockTrackBox::Video) {
             SourceBufferPrivateClient::InitializationSegment::VideoTrackInformation info;
             info.track = MockVideoTrackPrivate::create(trackBox);
@@ -211,11 +210,6 @@ Ref<SourceBufferPrivate::SamplesPromise> MockSourceBufferPrivate::enqueuedSample
     return SamplesPromise::createAndResolve(copyToVector(m_enqueuedSamples));
 }
 
-MediaTime MockSourceBufferPrivate::minimumUpcomingPresentationTimeForTrackID(TrackID)
-{
-    return m_minimumUpcomingPresentationTime;
-}
-
 void MockSourceBufferPrivate::setMaximumQueueDepthForTrackID(TrackID, uint64_t maxQueueDepth)
 {
     m_maxQueueDepth = maxQueueDepth;
@@ -224,16 +218,6 @@ void MockSourceBufferPrivate::setMaximumQueueDepthForTrackID(TrackID, uint64_t m
 bool MockSourceBufferPrivate::canSetMinimumUpcomingPresentationTime(TrackID) const
 {
     return true;
-}
-
-void MockSourceBufferPrivate::setMinimumUpcomingPresentationTime(TrackID, const MediaTime& presentationTime)
-{
-    m_minimumUpcomingPresentationTime = presentationTime;
-}
-
-void MockSourceBufferPrivate::clearMinimumUpcomingPresentationTime(TrackID)
-{
-    m_minimumUpcomingPresentationTime = MediaTime::invalidTime();
 }
 
 bool MockSourceBufferPrivate::canSwitchToType(const ContentType& contentType)

@@ -62,6 +62,7 @@ ScrollingStatePluginScrollingNode::ScrollingStatePluginScrollingNode(
     ScrollbarEnabledState&& scrollbarEnabledState,
     UserInterfaceLayoutDirection scrollbarLayoutDirection,
     ScrollbarWidth scrollbarWidth,
+    bool useDarkAppearanceForScrollbars,
     RequestedKeyboardScrollData&& scrollData
 ) : ScrollingStateScrollingNode(
     ScrollingNodeType::PluginScrolling,
@@ -93,6 +94,7 @@ ScrollingStatePluginScrollingNode::ScrollingStatePluginScrollingNode(
     WTFMove(scrollbarEnabledState),
     scrollbarLayoutDirection,
     scrollbarWidth,
+    useDarkAppearanceForScrollbars,
     WTFMove(scrollData)
 )
 {
@@ -119,7 +121,7 @@ Ref<ScrollingStateNode> ScrollingStatePluginScrollingNode::clone(ScrollingStateT
 
 void ScrollingStatePluginScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Plugin scrolling node";
+    ts << "Plugin scrolling node"_s;
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 }

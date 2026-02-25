@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -39,22 +39,10 @@ public:
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
 
-    void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
-
-    void computePerCharacterLayoutInformation();
-
-    LegacyInlineBox* closestLeafChildForPosition(const LayoutPoint&);
-
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
-
 private:
     RenderSVGText& renderSVGText() const;
 
     bool isSVGRootInlineBox() const override { return true; }
-    void reorderValueListsToLogicalOrder(Vector<SVGTextLayoutAttributes*>&);
-    void layoutCharactersInTextBoxes(LegacyInlineFlowBox*, SVGTextLayoutEngine&);
-    void layoutChildBoxes(LegacyInlineFlowBox*, FloatRect* = nullptr);
-    void layoutRootBox(const FloatRect&);
 
     float m_logicalHeight;
 };

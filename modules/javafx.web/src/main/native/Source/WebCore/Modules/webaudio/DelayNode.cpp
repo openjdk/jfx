@@ -30,6 +30,7 @@
 
 #include "DelayOptions.h"
 #include "DelayProcessor.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -69,7 +70,7 @@ ExceptionOr<Ref<DelayNode>> DelayNode::create(BaseAudioContext& context, const D
 
 AudioParam& DelayNode::delayTime()
 {
-    return static_cast<DelayProcessor&>(*m_processor).delayTime();
+    return downcast<DelayProcessor>(*m_processor).delayTime();
 }
 
 } // namespace WebCore

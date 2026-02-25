@@ -27,7 +27,6 @@
 #include "Disassembler.h"
 
 #include "MacroAssemblerCodeRef.h"
-#include <variant>
 #include <wtf/Condition.h>
 #include <wtf/DataLog.h>
 #include <wtf/Deque.h>
@@ -36,13 +35,15 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 namespace Disassembler {
 
 Lock labelMapLock;
 
-using LabelMap = HashMap<void*, std::variant<CString, const char*>>;
+using LabelMap = UncheckedKeyHashMap<void*, Variant<CString, const char*>>;
 LazyNeverDestroyed<LabelMap> labelMap;
 
 static LabelMap& ensureLabelMap() WTF_REQUIRES_LOCK(labelMapLock)
@@ -112,7 +113,7 @@ public:
     }
 
 private:
-    NO_RETURN void run()
+    [[noreturn]] void run()
     {
         for (;;) {
             std::unique_ptr<DisassemblyTask> task;
@@ -202,3 +203,4 @@ const char* labelFor(void* thunkAddress)
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

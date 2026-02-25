@@ -29,7 +29,9 @@
 #include "BitmapImage.h"
 #include "ColorBlending.h"
 #include "ColorHash.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
+#include "Editing.h"
 #include "Editor.h"
 #include "Element.h"
 #include "ElementAncestorIteratorInlines.h"
@@ -44,6 +46,7 @@
 #include "NodeTraversal.h"
 #include "Range.h"
 #include "RenderElement.h"
+#include "RenderLayer.h"
 #include "RenderObject.h"
 #include "RenderText.h"
 #include "TextIterator.h"
@@ -131,11 +134,43 @@ RefPtr<TextIndicator> TextIndicator::createWithSelectionInFrame(LocalFrame& fram
     return TextIndicator::create(data);
 }
 
+bool TextIndicator::wantsBounce() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool TextIndicator::wantsManualAnimation() const
+{
+    switch (m_data.presentationTransition) {
+    case WebCore::TextIndicatorPresentationTransition::FadeIn:
+        return true;
+
+    case WebCore::TextIndicatorPresentationTransition::Bounce:
+    case WebCore::TextIndicatorPresentationTransition::BounceAndCrossfade:
+    case WebCore::TextIndicatorPresentationTransition::None:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 static bool hasNonInlineOrReplacedElements(const SimpleRange& range)
 {
     for (auto& node : intersectingNodes(range)) {
         auto renderer = node.renderer();
-        if (renderer && (!renderer->isInline() || renderer->isReplacedOrInlineBlock()))
+        if (renderer && (!renderer->isInline() || renderer->isBlockLevelReplacedOrAtomicInline()))
             return true;
     }
     return false;
@@ -155,9 +190,12 @@ static SnapshotOptions snapshotOptionsForTextIndicatorOptions(OptionSet<TextIndi
                 snapshotOptions.flags.add(SnapshotFlags::ForceBlackText);
         }
         if (options.contains(TextIndicatorOption::SkipReplacedContent))
-            snapshotOptions.flags.add(SnapshotFlags::ExcludeReplacedContent);
+            snapshotOptions.flags.add(SnapshotFlags::ExcludeReplacedContentExceptForIFrames);
     } else
         snapshotOptions.flags.add(SnapshotFlags::ExcludeSelectionHighlighting);
+
+    if (options.contains(TextIndicatorOption::SnapshotContentAt3xBaseScale))
+        snapshotOptions.flags.add(SnapshotFlags::PaintWith3xBaseScale);
 
     return snapshotOptions;
 }
@@ -178,16 +216,24 @@ static bool takeSnapshots(TextIndicatorData& data, LocalFrame& frame, IntRect sn
         return false;
 
     if (data.options.contains(TextIndicatorOption::IncludeSnapshotWithSelectionHighlight)) {
+        SnapshotOptions snapshotOptions { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+        if (data.options.contains(TextIndicatorOption::SnapshotContentAt3xBaseScale))
+            snapshotOptions.flags.add(SnapshotFlags::PaintWith3xBaseScale);
+
         float snapshotScaleFactor;
-        data.contentImageWithHighlight = takeSnapshot(frame, snapshotRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, clipRectsInDocumentCoordinates);
+        data.contentImageWithHighlight = takeSnapshot(frame, snapshotRect, WTFMove(snapshotOptions), snapshotScaleFactor, clipRectsInDocumentCoordinates);
         ASSERT(!data.contentImageWithHighlight || data.contentImageScaleFactor >= snapshotScaleFactor);
     }
 
     if (data.options.contains(TextIndicatorOption::IncludeSnapshotOfAllVisibleContentWithoutSelection)) {
+        SnapshotOptions snapshotOptions { { SnapshotFlags::PaintEverythingExcludingSelection }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() };
+        if (data.options.contains(TextIndicatorOption::SnapshotContentAt3xBaseScale))
+            snapshotOptions.flags.add(SnapshotFlags::PaintWith3xBaseScale);
+
         float snapshotScaleFactor;
-        auto snapshotRect = frame.view()->visibleContentRect();
-        data.contentImageWithoutSelection = takeSnapshot(frame, snapshotRect, { { SnapshotFlags::PaintEverythingExcludingSelection }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }, snapshotScaleFactor, { });
-        data.contentImageWithoutSelectionRectInRootViewCoordinates = frame.view()->contentsToRootView(snapshotRect);
+        auto snapshotRect = frame.protectedView()->visibleContentRect();
+        data.contentImageWithoutSelection = takeSnapshot(frame, snapshotRect, WTFMove(snapshotOptions), snapshotScaleFactor, { });
+        data.contentImageWithoutSelectionRectInRootViewCoordinates = frame.protectedView()->contentsToRootView(snapshotRect);
     }
 
     return true;
@@ -200,9 +246,8 @@ static HashSet<Color> estimatedTextColorsForRange(const SimpleRange& range)
         auto node = iterator.node();
         if (!node)
             continue;
-        auto renderer = node->renderer();
-        if (is<RenderText>(renderer))
-            colors.add(renderer->style().color());
+        if (CheckedPtr renderText = dynamicDowncast<RenderText>(node->renderer()))
+            colors.add(renderText->style().color());
     }
     return colors;
 }
@@ -278,7 +323,7 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
         data.options.add(TextIndicatorOption::PaintAllContent);
 #if PLATFORM(IOS_FAMILY)
     else if (data.options.contains(TextIndicatorOption::UseSelectionRectForSizing)) {
-        textRects = RenderObject::collectSelectionGeometries(range).map([&](auto& geometry) -> FloatRect {
+        textRects = RenderObject::collectSelectionGeometries(range).geometries.map([&](auto& geometry) -> FloatRect {
             return geometry.rect();
         });
     }
@@ -295,7 +340,7 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
     if (textRects.isEmpty())
         textRects.append(absoluteBoundingRectForRange(range));
 
-    auto frameView = frame.view();
+    RefPtr frameView = frame.view();
 
     // Use the exposedContentRect/viewExposedRect instead of visibleContentRect to avoid creating a huge indicator for a large view inside a scroll view.
     IntRect contentsClipRect;
@@ -333,7 +378,7 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
         textRectInDocumentCoordinatesIncludingMargin.inflateY(margin.height());
         textBoundingRectInDocumentCoordinates.unite(textRectInDocumentCoordinatesIncludingMargin);
 
-        FloatRect textRectInRootViewCoordinates = frame.view()->contentsToRootView(enclosingIntRect(textRectInDocumentCoordinatesIncludingMargin));
+        FloatRect textRectInRootViewCoordinates = frame.protectedView()->contentsToRootView(enclosingIntRect(textRectInDocumentCoordinatesIncludingMargin));
         textRectsInRootViewCoordinates.append(textRectInRootViewCoordinates);
         textBoundingRectInRootViewCoordinates.unite(textRectInRootViewCoordinates);
     }
@@ -343,9 +388,11 @@ static bool initializeIndicator(TextIndicatorData& data, LocalFrame& frame, cons
         return rect;
     });
 
+    data.enclosingGraphicsLayerID = computeEnclosingLayer(range).enclosingGraphicsLayerID;
+
     // Store the selection rect in window coordinates, to be used subsequently
     // to determine if the indicator and selection still precisely overlap.
-    data.selectionRectInRootViewCoordinates = frame.view()->contentsToRootView(enclosingIntRect(frame.selection().selectionBounds(FrameSelection::ClipToVisibleContent::No)));
+    data.selectionRectInRootViewCoordinates = frame.protectedView()->contentsToRootView(enclosingIntRect(frame.selection().selectionBounds(FrameSelection::ClipToVisibleContent::No)));
     data.textBoundingRectInRootViewCoordinates = textBoundingRectInRootViewCoordinates;
     data.textRectsInBoundingRectCoordinates = WTFMove(textRectsInBoundingRectCoordinates);
 

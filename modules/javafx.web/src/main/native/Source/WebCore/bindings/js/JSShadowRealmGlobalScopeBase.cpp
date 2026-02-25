@@ -27,7 +27,6 @@
 #include "JSShadowRealmGlobalScopeBase.h"
 
 #include "EventLoop.h"
-#include "JSMicrotaskCallback.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "ScriptModuleLoader.h"
 #include "ShadowRealmGlobalScope.h"
@@ -73,6 +72,7 @@ const GlobalObjectMethodTable* JSShadowRealmGlobalScopeBase::globalObjectMethodT
     &deriveShadowRealmGlobalObject,
         &codeForEval,
         &canCompileStrings,
+        &trustedScriptStructure,
     };
     return &table;
 };
@@ -149,23 +149,13 @@ JSC::ScriptExecutionStatus JSShadowRealmGlobalScopeBase::scriptExecutionStatus(J
     return incubating->globalObjectMethodTable()->scriptExecutionStatus(incubating, owner);
 }
 
-void JSShadowRealmGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, JSC::JSString* msg)
+void JSShadowRealmGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, const String& msg)
 {
     auto incubating = jsCast<JSShadowRealmGlobalScopeBase*>(globalObject)->incubatingRealm();
     incubating->globalObjectMethodTable()->reportViolationForUnsafeEval(incubating, msg);
 }
 
-String JSShadowRealmGlobalScopeBase::codeForEval(JSC::JSGlobalObject* globalObject, JSC::JSValue value)
-{
-    return JSGlobalObject::codeForEval(globalObject, value);
-}
-
-bool JSShadowRealmGlobalScopeBase::canCompileStrings(JSC::JSGlobalObject* globalObject, JSC::CompilationType compilationType, String codeString, JSC::JSValue bodyArgument)
-{
-    return JSGlobalObject::canCompileStrings(globalObject, compilationType, codeString, bodyArgument);
-}
-
-void JSShadowRealmGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+void JSShadowRealmGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, QueuedTask&& task)
 {
     auto incubating = jsCast<JSShadowRealmGlobalScopeBase*>(&object)->incubatingRealm();
     incubating->globalObjectMethodTable()->queueMicrotaskToEventLoop(*incubating, WTFMove(task));

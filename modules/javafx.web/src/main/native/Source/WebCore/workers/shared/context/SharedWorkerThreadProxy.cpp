@@ -54,9 +54,9 @@
 
 namespace WebCore {
 
-static HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
+static HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>> map;
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>> map;
     return map;
 }
 
@@ -87,9 +87,9 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
     };
 }
 
-SharedWorkerThreadProxy* SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
+RefPtr<SharedWorkerThreadProxy> SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
 {
-    return allSharedWorkerThreadProxies().get(identifier);
+    return allSharedWorkerThreadProxies().get(identifier).get();
 }
 
 bool SharedWorkerThreadProxy::hasInstances()
@@ -99,7 +99,7 @@ bool SharedWorkerThreadProxy::hasInstances()
 
 SharedWorkerThreadProxy::SharedWorkerThreadProxy(Ref<Page>&& page, SharedWorkerIdentifier sharedWorkerIdentifier, const ClientOrigin& clientOrigin, WorkerFetchResult&& workerFetchResult, WorkerOptions&& workerOptions, WorkerInitializationData&& initializationData, CacheStorageProvider& cacheStorageProvider)
     : m_page(WTFMove(page))
-    , m_document(*dynamicDowncast<LocalFrame>(m_page->mainFrame())->document())
+    , m_document(*m_page->localTopDocument())
     , m_contextIdentifier(*initializationData.clientIdentifier)
     , m_workerThread(SharedWorkerThread::create(sharedWorkerIdentifier, generateWorkerParameters(workerFetchResult, WTFMove(workerOptions), WTFMove(initializationData), m_document), WTFMove(workerFetchResult.script), *this, *this, *this, *this, WorkerThreadStartMode::Normal, clientOrigin.topOrigin.securityOrigin(), m_document->idbConnectionProxy(), m_document->socketProvider(), JSC::RuntimeFlags::createAllEnabled()))
     , m_cacheStorageProvider(cacheStorageProvider)
@@ -153,7 +153,7 @@ void SharedWorkerThreadProxy::postExceptionToWorkerObject(const String& errorMes
 
     callOnMainThread([sharedWorkerIdentifier = m_workerThread->identifier(), errorMessage = errorMessage.isolatedCopy(), lineNumber, columnNumber, sourceURL = sourceURL.isolatedCopy()] {
         bool isErrorEvent = true;
-        if (auto* connection = SharedWorkerContextManager::singleton().connection())
+        if (RefPtr connection = SharedWorkerContextManager::singleton().connection())
             connection->postErrorToWorkerObject(sharedWorkerIdentifier, errorMessage, lineNumber, columnNumber, sourceURL, isErrorEvent);
     });
 }
@@ -164,7 +164,7 @@ void SharedWorkerThreadProxy::reportErrorToWorkerObject(const String& errorMessa
 
     callOnMainThread([sharedWorkerIdentifier = m_workerThread->identifier(), errorMessage = errorMessage.isolatedCopy()] {
         bool isErrorEvent = false;
-        if (auto* connection = SharedWorkerContextManager::singleton().connection())
+        if (RefPtr connection = SharedWorkerContextManager::singleton().connection())
             connection->postErrorToWorkerObject(sharedWorkerIdentifier, errorMessage, 0, 0, { }, isErrorEvent);
     });
 }
@@ -173,7 +173,7 @@ RefPtr<CacheStorageConnection> SharedWorkerThreadProxy::createCacheStorageConnec
 {
     ASSERT(isMainThread());
     if (!m_cacheStorageConnection)
-        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection();
+        m_cacheStorageConnection = Ref { m_cacheStorageProvider.get() }->createCacheStorageConnection();
     return m_cacheStorageConnection;
 }
 
@@ -216,8 +216,10 @@ void SharedWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool)
 
 void SharedWorkerThreadProxy::networkStateChanged(bool isOnLine)
 {
-    for (auto& proxy : allSharedWorkerThreadProxies().values())
+    for (auto& weakProxy : allSharedWorkerThreadProxies().values()) {
+        if (RefPtr proxy = weakProxy.get())
         proxy->notifyNetworkStateChange(isOnLine);
+    }
 }
 
 void SharedWorkerThreadProxy::workerGlobalScopeClosed()

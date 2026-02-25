@@ -32,6 +32,8 @@
 #include "JSCInlines.h"
 #include "WeakHandleOwner.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WeakBlock);
@@ -118,7 +120,7 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
 
         ASCIILiteral reason = ""_s;
         ASCIILiteral* reasonPtr = nullptr;
-        if (UNLIKELY(heapAnalyzer))
+        if (heapAnalyzer) [[unlikely]]
             reasonPtr = &reason;
 
         typename Visitor::ReferrerContext context(visitor, Visitor::OpaqueRoot);
@@ -128,7 +130,7 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
 
         visitor.appendUnbarriered(jsValue);
 
-        if (UNLIKELY(heapAnalyzer)) {
+        if (heapAnalyzer) [[unlikely]] {
             if (jsValue.isCell())
                 heapAnalyzer->setOpaqueRootReachabilityReasonForCell(jsValue.asCell(), *reasonPtr);
         }
@@ -180,3 +182,5 @@ void WeakBlock::reap()
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

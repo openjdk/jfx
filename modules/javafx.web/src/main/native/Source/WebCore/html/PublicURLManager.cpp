@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Motorola Mobility Inc.
- * Copyright (C) 2013 Google Inc. All Rights Reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +30,13 @@
 #include "ContextDestructionObserverInlines.h"
 #include "SecurityOrigin.h"
 #include "URLRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PublicURLManager);
 
 Ref<PublicURLManager> PublicURLManager::create(ScriptExecutionContext* context)
 {

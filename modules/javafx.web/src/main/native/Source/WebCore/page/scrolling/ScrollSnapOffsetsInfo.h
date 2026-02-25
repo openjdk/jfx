@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ElementIdentifier.h"
 #include "FloatRect.h"
 #include "LayoutRect.h"
 #include "LayoutUnit.h"
+#include "NodeIdentifier.h"
 #include "ScrollTypes.h"
 #include "StyleScrollSnapPoints.h"
 #include <utility>
@@ -46,19 +46,19 @@ struct SnapOffset {
     T offset;
     ScrollSnapStop stop;
     bool hasSnapAreaLargerThanViewport;
-    Markable<ElementIdentifier> snapTargetID;
+    Markable<NodeIdentifier> snapTargetID;
     bool isFocused;
-    Vector<size_t> snapAreaIndices;
+    Vector<uint64_t> snapAreaIndices;
 };
 
 template <typename UnitType, typename RectType>
 struct ScrollSnapOffsetsInfo {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ScrollSnapOffsetsInfo);
     ScrollSnapStrictness strictness { ScrollSnapStrictness::None };
     Vector<SnapOffset<UnitType>> horizontalSnapOffsets;
     Vector<SnapOffset<UnitType>> verticalSnapOffsets;
     Vector<RectType> snapAreas;
-    Vector<ElementIdentifier> snapAreasIDs;
+    Vector<NodeIdentifier> snapAreasIDs;
 
     bool isEqual(const ScrollSnapOffsetsInfo<UnitType, RectType>& other) const
     {
@@ -103,13 +103,13 @@ WEBCORE_EXPORT std::pair<LayoutUnit, std::optional<unsigned>> LayoutScrollSnapOf
 // Update the snap offsets for this scrollable area, given the RenderBox of the scroll container, the RenderStyle
 // which defines the scroll-snap properties, and the viewport rectangle with the origin at the top left of
 // the scrolling container's border box.
-void updateSnapOffsetsForScrollableArea(ScrollableArea&, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode, TextDirection, Element*);
+void updateSnapOffsetsForScrollableArea(ScrollableArea&, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode, Element*);
 
 template <typename T> WTF::TextStream& operator<<(WTF::TextStream& ts, SnapOffset<T> offset)
 {
-    ts << offset.offset << " snapTargetID: " <<  offset.snapTargetID << " isFocused: " << offset.isFocused;
+    ts << offset.offset << " snapTargetID: "_s <<  offset.snapTargetID << " isFocused: "_s << offset.isFocused;
     if (offset.stop == ScrollSnapStop::Always)
-        ts << " (always)";
+        ts << " (always)"_s;
     return ts;
 }
 

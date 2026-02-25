@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,9 @@
 
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
+#include "ReferrerPolicy.h"
 #include <memory>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
@@ -40,32 +42,9 @@ class SecurityOrigin;
 class SecurityOriginPolicy;
 class ContentSecurityPolicy;
 struct CrossOriginOpenerPolicy;
+struct IntegrityPolicy;
 struct PolicyContainer;
 enum class ReferrerPolicy : uint8_t;
-
-enum SandboxFlag {
-    // See http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-sandbox for a list of the sandbox flags.
-    SandboxNone                 = 0,
-    SandboxNavigation           = 1,
-    SandboxPlugins              = 1 << 1,
-    SandboxOrigin               = 1 << 2,
-    SandboxForms                = 1 << 3,
-    SandboxScripts              = 1 << 4,
-    SandboxTopNavigation        = 1 << 5,
-    SandboxPopups               = 1 << 6, // See https://www.w3.org/Bugs/Public/show_bug.cgi?id=12393
-    SandboxAutomaticFeatures    = 1 << 7,
-    SandboxPointerLock          = 1 << 8,
-    SandboxPropagatesToAuxiliaryBrowsingContexts = 1 << 9,
-    SandboxTopNavigationByUserActivation = 1 << 10,
-    SandboxDocumentDomain       = 1 << 11,
-    SandboxModals               = 1 << 12,
-    SandboxStorageAccessByUserActivation = 1 << 13,
-    SandboxTopNavigationToCustomProtocols = 1 << 14,
-    SandboxDownloads = 1 << 15,
-    SandboxAll                  = -1 // Mask with all bits set to 1.
-};
-
-using SandboxFlags = int;
 
 class SecurityContext {
 public:
@@ -81,7 +60,7 @@ public:
     enum class SandboxFlagsSource : bool { CSP, Other };
     void enforceSandboxFlags(SandboxFlags, SandboxFlagsSource = SandboxFlagsSource::Other);
 
-    bool isSandboxed(SandboxFlags mask) const { return m_sandboxFlags & mask; }
+    bool isSandboxed(SandboxFlag flag) const { return m_sandboxFlags.contains(flag); }
 
     SecurityOriginPolicy* securityOriginPolicy() const;
 
@@ -105,6 +84,12 @@ public:
 
     virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const { return m_crossOriginOpenerPolicy; }
     void setCrossOriginOpenerPolicy(const CrossOriginOpenerPolicy& crossOriginOpenerPolicy) { m_crossOriginOpenerPolicy = crossOriginOpenerPolicy; }
+
+    const IntegrityPolicy* integrityPolicy() const;
+    void setIntegrityPolicy(std::unique_ptr<IntegrityPolicy>&&);
+
+    const IntegrityPolicy* integrityPolicyReportOnly() const;
+    void setIntegrityPolicyReportOnly(std::unique_ptr<IntegrityPolicy>&&);
 
     virtual ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
     void setReferrerPolicy(ReferrerPolicy);
@@ -148,8 +133,8 @@ protected:
     virtual ~SecurityContext();
 
     // It's only appropriate to call this during security context initialization; it's needed for
-    // flags that can't be disabled with allow-* attributes, such as SandboxNavigation.
-    void disableSandboxFlags(SandboxFlags mask) { m_sandboxFlags &= ~mask; }
+    // flags that can't be disabled with allow-* attributes, such as SandboxFlag::Navigation.
+    void disableSandboxFlags(SandboxFlags flags) { m_sandboxFlags.remove(flags); }
 
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
 
@@ -162,8 +147,10 @@ private:
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
     CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
     CrossOriginOpenerPolicy m_crossOriginOpenerPolicy;
-    SandboxFlags m_creationSandboxFlags { SandboxNone };
-    SandboxFlags m_sandboxFlags { SandboxNone };
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicy;
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicyReportOnly;
+    SandboxFlags m_creationSandboxFlags;
+    SandboxFlags m_sandboxFlags;
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::Default };
     OptionSet<MixedContentType> m_mixedContentTypes;
     bool m_haveInitializedSecurityOrigin { false };

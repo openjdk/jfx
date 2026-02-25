@@ -29,6 +29,7 @@
 #include "VisibilityChangeClient.h"
 #include "WakeLockType.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -39,10 +40,13 @@ class SleepDisabler;
 class WakeLockSentinel;
 
 class WakeLockManager final : public VisibilityChangeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WakeLockManager);
 public:
     explicit WakeLockManager(Document&);
     ~WakeLockManager();
+
+    void ref() const final;
+    void deref() const final;
 
     void addWakeLock(Ref<WakeLockSentinel>&&, std::optional<PageIdentifier>);
     void removeWakeLock(WakeLockSentinel&);
@@ -52,7 +56,7 @@ public:
 private:
     void visibilityStateChanged() final;
 
-    Document& m_document;
+    const CheckedRef<Document> m_document;
     HashMap<WakeLockType, Vector<RefPtr<WakeLockSentinel>>, WTF::IntHash<WakeLockType>, WTF::StrongEnumHashTraits<WakeLockType>> m_wakeLocks;
     std::unique_ptr<SleepDisabler> m_screenLockDisabler;
 };

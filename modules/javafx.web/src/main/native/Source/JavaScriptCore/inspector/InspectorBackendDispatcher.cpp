@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2011 The Chromium Authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 #include <wtf/SetForScope.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace Inspector {
 
@@ -356,3 +358,5 @@ RefPtr<JSON::Array> BackendDispatcher::getArray(JSON::Object* params, const Stri
 }
 
 } // namespace Inspector
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

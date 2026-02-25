@@ -237,7 +237,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardLi
     int capacity = bfl->capacity();
     bfl->setCapacity(0);
     bfl->setCapacity(capacity);
-    bfl->addItem({}, *current);
+    bfl->addItem(*current);
     bfl->goToItem(*current);
 }
 
@@ -349,6 +349,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetHostObject(JNIE
 
 BackForwardList::BackForwardList()
     : m_current(NoCurrentItemIndex)
+    , m_provisional(NoCurrentItemIndex)
     , m_capacity(DefaultCapacity)
     , m_closed(true)
     , m_enabled(true)
@@ -360,7 +361,28 @@ BackForwardList::~BackForwardList()
     ASSERT(m_closed);
 }
 
-void BackForwardList::addItem(WebCore::FrameIdentifier frameIdentifier, Ref<HistoryItem>&& newItem)
+void  BackForwardList::setChildItem(WebCore::BackForwardFrameItemIdentifier parentFrameID, Ref<WebCore::HistoryItem>&&)
+{
+       /*Get the current top-level HistoryItem.
+       Access its main frame item.
+       Traverse its child frame items to find the one matching parentFrameID.
+       If found, update that frame item with a new child item state */
+}
+
+void  BackForwardList::goToProvisionalItem(const WebCore::HistoryItem& item)
+{
+    m_provisional = m_current;
+    goToItem(const_cast<HistoryItem&>(item));
+
+}
+
+void  BackForwardList::clearProvisionalItem(const WebCore::HistoryItem&)
+{
+   if (m_provisional != NoCurrentItemIndex)
+        m_current = std::exchange(m_provisional, NoCurrentItemIndex);
+}
+
+void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
 {
     if (!m_capacity || !m_enabled)
         return;
@@ -379,7 +401,7 @@ void BackForwardList::addItem(WebCore::FrameIdentifier frameIdentifier, Ref<Hist
     // (or even if we are, if we only want 1 entry).
     if (m_entries.size() == m_capacity && (m_current || m_capacity == 1)) {
         Ref<HistoryItem> item = WTFMove(m_entries[0]);
-        m_entries.remove(0);
+        m_entries.removeAt(0);
         m_entryHash.remove(item.ptr());
         BackForwardCache::singleton().remove(item);
         --m_current;
@@ -519,6 +541,18 @@ unsigned BackForwardList::forwardListCount() const
     return m_current == NoCurrentItemIndex ? 0 : m_entries.size() - m_current - 1;
 }
 
+RefPtr<HistoryItem> BackForwardList::itemAtIndex(int index, WebCore::FrameIdentifier frameIdentifier)
+{
+    // Do range checks without doing math on index to avoid overflow.
+    if (index < -static_cast<int>(m_current))
+        return nullptr;
+
+    if (index > static_cast<int>(forwardListCount()))
+        return nullptr;
+
+    return m_entries[index + m_current].copyRef();
+}
+
 RefPtr<HistoryItem> BackForwardList::itemAtIndex(int index)
 {
     // Do range checks without doing math on index to avoid overflow.
@@ -553,7 +587,7 @@ void BackForwardList::removeItem(HistoryItem& item)
 
     for (unsigned i = 0; i < m_entries.size(); ++i) {
         if (m_entries[i].ptr() == std::addressof(item)) {
-            m_entries.remove(i);
+            m_entries.removeAt(i);
             m_entryHash.remove(const_cast<HistoryItem*>(&item));
             if (m_current == NoCurrentItemIndex || m_current < i)
                 break;

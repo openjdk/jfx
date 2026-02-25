@@ -24,6 +24,8 @@
 #pragma once
 
 #include "HTMLElement.h"
+#include "Length.h"
+#include "StylePrimitiveNumericTypes.h"
 #include <wtf/UniqueArray.h>
 
 namespace WebCore {
@@ -45,8 +47,8 @@ public:
 
     bool hasBorderColor() const { return m_borderColorSet; }
 
-    const Length* rowLengths() const { return m_rowLengths.get(); }
-    const Length* colLengths() const { return m_colLengths.get(); }
+    std::span<const Length> rowLengths() const { return m_rowLengths ? unsafeMakeSpan(m_rowLengths.get(), m_totalRows) : std::span<const Length> { }; }
+    std::span<const Length> colLengths() const { return m_colLengths ? unsafeMakeSpan(m_colLengths.get(), m_totalCols) : std::span<const Length> { }; }
 
     static RefPtr<HTMLFrameSetElement> findContaining(Element* descendant);
 
@@ -66,7 +68,7 @@ private:
 
     void defaultEventHandler(Event&) final;
 
-    void willRecalcStyle(Style::Change) final;
+    void willRecalcStyle(OptionSet<Style::Change>) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;

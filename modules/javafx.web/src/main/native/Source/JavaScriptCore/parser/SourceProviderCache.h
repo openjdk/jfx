@@ -33,7 +33,7 @@ namespace JSC {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SourceProviderCache);
 class SourceProviderCache : public RefCounted<SourceProviderCache> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SourceProviderCache);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SourceProviderCache, SourceProviderCache);
 public:
     SourceProviderCache() { }
     JS_EXPORT_PRIVATE ~SourceProviderCache();
@@ -43,7 +43,7 @@ public:
     const SourceProviderCacheItem* get(int sourcePosition) const { return m_map.get(sourcePosition); }
 
 private:
-    HashMap<int, std::unique_ptr<SourceProviderCacheItem>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> m_map;
+    UncheckedKeyHashMap<int, std::unique_ptr<SourceProviderCacheItem>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> m_map;
 };
 
 } // namespace JSC

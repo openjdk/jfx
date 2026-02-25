@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2019 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +41,11 @@ namespace JSC { namespace Yarr {
     macro('u', Unicode, unicode, 5) \
     macro('v', UnicodeSets, unicodeSets, 6) \
     macro('y', Sticky, sticky, 7) \
+
+#define JSC_REGEXP_MOD_FLAGS(macro) \
+    macro('i', IgnoreCase, ignoreCase) \
+    macro('m', Multiline, multiline) \
+    macro('s', DotAll, dotAll) \
 
 #define JSC_COUNT_REGEXP_FLAG(key, name, lowerCaseName, index) + 1
 static constexpr unsigned numberOfFlags = 0 JSC_REGEXP_FLAGS(JSC_COUNT_REGEXP_FLAG);

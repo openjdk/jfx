@@ -26,6 +26,8 @@
 #include "config.h"
 #include "XRGPUBinding.h"
 
+#if ENABLE(WEBXR_LAYERS)
+
 #include "GPUDevice.h"
 #include "WebGPUXRBinding.h"
 #include "WebGPUXREye.h"
@@ -36,8 +38,7 @@
 #include "XRGPUProjectionLayerInit.h"
 #include "XRGPUSubImage.h"
 #include "XRProjectionLayer.h"
-
-#if ENABLE(WEBXR_LAYERS)
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -58,7 +59,13 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRGPUBinding);
 XRGPUBinding::XRGPUBinding(const WebXRSession& session, GPUDevice& device)
     : m_backing(device.createXRBinding(session))
     , m_session(&session)
+    , m_device(device)
 {
+}
+
+GPUDevice& XRGPUBinding::device()
+{
+    return m_device;
 }
 
 ExceptionOr<Ref<XRProjectionLayer>> XRGPUBinding::createProjectionLayer(ScriptExecutionContext& scriptExecutionContext, std::optional<XRGPUProjectionLayerInit> init)
@@ -93,8 +100,24 @@ ExceptionOr<Ref<XRGPUSubImage>> XRGPUBinding::getViewSubImage(XRProjectionLayer&
     if (!m_backing)
         return Exception { ExceptionCode::AbortError };
 
-    RefPtr subImage = m_backing->getViewSubImage(projectionLayer.backing(), convertToBacking(xrView.eye()));
-    return XRGPUSubImage::create(subImage.releaseNonNull());
+    auto layerData = projectionLayer.layerData();
+    if (!layerData)
+        return Exception { ExceptionCode::AbortError, "First frame is not ready"_s };
+
+    auto setupData = layerData->layerSetup;
+    auto textureData = layerData->textureData;
+    if (!setupData || !textureData)
+        return Exception { ExceptionCode::AbortError, "Layer setup or texture data is missing"_s };
+
+    unsigned eyeIndex = xrView.eye() == XREye::Right ? 1 : 0;
+    auto physicalSize = setupData->physicalSize[eyeIndex];
+    if (!physicalSize[0] || !physicalSize[1])
+        physicalSize = setupData->physicalSize[0];
+    auto viewport = setupData->viewports[eyeIndex];
+    if (eyeIndex)
+        viewport.move(-setupData->viewports[0].width(), 0);
+    RefPtr subImage = m_backing->getViewSubImage(projectionLayer.backing());
+    return XRGPUSubImage::create(subImage.releaseNonNull(), convertToBacking(xrView.eye()), WTFMove(physicalSize), WTFMove(viewport), m_device);
 }
 
 GPUTextureFormat XRGPUBinding::getPreferredColorFormat()

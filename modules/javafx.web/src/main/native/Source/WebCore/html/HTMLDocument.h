@@ -31,11 +31,11 @@ class HTMLDocument : public Document {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDocument);
 public:
-    static Ref<HTMLDocument> create(LocalFrame*, const Settings&, const URL&, ScriptExecutionContextIdentifier = { });
+    static Ref<HTMLDocument> create(LocalFrame*, const Settings&, const URL&, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
     static Ref<HTMLDocument> createSynthesizedDocument(LocalFrame&, const URL&);
     virtual ~HTMLDocument();
 
-    std::optional<std::variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomString&);
+    std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
     bool isSupportedPropertyName(const AtomString&) const;
 
@@ -54,18 +54,17 @@ public:
     static bool isCaseSensitiveAttribute(const QualifiedName&);
 
 protected:
-    WEBCORE_EXPORT HTMLDocument(LocalFrame*, const Settings&, const URL&, ScriptExecutionContextIdentifier, DocumentClasses = { }, OptionSet<ConstructionFlag> = { });
+    WEBCORE_EXPORT HTMLDocument(LocalFrame*, const Settings&, const URL&, std::optional<ScriptExecutionContextIdentifier>, DocumentClasses = { }, OptionSet<ConstructionFlag> = { });
 
 private:
     bool isFrameSet() const final;
     Ref<DocumentParser> createParser() override;
-    Ref<Document> cloneDocumentWithoutChildren() const final;
 
     TreeScopeOrderedMap m_documentNamedItem;
     TreeScopeOrderedMap m_windowNamedItem;
 };
 
-inline Ref<HTMLDocument> HTMLDocument::create(LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier identifier)
+inline Ref<HTMLDocument> HTMLDocument::create(LocalFrame* frame, const Settings& settings, const URL& url, std::optional<ScriptExecutionContextIdentifier> identifier)
 {
     auto document = adoptRef(*new HTMLDocument(frame, settings, url, identifier, { DocumentClass::HTML }));
     document->addToContextsMap();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import com.sun.jfx.incubator.scene.control.richtext.RichParagraphHelper;
 import com.sun.jfx.incubator.scene.control.richtext.TextCell;
-import jfx.incubator.scene.control.richtext.StyleResolver;
 
 /**
  * Represents a single immutable paragraph within the {@code StyledModel}.
@@ -90,8 +89,13 @@ public abstract class RichParagraph {
             }
 
             @Override
-            List<StyledSegment> getSegments() {
-                return null;
+            public int getSegmentCount() {
+                return 0;
+            }
+
+            @Override
+            public StyledSegment getSegment(int index) {
+                throw new IndexOutOfBoundsException();
             }
         };
     }
@@ -112,8 +116,21 @@ public abstract class RichParagraph {
      */
     public abstract String getPlainText();
 
-    // this method could be made public, as long as the returned list is made immutable
-    abstract List<StyledSegment> getSegments();
+    /**
+     * Returns the number of segments in the paragraph.
+     * @return the number of segments
+     * @since 26
+     */
+    public abstract int getSegmentCount();
+
+    /**
+     * Returns the segment at the specified index.
+     * @param index the segment index
+     * @return the segment
+     * @throws IndexOutOfBoundsException if the index is outside of the range {@code 0 ... getSegmentCount()-1} (inclusive)
+     * @since 26
+     */
+    public abstract StyledSegment getSegment(int index);
 
     /**
      * Returns the paragraph attributes.
@@ -129,14 +146,13 @@ public abstract class RichParagraph {
 
     // for use by StyledTextModel
     void export(int start, int end, StyledOutput out) throws IOException {
-        List<StyledSegment> segments = getSegments();
-        if (segments == null) {
+        int sz = getSegmentCount();
+        if (sz == 0) {
             out.consume(StyledSegment.of(""));
         } else {
             int off = 0;
-            int sz = segments.size();
             for (int i = 0; i < sz; i++) {
-                StyledSegment seg = segments.get(i);
+                StyledSegment seg = getSegment(i);
                 String text = seg.getText();
                 int len = (text == null ? 0 : text.length());
                 if (start <= (off + len)) {
@@ -155,31 +171,8 @@ public abstract class RichParagraph {
         }
     }
 
-    // for use by SimpleReadOnlyStyledModel
-    StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, int offset) {
-        int off = 0;
-        List<StyledSegment> segments = getSegments();
-        if (segments != null) {
-            int sz = segments.size();
-            for (int i = 0; i < sz; i++) {
-                StyledSegment seg = segments.get(i);
-                int len = seg.getTextLength();
-                if (offset < (off + len) || (i == sz - 1)) {
-                    return seg.getStyleAttributeMap(resolver);
-                }
-                off += len;
-            }
-        }
-        return StyleAttributeMap.EMPTY;
-    }
-
     private static void initAccessor() {
         RichParagraphHelper.setAccessor(new RichParagraphHelper.Accessor() {
-            @Override
-            public List<StyledSegment> getSegments(RichParagraph p) {
-                return p.getSegments();
-            }
-
             @Override
             public List<Consumer<TextCell>> getHighlights(RichParagraph p) {
                 return p.getHighlights();
@@ -221,6 +214,25 @@ public abstract class RichParagraph {
             return this;
         }
 
+        /**
+         * Adds a wavy underline (typically used as a spell checker indicator) with the specified style name(s).
+         * <p>
+         * The corresponding styles should define CSS properties applicable to {@link javafx.scene.shape.Path}.
+         *
+         * @param start the start offset
+         * @param length the end offset
+         * @param css the style name(s)
+         * @return this {@code Builder} instance
+         * @since 25
+         */
+        public Builder addWavyUnderline(int start, int length, String ... css) {
+            int end = start + length;
+            highlights().add((cell) -> {
+                cell.addSquiggly(start, end, css);
+            });
+            return this;
+        }
+
         private List<Consumer<TextCell>> highlights() {
             if (highlights == null) {
                 highlights = new ArrayList<>(4);
@@ -243,6 +255,7 @@ public abstract class RichParagraph {
 
         /**
          * Appends a text segment styled with the stylesheet style names.
+         * The corresponding styles should define CSS properties applicable to {@link javafx.scene.text.Text}.
          *
          * @param text non-null text string
          * @param css array of style names, cannot be null
@@ -258,6 +271,7 @@ public abstract class RichParagraph {
 
         /**
          * Appends a text segment styled with both the inline style and the stylesheet style names.
+         * The corresponding styles should define CSS properties applicable to {@link javafx.scene.text.Text}.
          *
          * @param text non-null text string
          * @param style direct style (such as {@code -fx-fill:red;}), or null
@@ -273,6 +287,7 @@ public abstract class RichParagraph {
 
         /**
          * Appends a text segment styled with the stylesheet style names.
+         * The corresponding styles should define CSS properties applicable to {@link javafx.scene.text.Text}.
          *
          * @param text non-null text string
          * @param style the inline style (example {@code "-fx-fill:red;"}), or null
@@ -332,6 +347,26 @@ public abstract class RichParagraph {
         }
 
         /**
+         * Adds a highlight with the specified style name(s).
+         * Use translucent colors to enable multiple highlights in the same region of text.
+         * <p>
+         * The corresponding styles should define CSS properties applicable to {@link javafx.scene.shape.Path}.
+         *
+         * @param start the start offset
+         * @param length the end offset
+         * @param css the style name(s)
+         * @return this {@code Builder} instance
+         * @since 25
+         */
+        public Builder addHighlight(int start, int length, String ... css) {
+            int end = start + length;
+            highlights().add((cell) -> {
+                cell.addHighlight(start, end, css);
+            });
+            return this;
+        }
+
+        /**
          * Adds an inline node.
          * <p>
          * The supplied generator must not cache or keep reference to the created Node,
@@ -366,30 +401,62 @@ public abstract class RichParagraph {
         }
 
         /**
+         * Returns the number of segments currently added to the builder.
+         * @return the number of segments
+         * @since 26
+         */
+        public int getSegmentCount() {
+            return (segments == null ?  0 : segments.size());
+        }
+
+        /**
+         * Returns the segment at the specified index.
+         * @param index the segment index
+         * @return the segment
+         * @throws IndexOutOfBoundsException if the index is outside of the range {@code 0 ... getSegmentCount()-1} (inclusive)
+         * @since 26
+         */
+        public StyledSegment getSegment(int index) {
+            if (segments == null) {
+                throw new IndexOutOfBoundsException(index);
+            }
+            return segments.get(index);
+        }
+
+        /**
          * Creates an instance of immutable {@code RichParagraph} from information
          * in this {@code Builder}.
          * @return the new paragraph instance
          */
         public RichParagraph build() {
+            List<Consumer<TextCell>> _highlights = highlights;
+            StyleAttributeMap _paragraphAttributes = (paragraphAttributes == null ? StyleAttributeMap.EMPTY : paragraphAttributes);
+            List<StyledSegment> _segments = (segments == null ? List.of() : List.copyOf(segments));
+
             return new RichParagraph() {
                 @Override
                 public StyleAttributeMap getParagraphAttributes() {
-                    return paragraphAttributes;
+                    return _paragraphAttributes;
                 }
 
                 @Override
-                List<StyledSegment> getSegments() {
-                    return segments;
+                public int getSegmentCount() {
+                    return _segments.size();
+                }
+
+                @Override
+                public StyledSegment getSegment(int index) {
+                    return _segments.get(index);
                 }
 
                 @Override
                 public String getPlainText() {
-                    if (segments == null) {
+                    if (getSegmentCount() == 0) {
                         return "";
                     }
 
                     StringBuilder sb = new StringBuilder();
-                    for (StyledSegment seg : segments) {
+                    for (StyledSegment seg : _segments) {
                         sb.append(seg.getText());
                     }
                     return sb.toString();
@@ -397,7 +464,7 @@ public abstract class RichParagraph {
 
                 @Override
                 List<Consumer<TextCell>> getHighlights() {
-                    return highlights;
+                    return _highlights;
                 }
             };
         }

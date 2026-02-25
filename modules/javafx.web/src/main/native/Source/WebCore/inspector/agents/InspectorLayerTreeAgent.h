@@ -32,6 +32,7 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/text/WTFString.h>
 
@@ -46,13 +47,13 @@ class WeakPtrImplWithEventTargetData;
 
 class InspectorLayerTreeAgent final : public InspectorAgentBase, public Inspector::LayerTreeBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorLayerTreeAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorLayerTreeAgent);
 public:
     InspectorLayerTreeAgent(WebAgentContext&);
     ~InspectorLayerTreeAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // LayerTreeBackendDispatcherHandler
@@ -83,8 +84,8 @@ private:
     String bindPseudoElement(PseudoElement*);
     void unbindPseudoElement(PseudoElement*);
 
-    std::unique_ptr<Inspector::LayerTreeFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::LayerTreeBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::LayerTreeFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::LayerTreeBackendDispatcher> m_backendDispatcher;
 
     HashMap<const RenderLayer*, Inspector::Protocol::LayerTree::LayerId> m_documentLayerToIdMap;
     HashMap<Inspector::Protocol::LayerTree::LayerId, const RenderLayer*> m_idToLayer;

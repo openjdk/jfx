@@ -39,6 +39,8 @@
 #include "YarrJIT.h"
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JITThunks);
@@ -53,7 +55,6 @@ void JITThunks::initialize(VM& vm)
 #define JSC_DEFINE_COMMON_JIT_THUNK(name, func) \
     m_commonThunks[static_cast<unsigned>(CommonJITThunkID::name)] = func(vm);
 JSC_FOR_EACH_COMMON_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
-JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
 #undef JSC_DEFINE_COMMON_JIT_THUNK
 }
 
@@ -203,7 +204,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiStub(CommonJITThunkID thunkI
 
 MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiSlowPathFunctionStub(VM& vm, SlowPathFunction slowPathFunction)
 {
-    auto key = bitwise_cast<ThunkGenerator>(slowPathFunction);
+    auto key = std::bit_cast<ThunkGenerator>(slowPathFunction);
     return ctiStubImpl(key, [&] {
         return JITSlowPathCall::generateThunk(vm, slowPathFunction);
     });
@@ -228,7 +229,7 @@ void JITThunks::finalize(Handle<Unknown> handle, void*)
     auto* nativeExecutable = static_cast<NativeExecutable*>(handle.get().asCell());
     auto hostFunctionKey = std::make_tuple(nativeExecutable->function(), nativeExecutable->constructor(), nativeExecutable->implementationVisibility(), nativeExecutable->name());
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         auto iterator = m_nativeExecutableSet.find<HostKeySearcher>(hostFunctionKey);
         // Because this finalizer is called, this means that we still have dead Weak<> in m_nativeExecutableSet.
         ASSERT(iterator != m_nativeExecutableSet.end());
@@ -249,7 +250,7 @@ NativeExecutable* JITThunks::hostFunctionStub(VM& vm, TaggedNativeFunction funct
 
     auto hostFunctionKey = std::make_tuple(function, constructor, implementationVisibility, name);
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         auto iterator = m_nativeExecutableSet.find<HostKeySearcher>(hostFunctionKey);
         if (iterator != m_nativeExecutableSet.end()) {
             // It is possible that this returns Weak<> which is Dead, but not finalized.
@@ -272,7 +273,7 @@ NativeExecutable* JITThunks::hostFunctionStub(VM& vm, TaggedNativeFunction funct
 
     NativeExecutable* nativeExecutable = NativeExecutable::create(vm, forCall.releaseNonNull(), function, WTFMove(forConstruct), constructor, implementationVisibility, name);
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         auto addResult = m_nativeExecutableSet.add<NativeExecutableTranslator>(nativeExecutable);
         if (!addResult.isNewEntry) {
             // Override the existing Weak<NativeExecutable> with the new one since it is dead.
@@ -296,5 +297,7 @@ NativeExecutable* JITThunks::hostFunctionStub(VM& vm, TaggedNativeFunction funct
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(JIT)

@@ -33,9 +33,11 @@
 #include "Timer.h"
 #include <wtf/MediaTime.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateMock);
 
 MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 {
@@ -102,12 +104,12 @@ void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
     }
 
     // Delay calling the completion handler a bit to mimick real writer behavior.
-    Timer::schedule(50_ms, [completionHandler = WTFMove(completionHandler), buffer = WTFMove(buffer), mimeType = mimeType(), timeCode = MonotonicTime::now().secondsSinceEpoch().value()]() mutable {
+    Timer::schedule(50_ms, [completionHandler = WTFMove(completionHandler), buffer = buffer.releaseNonNull(), mimeType = mimeType(), timeCode = MonotonicTime::now().secondsSinceEpoch().value()]() mutable {
         completionHandler(WTFMove(buffer), mimeType, timeCode);
     });
 }
 
-const String& MediaRecorderPrivateMock::mimeType() const
+String MediaRecorderPrivateMock::mimeType() const
 {
     static NeverDestroyed<const String> textPlainMimeType(MAKE_STATIC_STRING_IMPL("text/plain"));
     return textPlainMimeType;

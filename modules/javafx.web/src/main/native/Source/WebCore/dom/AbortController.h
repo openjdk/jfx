@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,6 @@ class JSValue;
 namespace WebCore {
 
 class AbortSignal;
-class JSDOMGlobalObject;
 class ScriptExecutionContext;
 
 class AbortController final : public ScriptWrappable, public RefCounted<AbortController> {
@@ -46,16 +45,15 @@ public:
     static Ref<AbortController> create(ScriptExecutionContext&);
     ~AbortController();
 
-    AbortSignal& signal();
-    Ref<AbortSignal> protectedSignal() const;
-    void abort(JSDOMGlobalObject&, JSC::JSValue reason);
+    AbortSignal& signal() { return m_signal; }
+    void abort(JSC::JSValue reason);
 
     WebCoreOpaqueRoot opaqueRoot();
 
 private:
     explicit AbortController(ScriptExecutionContext&);
 
-    Ref<AbortSignal> m_signal;
+    const Ref<AbortSignal> m_signal;
 };
 
 }

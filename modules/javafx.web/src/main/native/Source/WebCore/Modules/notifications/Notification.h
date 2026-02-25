@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2009, 2011, 2012, 2016, 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,6 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "NotificationDirection.h"
 #include "NotificationPayload.h"
 #include "NotificationPermission.h"
@@ -60,6 +61,9 @@ struct NotificationData;
 class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
 
@@ -74,8 +78,7 @@ public:
         RefPtr<JSON::Value> jsonData;
         std::optional<bool> silent;
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        String defaultAction;
-        URL defaultActionURL;
+        String navigate;
 #endif
     };
     // For JS constructor only.
@@ -91,7 +94,7 @@ public:
     void close();
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    const URL& defaultAction() const { return m_defaultActionURL; }
+    const URL& navigate() const { return m_navigate; }
 #endif
     const String& title() const { return m_title; }
     Direction dir() const { return m_direction; }
@@ -118,10 +121,6 @@ public:
 
     WEBCORE_EXPORT NotificationData data() const;
     RefPtr<NotificationResources> resources() const { return m_resources; }
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     void markAsShown();
     void showSoon();
@@ -154,7 +153,7 @@ private:
     WTF::UUID m_identifier;
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    URL m_defaultActionURL;
+    URL m_navigate;
 #endif
     String m_title;
     Direction m_direction;
@@ -162,7 +161,7 @@ private:
     String m_body;
     String m_tag;
     URL m_icon;
-    Ref<SerializedScriptValue> m_dataForBindings;
+    const Ref<SerializedScriptValue> m_dataForBindings;
     std::optional<bool> m_silent;
 
     enum State { Idle, Showing, Closed };

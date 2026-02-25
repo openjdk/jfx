@@ -34,7 +34,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
 #include <CoreText/CoreText.h>
-#include <pal/cf/CoreTextSoftLink.h>
 #include <pal/spi/cf/CoreTextSPI.h>
 
 namespace WebCore {
@@ -109,26 +108,33 @@ RefPtr<FontCustomPlatformData> FontCustomPlatformData::create(SharedBuffer& buff
 
 RefPtr<FontCustomPlatformData> FontCustomPlatformData::createMemorySafe(SharedBuffer& buffer, const String& itemInCollection)
 {
-    if (!PAL::canLoad_CoreText_CTFontManagerCreateMemorySafeFontDescriptorFromData())
-        return nullptr;
-
+#if HAVE(CTFONTMANAGER_CREATEMEMORYSAFEFONTDESCRIPTORFROMDATA)
     RetainPtr extractedData = extractFontCustomPlatformData(buffer, itemInCollection);
     if (!extractedData) {
         // Something is wrong with the font.
         return nullptr;
     }
 
-    RetainPtr fontDescriptor = adoptCF(PAL::softLinkCoreTextCTFontManagerCreateMemorySafeFontDescriptorFromData(extractedData.get()));
+    RetainPtr fontDescriptor = adoptCF(CTFontManagerCreateMemorySafeFontDescriptorFromData(extractedData.get()));
+
+    // Safe Font parser could not handle this font. This is already logged by CachedFontLoadRequest::ensureCustomFontData
+    if (!fontDescriptor)
+        return nullptr;
+
     Ref bufferRef = SharedBuffer::create(extractedData.get());
 
     FontPlatformData::CreationData creationData = { WTFMove(bufferRef), itemInCollection };
     return adoptRef(new FontCustomPlatformData(fontDescriptor.get(), WTFMove(creationData)));
+#else
+    UNUSED_PARAM(buffer);
+    UNUSED_PARAM(itemInCollection);
+    return nullptr;
+#endif
 }
 
 std::optional<Ref<FontCustomPlatformData>> FontCustomPlatformData::tryMakeFromSerializationData(FontCustomPlatformSerializedData&& data, bool shouldUseLockdownFontParser )
 {
-    auto buffer = SharedBuffer::create(WTFMove(data.fontFaceData));
-    RefPtr fontCustomPlatformData = shouldUseLockdownFontParser ? FontCustomPlatformData::createMemorySafe(buffer, data.itemInCollection) : FontCustomPlatformData::create(buffer, data.itemInCollection);
+    RefPtr fontCustomPlatformData = shouldUseLockdownFontParser ? FontCustomPlatformData::createMemorySafe(WTFMove(data.fontFaceData), data.itemInCollection) : FontCustomPlatformData::create(WTFMove(data.fontFaceData), data.itemInCollection);
     if (!fontCustomPlatformData)
         return std::nullopt;
     fontCustomPlatformData->m_renderingResourceIdentifier = data.renderingResourceIdentifier;
@@ -137,7 +143,7 @@ std::optional<Ref<FontCustomPlatformData>> FontCustomPlatformData::tryMakeFromSe
 
 FontCustomPlatformSerializedData FontCustomPlatformData::serializedData() const
 {
-    return FontCustomPlatformSerializedData { { creationData.fontFaceData->span() }, creationData.itemInCollection, m_renderingResourceIdentifier };
+    return FontCustomPlatformSerializedData { creationData.fontFaceData, creationData.itemInCollection, m_renderingResourceIdentifier };
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,16 +31,17 @@
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FFTFrame;
 
 class RealtimeAnalyser {
+    WTF_MAKE_TZONE_ALLOCATED(RealtimeAnalyser);
     WTF_MAKE_NONCOPYABLE(RealtimeAnalyser);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RealtimeAnalyser(NoiseInjectionPolicy);
+    explicit RealtimeAnalyser(OptionSet<NoiseInjectionPolicy>);
     virtual ~RealtimeAnalyser();
 
     size_t fftSize() const { return m_fftSize; }
@@ -63,7 +64,7 @@ public:
     void getByteTimeDomainData(JSC::Uint8Array&);
 
     // The audio thread writes input data here.
-    void writeInput(AudioBus*, size_t framesToProcess);
+    void writeInput(AudioBus&, size_t framesToProcess);
 
     static constexpr double DefaultSmoothingTimeConstant { 0.8 };
     static constexpr double DefaultMinDecibels { -100 };
@@ -81,7 +82,7 @@ private:
     unsigned m_writeIndex { 0 };
 
     // AudioBus used for downmixing input audio before copying it to m_inputBuffer.
-    RefPtr<AudioBus> m_downmixBus;
+    const Ref<AudioBus> m_downmixBus;
 
     size_t m_fftSize { DefaultFFTSize };
     std::unique_ptr<FFTFrame> m_analysisFrame;
@@ -100,7 +101,7 @@ private:
 
     // We should only do the FFT analysis once per render quantum.
     bool m_shouldDoFFTAnalysis { true };
-    NoiseInjectionPolicy m_noiseInjectionPolicy { NoiseInjectionPolicy::None };
+    OptionSet<NoiseInjectionPolicy> m_noiseInjectionPolicies;
 };
 
 } // namespace WebCore

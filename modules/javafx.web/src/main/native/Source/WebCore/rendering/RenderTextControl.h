@@ -36,12 +36,11 @@ public:
     virtual ~RenderTextControl();
 
     WEBCORE_EXPORT HTMLTextFormControlElement& textFormControlElement() const;
+    WEBCORE_EXPORT Ref<HTMLTextFormControlElement> protectedTextFormControlElement() const;
 
 #if PLATFORM(IOS_FAMILY)
     bool canScroll() const;
-
-    // Returns the line height of the inner renderer.
-    int innerLineHeight() const override;
+    WEBCORE_EXPORT int innerLineHeight() const;
 #endif
 
 protected:
@@ -63,7 +62,7 @@ protected:
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
 
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
-    void layoutExcludedChildren(bool relayoutChildren) override;
+    void layoutExcludedChildren(RelayoutChildren) override;
 
 private:
     void element() const = delete;
@@ -71,7 +70,6 @@ private:
     ASCIILiteral renderName() const override { return "RenderTextControl"_s; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
-    bool avoidsFloats() const override { return true; }
     bool canHaveGeneratedChildren() const override { return false; }
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
@@ -90,12 +88,7 @@ public:
     RenderTextControlInnerContainer(Element&, RenderStyle&&);
     virtual ~RenderTextControlInnerContainer();
 
-    LayoutUnit baselinePosition(FontBaseline baseline, bool firstLine, LineDirectionMode direction, LinePositionMode position) const override
-    {
-        return RenderBlock::baselinePosition(baseline, firstLine, direction, position);
-    }
     std::optional<LayoutUnit> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
-    std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
 
 private:
     bool isFlexibleBoxImpl() const override { return true; }
@@ -104,3 +97,4 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControl, isRenderTextControl())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlInnerContainer, isRenderTextControlInnerContainer())

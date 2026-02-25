@@ -242,6 +242,10 @@ g_dpgettext (const gchar *domain,
 
           translation = g_dgettext (domain, tmp);
 
+          /* g_dgettext() may return the value we pass to it, which will be on
+           * this stack frame since we allocated it with g_alloca(). If so, we
+           * return a pointer into our original input instead.
+           */
           if (translation == tmp)
             return sep + 1;
         }
@@ -299,6 +303,10 @@ g_dpgettext2 (const gchar *domain,
       msg_ctxt_id[msgctxt_len - 1] = '|';
       translation = g_dgettext (domain, msg_ctxt_id);
 
+      /* g_dgettext() may return the value we pass to it, which will be on this
+       * stack frame since we allocated it with g_alloca(). If so, we return our
+       * original input instead.
+       */
       if (translation == msg_ctxt_id)
         return msgid;
     }

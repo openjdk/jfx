@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "InbandTextTrackPrivateClient.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -38,11 +39,13 @@ enum class InbandTextTrackPrivateMode : uint8_t {
 };
 
 class InbandTextTrackPrivate : public TrackPrivateBase {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InbandTextTrackPrivate);
 public:
     enum class CueFormat : uint8_t {
         Data,
         Generic,
-        WebVTT
+        WebVTT,
+        Unknown
     };
     static Ref<InbandTextTrackPrivate> create(CueFormat format) { return adoptRef(*new InbandTextTrackPrivate(format)); }
     virtual ~InbandTextTrackPrivate() = default;
@@ -95,6 +98,12 @@ public:
 
     Type type() const final { return Type::Text; };
 
+    enum class InbandTextTrackType : uint8_t {
+        BaseTrack,
+        AVFTrack
+    };
+    virtual InbandTextTrackType inbandTextTrackType() const { return InbandTextTrackType::BaseTrack; }
+
 protected:
     InbandTextTrackPrivate(CueFormat format)
         : m_format(format)
@@ -102,7 +111,7 @@ protected:
     }
 
 private:
-    CueFormat m_format;
+    CueFormat m_format { CueFormat::Unknown };
     Mode m_mode { Mode::Disabled };
 };
 

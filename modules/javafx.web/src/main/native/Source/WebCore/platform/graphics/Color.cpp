@@ -30,24 +30,15 @@
 #include "ColorSerialization.h"
 #include <cmath>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Color);
+
 static constexpr auto lightenedBlack = SRGBA<uint8_t> { 84, 84, 84 };
 static constexpr auto darkenedWhite = SRGBA<uint8_t> { 171, 171, 171 };
-
-Color::Color(const Color& other)
-    : m_colorAndFlags(other.m_colorAndFlags)
-{
-    if (isOutOfLine())
-        asOutOfLine().ref();
-}
-
-Color::Color(Color&& other)
-{
-    *this = WTFMove(other);
-}
 
 Color::Color(std::optional<ColorDataForIPC>&& colorData)
 {
@@ -73,8 +64,7 @@ std::optional<ColorDataForIPC> Color::data() const
         return std::nullopt;
 
     if (isOutOfLine()) {
-        auto& outOfLineComponents = asOutOfLine();
-        auto [c1, c2, c3, alpha] = outOfLineComponents.unresolvedComponents();
+        auto [c1, c2, c3, alpha] = asOutOfLine().unresolvedComponents();
 
         OutOfLineColorDataForIPC oolcd = {
             .colorSpace = colorSpace(),
@@ -98,36 +88,6 @@ std::optional<ColorDataForIPC> Color::data() const
         } };
     };
 };
-
-Color& Color::operator=(const Color& other)
-{
-    if (*this == other)
-        return *this;
-
-    if (isOutOfLine())
-        asOutOfLine().deref();
-
-    m_colorAndFlags = other.m_colorAndFlags;
-
-    if (isOutOfLine())
-        asOutOfLine().ref();
-
-    return *this;
-}
-
-Color& Color::operator=(Color&& other)
-{
-    if (*this == other)
-        return *this;
-
-    if (isOutOfLine())
-        asOutOfLine().deref();
-
-    m_colorAndFlags = other.m_colorAndFlags;
-    other.m_colorAndFlags = invalidColorAndFlags;
-
-    return *this;
-}
 
 Color Color::lightened() const
 {
@@ -170,9 +130,7 @@ double Color::lightness() const
 
 double Color::luminance() const
 {
-    return callOnUnderlyingType([&] (const auto& underlyingColor) {
-        return WebCore::relativeLuminance(underlyingColor);
-    });
+    return WebCore::relativeLuminance(*this);
 }
 
 bool Color::anyComponentIsNone() const
@@ -217,7 +175,7 @@ Color Color::semanticColor() const
         return *this;
 
     if (isOutOfLine())
-        return { asOutOfLineRef(), colorSpace(), Flags::Semantic };
+        return { protectedAsOutOfLine(), colorSpace(), Flags::Semantic };
     return { asInline(), Flags::Semantic };
 }
 
@@ -236,7 +194,7 @@ ColorComponents<float, 4> Color::toResolvedColorComponentsInColorSpace(const Des
 std::pair<ColorSpace, ColorComponents<float, 4>> Color::colorSpaceAndResolvedColorComponents() const
 {
     if (isOutOfLine())
-        return { colorSpace(), resolveColorComponents(asOutOfLine().resolvedComponents()) };
+        return { colorSpace(), resolveColorComponents(protectedAsOutOfLine()->resolvedComponents()) };
     return { ColorSpace::SRGB, asColorComponents(convertColor<SRGBA<float>>(asInline()).resolved()) };
 }
 

@@ -122,7 +122,7 @@ namespace WebCore {
 
 JSGlobalContextRef getGlobalContext(WebCore::ScriptController* scriptController)
 {
-    return toGlobalRef(scriptController->globalObject(WebCore::mainThreadNormalWorld()));
+    return toGlobalRef(scriptController->globalObject(WebCore::mainThreadNormalWorldSingleton()));
 }
 
 JSStringRef asJSStringRef(JNIEnv *env, jstring str)

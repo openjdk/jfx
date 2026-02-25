@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -26,9 +26,11 @@
 
 #include "HTMLTextFormControlElement.h"
 #include <memory>
+#include <wtf/ValueOrReference.h>
 
 namespace WebCore {
 
+class Color;
 class Decimal;
 class DragData;
 class FileList;
@@ -65,27 +67,24 @@ public:
     static Ref<HTMLInputElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLInputElement();
 
+    WEBCORE_EXPORT bool alpha();
     bool checked() const { return m_isChecked; }
     WEBCORE_EXPORT void setChecked(bool, WasSetByJavaScript = WasSetByJavaScript::Yes);
+    String colorSpace();
+    void setColorSpace(const AtomString&);
     WEBCORE_EXPORT FileList* files();
     WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&, WasSetByJavaScript = WasSetByJavaScript::No);
     FileList* filesForBindings() { return files(); }
     void setFilesForBindings(RefPtr<FileList>&& fileList) { return setFiles(WTFMove(fileList), WasSetByJavaScript::Yes); }
     WEBCORE_EXPORT unsigned height() const;
-    WEBCORE_EXPORT void setHeight(unsigned);
     bool indeterminate() const { return m_isIndeterminate; }
     WEBCORE_EXPORT void setIndeterminate(bool);
-#if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
-#endif
     unsigned size() const { return m_size; }
     WEBCORE_EXPORT ExceptionOr<void> setSize(unsigned);
-    WEBCORE_EXPORT const AtomString& defaultValue() const;
-    WEBCORE_EXPORT void setDefaultValue(const AtomString&);
-    WEBCORE_EXPORT void setType(const AtomString&);
-    WEBCORE_EXPORT String value() const final;
+    WEBCORE_EXPORT ValueOrReference<String> value() const final;
     WEBCORE_EXPORT ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent, TextControlSetValueSelection = TextControlSetValueSelection::SetSelectionToEnd) final;
-    void setValueForUser(const String& value) { setValue(value, DispatchInputAndChangeEvent); }
+    WEBCORE_EXPORT void setValueForUser(const String&);
     WEBCORE_EXPORT WallTime valueAsDate() const;
     WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(WallTime);
     #if PLATFORM(JAVA)
@@ -97,7 +96,6 @@ public:
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
     WEBCORE_EXPORT ExceptionOr<void> stepDown(int = 1);
     WEBCORE_EXPORT unsigned width() const;
-    WEBCORE_EXPORT void setWidth(unsigned);
     bool hasSwitchAttribute() const { return m_hasSwitchAttribute; }
     WEBCORE_EXPORT String validationMessage() const final;
     std::optional<unsigned> selectionStartForBindings() const;
@@ -135,12 +133,12 @@ public:
     bool getAllowedValueStep(Decimal*) const;
     StepRange createStepRange(AnyStepHandling) const;
 
-#if ENABLE(DATALIST_ELEMENT)
     std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
     std::optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
-#endif
 
     bool isPresentingAttachedView() const;
+
+    RefPtr<InputType> inputType() const;
 
     bool isSteppable() const; // stepUp()/stepDown() for user-interaction.
     WEBCORE_EXPORT bool isTextButton() const;
@@ -149,13 +147,11 @@ public:
     WEBCORE_EXPORT bool isSearchField() const;
     bool isInputTypeHidden() const;
     WEBCORE_EXPORT bool isPasswordField() const;
-    bool isSecureField() const { return isPasswordField() || isAutoFilledAndObscured(); }
+    bool isSecureField() const { return isPasswordField() || autofilledAndObscured(); }
     bool isCheckbox() const;
     bool isSwitch() const;
     bool isRangeControl() const;
-#if ENABLE(INPUT_TYPE_COLOR)
     WEBCORE_EXPORT bool isColorControl() const;
-#endif
     // FIXME: It's highly likely that any call site calling this function should instead
     // be using a different one. Many input elements behave like text fields, and in addition
     // any unknown input type is treated as text. Consider, for example, isTextField or
@@ -176,6 +172,8 @@ public:
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
+    bool isDevolvableWidget() const override;
+
     DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
@@ -189,19 +187,19 @@ public:
     HTMLElement* resultsButtonElement() const;
     HTMLElement* cancelButtonElement() const;
     HTMLElement* sliderThumbElement() const;
+    RefPtr<HTMLElement> protectedSliderThumbElement() const { return sliderThumbElement(); }
     HTMLElement* sliderTrackElement() const;
+    RefPtr<HTMLElement> protectedSliderTrackElement() const { return sliderTrackElement(); }
     HTMLElement* placeholderElement() const final;
     WEBCORE_EXPORT HTMLElement* autoFillButtonElement() const;
-#if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT HTMLElement* dataListButtonElement() const;
-#endif
 
     bool matchesCheckedPseudoClass() const;
     bool matchesIndeterminatePseudoClass() const final;
     void setDefaultCheckedState(bool);
 
     bool sizeShouldIncludeDecoration(int& preferredSize) const;
-    float decorationWidth() const;
+    float decorationWidth(float inputWidth) const;
 
     // Checks if the specified string would be a valid value.
     // We should not call this for types with no string value such as CHECKBOX and RADIO.
@@ -210,7 +208,7 @@ public:
 
     String placeholder() const;
 
-    String sanitizeValue(const String&) const;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const;
 
     String localizeValue(const String&) const;
 
@@ -226,6 +224,7 @@ public:
 
     bool rendererIsNeeded(const RenderStyle&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
     void willAttachRenderers() final;
     void didAttachRenderers() final;
     void didDetachRenderers() final;
@@ -244,27 +243,34 @@ public:
 
     Vector<String> acceptMIMETypes() const;
     Vector<String> acceptFileExtensions() const;
-    WEBCORE_EXPORT String alt() const;
-
-    URL src() const;
 
     unsigned effectiveMaxLength() const;
 
     WEBCORE_EXPORT bool multiple() const;
 
     // AutoFill.
-    bool isAutoFilled() const { return m_isAutoFilled; }
-    WEBCORE_EXPORT void setAutoFilled(bool = true);
-    bool isAutoFilledAndViewable() const { return m_isAutoFilledAndViewable; }
-    WEBCORE_EXPORT void setAutoFilledAndViewable(bool = true);
-    bool isAutoFilledAndObscured() const { return m_isAutoFilledAndObscured; }
-    WEBCORE_EXPORT void setAutoFilledAndObscured(bool = true);
-    AutoFillButtonType lastAutoFillButtonType() const { return static_cast<AutoFillButtonType>(m_lastAutoFillButtonType); }
-    AutoFillButtonType autoFillButtonType() const { return static_cast<AutoFillButtonType>(m_autoFillButtonType); }
-    WEBCORE_EXPORT void setShowAutoFillButton(AutoFillButtonType);
-    bool hasAutoFillStrongPasswordButton() const  { return autoFillButtonType() == AutoFillButtonType::StrongPassword; }
-    bool isAutoFillAvailable() const { return m_isAutoFillAvailable; }
-    void setAutoFillAvailable(bool autoFillAvailable) { m_isAutoFillAvailable = autoFillAvailable; }
+    using AutofillButtonType = WebCore::AutoFillButtonType;
+    bool autofilled() const { return m_isAutoFilled; }
+    WEBCORE_EXPORT void setAutofilled(bool = true);
+    bool autofilledAndViewable() const { return m_isAutoFilledAndViewable; }
+    WEBCORE_EXPORT void setAutofilledAndViewable(bool = true);
+    bool autofilledAndObscured() const { return m_isAutoFilledAndObscured; }
+    WEBCORE_EXPORT void setAutofilledAndObscured(bool = true);
+    AutoFillButtonType lastAutofillButtonType() const { return static_cast<AutoFillButtonType>(m_lastAutoFillButtonType); }
+    AutoFillButtonType autofillButtonType() const { return static_cast<AutoFillButtonType>(m_autoFillButtonType); }
+    WEBCORE_EXPORT void setAutofillButtonType(AutoFillButtonType);
+    bool hasAutofillStrongPasswordButton() const  { return autofillButtonType() == AutoFillButtonType::StrongPassword; }
+    bool autofillAvailable() const { return m_isAutoFillAvailable; }
+    void setAutofillAvailable(bool autoFillAvailable) { m_isAutoFillAvailable = autoFillAvailable; }
+    enum class AutofillVisibility : uint8_t {
+        Normal,
+        Visible,
+        Hidden,
+    };
+    AutofillVisibility autofillVisibility() const;
+    void setAutofillVisibility(AutofillVisibility);
+    bool autofillSpellcheck() const { return !m_isSpellcheckDisabledExceptTextReplacement; }
+    void setAutofillSpellcheck(bool value) { m_isSpellcheckDisabledExceptTextReplacement = !value; }
 
 #if ENABLE(DRAG_SUPPORT)
     // Returns true if the given DragData has more than one dropped file.
@@ -279,15 +285,13 @@ public:
     void setCanReceiveDroppedFiles(bool);
 
     void addSearchResult();
-    void onSearch();
 
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
-#if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
+    bool hasDataList() const;
     RefPtr<HTMLDataListElement> dataList() const;
     void dataListMayHaveChanged();
-#endif
 
     Vector<Ref<HTMLInputElement>> radioButtonGroup() const;
     RefPtr<HTMLInputElement> checkedRadioButtonForGroup() const;
@@ -296,7 +300,7 @@ public:
     // Functions for InputType classes.
     void setValueInternal(const String&, TextFieldEventBehavior);
     bool isTextFormControlFocusable() const;
-    bool isTextFormControlKeyboardFocusable(KeyboardEvent*) const;
+    bool isTextFormControlKeyboardFocusable(const FocusEventData&) const;
     bool isTextFormControlMouseFocusable() const;
     bool valueAttributeWasUpdatedAfterParsing() const { return m_valueAttributeWasUpdatedAfterParsing; }
 
@@ -334,6 +338,7 @@ public:
 
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
+    Ref<HTMLImageLoader> ensureProtectedImageLoader();
 
     void capsLockStateMayHaveChanged();
 
@@ -341,7 +346,7 @@ public:
 
     String resultForDialogSubmit() const final;
 
-    bool isInnerTextElementEditable() const final { return !hasAutoFillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
+    bool isInnerTextElementEditable() const final { return !hasAutofillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
     void finishParsingChildren() final;
 
     bool hasEverBeenPasswordField() const { return m_hasEverBeenPasswordField; }
@@ -359,7 +364,7 @@ private:
 
     void defaultEventHandler(Event&) final;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const override;
 
     enum AutoCompleteSetting : uint8_t { Uninitialized, On, Off };
     static constexpr int defaultSize = 20;
@@ -373,7 +378,7 @@ private:
 
     int defaultTabIndex() const final;
     bool hasCustomFocusLogic() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isEnumeratable() const final;
     bool isLabelable() const final;
@@ -415,9 +420,7 @@ private:
     bool isOutOfRange() const final;
 
     void resumeFromDocumentSuspension() final;
-#if ENABLE(INPUT_TYPE_COLOR)
     void prepareForDocumentSuspension() final;
-#endif
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
@@ -442,6 +445,8 @@ private:
     bool computeWillValidate() const final;
     void requiredStateChanged() final;
 
+    void logUserInteraction();
+
     void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
 
@@ -453,9 +458,7 @@ private:
     void disabledStateChanged() final;
     void readOnlyStateChanged() final;
 
-#if ENABLE(DATALIST_ELEMENT)
     void resetListAttributeTargetObserver();
-#endif
     void maxLengthAttributeChanged(const AtomString& newValue);
     void minLengthAttributeChanged(const AtomString& newValue);
     void updateValueIfNeeded();
@@ -487,9 +490,7 @@ private:
     unsigned m_autoFillButtonType : 3 { enumToUnderlyingType(AutoFillButtonType::None) }; // AutoFillButtonType
     unsigned m_lastAutoFillButtonType : 3 { enumToUnderlyingType(AutoFillButtonType::None) }; // AutoFillButtonType
     bool m_isAutoFillAvailable : 1 { false };
-#if ENABLE(DATALIST_ELEMENT)
     bool m_hasNonEmptyList : 1 { false };
-#endif
     bool m_stateRestored : 1 { false };
     bool m_parsingInProgress : 1;
     bool m_valueAttributeWasUpdatedAfterParsing : 1 { false };
@@ -506,10 +507,8 @@ private:
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into
     // the ImageInput object we may delete the loader while this element lives on.
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
-#if ENABLE(DATALIST_ELEMENT)
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
-#endif
 };
 
 }

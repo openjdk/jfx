@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #pragma once
 
 #include <pal/ThreadGlobalData.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/StringHash.h>
 
@@ -46,8 +47,8 @@ struct EventNames;
 struct MIMETypeRegistryThreadGlobalData;
 
 class ThreadGlobalData : public PAL::ThreadGlobalData {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ThreadGlobalData, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(ThreadGlobalData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT ThreadGlobalData();
     WEBCORE_EXPORT ~ThreadGlobalData();
@@ -56,33 +57,33 @@ public:
     const CachedResourceRequestInitiatorTypes& cachedResourceRequestInitiatorTypes()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_cachedResourceRequestInitiatorTypes))
+        if (!m_cachedResourceRequestInitiatorTypes) [[unlikely]]
             initializeCachedResourceRequestInitiatorTypes();
         return *m_cachedResourceRequestInitiatorTypes;
     }
     EventNames& eventNames()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_eventNames))
+        if (!m_eventNames) [[unlikely]]
             initializeEventNames();
         return *m_eventNames;
     }
     QualifiedNameCache& qualifiedNameCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_qualifiedNameCache))
+        if (!m_qualifiedNameCache) [[unlikely]]
             initializeQualifiedNameCache();
         return *m_qualifiedNameCache;
     }
     const MIMETypeRegistryThreadGlobalData& mimeTypeRegistryThreadGlobalData()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_MIMETypeRegistryThreadGlobalData))
+        if (!m_MIMETypeRegistryThreadGlobalData) [[unlikely]]
             initializeMimeTypeRegistryThreadGlobalData();
         return *m_MIMETypeRegistryThreadGlobalData;
     }
 
-    ThreadTimers& threadTimers() { return *m_threadTimers; }
+    ThreadTimers& threadTimers() { return m_threadTimers; }
 
     JSC::JSGlobalObject* currentState() const { return m_currentState; }
     void setCurrentState(JSC::JSGlobalObject* state) { m_currentState = state; }
@@ -97,7 +98,7 @@ public:
     FontCache& fontCache()
     {
         ASSERT(!m_destroyed);
-        if (UNLIKELY(!m_fontCache))
+        if (!m_fontCache) [[unlikely]]
             initializeFontCache();
         return *m_fontCache;
     }
@@ -116,7 +117,7 @@ private:
 
     std::unique_ptr<CachedResourceRequestInitiatorTypes> m_cachedResourceRequestInitiatorTypes;
     std::unique_ptr<EventNames> m_eventNames;
-    std::unique_ptr<ThreadTimers> m_threadTimers;
+    const UniqueRef<ThreadTimers> m_threadTimers;
     std::unique_ptr<QualifiedNameCache> m_qualifiedNameCache;
     JSC::JSGlobalObject* m_currentState { nullptr };
     std::unique_ptr<MIMETypeRegistryThreadGlobalData> m_MIMETypeRegistryThreadGlobalData;
@@ -145,14 +146,14 @@ inline PURE_FUNCTION ThreadGlobalData& threadGlobalData()
 #endif
 {
 #if HAVE(FAST_TLS)
-    if (auto* thread = Thread::currentMayBeNull(); LIKELY(thread)) {
-        if (auto* clientData = thread->m_clientData.get(); LIKELY(clientData))
+    if (auto* thread = Thread::currentMayBeNull(); thread) [[likely]] {
+        if (auto* clientData = thread->m_clientData.get(); clientData) [[likely]]
             return *static_cast<ThreadGlobalData*>(clientData);
     }
 #else
-    auto& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (LIKELY(clientData))
+    if (clientData) [[likely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 #endif
     return threadGlobalDataSlow();

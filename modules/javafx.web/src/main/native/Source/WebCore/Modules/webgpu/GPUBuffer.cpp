@@ -92,15 +92,17 @@ void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, 
     });
 }
 
-static auto makeArrayBuffer(auto source, size_t offset, auto byteLength, auto& cachedArrayBuffers, auto& device, auto& buffer)
+static auto makeArrayBuffer(Variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
 {
     RefPtr<ArrayBuffer> arrayBuffer;
-    if constexpr (std::is_pointer_v<decltype(source)>)
-        arrayBuffer = ArrayBuffer::create({ source, static_cast<size_t>(byteLength) });
-    else
-        arrayBuffer = ArrayBuffer::create(source, byteLength);
+    WTF::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
+        arrayBuffer = ArrayBuffer::create(source);
+    }, [&](size_t numberOfElements) {
+        arrayBuffer = ArrayBuffer::create(numberOfElements, 1);
+    }), source);
+
     cachedArrayBuffers.append({ arrayBuffer.get(), offset });
-    cachedArrayBuffers.last().buffer->pin();
+    arrayBuffer->pin();
     if (device)
         device->addBufferToUnmap(buffer);
     return arrayBuffer;
@@ -175,12 +177,12 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> GPUBuffer::getMappedRange(std::optional<GPUSi
         if (!mappedRange.data()) {
             m_arrayBuffers.clear();
         if (m_mappedAtCreation || !size)
-                result = makeArrayBuffer(static_cast<size_t>(0U), 0, 1, m_arrayBuffers, m_device, *this);
+                result = makeArrayBuffer(0U /* numberOfElements */, 0 /* offset */, m_arrayBuffers, m_device, *this);
 
             return;
     }
 
-        result = makeArrayBuffer(mappedRange.data(), offset, size, m_arrayBuffers, m_device, *this);
+        result = makeArrayBuffer(mappedRange.first(size), offset, m_arrayBuffers, m_device, *this);
     });
 
     if (!result)
@@ -192,8 +194,8 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> GPUBuffer::getMappedRange(std::optional<GPUSi
 void GPUBuffer::unmap(ScriptExecutionContext& scriptExecutionContext)
 {
     internalUnmap(scriptExecutionContext);
-    if (m_device)
-        m_device->removeBufferToUnmap(*this);
+    if (RefPtr device = m_device.get())
+        device->removeBufferToUnmap(*this);
 }
 
 void GPUBuffer::internalUnmap(ScriptExecutionContext& scriptExecutionContext)
@@ -213,7 +215,7 @@ void GPUBuffer::internalUnmap(ScriptExecutionContext& scriptExecutionContext)
     for (auto& arrayBufferAndOffset : m_arrayBuffers) {
         auto& arrayBuffer = arrayBufferAndOffset.buffer;
         if (arrayBuffer && arrayBuffer->data() && arrayBuffer->byteLength()) {
-            m_backing->copy(arrayBuffer->span(), arrayBufferAndOffset.offset);
+            m_backing->copyFrom(arrayBuffer->span(), arrayBufferAndOffset.offset);
         JSC::ArrayBufferContents emptyBuffer;
             arrayBuffer->unpin();
             arrayBuffer->transferTo(scriptExecutionContext.vm(), emptyBuffer);

@@ -110,7 +110,7 @@ namespace JSC {
 #define __HI(x) *(1+(int*)&x)
 #define __LO(x) *(int*)&x
 
-static const double
+static constexpr double
 bp[] = {1.0, 1.5,},
 dp_h[] = { 0.0, 5.84962487220764160156e-01,}, /* 0x3FE2B803, 0x40000000 */
 dp_l[] = { 0.0, 1.35003920212974897128e-08,}, /* 0x3E4CFDEB, 0x43CFD006 */
@@ -383,14 +383,14 @@ static ALWAYS_INLINE bool isDenormal(double x)
 {
     static const uint64_t signbit = 0x8000000000000000ULL;
     static const uint64_t minNormal = 0x0001000000000000ULL;
-    return (bitwise_cast<uint64_t>(x) & ~signbit) - 1 < minNormal - 1;
+    return (std::bit_cast<uint64_t>(x) & ~signbit) - 1 < minNormal - 1;
 }
 
 static ALWAYS_INLINE bool isEdgeCase(double x)
 {
     static const uint64_t signbit = 0x8000000000000000ULL;
     static const uint64_t infinity = 0x7fffffffffffffffULL;
-    return (bitwise_cast<uint64_t>(x) & ~signbit) - 1 >= infinity - 1;
+    return (std::bit_cast<uint64_t>(x) & ~signbit) - 1 >= infinity - 1;
 }
 
 static ALWAYS_INLINE double mathPowInternal(double x, double y)
@@ -489,25 +489,6 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double value))
 
 namespace Math {
 
-static ALWAYS_INLINE double log1pDoubleImpl(double value)
-{
-    if (value == 0.0)
-        return value;
-    return std::log1p(value);
-}
-
-static ALWAYS_INLINE float log1pFloatImpl(float value)
-{
-    if (value == 0.0)
-        return value;
-    return std::log1p(value);
-}
-
-double log1p(double value)
-{
-    return log1pDoubleImpl(value);
-}
-
 #define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
     JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double value)) \
     { \
@@ -519,18 +500,6 @@ double log1p(double value)
     }
 FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
 #undef JSC_DEFINE_VIA_STD
-
-#define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
-    JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double value)) \
-    { \
-        return lowerName##DoubleImpl(value); \
-    } \
-    JSC_DEFINE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float value)) \
-    { \
-        return lowerName##FloatImpl(value); \
-    }
-FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
-#undef JSC_DEFINE_VIA_CUSTOM
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(truncDouble, double, (double value))
 {
@@ -638,7 +607,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(f64_nearest, double, (double operand))
     return std::nearbyint(operand);
 }
 
-#if OS(LINUX) && !defined(__GLIBC__)
+#if (OS(LINUX) && !defined(__GLIBC__)) || OS(HAIKU)
 static inline float roundevenf(float operand)
 {
     float rounded = roundf(operand);
@@ -648,6 +617,7 @@ static inline float roundevenf(float operand)
     }
     return rounded;
 }
+
 static inline double roundeven(double operand)
 {
     double rounded = round(operand);

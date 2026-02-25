@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@
 #import "GlassView.h"
 #import "GlassScreen.h"
 #import "GlassApplication.h"
-#import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -93,13 +92,13 @@ static inline GlassWindow *getGlassWindow(JNIEnv *env, jlong jPtr)
     return (GlassWindow*)[nsWindow delegate];
 }
 
-static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
+static inline GlassView3D<GlassView> *getMacView(JNIEnv *env, jobject jview)
 {
     if (jview != NULL)
     {
         jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
         GLASS_CHECK_EXCEPTION(env);
-        return (NSView<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, jfID));
+        return (GlassView3D<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, jfID));
     }
     else
     {
@@ -310,6 +309,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         }
 
         [self _checkUngrab];
+        [self reorderChildWindows];
     }
 }
 
@@ -346,6 +346,90 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     return self->isFocusable;
 }
 
+- (void) addChildWindow:(GlassWindow*)childWindow
+{
+    LOG("addChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows == nil) {
+        self->childWindows = [[NSMutableArray alloc] init];
+    }
+    [self->childWindows addObject:childWindow];
+}
+
+- (void) removeChildWindow:(GlassWindow*)childWindow
+{
+    LOG("removeChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows != nil) {
+        [self->childWindows removeObject:childWindow];
+    }
+}
+
+//
+// Recursively orders all child windows so that they are above their owner.
+//
+- (void) reorderChildWindows
+{
+    LOG("reorderChildWindows: %p", self);
+    if ((self->childWindows != nil) && (!nsWindow.isMiniaturized)) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            // Owned windows must set their level to at least the level of their owner
+            NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
+            [child->nsWindow setLevel:level];
+            // Order child above the owner window
+            if (child->nsWindow.isVisible) {
+                [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+            }
+            [child reorderChildWindows];
+        }
+    }
+}
+
+//
+// Recursively minimize or unminimize all child windows.
+//
+- (void) minimizeChildWindows:(BOOL)minimize
+{
+    LOG("minimizeChildWindows: %p  minimize:%d", self, minimize);
+    if (self->childWindows != nil) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            if (minimize) {
+                [child->nsWindow orderOut:child];
+            } else {
+                [child->nsWindow orderFront:child];
+            }
+
+            [child minimizeChildWindows:minimize];
+        }
+    }
+}
+
+//
+// Recursively set the collection behavior for the child windows to enable or
+// disable the "move to active space" behavior. This is used when the owner
+// enters full-screen, so that the children will follow the owner to the
+// full-screen space. It is called with "true" when first entering full screen
+// and "false" once the transition to full-screen is complete.
+//
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace
+{
+    LOG("setMoveToActiveSpaceChildWindows: %p  moveToActiveSpace:%d", self, moveToActiveSpace);
+    if (self->childWindows != nil) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            NSWindowCollectionBehavior behavior = [child->nsWindow collectionBehavior];
+            if (moveToActiveSpace) {
+                behavior |= NSWindowCollectionBehaviorMoveToActiveSpace;
+            } else {
+                behavior &= ~NSWindowCollectionBehaviorMoveToActiveSpace;
+            }
+            [child->nsWindow setCollectionBehavior: behavior];
+
+            [child setMoveToActiveSpaceChildWindows:moveToActiveSpace];
+        }
+    }
+}
+
 - (NSColor*)setBackgroundColor:(NSColor *)color
 {
     if (self->isTransparent == NO)
@@ -373,39 +457,58 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
+        bool isTitled = (jStyleMask & com_sun_glass_ui_Window_TITLED) != 0;
+        bool isClosable = (jStyleMask & com_sun_glass_ui_Window_CLOSABLE) != 0;
+        bool isMinimizable = (jStyleMask & com_sun_glass_ui_Window_MINIMIZABLE) != 0;
+        bool isMaximizable = (jStyleMask & com_sun_glass_ui_Window_MAXIMIZABLE) != 0;
+        bool isTransparent = (jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0;
+        bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
+        bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
+        bool isUnified = (jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0;
+        bool isExtended = (jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0;
+        bool isDarkFrame = (jStyleMask & com_sun_glass_ui_Window_DARK_FRAME) != 0;
+
         NSUInteger styleMask = NSWindowStyleMaskBorderless;
         // only titled windows get title
-        if ((jStyleMask&com_sun_glass_ui_Window_TITLED) != 0)
+        if (isTitled)
         {
             styleMask = styleMask|NSWindowStyleMaskTitled;
         }
 
-        bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
-        bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
-
         // only nontransparent windows get decorations
-        if ((jStyleMask&com_sun_glass_ui_Window_TRANSPARENT) == 0)
+        if (!isTransparent)
         {
-            if ((jStyleMask&com_sun_glass_ui_Window_CLOSABLE) != 0)
+            if (isClosable)
             {
                 styleMask = styleMask|NSWindowStyleMaskClosable;
             }
 
-            if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) ||
-                ((jStyleMask&com_sun_glass_ui_Window_MAXIMIZABLE) != 0))
+            if (isMinimizable || isMaximizable)
             {
                 // on Mac OS X there is one set for min/max buttons,
                 // so if clients requests either one, we turn them both on
                 styleMask = styleMask|NSWindowStyleMaskMiniaturizable;
             }
 
-            if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
+            if (isExtended) {
+                styleMask = styleMask | NSWindowStyleMaskTitled | NSWindowStyleMaskFullSizeContentView;
+            }
+
+            if (isUnified) {
                 styleMask = styleMask|NSWindowStyleMaskTexturedBackground;
             }
 
             if (isUtility)
             {
-                styleMask = styleMask | NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel;
+                styleMask = styleMask | NSWindowStyleMaskNonactivatingPanel;
+
+                // The NSWindowStyleMaskUtilityWindow style makes the close button appear very small (because the
+                // title bar is thinner than normal). This doesn't work well with client-side title bars in extended
+                // windows: the point of a client-side title bar is its ability to host custom controls, so it can't
+                // be very thin. We therefore only add this style for non-extended windows.
+                if (!isExtended) {
+                    styleMask |= NSWindowStyleMaskUtilityWindow;
+                }
             }
         }
 
@@ -423,26 +526,42 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
+        window->isStandardButtonsVisible = YES;
 
-        if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
+        if (isExtended) {
+            [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
+            [window->nsWindow setTitlebarAppearsTransparent:YES];
+            [window->nsWindow setToolbar:[NSToolbar new]];
+        }
+
+        if (isUnified) {
             //Prevent the textured effect from disappearing on border thickness recalculation
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
         }
 
-        if ((jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0) {
-            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
-            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
-            if (!jOwnerPtr) {
-                [window->nsWindow setLevel:NSNormalWindowLevel];
-            }
+        if (isUtility) {
+            // When we hide the standard window buttons, they are still part of the button group that activates
+            // the hover appearance (the icons inside the buttons) when the cursor is over any of the buttons.
+            // This leads to the close button receiving the hover appearance when the mouse cursor is over one
+            // of the hidden buttons. Setting the hidden buttons' frame to an empty rectangle fixes this.
+            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setFrame:CGRectMake(0, 0, 0, 0)];
+            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setFrame:CGRectMake(0, 0, 0, 0)];
+
+            [window->nsWindow setLevel:NSNormalWindowLevel];
         }
 
+        window->prefLevel = [window->nsWindow level];
         if (jOwnerPtr != 0L)
         {
-            window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
+            // Get owner glass window and add this window as a child window
+            window->owner = getGlassWindow(env, jOwnerPtr);
+            [window->owner addChildWindow:window];
+
+            // Owned windows must set their level to at least the level of their owner
+            NSWindowLevel level = MAX(window->prefLevel, [window->owner->nsWindow level]);
+            [window->nsWindow setLevel:level];
         }
-        window->isResizable = NO;
-        window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0;
+
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
@@ -460,8 +579,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setCollectionBehavior: behavior];
         }
 
-        window->isTransparent = (jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0;
-        if (window->isTransparent == YES)
+        if (isTransparent)
         {
             [window->nsWindow setBackgroundColor:[NSColor clearColor]];
             [window->nsWindow setHasShadow:NO];
@@ -473,9 +591,16 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setOpaque:YES];
         }
 
+        window->isDecorated = isTitled || isExtended;
+        window->isExtended = isExtended;
+        window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
-
+        window->isResizable = NO;
+        [window _setResizable:NO]; // actual value will be set later with a separate JNI downcall
+        [window->nsWindow setAppearance:isDarkFrame
+            ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
+            : [NSAppearance appearanceNamed:NSAppearanceNameAqua]];
     }
     [pool drain];
 
@@ -646,7 +771,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
                 level = NSScreenSaverWindowLevel;
                 break;
         }
+        window->prefLevel = level; // Save preferred level
+        if (window->owner != nil) {
+            // Owned windows must set their level to at least the level of their owner
+            level = MAX(level, [window->owner->nsWindow level]);
+        }
         [window->nsWindow setLevel:level];
+        [window reorderChildWindows];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -805,8 +936,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 
         if (window->view != nil)
         {
-            CALayer *layer = [window->view layer];
-            if (([layer isKindOfClass:[CAOpenGLLayer class]] == YES) &&
+            CALayer *layer = [window->view getLayer];
+            LOG("   layer: %p", layer);
+            // TODO : Move below logic to CGL specific View/Layer class
+            if (([layer.sublayers[0] isKindOfClass:[CAOpenGLLayer class]] == YES) &&
                 (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
@@ -859,8 +992,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->menubar = (GlassMenubar*)jlong_to_ptr(jMenubarPtr);
-        [NSApp setMainMenu:window->menubar->menu];
-        [[NSApp mainMenu] update];
+
+        BOOL isEmbedded = [GlassApplication isEmbedded];
+        BOOL isKeyWindow = [window->nsWindow isKeyWindow];
+
+        if (!isEmbedded || isKeyWindow) {
+            [NSApp setMainMenu:window->menubar->menu];
+            [[NSApp mainMenu] update];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1006,32 +1145,50 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
+
+        NSRect oldFrame = window->nsWindow.frame;
+        int eventType = com_sun_glass_events_WindowEvent_RESTORE;
+
         window->suppressWindowResizeEvent = YES;
+        window->suppressWindowMoveEvent = YES;
 
         if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE))
         {
-            window->preZoomedRect = [window->nsWindow frame];
+            window->preZoomedRect = oldFrame;
+            eventType = com_sun_glass_events_WindowEvent_MAXIMIZE;
 
             if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless)
             {
                 [window->nsWindow zoom:nil];
-                // windowShouldZoom will be called automatically in this case
             }
             else
             {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
-                [window _setWindowFrameWithRect:NSMakeRect(visibleRect.origin.x, visibleRect.origin.y, visibleRect.size.width, visibleRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-
-                // calling windowShouldZoom will send Java maximize event
-                [window windowShouldZoom:window->nsWindow toFrame:[window->nsWindow frame]];
+                [window->nsWindow setFrame:visibleRect display:YES animate:YES];
             }
         }
         else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE))
         {
-            [window _restorePreZoomedRect];
+            // Platform unzooming only works reliably for titled windows. For
+            // untitled windows the unzoom location can be wildly off. We want
+            // to use platform unzoom when we can since it uses the platform's
+            // user state which may be more up-to-date than the preZoomedRect.
+            if (window->nsWindow.styleMask & NSWindowStyleMaskTitled) {
+                [window->nsWindow zoom:nil];
+            } else {
+                [window->nsWindow setFrame:window->preZoomedRect display:YES animate:YES];
+            }
         }
 
         window->suppressWindowResizeEvent = NO;
+        window->suppressWindowMoveEvent = NO;
+
+        NSRect newFrame = window->nsWindow.frame;
+        if (!NSEqualRects(newFrame, oldFrame)) {
+            NSRect flipFrame = [window _flipFrame];
+            [window _sendJavaWindowMoveEventForFrame:flipFrame];
+            [window _sendJavaWindowResizeEvent:eventType forFrame:flipFrame];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1084,7 +1241,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMinSize:NSMakeSize(jW, jH)];
+        NSSize minSize = NSMakeSize(jW, jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMinSize = minSize;
+        } else {
+            [window->nsWindow setMinSize:minSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1107,8 +1270,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMaxSize:NSMakeSize(jW == -1 ? FLT_MAX : (CGFloat)jW,
-                                                jH == -1 ? FLT_MAX : (CGFloat)jH)];
+        NSSize maxSize = NSMakeSize(
+            jW == -1 ? FLT_MAX : (CGFloat)jW,
+            jH == -1 ? FLT_MAX : (CGFloat)jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMaxSize = maxSize;
+        } else {
+            [window->nsWindow setMaxSize:maxSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1131,10 +1301,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if (window->isResizable != jResizable)
-        {
-            [window performSelectorOnMainThread:@selector(_setResizable) withObject:nil waitUntilDone:YES];
-        }
+        [window _setResizable:jResizable];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1173,11 +1340,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         else
         {
             [window _ungrabFocus];
-            if (window->owner != nil)
-            {
-                LOG("   removeChildWindow: %p", window);
-                [window->owner removeChildWindow:window->nsWindow];
-            }
             [window->nsWindow orderOut:window->nsWindow];
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
@@ -1334,6 +1496,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setDarkFrame
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setDarkFrame
+(JNIEnv *env, jobject jWindow, jlong jPtr, jboolean dark)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setDarkFrame");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        [window->nsWindow setAppearance:dark
+            ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
+            : [NSAppearance appearanceNamed:NSAppearanceNameAqua]];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _toFront
  * Signature: (J)V
  */
@@ -1374,23 +1559,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toBack
     GLASS_CHECK_EXCEPTION(env);
 }
 
-
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _enterModal
+ * Method:    _performWindowDrag
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModal
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModal");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1performWindowDrag");
     if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [NSApp runModalForWindow:window->nsWindow];
+        [[window->view delegate] performWindowDrag];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1398,19 +1582,26 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModal
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _enterModalWithWindow
- * Signature: (JJ)V
+ * Method:    _performTitleBarDoubleClickAction
+ * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindow
-(JNIEnv *env, jobject jWindow, jlong jDialogPtr, jlong jWindowPtr)
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction
+(JNIEnv *env, jobject jWindow, jlong jPtr)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindow");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1performTitleBarDoubleClickAction");
+    if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        //GlassWindow *window = getGlassWindow(env, jDialogPtr);
-        // TODO: implement _enterModalWithWindow
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        NSString* action = [NSUserDefaults.standardUserDefaults stringForKey:@"AppleActionOnDoubleClick"];
+
+        if ([action isEqualToString:@"Minimize"]) {
+            [window->nsWindow performMiniaturize:nil];
+        } else if ([action isEqualToString:@"Maximize"]) {
+            [window->nsWindow performZoom:nil];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1418,21 +1609,55 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindo
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
- * Method:    _exitModal
- * Signature: (J)V
+ * Method:    _setWindowButtonStyle
+ * Signature: (JIZ)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
-(JNIEnv *env, jobject jWindow, jlong jPtr)
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyle
+(JNIEnv *env, jobject jWindow, jlong jPtr, jint toolbarStyle, jboolean buttonsVisible)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1exitModal");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyle");
     if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [NSApp stop:window->nsWindow];
+        if (window) {
+            window->isStandardButtonsVisible = buttonsVisible;
+
+            if (window->nsWindow) {
+                [window->nsWindow setToolbarStyle:toolbarStyle];
+                [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:!buttonsVisible];
+                [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:!buttonsVisible];
+                [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:!buttonsVisible];
+            }
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _isRightToLeftLayoutDirection
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1isRightToLeftLayoutDirection
+(JNIEnv *env, jobject self)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1isRightToLeftLayoutDirection");
+    jboolean result = false;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        NSString* preferredLanguage = [[NSLocale preferredLanguages] objectAtIndex:0];
+        NSLocale* locale = [NSLocale localeWithLocaleIdentifier:preferredLanguage];
+        NSString* languageCode = [locale objectForKey:NSLocaleLanguageCode];
+        result = [NSLocale characterDirectionForLanguage:languageCode] == NSLocaleLanguageDirectionRightToLeft;
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return result;
 }

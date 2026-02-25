@@ -32,8 +32,9 @@
 
 #include "FloatRect.h"
 #include "FloatSize.h"
+#include "LayoutRoundedRect.h"
 #include "Region.h"
-#include "RoundedRect.h"
+#include <wtf/TZoneMalloc.h>
 
 #if USE(SKIA)
 class SkRRect;
@@ -41,11 +42,13 @@ class SkRRect;
 
 namespace WebCore {
 
+class Path;
+
 class FloatRoundedRect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FloatRoundedRect, WEBCORE_EXPORT);
 public:
     class Radii {
-    WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Radii);
     public:
         Radii() = default;
         Radii(const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight)
@@ -56,7 +59,7 @@ public:
         {
         }
 
-        Radii(const RoundedRect::Radii& intRadii)
+        Radii(const LayoutRoundedRect::Radii& intRadii)
             : m_topLeft(intRadii.topLeft())
             , m_topRight(intRadii.topRight())
             , m_bottomLeft(intRadii.bottomLeft())
@@ -95,6 +98,7 @@ public:
 
         void scale(float factor);
         void scale(float horizontalFactor, float verticalFactor);
+        void expandEvenIfZero(float size);
         void expand(float topWidth, float bottomWidth, float leftWidth, float rightWidth);
         void expand(float size) { expand(size, size, size, size); }
         void shrink(float topWidth, float bottomWidth, float leftWidth, float rightWidth) { expand(-topWidth, -bottomWidth, -leftWidth, -rightWidth); }
@@ -111,7 +115,7 @@ public:
 
     WEBCORE_EXPORT explicit FloatRoundedRect(const FloatRect& = FloatRect(), const Radii& = Radii());
     WEBCORE_EXPORT FloatRoundedRect(const FloatRect&, const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight);
-    explicit FloatRoundedRect(const RoundedRect&);
+    explicit FloatRoundedRect(const LayoutRoundedRect&);
     FloatRoundedRect(float x, float y, float width, float height);
 
     const FloatRect& rect() const { return m_rect; }
@@ -151,6 +155,8 @@ public:
     bool xInterceptsAtY(float y, float& minXIntercept, float& maxXIntercept) const;
 
     bool intersectionIsRectangular(const FloatRect&) const;
+
+    Path path() const;
 
     friend bool operator==(const FloatRoundedRect&, const FloatRoundedRect&) = default;
 

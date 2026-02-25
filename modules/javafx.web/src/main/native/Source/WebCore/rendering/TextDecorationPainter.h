@@ -24,6 +24,7 @@
 
 #include "Color.h"
 #include "FloatPoint.h"
+#include "GraphicsContext.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderStyleConstants.h"
 #include <wtf/OptionSet.h>
@@ -32,15 +33,13 @@ namespace WebCore {
 
 class FilterOperations;
 class FontCascade;
-class GraphicsContext;
 class RenderObject;
 class RenderStyle;
-class ShadowData;
 class TextRun;
 
 class TextDecorationPainter {
 public:
-    TextDecorationPainter(GraphicsContext&, const FontCascade&, const ShadowData*, const FilterOperations*, bool isPrinting, bool isHorizontal);
+    TextDecorationPainter(GraphicsContext&, const FontCascade&, const Style::TextShadows&, const FilterOperations*, bool isPrinting, WritingMode);
 
     struct Styles {
         bool operator==(const Styles&) const;
@@ -52,8 +51,6 @@ public:
         DecorationStyleAndColor underline;
         DecorationStyleAndColor overline;
         DecorationStyleAndColor linethrough;
-
-        TextDecorationSkipInk skipInk { TextDecorationSkipInk::None };
     };
     struct BackgroundDecorationGeometry {
         FloatPoint textOrigin;
@@ -86,8 +83,8 @@ private:
 
     GraphicsContext& m_context;
     bool m_isPrinting { false };
-    bool m_isHorizontal { true };
-    const ShadowData* m_shadow { nullptr };
+    WritingMode m_writingMode;
+    const Style::TextShadows& m_shadow;
     const FilterOperations* m_shadowColorFilter { nullptr };
     const FontCascade& m_font;
 };

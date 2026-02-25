@@ -19,15 +19,19 @@
 
 #pragma once
 
-#if USE(GSTREAMER_TRANSCODER)
+#if USE(GSTREAMER) && ENABLE(MEDIA_RECORDER)
 
 #include "GRefPtrGStreamer.h"
 #include "MediaRecorderPrivate.h"
 #include "SharedBuffer.h"
+#include "Timer.h"
+#include <gst/app/gstappsink.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,7 +41,7 @@ class MediaStreamTrackPrivate;
 struct MediaRecorderPrivateOptions;
 
 class MediaRecorderPrivateBackend : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateBackend, WTF::DestructionThread::Main> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateBackend);
 public:
     using SelectTracksCallback = Function<void(MediaRecorderPrivate::AudioVideoSelectedTracks)>;
     static RefPtr<MediaRecorderPrivateBackend> create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
@@ -69,14 +73,12 @@ private:
     GRefPtr<GstEncodingContainerProfile> containerProfile();
     MediaStreamPrivate& stream() const { return m_stream; }
     void processSample(GRefPtr<GstSample>&&);
-    void notifyPosition(GstClockTime);
+    GstFlowReturn handleSample(GstAppSink*, GRefPtr<GstSample>&&);
     void notifyEOS();
+    void positionUpdated();
 
     GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
-    GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
     String m_videoCodec;
-    GRefPtr<GstTranscoder> m_transcoder;
-    GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;
     GRefPtr<GstElement> m_pipeline;
     GRefPtr<GstElement> m_src;
     GRefPtr<GstElement> m_sink;
@@ -93,10 +95,11 @@ private:
     const MediaRecorderPrivateOptions& m_options;
     String m_mimeType;
     std::optional<SelectTracksCallback> m_selectTracksCallback;
+    Timer m_positionTimer;
 };
 
 class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateGStreamer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaRecorderPrivateGStreamer);
 public:
     static std::unique_ptr<MediaRecorderPrivateGStreamer> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
@@ -114,11 +117,11 @@ private:
     void stopRecording(CompletionHandler<void()>&&) final;
     void pauseRecording(CompletionHandler<void()>&&) final;
     void resumeRecording(CompletionHandler<void()>&&) final;
-    const String& mimeType() const final;
+    String mimeType() const final;
 
     Ref<MediaRecorderPrivateBackend> m_recorder;
 };
 
 } // namespace WebCore
 
-#endif // USE(GSTREAMER_TRANSCODER)
+#endif // USE(GSTREAMER) && ENABLE(MEDIA_RECORDER)

@@ -31,6 +31,6 @@
 namespace WebCore {
 
 struct UserGestureTokenIdentifierType;
-using UserGestureTokenIdentifier = ProcessQualified<LegacyNullableObjectIdentifier<UserGestureTokenIdentifierType>>;
+using UserGestureTokenIdentifier = ProcessQualified<ObjectIdentifier<UserGestureTokenIdentifierType>>;
 
 }

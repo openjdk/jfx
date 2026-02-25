@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,9 +46,10 @@ NodeIdentifier HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1;
 NodeIdentifier HeapSnapshotBuilder::getNextObjectIdentifier() { return nextAvailableObjectIdentifier++; }
 void HeapSnapshotBuilder::resetNextAvailableObjectIdentifier() { HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1; }
 
-HeapSnapshotBuilder::HeapSnapshotBuilder(HeapProfiler& profiler, SnapshotType type)
+HeapSnapshotBuilder::HeapSnapshotBuilder(HeapProfiler& profiler, SnapshotType type, OverflowPolicy policy)
     : HeapAnalyzer()
     , m_profiler(profiler)
+    , m_overflowPolicy(policy)
     , m_snapshotType(type)
 {
 }
@@ -191,7 +192,7 @@ bool HeapSnapshotBuilder::previousSnapshotHasNodeForCell(JSCell* cell, NodeIdent
 //  Inspector snapshots:
 //
 //   {
-//      "version": 2,
+//      "version": 3,
 //      "type": "Inspector",
 //      // [<address>, <labelIndex>, <wrappedAddress>] only present in GCDebuggingSnapshot-type snapshots
 //      "nodes": [
@@ -218,7 +219,7 @@ bool HeapSnapshotBuilder::previousSnapshotHasNodeForCell(JSCell* cell, NodeIdent
 //  GC heap debugger snapshots:
 //
 //   {
-//      "version": 2,
+//      "version": 3,
 //      "type": "GCDebugging",
 //      "nodes": [
 //          <nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <flags>, <labelIndex>, <cellEddress>, <wrappedAddress>,
@@ -258,6 +259,7 @@ bool HeapSnapshotBuilder::previousSnapshotHasNodeForCell(JSCell* cell, NodeIdent
 //       - 0b0000 - no flags
 //       - 0b0001 - internal instance
 //       - 0b0010 - Object subclassification
+//       - 0b0100 - Element subclassification
 //
 //     <edgeTypeIndex>
 //       - index into the "edgeTypes" list.
@@ -273,6 +275,7 @@ bool HeapSnapshotBuilder::previousSnapshotHasNodeForCell(JSCell* cell, NodeIdent
 enum class NodeFlags {
     Internal      = 1 << 0,
     ObjectSubtype = 1 << 1,
+    ElementSubtype = 1 << 2,
 };
 
 static uint8_t edgeTypeToNumber(EdgeType type)
@@ -308,18 +311,15 @@ static ASCIILiteral snapshotTypeToString(HeapSnapshotBuilder::SnapshotType type)
     return "Inspector"_s;
 }
 
-String HeapSnapshotBuilder::json()
-{
-    return json([] (const HeapSnapshotNode&) { return true; });
-}
-
 void HeapSnapshotBuilder::setLabelForCell(JSCell* cell, const String& label)
 {
     m_cellLabels.set(cell, label);
 }
 
-String HeapSnapshotBuilder::descriptionForCell(JSCell *cell) const
+String HeapSnapshotBuilder::descriptionForNode(const HeapSnapshotNode& node)
 {
+    JSCell* cell = node.cell;
+
     if (cell->isString())
         return emptyString(); // FIXME: get part of string.
 
@@ -327,39 +327,41 @@ String HeapSnapshotBuilder::descriptionForCell(JSCell *cell) const
 
     if (structure->classInfoForCells()->isSubClassOf(Structure::info())) {
         Structure* cellAsStructure = jsCast<Structure*>(cell);
-        return cellAsStructure->classInfoForCells()->className;
+        String className = cellAsStructure->classInfoForCells()->className;
+        if (m_client)
+            className = m_client->heapSnapshotBuilderOverrideClassName(*this, cell, className);
+        return className;
     }
 
     return emptyString();
 }
 
-String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowNodeCallback)
+String HeapSnapshotBuilder::json()
 {
     VM& vm = m_profiler.vm();
     DeferGCForAWhile deferGC(vm);
 
     // Build a node to identifier map of allowed nodes to use when serializing edges.
-    HashMap<JSCell*, NodeIdentifier> allowedNodeIdentifiers;
+    UncheckedKeyHashMap<JSCell*, NodeIdentifier> allowedNodeIdentifiers;
 
     // Build a list of used class names.
-    HashMap<String, unsigned> classNameIndexes;
+    UncheckedKeyHashMap<String, unsigned> classNameIndexes;
     classNameIndexes.set("<root>"_s, 0);
     unsigned nextClassNameIndex = 1;
 
     // Build a list of labels (this is just a string table).
-    HashMap<String, unsigned> labelIndexes;
+    UncheckedKeyHashMap<String, unsigned> labelIndexes;
     labelIndexes.set(emptyString(), 0);
     unsigned nextLabelIndex = 1;
 
     // Build a list of used edge names.
-    HashMap<UniquedStringImpl*, unsigned> edgeNameIndexes;
+    UncheckedKeyHashMap<UniquedStringImpl*, unsigned> edgeNameIndexes;
     unsigned nextEdgeNameIndex = 0;
 
-    StringBuilder json;
+    StringBuilder json(m_overflowPolicy);
 
     auto appendNodeJSON = [&] (const HeapSnapshotNode& node) {
-        // Let the client decide if they want to allow or disallow certain nodes.
-        if (!allowNodeCallback(node))
+        if (m_client && m_client->heapSnapshotBuilderIgnoreNode(*this, node.cell))
             return;
 
         unsigned flags = 0;
@@ -381,6 +383,9 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             }
         }
 
+        if (m_client)
+            className = m_client->heapSnapshotBuilderOverrideClassName(*this, node.cell, className);
+
         auto result = classNameIndexes.add(className, nextClassNameIndex);
         if (result.isNewEntry)
             nextClassNameIndex++;
@@ -394,7 +399,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
                 flags |= static_cast<unsigned>(NodeFlags::Internal);
 
             if (m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
-                StringBuilder nodeLabel;
+                StringBuilder nodeLabel(m_overflowPolicy);
                 auto it = m_cellLabels.find(node.cell);
                 if (it != m_cellLabels.end())
                     nodeLabel.append(it->value);
@@ -406,11 +411,16 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
                     }
                 }
 
-                String description = descriptionForCell(node.cell);
+                String description = descriptionForNode(node);
                 if (description.length()) {
                     if (nodeLabel.length())
                         nodeLabel.append(' ');
                     nodeLabel.append(description);
+                }
+
+                if (nodeLabel.hasOverflowed()) [[unlikely]] {
+                    m_hasOverflowed = true;
+                    return;
                 }
 
                 if (!nodeLabel.isEmpty() && m_snapshotType == SnapshotType::GCDebuggingSnapshot) {
@@ -423,6 +433,9 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
                 wrappedAddress = m_wrappedObjectPointers.get(node.cell);
             }
         }
+
+        if (m_client && m_client->heapSnapshotBuilderIsElement(*this, node.cell))
+            flags |= static_cast<unsigned>(NodeFlags::ElementSubtype);
 
         // <nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <flags>, [<labelIndex>, <cellAddress>, <wrappedAddress>]
         json.append(',', node.identifier, ',', node.cell->estimatedSizeInBytes(vm), ',', classNameIndex, ',', flags);
@@ -459,7 +472,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     };
 
     // version
-    json.append("{\"version\":2"_s);
+    json.append("{\"version\":3"_s);
 
     // type
     json.append(",\"type\":\""_s, snapshotTypeToString(m_snapshotType), '"');
@@ -625,6 +638,10 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
     }
 
     json.append('}');
+    if (json.hasOverflowed()) {
+        m_hasOverflowed = true;
+        return { };
+    }
     return json.toString();
 }
 

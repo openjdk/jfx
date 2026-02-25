@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,12 +41,11 @@ class ScriptExecutionContext;
 class FileSystemDirectoryReader final : public ScriptWrappable, public ActiveDOMObject, public RefCounted<FileSystemDirectoryReader> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FileSystemDirectoryReader);
 public:
-    static Ref<FileSystemDirectoryReader> create(ScriptExecutionContext&, FileSystemDirectoryEntry&);
-    ~FileSystemDirectoryReader();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    static Ref<FileSystemDirectoryReader> create(ScriptExecutionContext&, FileSystemDirectoryEntry&);
+    ~FileSystemDirectoryReader();
 
     void readEntries(ScriptExecutionContext&, Ref<FileSystemEntriesCallback>&&, RefPtr<ErrorCallback>&&);
 
@@ -55,7 +54,7 @@ private:
 
     Document* document() const;
 
-    Ref<FileSystemDirectoryEntry> m_directory;
+    const Ref<FileSystemDirectoryEntry> m_directory;
     std::optional<Exception> m_error;
     bool m_isReading { false };
     bool m_isDone { false };

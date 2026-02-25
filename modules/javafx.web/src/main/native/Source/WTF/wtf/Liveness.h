@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/BitVector.h>
 #include <wtf/IndexSparseSet.h>
 #include <wtf/StdLibExtras.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -53,7 +56,7 @@ public:
 
     // This calculator has to be run in reverse.
     class LocalCalc {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LocalCalc);
     public:
         LocalCalc(Liveness& liveness, typename CFG::Node block)
             : m_liveness(liveness)
@@ -67,7 +70,7 @@ public:
         }
 
         class Iterable {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Iterable);
         public:
             Iterable(Liveness& liveness)
                 : m_liveness(liveness)
@@ -75,7 +78,7 @@ public:
             }
 
             class iterator {
-                WTF_MAKE_FAST_ALLOCATED;
+                WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
             public:
                 iterator(Adapter& adapter, Workset::const_iterator sparceSetIterator)
                     : m_adapter(adapter)
@@ -158,7 +161,7 @@ public:
 
     template<typename UnderlyingIterable>
     class Iterable {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Iterable);
     public:
         Iterable(Liveness& liveness, const UnderlyingIterable& iterable)
             : m_liveness(liveness)
@@ -167,7 +170,7 @@ public:
         }
 
         class iterator {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
         public:
             iterator()
                 : m_liveness(nullptr)
@@ -229,7 +232,7 @@ public:
     Workset& workset() { return m_workset; }
 
     class LiveAtHead {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LiveAtHead);
     public:
         LiveAtHead(Liveness& liveness)
             : m_liveness(liveness)
@@ -273,7 +276,7 @@ protected:
                     liveAtTail.append(index);
                 });
 
-            std::sort(liveAtTail.begin(), liveAtTail.end());
+            std::ranges::sort(liveAtTail);
             removeRepeatedElements(liveAtTail);
         }
 
@@ -367,3 +370,4 @@ private:
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

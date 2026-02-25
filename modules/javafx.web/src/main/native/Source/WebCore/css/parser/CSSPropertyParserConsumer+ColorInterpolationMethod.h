@@ -31,10 +31,14 @@ namespace WebCore {
 class CSSParserTokenRange;
 struct ColorInterpolationMethod;
 
+namespace CSS {
+struct PropertyParserState;
+}
+
 namespace CSSPropertyParserHelpers {
 
 // MARK: <color-interpolation-method> consuming (raw)
-std::optional<ColorInterpolationMethod> consumeColorInterpolationMethod(CSSParserTokenRange&);
+std::optional<ColorInterpolationMethod> consumeColorInterpolationMethod(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

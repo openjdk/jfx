@@ -41,7 +41,7 @@ namespace WTF {
 
 template<typename T>
 class Packed {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Packed);
 public:
     static constexpr bool isPackedType = true;
 
@@ -108,7 +108,7 @@ private:
 // alignment information only when we can reduce the size of the storage.
 template<typename T, size_t passedAlignment>
 class PackedAlignedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PackedAlignedPtr);
 public:
     static_assert(::allowCompactPointers<T*>());
     static_assert(hasOneBitSet(passedAlignment), "Alignment needs to be power-of-two");
@@ -144,9 +144,9 @@ public:
         uintptr_t value = 0;
 
 #if CPU(LITTLE_ENDIAN)
-        memcpy(&value, m_storage.data(), storageSize);
+        memcpySpan(asMutableByteSpan(value), std::span { m_storage });
 #else
-        memcpy(bitwise_cast<uint8_t*>(&value) + (sizeof(void*) - storageSize), m_storage.data(), storageSize);
+        memcpySpan(asMutableByteSpan(value).last(storageSize), std::span { m_storage });
 #endif
 
         if (isAlignmentShiftProfitable)
@@ -162,23 +162,23 @@ public:
         //
         // Reference: https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
         constexpr unsigned shiftBits = countOfBits<uintptr_t> - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
-        value = (bitwise_cast<intptr_t>(value) << shiftBits) >> shiftBits;
+        value = (std::bit_cast<intptr_t>(value) << shiftBits) >> shiftBits;
 #endif
 
-        return bitwise_cast<T*>(value);
+        return std::bit_cast<T*>(value);
     }
 
     void set(T* passedValue)
     {
-        uintptr_t value = bitwise_cast<uintptr_t>(passedValue);
+        uintptr_t value = std::bit_cast<uintptr_t>(passedValue);
         if (isAlignmentShiftProfitable)
             value >>= alignmentShiftSize;
 #if CPU(LITTLE_ENDIAN)
-        memcpy(m_storage.data(), &value, storageSize);
+        memcpySpan(std::span { m_storage }, asByteSpan(value).first(storageSize));
 #else
-        memcpy(m_storage.data(), bitwise_cast<uint8_t*>(&value) + (sizeof(void*) - storageSize), storageSize);
+        memcpySpan(std::span { m_storage }, asByteSpan(value).last(storageSize));
 #endif
-        ASSERT(bitwise_cast<uintptr_t>(get()) == value);
+        ASSERT(std::bit_cast<uintptr_t>(get()) == value);
     }
 
     void clear()
@@ -247,8 +247,8 @@ public:
     using Base::Base;
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
-    Packed(HashTableDeletedValueType) : Base(bitwise_cast<T*>(static_cast<uintptr_t>(Base::alignment))) { }
-    bool isHashTableDeletedValue() const { return Base::get() == bitwise_cast<T*>(static_cast<uintptr_t>(Base::alignment)); }
+    Packed(HashTableDeletedValueType) : Base(std::bit_cast<T*>(static_cast<uintptr_t>(Base::alignment))) { }
+    bool isHashTableDeletedValue() const { return Base::get() == std::bit_cast<T*>(static_cast<uintptr_t>(Base::alignment)); }
 };
 
 template<typename T>
@@ -279,12 +279,6 @@ inline bool operator==(const PackedPtr<T>& a, U* b)
     return a.get() == b;
 }
 
-template<typename T, typename U>
-inline bool operator==(T* a, const PackedPtr<U>& b)
-{
-    return a == b.get();
-}
-
 template<typename T>
 struct PackedPtrTraits {
     template<typename U> using RebindTraits = PackedPtrTraits<U>;
@@ -300,8 +294,8 @@ struct PackedPtrTraits {
     // We assume that,
     // 1. The alignment is < 4KB. (It is tested by HashTraits).
     // 2. The first page (including nullptr) is never mapped.
-    static StorageType hashTableDeletedValue() { return StorageType { bitwise_cast<T*>(static_cast<uintptr_t>(StorageType::alignment)) }; }
-    static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr.get() == bitwise_cast<T*>(static_cast<uintptr_t>(StorageType::alignment)); }
+    static StorageType hashTableDeletedValue() { return StorageType { std::bit_cast<T*>(static_cast<uintptr_t>(StorageType::alignment)) }; }
+    static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr.get() == std::bit_cast<T*>(static_cast<uintptr_t>(StorageType::alignment)); }
 };
 
 template<typename P> struct DefaultHash<PackedPtr<P>> : PtrHash<PackedPtr<P>> { };

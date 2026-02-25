@@ -33,6 +33,7 @@
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
@@ -40,7 +41,7 @@ class ConvertToBackingContext;
 struct ExternalTextureDescriptor;
 
 class ExternalTextureImpl final : public ExternalTexture {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ExternalTextureImpl);
 public:
     static Ref<ExternalTextureImpl> create(WebGPUPtr<WGPUExternalTexture>&& externalTexture, const ExternalTextureDescriptor& descriptor, ConvertToBackingContext& convertToBackingContext)
     {
@@ -64,9 +65,11 @@ private:
     void setLabelInternal(const String&) final;
     void destroy() final;
     void undestroy() final;
+#if PLATFORM(COCOA)
     void updateExternalTexture(CVPixelBufferRef) final;
+#endif
 
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 
     WebGPUPtr<WGPUExternalTexture> m_backing;
     PredefinedColorSpace m_colorSpace;

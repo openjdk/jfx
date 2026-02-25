@@ -34,11 +34,7 @@ typedef struct CGPoint CGPoint;
 
 #if !PLATFORM(IOS_FAMILY)
 #if OS(DARWIN)
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGPoint NSPoint;
-#else
-typedef struct _NSPoint NSPoint;
-#endif
 #endif
 #endif // !PLATFORM(IOS_FAMILY)
 
@@ -86,6 +82,16 @@ public:
         this->scale(scale, scale);
     }
 
+    constexpr IntPoint scaled(float scale) const
+    {
+        return { static_cast<int>(std::lround(m_x * scale)), static_cast<int>(std::lround(m_y * scale)) };
+    }
+
+    constexpr IntPoint scaled(float scaleX, float scaleY) const
+    {
+        return { static_cast<int>(std::lround(m_x * scaleX)), static_cast<int>(std::lround(m_y * scaleY)) };
+    }
+
     constexpr IntPoint expandedTo(const IntPoint& other) const
     {
         return {
@@ -124,13 +130,6 @@ public:
     WEBCORE_EXPORT explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
     WEBCORE_EXPORT operator CGPoint() const;
 #endif
-
-#if !PLATFORM(IOS_FAMILY)
-#if OS(DARWIN) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    WEBCORE_EXPORT explicit IntPoint(const NSPoint&); // don't do this implicitly since it's lossy
-    WEBCORE_EXPORT operator NSPoint() const;
-#endif
-#endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT IntPoint(const POINT&);

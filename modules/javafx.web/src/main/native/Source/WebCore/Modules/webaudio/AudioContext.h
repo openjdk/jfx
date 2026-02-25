@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,16 +53,22 @@ class AudioContext final
 public:
     // Create an AudioContext for rendering to the audio hardware.
     static ExceptionOr<Ref<AudioContext>> create(Document&, AudioContextOptions&&);
-    ~AudioContext();
+    virtual ~AudioContext();
+
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     WEBCORE_EXPORT static void setDefaultSampleRateForTesting(std::optional<float>);
 
     void close(DOMPromiseDeferred<void>&&);
 
     DefaultAudioDestinationNode& destination() final { return m_destinationNode.get(); }
+    Ref<DefaultAudioDestinationNode> protectedDestination() { return destination(); }
     const DefaultAudioDestinationNode& destination() const final { return m_destinationNode.get(); }
+    Ref<const DefaultAudioDestinationNode> protectedDestination() const { return destination(); }
 
     double baseLatency();
+    double outputLatency();
 
     AudioTimestamp getOutputTimestamp();
 
@@ -85,17 +91,20 @@ public:
     void isPlayingAudioDidChange();
 
     // Restrictions to change default behaviors.
-    enum BehaviorRestrictionFlags {
-        NoRestrictions = 0,
+    enum class BehaviorRestrictionFlags : uint8_t {
         RequireUserGestureForAudioStartRestriction = 1 << 0,
         RequirePageConsentForAudioStartRestriction = 1 << 1,
     };
-    typedef unsigned BehaviorRestrictions;
+    using BehaviorRestrictions = OptionSet<BehaviorRestrictionFlags>;
     BehaviorRestrictions behaviorRestrictions() const { return m_restrictions; }
-    void addBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions |= restriction; }
-    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
+    void addBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.add(restriction); }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.remove(restriction); }
 
     void defaultDestinationWillBecomeConnected();
+
+#if PLATFORM(IOS_FAMILY)
+    const String& sceneIdentifier() const final;
+#endif
 
 private:
     AudioContext(Document&, const AudioContextOptions&);
@@ -104,13 +113,13 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
-    const void* logIdentifier() const final { return BaseAudioContext::logIdentifier(); }
+    uint64_t logIdentifier() const final { return BaseAudioContext::logIdentifier(); }
 #endif
 
     void constructCommon();
 
-    bool userGestureRequiredForAudioStart() const { return m_restrictions & RequireUserGestureForAudioStartRestriction; }
-    bool pageConsentRequiredForAudioStart() const { return m_restrictions & RequirePageConsentForAudioStartRestriction; }
+    bool userGestureRequiredForAudioStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction); }
+    bool pageConsentRequiredForAudioStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction); }
 
     bool willPausePlayback();
 
@@ -120,8 +129,12 @@ private:
     // MediaProducer
     MediaProducerMediaStateFlags mediaState() const final;
     void pageMutedStateDidChange() final;
+#if PLATFORM(IOS_FAMILY)
+    void sceneIdentifierDidChange() final;
+#endif
 
     // PlatformMediaSessionClient
+    RefPtr<MediaSessionManagerInterface> sessionManager() const final;
     PlatformMediaSession::MediaType mediaType() const final { return isSuspended() || isStopped() ? PlatformMediaSession::MediaType::None : PlatformMediaSession::MediaType::WebAudio; }
     PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::MediaType::WebAudio; }
     void mayResumePlayback(bool shouldResume) final;
@@ -129,16 +142,17 @@ private:
     bool canReceiveRemoteControlCommands() const final;
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) final;
     bool supportsSeeking() const final { return false; }
-    bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final;
     bool canProduceAudio() const final { return true; }
+    std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const final;
+    void isActiveNowPlayingSessionChanged() final;
+    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final;
+    bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final;
     bool isSuspended() const final;
     bool isPlaying() const final;
     bool isAudible() const final;
-    MediaSessionGroupIdentifier mediaSessionGroupIdentifier() const final;
     bool isNowPlayingEligible() const final;
     std::optional<NowPlayingInfo> nowPlayingInfo() const final;
-    WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
-    void isActiveNowPlayingSessionChanged() final;
+    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlatformMediaSession::PlaybackControlsPurpose) final;
 
     // MediaCanStartListener.
     void mediaCanStart(Document&) final;
@@ -148,11 +162,11 @@ private:
     void resume() final;
     bool virtualHasPendingActivity() const final;
 
-    UniqueRef<DefaultAudioDestinationNode> m_destinationNode;
-    std::unique_ptr<PlatformMediaSession> m_mediaSession;
+    const UniqueRef<DefaultAudioDestinationNode> m_destinationNode;
+    const Ref<PlatformMediaSession> m_mediaSession;
     MediaUniqueIdentifier m_currentIdentifier;
 
-    BehaviorRestrictions m_restrictions { NoRestrictions };
+    BehaviorRestrictions m_restrictions;
 
     // [[suspended by user]] flag in the specification:
     // https://www.w3.org/TR/webaudio/#dom-audiocontext-suspended-by-user-slot
@@ -162,6 +176,16 @@ private:
 };
 
 } // WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::AudioContext::BehaviorRestrictionFlags> {
+    using values = EnumValues<
+        WebCore::AudioContext::BehaviorRestrictionFlags,
+        WebCore::AudioContext::BehaviorRestrictionFlags::RequireUserGestureForAudioStartRestriction,
+        WebCore::AudioContext::BehaviorRestrictionFlags::RequirePageConsentForAudioStartRestriction
+    >;
+};
+} // namespace WTF
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioContext)
     static bool isType(const WebCore::BaseAudioContext& context) { return !context.isOfflineContext(); }

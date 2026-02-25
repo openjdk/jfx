@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "DocumentMarker.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Hasher.h>
 #include <wtf/Vector.h>
@@ -37,9 +36,10 @@ class RenderBoxModelObject;
 class RenderText;
 class RenderedDocumentMarker;
 struct TextBoxSelectableRange;
+enum class DocumentMarkerType : uint32_t;
 
-struct MarkedText : public CanMakeCheckedPtr<MarkedText> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorEqual::Yes> {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(MarkedText);
     WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(MarkedText);
 
     // Sorted by paint order
@@ -90,7 +90,7 @@ struct MarkedText : public CanMakeCheckedPtr<MarkedText> {
 
     static Vector<MarkedText> collectForDocumentMarkers(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
     static Vector<MarkedText> collectForHighlights(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
-    static Vector<MarkedText> collectForDraggedAndTransparentContent(const DocumentMarker::Type, const RenderText& renderer, const TextBoxSelectableRange&);
+    static Vector<MarkedText> collectForDraggedAndTransparentContent(const DocumentMarkerType, const RenderText& renderer, const TextBoxSelectableRange&);
 
     unsigned startOffset { 0 };
     unsigned endOffset { 0 };

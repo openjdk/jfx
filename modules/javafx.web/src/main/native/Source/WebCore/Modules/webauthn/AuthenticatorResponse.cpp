@@ -63,12 +63,8 @@ AuthenticatorResponseData AuthenticatorResponse::data() const
     AuthenticatorResponseData data;
     data.rawId = m_rawId.copyRef();
     data.extensionOutputs = m_extensions;
+    data.clientDataJSON = m_clientDataJSON.copyRef();
     return data;
-}
-
-ArrayBuffer* AuthenticatorResponse::rawId() const
-{
-    return m_rawId.ptr();
 }
 
 void AuthenticatorResponse::setExtensions(AuthenticationExtensionsClientOutputs&& extensions)

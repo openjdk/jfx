@@ -43,7 +43,7 @@ namespace WTF {
 // We are assuming 48bit pointers here, which is also assumed in JSValue anyway.
 template<typename PointerType, typename Type>
 class CompactPointerTuple final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CompactPointerTuple);
 public:
     static_assert(sizeof(Type) <= 2);
     static_assert(std::is_pointer<PointerType>::value);
@@ -83,7 +83,7 @@ public:
     {
     }
 
-    PointerType pointer() const { return bitwise_cast<PointerType>(m_data & pointerMask); }
+    PointerType pointer() const { return std::bit_cast<PointerType>(m_data & pointerMask); }
     void setPointer(PointerType pointer)
     {
         m_data = encode(pointer, type());
@@ -99,6 +99,11 @@ public:
 
     uint64_t data() const { return m_data; }
 
+    void swap(CompactPointerTuple& other)
+    {
+        std::swap(m_data, other.m_data);
+    }
+
 private:
     static constexpr uint64_t encodeType(Type type)
     {
@@ -111,7 +116,7 @@ private:
 
     static uint64_t encode(PointerType pointer, Type type)
     {
-        return bitwise_cast<uint64_t>(pointer) | encodeType(type);
+        return std::bit_cast<uint64_t>(pointer) | encodeType(type);
     }
 
     uint64_t m_data { 0 };
@@ -134,6 +139,12 @@ public:
     void setPointer(PointerType pointer) { m_pointer = pointer; }
     Type type() const { return m_type; }
     void setType(Type type) { m_type = type; }
+
+    void swap(CompactPointerTuple& other)
+    {
+        std::swap(m_pointer, other.m_pointer);
+        std::swap(m_type, other.m_type);
+    }
 
 private:
     PointerType m_pointer { nullptr };

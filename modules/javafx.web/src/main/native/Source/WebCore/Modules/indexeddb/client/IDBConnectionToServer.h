@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,13 @@
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServerDelegate.h"
 #include "IDBDatabaseConnectionIdentifier.h"
+#include "IDBIndexIdentifier.h"
+#include "IDBKeyPath.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
+#include "IndexKey.h"
+#include <pal/SessionID.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
@@ -54,14 +59,16 @@ struct IDBIterateCursorData;
 
 namespace IDBClient {
 
-class IDBConnectionToServer : public ThreadSafeRefCounted<IDBConnectionToServer> {
+class IDBConnectionToServer final : public ThreadSafeRefCounted<IDBConnectionToServer>, public CanMakeThreadSafeCheckedPtr<IDBConnectionToServer> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionToServer, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IDBConnectionToServer);
 public:
-    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&);
+    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&, PAL::SessionID);
+    WEBCORE_EXPORT ~IDBConnectionToServer();
 
     WEBCORE_EXPORT IDBConnectionIdentifier identifier() const;
 
-    IDBConnectionProxy& proxy();
+    IDBConnectionProxy& proxy() { return m_proxy; }
 
     void deleteDatabase(const IDBOpenRequestData&);
     WEBCORE_EXPORT void didDeleteDatabase(const IDBResultData&);
@@ -87,10 +94,10 @@ public:
     void deleteIndex(const IDBRequestData&, IDBObjectStoreIdentifier, const String& indexName);
     WEBCORE_EXPORT void didDeleteIndex(const IDBResultData&);
 
-    void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
     WEBCORE_EXPORT void didRenameIndex(const IDBResultData&);
 
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode);
+    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap&, const IndexedDB::ObjectStoreOverwriteMode);
     WEBCORE_EXPORT void didPutOrAdd(const IDBResultData&);
 
     void getRecord(const IDBRequestData&, const IDBGetRecordData&);
@@ -122,6 +129,9 @@ public:
     WEBCORE_EXPORT void fireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
     void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer);
 
+    WEBCORE_EXPORT void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
+    void didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID);
+
     WEBCORE_EXPORT void didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError&);
 
     WEBCORE_EXPORT void didCloseFromServer(IDBDatabaseConnectionIdentifier, const IDBError&);
@@ -144,7 +154,7 @@ public:
     WEBCORE_EXPORT void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
 private:
-    IDBConnectionToServer(IDBConnectionToServerDelegate&);
+    IDBConnectionToServer(IDBConnectionToServerDelegate&, PAL::SessionID);
 
     typedef void (IDBConnectionToServer::*ResultFunction)(const IDBResultData&);
     void callResultFunctionWithErrorLater(ResultFunction, const IDBResourceIdentifier& requestIdentifier);
@@ -152,7 +162,7 @@ private:
     WeakPtr<IDBConnectionToServerDelegate> m_delegate;
     bool m_serverConnectionIsValid { true };
 
-    std::unique_ptr<IDBConnectionProxy> m_proxy;
+    const UniqueRef<IDBConnectionProxy> m_proxy;
 };
 
 } // namespace IDBClient

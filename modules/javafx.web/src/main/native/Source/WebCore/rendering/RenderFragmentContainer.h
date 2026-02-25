@@ -66,7 +66,7 @@ public:
     RenderBoxFragmentInfo* renderBoxFragmentInfo(const RenderBox&) const;
     RenderBoxFragmentInfo* setRenderBoxFragmentInfo(const RenderBox&, LayoutUnit logicalLeftInset, LayoutUnit logicalRightInset,
         bool containingBlockChainIsInset);
-    std::unique_ptr<RenderBoxFragmentInfo> takeRenderBoxFragmentInfo(const RenderBox*);
+    std::unique_ptr<RenderBoxFragmentInfo> takeRenderBoxFragmentInfo(const RenderBox&);
     void removeRenderBoxFragmentInfo(const RenderBox&);
 
     void deleteAllRenderBoxFragmentInfo();
@@ -101,7 +101,7 @@ public:
 
     virtual void repaintFragmentedFlowContent(const LayoutRect& repaintRect) const;
 
-    virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
+    virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) const { }
 
     void addLayoutOverflowForBox(const RenderBox&, const LayoutRect&);
     void addVisualOverflowForBox(const RenderBox&, const LayoutRect&);
@@ -119,13 +119,14 @@ public:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     virtual Vector<LayoutRect> fragmentRectsForFlowContentRect(const LayoutRect&) const;
+    virtual bool contentRectSpansFragments(const LayoutRect&) const { return false; }
 
 protected:
     RenderFragmentContainer(Type, Element&, RenderStyle&&, RenderFragmentedFlow*);
     RenderFragmentContainer(Type, Document&, RenderStyle&&, RenderFragmentedFlow*);
     virtual ~RenderFragmentContainer();
 
-    void ensureOverflowForBox(const RenderBox&, RefPtr<RenderOverflow>&, bool) const;
+    RenderOverflow* overflowForBox(const RenderBox&) const;
 
     void computePreferredLogicalWidths() override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -144,6 +145,8 @@ private:
     virtual void installFragmentedFlow();
 
     LayoutPoint mapFragmentPointIntoFragmentedFlowCoordinates(const LayoutPoint&);
+    LayoutRect computedVisualOverflowRectForBox(const RenderBox&) const;
+    LayoutRect computedLayoutOverflowRectForBox(const RenderBox&) const;
 
 protected:
     SingleThreadWeakPtr<RenderFragmentedFlow> m_fragmentedFlow;
@@ -155,7 +158,7 @@ private:
     // A RenderBoxFragmentInfo* tells us about any layout information for a RenderBox that
     // is unique to the fragment. For now it just holds logical width information for RenderBlocks, but eventually
     // it will also hold a custom style for any box (for fragment styling).
-    using RenderBoxFragmentInfoMap = HashMap<SingleThreadWeakRef<const RenderBox>, std::unique_ptr<RenderBoxFragmentInfo>>;
+    using RenderBoxFragmentInfoMap = SingleThreadWeakHashMap<const RenderBox, std::unique_ptr<RenderBoxFragmentInfo>>;
     RenderBoxFragmentInfoMap m_renderBoxFragmentInfo;
 
     bool m_isValid { false };

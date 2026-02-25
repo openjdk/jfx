@@ -40,6 +40,7 @@
 
 #include "config.h"
 
+#include "glib-private.h"
 #include "gthread.h"
 #include "gthreadprivate.h"
 
@@ -505,10 +506,11 @@ static GPrivate     g_thread_specific_private = G_PRIVATE_INIT (g_thread_cleanup
  *
  * Sets the thread local variable @key to have a newly-allocated and zero-filled
  * value of given @size, and returns a pointer to that memory. Allocations made
- * using this API will be suppressed in valgrind: it is intended to be used for
- * one-time allocations which are known to be leaked, such as those for
- * per-thread initialisation data. Otherwise, this function behaves the same as
- * g_private_set().
+ * using this API will be suppressed in valgrind (when the GLib default
+ * suppression file, `glib.supp`, is used) and leak sanitizer: it is intended to
+ * be used for one-time allocations which are known to be leaked, such as those
+ * for per-thread initialisation data. Otherwise, this function behaves the same
+ * as g_private_set().
  *
  * Returns: (transfer full): new thread-local heap allocation of size @size
  * Since: 2.60
@@ -520,6 +522,7 @@ g_private_set_alloc0 (GPrivate *key,
 {
   gpointer allocated = g_malloc0 (size);
 
+  g_ignore_leak (allocated);
   g_private_set (key, allocated);
 
   return g_steal_pointer (&allocated);
@@ -748,7 +751,7 @@ gboolean
  * g_once_init_leave:
  * @location: (inout) (not optional): location of a static initializable variable
  *    containing 0
- * @result: new non-0 value for *@value_location
+ * @result: new non-0 value for `*value_location`
  *
  * Counterpart to g_once_init_enter(). Expects a location of a static
  * 0-initialized initialization variable, and an initialization value
@@ -882,12 +885,10 @@ g_thread_proxy (gpointer data)
   TRACE (GLIB_THREAD_SPAWNED (thread->thread.func, thread->thread.data,
                               thread->name));
 
-  if (thread->name)
-    {
-      g_system_thread_set_name (thread->name);
-      g_free (thread->name);
-      thread->name = NULL;
-    }
+  if (thread->name[0] != '\0')
+    g_system_thread_set_name (thread->name);
+  else
+    g_system_thread_get_name (thread->name, sizeof (thread->name));
 
   thread->retval = thread->thread.func (thread->thread.data);
 
@@ -1104,6 +1105,26 @@ g_thread_self (void)
     }
 
   return (GThread*) thread;
+}
+
+/**
+ * g_thread_get_name:
+ * @thread: a thread
+ *
+ * Gets the name of the thread.
+ *
+ * This function is intended for debugging purposes.
+ *
+ * Returns: the name of the thread
+ *
+ * Since: 2.84
+ */
+const char *
+g_thread_get_name (GThread *thread)
+{
+  GRealThread *real = (GRealThread*) thread;
+
+  return real->name;
 }
 
 /**

@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Identifier.h"
+#include "Strong.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -49,14 +50,22 @@ enum class LinkTimeConstant : int32_t;
     macro(getPrototypeOf) \
     macro(getPromiseInternalField) \
     macro(getGeneratorInternalField) \
+    macro(getIteratorHelperInternalField) \
+    macro(getAsyncDisposableStackInternalField) \
+    macro(getAsyncFromSyncIteratorInternalField) \
     macro(getAsyncGeneratorInternalField) \
     macro(getAbstractModuleRecordInternalField) \
     macro(getArrayIteratorInternalField) \
     macro(getStringIteratorInternalField) \
     macro(getMapIteratorInternalField) \
     macro(getSetIteratorInternalField) \
+    macro(getRegExpStringIteratorInternalField) \
     macro(getProxyInternalField) \
+    macro(getWrapForValidIteratorInternalField) \
+    macro(getDisposableStackInternalField) \
     macro(idWithProfile) \
+    macro(isAsyncDisposableStack) \
+    macro(isAsyncFromSyncIterator) \
     macro(isObject) \
     macro(isCallable) \
     macro(isConstructor) \
@@ -64,6 +73,7 @@ enum class LinkTimeConstant : int32_t;
     macro(isProxyObject) \
     macro(isDerivedArray) \
     macro(isGenerator) \
+    macro(isIteratorHelper) \
     macro(isAsyncGenerator) \
     macro(isPromise) \
     macro(isRegExpObject) \
@@ -75,6 +85,9 @@ enum class LinkTimeConstant : int32_t;
     macro(isMapIterator) \
     macro(isSetIterator) \
     macro(isUndefinedOrNull) \
+    macro(isWrapForValidIterator) \
+    macro(isRegExpStringIterator) \
+    macro(isDisposableStack) \
     macro(tailCallForwardArguments) \
     macro(throwTypeError) \
     macro(throwRangeError) \
@@ -88,11 +101,14 @@ enum class LinkTimeConstant : int32_t;
     macro(putByValWithThisStrict) \
     macro(putPromiseInternalField) \
     macro(putGeneratorInternalField) \
+    macro(putAsyncDisposableStackInternalField) \
     macro(putAsyncGeneratorInternalField) \
     macro(putArrayIteratorInternalField) \
     macro(putStringIteratorInternalField) \
     macro(putMapIteratorInternalField) \
     macro(putSetIteratorInternalField) \
+    macro(putRegExpStringIteratorInternalField) \
+    macro(putDisposableStackInternalField) \
     macro(superSamplerBegin) \
     macro(superSamplerEnd) \
     macro(toNumber) \
@@ -105,6 +121,9 @@ enum class LinkTimeConstant : int32_t;
     macro(newArrayWithSize) \
     macro(newArrayWithSpecies) \
     macro(newPromise) \
+    macro(iteratorGenericClose) \
+    macro(iteratorGenericNext) \
+    macro(ifAbruptCloseIterator) \
     macro(createPromise) \
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
@@ -148,6 +167,9 @@ enum class LinkTimeConstant : int32_t;
     macro(GeneratorResumeModeReturn) \
     macro(GeneratorStateCompleted) \
     macro(GeneratorStateExecuting) \
+    macro(GeneratorStateInit) \
+    macro(iteratorHelperFieldGenerator) \
+    macro(iteratorHelperFieldUnderlyingIterator) \
     macro(arrayIteratorFieldIndex) \
     macro(arrayIteratorFieldIteratedObject) \
     macro(arrayIteratorFieldKind) \
@@ -172,7 +194,25 @@ enum class LinkTimeConstant : int32_t;
     macro(AsyncGeneratorSuspendReasonYield) \
     macro(AsyncGeneratorSuspendReasonAwait) \
     macro(AsyncGeneratorSuspendReasonNone) \
-    macro(abstractModuleRecordFieldState)
+    macro(asyncFromSyncIteratorFieldSyncIterator) \
+    macro(asyncFromSyncIteratorFieldNextMethod) \
+    macro(abstractModuleRecordFieldState) \
+    macro(wrapForValidIteratorFieldIteratedIterator) \
+    macro(wrapForValidIteratorFieldIteratedNextMethod) \
+    macro(regExpStringIteratorFieldRegExp) \
+    macro(regExpStringIteratorFieldString) \
+    macro(regExpStringIteratorFieldGlobal) \
+    macro(regExpStringIteratorFieldFullUnicode) \
+    macro(regExpStringIteratorFieldDone) \
+    macro(disposableStackFieldState) \
+    macro(disposableStackFieldCapability) \
+    macro(DisposableStackStatePending) \
+    macro(DisposableStackStateDisposed) \
+    macro(asyncDisposableStackFieldState) \
+    macro(asyncDisposableStackFieldCapability) \
+    macro(AsyncDisposableStackStatePending) \
+    macro(AsyncDisposableStackStateDisposed) \
+
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_CUSTOM_EACH_NAME(macro) \
     macro(orderedHashTableSentinel)

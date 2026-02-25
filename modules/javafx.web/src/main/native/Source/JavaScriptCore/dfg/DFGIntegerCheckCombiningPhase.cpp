@@ -182,14 +182,12 @@ private:
 
         for (auto* node : *block) {
             RangeKeyAndAddend data = rangeKeyAndAddend(node);
-            if (DFGIntegerCheckCombiningPhaseInternal::verbose)
-                dataLog("For ", node, ": ", data, "\n");
+            dataLogLnIf(DFGIntegerCheckCombiningPhaseInternal::verbose, "For ", node, ": ", data);
             if (!data)
                 continue;
 
             Range& range = m_map.add(data.m_key, Range { }).iterator->value;
-            if (DFGIntegerCheckCombiningPhaseInternal::verbose)
-                dataLog("    Range: ", range, "\n");
+            dataLogLnIf(DFGIntegerCheckCombiningPhaseInternal::verbose, "    Range: ", range);
             if (range.m_count) {
                 if (data.m_addend > range.m_maxBound) {
                     range.m_maxBound = data.m_addend;
@@ -205,8 +203,7 @@ private:
                 range.m_maxOrigin = node->origin.semantic;
             }
             range.m_count++;
-            if (DFGIntegerCheckCombiningPhaseInternal::verbose)
-                dataLog("    New range: ", range, "\n");
+            dataLogLnIf(DFGIntegerCheckCombiningPhaseInternal::verbose, "    New range: ", range);
         }
 
         for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
@@ -284,7 +281,7 @@ private:
 
             case ArrayBounds:
                 ASSERT(node->op() == CheckInBounds);
-                if (UNLIKELY(Options::validateBoundsCheckElimination()))
+                if (Options::validateBoundsCheckElimination()) [[unlikely]]
                     m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
                 node->convertToIdentityOn(m_map.get(data.m_key).m_dependency);
                 m_changed = true;
@@ -379,7 +376,7 @@ private:
                 nodeIndex, origin, jsNumber(addend), source.useKind()));
     }
 
-    using RangeMap = HashMap<GenericHashKey<RangeKey, RangeKey::Hash>, Range>;
+    using RangeMap = UncheckedKeyHashMap<GenericHashKey<RangeKey, RangeKey::Hash>, Range>;
     RangeMap m_map;
 
     InsertionSet m_insertionSet;

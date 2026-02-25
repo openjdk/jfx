@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
     height: var(--inline-controls-bar-height);
     min-width: 44px !important;
     min-height: var(--inline-controls-bar-height) !important;
+    box-sizing: content-box !important;
 }
 
 * {
@@ -57,6 +58,7 @@
     -webkit-cursor-visibility: inherit;
     position: relative;
     will-change: z-index;
+    overflow: clip;
 }
 
 .media-controls-container,

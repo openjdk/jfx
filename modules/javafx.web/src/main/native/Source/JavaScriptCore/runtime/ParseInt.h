@@ -29,6 +29,8 @@
 #include "Lexer.h"
 #include <wtf/dtoa.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 static constexpr double mantissaOverflowLowerBound = 9007199254740992.0;
@@ -71,12 +73,12 @@ static double parseIntOverflow(std::span<const LChar> s, int radix)
     return number;
 }
 
-static double parseIntOverflow(std::span<const UChar> s, int radix)
+static double parseIntOverflow(std::span<const char16_t> s, int radix)
 {
     double number = 0.0;
     double radixMultiplier = 1.0;
 
-    for (const UChar* p = s.data() + s.size() - 1; p >= s.data(); p--) {
+    for (const char16_t* p = s.data() + s.size() - 1; p >= s.data(); p--) {
         if (radixMultiplier == std::numeric_limits<double>::infinity()) {
             if (*p != '0') {
                 number = std::numeric_limits<double>::infinity();
@@ -93,10 +95,13 @@ static double parseIntOverflow(std::span<const UChar> s, int radix)
     return number;
 }
 
-ALWAYS_INLINE static bool isStrWhiteSpace(UChar c)
+template<typename CharacterType>
+ALWAYS_INLINE static bool isStrWhiteSpace(CharacterType c)
 {
     // https://tc39.github.io/ecma262/#sec-tonumber-applied-to-the-string-type
-    return Lexer<UChar>::isWhiteSpace(c) || Lexer<UChar>::isLineTerminator(c);
+    if constexpr (sizeof(c) == 1)
+        return Lexer<LChar>::isWhiteSpace(c) || Lexer<LChar>::isLineTerminator(c);
+    return Lexer<char16_t>::isWhiteSpace(c) || Lexer<char16_t>::isLineTerminator(c);
 }
 
 inline static std::optional<double> parseIntDouble(double n)
@@ -220,7 +225,7 @@ static ALWAYS_INLINE typename std::invoke_result<CallbackWhenNoException, String
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSString* string = value.toStringOrNull(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !string);
-    if (UNLIKELY(!string))
+    if (!string) [[unlikely]]
         return { };
     auto view = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -231,3 +236,5 @@ static ALWAYS_INLINE typename std::invoke_result<CallbackWhenNoException, String
 const char radixDigits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

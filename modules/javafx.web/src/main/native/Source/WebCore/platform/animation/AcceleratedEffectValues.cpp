@@ -35,6 +35,10 @@
 #include "RenderElementInlines.h"
 #include "RenderLayerModelObject.h"
 #include "RenderStyleInlines.h"
+#include "StyleOffsetAnchor.h"
+#include "StyleOffsetDistance.h"
+#include "StyleOffsetPath.h"
+#include "StyleOffsetPosition.h"
 #include "TransformOperationData.h"
 
 namespace WebCore {
@@ -49,19 +53,19 @@ AcceleratedEffectValues AcceleratedEffectValues::clone() const
     auto clonedTransform = transform.clone();
 
     RefPtr<TransformOperation> clonedTranslate;
-    if (auto* srcTranslate = translate.get())
+    if (RefPtr srcTranslate = translate)
         clonedTranslate = srcTranslate->clone();
 
     RefPtr<TransformOperation> clonedScale;
-    if (auto* srcScale = scale.get())
+    if (RefPtr srcScale = scale)
         clonedScale = srcScale->clone();
 
     RefPtr<TransformOperation> clonedRotate;
-    if (auto* srcRotate = rotate.get())
+    if (RefPtr srcRotate = rotate)
         clonedRotate = srcRotate->clone();
 
     RefPtr<PathOperation> clonedOffsetPath;
-    if (auto* srcOffsetPath = offsetPath.get())
+    if (RefPtr srcOffsetPath = offsetPath)
         clonedOffsetPath = srcOffsetPath->clone();
 
     auto clonedOffsetDistance = offsetDistance;
@@ -91,19 +95,26 @@ AcceleratedEffectValues AcceleratedEffectValues::clone() const
     };
 }
 
-static LengthPoint nonCalculatedLengthPoint(LengthPoint lengthPoint, const IntSize& borderBoxSize)
+static LengthPoint resolveCalculateValuesFor(const LengthPoint& lengthPoint, IntSize borderBoxSize)
 {
-    if (!lengthPoint.x().isCalculated() && !lengthPoint.y().isCalculated())
+    if (!lengthPoint.x.isCalculated() && !lengthPoint.y.isCalculated())
         return lengthPoint;
     return {
-        { floatValueForLength(lengthPoint.x(), borderBoxSize.width()), LengthType::Fixed },
-        { floatValueForLength(lengthPoint.y(), borderBoxSize.height()), LengthType::Fixed }
+        { floatValueForLength(lengthPoint.x, borderBoxSize.width()), LengthType::Fixed },
+        { floatValueForLength(lengthPoint.y, borderBoxSize.height()), LengthType::Fixed }
     };
+}
+
+template<typename T> static RefPtr<TransformOperation> resolveCalculateValuesForTransformOperation(const T& operation, const IntSize& borderBoxSize)
+{
+    if (!operation)
+        return nullptr;
+    return operation->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
 }
 
 AcceleratedEffectValues::AcceleratedEffectValues(const RenderStyle& style, const IntRect& borderBoxRect, const RenderLayerModelObject* renderer)
 {
-    opacity = style.opacity();
+    opacity = style.opacity().value.value;
 
     auto borderBoxSize = borderBoxRect.size();
 
@@ -112,23 +123,18 @@ AcceleratedEffectValues::AcceleratedEffectValues(const RenderStyle& style, const
 
     transformBox = style.transformBox();
     transform = style.transform().selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
-
-    if (auto* srcTranslate = style.translate())
-        translate = srcTranslate->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
-    if (auto* srcScale = style.scale())
-        scale = srcScale->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
-    if (auto* srcRotate = style.rotate())
-        rotate = srcRotate->selfOrCopyWithResolvedCalculatedValues(borderBoxSize);
-    transformOrigin = nonCalculatedLengthPoint(style.transformOriginXY(), borderBoxSize);
-
-    offsetPath = style.offsetPath();
-    offsetPosition = nonCalculatedLengthPoint(style.offsetPosition(), borderBoxSize);
-    offsetAnchor = nonCalculatedLengthPoint(style.offsetAnchor(), borderBoxSize);
+    translate = resolveCalculateValuesForTransformOperation(Style::toPlatform(style.translate()), borderBoxSize);
+    scale = resolveCalculateValuesForTransformOperation(Style::toPlatform(style.scale()), borderBoxSize);
+    rotate = resolveCalculateValuesForTransformOperation(Style::toPlatform(style.rotate()), borderBoxSize);
+    transformOrigin = resolveCalculateValuesFor(Style::toPlatform(style.transformOrigin().xy()), borderBoxSize);
+    offsetPath = Style::toPlatform(style.offsetPath());
+    offsetPosition = resolveCalculateValuesFor(Style::toPlatform(style.offsetPosition()), borderBoxSize);
+    offsetAnchor = resolveCalculateValuesFor(Style::toPlatform(style.offsetAnchor()), borderBoxSize);
     offsetRotate = style.offsetRotate();
-    offsetDistance = style.offsetDistance();
+    offsetDistance = Style::toPlatform(style.offsetDistance());
     if (offsetDistance.isCalculated() && offsetPath) {
         auto anchor = borderBoxRect.location() + floatPointForLengthPoint(transformOrigin, borderBoxSize);
-        if (!offsetAnchor.x().isAuto())
+        if (!offsetAnchor.x.isAuto())
             anchor = floatPointForLengthPoint(offsetAnchor, borderBoxRect.size()) + borderBoxRect.location();
 
         auto path = offsetPath->getPath(TransformOperationData(FloatRect(borderBoxRect)));
@@ -164,7 +170,7 @@ TransformationMatrix AcceleratedEffectValues::computedTransformationMatrix(const
     // 6. Translate and rotate by the transform specified by offset.
     if (transformOperationData && offsetPath) {
         auto computedTransformOrigin = boundingBox.location() + floatPointForLengthPoint(transformOrigin, boundingBox.size());
-        MotionPath::applyMotionPathTransform(matrix, *transformOperationData, computedTransformOrigin, *offsetPath, offsetAnchor, offsetDistance, offsetRotate, transformBox);
+        MotionPath::applyMotionPathTransform(matrix, *transformOperationData, computedTransformOrigin, Style::OffsetPath { *offsetPath }, Style::OffsetAnchor { offsetAnchor }, Style::OffsetDistance { offsetDistance }, offsetRotate, transformBox);
     }
 
     // 7. Multiply by each of the transform functions in transform from left to right.

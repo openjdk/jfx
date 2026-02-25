@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,12 +37,11 @@ class ScriptExecutionContext;
 
 class DOMCache final : public RefCounted<DOMCache>, public ActiveDOMObject {
 public:
-    static Ref<DOMCache> create(ScriptExecutionContext&, String&&, DOMCacheIdentifier, Ref<CacheStorageConnection>&&);
-    ~DOMCache();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    static Ref<DOMCache> create(ScriptExecutionContext&, String&&, DOMCacheIdentifier, Ref<CacheStorageConnection>&&);
+    ~DOMCache();
 
     using RequestInfo = FetchRequest::Info;
 
@@ -90,7 +89,7 @@ private:
 
     String m_name;
     DOMCacheIdentifier m_identifier;
-    Ref<CacheStorageConnection> m_connection;
+    const Ref<CacheStorageConnection> m_connection;
 
     bool m_isStopped { false };
 };

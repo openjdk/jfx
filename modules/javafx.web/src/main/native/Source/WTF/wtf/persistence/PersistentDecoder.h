@@ -35,7 +35,7 @@ namespace WTF::Persistence {
 template<typename> struct Coder;
 
 class Decoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Decoder);
 public:
     WTF_EXPORT_PRIVATE Decoder(std::span<const uint8_t>);
     WTF_EXPORT_PRIVATE ~Decoder();
@@ -88,7 +88,7 @@ public:
         return numElements <= std::numeric_limits<size_t>::max() / sizeof(T) && bufferIsLargeEnoughToContain(numElements * sizeof(T));
     }
 
-    WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN const uint8_t* bufferPointerForDirectRead(size_t numBytes);
+    WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN std::span<const uint8_t> bufferPointerForDirectRead(size_t numBytes);
 
 private:
     WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool bufferIsLargeEnoughToContain(size_t) const;

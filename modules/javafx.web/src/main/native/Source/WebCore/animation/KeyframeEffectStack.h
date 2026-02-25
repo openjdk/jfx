@@ -52,7 +52,7 @@ struct ResolutionContext;
 }
 
 class KeyframeEffectStack {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(KeyframeEffectStack, Animation);
 public:
     explicit KeyframeEffectStack();
     ~KeyframeEffectStack();
@@ -91,7 +91,7 @@ public:
 
 private:
     void ensureEffectsAreSorted();
-    bool hasMatchingEffect(const Function<bool(const KeyframeEffect&)>&) const;
+    bool hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>&) const;
     void startAcceleratedAnimationsIfPossible();
     void stopAcceleratedAnimations();
 

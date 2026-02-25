@@ -26,27 +26,26 @@
 
 #pragma once
 
+#include "JSExportMacros.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-class BackendDispatcher;
-class FrontendRouter;
 class InspectorAgentBase;
 
 enum class DisconnectReason;
 
-class JS_EXPORT_PRIVATE AgentRegistry {
+class AgentRegistry {
 public:
-    AgentRegistry();
-    ~AgentRegistry();
+    JS_EXPORT_PRIVATE AgentRegistry();
+    JS_EXPORT_PRIVATE ~AgentRegistry();
 
-    void append(std::unique_ptr<InspectorAgentBase>);
+    JS_EXPORT_PRIVATE void append(std::unique_ptr<InspectorAgentBase>);
 
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*);
-    void willDestroyFrontendAndBackend(DisconnectReason);
-    void discardValues();
+    JS_EXPORT_PRIVATE void didCreateFrontendAndBackend();
+    JS_EXPORT_PRIVATE void willDestroyFrontendAndBackend(DisconnectReason);
+    JS_EXPORT_PRIVATE void discardValues();
 
 private:
     // These are declared here to avoid MSVC from trying to create default iplementations which would

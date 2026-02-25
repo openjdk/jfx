@@ -35,13 +35,14 @@
 #include <array>
 #include <wtf/HashMap.h>
 #include <wtf/PointerComparison.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 struct FontDescriptionKeyRareData : public RefCounted<FontDescriptionKeyRareData> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FontDescriptionKeyRareData);
 public:
     static Ref<FontDescriptionKeyRareData> create(FontFeatureSettings&& featureSettings, FontVariationSettings&& variationSettings, FontVariantAlternates&& variantAlternates, FontPalette&& fontPalette, FontSizeAdjust&& fontSizeAdjust)
     {
@@ -113,7 +114,7 @@ struct FontDescriptionKey {
         : m_size(description.computedSize())
         , m_fontSelectionRequest(description.fontSelectionRequest())
         , m_flags(makeFlagsKey(description))
-        , m_locale(description.specifiedLocale())
+        , m_locale(description.computedLocale())
     {
         auto featureSettings = description.featureSettings();
         auto variationSettings = description.variationSettings();
@@ -121,7 +122,7 @@ struct FontDescriptionKey {
         auto fontPalette = description.fontPalette();
         auto fontSizeAdjust = description.fontSizeAdjust();
         if (!featureSettings.isEmpty() || !variationSettings.isEmpty() || !variantAlternates.isNormal() || fontPalette.type != FontPalette::Type::Normal || !fontSizeAdjust.isNone())
-            m_rareData = FontDescriptionKeyRareData::create(WTFMove(featureSettings), WTFMove(variationSettings), WTFMove(variantAlternates), WTFMove(fontPalette), WTFMove(fontSizeAdjust));
+            lazyInitialize(m_rareData, FontDescriptionKeyRareData::create(WTFMove(featureSettings), WTFMove(variationSettings), WTFMove(variantAlternates), WTFMove(fontPalette), WTFMove(fontSizeAdjust)));
     }
 
     explicit FontDescriptionKey(WTF::HashTableDeletedValueType)
@@ -187,8 +188,8 @@ private:
 inline void add(Hasher& hasher, const FontDescriptionKey& key)
 {
     add(hasher, key.m_size, key.m_fontSelectionRequest, key.m_flags, key.m_locale);
-    if (key.m_rareData)
-        add(hasher, *key.m_rareData);
+    if (RefPtr rareData = key.m_rareData)
+        add(hasher, *rareData);
 }
 
 } // namespace WebCore
@@ -228,6 +229,8 @@ struct FontCascadeCacheKey {
     Vector<FontFamilyName, 3> families;
     unsigned fontSelectorId;
     unsigned fontSelectorVersion;
+    bool hasComplexFontSelector { true };
+
 
     friend bool operator==(const FontCascadeCacheKey&, const FontCascadeCacheKey&) = default;
 };
@@ -238,7 +241,7 @@ inline void add(Hasher& hasher, const FontCascadeCacheKey& key)
 }
 
 struct FontCascadeCacheEntry {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FontCascadeCacheEntry);
 
     FontCascadeCacheKey key;
     Ref<FontCascadeFonts> fonts;
@@ -257,8 +260,8 @@ struct FontCascadeCacheKeyHashTraits : HashTraits<FontCascadeCacheKey> {
 };
 
 class FontCascadeCache {
+    WTF_MAKE_TZONE_ALLOCATED(FontCascadeCache);
     WTF_MAKE_NONCOPYABLE(FontCascadeCache);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     FontCascadeCache() = default;
 
@@ -268,7 +271,7 @@ public:
     void clearWidthCaches();
     void pruneUnreferencedEntries();
     void pruneSystemFallbackFonts();
-    Ref<FontCascadeFonts> retrieveOrAddCachedFonts(const FontCascadeDescription&, RefPtr<FontSelector>&&);
+    Ref<FontCascadeFonts> retrieveOrAddCachedFonts(const FontCascadeDescription&, FontSelector*);
 
 private:
     HashMap<FontCascadeCacheKey, std::unique_ptr<FontCascadeCacheEntry>, FontCascadeCacheKeyHash, FontCascadeCacheKeyHashTraits> m_entries;

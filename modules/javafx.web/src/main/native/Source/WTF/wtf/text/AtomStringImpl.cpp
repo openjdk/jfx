@@ -66,7 +66,7 @@ using StringTableImpl = AtomStringTable::StringTableImpl;
 
 static ALWAYS_INLINE StringTableImpl& stringTable()
 {
-    return Thread::current().atomStringTable()->table();
+    return Thread::currentSingleton().atomStringTable()->table();
 }
 
 template<typename T, typename HashTranslator>
@@ -88,7 +88,7 @@ static inline Ref<AtomStringImpl> addToStringTable(const T& value)
     return addToStringTable<T, HashTranslator>(locker, stringTable(), value);
 }
 
-using UCharBuffer = HashTranslatorCharBuffer<UChar>;
+using UCharBuffer = HashTranslatorCharBuffer<char16_t>;
 struct UCharBufferTranslator {
     static unsigned hash(const UCharBuffer& buf)
     {
@@ -133,7 +133,7 @@ struct HashedUTF8CharactersTranslator {
             return Unicode::equal(string->span16(), characters.characters);
         }
 
-        auto charactersLatin1 = spanReinterpretCast<const LChar>(characters.characters);
+        auto charactersLatin1 = byteCast<LChar>(characters.characters);
         if (string->is8Bit())
             return WTF::equal(string->span8().data(), charactersLatin1);
         return WTF::equal(string->span16().data(), charactersLatin1);
@@ -141,14 +141,14 @@ struct HashedUTF8CharactersTranslator {
 
     static void translate(AtomStringTable::StringEntry& location, const HashedUTF8Characters& characters, unsigned hash)
     {
-        UChar* target;
+        std::span<char16_t> target;
         auto newString = StringImpl::createUninitialized(characters.length.lengthUTF16, target);
 
-        auto result = Unicode::convert(characters.characters, { target, characters.length.lengthUTF16 });
+        auto result = Unicode::convert(characters.characters, target);
         RELEASE_ASSERT(result.code == Unicode::ConversionResultCode::Success);
 
         if (result.isAllASCII)
-            newString = StringImpl::create(spanReinterpretCast<const LChar>(characters.characters));
+            newString = StringImpl::create(byteCast<LChar>(characters.characters));
 
         auto* pointer = &newString.leakRef();
         pointer->setHash(hash);
@@ -157,7 +157,7 @@ struct HashedUTF8CharactersTranslator {
     }
 };
 
-RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const UChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const char16_t> characters)
 {
     if (!characters.data())
         return nullptr;
@@ -169,7 +169,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const UChar> characters)
     return addToStringTable<UCharBuffer, UCharBufferTranslator>(buffer);
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<UChar>& buffer)
+RefPtr<AtomStringImpl> AtomStringImpl::add(HashTranslatorCharBuffer<char16_t>& buffer)
 {
     if (!buffer.characters.data())
         return nullptr;
@@ -343,7 +343,7 @@ static Ref<AtomStringImpl> addStatic(AtomStringTableLocker& locker, StringTableI
         return addToStringTable<LCharBuffer, BufferFromStaticDataTranslator<LChar>>(locker, atomStringTable, buffer);
     }
     UCharBuffer buffer { base.span16(), base.hash() };
-    return addToStringTable<UCharBuffer, BufferFromStaticDataTranslator<UChar>>(locker, atomStringTable, buffer);
+    return addToStringTable<UCharBuffer, BufferFromStaticDataTranslator<char16_t>>(locker, atomStringTable, buffer);
 }
 
 static inline Ref<AtomStringImpl> addStatic(const StringImpl& base)
@@ -476,7 +476,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUpSlowCase(StringImpl& string)
 
 RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const char8_t> characters)
 {
-    HashedUTF8Characters buffer { characters, computeUTF16LengthWithHash(spanReinterpretCast<const char8_t>(characters)) };
+    HashedUTF8Characters buffer { characters, computeUTF16LengthWithHash(characters) };
     if (!buffer.length.hash)
         return nullptr;
     return addToStringTable<HashedUTF8Characters, HashedUTF8CharactersTranslator>(buffer);
@@ -494,7 +494,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUp(std::span<const LChar> characters)
     return nullptr;
 }
 
-RefPtr<AtomStringImpl> AtomStringImpl::lookUp(std::span<const UChar> characters)
+RefPtr<AtomStringImpl> AtomStringImpl::lookUp(std::span<const char16_t> characters)
 {
     AtomStringTableLocker locker;
     auto& table = stringTable();

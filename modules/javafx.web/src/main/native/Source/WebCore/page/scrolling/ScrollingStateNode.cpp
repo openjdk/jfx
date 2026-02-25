@@ -31,11 +31,14 @@
 #include "ScrollingStateFixedNode.h"
 #include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStateNode);
 
 ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingStateTree& scrollingStateTree, ScrollingNodeID nodeID)
     : m_nodeType(nodeType)
@@ -63,7 +66,7 @@ ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingNode
     , m_nodeID(nodeID)
     , m_changedProperties(changedProperties)
     , m_children(WTFMove(children))
-    , m_layer(layerID.value_or(PlatformLayerIdentifier { }))
+    , m_layer(layerID)
 {
     for (auto& child : m_children) {
         ASSERT(!child->parent());
@@ -98,7 +101,7 @@ void ScrollingStateNode::setChildren(Vector<Ref<ScrollingStateNode>>&& children)
     ASSERT(parentPointersAreCorrect());
 }
 
-void ScrollingStateNode::traverse(const Function<void(ScrollingStateNode&)>& function)
+void ScrollingStateNode::traverse(NOESCAPE const Function<void(ScrollingStateNode&)>& function)
 {
     function(*this);
     for (auto& child : m_children)
@@ -206,34 +209,34 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
 void ScrollingStateNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
-        ts.dumpProperty("nodeID", scrollingNodeID());
+        ts.dumpProperty("nodeID"_s, scrollingNodeID());
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs)
-        ts.dumpProperty("layerID", layer().layerID());
+        ts.dumpProperty("layerID"_s, layer().layerID());
 }
 
 void ScrollingStateNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "\n";
-    ts << indent << "(";
+    ts << '\n';
+    ts << indent << '(';
     ts.increaseIndent();
     dumpProperties(ts, behavior);
 
     if (!m_children.isEmpty()) {
-        ts << "\n";
+        ts << '\n';
         ts << indent <<"(";
         {
             TextStream::IndentScope indentScope(ts);
-            ts << "children " << children().size();
+            ts << "children "_s << children().size();
             for (auto& child : m_children)
                 child->dump(ts, behavior);
-            ts << "\n";
+            ts << '\n';
         }
-        ts << indent << ")";
+        ts << indent << ')';
     }
-    ts << "\n";
+    ts << '\n';
     ts.decreaseIndent();
-    ts << indent << ")";
+    ts << indent << ')';
 }
 
 String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
@@ -241,7 +244,7 @@ String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTree
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
     dump(ts, behavior);
-    ts << "\n";
+    ts << '\n';
     return ts.release();
 }
 

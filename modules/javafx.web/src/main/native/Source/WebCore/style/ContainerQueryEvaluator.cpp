@@ -29,6 +29,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueList.h"
 #include "ComposedTreeAncestorIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ContainerQueryFeatures.h"
 #include "Document.h"
 #include "MediaList.h"
@@ -61,7 +62,7 @@ static const RenderStyle* styleForContainer(const Element& container, OptionSet<
 {
     // Any element can be a style container and we haven't necessarily committed the style to render tree yet.
     // Look it up from the currently computed style update instead.
-    if (requiredAxes.isEmpty() && evaluationState)
+    if (requiredAxes.isEmpty() && evaluationState && evaluationState->styleUpdate)
         return evaluationState->styleUpdate->elementStyle(container);
 
     return container.existingComputedStyle();
@@ -89,7 +90,7 @@ auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::Contain
         return { };
 
     RefPtr containerParent = container->parentElementInComposedTree();
-    CheckedPtr containerParentStyle = containerParent ? styleForContainer(*containerParent, containerQuery.requiredAxes, m_evaluationState) : nullptr;
+    CheckedPtr containerParentStyle = containerParent ? styleForContainer(*containerParent, containerQuery.requiredAxes, m_evaluationState) : containerStyle;
 
     Ref document = element->document();
     CheckedPtr rootStyle = document->documentElement()->renderStyle();
@@ -154,16 +155,18 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> requ
     };
 
     auto findOriginatingElement = [&]() -> const Element* {
-        // ::part() selectors can query its originating host, but not internal query containers inside the shadow tree.
-        if (selectionMode == SelectionMode::PartPseudoElement) {
-        if (scopeOrdinal <= ScopeOrdinal::ContainingHost)
-            return hostForScopeOrdinal(element, scopeOrdinal);
-            ASSERT(scopeOrdinal == ScopeOrdinal::Element);
-            return element.shadowHost();
-        }
+        // ::part() selectors query the composed tree
+        if (selectionMode == SelectionMode::PartPseudoElement)
+            return element.assignedSlot();
+
         // ::slotted() selectors can query containers inside the shadow tree, including the slot itself.
         if (scopeOrdinal >= ScopeOrdinal::FirstSlot && scopeOrdinal <= ScopeOrdinal::SlotLimit)
             return assignedSlotForScopeOrdinal(element, scopeOrdinal);
+
+        // Unnamed queries query the composed tree, while named queries do not.
+        if (scopeOrdinal == ScopeOrdinal::Element && element.assignedSlot() && name.isEmpty())
+            return element.assignedSlot();
+
         return nullptr;
     };
 

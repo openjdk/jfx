@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "BitmapImageSource.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "ImageObserver.h"
 #include "NativeImageSource.h"
 
@@ -95,17 +96,19 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     auto scaleFactorForDrawing = context.scaleFactorForDrawing(destinationRect, adjustedSourceRect);
     auto sizeForDrawing = expandedIntSize(sourceSize * scaleFactorForDrawing);
     auto subsamplingLevel =  m_source->subsamplingLevelForScaleFactor(context, scaleFactorForDrawing, options.allowImageSubsampling());
+    auto shouldDecodeToHDR = m_source->hasHDRGainMap() && options.drawsHDRContent() == DrawsHDRContent::Yes && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard() ? ShouldDecodeToHDR::Yes : ShouldDecodeToHDR::No;
 
-    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), sizeForDrawing });
+    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), shouldDecodeToHDR, sizeForDrawing });
 
     if (!nativeImage) {
-        if (nativeImage.error() != DecodingStatus::Decoding)
-        return ImageDrawResult::DidNothing;
-
-            if (options.showDebugBackground() == ShowDebugBackground::Yes)
+        // The decoder has not returned a frame. Fill the image rectangle with a debugging color to show what has happened.
+        if (options.showDebugBackground() == ShowDebugBackground::Yes) {
+            if (nativeImage.error() == DecodingStatus::Decoding)
             fillWithSolidColor(context, destinationRect, Color::yellow.colorWithAlphaByte(128), options.compositeOperator());
-
-            return ImageDrawResult::DidRequestDecoding;
+            else if (nativeImage.error() == DecodingStatus::Invalid)
+                fillWithSolidColor(context, destinationRect, Color::red.colorWithAlphaByte(128), options.compositeOperator());
+        }
+        return nativeImage.error() == DecodingStatus::Decoding ? ImageDrawResult::DidRequestDecoding : ImageDrawResult::DidNothing;
     }
 
     if (auto color = (*nativeImage)->singlePixelSolidColor())
@@ -120,7 +123,15 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
         if (orientation == ImageOrientation::Orientation::FromImage)
             orientation = currentFrameOrientation();
 
-        context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation });
+        auto headroom = options.headroom();
+        if (hasHDRContentForTesting() && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard())
+            fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+        else {
+            if (headroom == Headroom::FromImage)
+                headroom = currentFrameHeadroom(shouldDecodeToHDR);
+
+            context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+        }
     }
 
     if (auto observer = imageObserver())
@@ -134,7 +145,10 @@ void BitmapImage::drawPattern(GraphicsContext& context, const FloatRect& destina
     if (tileRect.isEmpty())
         return;
 
-    if (context.drawLuminanceMask())
+    auto headroom = options.headroom();
+    if (headroom == Headroom::FromImage && hasHDRContentForTesting())
+        fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+    else if (context.drawLuminanceMask())
         drawLuminanceMaskPattern(context, destinationRect, tileRect, transform, phase, spacing, options);
     else
         Image::drawPattern(context, destinationRect, tileRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });
@@ -160,12 +174,8 @@ void BitmapImage::drawLuminanceMaskPattern(GraphicsContext& context, const Float
         setImageObserver(WTFMove(observer));
         buffer->convertToLuminanceMask();
 
-    auto image = ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
-    if (!image)
-            return;
-
     context.setDrawLuminanceMask(false);
-    context.drawPattern(Ref { *image }, destinationRect, bufferRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });
+    context.drawPattern(*buffer, destinationRect, bufferRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });
 }
 
 void BitmapImage::dump(TextStream& ts) const

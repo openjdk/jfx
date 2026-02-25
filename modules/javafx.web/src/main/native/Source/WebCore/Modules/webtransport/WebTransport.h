@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "WebTransportOptions.h"
 #include "WebTransportReliabilityMode.h"
 #include "WebTransportSessionClient.h"
@@ -45,8 +44,10 @@ class DOMException;
 class DOMPromise;
 class DatagramSource;
 class DeferredPromise;
+class Exception;
 class JSDOMGlobalObject;
 class ReadableStream;
+class ReadableStreamSource;
 class ScriptExecutionContext;
 class SocketProvider;
 class WebTransportBidirectionalStreamSource;
@@ -54,11 +55,15 @@ class WebTransportDatagramDuplexStream;
 class WebTransportError;
 class WebTransportReceiveStreamSource;
 class WebTransportSession;
+class WorkerWebTransportSession;
 class WritableStream;
 
+struct WebTransportBidirectionalStreamConstructionParameters;
 struct WebTransportCloseInfo;
 struct WebTransportSendStreamOptions;
 struct WebTransportHash;
+
+template<typename> class ExceptionOr;
 
 class WebTransport : public WebTransportSessionClient, public ActiveDOMObject {
 public:
@@ -93,14 +98,18 @@ private:
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
-    void receiveDatagram(std::span<const uint8_t>) final;
-    void receiveIncomingUnidirectionalStream() final;
-    void receiveBidirectionalStream() final;
+    void receiveDatagram(std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
+    void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier) final;
+    void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) final;
+    void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
+    void networkProcessCrashed() final;
+
+    RefPtr<WebTransportSession> protectedSession();
 
     ListHashSet<Ref<WritableStream>> m_sendStreams;
     ListHashSet<Ref<ReadableStream>> m_receiveStreams;
-    Ref<ReadableStream> m_incomingBidirectionalStreams;
-    Ref<ReadableStream> m_incomingUnidirectionalStreams;
+    const Ref<ReadableStream> m_incomingBidirectionalStreams;
+    const Ref<ReadableStream> m_incomingUnidirectionalStreams;
 
     // https://www.w3.org/TR/webtransport/#dom-webtransport-state-slot
     enum class State : uint8_t {
@@ -112,18 +121,18 @@ private:
     };
     State m_state { State::Connecting };
 
-    using PromiseAndWrapper = std::pair<Ref<DOMPromise>, Ref<DeferredPromise>>;
-    PromiseAndWrapper m_ready;
+    using PromiseAndWrapper = const std::pair<const Ref<DOMPromise>, const Ref<DeferredPromise>>;
+    const PromiseAndWrapper m_ready;
     WebTransportReliabilityMode m_reliability { WebTransportReliabilityMode::Pending };
     WebTransportCongestionControl m_congestionControl;
-    PromiseAndWrapper m_closed;
-    PromiseAndWrapper m_draining;
-    Ref<WebTransportDatagramDuplexStream> m_datagrams;
+    const PromiseAndWrapper m_closed;
+    const PromiseAndWrapper m_draining;
+    const Ref<WebTransportDatagramDuplexStream> m_datagrams;
     RefPtr<WebTransportSession> m_session;
-
-    Ref<DatagramSource> m_datagramSource;
-    Ref<WebTransportReceiveStreamSource> m_receiveStreamSource;
-    Ref<WebTransportBidirectionalStreamSource> m_bidirectionalStreamSource;
+    const Ref<DatagramSource> m_datagramSource;
+    const Ref<WebTransportReceiveStreamSource> m_receiveStreamSource;
+    const Ref<WebTransportBidirectionalStreamSource> m_bidirectionalStreamSource;
+    HashMap<WebTransportStreamIdentifier, Ref<WebTransportReceiveStreamSource>> m_readStreamSources;
 };
 
 }

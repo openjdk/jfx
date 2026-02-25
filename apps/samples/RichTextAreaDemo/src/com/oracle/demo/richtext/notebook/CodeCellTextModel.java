@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -66,13 +66,13 @@ public class CodeCellTextModel extends CodeTextModel {
     }
 
     public void setText(String text) {
-        replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        replace(null, TextPos.ZERO, TextPos.ZERO, text);
         setModified(false);
     }
 
     public String getText() {
         try {
-            StyledOutput out = StyledOutput.forPlainText();
+            StyledOutput out = StyledOutput.forPlainText(getLineEnding());
             TextPos end = getDocumentEnd();
             export(TextPos.ZERO, end, out);
             return out.toString();

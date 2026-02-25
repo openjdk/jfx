@@ -61,9 +61,11 @@ CallLinkInfo::CallType CallLinkInfo::callTypeFor(OpcodeID opcodeID)
         return CallVarargs;
 
     case op_construct:
+    case op_super_construct:
         return Construct;
 
     case op_construct_varargs:
+    case op_super_construct_varargs:
         return ConstructVarargs;
 
     case op_tail_call:
@@ -86,7 +88,7 @@ void CallLinkInfo::clearStub()
     if (!stub())
         return;
 
-    m_stub->clearCallNodesFor(this);
+    m_stub->unlinkForcefully();
     m_stub = nullptr;
 }
 
@@ -104,7 +106,7 @@ void CallLinkInfo::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, CodeBloc
     case Mode::Monomorphic: {
         if (newCodeBlock && oldCodeBlock == m_codeBlock) {
             // Upgrading Monomorphic DataIC with newCodeBlock.
-            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckNotRequired) == m_monomorphicCallDestination ? ArityCheckNotRequired : MustCheckArity;
+            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckMode::ArityCheckNotRequired) == m_monomorphicCallDestination ? ArityCheckMode::ArityCheckNotRequired : ArityCheckMode::MustCheckArity;
             auto target = newCodeBlock->jitCode()->addressForCall(arityCheck);
             m_codeBlock = newCodeBlock;
             m_monomorphicCallDestination = target;
@@ -131,7 +133,7 @@ void CallLinkInfo::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, CodeBloc
 
 void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, CodePtr<JSEntryPtrTag> codePtr)
 {
-    RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(callee) & polymorphicCalleeMask));
+    RELEASE_ASSERT(!(std::bit_cast<uintptr_t>(callee) & polymorphicCalleeMask));
     m_callee.set(vm, owner, callee);
     m_codeBlock = codeBlock;
     m_monomorphicCallDestination = codePtr;
@@ -147,7 +149,7 @@ void CallLinkInfo::clearCallee()
 
 JSObject* CallLinkInfo::callee()
 {
-    RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(m_callee.get()) & polymorphicCalleeMask));
+    RELEASE_ASSERT(!(std::bit_cast<uintptr_t>(m_callee.get()) & polymorphicCalleeMask));
     return m_callee.get();
 }
 
@@ -238,7 +240,7 @@ void DataOnlyCallLinkInfo::initialize(VM& vm, CodeBlock* owner, CallType callTyp
     m_codeOrigin = codeOrigin;
     m_callType = callType;
     m_mode = static_cast<unsigned>(Mode::Init);
-    if (UNLIKELY(!Options::useLLIntICs()))
+    if (!Options::useLLIntICs()) [[unlikely]]
         setVirtualCall(vm);
 }
 
@@ -267,7 +269,7 @@ void CallLinkInfo::reset(VM&)
 
 void CallLinkInfo::revertCall(VM& vm)
 {
-    if (UNLIKELY(!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly))
+    if (!Options::useLLIntICs() && type() == CallLinkInfo::Type::DataOnly) [[unlikely]]
         setVirtualCall(vm);
     else
         reset(vm);
@@ -277,7 +279,7 @@ void CallLinkInfo::setVirtualCall(VM& vm)
 {
     reset(vm);
         m_callee.clear();
-        *bitwise_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
+    *std::bit_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
     m_codeBlock = nullptr; // PolymorphicCallStubRoutine will set CodeBlock inside it.
     m_monomorphicCallDestination = vm.getCTIVirtualCall(callMode()).code().template retagged<JSEntryPtrTag>();
 
@@ -305,7 +307,7 @@ void CallLinkInfo::setStub(Ref<PolymorphicCallStubRoutine>&& newStub)
     m_stub = WTFMove(newStub);
 
     m_callee.clear();
-    *bitwise_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
+    *std::bit_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
     m_codeBlock = nullptr; // PolymorphicCallStubRoutine will set CodeBlock inside it.
     m_monomorphicCallDestination = m_stub->code().code().retagged<JSEntryPtrTag>();
 
@@ -429,7 +431,7 @@ void DirectCallLinkInfo::unlinkOrUpgradeImpl(VM&, CodeBlock* oldCodeBlock, CodeB
 
     if (!!m_target) {
         if (m_codeBlock && newCodeBlock && oldCodeBlock == m_codeBlock) {
-            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckNotRequired) == m_target ? ArityCheckNotRequired : MustCheckArity;
+            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckMode::ArityCheckNotRequired) == m_target ? ArityCheckMode::ArityCheckNotRequired : ArityCheckMode::MustCheckArity;
             auto target = newCodeBlock->jitCode()->addressForCall(arityCheck);
             setCallTarget(newCodeBlock, CodeLocationLabel { target });
             newCodeBlock->linkIncomingCall(nullptr, this); // This is just relinking. So owner and caller frame can be nullptr.
@@ -566,7 +568,7 @@ CodeBlock* DirectCallLinkInfo::retrieveCodeBlock(FunctionExecutable* functionExe
 CodePtr<JSEntryPtrTag> DirectCallLinkInfo::retrieveCodePtr(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
 {
     unsigned argumentStackSlots = maxArgumentCountIncludingThis();
-    ArityCheckMode arityCheckMode = (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters())) ? MustCheckArity : ArityCheckNotRequired;
+    ArityCheckMode arityCheckMode = (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters())) ? ArityCheckMode::MustCheckArity : ArityCheckMode::ArityCheckNotRequired;
     return codeBlock->addressForCallConcurrently(locker, arityCheckMode);
 }
 
@@ -575,7 +577,7 @@ void DirectCallLinkInfo::repatchSpeculatively()
     if (m_executable->isHostFunction()) {
         CodeSpecializationKind kind = specializationKind();
         CodePtr<JSEntryPtrTag> codePtr;
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             codePtr = m_executable->generatedJITCodeWithArityCheckForCall();
         else
             codePtr = m_executable->generatedJITCodeWithArityCheckForConstruct();

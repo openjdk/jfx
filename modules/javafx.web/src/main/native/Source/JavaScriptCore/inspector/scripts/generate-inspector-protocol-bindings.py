@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2025 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,8 @@ try:
     import json
 except ImportError:
     import simplejson as json
+
+from json import JSONDecodeError
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.ERROR)
 log = logging.getLogger('global')
@@ -127,8 +129,10 @@ def generate_from_specification(primary_specification_filepath=None,
                 regex = re.compile(r"\/\*.*?\*\/", re.DOTALL)
                 parsed_json = json.loads(re.sub(regex, "", input_file.read()))
                 protocol.parse_specification(parsed_json, isSupplemental)
-        except ValueError as e:
-            raise Exception("Error parsing valid JSON in file: " + filepath + "\nParse error: " + str(e))
+        except JSONDecodeError as e:
+            # There's no way to get the filename from the outer exception handler, so insert it here.
+            setattr(e, 'input_filename', input_file.name)
+            raise
 
     protocol = models.Protocol(framework_name)
     for specification in supplemental_specification_filepaths:
@@ -170,7 +174,7 @@ def generate_from_specification(primary_specification_filepath=None,
         generators.append(CppProtocolTypesHeaderGenerator(*generator_arguments))
         generators.append(CppProtocolTypesImplementationGenerator(*generator_arguments))
 
-    elif protocol.framework is Frameworks.WebKit and generate_backend:
+    elif generate_backend and protocol.framework in [Frameworks.WebKit, Frameworks.WebDriverBidi]:
         generators.append(CppBackendDispatcherHeaderGenerator(*generator_arguments))
         generators.append(CppBackendDispatcherImplementationGenerator(*generator_arguments))
         generators.append(CppFrontendDispatcherHeaderGenerator(*generator_arguments))
@@ -263,7 +267,7 @@ def generate_from_specification(primary_specification_filepath=None,
 
 
 if __name__ == '__main__':
-    allowed_framework_names = ['JavaScriptCore', 'WebInspector', 'WebInspectorUI', 'WebKit', 'Test']
+    allowed_framework_names = ['JavaScriptCore', 'WebInspector', 'WebInspectorUI', 'WebKit', 'WebDriverBidi', 'Test']
     cli_parser = optparse.OptionParser(usage="usage: %prog [options] PrimaryProtocol.json [SupplementalProtocol.json ...]")
     cli_parser.add_option("-o", "--outputDir", help="Directory where generated files should be written.")
     cli_parser.add_option("--framework", type="choice", choices=allowed_framework_names, help="The framework that the primary specification belongs to.")
@@ -304,6 +308,17 @@ if __name__ == '__main__':
 
     try:
         generate_from_specification(**options)
+    except JSONDecodeError as e:
+        message_lines = [
+            "Parse error trying to decode JSON!\n",
+            "error: {} at {}:{}:{}\n".format(e.msg, getattr(e, 'input_filename', '<unkwown>'), e.lineno, e.colno),
+            e.doc[:e.pos],
+            '~' * (e.colno - 1) + "^  // line {}, col {}: {}".format(e.lineno, e.colno, e.msg),
+        ]
+        log.error("\n".join(message_lines))
+        if not arg_options.test:
+            raise  # Force the build to fail after printing full message.
+
     except (ParseException, TypecheckException) as e:
         if arg_options.test:
             log.error(str(e))

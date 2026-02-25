@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #include <WebCore/DOMException.h>
 #include <WebCore/Element.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/HTMLNames.h>
@@ -98,12 +99,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDirImpl(JNI
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->dir());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setDirImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setDir(AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDraggableImpl(JNIEnv*, jclass, jlong peer)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +38,12 @@ namespace Inspector {
 
 class FrontendChannel;
 
-class JS_EXPORT_PRIVATE RemoteInspectionTarget : public RemoteControllableTarget {
+class RemoteInspectionTarget : public RemoteControllableTarget {
 public:
-    bool inspectable() const;
-    void setInspectable(bool);
+    JS_EXPORT_PRIVATE RemoteInspectionTarget();
+    JS_EXPORT_PRIVATE ~RemoteInspectionTarget() override;
+    JS_EXPORT_PRIVATE bool inspectable() const;
+    JS_EXPORT_PRIVATE void setInspectable(bool);
 
     bool allowsInspectionByPolicy() const;
 
@@ -58,14 +60,18 @@ public:
     virtual void setIndicating(bool) { } // Default is to do nothing.
 
     virtual bool automaticInspectionAllowed() const { return false; }
-    virtual void pauseWaitingForAutomaticInspection();
-    virtual void unpauseForInitializedInspector();
+    virtual bool automaticInspectionAllowedInSameProcess() const { return false; }
+    JS_EXPORT_PRIVATE virtual void pauseWaitingForAutomaticInspection();
+    JS_EXPORT_PRIVATE virtual void unpauseForResolvedAutomaticInspection();
 
     // RemoteControllableTarget overrides.
-    bool remoteControlAllowed() const final;
+    JS_EXPORT_PRIVATE bool remoteControlAllowed() const final;
 
     std::optional<ProcessID> presentingApplicationPID() const { return m_presentingApplicationPID; }
-    void setPresentingApplicationPID(std::optional<ProcessID>&&);
+    JS_EXPORT_PRIVATE void setPresentingApplicationPID(std::optional<ProcessID>&&);
+
+protected:
+    bool m_isPausedWaitingForAutomaticInspection { false };
 
 private:
     enum class Inspectable : uint8_t {

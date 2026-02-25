@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "BlobPropertyBag.h"
 #include "BlobURL.h"
 #include "FileReaderLoader.h"
@@ -39,7 +40,6 @@
 #include "SecurityOriginData.h"
 #include "URLKeepingBlobAlive.h"
 #include "URLRegistry.h"
-#include <variant>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
@@ -53,6 +53,7 @@ namespace WebCore {
 class Blob;
 class BlobLoader;
 class DeferredPromise;
+class FragmentedSharedBuffer;
 class ReadableStream;
 class ScriptExecutionContext;
 class FragmentedSharedBuffer;
@@ -63,28 +64,38 @@ struct IDLArrayBuffer;
 template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
-using BlobPartVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
+using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<Blob> create(ScriptExecutionContext* context)
     {
-        auto blob = adoptRef(*new Blob(context));
+        Ref blob = adoptRef(*new Blob(context));
         blob->suspendIfNeeded();
         return blob;
     }
 
     static Ref<Blob> create(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVariants, const BlobPropertyBag& propertyBag)
     {
-        auto blob = adoptRef(*new Blob(context, WTFMove(blobPartVariants), propertyBag));
+        Ref blob = adoptRef(*new Blob(context, WTFMove(blobPartVariants), propertyBag));
         blob->suspendIfNeeded();
         return blob;
     }
 
     static Ref<Blob> create(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
     {
-        auto blob = adoptRef(*new Blob(context, WTFMove(data), contentType));
+        Ref blob = adoptRef(*new Blob(context, WTFMove(data), contentType));
+        blob->suspendIfNeeded();
+        return blob;
+    }
+
+    static Ref<Blob> create(ScriptExecutionContext* context, Ref<FragmentedSharedBuffer>&& buffer, const String& contentType)
+    {
+        Ref blob = adoptRef(*new Blob(context, WTFMove(buffer), contentType));
         blob->suspendIfNeeded();
         return blob;
     }
@@ -92,7 +103,7 @@ public:
     static Ref<Blob> deserialize(ScriptExecutionContext* context, const URL& srcURL, const String& type, long long size, long long memoryCost, const String& fileBackedPath)
     {
         ASSERT(Blob::isNormalizedContentType(type));
-        auto blob = adoptRef(*new Blob(deserializationContructor, context, srcURL, type, size, memoryCost, fileBackedPath));
+        Ref blob = adoptRef(*new Blob(deserializationContructor, context, srcURL, type, size, memoryCost, fileBackedPath));
         blob->suspendIfNeeded();
         return blob;
     }
@@ -114,17 +125,15 @@ public:
     static bool isNormalizedContentType(const CString&);
 #endif
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     // URLRegistrable
-    URLRegistry& registry() const override;
+    URLRegistry& registry() const final;
+    RegistrableType registrableType() const final { return RegistrableType::Blob; }
 
     Ref<Blob> slice(long long start, long long end, const String& contentType) const;
 
     void text(Ref<DeferredPromise>&&);
     void arrayBuffer(DOMPromiseDeferred<IDLArrayBuffer>&&);
+    void getArrayBuffer(CompletionHandler<void(ExceptionOr<Ref<JSC::ArrayBuffer>>)>&&);
     void bytes(Ref<DeferredPromise>&&);
     ExceptionOr<Ref<ReadableStream>> stream();
 
@@ -137,6 +146,7 @@ protected:
     WEBCORE_EXPORT explicit Blob(ScriptExecutionContext*);
     Blob(ScriptExecutionContext&, Vector<BlobPartVariant>&&, const BlobPropertyBag&);
     Blob(ScriptExecutionContext*, Vector<uint8_t>&&, const String& contentType);
+    Blob(ScriptExecutionContext*, Ref<FragmentedSharedBuffer>&&, const String& contentType);
 
     enum ReferencingExistingBlobConstructor { referencingExistingBlobConstructor };
     Blob(ReferencingExistingBlobConstructor, ScriptExecutionContext*, const Blob&);
@@ -151,7 +161,7 @@ protected:
     Blob(ScriptExecutionContext*, const URL& srcURL, long long start, long long end, unsigned long long memoryCost, const String& contentType);
 
 private:
-    void loadBlob(FileReaderLoader::ReadType, CompletionHandler<void(BlobLoader&)>&&);
+    void loadBlob(FileReaderLoader::ReadType, Function<void(BlobLoader&)>&&);
 
     String m_type;
     mutable std::optional<unsigned long long> m_size;
@@ -168,3 +178,7 @@ private:
 WebCoreOpaqueRoot root(Blob*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Blob)
+    static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::Blob; }
+SPECIALIZE_TYPE_TRAITS_END()

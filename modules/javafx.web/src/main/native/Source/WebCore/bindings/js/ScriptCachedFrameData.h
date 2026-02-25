@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2008, Google Inc. All rights reserved.
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (c) 2008 Google Inc. All rights reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 
 #include <JavaScriptCore/Strong.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -41,7 +42,8 @@ class JSDOMWindow;
 class LocalFrame;
 
 class ScriptCachedFrameData {
-    WTF_MAKE_NONCOPYABLE(ScriptCachedFrameData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScriptCachedFrameData);
+    WTF_MAKE_NONCOPYABLE(ScriptCachedFrameData);
 public:
     explicit ScriptCachedFrameData(LocalFrame&);
     ~ScriptCachedFrameData();

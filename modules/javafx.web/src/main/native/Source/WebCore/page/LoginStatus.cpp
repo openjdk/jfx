@@ -26,13 +26,14 @@
 #include "config.h"
 #include "LoginStatus.h"
 
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringCommon.h>
 
 namespace WebCore {
 
-using CodeUnitMatchFunction = bool (*)(UChar);
+using CodeUnitMatchFunction = bool (*)(char16_t);
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LoginStatus);
 
@@ -46,14 +47,11 @@ ExceptionOr<UniqueRef<LoginStatus>> LoginStatus::create(const RegistrableDomain&
     if (domain.isEmpty())
         return Exception { ExceptionCode::SecurityError, "LoginStatus status can only be set for origins with a registrable domain."_s };
 
-    if (username.isEmpty())
-        return Exception { ExceptionCode::SyntaxError, "LoginStatus requires a non-empty username."_s };
-
     unsigned length = username.length();
     if (length > UsernameMaxLength)
         return Exception { ExceptionCode::SyntaxError, makeString("LoginStatus usernames cannot be longer than "_s, UsernameMaxLength) };
 
-    auto spaceOrNewline = username.find([](UChar ch) {
+    auto spaceOrNewline = username.find([](char16_t ch) {
         return deprecatedIsSpaceOrNewline(ch);
     });
     if (spaceOrNewline != notFound)
@@ -72,6 +70,16 @@ LoginStatus::LoginStatus(const RegistrableDomain& domain, const String& username
     setTimeToLive(timeToLive);
 }
 
+LoginStatus::LoginStatus(const RegistrableDomain& domain, const String& username, CredentialTokenType tokenType, AuthenticationType authType, WallTime loggedInTime, Seconds timeToLive)
+    : m_domain { domain }
+    , m_username { username }
+    , m_tokenType { tokenType }
+    , m_authType { authType }
+    , m_loggedInTime { loggedInTime }
+{
+    setTimeToLive(timeToLive);
+}
+
 void LoginStatus::setTimeToLive(Seconds timeToLive)
 {
     m_timeToLive = std::min(timeToLive, m_authType == AuthenticationType::Unmanaged ? TimeToLiveShort : TimeToLiveLong);
@@ -79,7 +87,7 @@ void LoginStatus::setTimeToLive(Seconds timeToLive)
 
 bool LoginStatus::hasExpired() const
 {
-    ASSERT(!m_domain.isEmpty() && !m_username.isEmpty());
+    ASSERT(!m_domain.isEmpty());
     return WallTime::now() > m_loggedInTime + m_timeToLive;
 }
 

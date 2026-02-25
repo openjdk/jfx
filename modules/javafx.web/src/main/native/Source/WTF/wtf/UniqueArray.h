@@ -27,6 +27,7 @@
 
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -73,9 +74,9 @@ struct UniqueArrayMaker<true, T> {
         // Do not use placement new like `new (storage) T[size]()`. `new T[size]()` requires
         // larger storage than the `sizeof(T) * size` storage since it want to store `size`
         // to somewhere.
-        T* storage = static_cast<T*>(UniqueArrayMalloc::malloc(Checked<size_t>(sizeof(T)) * size));
-        VectorTypeOperations<T>::initialize(storage, storage + size);
-        return ResultType(storage);
+        auto storage = MallocSpan<T, UniqueArrayMalloc>::malloc(Checked<size_t>(sizeof(T)) * size);
+        VectorTypeOperations<T>::initialize(storage.mutableSpan().data(), storage.mutableSpan().subspan(size).data());
+        return ResultType(storage.leakSpan().data());
     }
 };
 
@@ -86,12 +87,12 @@ struct UniqueArrayMaker<false, T> {
     // UniqueArrayElement has new [] and delete [] operators for FastMalloc. We allocate UniqueArrayElement[] and cast
     // it to T[]. When deleting, the custom deleter casts T[] to UniqueArrayElement[] and deletes it.
     class UniqueArrayElement {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UniqueArrayElement);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UniqueArrayElement, UniqueArrayElement);
     public:
         struct Deleter {
             void operator()(T* pointer)
             {
-                delete [] bitwise_cast<UniqueArrayElement*>(pointer);
+                delete [] std::bit_cast<UniqueArrayElement*>(pointer);
             };
         };
 
@@ -105,7 +106,7 @@ struct UniqueArrayMaker<false, T> {
 
     static ResultType make(size_t size)
     {
-        return ResultType(bitwise_cast<T*>(new UniqueArrayElement[size]()));
+        return ResultType(std::bit_cast<T*>(new UniqueArrayElement[size]()));
     }
 };
 

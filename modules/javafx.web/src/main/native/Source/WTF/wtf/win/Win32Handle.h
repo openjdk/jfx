@@ -31,7 +31,7 @@
 namespace WTF {
 
 class Win32Handle {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Win32Handle);
 public:
     WTF_EXPORT_PRIVATE static Win32Handle adopt(HANDLE);
 
@@ -47,6 +47,14 @@ public:
     HANDLE get() const { return m_handle; }
 
     WTF_EXPORT_PRIVATE HANDLE leak() WARN_UNUSED_RETURN;
+
+    struct IPCData {
+        uintptr_t handle;
+        DWORD processID;
+    };
+
+    WTF_EXPORT_PRIVATE IPCData toIPCData();
+    WTF_EXPORT_PRIVATE static Win32Handle createFromIPCData(IPCData&&);
 
 private:
     explicit Win32Handle(HANDLE);

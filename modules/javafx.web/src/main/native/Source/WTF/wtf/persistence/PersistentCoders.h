@@ -184,7 +184,7 @@ template<typename T, size_t inlineCapacity> struct VectorCoder<true, T, inlineCa
         Vector<T, inlineCapacity> temp;
         temp.grow(size);
 
-        if (!decoder.decodeFixedLengthData({ temp.data(), size * sizeof(T) }))
+        if (!decoder.decodeFixedLengthData(temp.mutableSpan()))
             return std::nullopt;
 
         return temp;

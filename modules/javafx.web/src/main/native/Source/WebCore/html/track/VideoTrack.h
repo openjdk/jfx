@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "TrackBase.h"
 #include "VideoTrackPrivateClient.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -42,6 +43,7 @@ class VideoTrackList;
 class VideoTrackPrivate;
 
 class VideoTrack final : public MediaTrackBase, private VideoTrackPrivateClient {
+    WTF_MAKE_TZONE_ALLOCATED(VideoTrack);
 public:
     static Ref<VideoTrack> create(ScriptExecutionContext* context, VideoTrackPrivate& trackPrivate)
     {
@@ -68,7 +70,7 @@ public:
 
     void setPrivate(VideoTrackPrivate&);
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*) final;
+    void setLogger(const Logger&, uint64_t) final;
 #endif
 
 private:
@@ -98,7 +100,7 @@ private:
     WeakPtr<VideoTrackList> m_videoTrackList;
     WeakHashSet<VideoTrackClient> m_clients;
     Ref<VideoTrackPrivate> m_private;
-    Ref<VideoTrackConfiguration> m_configuration;
+    const Ref<VideoTrackConfiguration> m_configuration;
     bool m_selected { false };
 };
 

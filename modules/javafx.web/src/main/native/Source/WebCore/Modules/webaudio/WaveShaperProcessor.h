@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,15 @@
 #include <memory>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 // WaveShaperProcessor is an AudioDSPKernelProcessor which uses WaveShaperDSPKernel objects to implement non-linear distortion effects.
 
 class WaveShaperProcessor final : public AudioDSPKernelProcessor {
+    WTF_MAKE_TZONE_ALLOCATED(WaveShaperProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WaveShaperProcessor);
 public:
     enum OverSampleType {
         OverSampleNone,
@@ -50,7 +53,7 @@ public:
 
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) final;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) final;
 
     void setCurveForBindings(Float32Array*);
     Float32Array* curveForBindings() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_curve.get(); } // Doesn't grab the lock, only safe to call on the main thread.
@@ -63,6 +66,8 @@ public:
     Lock& processLock() const WTF_RETURNS_LOCK(m_processLock) { return m_processLock; }
 
 private:
+    Type processorType() const final { return Type::WaveShaper; }
+
     // m_curve represents the non-linear shaping curve.
     RefPtr<Float32Array> m_curve WTF_GUARDED_BY_LOCK(m_processLock);
 
@@ -73,3 +78,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WaveShaperProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::WaveShaper; } \
+SPECIALIZE_TYPE_TRAITS_END()

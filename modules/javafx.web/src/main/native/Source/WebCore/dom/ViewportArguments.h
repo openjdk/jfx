@@ -47,6 +47,12 @@ enum class ViewportFit : uint8_t {
     Cover
 };
 
+enum class InteractiveWidget : uint8_t {
+    ResizesVisual,
+    ResizesContent,
+    OverlaysContent
+};
+
 struct ViewportAttributes {
     FloatSize layoutSize;
 
@@ -59,15 +65,17 @@ struct ViewportAttributes {
     float shrinkToFit;
 
     ViewportFit viewportFit;
+
+    InteractiveWidget interactiveWidget;
 };
 
 struct ViewportArguments {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ViewportArguments);
 
     enum class Type : uint8_t {
         // These are ordered in increasing importance.
         Implicit,
 #if PLATFORM(IOS_FAMILY)
-        PluginDocument,
         ImageDocument,
 #endif
         ViewportMeta,
@@ -84,7 +92,12 @@ struct ViewportArguments {
     {
     }
 
-    ViewportArguments(Type type, float width, float height, float zoom, float minZoom, float maxZoom, float userZoom, float orientation, float shrinkToFit, ViewportFit viewportFit, bool widthWasExplicit)
+    ViewportArguments(ViewportArguments&&) = default;
+    ViewportArguments(const ViewportArguments&) = default;
+    ViewportArguments& operator=(ViewportArguments&&) = default;
+    ViewportArguments& operator=(const ViewportArguments&) = default;
+
+    ViewportArguments(Type type, float width, float height, float zoom, float minZoom, float maxZoom, float userZoom, float orientation, float shrinkToFit, ViewportFit viewportFit, bool widthWasExplicit, InteractiveWidget interactiveWidget)
         : type(type)
         , width(width)
         , height(height)
@@ -96,6 +109,7 @@ struct ViewportArguments {
         , shrinkToFit(shrinkToFit)
         , viewportFit(viewportFit)
         , widthWasExplicit(widthWasExplicit)
+        , interactiveWidget(interactiveWidget)
     {
     }
 
@@ -112,6 +126,7 @@ struct ViewportArguments {
     float shrinkToFit { ValueAuto };
     ViewportFit viewportFit { ViewportFit::Auto };
     bool widthWasExplicit { false };
+    InteractiveWidget interactiveWidget { InteractiveWidget::ResizesVisual };
 
     bool operator==(const ViewportArguments& other) const
     {
@@ -126,7 +141,8 @@ struct ViewportArguments {
             && orientation == other.orientation
             && shrinkToFit == other.shrinkToFit
             && viewportFit == other.viewportFit
-            && widthWasExplicit == other.widthWasExplicit;
+            && widthWasExplicit == other.widthWasExplicit
+            && interactiveWidget == other.interactiveWidget;
     }
 
 #if PLATFORM(GTK)
@@ -144,7 +160,7 @@ WEBCORE_EXPORT float computeMinimumScaleFactorForContentContained(const Viewport
 
 typedef Function<void(ViewportErrorCode, const String&)> ViewportErrorHandler;
 void setViewportFeature(ViewportArguments&, Document&, StringView key, StringView value);
-WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, const ViewportErrorHandler&);
+WEBCORE_EXPORT void setViewportFeature(ViewportArguments&, StringView key, StringView value, bool metaViewportInteractiveWidgetEnabled, NOESCAPE const ViewportErrorHandler&);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const ViewportArguments&);
 

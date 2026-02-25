@@ -32,6 +32,7 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
+#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -42,14 +43,16 @@
 #include "LayoutPhase.h"
 #include "LayoutSize.h"
 #include "LayoutState.h"
+#include "PathOperation.h"
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderChildIterator.h"
 #include "RenderCombineText.h"
-#include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"
@@ -90,10 +93,8 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
 template<typename CharacterType>
 static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
-    auto& primaryFont = fontCascade.primaryFont();
-    auto* rawCharacters = characters.data();
-    for (unsigned i = 0; i < characters.size(); ++i) {
-        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+    Ref primaryFont = fontCascade.primaryFont();
+    for (auto character : characters) {
         if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
             return false;
     }
@@ -118,8 +119,8 @@ std::unique_ptr<Layout::LayoutTree> TreeBuilder::buildLayoutTree(const RenderVie
     PhaseScope scope(Phase::Type::TreeBuilding);
 
     auto rootStyle = RenderStyle::clone(renderView.style());
-    rootStyle.setLogicalWidth(Length(renderView.width(), LengthType::Fixed));
-    rootStyle.setLogicalHeight(Length(renderView.height(), LengthType::Fixed));
+    rootStyle.setLogicalWidth(Style::PreferredSize::Fixed { renderView.width() });
+    rootStyle.setLogicalHeight(Style::PreferredSize::Fixed { renderView.height() });
 
     auto rootLayoutBox = makeUnique<InitialContainingBlock>(WTFMove(rootStyle));
     TreeBuilder().buildSubTree(renderView, *rootLayoutBox);
@@ -140,7 +141,7 @@ std::unique_ptr<Box> TreeBuilder::createTextBox(String text, bool isCombined, bo
 {
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     if (canUseSimpleFontCodePath)
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
     if (canUseSimplifiedTextMeasuring)
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
     if (hasPositionDependentContentWidth)
@@ -214,15 +215,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
             tableWrapperBoxStyle.setPosition(renderer.style().position());
             tableWrapperBoxStyle.setFloating(renderer.style().floating());
 
-            tableWrapperBoxStyle.setTop(Length { renderer.style().top() });
-            tableWrapperBoxStyle.setLeft(Length { renderer.style().left() });
-            tableWrapperBoxStyle.setBottom(Length { renderer.style().bottom() });
-            tableWrapperBoxStyle.setRight(Length { renderer.style().right() });
-
-            tableWrapperBoxStyle.setMarginTop(Length { renderer.style().marginTop() });
-            tableWrapperBoxStyle.setMarginLeft(Length { renderer.style().marginLeft() });
-            tableWrapperBoxStyle.setMarginBottom(Length { renderer.style().marginBottom() });
-            tableWrapperBoxStyle.setMarginRight(Length { renderer.style().marginRight() });
+            tableWrapperBoxStyle.setInsetBox(Style::InsetBox { renderer.style().insetBox() });
+            tableWrapperBoxStyle.setMarginBox(Style::MarginBox { renderer.style().marginBox() });
 
             childLayoutBox = createContainer(Box::ElementAttributes { Box::NodeType::TableWrapperBox, Box::IsAnonymous::Yes }, WTFMove(tableWrapperBoxStyle));
         } else if (auto* replacedRenderer = dynamicDowncast<RenderReplaced>(renderer)) {
@@ -239,8 +233,8 @@ std::unique_ptr<Box> TreeBuilder::createLayoutBox(const ElementBox& parentContai
         } else {
             if (displayType == DisplayType::Block) {
                 if (auto offset = accumulatedOffsetForInFlowPositionedContinuation(downcast<RenderBox>(renderer))) {
-                    clonedStyle.setTop({ offset->height(), LengthType::Fixed });
-                    clonedStyle.setLeft({ offset->width(), LengthType::Fixed });
+                    clonedStyle.setTop(Style::InsetEdge::Fixed { offset->height() });
+                    clonedStyle.setLeft(Style::InsetEdge::Fixed { offset->width() });
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
                 } else
                     childLayoutBox = createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
@@ -575,11 +569,11 @@ void printLayoutTreeForLiveDocuments()
             continue;
         if (document->frame() && document->frame()->isMainFrame())
             fprintf(stderr, "----------------------main frame--------------------------\n");
-        fprintf(stderr, "%s\n", document->url().string().utf8().data());
+        SAFE_FPRINTF(stderr, "%s\n", document->url().string().utf8());
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { } };
+        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { }, { }, { } };
 
         LayoutContext(layoutState).layout(renderView.size());
         showLayoutTree(downcast<InitialContainingBlock>(layoutState.root()), &layoutState);
@@ -589,4 +583,3 @@ void printLayoutTreeForLiveDocuments()
 
 }
 }
-

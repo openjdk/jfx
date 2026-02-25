@@ -36,7 +36,6 @@
 #include "IOSurface.h"
 #include "OffscreenCanvas.h"
 #include "PlatformCALayer.h"
-#include <variant>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -44,18 +43,19 @@
 
 namespace WebCore {
 
+class Document;
 class GPUDisplayBufferDisplayDelegate;
 
 class GPUCanvasContextCocoa final : public GPUCanvasContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContextCocoa);
 public:
 #if ENABLE(OFFSCREEN_CANVAS)
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 #else
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
-    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&);
+    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&, Document*);
 
     DestinationColorSpace colorSpace() const override;
     bool compositingResultsNeedUpdating() const override { return m_compositingResultsNeedsUpdating; }
@@ -63,6 +63,7 @@ public:
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
     ImageBufferPixelFormat pixelFormat() const override;
+    bool isOpaque() const override;
     void reshape() override;
 
 
@@ -71,13 +72,17 @@ public:
     CanvasType canvas() override;
     ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
+    std::optional<GPUCanvasConfiguration> getConfiguration() const override;
     ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() override;
     RefPtr<ImageBuffer> transferToImageBuffer() override;
 
-    bool isWebGPU() const override { return true; }
+#if HAVE(SUPPORT_HDR_DISPLAY) && ENABLE(PIXEL_FORMAT_RGBA16F)
+    void setDynamicRangeLimit(PlatformDynamicRangeLimit) override;
+    std::optional<double> getEffectiveDynamicRangeLimitValue() const override;
+#endif
 
 private:
-    explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
+    explicit GPUCanvasContextCocoa(CanvasBase&, Ref<GPUCompositorIntegration>&&, Ref<GPUPresentationContext>&&, Document*);
 
     void markContextChangedAndNotifyCanvasObservers();
 
@@ -88,7 +93,13 @@ private:
 
     CanvasType htmlOrOffscreenCanvas() const;
     ExceptionOr<void> configure(GPUCanvasConfiguration&&, bool);
-    void present();
+    void present(uint32_t frameIndex);
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    float computeContentsHeadroom();
+    void updateContentsHeadroom();
+    void updateScreenHeadroom(float, bool suppressEDR);
+    void updateScreenHeadroomFromScreenProperties();
+#endif // HAVE(SUPPORT_HDR_DISPLAY)
 
     struct Configuration {
         Ref<GPUDevice> device;
@@ -96,19 +107,27 @@ private:
         GPUTextureUsageFlags usage { GPUTextureUsage::RENDER_ATTACHMENT };
         Vector<GPUTextureFormat> viewFormats;
         GPUPredefinedColorSpace colorSpace { GPUPredefinedColorSpace::SRGB };
+        GPUCanvasToneMapping toneMapping;
         GPUCanvasAlphaMode compositingAlphaMode { GPUCanvasAlphaMode::Opaque };
         Vector<MachSendRight> renderBuffers;
         unsigned frameCount { 0 };
     };
     std::optional<Configuration> m_configuration;
 
-    Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
-    RefPtr<GPUCompositorIntegration> m_compositorIntegration;
-    RefPtr<GPUPresentationContext> m_presentationContext;
+    const Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
+    const Ref<GPUCompositorIntegration> m_compositorIntegration;
+    const Ref<GPUPresentationContext> m_presentationContext;
     RefPtr<GPUTexture> m_currentTexture;
 
     GPUIntegerCoordinate m_width { 0 };
     GPUIntegerCoordinate m_height { 0 };
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    using ScreenPropertiesChangedObserver = Observer<void(PlatformDisplayID)>;
+    std::optional<ScreenPropertiesChangedObserver> m_screenPropertiesChangedObserver;
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
+    float m_currentEDRHeadroom { 1 };
+    bool m_suppressEDR { false };
+#endif // HAVE(SUPPORT_HDR_DISPLAY)
     bool m_compositingResultsNeedsUpdating { false };
 };
 

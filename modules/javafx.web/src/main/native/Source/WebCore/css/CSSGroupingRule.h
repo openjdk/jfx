@@ -45,20 +45,22 @@ protected:
     CSSGroupingRule(StyleRuleGroup&, CSSStyleSheet* parent);
     const StyleRuleGroup& groupRule() const { return m_groupRule; }
     StyleRuleGroup& groupRule() { return m_groupRule; }
+    Ref<const StyleRuleGroup> protectedGroupRule() const;
+    Ref<StyleRuleGroup> protectedGroupRule();
     void reattach(StyleRuleBase&) override;
     void appendCSSTextForItems(StringBuilder&) const;
-    void appendCSSTextWithReplacementURLsForItems(StringBuilder&, const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&) const;
+    void appendCSSTextWithReplacementURLsForItems(StringBuilder&, const CSS::SerializationContext&) const;
     RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&) override;
 
 private:
     bool isGroupingRule() const final { return true; }
     void appendCSSTextForItemsInternal(StringBuilder&, StringBuilder&) const;
     void cssTextForRules(StringBuilder&) const;
-    void cssTextForRulesWithReplacementURLs(StringBuilder&, const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&) const;
+    void cssTextForRulesWithReplacementURLs(StringBuilder&, const CSS::SerializationContext&) const;
 
     Ref<StyleRuleGroup> m_groupRule;
     mutable Vector<RefPtr<CSSRule>> m_childRuleCSSOMWrappers;
-    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
+    const std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
 } // namespace WebCore

@@ -41,6 +41,7 @@ class HTMLFormElement;
 class HTMLImageLoader;
 class HTMLMapElement;
 class Image;
+class SecurityOrigin;
 
 struct ImageCandidate;
 
@@ -82,8 +83,6 @@ public:
 
     const AtomString& altText() const;
 
-    CompositeOperator compositeOperator() const { return m_compositeOperator; }
-
     WEBCORE_EXPORT CachedImage* cachedImage() const;
 
     void setLoadManually(bool);
@@ -91,24 +90,10 @@ public:
     bool matchesUsemap(const AtomString&) const;
     RefPtr<HTMLMapElement> associatedMapElement() const;
 
-    WEBCORE_EXPORT const AtomString& alt() const;
-
-    WEBCORE_EXPORT void setHeight(unsigned);
-
-    URL src() const;
-    void setSrc(const AtomString&);
-
-    WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
-
-    WEBCORE_EXPORT void setWidth(unsigned);
-
     WEBCORE_EXPORT int x() const;
     WEBCORE_EXPORT int y() const;
-
     WEBCORE_EXPORT bool complete() const;
-
-    void setDecoding(AtomString&&);
     String decoding() const;
 
     DecodingMode decodingMode() const;
@@ -151,12 +136,10 @@ public:
     void loadDeferredImage();
 
     AtomString srcsetForBindings() const;
-    void setSrcsetForBindings(const AtomString&);
 
     bool usesSrcsetOrPicture() const;
 
-    const AtomString& loadingForBindings() const;
-    void setLoadingForBindings(const AtomString&);
+    enum LoadingValues { Lazy, Eager };
 
     bool isLazyLoadable() const;
     static bool hasLazyLoadableAttributeValue(StringView);
@@ -168,7 +151,6 @@ public:
 
     void evaluateDynamicMediaQueryDependencies();
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const;
 
@@ -179,9 +161,8 @@ public:
     WEBCORE_EXPORT void setAllowsAnimation(std::optional<bool>);
 #endif
 
-    void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const;
+    RequestPriority fetchPriority() const;
 
     bool originClean(const SecurityOrigin&) const;
 
@@ -204,13 +185,14 @@ private:
     void invalidateAttributeMapping();
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const final;
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
     void didAttachRenderers() override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
     void setBestFitURLAndDPRFromImageCandidate(const ImageCandidate&);
 
     bool canStartSelection() const override;
@@ -218,7 +200,7 @@ private:
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
     String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
-    Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const override;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
@@ -262,14 +244,13 @@ private:
     IntersectionObserverData& ensureIntersectionObserverData() final;
     IntersectionObserverData* intersectionObserverDataIfExists() final;
 
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     AtomString m_bestFitImageURL;
     URL m_currentURL;
     AtomString m_currentSrc;
     AtomString m_parsedUsemap;
-    CompositeOperator m_compositeOperator;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
     bool m_isImageMenuEnabled { false };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -123,10 +123,10 @@ public:
     void dumpTypeProfilerData(VM&);
 
 private:
-    typedef HashMap<SourceID, Vector<TypeLocation*>> SourceIDToLocationBucketMap;
+    typedef UncheckedKeyHashMap<SourceID, Vector<TypeLocation*>> SourceIDToLocationBucketMap;
     SourceIDToLocationBucketMap m_bucketMap;
     TypeLocationCache m_typeLocationCache;
-    typedef HashMap<QueryKey, TypeLocation*> TypeLocationQueryCache;
+    typedef UncheckedKeyHashMap<QueryKey, TypeLocation*> TypeLocationQueryCache;
     TypeLocationQueryCache m_queryCache;
     GlobalVariableID m_nextUniqueVariableID;
     Bag<TypeLocation> m_typeLocationInfo;

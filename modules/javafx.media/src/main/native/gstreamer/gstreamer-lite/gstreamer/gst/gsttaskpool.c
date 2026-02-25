@@ -233,8 +233,8 @@ gst_task_pool_cleanup (GstTaskPool * pool)
 /**
  * gst_task_pool_push:
  * @pool: a #GstTaskPool
- * @func: (scope async): the function to call
- * @user_data: (closure): data to pass to @func
+ * @func: (scope async) (closure user_data): the function to call
+ * @user_data: data to pass to @func
  * @error: return location for an error
  *
  * Start the execution of a new thread from @pool.

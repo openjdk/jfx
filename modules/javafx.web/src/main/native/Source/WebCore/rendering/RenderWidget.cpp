@@ -32,12 +32,16 @@
 #include "LocalFrame.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameView.h"
+#include "RenderBox.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderEmbeddedObject.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/Ref.h>
 #include <wtf/StackStats.h>
@@ -104,8 +108,9 @@ RenderWidget::RenderWidget(Type type, HTMLFrameOwnerElement& element, RenderStyl
 void RenderWidget::willBeDestroyed()
 {
     if (CheckedPtr cache = document().existingAXObjectCache()) {
-        cache->childrenChanged(this->parent());
-        cache->remove(this);
+        if (auto* parent = this->parent())
+            cache->childrenChanged(*parent);
+        cache->remove(*this);
     }
 
     if (renderTreeBeingDestroyed() && document().backForwardCacheState() == Document::NotInBackForwardCache && m_widget)
@@ -161,7 +166,7 @@ bool RenderWidget::updateWidgetGeometry()
 
     LayoutRect contentBox = contentBoxRect();
     LayoutRect absoluteContentBox(localToAbsoluteQuad(FloatQuad(contentBox)).boundingBox());
-    if (m_widget->isLocalFrameView()) {
+    if (is<FrameView>(m_widget)) {
         contentBox.setLocation(absoluteContentBox.location());
         return setWidgetGeometry(contentBox);
     }
@@ -173,6 +178,9 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
 {
     if (widget == m_widget)
         return;
+
+    if (is<RemoteFrameView>(m_widget) != is<RemoteFrameView>(widget))
+        frameOwnerElement().scheduleInvalidateStyleAndLayerComposition();
 
     if (m_widget) {
         moveWidgetToParentSoon(*m_widget, nullptr);
@@ -207,7 +215,7 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
     }
 
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this);
+        cache->childrenChanged(*this);
 }
 
 void RenderWidget::layout()
@@ -234,6 +242,8 @@ void RenderWidget::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
 void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.requireSecurityOriginAccessForWidgets) {
         if (auto contentDocument = frameOwnerElement().contentDocument()) {
             if (!document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
@@ -241,7 +251,9 @@ void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintO
         }
     }
 
-    IntPoint contentPaintOffset = roundedIntPoint(paintOffset + location() + contentBoxRect().location());
+    auto contentPaintOffset = paintOffset + location() + contentBoxRect().location();
+    auto snappedPaintOffset = roundPointToDevicePixels(contentPaintOffset, document().deviceScaleFactor());
+
     // Tell the widget to paint now. This is the only time the widget is allowed
     // to paint itself. That way it will composite properly with z-indexed layers.
     LayoutRect paintRect = paintInfo.rect;
@@ -254,23 +266,23 @@ void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintO
     }
     }
 
-    IntPoint widgetLocation = m_widget->frameRect().location();
-    IntSize widgetPaintOffset = contentPaintOffset - widgetLocation;
+    auto widgetLocation = m_widget->frameRect().location();
+    auto widgetPaintOffset = snappedPaintOffset - widgetLocation;
     // When painting widgets into compositing layers, tx and ty are relative to the enclosing compositing layer,
     // not the root. In this case, shift the CTM and adjust the paintRect to be root-relative to fix plug-in drawing.
     if (!widgetPaintOffset.isZero()) {
         paintInfo.context().translate(widgetPaintOffset);
-        paintRect.move(-widgetPaintOffset);
+        paintRect.move(-widgetPaintOffset.width(), -widgetPaintOffset.height());
     }
 
     if (paintInfo.regionContext) {
         AffineTransform transform;
-        transform.translate(contentPaintOffset);
+        transform.translate(snappedPaintOffset);
         paintInfo.regionContext->pushTransform(transform);
     }
 
     // FIXME: Remove repaintrect enclosing/integral snapping when RenderWidget becomes device pixel snapped.
-    m_widget->paint(paintInfo.context(), snappedIntRect(paintRect), paintInfo.requireSecurityOriginAccessForWidgets ? Widget::SecurityOriginPaintPolicy::AccessibleOriginOnly : Widget::SecurityOriginPaintPolicy::AnyOrigin, paintInfo.regionContext);
+    m_widget->paint(paintInfo.context(), enclosingIntRect(paintRect), paintInfo.requireSecurityOriginAccessForWidgets ? Widget::SecurityOriginPaintPolicy::AccessibleOriginOnly : Widget::SecurityOriginPaintPolicy::AnyOrigin, paintInfo.regionContext);
 
     if (paintInfo.regionContext)
         paintInfo.regionContext->popTransform();
@@ -326,11 +338,10 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
         // Push a clip if we have a border radius, since we want to round the foreground content that gets painted.
         paintInfo.context().save();
-        auto roundedInnerRect = FloatRoundedRect(roundedContentBoxRect(borderRect));
-        BackgroundPainter::clipRoundedInnerRect(paintInfo.context(), roundedInnerRect);
+        clipToContentBoxShape(paintInfo.context(), adjustedPaintOffset, document().deviceScaleFactor());
     }
 
-    if (m_widget && !isSkippedContentRoot())
+    if (m_widget && !isSkippedContentRoot(*this))
         paintContents(paintInfo, paintOffset);
 
     if (style().hasBorderRadius())
@@ -383,7 +394,8 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
 
 IntRect RenderWidget::windowClipRect() const
 {
-    return intersection(view().frameView().contentsToWindow(m_clipRect), view().frameView().windowClipRect());
+    Ref frameView = view().frameView();
+    return intersection(frameView->contentsToWindow(m_clipRect), frameView->windowClipRect());
 }
 
 void RenderWidget::setSelectionState(HighlightState state)
@@ -458,9 +470,9 @@ RemoteFrame* RenderWidget::remoteFrame() const
     return dynamicDowncast<RemoteFrame>(frameOwnerElement().contentFrame());
 }
 
-bool RenderWidget::needsPreferredWidthsRecalculation() const
+bool RenderWidget::shouldInvalidatePreferredWidths() const
 {
-    if (RenderReplaced::needsPreferredWidthsRecalculation())
+    if (RenderReplaced::shouldInvalidatePreferredWidths())
         return true;
     return embeddedContentBox();
 }
@@ -469,7 +481,7 @@ RenderBox* RenderWidget::embeddedContentBox() const
 {
     if (!is<RenderEmbeddedObject>(this))
         return nullptr;
-    auto* frameView = dynamicDowncast<LocalFrameView>(widget());
+    RefPtr frameView = dynamicDowncast<LocalFrameView>(widget());
     return frameView ? frameView->embeddedContentBox() : nullptr;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,8 +59,8 @@ private:
     WEBCORE_EXPORT DOMWindowExtension(LocalDOMWindow*, DOMWrapperWorld&);
 
     WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData> m_window;
-    Ref<DOMWrapperWorld> m_world;
-    RefPtr<LocalFrame> m_disconnectedFrame;
+    const Ref<DOMWrapperWorld> m_world;
+    WeakPtr<LocalFrame> m_disconnectedFrame;
     bool m_wasDetached;
 };
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia S.L.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,11 +28,12 @@
 #include "AccessibilityAtspiEnums.h"
 #include "AccessibilityObject.h"
 #include "AXCoreObject.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "PlatformScreen.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "SurrogatePairAwareTextIterator.h"
 #include "TextIterator.h"
@@ -275,13 +276,11 @@ String AccessibilityObjectAtspi::text() const
 
     m_hasListMarkerAtStart = false;
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    if (m_coreObject->roleValue() == AccessibilityRole::ColorWell) {
+    if (m_coreObject->role() == AccessibilityRole::ColorWell) {
         auto color = convertColor<SRGBA<float>>(m_coreObject->colorValue()).resolved();
         GUniquePtr<char> colorString(g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", color.red, color.green, color.blue));
         return String::fromUTF8(colorString.get());
     }
-#endif
 
     if (m_coreObject->isTextControl())
         return m_coreObject->doAXStringForRange({ 0, String::MaxLength });
@@ -293,7 +292,7 @@ String AccessibilityObjectAtspi::text() const
     auto text = m_coreObject->textUnderElement(TextUnderElementMode(TextUnderElementMode::Children::IncludeAllChildren));
     if (auto* renderer = m_coreObject->renderer()) {
         if (is<RenderListItem>(*renderer) && downcast<RenderListItem>(*renderer).markerRenderer()) {
-            if (renderer->style().direction() == TextDirection::LTR) {
+            if (renderer->writingMode().isBidiLTR()) {
                 text = makeString(objectReplacementCharacter, text);
                 m_hasListMarkerAtStart = true;
             } else
@@ -501,7 +500,7 @@ int AccessibilityObjectAtspi::characterAtOffset(int offset) const
     return g_utf8_get_char(g_utf8_offset_to_pointer(utf8Text.data(), offset));
 }
 
-std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(UChar character, int index) const
+std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(char16_t character, int index) const
 {
     auto utf16Text = text();
     unsigned start = 0;
@@ -520,7 +519,7 @@ std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(UChar characte
     return UTF16OffsetToUTF8(mapping, offset);
 }
 
-std::optional<unsigned> AccessibilityObjectAtspi::characterIndex(UChar character, unsigned offset) const
+std::optional<unsigned> AccessibilityObjectAtspi::characterIndex(char16_t character, unsigned offset) const
 {
     auto utf16Text = text();
     auto utf8Text = utf16Text.utf8();
@@ -702,7 +701,7 @@ bool AccessibilityObjectAtspi::selectionBounds(int& startOffset, int& endOffset)
 
 void AccessibilityObjectAtspi::setSelectedRange(unsigned utf16Offset, unsigned length)
 {
-    auto* axObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+    auto* axObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
     if (!axObject)
         return;
 
@@ -793,10 +792,8 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         addAttributeIfNeeded("underline"_s, style.textDecorationLine() & TextDecorationLine::Underline ? "single"_s : "none"_s);
         addAttributeIfNeeded("invisible"_s, style.visibility() == Visibility::Hidden ? "true"_s : "false"_s);
         addAttributeIfNeeded("editable"_s, m_coreObject->canSetValueAttribute() ? "true"_s : "false"_s);
-        addAttributeIfNeeded("direction"_s, style.direction() == TextDirection::LTR ? "ltr"_s : "rtl"_s);
-
-        if (!style.textIndent().isUndefined())
-            addAttributeIfNeeded("indent"_s, makeString(valueForLength(style.textIndent(), m_coreObject->size().width()).toInt()));
+        addAttributeIfNeeded("direction"_s, style.writingMode().isBidiLTR() ? "ltr"_s : "rtl"_s);
+        addAttributeIfNeeded("indent"_s, makeString(Style::evaluate(style.textIndent().length, m_coreObject->size().width())));
 
         switch (style.textAlign()) {
         case TextAlignMode::Start:
@@ -823,14 +820,14 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         if (invalidStatus != "false"_s)
             addAttributeIfNeeded("invalid"_s, invalidStatus);
 
-        String language = m_coreObject->language();
+        String language = m_coreObject->languageIncludingAncestors();
         if (!language.isEmpty())
             addAttributeIfNeeded("language"_s, language);
 
         return attributes;
     };
 
-    auto defaultAttributes = accessibilityTextAttributes(*m_coreObject, { });
+    auto defaultAttributes = accessibilityTextAttributes(*m_coreObject.get(), { });
     if (!utf16Offset)
         return { WTFMove(defaultAttributes), -1, -1 };
 
@@ -841,10 +838,8 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         return { WTFMove(defaultAttributes), -1, -1 };
 
     if (!*utf16Offset && m_hasListMarkerAtStart) {
-        auto* axObject = m_coreObject->children()[0].get();
-        RELEASE_ASSERT(axObject);
         // Always consider list marker an independent run.
-        auto attributes = accessibilityTextAttributes(*axObject, defaultAttributes);
+        auto attributes = accessibilityTextAttributes(m_coreObject->children()[0].get(), defaultAttributes);
         if (!includeDefault)
             return { WTFMove(attributes), 0, 1 };
 
@@ -854,7 +849,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     }
 
     VisiblePosition offsetPosition = m_coreObject->visiblePositionForIndex(adjustInputOffset(*utf16Offset, m_hasListMarkerAtStart));
-    auto childNode = offsetPosition.deepEquivalent().protectedDeprecatedNode();
+    RefPtr childNode = offsetPosition.deepEquivalent().deprecatedNode();
     if (!childNode)
         return { WTFMove(defaultAttributes), -1, -1 };
 
@@ -879,6 +874,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         auto* axObject = r->document().axObjectCache()->get(r);
         if (!axObject)
             continue;
+
         auto childAttributes = accessibilityTextAttributes(*axObject, defaultAttributes);
         if (childAttributes != attributes)
             break;
@@ -896,6 +892,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         auto* axObject = r->document().axObjectCache()->get(r);
         if (!axObject)
             continue;
+
         auto childAttributes = accessibilityTextAttributes(*axObject, defaultAttributes);
         if (childAttributes != attributes)
             break;

@@ -66,21 +66,24 @@ inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseVa
 
     switch (mode) {
     case JSPropertyNameEnumerator::IndexedMode: {
-        if (arrayProfile && LIKELY(baseValue.isCell()))
+        if (arrayProfile) {
+            if (baseValue.isCell()) [[likely]]
             arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        }
         RELEASE_AND_RETURN(scope, baseValue.get(globalObject, static_cast<unsigned>(index)));
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
+        if (baseValue.isCell()) [[likely]] {
+            if (baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
             // We'll only match the structure ID if the base is an object.
             ASSERT(index < enumerator->endStructurePropertyIndex());
             RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
-        } else {
+            }
+        }
             if (enumeratorMetadata)
                 *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
+        [[fallthrough]];
         }
-        FALLTHROUGH;
-    }
 
     case JSPropertyNameEnumerator::GenericMode: {
         if (arrayProfile && baseValue.isCell() && mode != JSPropertyNameEnumerator::OwnStructureMode)
@@ -196,7 +199,7 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
     if (result)
         *result = structure;
 
-    if (LIKELY(canPutDirectFast(vm, structure, propertyName, isJSFunction))) {
+    if (canPutDirectFast(vm, structure, propertyName, isJSFunction)) [[likely]] {
         bool success = baseObject->putDirect(vm, propertyName, value, 0, slot);
         ASSERT_UNUSED(success, success);
     } else {
@@ -236,7 +239,7 @@ inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutable
 
     JSArray* result = JSArray::createWithButterfly(vm, nullptr, originalStructure, immutableButterfly->toButterfly());
     // FIXME: This works but it's slow. If we cared enough about the perf when having a bad time then we could fix it.
-    if (UNLIKELY(originalStructure != structure)) {
+    if (originalStructure != structure) [[unlikely]] {
         ASSERT(hasSlowPutArrayStorage(structure->indexingMode()));
         ASSERT(globalObject->isHavingABadTime());
 
@@ -290,7 +293,6 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_bitxor);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_object);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_function);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_instanceof_custom);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_callable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_constructor);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_strcat);
@@ -319,6 +321,8 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_val_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_define_data_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_define_accessor_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_throw_static_error);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_instanceof_custom_from_instanceof);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_throw_static_error_from_instanceof);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_promise);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_array_with_spread);

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,7 +26,6 @@
 #include "ElementInlines.h"
 #include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
-#include "Quirks.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -38,7 +37,6 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NameNodeList);
 NameNodeList::NameNodeList(ContainerNode& rootNode, const AtomString& name)
     : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateOnNameAttrChange)
     , m_name(name)
-    , m_needsGetElementsByNameQuirk(rootNode.document().quirks().needsGetElementsByNameQuirk())
 {
 }
 
@@ -49,12 +47,12 @@ Ref<NameNodeList> NameNodeList::create(ContainerNode& rootNode, const AtomString
 
 NameNodeList::~NameNodeList()
 {
-    protectedOwnerNode()->nodeLists()->removeCacheWithAtomName(*this, m_name);
+    ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
 bool NameNodeList::elementMatches(Element& element) const
 {
-    return (is<HTMLElement>(element) || m_needsGetElementsByNameQuirk) && element.getNameAttribute() == m_name;
+    return is<HTMLElement>(element) && element.getNameAttribute() == m_name;
 }
 
 } // namespace WebCore

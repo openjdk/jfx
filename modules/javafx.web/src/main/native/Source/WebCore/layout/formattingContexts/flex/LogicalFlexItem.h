@@ -26,6 +26,7 @@
 #pragma once
 
 #include "LayoutElementBox.h"
+#include "StyleFlexBasis.h"
 
 namespace WebCore {
 namespace Layout {
@@ -37,8 +38,9 @@ public:
 
         std::optional<LayoutUnit> definiteFlexBasis;
 
-        LayoutUnit maximumUsedSize;
-        LayoutUnit minimumUsedSize;
+        std::optional<LayoutUnit> size;
+        std::optional<LayoutUnit> maximumSize;
+        std::optional<LayoutUnit> minimumSize;
 
         std::optional<LayoutUnit> marginStart;
         std::optional<LayoutUnit> marginEnd;
@@ -83,7 +85,9 @@ public:
     bool isContentBoxBased() const { return style().boxSizing() == BoxSizing::ContentBox; }
 
     const ElementBox& layoutBox() const { return *m_layoutBox; }
+    CheckedRef<const ElementBox> checkedLayoutBox() const { return *m_layoutBox; }
     const RenderStyle& style() const { return layoutBox().style(); }
+    WritingMode writingMode() const { return style().writingMode(); }
 
 private:
     CheckedPtr<const ElementBox> m_layoutBox;

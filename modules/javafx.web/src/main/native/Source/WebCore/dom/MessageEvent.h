@@ -33,19 +33,18 @@
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "WindowProxy.h"
-#include <variant>
 
 namespace WebCore {
 
 class Blob;
 
-using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
+using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
 
 class MessageEvent final : public Event {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MessageEvent);
 public:
     struct JSValueTag { };
-    using DataType = std::variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
+    using DataType = Variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
     static Ref<MessageEvent> create(const AtomString& type, DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<Ref<MessagePort>>&& = { });
     static Ref<MessageEvent> create(DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<Ref<MessagePort>>&& = { });
     static Ref<MessageEvent> createForBindings();
@@ -75,7 +74,12 @@ public:
     const std::optional<MessageEventSource>& source() const { return m_source; }
     const Vector<Ref<MessagePort>>& ports() const { return m_ports; }
 
-    const DataType& data() const { return m_data; }
+    const DataType& data() const
+    {
+        IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
+        return m_data;
+        IGNORE_CLANG_WARNINGS_END
+    }
 
     JSValueInWrappedObject& jsData() { return m_jsData; }
     JSValueInWrappedObject& cachedData() { return m_cachedData; }

@@ -36,6 +36,8 @@
 #include <wtf/PrintStream.h>
 #include <wtf/StringPrintStream.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class UnlinkedValueProfile;
@@ -201,12 +203,12 @@ public:
     }
 
     unsigned size() const { return m_size; }
-    ValueProfileAndVirtualRegister* data() const
+    ValueProfileAndVirtualRegister* data() const LIFETIME_BOUND
     {
-        return bitwise_cast<ValueProfileAndVirtualRegister*>(this + 1);
+        return std::bit_cast<ValueProfileAndVirtualRegister*>(this + 1);
     }
 
-    std::span<ValueProfileAndVirtualRegister> span() { return { data(), size() }; }
+    std::span<ValueProfileAndVirtualRegister> span() LIFETIME_BOUND { return { data(), size() }; }
 
 private:
 
@@ -252,3 +254,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

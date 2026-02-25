@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ struct ControlStyle {
         Presenting          = 1 << 9,
         FormSemanticContext = 1 << 10,
         DarkAppearance      = 1 << 11,
-        RightToLeft         = 1 << 12,
+        InlineFlippedWritingMode = 1 << 12,
         LargeControls       = 1 << 13,
         ReadOnly            = 1 << 14,
         ListButton          = 1 << 15,

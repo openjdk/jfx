@@ -25,9 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
-#include "ImageBuffer.h"
 #include "ScriptWrappable.h"
 #include <atomic>
 #include <wtf/RefCounted.h>
@@ -45,11 +43,15 @@ class Blob;
 class CachedImage;
 class CanvasBase;
 class CSSStyleImageValue;
+class DestinationColorSpace;
+class FloatSize;
+class GLFence;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmapImageObserver;
 class ImageData;
+class ImageBuffer;
 class IntRect;
 class IntSize;
 #if ENABLE(OFFSCREEN_CANVAS)
@@ -58,21 +60,24 @@ class OffscreenCanvas;
 class PendingImageBitmap;
 class RenderElement;
 class ScriptExecutionContext;
+class SerializedImageBuffer;
 class SVGImageElement;
 #if ENABLE(WEB_CODECS)
 class WebCodecsVideoFrame;
 #endif
+enum class RenderingMode : uint8_t;
 
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class DetachedImageBitmap {
 public:
     DetachedImageBitmap(DetachedImageBitmap&&);
     WEBCORE_EXPORT ~DetachedImageBitmap();
     DetachedImageBitmap& operator=(DetachedImageBitmap&&);
-    size_t memoryCost() const { return m_bitmap->memoryCost(); }
+    size_t memoryCost() const;
 private:
     DetachedImageBitmap(UniqueRef<SerializedImageBuffer>, bool originClean, bool premultiplyAlpha, bool forciblyPremultiplyAlpha);
     UniqueRef<SerializedImageBuffer> m_bitmap;
@@ -85,7 +90,7 @@ private:
 class ImageBitmap final : public ScriptWrappable, public RefCounted<ImageBitmap> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageBitmap);
 public:
-    using Source = std::variant<
+    using Source = Variant<
         RefPtr<HTMLImageElement>,
 #if ENABLE(VIDEO)
         RefPtr<HTMLVideoElement>,
@@ -121,7 +126,7 @@ public:
 
     ~ImageBitmap();
 
-    ImageBuffer* buffer() const { return m_bitmap.get(); }
+    ImageBuffer* buffer() const;
 
     RefPtr<ImageBuffer> takeImageBuffer();
 
@@ -134,11 +139,13 @@ public:
 
     std::optional<DetachedImageBitmap> detach();
     bool isDetached() const { return !m_bitmap; }
-    void close() { takeImageBuffer(); }
+    void close();
 
 #if USE(SKIA)
     void prepareForCrossThreadTransfer();
+    void finalizeCrossThreadTransfer();
 #endif
+
 
     size_t memoryCost() const;
 private:
@@ -166,13 +173,15 @@ private:
     static void createCompletionHandler(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
     static void createCompletionHandler(ScriptExecutionContext&, RefPtr<CSSStyleImageValue>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
     static void createFromBuffer(ScriptExecutionContext&, Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
-    void updateMemoryCost();
 
     RefPtr<ImageBuffer> m_bitmap;
-    std::atomic<size_t> m_memoryCost { 0 };
+    std::atomic<size_t> m_memoryCost { 0 }; // Atomic, accessed from arbitrary thread by GC.
     const bool m_originClean : 1 { false };
     const bool m_premultiplyAlpha : 1 { false };
     const bool m_forciblyPremultiplyAlpha : 1 { false };
+#if USE(SKIA)
+    std::unique_ptr<GLFence> m_fence;
+#endif
 };
 
 }

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DataListButtonElement.h"
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
@@ -71,6 +69,10 @@ void DataListButtonElement::defaultEventHandler(Event& event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
-} // namespace WebCore
+bool DataListButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
+}
 
-#endif // ENABLE(DATALIST_ELEMENT)
+} // namespace WebCore

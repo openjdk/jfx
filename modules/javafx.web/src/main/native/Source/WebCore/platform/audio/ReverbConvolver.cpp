@@ -35,8 +35,11 @@
 #include "VectorMath.h"
 #include "AudioBus.h"
 #include <mutex>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ReverbConvolver);
 
 constexpr int InputBufferSize = 8 * 16384;
 
@@ -44,7 +47,7 @@ constexpr int InputBufferSize = 8 * 16384;
 // It turns out then, that the background thread has about 278msec of scheduling slop.
 // Empirically, this has been found to be a good compromise between giving enough time for scheduling slop,
 // while still minimizing the amount of processing done in the primary (high-priority) thread.
-// This was found to be a good value on Mac OS X, and may work well on other platforms as well, assuming
+// This was found to be a good value on macOS, and may work well on other platforms as well, assuming
 // the very rough scheduling latencies are similar on these time-scales.  Of course, this code may need to be
 // tuned for individual platforms if this assumption is found to be incorrect.
 constexpr size_t RealtimeFrameLimit = 8192  + 4096; // ~278msec @ 44.1KHz
@@ -70,7 +73,7 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
     // Otherwise, assume we're being run from a command-line tool.
     bool hasRealtimeConstraint = useBackgroundThreads;
 
-    const float* response = impulseResponse->data();
+    auto response = impulseResponse->span();
     size_t totalResponseLength = impulseResponse->length();
 
     // The total latency is zero because the direct-convolution is used in the leading portion.
@@ -92,7 +95,7 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
 
         bool useDirectConvolver = !stageOffset;
 
-        auto stage = makeUnique<ReverbConvolverStage>(response, totalResponseLength, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, scale, useDirectConvolver);
+        auto stage = makeUnique<ReverbConvolverStage>(response, reverbTotalLatency, stageOffset, stageSize, fftSize, renderPhase, renderSliceSize, &m_accumulationBuffer, scale, useDirectConvolver);
 
         bool isBackgroundStage = false;
 
@@ -119,9 +122,9 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
     // Start up background thread
     // FIXME: would be better to up the thread priority here.  It doesn't need to be real-time, but higher than the default...
     if (this->useBackgroundThreads() && m_backgroundStages.size() > 0) {
-        m_backgroundThread = Thread::create("convolution background thread"_s, [this] {
+        lazyInitialize(m_backgroundThread, Thread::create("convolution background thread"_s, [this] {
             backgroundThreadEntry();
-        }, ThreadType::Audio);
+        }, ThreadType::Audio));
     }
 }
 
@@ -174,19 +177,19 @@ void ReverbConvolver::process(const AudioChannel* sourceChannel, AudioChannel* d
     if (!isSafe)
         return;
 
-    const float* source = sourceChannel->data();
-    float* destination = destinationChannel->mutableData();
-    bool isDataSafe = source && destination;
+    auto source = sourceChannel->span().first(framesToProcess);
+    auto destination = destinationChannel->mutableSpan();
+    bool isDataSafe = source.data() && destination.data();
     ASSERT(isDataSafe);
     if (!isDataSafe)
         return;
 
     // Feed input buffer (read by all threads)
-    m_inputBuffer.write(source, framesToProcess);
+    m_inputBuffer.write(source);
 
     // Accumulate contributions from each stage
     for (size_t i = 0; i < m_stages.size(); ++i)
-        m_stages[i]->process(source, framesToProcess);
+        m_stages[i]->process(source);
 
     // Finally read from accumulation buffer
     m_accumulationBuffer.readAndClear(destination, framesToProcess);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,10 @@
 package hello;
 
 import java.io.File;
+import java.util.Optional;
 
 import javafx.application.Application;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -35,9 +37,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -53,7 +58,6 @@ public class HelloModality extends Application {
     }
 
     Scene createScene(final Stage stage) {
-
         Group root = new Group();
         int xyOffset = offset * counter++;
         if (xyOffset > 200) xyOffset = 0;
@@ -65,6 +69,24 @@ public class HelloModality extends Application {
         checker.setLayoutX(25);
         checker.setLayoutY(40);
         root.getChildren().add(checker);
+
+        // Setup AlwaysOnTop checker
+        final CheckBox onTopChecker = new CheckBox("AlwaysOnTop");
+        onTopChecker.setSelected(false);
+        onTopChecker.setLayoutX(25);
+        onTopChecker.setLayoutY(65);
+        root.getChildren().add(onTopChecker);
+
+        // Setup secondary screen checker
+        final CheckBox secondaryScreenChecker = new CheckBox("2nd Screen");
+        secondaryScreenChecker.setSelected(false);
+        secondaryScreenChecker.setDisable(Screen.getScreens().size() < 2);
+        secondaryScreenChecker.setLayoutX(25);
+        secondaryScreenChecker.setLayoutY(90);
+        Screen.getScreens().addListener((ListChangeListener.Change<? extends Screen> change) -> {
+            secondaryScreenChecker.setDisable(Screen.getScreens().size() < 2);
+        });
+        root.getChildren().add(secondaryScreenChecker);
 
         // Setup Modality Selection
         final ToggleGroup modalityGroup = new ToggleGroup();
@@ -111,7 +133,8 @@ public class HelloModality extends Application {
         root.getChildren().add(stButton);
         root.getChildren().add(suButton);
 
-        Button button = new Button("Create Dialog");
+        Button button = new Button("Create Stage");
+        button.setTooltip(new Tooltip("Creates a new stage"));
         button.setLayoutX(100);
         button.setLayoutY(200);
         button.setOnAction(new EventHandler<ActionEvent>() {
@@ -120,6 +143,9 @@ public class HelloModality extends Application {
 
                 boolean owned = checker.isSelected();
                 dialog.initOwner(owned ? stage : null);
+
+                boolean alwaysOnTop = onTopChecker.isSelected();
+                dialog.setAlwaysOnTop(alwaysOnTop);
 
                 Modality modality;
                 if (applicationButton.isSelected()) {
@@ -153,7 +179,8 @@ public class HelloModality extends Application {
                 Group dialogRoot = (Group) dialogScene.getRoot();
 
                 Button dialogButton = new Button("Dismiss");
-                dialogButton.setLayoutX(275);
+                dialogButton.setTooltip(new Tooltip("Hides (closes) this stage"));
+                dialogButton.setLayoutX(375);
                 dialogButton.setLayoutY(200);
                 dialogButton.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent e) {
@@ -162,14 +189,30 @@ public class HelloModality extends Application {
                 });
                 dialogRoot.getChildren().add(dialogButton);
 
-
                 dialog.setScene(dialogScene);
+
+                if (secondaryScreenChecker.isSelected()) {
+                    Optional<Screen> otherScreen = Screen.getScreens()
+                            .stream()
+                            .filter(scr -> !Screen.getPrimary().equals(scr))
+                            .findFirst();
+                    otherScreen.ifPresent(scr -> {
+                        double x = (scr.getVisualBounds().getWidth() - scene.getWidth()) / 2.0 +
+                                scr.getVisualBounds().getMinX();
+                        double y = (scr.getVisualBounds().getHeight()- scene.getHeight()) / 2.0 +
+                                scr.getVisualBounds().getMinY();
+                        dialog.setX(x);
+                        dialog.setY(y);
+                    });
+                }
+
                 dialog.show();
             }
         });
         root.getChildren().add(button);
 
         Button button2 = new Button("Click Me");
+        button2.setTooltip(new Tooltip("Prints a message"));
         button2.setLayoutX(200);
         button2.setLayoutY(200);
         button2.setOnAction(new EventHandler<ActionEvent>() {
@@ -178,6 +221,18 @@ public class HelloModality extends Application {
             }
         });
         root.getChildren().add(button2);
+
+        ToggleButton onTopButton = new ToggleButton("AlwaysOnTop");
+        onTopButton.setTooltip(new Tooltip("Toggles the alwaysOnTop property"));
+        onTopButton.setSelected(stage.isAlwaysOnTop());
+        onTopButton.setLayoutX(275);
+        onTopButton.setLayoutY(200);
+        onTopButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {
+                stage.setAlwaysOnTop(onTopButton.isSelected());
+            }
+        });
+        root.getChildren().add(onTopButton);
 
         // Owned file dialog checkbox
         final CheckBox ownedFileChooser = new CheckBox("Owned file chooser");

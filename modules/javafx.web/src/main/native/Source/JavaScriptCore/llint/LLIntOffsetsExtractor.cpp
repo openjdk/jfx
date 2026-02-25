@@ -53,7 +53,7 @@
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
 #include "JSTypeInfo.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "JumpTable.h"
 #include "LLIntData.h"
@@ -73,6 +73,8 @@
 #include "ValueProfile.h"
 #include "WasmCallingConvention.h"
 #include "WasmFunctionCodeBlockGenerator.h"
+#include "WasmIPIntGenerator.h"
+#include "WasmIPIntSlowPaths.h"
 #include "Watchdog.h"
 #include "WebAssemblyFunction.h"
 #include <stdio.h>

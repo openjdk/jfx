@@ -34,6 +34,7 @@
 #include "CachedSVGDocumentClient.h"
 #include "FilterRenderingMode.h"
 #include "RenderLayer.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ class FilterOperations;
 class GraphicsContextSwitcher;
 
 class RenderLayerFilters final : private CachedSVGDocumentClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderLayerFilters);
 public:
     explicit RenderLayerFilters(RenderLayer&);
     virtual ~RenderLayerFilters();
@@ -77,7 +78,7 @@ private:
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void resetDirtySourceRect() { m_dirtySourceRect = LayoutRect(); }
 
-    RenderLayer& m_layer;
+    const CheckedRef<RenderLayer> m_layer;
     Vector<RefPtr<Element>> m_internalSVGReferences;
     Vector<CachedResourceHandle<CachedSVGDocument>> m_externalSVGReferences;
 

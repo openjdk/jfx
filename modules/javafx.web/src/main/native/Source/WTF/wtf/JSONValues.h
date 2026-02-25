@@ -33,6 +33,7 @@
 #pragma once
 
 #include <wtf/HashMap.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -52,11 +53,12 @@ class Object;
 class ObjectBase;
 
 // FIXME: unify this JSON parser with JSONParse in JavaScriptCore.
-class WTF_EXPORT_PRIVATE Value : public RefCounted<Value> {
+class WTF_EXPORT_PRIVATE Value : public RefCounted<Value>, public NoVirtualDestructorBase {
 public:
     static constexpr int maxDepth = 1000;
 
     void operator delete(Value*, std::destroying_delete_t);
+    bool operator!() const;
 
     ~Value()
     {
@@ -106,6 +108,7 @@ public:
     RefPtr<Array> asArray();
 
     static RefPtr<Value> parseJSON(StringView);
+    static std::optional<Ref<Value>> optionalParseJSON(StringView);
 
     String toJSONString() const;
 
@@ -170,7 +173,7 @@ private:
     } m_value;
 };
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR ObjectBase : public Value {
+class ObjectBase : public Value {
 private:
     friend class Value;
     using DataStorage = HashMap<String, Ref<Value>>;
@@ -205,10 +208,12 @@ protected:
 
     WTF_EXPORT_PRIVATE void remove(const String& name);
 
-    iterator begin() { return m_map.begin(); }
-    iterator end() { return m_map.end(); }
-    const_iterator begin() const { return m_map.begin(); }
-    const_iterator end() const { return m_map.end(); }
+    iterator begin() LIFETIME_BOUND { return m_map.begin(); }
+    iterator end() LIFETIME_BOUND { return m_map.end(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_map.begin(); }
+    const_iterator end() const LIFETIME_BOUND { return m_map.end(); }
+
+    OrderStorage keys() const { return m_order; }
 
     unsigned size() const { return m_map.size(); }
 
@@ -257,11 +262,13 @@ public:
     using ObjectBase::begin;
     using ObjectBase::end;
 
+    using ObjectBase::keys;
+
     using ObjectBase::size;
 };
 
 
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR WTF_EXPORT_PRIVATE ArrayBase : public Value {
+class WTF_EXPORT_PRIVATE ArrayBase : public Value {
 private:
     friend class Value;
     using DataStorage = Vector<Ref<Value>>;
@@ -467,6 +474,11 @@ public:
     using ArrayBase::end;
 };
 
+
+inline bool Value::operator!() const
+{
+    return isNull();
+}
 
 inline RefPtr<Value> Value::asValue()
 {

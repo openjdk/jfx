@@ -1,6 +1,6 @@
 /*
  * Copyright 2016 The Chromium Authors. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ public:
 private:
     IIRFilterNode(BaseAudioContext&, const Vector<double>& feedforward, const Vector<double>& feedback, bool isFilterStable);
 
-    IIRProcessor* iirProcessor() { return static_cast<IIRProcessor*>(processor()); }
+    IIRProcessor* iirProcessor() { return downcast<IIRProcessor>(processor()); }
 };
 
 } // namespace WebCore

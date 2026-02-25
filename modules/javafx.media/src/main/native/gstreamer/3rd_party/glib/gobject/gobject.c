@@ -228,10 +228,17 @@ static GQuark             quark_closure_array = 0;
 static GQuark             quark_weak_notifies = 0;
 static GQuark             quark_toggle_refs = 0;
 static GQuark             quark_notify_queue;
-static GParamSpecPool      *pspec_pool = NULL;
+static GParamSpecPool      *pspec_pool = NULL; /* atomic */
 static gulong             gobject_signals[LAST_SIGNAL] = { 0, };
 static guint (*floating_flag_handler) (GObject*, gint) = object_floating_flag_handler;
 static GQuark             quark_weak_locations = 0;
+
+static gpointer (*_local_g_datalist_id_update_atomic) (GData **datalist,
+                                                       GQuark key_id,
+                                                       GDataListUpdateAtomicFunc callback,
+                                                       gpointer user_data) = NULL;
+#undef _g_datalist_id_update_atomic
+#define _g_datalist_id_update_atomic(...) ((_local_g_datalist_id_update_atomic) (__VA_ARGS__))
 
 #if HAVE_PRIVATE
 G_ALWAYS_INLINE static inline GObjectPrivate *
@@ -367,8 +374,7 @@ weak_ref_data_unlock (WeakRefData *wrdata)
 }
 
 static gpointer
-weak_ref_data_get_or_create_cb (GQuark key_id,
-                                gpointer *data,
+weak_ref_data_get_or_create_cb (gpointer *data,
                                 GDestroyNotify *destroy_notify,
                                 gpointer user_data)
 {
@@ -919,15 +925,22 @@ _g_object_type_init (void)
  * first caller of this function will win the race. Any other access to
  * the GParamSpecPool is done under its own mutex.
  */
-static inline void
-g_object_init_pspec_pool (void)
+static inline GParamSpecPool *
+g_object_maybe_init_pspec_pool (void)
 {
-  if (G_UNLIKELY (g_atomic_pointer_get (&pspec_pool) == NULL))
+  GParamSpecPool *pool = g_atomic_pointer_get (&pspec_pool);
+
+  if (G_UNLIKELY (pool == NULL))
     {
-      GParamSpecPool *pool = g_param_spec_pool_new (TRUE);
-      if (!g_atomic_pointer_compare_and_exchange (&pspec_pool, NULL, pool))
-        g_param_spec_pool_free (pool);
+      GParamSpecPool *new_pool = g_param_spec_pool_new (TRUE);
+      if (g_atomic_pointer_compare_and_exchange_full (&pspec_pool, NULL,
+                                                      new_pool, &pool))
+        pool = g_steal_pointer (&new_pool);
+
+      g_clear_pointer (&new_pool, g_param_spec_pool_free);
     }
+
+  return pool;
 }
 
 static void
@@ -954,18 +967,19 @@ static void
 g_object_base_class_finalize (GObjectClass *class)
 {
   GList *list, *node;
+  GParamSpecPool *param_spec_pool;
 
   _g_signals_destroy (G_OBJECT_CLASS_TYPE (class));
 
   g_slist_free (class->construct_properties);
   class->construct_properties = NULL;
   class->n_construct_properties = 0;
-  list = g_param_spec_pool_list_owned (pspec_pool, G_OBJECT_CLASS_TYPE (class));
+  param_spec_pool = g_atomic_pointer_get (&pspec_pool);
+  list = g_param_spec_pool_list_owned (param_spec_pool, G_OBJECT_CLASS_TYPE (class));
   for (node = list; node; node = node->next)
     {
       GParamSpec *pspec = node->data;
-
-      g_param_spec_pool_remove (pspec_pool, pspec);
+      g_param_spec_pool_remove (param_spec_pool, pspec);
       PARAM_SPEC_SET_PARAM_ID (pspec, 0);
       g_param_spec_unref (pspec);
     }
@@ -981,7 +995,9 @@ g_object_do_class_init (GObjectClass *class)
   quark_toggle_refs = g_quark_from_static_string ("GObject-toggle-references");
   quark_notify_queue = g_quark_from_static_string ("GObject-notify-queue");
 
-  g_object_init_pspec_pool ();
+  g_atomic_pointer_set (&_local_g_datalist_id_update_atomic, GLIB_PRIVATE_CALL (g_datalist_id_update_atomic));
+
+  g_object_maybe_init_pspec_pool ();
 
   class->constructor = g_object_constructor;
   class->constructed = g_object_constructed;
@@ -1049,11 +1065,12 @@ install_property_internal (GType       g_type,
          guint       property_id,
          GParamSpec *pspec)
 {
+  GParamSpecPool *param_spec_pool;
   g_param_spec_ref_sink (pspec);
 
-  g_object_init_pspec_pool ();
+  param_spec_pool = g_object_maybe_init_pspec_pool ();
 
-  if (g_param_spec_pool_lookup (pspec_pool, pspec->name, g_type, FALSE))
+  if (g_param_spec_pool_lookup (param_spec_pool, pspec->name, g_type, FALSE))
     {
       g_critical ("When installing property: type '%s' already has a property named '%s'",
       g_type_name (g_type),
@@ -1063,7 +1080,7 @@ install_property_internal (GType       g_type,
     }
 
   PARAM_SPEC_SET_PARAM_ID (pspec, property_id);
-  g_param_spec_pool_insert (pspec_pool, g_steal_pointer (&pspec), g_type);
+  g_param_spec_pool_insert (param_spec_pool, g_steal_pointer (&pspec), g_type);
   return TRUE;
 }
 
@@ -1116,7 +1133,8 @@ validate_and_install_class_property (GObjectClass *class,
       /* for property overrides of construct properties, we have to get rid
        * of the overridden inherited construct property
        */
-      pspec = g_param_spec_pool_lookup (pspec_pool, pspec->name, parent_type, TRUE);
+      pspec = g_param_spec_pool_lookup (g_atomic_pointer_get (&pspec_pool),
+                                        pspec->name, parent_type, TRUE);
       if (pspec && pspec->flags & (G_PARAM_CONSTRUCT | G_PARAM_CONSTRUCT_ONLY))
         {
           class->construct_properties = g_slist_remove (class->construct_properties, pspec);
@@ -1232,7 +1250,7 @@ find_pspec (GObjectClass *class,
         }
     }
 
-  return g_param_spec_pool_lookup (pspec_pool,
+  return g_param_spec_pool_lookup (g_atomic_pointer_get (&pspec_pool),
                                    property_name,
                                    ((GTypeClass *)class)->g_type,
                                    TRUE);
@@ -1475,13 +1493,14 @@ g_object_interface_find_property (gpointer      g_iface,
           const gchar  *property_name)
 {
   GTypeInterface *iface_class = g_iface;
+  GParamSpecPool *param_spec_pool;
 
   g_return_val_if_fail (G_TYPE_IS_INTERFACE (iface_class->g_type), NULL);
   g_return_val_if_fail (property_name != NULL, NULL);
 
-  g_object_init_pspec_pool ();
+  param_spec_pool = g_object_maybe_init_pspec_pool ();
 
-  return g_param_spec_pool_lookup (pspec_pool,
+  return g_param_spec_pool_lookup (param_spec_pool,
            property_name,
            iface_class->g_type,
            FALSE);
@@ -1518,6 +1537,7 @@ g_object_class_override_property (GObjectClass *oclass,
           guint         property_id,
           const gchar  *name)
 {
+  GParamSpecPool *param_spec_pool;
   GParamSpec *overridden = NULL;
   GParamSpec *new;
   GType parent_type;
@@ -1526,11 +1546,13 @@ g_object_class_override_property (GObjectClass *oclass,
   g_return_if_fail (property_id > 0);
   g_return_if_fail (name != NULL);
 
+  param_spec_pool = g_atomic_pointer_get (&pspec_pool);
+
   /* Find the overridden property; first check parent types
    */
   parent_type = g_type_parent (G_OBJECT_CLASS_TYPE (oclass));
   if (parent_type != G_TYPE_NONE)
-    overridden = g_param_spec_pool_lookup (pspec_pool,
+    overridden = g_param_spec_pool_lookup (param_spec_pool,
              name,
              parent_type,
              TRUE);
@@ -1544,10 +1566,10 @@ g_object_class_override_property (GObjectClass *oclass,
       ifaces = g_type_interfaces (G_OBJECT_CLASS_TYPE (oclass), &n_ifaces);
       while (n_ifaces-- && !overridden)
         {
-          overridden = g_param_spec_pool_lookup (pspec_pool,
-                                                 name,
-                                                 ifaces[n_ifaces],
-                                                 FALSE);
+    overridden = g_param_spec_pool_lookup (param_spec_pool,
+             name,
+             ifaces[n_ifaces],
+             FALSE);
         }
 
       g_free (ifaces);
@@ -1583,7 +1605,7 @@ g_object_class_list_properties (GObjectClass *class,
 
   g_return_val_if_fail (G_IS_OBJECT_CLASS (class), NULL);
 
-  pspecs = g_param_spec_pool_list (pspec_pool,
+  pspecs = g_param_spec_pool_list (g_atomic_pointer_get (&pspec_pool),
            G_OBJECT_CLASS_TYPE (class),
            &n);
   if (n_properties_p)
@@ -1616,14 +1638,15 @@ g_object_interface_list_properties (gpointer      g_iface,
             guint        *n_properties_p)
 {
   GTypeInterface *iface_class = g_iface;
+  GParamSpecPool *param_spec_pool;
   GParamSpec **pspecs;
   guint n;
 
   g_return_val_if_fail (G_TYPE_IS_INTERFACE (iface_class->g_type), NULL);
 
-  g_object_init_pspec_pool ();
+  param_spec_pool = g_object_maybe_init_pspec_pool ();
 
-  pspecs = g_param_spec_pool_list (pspec_pool,
+  pspecs = g_param_spec_pool_list (param_spec_pool,
            iface_class->g_type,
            &n);
   if (n_properties_p)
@@ -1756,20 +1779,29 @@ g_object_real_dispose (GObject *object)
   g_datalist_id_set_data (&object->qdata, quark_closure_array, NULL);
 }
 
+static gboolean
+g_diagnostic_is_enabled (void)
+{
+  static const char *g_enable_diagnostic = NULL;
+
+  if (g_once_init_enter_pointer (&g_enable_diagnostic))
+    {
+      const gchar *value = g_getenv ("G_ENABLE_DIAGNOSTIC");
+
+      if (value == NULL)
+        value = "0";
+
+      g_once_init_leave_pointer (&g_enable_diagnostic, value);
+    }
+
+  return g_enable_diagnostic[0] == '1';
+}
+
 #ifdef G_ENABLE_DEBUG
 static gboolean
 floating_check (GObject *object)
 {
-  static const char *g_enable_diagnostic = NULL;
-
-  if (G_UNLIKELY (g_enable_diagnostic == NULL))
-    {
-      g_enable_diagnostic = g_getenv ("G_ENABLE_DIAGNOSTIC");
-      if (g_enable_diagnostic == NULL)
-        g_enable_diagnostic = "0";
-    }
-
-  if (g_enable_diagnostic[0] == '1')
+  if (g_diagnostic_is_enabled ())
     return g_object_is_floating (object);
 
   return FALSE;
@@ -1960,7 +1992,7 @@ g_object_notify (GObject     *object,
    * (by, e.g. calling g_object_class_find_property())
    * because g_object_notify_queue_add() does that
    */
-  pspec = g_param_spec_pool_lookup (pspec_pool,
+  pspec = g_param_spec_pool_lookup (g_atomic_pointer_get (&pspec_pool),
             property_name,
             G_OBJECT_TYPE (object),
             TRUE);
@@ -2067,21 +2099,10 @@ static void
 maybe_issue_property_deprecation_warning (const GParamSpec *pspec)
 {
   static GHashTable *already_warned_table;
-  static const gchar *enable_diagnostic;
   static GMutex already_warned_lock;
   gboolean already;
 
-  if (g_once_init_enter_pointer (&enable_diagnostic))
-    {
-      const gchar *value = g_getenv ("G_ENABLE_DIAGNOSTIC");
-
-      if (!value)
-        value = "0";
-
-      g_once_init_leave_pointer (&enable_diagnostic, value);
-    }
-
-  if (enable_diagnostic[0] == '0')
+  if (!g_diagnostic_is_enabled ())
     return;
 
   /* We hash only on property names: this means that we could end up in
@@ -2213,6 +2234,7 @@ object_interface_check_properties (gpointer check_data,
 {
   GTypeInterface *iface_class = g_iface;
   GObjectClass *class;
+  GParamSpecPool *param_spec_pool;
   GType iface_type = iface_class->g_type;
   GParamSpec **pspecs;
   guint n;
@@ -2225,11 +2247,12 @@ object_interface_check_properties (gpointer check_data,
   if (!G_IS_OBJECT_CLASS (class))
     goto out;
 
-  pspecs = g_param_spec_pool_list (pspec_pool, iface_type, &n);
+  param_spec_pool = g_atomic_pointer_get (&pspec_pool);
+  pspecs = g_param_spec_pool_list (param_spec_pool, iface_type, &n);
 
   while (n--)
     {
-      GParamSpec *class_pspec = g_param_spec_pool_lookup (pspec_pool,
+      GParamSpec *class_pspec = g_param_spec_pool_lookup (param_spec_pool,
                 pspecs[n]->name,
                 G_OBJECT_CLASS_TYPE (class),
                 TRUE);
@@ -5155,6 +5178,14 @@ g_value_dup_object (const GValue *value)
  * emitting a signal while @gobject is being destroyed in another thread
  * is not safe).
  *
+ * This function cannot fail. If the given signal name doesn’t exist,
+ * a critical warning is emitted. No validation is performed on the
+ * "detail" string when specified in @detailed_signal, other than a
+ * non-empty check.
+ *
+ * Refer to the [signals documentation](signals.html) for more
+ * details.
+ *
  * Returns: the handler id.
  */
 gulong
@@ -5632,8 +5663,7 @@ _weak_ref_set (GWeakRef *weak_ref,
 
 /**
  * g_weak_ref_init: (skip)
- * @weak_ref: (inout): uninitialized or empty location for a weak
- *    reference
+ * @weak_ref: uninitialized or empty location for a weak reference
  * @object: (type GObject.Object) (nullable): a #GObject or %NULL
  *
  * Initialise a non-statically-allocated #GWeakRef.
@@ -5667,7 +5697,7 @@ g_weak_ref_init (GWeakRef *weak_ref,
 
 /**
  * g_weak_ref_clear: (skip)
- * @weak_ref: (inout): location of a weak reference, which
+ * @weak_ref: location of a weak reference, which
  *  may be empty
  *
  * Frees resources associated with a non-statically-allocated #GWeakRef.
@@ -5689,7 +5719,7 @@ g_weak_ref_clear (GWeakRef *weak_ref)
 
 /**
  * g_weak_ref_get: (skip)
- * @weak_ref: (inout): location of a weak reference to a #GObject
+ * @weak_ref: location of a weak reference to a #GObject
  *
  * If @weak_ref is not empty, atomically acquire a strong
  * reference to the object it points to, and return that reference.

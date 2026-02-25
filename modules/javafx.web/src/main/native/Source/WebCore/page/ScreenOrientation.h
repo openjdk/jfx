@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ScreenOrientationLockType.h"
 #include "ScreenOrientationManager.h"
 #include "ScreenOrientationType.h"
@@ -41,12 +42,13 @@ class DeferredPromise;
 class ScreenOrientation final : public ActiveDOMObject, public EventTarget, public ScreenOrientationManagerObserver, public VisibilityChangeClient, public RefCounted<ScreenOrientation> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ScreenOrientation);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<ScreenOrientation> create(Document*);
     ~ScreenOrientation();
 
-    using ScreenOrientationManagerObserver::weakPtrFactory;
-    using ScreenOrientationManagerObserver::WeakValueType;
-    using ScreenOrientationManagerObserver::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(ScreenOrientationManagerObserver);
 
     using LockType = ScreenOrientationLockType;
     using Type = ScreenOrientationType;
@@ -55,10 +57,6 @@ public:
     ExceptionOr<void> unlock();
     Type type() const;
     uint16_t angle() const;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     ScreenOrientation(Document*);

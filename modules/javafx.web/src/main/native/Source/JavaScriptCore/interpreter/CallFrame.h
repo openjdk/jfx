@@ -30,6 +30,12 @@
 #include "VM.h"
 #include <wtf/EnumClassOperatorOverloads.h>
 
+#if OS(WINDOWS)
+#include <intrin.h>
+#endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC  {
 
 class JSWebAssemblyInstance;
@@ -118,33 +124,53 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
     //      Layout of CallFrame
     //
+    //  Higher addresses are on top.
+    //  Slots marked with "(+)" have a different meaning when executing Wasm code.
+    //  See details below the diagram.
+    //
+    //
     //   |          ......            |   |
     //   +----------------------------+   |
-    //   |           argN             |   v  lower address
+    //   |           argN             |   v  lower addresses
+    //   +----------------------------+
+    //   |           ...              |
     //   +----------------------------+
     //   |           arg1             |
     //   +----------------------------+
     //   |           arg0             |
     //   +----------------------------+
-    //   |           this             |
+    //   |          this(+)           |
     //   +----------------------------+
     //   | argumentCountIncludingThis |
     //   +----------------------------+
     //   |          callee            |
     //   +----------------------------+
-    //   |        codeBlock           |
+    //   |       codeBlock(+)         |
     //   +----------------------------+
-    //   |      return-address        |
+    //   |       returnAddress        |
     //   +----------------------------+
-    //   |       callerFrame          |
-    //   +----------------------------+  <- callee's cfr is pointing this address
+    //   |        callerFrame         |  <- callee's cfr is pointing at this address
+    //   +----------------------------+
     //   |          local0            |
     //   +----------------------------+
     //   |          local1            |
     //   +----------------------------+
+    //   |           ...              |
+    //   +----------------------------+
     //   |          localN            |
     //   +----------------------------+
     //   |          ......            |
+    //
+    //
+    //  Overloaded slots:
+    //
+    //    - 'this': when executing wasm code, the slot contains the value of SP saved before the call.
+    //      Saving the value allows moving the SP freely in tail calls.
+    //    - 'codeBlock': when executing wasm code, the slot contains a pointer to the Wasm instance.
+    //      The pointer is determined by 'resolveWasmCall()' in WasmIPIntSlowPaths.cpp.
+    //      A special case is calling a module import whose functionCallLinkInfo.targetInstance is
+    //      null, which is the case when the imported function is a JS function.
+    //      In that case, 'codeBlock' points at the functionCallLinkInfo object.
 
     enum class CallFrameSlot {
         codeBlock = CallerFrameAndPC::sizeInRegisters,
@@ -175,7 +201,7 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         CalleeBits callee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].unboxedInt64()); }
         SUPPRESS_ASAN CalleeBits unsafeCallee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].asanUnsafeUnboxedInt64()); }
         CodeBlock* codeBlock() const;
-        CodeBlock** addressOfCodeBlock() const { return bitwise_cast<CodeBlock**>(this + static_cast<int>(CallFrameSlot::codeBlock)); }
+        CodeBlock** addressOfCodeBlock() const { return std::bit_cast<CodeBlock**>(this + static_cast<int>(CallFrameSlot::codeBlock)); }
         inline SUPPRESS_ASAN CodeBlock* unsafeCodeBlock() const;
         inline JSScope* scope(int scopeRegisterOffset) const;
 
@@ -204,7 +230,7 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
         static constexpr ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
-        void* rawReturnPCForInspection() const { return callerFrameAndPC().returnPC; }
+        void* rawReturnPC() const { return callerFrameAndPC().returnPC; }
         void* returnPCForInspection() const { return removeCodePtrTag(callerFrameAndPC().returnPC); }
         bool hasReturnPC() const { return !!callerFrameAndPC().returnPC; }
         void clearReturnPC() { callerFrameAndPC().returnPC = nullptr; }
@@ -270,7 +296,7 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         // arguments(0) will not fetch the 'this' value. To get/set 'this',
         // use thisValue() and setThisValue() below.
 
-        JSValue* addressOfArgumentsStart() const { return bitwise_cast<JSValue*>(this + argumentOffset(0)); }
+        JSValue* addressOfArgumentsStart() const { return std::bit_cast<JSValue*>(this + argumentOffset(0)); }
         JSValue argument(size_t argument) const
         {
             if (argument >= argumentCount())
@@ -383,7 +409,7 @@ JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
             : "rbp" /* clobber rbp */ \
         ); \
         ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \
-        bitwise_cast<JSC::CallFrame*>(*((uintptr_t**) _AddressOfReturnAddress() - 1)); \
+        std::bit_cast<JSC::CallFrame*>(*((uintptr_t**) _AddressOfReturnAddress() - 1)); \
     })
 #else // !OS(WINDOWS)
 // FIXME (see rdar://72897291): Work around a Clang bug where __builtin_return_address()
@@ -391,7 +417,7 @@ JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
 #define DECLARE_CALL_FRAME(vm) \
     ({ \
         ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \
-        bitwise_cast<JSC::CallFrame*>(__builtin_frame_address(1)); \
+        std::bit_cast<JSC::CallFrame*>(__builtin_frame_address(1)); \
     })
 #endif // !OS(WINDOWS)
 #else
@@ -417,3 +443,5 @@ template<> struct HashTraits<JSC::CallSiteIndex> : SimpleClassHashTraits<JSC::Ca
 };
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

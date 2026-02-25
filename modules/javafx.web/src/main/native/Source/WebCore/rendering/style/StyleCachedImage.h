@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 
 #include "CachedResourceHandle.h"
 #include "StyleImage.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,9 +39,10 @@ class RenderSVGResourceContainer;
 class TreeScope;
 
 class StyleCachedImage final : public StyleImage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StyleCachedImage);
 public:
-    static Ref<StyleCachedImage> create(Ref<CSSImageValue>, float scaleFactor = 1);
+    static Ref<StyleCachedImage> create(Style::URL&&, Ref<CSSImageValue>&&, float scaleFactor = 1);
+    static Ref<StyleCachedImage> create(const Style::URL&, const Ref<CSSImageValue>&, float scaleFactor = 1);
     static Ref<StyleCachedImage> copyOverridingScaleFactor(StyleCachedImage&, float scaleFactor);
     virtual ~StyleCachedImage();
 
@@ -73,12 +75,11 @@ public:
     bool knownToBeOpaque(const RenderElement&) const final;
     bool usesDataProtocol() const final;
 
-    URL reresolvedURL(const Document&) const;
-
-    URL imageURL() const;
+    Style::URL url() const final;
 
 private:
-    StyleCachedImage(Ref<CSSImageValue>&&, float);
+    StyleCachedImage(Style::URL&&, Ref<CSSImageValue>&&, float);
+    StyleCachedImage(const Style::URL&, const Ref<CSSImageValue>&, float);
 
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(TreeScope&, const AtomString& fragment) const;
     LegacyRenderSVGResourceContainer* uncheckedRenderSVGResource(const RenderElement*) const;
@@ -86,7 +87,8 @@ private:
     RenderSVGResourceContainer* renderSVGResource(const RenderElement*) const;
     bool isRenderSVGResource(const RenderElement*) const;
 
-    Ref<CSSImageValue> m_cssValue;
+    Style::URL m_url;
+    const Ref<CSSImageValue> m_cssValue;
     bool m_isPending { true };
     mutable float m_scaleFactor { 1 };
     mutable CachedResourceHandle<CachedImage> m_cachedImage;

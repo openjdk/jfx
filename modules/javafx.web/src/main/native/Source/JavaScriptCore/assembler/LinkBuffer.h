@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
 #define DUMP_LINK_STATISTICS 0
@@ -38,6 +40,8 @@
 #include "MacroAssemblerCodeRef.h"
 #include <wtf/DataLog.h>
 #include <wtf/TZoneMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -336,7 +340,7 @@ private:
         // within this space that required compaction.
         if (location < static_cast<int>(sizeof(int32_t)))
             return 0;
-        return bitwise_cast<int32_t*>(m_assemblerStorage.buffer())[location / sizeof(int32_t) - 1];
+        return std::bit_cast<int32_t*>(m_assemblerStorage.buffer())[location / sizeof(int32_t) - 1];
     }
 #endif
 
@@ -383,7 +387,7 @@ private:
     static void dumpCode(void* code, size_t);
 #endif
 
-    void logJITCodeForPerf(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
+    void logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
 
     RefPtr<ExecutableMemoryHandle> m_executableMemory;
     size_t m_size { 0 };
@@ -415,9 +419,11 @@ private:
 };
 
 #define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, simpleName, ...) \
-    (UNLIKELY((condition) || JSC::Options::logJIT()) \
-        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), simpleName, __VA_ARGS__) \
-        : (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>(simpleName))
+    ([&]() { \
+        if ((condition) || JSC::Options::logJIT()) [[unlikely]] \
+            return (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), simpleName, __VA_ARGS__); \
+        return (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>(simpleName); \
+    }())
 
 #define FINALIZE_CODE_FOR(codeBlock, linkBufferReference, resultPtrTag, simpleName, ...)  \
     FINALIZE_CODE_IF((shouldDumpDisassemblyFor(codeBlock) || Options::asyncDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)
@@ -459,5 +465,7 @@ private:
 
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

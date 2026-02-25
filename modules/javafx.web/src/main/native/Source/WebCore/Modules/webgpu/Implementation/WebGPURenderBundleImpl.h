@@ -30,13 +30,14 @@
 #include "WebGPUPtr.h"
 #include "WebGPURenderBundle.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class RenderBundleImpl final : public RenderBundle {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderBundleImpl);
 public:
     static Ref<RenderBundleImpl> create(WebGPUPtr<WGPURenderBundle>&& renderBundle, ConvertToBackingContext& convertToBackingContext)
     {
@@ -60,7 +61,7 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPURenderBundle> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

@@ -30,12 +30,15 @@
 #include "MainThreadSharedTimer.h"
 
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(GLIB)
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MainThreadSharedTimer);
 
 MainThreadSharedTimer& MainThreadSharedTimer::singleton()
 {
@@ -47,11 +50,10 @@ MainThreadSharedTimer& MainThreadSharedTimer::singleton()
 MainThreadSharedTimer::MainThreadSharedTimer() = default;
 #else
 MainThreadSharedTimer::MainThreadSharedTimer()
-    : m_timer(RunLoop::main(), this, &MainThreadSharedTimer::fired)
+    : m_timer(RunLoop::mainSingleton(), "MainThreadSharedTimer::timer"_s, this, &MainThreadSharedTimer::fired)
 {
 #if USE(GLIB)
     m_timer.setPriority(RunLoopSourcePriority::MainThreadSharedTimer);
-    m_timer.setName("[WebKit] MainThreadSharedTimer"_s);
 #endif
 }
 

@@ -31,6 +31,7 @@
 #if ENABLE(MATHML)
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLMapElement.h"
@@ -90,12 +91,12 @@ MathMLElement::Length MathMLPresentationElement::parseNumberAndUnit(StringView s
 {
     LengthType lengthType = LengthType::UnitLess;
     unsigned stringLength = string.length();
-    UChar lastChar = string[stringLength - 1];
+    char16_t lastChar = string[stringLength - 1];
     if (lastChar == '%') {
         lengthType = LengthType::Percentage;
         stringLength--;
     } else if (stringLength >= 2) {
-        UChar penultimateChar = string[stringLength - 2];
+        char16_t penultimateChar = string[stringLength - 2];
         if (penultimateChar == 'c' && lastChar == 'm')
             lengthType = LengthType::Cm;
         if (penultimateChar == 'e' && lastChar == 'm')
@@ -183,13 +184,13 @@ MathMLElement::Length MathMLPresentationElement::parseMathMLLength(const String&
 
     // We first skip whitespace from both ends of the string.
     StringView stringView = string;
-    StringView trimmedLength = stringView.trim(isASCIIWhitespaceWithoutFF<UChar>);
+    StringView trimmedLength = stringView.trim(isASCIIWhitespaceWithoutFF<char16_t>);
 
     if (trimmedLength.isEmpty())
         return Length();
 
     // We consider the most typical case: a number followed by an optional unit.
-    UChar firstChar = trimmedLength[0];
+    char16_t firstChar = trimmedLength[0];
     if (isASCIIDigit(firstChar) || firstChar == '-' || firstChar == '.')
         return parseNumberAndUnit(trimmedLength, acceptLegacyMathMLLengths);
 
@@ -211,24 +212,24 @@ MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(
 {
     // The mathvariant attribute values is case-sensitive.
     static constexpr std::pair<ComparableASCIILiteral, MathVariant> mappings[] = {
-        { "bold", MathVariant::Bold },
-        { "bold-fraktur", MathVariant::BoldFraktur },
-        { "bold-italic", MathVariant::BoldItalic },
-        { "bold-sans-serif", MathVariant::BoldSansSerif },
-        { "bold-script", MathVariant::BoldScript },
-        { "double-struck", MathVariant::DoubleStruck },
-        { "fraktur", MathVariant::Fraktur },
-        { "initial", MathVariant::Initial },
-        { "italic", MathVariant::Italic },
-        { "looped", MathVariant::Looped },
-        { "monospace", MathVariant::Monospace },
-        { "normal", MathVariant::Normal },
-        { "sans-serif", MathVariant::SansSerif },
-        { "sans-serif-bold-italic", MathVariant::SansSerifBoldItalic },
-        { "sans-serif-italic", MathVariant::SansSerifItalic },
-        { "script", MathVariant::Script },
-        { "stretched", MathVariant::Stretched },
-        { "tailed", MathVariant::Tailed },
+        { "bold"_s, MathVariant::Bold },
+        { "bold-fraktur"_s, MathVariant::BoldFraktur },
+        { "bold-italic"_s, MathVariant::BoldItalic },
+        { "bold-sans-serif"_s, MathVariant::BoldSansSerif },
+        { "bold-script"_s, MathVariant::BoldScript },
+        { "double-struck"_s, MathVariant::DoubleStruck },
+        { "fraktur"_s, MathVariant::Fraktur },
+        { "initial"_s, MathVariant::Initial },
+        { "italic"_s, MathVariant::Italic },
+        { "looped"_s, MathVariant::Looped },
+        { "monospace"_s, MathVariant::Monospace },
+        { "normal"_s, MathVariant::Normal },
+        { "sans-serif"_s, MathVariant::SansSerif },
+        { "sans-serif-bold-italic"_s, MathVariant::SansSerifBoldItalic },
+        { "sans-serif-italic"_s, MathVariant::SansSerifItalic },
+        { "script"_s, MathVariant::Script },
+        { "stretched"_s, MathVariant::Stretched },
+        { "tailed"_s, MathVariant::Tailed },
     };
     static constexpr SortedArrayMap map { mappings };
     return map.get(attributeValue, MathVariant::None);

@@ -32,8 +32,11 @@
 #include "PreviewConverterProvider.h"
 #include <wtf/RunLoop.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PreviewConverter);
 
 PreviewConverter::~PreviewConverter() = default;
 
@@ -171,7 +174,7 @@ void PreviewConverter::iterateClients(T&& callback)
 
 void PreviewConverter::didAddClient(PreviewConverterClient& client)
 {
-    RunLoop::current().dispatch([this, protectedThis = Ref { *this }, weakClient = WeakPtr { client }]() {
+    RunLoop::currentSingleton().dispatch([this, protectedThis = Ref { *this }, weakClient = WeakPtr { client }]() {
         if (auto client = weakClient.get())
             replayToClient(*client);
     });

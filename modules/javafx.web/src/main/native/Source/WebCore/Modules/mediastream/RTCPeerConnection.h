@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaEndpointConfiguration.h"
 #include "MediaStream.h"
 #include "PeerConnectionBackend.h"
@@ -91,6 +92,9 @@ class RTCPeerConnection final
 {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(RTCPeerConnection, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ExceptionOr<Ref<RTCPeerConnection>> create(Document&, RTCConfiguration&&);
     WEBCORE_EXPORT virtual ~RTCPeerConnection();
 
@@ -105,7 +109,7 @@ public:
         std::optional<double> expires;
     };
 
-    using AlgorithmIdentifier = std::variant<JSC::Strong<JSC::JSObject>, String>;
+    using AlgorithmIdentifier = Variant<JSC::Strong<JSC::JSObject>, String>;
     static void generateCertificate(JSC::JSGlobalObject&, AlgorithmIdentifier&&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
 
     // 4.3.2 RTCPeerConnection Interface
@@ -122,7 +126,7 @@ public:
     RTCSessionDescription* currentRemoteDescription() const { return m_currentRemoteDescription.get(); }
     RTCSessionDescription* pendingRemoteDescription() const { return m_pendingRemoteDescription.get(); }
 
-    using Candidate = std::optional<std::variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
+    using Candidate = std::optional<Variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
     void addIceCandidate(Candidate&&, Ref<DeferredPromise>&&);
 
     RTCSignalingState signalingState() const { return m_signalingState; }
@@ -131,7 +135,7 @@ public:
     RTCPeerConnectionState connectionState() const { return m_connectionState; }
     std::optional<bool> canTrickleIceCandidates() const;
 
-    void restartIce() { m_backend->restartIce(); }
+    void restartIce() { protectedBackend()->restartIce(); }
     const RTCConfiguration& getConfiguration() const { return m_configuration; }
     ExceptionOr<void> setConfiguration(RTCConfiguration&&);
     void close();
@@ -151,7 +155,7 @@ public:
     ExceptionOr<Ref<RTCRtpSender>> addTrack(Ref<MediaStreamTrack>&&, const FixedVector<std::reference_wrapper<MediaStream>>&);
     ExceptionOr<void> removeTrack(RTCRtpSender&);
 
-    using AddTransceiverTrackOrKind = std::variant<RefPtr<MediaStreamTrack>, String>;
+    using AddTransceiverTrackOrKind = Variant<RefPtr<MediaStreamTrack>, String>;
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, RTCRtpTransceiverInit&&);
 
     // 6.1 Peer-to-peer data API
@@ -166,10 +170,6 @@ public:
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RTCPeerConnection; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     // Used for testing with a mock
     WEBCORE_EXPORT void emulatePlatformEvent(const String& action);
 
@@ -182,8 +182,8 @@ public:
 
     void scheduleEvent(Ref<Event>&&);
 
-    void disableICECandidateFiltering() { m_backend->disableICECandidateFiltering(); }
-    void enableICECandidateFiltering() { m_backend->enableICECandidateFiltering(); }
+    void disableICECandidateFiltering() { protectedBackend()->disableICECandidateFiltering(); }
+    void enableICECandidateFiltering() { protectedBackend()->enableICECandidateFiltering(); }
 
     void clearController() { m_controller = nullptr; }
 
@@ -203,15 +203,18 @@ public:
     void dispatchEvent(Event&) final;
     void dispatchDataChannelEvent(UniqueRef<RTCDataChannelHandler>&&, String&& label, RTCDataChannelInit&&);
 
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "RTCPeerConnection"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
     void startGatheringStatLogs(Function<void(String&&)>&&);
     void stopGatheringStatLogs();
+
+    void clearTransports();
 
 private:
     RTCPeerConnection(Document&);
@@ -224,7 +227,7 @@ private:
     void unregisterFromController();
 
     friend class Internals;
-    void applyRotationForOutgoingVideoSources() { m_backend->applyRotationForOutgoingVideoSources(); }
+    void applyRotationForOutgoingVideoSources() { protectedBackend()->applyRotationForOutgoingVideoSources(); }
 
     // EventTarget implementation.
     void refEventTarget() final { ref(); }
@@ -243,7 +246,7 @@ private:
     bool doClose();
     void doStop();
 
-    void getStats(RTCRtpSender& sender, Ref<DeferredPromise>&& promise) { m_backend->getStats(sender, WTFMove(promise)); }
+    void getStats(RTCRtpSender& sender, Ref<DeferredPromise>&& promise) { protectedBackend()->getStats(sender, WTFMove(promise)); }
 
     ExceptionOr<Vector<MediaEndpointConfiguration::CertificatePEM>> certificatesFromConfiguration(const RTCConfiguration&);
     void chainOperation(Ref<DeferredPromise>&&, Function<void(Ref<DeferredPromise>&&)>&&);
@@ -257,6 +260,8 @@ private:
 
     void setSignalingState(RTCSignalingState);
 
+    WEBCORE_EXPORT RefPtr<PeerConnectionBackend> protectedBackend() const;
+
     bool m_isStopped { false };
     RTCSignalingState m_signalingState { RTCSignalingState::Stable };
     RTCIceGatheringState m_iceGatheringState { RTCIceGatheringState::New };
@@ -264,13 +269,13 @@ private:
     RTCPeerConnectionState m_connectionState { RTCPeerConnectionState::New };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
 
     RtpTransceiverSet m_transceiverSet;
 
-    std::unique_ptr<PeerConnectionBackend> m_backend;
+    const std::unique_ptr<PeerConnectionBackend> m_backend;
 
     RTCConfiguration m_configuration;
     RTCController* m_controller { nullptr };

@@ -31,14 +31,13 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateTimeChooser.h"
 #include "DateTimeChooserClient.h"
 #include "DateTimeEditElement.h"
 #include "DateTimeFormat.h"
 #include "InputType.h"
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -47,7 +46,9 @@ class DateComponents;
 struct DateTimeChooserParameters;
 
 // A super class of date, datetime, datetime-local, month, time, and week types.
-class BaseDateAndTimeInputType : public InputType, private DateTimeChooserClient, private DateTimeEditElementEditControlOwner {
+class BaseDateAndTimeInputType : public InputType, public DateTimeChooserClient, private DateTimeEditElementEditControlOwner {
+    WTF_MAKE_TZONE_ALLOCATED(BaseDateAndTimeInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BaseDateAndTimeInputType);
 public:
     bool typeMismatchFor(const String&) const final;
     bool valueMissing(const String&) const final;
@@ -87,7 +88,7 @@ private:
         DateTimeFormatValidator() { }
 
         void visitField(DateTimeFormat::FieldType, int);
-        void visitLiteral(String&&) { }
+        void visitLiteral(const String&) { }
 
         bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
 
@@ -103,7 +104,7 @@ private:
 
     // InputType functions:
     String visibleValue() const final;
-    String sanitizeValue(const String&) const override;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const override;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     WallTime valueAsDate() const override;
     ExceptionOr<void> setValueAsDate(WallTime) const override;
@@ -114,7 +115,7 @@ private:
     String localizeValue(const String&) const final;
     bool supportsReadOnly() const final;
     bool shouldRespectListAttribute() final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
 
     void handleDOMActivateEvent(Event&) override;
@@ -142,17 +143,17 @@ private:
 
     // DateTimeChooserClient functions:
     void didChooseValue(StringView) final;
-    void didEndChooser() final;
+    void didEndChooser() final { m_dateTimeChooser = nullptr; }
 
     bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
     void closeDateTimeChooser();
 
     void showPicker() override;
 
-    std::unique_ptr<DateTimeChooser> m_dateTimeChooser;
+    RefPtr<DateTimeEditElement> protectedDateTimeEditElement() const { return m_dateTimeEditElement; };
+
+    RefPtr<DateTimeChooser> m_dateTimeChooser;
     RefPtr<DateTimeEditElement> m_dateTimeEditElement;
 };
 
 } // namespace WebCore
-
-#endif

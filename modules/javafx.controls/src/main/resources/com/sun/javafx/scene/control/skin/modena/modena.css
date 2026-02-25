@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1977,10 +1977,6 @@ is being used to size a border should also be in pixels.
     -fx-padding: 1em; /* 12 */
     -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
-.color-palette > .color-picker-grid {
-    -fx-padding: 0.5px;
-    -fx-snap-to-pixel: false;
-}
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
     -fx-padding: 0.5px;
@@ -3455,7 +3451,6 @@ is being used to size a border should also be in pixels.
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: 0, 1;
     -fx-background-radius: 3, 2;
-    -fx-cursor: text;
     -fx-padding: 0;
     -fx-content-padding: 4 8 4 8;
 }
@@ -3509,4 +3504,12 @@ is being used to size a border should also be in pixels.
 
 .line-number-decorator .text {
     -fx-bounds-type: visual;
+}
+
+.rich-text-area .content {
+    -fx-cursor: text;
+}
+
+.code-area .content {
+    -fx-cursor: text;
 }

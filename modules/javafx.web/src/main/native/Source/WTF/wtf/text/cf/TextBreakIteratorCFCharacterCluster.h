@@ -28,7 +28,7 @@
 namespace WTF {
 
 class TextBreakIteratorCFCharacterCluster {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TextBreakIteratorCFCharacterCluster);
 public:
     enum class Mode {
         ComposedCharacter,
@@ -58,7 +58,7 @@ public:
     void setText(StringView string, StringView priorContext)
     {
         if (priorContext.isEmpty())
-        m_string = string.createCFStringWithoutCopying();
+            m_string = string.createCFStringWithoutCopying();
         else
             m_string = createContextualizedCFString(string, priorContext);
         m_stringLength = string.length();

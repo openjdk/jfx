@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2023 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -35,7 +35,7 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction);
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
         return &vm.regExpObjectSpace();
     }
 
@@ -61,14 +61,14 @@ public:
 
     void setRegExp(VM& vm, RegExp* regExp)
     {
-        uintptr_t result = (m_regExpAndFlags & flagsMask) | bitwise_cast<uintptr_t>(regExp);
+        uintptr_t result = (m_regExpAndFlags & flagsMask) | std::bit_cast<uintptr_t>(regExp);
         m_regExpAndFlags = result;
         vm.writeBarrier(this, regExp);
     }
 
     RegExp* regExp() const
     {
-        return bitwise_cast<RegExp*>(m_regExpAndFlags & regExpMask);
+        return std::bit_cast<RegExp*>(m_regExpAndFlags & regExpMask);
     }
 
     bool setLastIndex(JSGlobalObject* globalObject, size_t lastIndex)
@@ -76,7 +76,7 @@ public:
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        if (LIKELY(lastIndexIsWritable())) {
+        if (lastIndexIsWritable()) [[likely]] {
             m_lastIndex.setWithoutWriteBarrier(jsNumber(lastIndex));
             return true;
         }
@@ -88,7 +88,7 @@ public:
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        if (LIKELY(lastIndexIsWritable())) {
+        if (lastIndexIsWritable()) [[likely]] {
             m_lastIndex.set(vm, this, lastIndex);
             return true;
         }
@@ -99,9 +99,14 @@ public:
         return m_lastIndex.get();
     }
 
+    bool lastIndexIsWritable() const
+    {
+        return !(m_regExpAndFlags & lastIndexIsNotWritableFlag);
+    }
+
     bool test(JSGlobalObject* globalObject, JSString* string) { return !!match(globalObject, string); }
     bool testInline(JSGlobalObject* globalObject, JSString* string) { return !!matchInline(globalObject, string); }
-    JSValue exec(JSGlobalObject*, JSString*);
+    JS_EXPORT_PRIVATE JSValue exec(JSGlobalObject*, JSString*);
     JSValue execInline(JSGlobalObject*, JSString*);
     MatchResult match(JSGlobalObject*, JSString*);
     JSValue matchGlobal(JSGlobalObject*, JSString*);
@@ -110,6 +115,8 @@ public:
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
@@ -136,13 +143,6 @@ private:
 #if ASSERT_ENABLED
     JS_EXPORT_PRIVATE void finishCreation(VM&);
 #endif
-
-    DECLARE_VISIT_CHILDREN;
-
-    bool lastIndexIsWritable() const
-    {
-        return !(m_regExpAndFlags & lastIndexIsNotWritableFlag);
-    }
 
     void setLastIndexIsNotWritable()
     {

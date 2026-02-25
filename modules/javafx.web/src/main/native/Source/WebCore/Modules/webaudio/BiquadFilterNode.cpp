@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "BiquadFilterNode.h"
+#include "ExceptionOr.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -79,7 +80,7 @@ ExceptionOr<void> BiquadFilterNode::getFrequencyResponse(const Ref<Float32Array>
         return Exception { ExceptionCode::InvalidAccessError, "The arrays passed as arguments must have the same length"_s };
 
     if (length)
-        biquadProcessor()->getFrequencyResponse(length, frequencyHz->data(), magResponse->data(), phaseResponse->data());
+        biquadProcessor()->getFrequencyResponse(length, frequencyHz->typedSpan(), magResponse->typedMutableSpan(), phaseResponse->typedMutableSpan());
     return { };
 }
 

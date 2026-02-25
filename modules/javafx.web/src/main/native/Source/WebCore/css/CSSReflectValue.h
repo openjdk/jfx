@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@ public:
     const CSSPrimitiveValue& offset() const { return m_offset.get(); }
     const CSSValue* mask() const { return m_mask.get(); }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSReflectValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_offset.get()) == IterationStatus::Done)
             return IterationStatus::Done;
@@ -57,8 +57,8 @@ private:
     CSSReflectValue(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask);
 
     CSSValueID m_direction;
-    Ref<CSSPrimitiveValue> m_offset;
-    RefPtr<CSSValue> m_mask;
+    const Ref<CSSPrimitiveValue> m_offset;
+    const RefPtr<CSSValue> m_mask;
 };
 
 } // namespace WebCore

@@ -32,6 +32,7 @@
 #include "LocalAllocator.h"
 #include "MarkedBlock.h"
 #include <wtf/DataLog.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/SharedTask.h>
@@ -53,7 +54,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BlockDirectory);
 
 class BlockDirectory {
     WTF_MAKE_NONCOPYABLE(BlockDirectory);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BlockDirectory);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BlockDirectory, BlockDirectory);
 
     friend class LLIntOffsetsExtractor;
 
@@ -75,11 +76,8 @@ public:
     void assertNoUnswept();
     size_t cellSize() const { return m_cellSize; }
     CellAttributes attributes() const { return m_attributes; }
-    bool needsDestruction() const { return m_attributes.destruction == NeedsDestruction; }
     DestructionMode destruction() const { return m_attributes.destruction; }
     HeapCell::Kind cellKind() const { return m_attributes.cellKind; }
-
-    bool isFreeListedCell(const void* target);
 
     inline void forEachBlock(const std::invocable<MarkedBlock::Handle*> auto&);
     inline void forEachNotEmptyBlock(const std::invocable<MarkedBlock::Handle*> auto&);
@@ -148,6 +146,9 @@ public:
 
     MarkedBlock::Handle* findBlockToSweep() { return findBlockToSweep(m_unsweptCursor); }
     MarkedBlock::Handle* findBlockToSweep(unsigned& unsweptCursor);
+
+    // FIXME: rdar://139998916
+    MarkedBlock::Handle* findMarkedBlockHandleDebug(MarkedBlock*);
 
     void didFinishUsingBlock(MarkedBlock::Handle*);
     void didFinishUsingBlock(AbstractLocker&, MarkedBlock::Handle*) WTF_REQUIRES_LOCK(m_bitvectorLock);

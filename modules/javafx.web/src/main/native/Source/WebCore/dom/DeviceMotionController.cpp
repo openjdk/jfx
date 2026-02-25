@@ -32,13 +32,17 @@
 #include "DeviceMotionEvent.h"
 #include "EventNames.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionController);
+
 DeviceMotionController::DeviceMotionController(DeviceMotionClient& client)
-    : DeviceController(client)
+    : m_client(client)
 {
-    deviceMotionClient().setController(this);
+    client.setController(this);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -53,7 +57,7 @@ void DeviceMotionController::suspendUpdates()
 
 void DeviceMotionController::resumeUpdates()
 {
-    if (!m_listeners.isEmpty())
+    if (hasListeners())
         m_client->startUpdating();
 }
 
@@ -64,19 +68,14 @@ void DeviceMotionController::didChangeDeviceMotion(DeviceMotionData* deviceMotio
     dispatchDeviceEvent(DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionData));
 }
 
-DeviceMotionClient& DeviceMotionController::deviceMotionClient()
-{
-    return static_cast<DeviceMotionClient&>(m_client.get());
-}
-
 bool DeviceMotionController::hasLastData()
 {
-    return deviceMotionClient().lastMotion();
+    return m_client->lastMotion();
 }
 
 RefPtr<Event> DeviceMotionController::getLastEvent()
 {
-    RefPtr lastMotion = deviceMotionClient().lastMotion();
+    RefPtr lastMotion = m_client->lastMotion();
     return DeviceMotionEvent::create(eventNames().devicemotionEvent, lastMotion.get());
 }
 
@@ -95,6 +94,11 @@ bool DeviceMotionController::isActiveAt(Page* page)
     if (DeviceMotionController* self = DeviceMotionController::from(page))
         return self->isActive();
     return false;
+}
+
+DeviceClient& DeviceMotionController::client()
+{
+    return m_client.get();
 }
 
 } // namespace WebCore

@@ -48,20 +48,26 @@ Ref<PathJava> PathJava::create()
     return adoptRef(*new PathJava);
 }
 
-Ref<PathJava> PathJava::create(const PathStream& stream)
+Ref<PathJava> PathJava::create(std::span<const PathSegment> segments)
 {
     auto pathJava = PathJava::create();
 
-    for (auto& segment : stream.segments())
+    for (auto& segment : segments)
         pathJava->addSegment(segment);
     return pathJava;
 }
 
-Ref<PathJava> PathJava::create(const PathSegment& segment)
+PlatformPathPtr PathJava::emptyPlatformPath()
 {
-    auto pathJava = PathJava::create();
-    pathJava->addSegment(segment);
-    return pathJava;
+       JNIEnv* env = WTF::GetJavaEnv();
+       static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
+           "createWCPath", "()Lcom/sun/webkit/graphics/WCPath;");
+       ASSERT(mid);
+
+       JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid));
+       ASSERT(ref);
+       WTF::CheckAndClearException(env);
+       return RQRef::create(ref);
 }
 
 RefPtr<RQRef> createEmptyPath()
@@ -79,7 +85,7 @@ RefPtr<RQRef> createEmptyPath()
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -135,6 +141,20 @@ PlatformPathPtr PathJava::platformPath() const
     return m_platformPath.get();
 }
 
+bool PathJava::definitelyEqual(const PathImpl& otherImpl) const
+{
+    RefPtr otherAsPathJava = dynamicDowncast<PathJava>(otherImpl);
+    if (!otherAsPathJava) {
+        return false;
+    }
+    if (otherAsPathJava.get() == this)
+        return true;
+    return m_platformPath == otherAsPathJava->m_platformPath;
+}
+void PathJava::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+}
 
 void PathJava::add(PathMoveTo moveto)
 {
@@ -280,7 +300,8 @@ void PathJava::add(PathRect rect)
 
 void PathJava::add(PathRoundedRect roundedRect)
 {
-    addBeziersForRoundedRect(roundedRect.roundedRect);
+    for (auto& segment : PathImpl::beziersForRoundedRect(roundedRect.roundedRect))
+        addSegment(segment);
 }
 
 void PathJava::add(PathCloseSubpath)
@@ -428,7 +449,7 @@ bool PathJava::strokeContains(const FloatPoint& p, const Function<void(GraphicsC
 
     size_t size = strokeStyle == StrokeStyle::SolidStroke ? 0 : dashes.size();
     JLocalRef<jdoubleArray> dashArray(env->NewDoubleArray(size));
-    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.data());
+    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.span().data());
 
     jboolean res = env->CallBooleanMethod(*m_platformPath, mid, (jdouble)p.x(),
         (jdouble)p.y(), (jdouble) thickness, (jdouble) miterLimit,

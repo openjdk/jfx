@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +31,18 @@
 #include "config.h"
 #include "FloatRoundedRect.h"
 
+#include "Path.h"
 #include <algorithm>
+#include <numbers>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-FloatRoundedRect::FloatRoundedRect(const RoundedRect& rect)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatRoundedRect);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatRoundedRect::Radii);
+
+FloatRoundedRect::FloatRoundedRect(const LayoutRoundedRect& rect)
     : m_rect(rect.rect())
     , m_radii(rect.radii())
 {
@@ -118,6 +125,19 @@ void FloatRoundedRect::Radii::expand(float topWidth, float bottomWidth, float le
         m_bottomRight.setWidth(std::max<float>(0, m_bottomRight.width() + rightWidth));
         m_bottomRight.setHeight(std::max<float>(0, m_bottomRight.height() + bottomWidth));
     }
+}
+
+void FloatRoundedRect::Radii::expandEvenIfZero(float size)
+{
+    auto expand = [&](auto& corner) {
+        corner.setWidth(std::max(0.f, corner.width() + size));
+        corner.setHeight(std::max(0.f, corner.height() + size));
+    };
+
+    expand(m_topLeft);
+    expand(m_topRight);
+    expand(m_bottomLeft);
+    expand(m_bottomRight);
 }
 
 static inline float cornerRectIntercept(float y, const FloatRect& cornerRect)
@@ -207,6 +227,13 @@ bool FloatRoundedRect::intersectionIsRectangular(const FloatRect& rect) const
     return !(rect.intersects(topLeftCorner()) || rect.intersects(topRightCorner()) || rect.intersects(bottomLeftCorner()) || rect.intersects(bottomRightCorner()));
 }
 
+Path FloatRoundedRect::path() const
+{
+    Path path;
+    path.addRoundedRect(*this);
+    return path;
+}
+
 Region approximateAsRegion(const FloatRoundedRect& roundedRect, unsigned stepLength)
 {
     Region region;
@@ -230,7 +257,7 @@ Region approximateAsRegion(const FloatRoundedRect& roundedRect, unsigned stepLen
     };
 
     auto subtractCornerRects = [&] (LayoutPoint corner, LayoutPoint ellipsisCenter, FloatSize axes, double fromAngle) {
-        double toAngle = fromAngle + piDouble / 2;
+        double toAngle = fromAngle + std::numbers::pi / 2;
 
         // Substract more rects for longer, more rounded arcs.
         auto arcLengthFactor = roundToInt(std::min(axes.width(), axes.height()));
@@ -258,21 +285,21 @@ Region approximateAsRegion(const FloatRoundedRect& roundedRect, unsigned stepLen
         auto corner = rect.minXMaxYCorner();
         auto axes = radii.bottomLeft();
         auto ellipsisCenter = LayoutPoint(corner.x() + axes.width(), corner.y() - axes.height());
-        subtractCornerRects(corner, ellipsisCenter, axes, piDouble / 2);
+        subtractCornerRects(corner, ellipsisCenter, axes, std::numbers::pi / 2);
     }
 
     {
         auto corner = rect.minXMinYCorner();
         auto axes = radii.topLeft();
         auto ellipsisCenter = LayoutPoint(corner.x() + axes.width(), corner.y() + axes.height());
-        subtractCornerRects(corner, ellipsisCenter, axes, piDouble);
+        subtractCornerRects(corner, ellipsisCenter, axes, std::numbers::pi);
     }
 
     {
         auto corner = rect.maxXMinYCorner();
         auto axes = radii.topRight();
         auto ellipsisCenter = LayoutPoint(corner.x() - axes.width(), corner.y() + axes.height());
-        subtractCornerRects(corner, ellipsisCenter, axes, piDouble * 3 / 2);
+        subtractCornerRects(corner, ellipsisCenter, axes, std::numbers::pi * 3 / 2);
     }
 
     return region;
@@ -281,10 +308,10 @@ Region approximateAsRegion(const FloatRoundedRect& roundedRect, unsigned stepLen
 TextStream& operator<<(TextStream& ts, const FloatRoundedRect& roundedRect)
 {
     ts << roundedRect.rect();
-    ts.dumpProperty("top-left", roundedRect.radii().topLeft());
-    ts.dumpProperty("top-right", roundedRect.radii().topRight());
-    ts.dumpProperty("bottom-left", roundedRect.radii().bottomLeft());
-    ts.dumpProperty("bottom-right", roundedRect.radii().bottomRight());
+    ts.dumpProperty("top-left"_s, roundedRect.radii().topLeft());
+    ts.dumpProperty("top-right"_s, roundedRect.radii().topRight());
+    ts.dumpProperty("bottom-left"_s, roundedRect.radii().bottomLeft());
+    ts.dumpProperty("bottom-right"_s, roundedRect.radii().bottomRight());
     return ts;
 }
 

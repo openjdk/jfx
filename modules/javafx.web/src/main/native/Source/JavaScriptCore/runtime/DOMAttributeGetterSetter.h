@@ -28,6 +28,7 @@
 
 #include "CustomGetterSetter.h"
 #include "DOMAnnotation.h"
+#include "VM.h"
 
 namespace JSC {
 namespace DOMJIT {

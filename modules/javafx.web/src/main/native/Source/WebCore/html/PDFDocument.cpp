@@ -28,10 +28,10 @@
 #if ENABLE(PDFJS)
 
 #include "AddEventListenerOptions.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "EventListener.h"
 #include "EventNames.h"
-#include "FrameDestructionObserverInlines.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHeadElement.h"
@@ -45,6 +45,8 @@
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "Settings.h"
+#include "UserScriptTypes.h"
+#include "WindowPostMessageOptions.h"
 #include <JavaScriptCore/ObjectConstructor.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -148,12 +150,12 @@ void PDFDocument::createDocumentStructure()
     // Description of parameters:
     // - Empty `?file=` parameter prevents default pdf from loading.
     auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file="_s;
-    auto rootElement = HTMLHtmlElement::create(*this);
+    Ref rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
 
     frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
-    auto body = HTMLBodyElement::create(*this);
+    Ref body = HTMLBodyElement::create(*this);
     body->setAttribute(styleAttr, "margin: 0px;height: 100vh;"_s);
     rootElement->appendChild(body);
 
@@ -239,7 +241,7 @@ void PDFDocument::injectStyleAndContentScript()
 
     auto* contentDocument = m_iframe->contentDocument();
     ASSERT(contentDocument->head());
-    auto link = HTMLLinkElement::create(HTMLNames::linkTag, *contentDocument, false);
+    Ref link = HTMLLinkElement::create(HTMLNames::linkTag, *contentDocument, false);
     link->setAttribute(relAttr, "stylesheet"_s);
 #if PLATFORM(COCOA)
     link->setAttribute(hrefAttr, "webkit-pdfjs-viewer://pdfjs/extras/cocoa/style.css"_s);

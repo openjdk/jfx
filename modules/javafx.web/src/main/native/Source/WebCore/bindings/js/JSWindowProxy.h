@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ class Frame;
 class WEBCORE_EXPORT JSWindowProxy final : public JSC::JSGlobalProxy {
 public:
     using Base = JSC::JSGlobalProxy;
-    static constexpr bool needsDestruction = true;
+    static constexpr JSC::DestructionMode needsDestruction = JSC::NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, JSC::SubspaceAccess> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm) { return subspaceForImpl(vm); }
@@ -61,10 +61,10 @@ public:
     WindowProxy* windowProxy() const;
 
     DOMWindow& wrapped() const;
+    Ref<DOMWindow> protectedWrapped() const;
     static WindowProxy* toWrapped(JSC::VM&, JSC::JSValue);
 
-    DOMWrapperWorld& world();
-    Ref<DOMWrapperWorld> protectedWorld();
+    DOMWrapperWorld& world() { return m_world; }
 
     void attachDebugger(JSC::Debugger*);
 
@@ -87,7 +87,7 @@ private:
     static bool defineOwnProperty(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, const JSC::PropertyDescriptor&, bool shouldThrow);
 #endif
 
-    Ref<DOMWrapperWorld> m_world;
+    const Ref<DOMWrapperWorld> m_world;
 };
 
 // JSWindowProxy is a little odd in that it's not a traditional wrapper and has no back pointer.

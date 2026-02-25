@@ -48,7 +48,7 @@ namespace WebCore::WebGPU {
 class ConvertToBackingContext;
 
 class XRBindingImpl final : public XRBinding {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRBindingImpl);
 public:
     static Ref<XRBindingImpl> create(WebGPUPtr<WGPUXRBinding>&& binding, ConvertToBackingContext& convertToBackingContext)
     {
@@ -71,11 +71,11 @@ private:
 
     RefPtr<XRProjectionLayer> createProjectionLayer(const XRProjectionLayerInit&) final;
     RefPtr<XRSubImage> getSubImage(XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<XREye>/* = "none"*/) final;
-    RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&, XREye) final;
+    RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&) final;
     TextureFormat getPreferredColorFormat() final;
 
     WebGPUPtr<WGPUXRBinding> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

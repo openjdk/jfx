@@ -36,6 +36,7 @@
 #include "BlobLoader.h"
 #include "BlobPart.h"
 #include "BlobURL.h"
+#include "ContextDestructionObserverInlines.h"
 #include "File.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PolicyContainer.h"
@@ -55,6 +56,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BlobLoader);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Blob);
 
 class BlobURLRegistry final : public URLRegistry {
@@ -76,7 +78,7 @@ void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const U
         Locker locker { m_urlsPerContextLock };
         m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
     }
-    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url(), context.topOrigin().data());
+    ThreadableBlobRegistry::registerBlobURL(context.protectedSecurityOrigin().get(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& topOrigin)
@@ -180,6 +182,18 @@ Blob::Blob(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String
     ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, { BlobPart(WTFMove(data)) }, contentType);
 }
 
+Blob::Blob(ScriptExecutionContext* context, Ref<FragmentedSharedBuffer>&& buffer, const String& contentType)
+    : ActiveDOMObject(context)
+    , m_type(contentType)
+    , m_size(buffer->size())
+    , m_memoryCost(buffer->size())
+    , m_internalURL(BlobURL::createInternalURL())
+{
+    BlobBuilder builder(EndingType::Transparent);
+    builder.append(WTFMove(buffer));
+    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, builder.finalize(), contentType);
+}
+
 Blob::Blob(ReferencingExistingBlobConstructor, ScriptExecutionContext* context, const Blob& blob)
     : ActiveDOMObject(context)
     , m_type(blob.type())
@@ -265,14 +279,14 @@ String Blob::normalizedContentType(const String& contentType)
     return contentType.convertToASCIILowercase();
 }
 
-void Blob::loadBlob(FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
+void Blob::loadBlob(FileReaderLoader::ReadType readType, Function<void(BlobLoader&)>&& completionHandler)
 {
-    auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+    auto blobLoader = makeUnique<BlobLoader>([pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
-        m_blobLoaders.take(&blobLoader);
+        pendingActivity->object().m_blobLoaders.take(&blobLoader);
     });
 
-    blobLoader->start(*this, scriptExecutionContext(), readType);
+    blobLoader->start(*this, protectedScriptExecutionContext().get(), readType);
 
     if (blobLoader->isLoading())
         m_blobLoaders.add(WTFMove(blobLoader));
@@ -303,6 +317,13 @@ void Blob::arrayBuffer(DOMPromiseDeferred<IDLArrayBuffer>&& promise)
 {
     loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         promise.settle(arrayBufferFromBlobLoader(blobLoader));
+    });
+}
+
+void Blob::getArrayBuffer(CompletionHandler<void(ExceptionOr<Ref<JSC::ArrayBuffer>>)>&& completionHandler)
+{
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+        completionHandler(arrayBufferFromBlobLoader(blobLoader));
     });
 }
 
@@ -419,7 +440,7 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream()
             return didSucceed;
         }
 
-        UniqueRef<FileReaderLoader> m_loader;
+        const UniqueRef<FileReaderLoader> m_loader;
         Deque<Ref<FragmentedSharedBuffer>> m_queue;
         std::optional<Exception> m_exception;
         enum class StreamState : uint8_t { NotStarted, Started, Waiting };
@@ -428,7 +449,7 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream()
         LoaderState m_loaderState { LoaderState::Started };
     };
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     auto* globalObject = context ? context->globalObject() : nullptr;
     if (!globalObject)
         return Exception { ExceptionCode::InvalidStateError };
@@ -452,12 +473,10 @@ bool Blob::isNormalizedContentType(const String& contentType)
 bool Blob::isNormalizedContentType(const CString& contentType)
 {
     // FIXME: Do we really want to treat the empty string and null string as valid content types?
-    size_t length = contentType.length();
-    const char* characters = contentType.data();
-    for (size_t i = 0; i < length; ++i) {
-        if (characters[i] < 0x20 || characters[i] > 0x7e)
+    for (auto character : contentType.span()) {
+        if (character < 0x20 || character > 0x7e)
             return false;
-        if (isASCIIUpper(characters[i]))
+        if (isASCIIUpper(character))
             return false;
     }
     return true;

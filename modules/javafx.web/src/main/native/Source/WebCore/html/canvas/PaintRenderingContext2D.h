@@ -26,6 +26,8 @@
 #pragma once
 
 #include "CanvasRenderingContext2DBase.h"
+#include "DisplayListRecorderImpl.h"
+#include <optional>
 
 namespace WebCore {
 
@@ -42,9 +44,8 @@ public:
 
     virtual ~PaintRenderingContext2D();
 
-    GraphicsContext* drawingContext() const final;
+    GraphicsContext* ensureDrawingContext() const;
     GraphicsContext* existingDrawingContext() const final;
-    GraphicsContext* effectiveDrawingContext() const final { return drawingContext(); }
     AffineTransform baseTransform() const final;
 
     CustomPaintCanvas& canvas() const;
@@ -52,8 +53,7 @@ public:
 
 private:
     PaintRenderingContext2D(CustomPaintCanvas&);
-    bool isPaint() const override { return true; }
-    mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
+    mutable std::optional<DisplayList::RecorderImpl> m_recordingContext;
 };
 
 } // namespace WebCore

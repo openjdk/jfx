@@ -29,6 +29,7 @@
 #include <wtf/URL.h>
 #include "ScriptCachedFrameData.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,6 +38,7 @@ class CachedFrame;
 class CachedFramePlatformData;
 class Document;
 class DocumentLoader;
+class FrameView;
 class LocalFrameView;
 class Node;
 enum class HasInsecureContent : bool;
@@ -74,7 +76,7 @@ private:
 };
 
 class CachedFrame : private CachedFrameBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CachedFrame);
 public:
     explicit CachedFrame(Frame&);
 

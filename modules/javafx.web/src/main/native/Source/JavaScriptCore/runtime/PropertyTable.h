@@ -23,6 +23,7 @@
 #include "JSExportMacros.h"
 #include "PropertyOffset.h"
 #include "Structure.h"
+#include "VM.h"
 #include "WriteBarrier.h"
 #include <wtf/HashTable.h>
 #include <wtf/MathExtras.h>
@@ -35,6 +36,8 @@
 #define DUMP_PROPERTYMAP_COLLISIONS 0
 
 #define PROPERTY_MAP_DELETED_ENTRY_KEY ((UniquedStringImpl*)1)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -56,27 +59,6 @@ struct PropertyTableStats {
 JS_EXPORT_PRIVATE extern PropertyTableStats* propertyTableStats;
 
 #endif
-
-inline constexpr bool isPowerOf2(unsigned v)
-{
-    return hasOneBitSet(v);
-}
-
-inline constexpr unsigned nextPowerOf2(unsigned v)
-{
-    // Taken from http://www.cs.utk.edu/~vose/c-stuff/bithacks.html
-    // Devised by Sean Anderson, Sepember 14, 2001
-
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-
-    return v;
-}
 
 // compact <-> non-compact PropertyTable
 // We need to maintain two things, one is PropertyOffset and one is unsigned index in index buffer of PropertyTable.
@@ -113,7 +95,7 @@ public:
         return &vm.propertyTableSpace();
     }
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
     DECLARE_VISIT_CHILDREN;
 
@@ -246,19 +228,19 @@ private:
     // The table of values lies after the hash index.
     static CompactPropertyTableEntry* tableFromIndexVector(uint8_t* index, unsigned indexSize)
     {
-        return bitwise_cast<CompactPropertyTableEntry*>(index + indexSize);
+        return std::bit_cast<CompactPropertyTableEntry*>(index + indexSize);
     }
     static const CompactPropertyTableEntry* tableFromIndexVector(const uint8_t* index, unsigned indexSize)
     {
-        return bitwise_cast<const CompactPropertyTableEntry*>(index + indexSize);
+        return std::bit_cast<const CompactPropertyTableEntry*>(index + indexSize);
     }
     static PropertyTableEntry* tableFromIndexVector(uint32_t* index, unsigned indexSize)
     {
-        return bitwise_cast<PropertyTableEntry*>(index + indexSize);
+        return std::bit_cast<PropertyTableEntry*>(index + indexSize);
     }
     static const PropertyTableEntry* tableFromIndexVector(const uint32_t* index, unsigned indexSize)
     {
-        return bitwise_cast<const PropertyTableEntry*>(index + indexSize);
+        return std::bit_cast<const PropertyTableEntry*>(index + indexSize);
     }
 
     CompactPropertyTableEntry* tableFromIndexVector(uint8_t* index) { return tableFromIndexVector(index, m_indexSize); }
@@ -291,8 +273,8 @@ private:
     static ALWAYS_INLINE auto withIndexVector(uintptr_t indexVector, Func&& function) -> decltype(auto)
     {
         if (indexVector & isCompactFlag)
-            return function(bitwise_cast<uint8_t*>(indexVector & indexVectorMask));
-        return function(bitwise_cast<uint32_t*>(indexVector & indexVectorMask));
+            return function(std::bit_cast<uint8_t*>(indexVector & indexVectorMask));
+        return function(std::bit_cast<uint32_t*>(indexVector & indexVectorMask));
     }
 
     template<typename Func>
@@ -635,24 +617,24 @@ inline size_t PropertyTable::dataSize(bool isCompact)
 
 ALWAYS_INLINE uintptr_t PropertyTable::allocateIndexVector(bool isCompact, unsigned indexSize)
 {
-    return bitwise_cast<uintptr_t>(PropertyTableMalloc::malloc(PropertyTable::dataSize(isCompact, indexSize))) | (isCompact ? isCompactFlag : 0);
+    return std::bit_cast<uintptr_t>(PropertyTableMalloc::malloc(PropertyTable::dataSize(isCompact, indexSize))) | (isCompact ? isCompactFlag : 0);
 }
 
 ALWAYS_INLINE uintptr_t PropertyTable::allocateZeroedIndexVector(bool isCompact, unsigned indexSize)
 {
-    return bitwise_cast<uintptr_t>(PropertyTableMalloc::zeroedMalloc(PropertyTable::dataSize(isCompact, indexSize))) | (isCompact ? isCompactFlag : 0);
+    return std::bit_cast<uintptr_t>(PropertyTableMalloc::zeroedMalloc(PropertyTable::dataSize(isCompact, indexSize))) | (isCompact ? isCompactFlag : 0);
 }
 
 ALWAYS_INLINE void PropertyTable::destroyIndexVector(uintptr_t indexVector)
 {
-    PropertyTableMalloc::free(bitwise_cast<void*>(indexVector & indexVectorMask));
+    PropertyTableMalloc::free(std::bit_cast<void*>(indexVector & indexVectorMask));
 }
 
 inline unsigned PropertyTable::sizeForCapacity(unsigned capacity)
 {
     if (capacity < MinimumTableSize / 2)
         return MinimumTableSize;
-    return nextPowerOf2(capacity + 1) * 2;
+    return roundUpToPowerOfTwo(capacity + 1) * 2;
 }
 
 inline bool PropertyTable::canInsert(const ValueType& entry)
@@ -680,3 +662,5 @@ inline void PropertyTable::forEachProperty(const Functor& functor) const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

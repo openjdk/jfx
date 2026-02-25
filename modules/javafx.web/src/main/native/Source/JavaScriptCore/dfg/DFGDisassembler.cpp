@@ -35,9 +35,11 @@
 #include "LinkBuffer.h"
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(Disassembler);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Disassembler);
 
 Disassembler::Disassembler(Graph& graph)
     : m_graph(graph)
@@ -75,7 +77,7 @@ void Disassembler::reportToProfiler(Profiler::Compilation* compilation, LinkBuff
 void Disassembler::dumpHeader(PrintStream& out, LinkBuffer& linkBuffer)
 {
     out.print("Generated DFG JIT code for ", CodeBlockWithJITType(m_graph.m_codeBlock, JITType::DFGJIT), ", instructions size = ", m_graph.m_codeBlock->instructionsSize(), ":\n");
-    out.print("    Optimized with execution counter = ", m_graph.m_profiledBlock->jitExecuteCounter(), "\n");
+    out.print("    Optimized with execution counter = ", m_graph.m_profiledBlock->baselineExecuteCounter(), "\n");
     out.print("    Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.size()), "):\n");
 }
 
@@ -114,7 +116,7 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
         Node* lastNodeForDisassembly = block->at(0);
         for (size_t i = 0; i < block->size(); ++i) {
             MacroAssembler::Label currentLabel;
-            HashMap<Node*, MacroAssembler::Label>::iterator iter = m_labelForNode.find(block->at(i));
+            UncheckedKeyHashMap<Node*, MacroAssembler::Label>::iterator iter = m_labelForNode.find(block->at(i));
             if (iter != m_labelForNode.end())
                 currentLabel = iter->value;
             else {
@@ -160,21 +162,23 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
     else
         amountOfNodeWhiteSpace = Graph::amountOfNodeWhiteSpace(context);
     Vector<char> prefixBuffer(prefixLength + amountOfNodeWhiteSpace + 1);
-    memcpy(prefixBuffer.data(), prefix, prefixLength);
+    memcpy(prefixBuffer.mutableSpan().data(), prefix, prefixLength);
     for (int i = 0; i < amountOfNodeWhiteSpace; ++i)
         prefixBuffer[i + prefixLength] = ' ';
     prefixBuffer[prefixLength + amountOfNodeWhiteSpace] = 0;
 
     void* codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    void* codeEnd = bitwise_cast<uint8_t*>(codeStart) +  linkBuffer.size();
+    void* codeEnd = std::bit_cast<uint8_t*>(codeStart) +  linkBuffer.size();
 
     CodeLocationLabel<DisassemblyPtrTag> start = linkBuffer.locationOf<DisassemblyPtrTag>(previousLabel);
     CodeLocationLabel<DisassemblyPtrTag> end = linkBuffer.locationOf<DisassemblyPtrTag>(currentLabel);
     previousLabel = currentLabel;
     ASSERT(end.dataLocation<uintptr_t>() >= start.dataLocation<uintptr_t>());
-    disassemble(start, end.dataLocation<uintptr_t>() - start.dataLocation<uintptr_t>(), codeStart, codeEnd, prefixBuffer.data(), out);
+    disassemble(start, end.dataLocation<uintptr_t>() - start.dataLocation<uintptr_t>(), codeStart, codeEnd, prefixBuffer.span().data(), out);
 }
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(DFG_JIT)

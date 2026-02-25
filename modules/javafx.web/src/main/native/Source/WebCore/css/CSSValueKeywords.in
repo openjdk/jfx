@@ -282,6 +282,7 @@ accentcolortext
 -apple-system-tertiary-label enable-if=WTF_PLATFORM_COCOA
 -apple-system-tertiary-fill enable-if=WTF_PLATFORM_COCOA
 -apple-system-quaternary-label enable-if=WTF_PLATFORM_COCOA
+-apple-system-quinary-label enable-if=WTF_PLATFORM_MAC
 -apple-system-grid enable-if=WTF_PLATFORM_COCOA
 -apple-system-separator enable-if=WTF_PLATFORM_COCOA
 -apple-system-container-border enable-if=WTF_PLATFORM_COCOA
@@ -315,13 +316,13 @@ accentcolortext
 -apple-system-find-highlight-background enable-if=WTF_PLATFORM_MAC
 -apple-system-indigo enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-teal enable-if=WTF_PLATFORM_IOS_FAMILY
--apple-system-opaque-fill enable-if=WTF_PLATFORM_IOS_FAMILY
--apple-system-opaque-secondary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
+-apple-system-opaque-fill enable-if=WTF_PLATFORM_COCOA
+-apple-system-opaque-secondary-fill enable-if=WTF_PLATFORM_COCOA
 -apple-system-opaque-secondary-fill-disabled enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-tertiary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-quaternary-fill enable-if=WTF_PLATFORM_IOS_FAMILY
 -apple-system-opaque-separator enable-if=WTF_PLATFORM_IOS_FAMILY
--webkit-control-background enable-if=WTF_PLATFORM_COCOA|HAVE_OS_DARK_MODE_SUPPORT
+-webkit-control-background enable-if=WTF_PLATFORM_COCOA
 activebuttontext
 -webkit-activelink
 -webkit-link
@@ -903,7 +904,8 @@ anywhere
 
 // -webkit-appearance
 // The order here must match the order in the StyleAppearance enum in StyleAppearance.h.
-// All appearance values that should be accepted by the parser should be listed between 'checkbox' and 'textarea':
+// All appearance values that should be accepted by the parser should be listed between 'base' and 'textarea':
+base
 checkbox
 radio
 push-button
@@ -951,8 +953,17 @@ padding-box
 // text
 -webkit-text
 
-// block-step-insert
-margin
+//
+// Corner-shape
+//
+// round
+scoop
+// bevel
+notch
+straight
+squircle
+superellipse
+// infinity
 
 //
 // CSS_PROP_MASK_CLIP
@@ -1037,7 +1048,7 @@ paused
 //
 flat
 preserve-3d
-optimized-3d enable-if=ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D
+separated enable-if=HAVE_CORE_ANIMATION_SEPARATED_LAYERS
 
 //
 // CSS_PROP__WEBKIT_TRANSITION_TIMING_FUNCTION
@@ -1074,11 +1085,16 @@ nearest
 root
 self
 view
+// cover
+// contain
+entry
+exit
+entry-crossing
+exit-crossing
 
 //
 // CSS_PROP_ZOOM
 //
-document
 reset
 
 //
@@ -1140,7 +1156,7 @@ manual
 
 // -webkit-overflow-scrolling
 // auto
-touch enable-if=ENABLE_OVERFLOW_SCROLLING_TOUCH
+touch enable-if=ENABLE_WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY
 
 // writing-mode
 // SVG compatibility
@@ -1163,6 +1179,7 @@ horizontal-bt
 after
 before
 inter-character
+legacy-inter-character
 
 // -webkit-text-combine
 // horizontal
@@ -1367,8 +1384,12 @@ ccw
 // small
 by
 close
-using
+with
 of
+// from
+// start
+// end
+origin
 
 // @font-face src
 format
@@ -1409,6 +1430,26 @@ cubic-bezier
 spring
 steps
 apple-invert-lightness
+
+// -apple-visual-effect
+-apple-system-blur-material-ultra-thin enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-thin enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-thick enable-if=HAVE_CORE_MATERIAL
+-apple-system-blur-material-chrome enable-if=HAVE_CORE_MATERIAL
+-apple-system-glass-material enable-if=HAVE_MATERIAL_HOSTING
+-apple-system-glass-material-clear enable-if=HAVE_MATERIAL_HOSTING
+-apple-system-glass-material-subdued enable-if=HAVE_MATERIAL_HOSTING
+-apple-system-glass-material-media-controls enable-if=HAVE_MATERIAL_HOSTING
+-apple-system-glass-material-media-controls-subdued enable-if=HAVE_MATERIAL_HOSTING
+-apple-system-vibrancy-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-secondary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-tertiary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-quaternary-label enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-secondary-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-tertiary-fill enable-if=HAVE_CORE_MATERIAL
+-apple-system-vibrancy-separator enable-if=HAVE_CORE_MATERIAL
 
 // colors
 rgb
@@ -1499,6 +1540,12 @@ mod
 rem
 to-zero
 // nearest
+// progress
+random
+element-shared
+// fixed
+sibling-count
+sibling-index
 infinity
 -infinity id=NegativeInfinity
 NaN
@@ -1522,12 +1569,6 @@ span
 minmax
 subgrid
 masonry
-
-// masonry-auto-flow
-pack
-next
-definite-first
-ordered
 
 // grid-auto-flow
 auto-flow
@@ -1605,19 +1646,15 @@ xyz
 xyz-d50
 xyz-d65
 
-// color-contast()
-color-contrast
-vs
-AA
-AA-large
-AAA
-AAA-large
-
 // color-layers()
 color-layers
 
 // color-mix()
 color-mix
+
+// contrast-color()
+contrast-color
+// max
 
 // light-dark()
 light-dark
@@ -1687,6 +1724,12 @@ from-font
 // dynamic-range
 standard
 high
+
+// dynamic-range-limit
+// standard
+constrained
+// no-limit
+dynamic-range-limit-mix
 
 // @counter-style `system` descriptor values
 // https://www.w3.org/TR/css-counter-styles-3/#counter-style-system
@@ -1773,6 +1816,7 @@ false
 
 // text-spacing-trim
 space-all
+trim-all
 // text-autospace
 // normal
 no-autospace
@@ -1797,5 +1841,87 @@ allow-discrete
 // inline
 -internal-textarea-auto
 
-// anchor()
+// CSS Anchor Positioning
 anchor
+anchor-size
+width
+height
+self-block
+self-inline
+anchor-center
+// position-try-order
+// normal
+most-width
+most-height
+most-block-size
+most-inline-size
+// position-try-fallbacks
+// none
+flip-block
+flip-inline
+flip-start
+// position-area
+self-block-end
+self-block-end-start
+self-block-start
+span-all
+span-block-end
+span-block-start
+span-bottom
+span-end
+span-left
+span-right
+span-self-block-end
+span-self-block-start
+span-self-end
+span-self-start
+span-start
+span-top
+span-x-end
+span-x-self-end
+span-x-self-start
+span-x-start
+span-y-end
+span-y-self-end
+span-y-self-start
+span-y-start
+x-end
+x-self-end
+x-self-start
+x-start
+y-end
+y-self-end
+y-self-start
+y-start
+span-inline-start
+span-inline-end
+self-inline-start
+self-inline-end
+span-self-inline-start
+span-self-inline-end
+// position-visibility
+// always
+anchors-valid
+anchors-visible
+no-overflow
+
+// view-transition-name
+match-element
+
+// <url>
+// url
+
+// <url-modifier>
+cross-origin
+anonymous
+use-credentials
+integrity
+referrer-policy
+no-referrer
+no-referrer-when-downgrade
+same-origin
+// origin
+strict-origin
+origin-when-cross-origin
+strict-origin-when-cross-origin
+unsafe-url

@@ -32,32 +32,18 @@
 #include "RealtimeMediaSourceCenter.h"
 #include "RealtimeMediaSourceSettings.h"
 #include <VideoFrame.h>
+#include <algorithm>
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
 
 namespace WebCore {
 
-RealtimeVideoCaptureSource::RealtimeVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
+RealtimeVideoCaptureSource::RealtimeVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : RealtimeMediaSource(device, WTFMove(hashSalts), pageIdentifier)
 {
 }
 
 RealtimeVideoCaptureSource::~RealtimeVideoCaptureSource() = default;
-
-void RealtimeVideoCaptureSource::ref() const
-{
-    ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeVideoCaptureSource, WTF::DestructionThread::MainRunLoop>::ref();
-}
-
-void RealtimeVideoCaptureSource::deref() const
-{
-    ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeVideoCaptureSource, WTF::DestructionThread::MainRunLoop>::deref();
-}
-
-ThreadSafeWeakPtrControlBlock& RealtimeVideoCaptureSource::controlBlock() const
-{
-    return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeVideoCaptureSource, WTF::DestructionThread::MainRunLoop>::controlBlock();
-}
 
 const Vector<VideoPreset>& RealtimeVideoCaptureSource::presets()
 {
@@ -158,6 +144,11 @@ void RealtimeVideoCaptureSource::updateCapabilities(RealtimeMediaSourceCapabilit
             maximumFrameRate = std::max(maximumFrameRate, rate.maximum);
     }
 
+    if (!maximumWidth || !maximumHeight || !maximumFrameRate) {
+        RELEASE_LOG_ERROR(WebRTC, "RealtimeVideoCaptureSource::updateCapabilities max width, max height or max frame rate is 0");
+        return;
+    }
+
     if (canResizeVideoFrames()) {
         minimumWidth = 1;
         minimumHeight = 1;
@@ -169,8 +160,6 @@ void RealtimeVideoCaptureSource::updateCapabilities(RealtimeMediaSourceCapabilit
     capabilities.setHeight({ minimumHeight, maximumHeight });
     capabilities.setAspectRatio({ minimumAspectRatio, maximumAspectRatio });
     capabilities.setFrameRate({ minimumFrameRate, maximumFrameRate });
-    capabilities.setFrameRate({ minimumFrameRate, maximumFrameRate });
-
     capabilities.setZoom({ minimumZoom, maximumZoom });
 }
 
@@ -200,7 +189,7 @@ bool RealtimeVideoCaptureSource::presetSupportsZoom(const VideoPreset& preset, d
     return preset.minZoom() <= zoom && zoom <= preset.maxZoom();
 }
 
-bool RealtimeVideoCaptureSource::supportsCaptureSize(std::optional<int> width, std::optional<int> height, const Function<bool(const IntSize&)>&& function)
+bool RealtimeVideoCaptureSource::supportsCaptureSize(std::optional<int> width, std::optional<int> height, NOESCAPE const Function<bool(const IntSize&)>& function)
 {
     if (width && height)
         return function({ width.value(), height.value() });
@@ -521,7 +510,7 @@ auto RealtimeVideoCaptureSource::takePhoto(PhotoSettings&& photoSettings) -> Ref
         setSizeFrameRateAndZoomForPhoto(WTFMove(*newPresetForPhoto));
     }
 
-    return takePhotoInternal(WTFMove(photoSettings))->whenSettled(RunLoop::main(), [this, protectedThis = Ref { *this }, configurationToRestore = WTFMove(configurationToRestore)] (auto&& result) mutable {
+    return takePhotoInternal(WTFMove(photoSettings))->whenSettled(RunLoop::mainSingleton(), [this, protectedThis = Ref { *this }, configurationToRestore = WTFMove(configurationToRestore)] (auto&& result) mutable {
 
         ASSERT(isMainThread());
 
@@ -591,7 +580,7 @@ String SizeFrameRateAndZoom::toJSONString() const
 
 bool RealtimeVideoCaptureSource::canBePowerEfficient()
 {
-    return anyOf(presets(), [] (auto& preset) { return preset.isEfficient(); }) && anyOf(presets(), [] (auto& preset) { return !preset.isEfficient(); });
+    return std::ranges::any_of(presets(), [](auto& preset) { return preset.isEfficient(); }) && std::ranges::any_of(presets(), [](auto& preset) { return !preset.isEfficient(); });
 }
 
 

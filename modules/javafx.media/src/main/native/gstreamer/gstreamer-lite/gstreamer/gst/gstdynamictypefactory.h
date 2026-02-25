@@ -89,7 +89,11 @@ G_BEGIN_DECLS
 #define GST_TYPE_DYNAMIC_TYPE_FACTORY           (gst_dynamic_type_factory_get_type())
 #define GST_DYNAMIC_TYPE_FACTORY(obj)           (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_DYNAMIC_TYPE_FACTORY,\
                                                  GstDynamicTypeFactory))
+#ifndef GST_DISABLE_DEPRECATED
 #define GST_DYNAMIC_TYPE_CLASS(klass)           (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_DYNAMIC_TYPE_FACTORY,\
+                                                 GstDynamicTypeFactoryClass))
+#endif
+#define GST_DYNAMIC_TYPE_FACTORY_CLASS(klass)   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_DYNAMIC_TYPE_FACTORY,\
                                                  GstDynamicTypeFactoryClass))
 #define GST_IS_DYNAMIC_TYPE_FACTORY(obj)        (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_DYNAMIC_TYPE_FACTORY))
 #define GST_IS_DYNAMIC_TYPE_FACTORY_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_DYNAMIC_TYPE_FACTORY))

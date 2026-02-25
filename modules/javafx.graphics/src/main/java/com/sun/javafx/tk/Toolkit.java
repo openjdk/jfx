@@ -360,7 +360,8 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl);
+    public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                          Modality modality, TKStage owner, boolean rtl, boolean darkFrame);
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner);
     public abstract TKStage createTKEmbeddedStage(HostInterface host);
@@ -519,12 +520,17 @@ public abstract class Toolkit {
                                           boolean preserveRatio,
                                           boolean smooth);
     public abstract AsyncOperation loadImageAsync(
-                                          AsyncOperationListener<? extends ImageLoader> listener,
+                                          AsyncOperationListener<ImageLoader> listener,
                                           String url,
                                           double width, double height,
                                           boolean preserveRatio,
                                           boolean smooth);
-
+    public abstract AsyncOperation loadImageAsync(
+                                          AsyncOperationListener<ImageLoader> listener,
+                                          InputStream stream,
+                                          double width, double height,
+                                          boolean preserveRatio,
+                                          boolean smooth);
     /*
      * The loadPlatformImage method supports the following image types:
      *   - an object returned by the renderToImage method

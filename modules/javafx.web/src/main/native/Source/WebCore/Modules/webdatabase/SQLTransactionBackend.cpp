@@ -353,7 +353,7 @@ SQLTransactionBackend::~SQLTransactionBackend()
 
 void SQLTransactionBackend::doCleanup()
 {
-    ASSERT(m_frontend.database().databaseThread().getThread() == &Thread::current());
+    ASSERT(m_frontend.database().databaseThread().getThread() == &Thread::currentSingleton());
 
     m_frontend.releaseOriginLockIfNeeded();
 
@@ -371,7 +371,7 @@ void SQLTransactionBackend::doCleanup()
 
     // Release the lock on this database
     if (m_frontend.m_lockAcquired)
-        m_frontend.m_database->transactionCoordinator()->releaseLock(m_frontend);
+        m_frontend.m_database->transactionCoordinator().releaseLock(m_frontend);
 
     // Do some aggresive clean up here except for m_database.
     //
@@ -401,7 +401,7 @@ void SQLTransactionBackend::doCleanup()
 
 SQLTransactionBackend::StateFunction SQLTransactionBackend::stateFunctionFor(SQLTransactionState state)
 {
-    static const StateFunction stateFunctions[] = {
+    static constexpr std::array<StateFunction, 13> stateFunctions {
         &SQLTransactionBackend::unreachableState,            // 0. end
         &SQLTransactionBackend::unreachableState,            // 1. idle
         &SQLTransactionBackend::acquireLock,                 // 2.
@@ -417,7 +417,7 @@ SQLTransactionBackend::StateFunction SQLTransactionBackend::stateFunctionFor(SQL
         &SQLTransactionBackend::unreachableState             // 12. deliverSuccessCallback
     };
 
-    ASSERT(std::size(stateFunctions) == static_cast<int>(SQLTransactionState::NumberOfStates));
+    ASSERT(stateFunctions.size() == static_cast<int>(SQLTransactionState::NumberOfStates));
     ASSERT(state < SQLTransactionState::NumberOfStates);
 
     return stateFunctions[static_cast<int>(state)];
@@ -465,7 +465,7 @@ void SQLTransactionBackend::computeNextStateAndCleanupIfNeeded()
 
 void SQLTransactionBackend::notifyDatabaseThreadIsShuttingDown()
 {
-    ASSERT(m_frontend.database().databaseThread().getThread() == &Thread::current());
+    ASSERT(m_frontend.database().databaseThread().getThread() == &Thread::currentSingleton());
 
     // If the transaction is in progress, we should roll it back here, since this
     // is our last opportunity to do something related to this transaction on the

@@ -45,13 +45,17 @@ public:
         EncodingFromParentFrame
     };
 
+    enum ContentType { PlainText, HTML, XML, CSS }; // PlainText only checks for BOM.
+
     WEBCORE_EXPORT static Ref<TextResourceDecoder> create(const String& mimeType, const PAL::TextEncoding& defaultEncoding = { }, bool usesEncodingDetector = false);
+    WEBCORE_EXPORT static Ref<TextResourceDecoder> create(ContentType, const PAL::TextEncoding&, bool usesEncodingDetector);
     WEBCORE_EXPORT ~TextResourceDecoder();
 
     static String textFromUTF8(std::span<const uint8_t>);
 
     void setEncoding(const PAL::TextEncoding&, EncodingSource);
     const PAL::TextEncoding& encoding() const { return m_encoding; }
+    ContentType contentType() const { return m_contentType; }
     const PAL::TextEncoding* encodingForURLParsing();
 
     bool hasEqualEncodingForCharset(const String& charset) const;
@@ -65,12 +69,13 @@ public:
     void useLenientXMLDecoding() { m_useLenientXMLDecoding = true; }
     bool sawError() const { return m_sawError; }
 
-    void setAlwaysUseUTF8() { ASSERT(!strcmp(m_encoding.name(), "UTF-8")); m_alwaysUseUTF8 = true; }
+    void setAlwaysUseUTF8() { ASSERT(m_encoding.name() == "UTF-8"_s); m_alwaysUseUTF8 = true; }
+
+    bool usesEncodingDetector() const { return m_usesEncodingDetector; }
 
 private:
-    TextResourceDecoder(const String& mimeType, const PAL::TextEncoding& defaultEncoding, bool usesEncodingDetector);
+    TextResourceDecoder(ContentType, const PAL::TextEncoding&, bool usesEncodingDetector);
 
-    enum ContentType { PlainText, HTML, XML, CSS }; // PlainText only checks for BOM.
     static ContentType determineContentType(const String& mimeType);
     static const PAL::TextEncoding& defaultEncoding(ContentType, const PAL::TextEncoding& defaultEncoding);
 
@@ -86,7 +91,7 @@ private:
     std::unique_ptr<PAL::TextCodec> m_codec;
     std::unique_ptr<HTMLMetaCharsetParser> m_charsetParser;
     EncodingSource m_source { DefaultEncoding };
-    const char* m_parentFrameAutoDetectedEncoding { nullptr };
+    ASCIILiteral m_parentFrameAutoDetectedEncoding;
     Vector<uint8_t> m_buffer;
     bool m_checkedForBOM { false };
     bool m_checkedForCSSCharset { false };

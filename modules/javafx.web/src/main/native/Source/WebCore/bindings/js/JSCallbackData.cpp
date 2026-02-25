@@ -34,10 +34,13 @@
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
 #include <JavaScriptCore/Exception.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSCallbackData);
 
 // https://webidl.spec.whatwg.org/#call-a-user-objects-operation
 JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject* callback, JSValue thisValue, MarkedArgumentBuffer& args, CallbackType method, PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
@@ -64,7 +67,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 
         ASSERT(!functionName.isNull());
         function = callback->get(lexicalGlobalObject, functionName);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             returnedException = scope.exception();
             scope.clearException();
             return JSValue();

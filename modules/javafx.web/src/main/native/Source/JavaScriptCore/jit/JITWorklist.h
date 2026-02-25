@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,11 +60,9 @@ public:
     void resumeAllThreads();
 
     enum State { NotKnown, Compiling, Compiled };
-    State compilationState(JITCompilationKey);
+    State compilationState(VM&, JITCompilationKey);
 
     State completeAllReadyPlansForVM(VM&, JITCompilationKey = JITCompilationKey());
-
-    void waitUntilAllPlansForVMAreReady(VM&);
 
     // This is equivalent to:
     // worklist->waitUntilAllPlansForVMAreReady(vm);
@@ -83,14 +81,20 @@ public:
     void visitWeakReferences(Visitor&);
 
     template<typename Visitor>
-    void iterateCodeBlocksForGC(Visitor&, VM&, const Function<void(CodeBlock*)>&);
+    void iterateCodeBlocksForGC(Visitor&, VM&, NOESCAPE const Function<void(CodeBlock*)>&);
 
     void dump(PrintStream&) const;
 
 private:
     JITWorklist();
 
+    void wakeThreads(const AbstractLocker&, unsigned enqueuedTier);
+    unsigned planLoad(JITPlan&);
+
     size_t queueLength(const AbstractLocker&) const;
+    size_t totalOngoingCompilations(const AbstractLocker&) const;
+
+    void waitUntilAllPlansForVMAreReady(VM&);
 
     template<typename MatchFunction>
     void removeMatchingPlansForVM(VM&, const MatchFunction&);
@@ -100,8 +104,10 @@ private:
     void dump(const AbstractLocker&, PrintStream&) const;
 
     unsigned m_numberOfActiveThreads { 0 };
+    unsigned m_totalLoad { 0 }; // Total load of the queues and ongoing compilations
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_ongoingCompilationsPerTier { 0, 0, 0 };
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_maximumNumberOfConcurrentCompilationsPerTier;
+    std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_loadWeightsPerTier;
 
     Vector<Ref<JITWorklistThread>> m_threads;
 
@@ -112,7 +118,7 @@ private:
     // is particularly great for the cti_optimize OSR slow path, which wants
     // to know: did I get here because a better version of me just got
     // compiled?
-    HashMap<JITCompilationKey, RefPtr<JITPlan>> m_plans;
+    UncheckedKeyHashMap<JITCompilationKey, RefPtr<JITPlan>> m_plans;
 
     // Used to quickly find which plans have been compiled and are ready to
     // be completed.
@@ -121,7 +127,7 @@ private:
     Lock m_suspensionLock;
     Box<Lock> m_lock;
 
-    Ref<AutomaticThreadCondition> m_planEnqueued;
+    const Ref<AutomaticThreadCondition> m_planEnqueued;
     Condition m_planCompiledOrCancelled;
 };
 

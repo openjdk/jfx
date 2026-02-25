@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,8 @@
 
 using namespace JSC;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 struct OpaqueJSScript final : public SourceProvider {
 public:
     static WTF::Ref<OpaqueJSScript> create(VM& vm, const SourceOrigin& sourceOrigin, String filename, int startingLineNumber, const String& source)
@@ -67,7 +69,7 @@ private:
     ~OpaqueJSScript() final { }
 
     VM& m_vm;
-    Ref<StringImpl> m_source;
+    const Ref<StringImpl> m_source;
 };
 
 static bool parseScript(VM& vm, const SourceCode& source, ParserError& error)
@@ -161,3 +163,5 @@ JSValueRef JSScriptEvaluate(JSContextRef context, JSScriptRef script, JSValueRef
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

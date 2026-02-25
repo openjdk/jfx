@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ApplicationCacheResourceLoader.h"
-#include "DOMApplicationCache.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -60,7 +59,7 @@ enum ApplicationCacheUpdateOption {
 
 class ApplicationCacheGroup : public CanMakeWeakPtr<ApplicationCacheGroup> {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheGroup);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ApplicationCacheGroup, Loader);
 public:
     explicit ApplicationCacheGroup(Ref<ApplicationCacheStorage>&&, const URL& manifestURL);
     virtual ~ApplicationCacheGroup();
@@ -114,8 +113,8 @@ private:
     void didFinishLoadingManifest();
     void didFailLoadingManifest(ApplicationCacheResourceLoader::Error);
 
-    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, const URL&, unsigned type);
-    void didFinishLoadingEntry(const URL&);
+    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, URL&&, unsigned type);
+    void didFinishLoadingEntry(URL&&);
 
     void didReachMaxAppCacheSize();
     void didReachOriginQuota(int64_t totalSpaceNeeded);
@@ -135,7 +134,7 @@ private:
 
     ResourceRequest createRequest(URL&&, ApplicationCacheResource*);
 
-    Ref<ApplicationCacheStorage> m_storage;
+    const Ref<ApplicationCacheStorage> m_storage;
 
     URL m_manifestURL;
     Ref<SecurityOrigin> m_origin;
@@ -190,7 +189,7 @@ private:
 
     RefPtr<ApplicationCacheResource> m_currentResource;
     RefPtr<ApplicationCacheResourceLoader> m_entryLoader;
-    ResourceLoaderIdentifier m_currentResourceIdentifier;
+    Markable<ResourceLoaderIdentifier> m_currentResourceIdentifier;
 
     RefPtr<ApplicationCacheResource> m_manifestResource;
     RefPtr<ApplicationCacheResourceLoader> m_manifestLoader;

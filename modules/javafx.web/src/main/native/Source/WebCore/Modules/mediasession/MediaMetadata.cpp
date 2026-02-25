@@ -40,10 +40,14 @@
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ArtworkImageLoader);
 
 ArtworkImageLoader::ArtworkImageLoader(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
     : m_document(document)
@@ -62,11 +66,12 @@ void ArtworkImageLoader::requestImageResource()
 {
     ASSERT(!m_cachedImage, "Can only call requestImageResource once");
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.contentSecurityPolicyImposition = m_document.isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+    Ref document = m_document.get();
+    options.contentSecurityPolicyImposition = document->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
 
-    CachedResourceRequest request(ResourceRequest(m_document.completeURL(m_src)), options);
-    request.setInitiatorType(AtomString { m_document.documentURI() });
-    m_cachedImage = m_document.protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
+    CachedResourceRequest request(ResourceRequest(document->completeURL(m_src)), options);
+    request.setInitiatorType(AtomString { document->documentURI() });
+    m_cachedImage = document->protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
 
     if (m_cachedImage)
         m_cachedImage->addClient(*this);
@@ -79,7 +84,10 @@ void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkL
         m_callback(nullptr);
         return;
     }
-    m_callback(m_cachedImage->image());
+    Ref image = *m_cachedImage->image();
+    image->subresourcesAreFinished(nullptr, [image, callback = std::exchange(m_callback, { })]() mutable {
+        callback(image.ptr());
+    });
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)
@@ -241,9 +249,7 @@ void MediaMetadata::refreshArtworkImage()
         return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
     });
 
-    std::sort(artworks.begin(), artworks.end(), [](const Pair& a1, const Pair& a2) {
-        return a1.score > a2.score;
-    });
+    std::ranges::sort(artworks, std::ranges::greater { }, &Pair::score);
 
     tryNextArtworkImage(0, WTFMove(artworks));
 }

@@ -32,6 +32,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wtf/Assertions.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 static int stdinSocket;
 static int stdoutSocket;
@@ -48,16 +50,16 @@ static int connectToServer(sockaddr_in& serverAddress)
 
 void setUpIOSLayoutTestCommunication()
 {
-    char* portFromEnvironment = getenv("PORT");
-    if (!portFromEnvironment)
+    auto portFromEnvironment = unsafeSpan(getenv("PORT"));
+    if (!portFromEnvironment.data())
         return;
-    int port = atoi(portFromEnvironment);
+    int port = parseInteger<int>(portFromEnvironment).value_or(0);
     RELEASE_ASSERT(port > 0);
     isUsingTCP = true;
 
     struct hostent* host = gethostbyname("127.0.0.1");
     struct sockaddr_in serverAddress;
-    memset((char*) &serverAddress, 0, sizeof(serverAddress));
+    zeroBytes(serverAddress);
     serverAddress.sin_family = AF_INET;
     memcpy(
         (char*)&serverAddress.sin_addr.s_addr,

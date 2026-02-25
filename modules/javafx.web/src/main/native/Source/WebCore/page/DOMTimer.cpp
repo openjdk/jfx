@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,13 +33,14 @@
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
 #include "ScheduledAction.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "ContentChangeObserver.h"
@@ -54,6 +55,8 @@ static constexpr Seconds minIntervalForRepeatingTimers { 1_ms };
 static constexpr int maxTimerNestingLevel = 10;
 static constexpr int maxTimerNestingLevelForOneShotTimers = 10;
 static constexpr int maxTimerNestingLevelForRepeatingTimers = 5;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMTimer);
 
 class DOMTimerFireState {
 public:
@@ -94,7 +97,7 @@ public:
     static DOMTimerFireState* current;
 
 private:
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
@@ -264,7 +267,7 @@ void DOMTimer::updateThrottlingStateIfNecessary(const DOMTimerFireState& fireSta
     if (!contextDocument)
         return;
 
-    if (UNLIKELY(!isDOMTimersThrottlingEnabled(*contextDocument))) {
+    if (!isDOMTimersThrottlingEnabled(*contextDocument)) [[unlikely]] {
         if (m_throttleState == ShouldThrottle) {
             // Unthrottle the timer in case it was throttled before the setting was updated.
             LOG(DOMTimers, "%p - Unthrottling DOM timer because throttling was disabled via settings.", this);

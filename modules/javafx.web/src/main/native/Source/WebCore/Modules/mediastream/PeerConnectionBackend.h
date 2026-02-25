@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,15 +48,11 @@ namespace WebCore {
 class PeerConnectionBackend;
 }
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PeerConnectionBackend> : std::true_type { };
-}
-
 namespace WebCore {
 
 class DeferredPromise;
 class Document;
+class Exception;
 class MediaStream;
 class MediaStreamTrack;
 class PeerConnectionBackend;
@@ -73,6 +69,7 @@ class RTCSctpTransportBackend;
 class RTCSessionDescription;
 class RTCStatsReport;
 class ScriptExecutionContext;
+class WeakPtrImplWithEventTargetData;
 
 struct MediaEndpointConfiguration;
 struct RTCAnswerOptions;
@@ -81,13 +78,14 @@ struct RTCOfferOptions;
 struct RTCRtpTransceiverInit;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 namespace PeerConnection {
 using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescriptionInit>>;
 using StatsPromise = DOMPromiseDeferred<IDLInterface<RTCStatsReport>>;
 }
 
-using CreatePeerConnectionBackend = std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&);
+using CreatePeerConnectionBackend = const std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&);
 
 class PeerConnectionBackend
     : public CanMakeWeakPtr<PeerConnectionBackend>
@@ -172,7 +170,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const override { return "PeerConnectionBackend"_s; }
     WTFLogChannel& logChannel() const final;
 #if PLATFORM(WPE) || PLATFORM(GTK)
@@ -230,6 +228,9 @@ public:
     virtual void startGatheringStatLogs(Function<void(String&&)>&&) { }
     virtual void stopGatheringStatLogs() { }
 
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
+
 protected:
     void doneGatheringCandidates();
 
@@ -250,14 +251,17 @@ protected:
 #if PLATFORM(WPE) || PLATFORM(GTK)
     bool isJSONLogStreamingEnabled() const { return !m_jsonFilePath.isEmpty(); }
 #endif
+
     struct MessageLogEvent {
         String message;
         std::optional<std::span<const uint8_t>> payload;
     };
     using StatsLogEvent = String;
-    using LogEvent = std::variant<MessageLogEvent, StatsLogEvent>;
+
+    using LogEvent = Variant<MessageLogEvent, StatsLogEvent>;
     String generateJSONLogEvent(LogEvent&&, bool isForGatherLogs);
     void emitJSONLogEvent(String&&);
+
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
@@ -267,7 +271,8 @@ private:
     virtual void doStop() = 0;
 
 protected:
-    RTCPeerConnection& m_peerConnection;
+    Ref<RTCPeerConnection> protectedPeerConnection() const;
+    WeakRef<RTCPeerConnection, WeakPtrImplWithEventTargetData> m_peerConnection;
 
 private:
     CreateCallback m_offerAnswerCallback;
@@ -276,12 +281,13 @@ private:
     bool m_shouldFilterICECandidates { true };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
     String m_logIdentifierString;
     bool m_finishedGatheringCandidates { false };
     bool m_isProcessingLocalDescriptionAnswer { false };
+
 #if PLATFORM(WPE) || PLATFORM(GTK)
     String m_jsonFilePath;
 #endif

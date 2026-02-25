@@ -31,6 +31,7 @@
 #include "DOMTimer.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMException.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreOpaqueRoot.h"
@@ -129,7 +130,16 @@ void AbortSignal::signalAbort(JSC::JSValue reason)
     if (m_aborted)
         return;
 
-    // 2. Set signal’s aborted flag.
+    // 2. ... if the reason is not given, set it to a new "AbortError" DOMException.
+    ASSERT(reason);
+    if (reason.isUndefined()) {
+        auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(protectedScriptExecutionContext()->globalObject());
+        if (!globalObject)
+            return;
+        reason = toJS(globalObject, globalObject, DOMException::create(ExceptionCode::AbortError));
+    }
+
+    // 2. Set signal’s abort reason to reason if it is given; otherwise to a new "AbortError" DOMException.
     markAborted(reason);
 
     Vector<Ref<AbortSignal>> dependentSignalsToAbort;
@@ -201,11 +211,11 @@ void AbortSignal::eventListenersDidChange()
 uint32_t AbortSignal::addAbortAlgorithmToSignal(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
 {
     if (signal.aborted()) {
-        algorithm->handleEvent(signal.m_reason.getValue());
+        algorithm->invoke(signal.m_reason.getValue());
         return 0;
     }
     return signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue value) mutable {
-        algorithm->handleEvent(value);
+        algorithm->invoke(value);
     });
 }
 

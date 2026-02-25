@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "InspectorBackendDispatchers.h"
 #include "InspectorFrontendChannel.h"
 #include "InspectorFrontendDispatchers.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -36,15 +37,16 @@ namespace Inspector {
 
 class InspectorTarget;
 
-class JS_EXPORT_PRIVATE InspectorTargetAgent final : public InspectorAgentBase, public TargetBackendDispatcherHandler {
+class JS_EXPORT_PRIVATE InspectorTargetAgent final : public InspectorAgentBase, public TargetBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorTargetAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorTargetAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorTargetAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorTargetAgent);
 public:
     InspectorTargetAgent(FrontendRouter&, BackendDispatcher&);
     ~InspectorTargetAgent() final;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // TargetBackendDispatcherHandler
@@ -67,9 +69,9 @@ private:
     void disconnectFromTargets();
 
     Inspector::FrontendRouter& m_router;
-    std::unique_ptr<TargetFrontendDispatcher> m_frontendDispatcher;
-    Ref<TargetBackendDispatcher> m_backendDispatcher;
-    HashMap<String, InspectorTarget*> m_targets;
+    const UniqueRef<TargetFrontendDispatcher> m_frontendDispatcher;
+    const Ref<TargetBackendDispatcher> m_backendDispatcher;
+    UncheckedKeyHashMap<String, InspectorTarget*> m_targets;
     bool m_isConnected { false };
     bool m_shouldPauseOnStart { false };
 };

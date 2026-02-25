@@ -29,9 +29,12 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/IterationStatus.h>
+#include <wtf/MallocPtr.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -39,7 +42,7 @@ namespace JSC {
 
 class ExpressionInfo {
     WTF_MAKE_NONCOPYABLE(ExpressionInfo);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ExpressionInfo);
 public:
     enum class FieldID : uint8_t { InstPC, Divot, Start, End, Line, Column };
 
@@ -88,7 +91,7 @@ public:
 
         Entry entry() const { return m_entry; }
 
-        MallocPtr<ExpressionInfo> createExpressionInfo();
+        std::unique_ptr<ExpressionInfo> createExpressionInfo();
 
         void dumpEncodedInfo() // For debugging use only.
         {
@@ -163,8 +166,6 @@ public:
             m_wides[m_numWides++] = { id, value };
         }
 
-        unsigned m_word { 0 };
-
         Entry m_entry;
         EncodedInfo* m_startInfo { nullptr };
         EncodedInfo* m_endInfo { nullptr };
@@ -213,12 +214,12 @@ private:
 
     Chapter* chapters() const
     {
-        return bitwise_cast<Chapter*>(this + 1);
+        return std::bit_cast<Chapter*>(this + 1);
     }
 
     EncodedInfo* encodedInfo() const
     {
-        return bitwise_cast<EncodedInfo*>(&chapters()[m_numberOfChapters]);
+        return std::bit_cast<EncodedInfo*>(&chapters()[m_numberOfChapters]);
     }
 
     EncodedInfo* endEncodedInfo() const
@@ -238,10 +239,10 @@ private:
 
     unsigned* payload() const
     {
-        return bitwise_cast<unsigned*>(this + 1);
+        return std::bit_cast<unsigned*>(this + 1);
     }
 
-    static MallocPtr<ExpressionInfo> createUninitialized(unsigned numberOfChapters, unsigned numberOfEncodedInfo, unsigned numberOfEncodedInfoExtensions);
+    static std::unique_ptr<ExpressionInfo> createUninitialized(unsigned numberOfChapters, unsigned numberOfEncodedInfo, unsigned numberOfEncodedInfoExtensions);
 
     static constexpr unsigned bitsPerWord = sizeof(unsigned) * CHAR_BIT;
 
@@ -316,7 +317,7 @@ private:
 
     static constexpr unsigned numberOfWordsBetweenChapters = 10000;
 
-    using LineColumnMap = HashMap<InstPC, LineColumn, WTF::IntHash<InstPC>, WTF::UnsignedWithZeroKeyHashTraits<InstPC>>;
+    using LineColumnMap = UncheckedKeyHashMap<InstPC, LineColumn, WTF::IntHash<InstPC>, WTF::UnsignedWithZeroKeyHashTraits<InstPC>>;
 
     mutable LineColumnMap m_cachedLineColumns;
     unsigned m_numberOfChapters;
@@ -332,3 +333,5 @@ private:
 static_assert(roundUpToMultipleOf<sizeof(unsigned)>(sizeof(ExpressionInfo)) == sizeof(ExpressionInfo), "CachedExpressionInfo relies on this invariant");
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

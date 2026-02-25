@@ -43,6 +43,10 @@
 #include <wtf/WTFConfig.h>
 #include <wtf/WordLock.h>
 
+#if OS(HAIKU)
+#include <OS.h>
+#endif
+
 #if OS(LINUX)
 #include <sched.h>
 #include <sys/prctl.h>
@@ -82,7 +86,7 @@ Thread::~Thread() = default;
 #if !OS(DARWIN)
 class Semaphore final {
     WTF_MAKE_NONCOPYABLE(Semaphore);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Semaphore);
 public:
     explicit Semaphore(unsigned initialValue)
     {
@@ -178,8 +182,10 @@ void Thread::initializePlatformThreading()
         g_wtfConfig.sigThreadSuspendResume = SIGUSR1;
         if (const char* string = getenv("JSC_SIGNAL_FOR_GC")) {
             int32_t value = 0;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             if (sscanf(string, "%d", &value) == 1)
                 g_wtfConfig.sigThreadSuspendResume = value;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     }
     g_wtfConfig.isThreadSuspendResumeSignalConfigured = true;
@@ -206,7 +212,7 @@ void Thread::initializePlatformThreading()
         if (sigaction(signal, nullptr, &oldAction))
             return false;
         // It has signal already.
-        if (oldAction.sa_handler != SIG_DFL || bitwise_cast<void*>(oldAction.sa_sigaction) != bitwise_cast<void*>(SIG_DFL))
+        if (oldAction.sa_handler != SIG_DFL || std::bit_cast<void*>(oldAction.sa_sigaction) != std::bit_cast<void*>(SIG_DFL))
             WTFLogAlways("Overriding existing handler for signal %d. Set JSC_SIGNAL_FOR_GC if you want WebKit to use a different signal", signal);
         return !sigaction(signal, &action, 0);
     };
@@ -344,6 +350,8 @@ void Thread::initializeCurrentThreadInternal(const char* threadName)
 {
 #if HAVE(PTHREAD_SETNAME_NP)
     pthread_setname_np(normalizeThreadName(threadName));
+#elif OS(HAIKU)
+    rename_thread(find_thread(nullptr), normalizeThreadName(threadName));
 #elif OS(LINUX)
     prctl(PR_SET_NAME, normalizeThreadName(threadName));
 #else
@@ -378,8 +386,10 @@ void Thread::setThreadTimeConstraints(MonotonicTime period, MonotonicTime nomina
     policy.computation = nominalComputation.toMachAbsoluteTime();
     policy.constraint = constraint.toMachAbsoluteTime();
     policy.preemptible = isPremptable;
-    if (auto error = thread_policy_set(machThread(), THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT))
+    if (auto error = thread_policy_set(machThread(), THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT)) {
+        UNUSED_VARIABLE(error);
         LOG_ERROR("Thread %p failed to set time constraints with error %d", this, error);
+    }
 #else
     ASSERT_NOT_REACHED();
 #endif
@@ -446,7 +456,7 @@ bool Thread::signal(int signalNumber)
 
 auto Thread::suspend(const ThreadSuspendLocker&) -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::currentSingleton(), "We do not support suspending the current thread itself.");
 #if OS(DARWIN)
     kern_return_t result = thread_suspend(m_platformThread);
     if (result != KERN_SUCCESS)
@@ -499,7 +509,7 @@ void Thread::resume(const ThreadSuspendLocker&)
 
 #if OS(DARWIN)
 struct ThreadStateMetadata {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ThreadStateMetadata);
     unsigned userCount;
     thread_state_flavor_t flavor;
 };
@@ -538,7 +548,7 @@ size_t Thread::getRegisters(const ThreadSuspendLocker&, PlatformRegisters& regis
     kern_return_t result = thread_get_state(m_platformThread, metadata.flavor, (thread_state_t)&registers, &metadata.userCount);
     if (result != KERN_SUCCESS) {
         WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "JavaScript garbage collection failed because thread_get_state returned an error (%d). This is probably the result of running inside Rosetta, which is not supported.", result);
-        CRASH();
+        CRASH_WITH_INFO(result, KERN_SUCCESS);
     }
     return metadata.userCount * sizeof(uintptr_t);
 #else
@@ -568,7 +578,7 @@ void Thread::initializeTLSKey()
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
     // We leak the ref to keep the Thread alive while it is held in TLS. destructTLS will deref it later at thread destruction time.
-    auto& threadInTLS = thread.leakRef();
+    SUPPRESS_UNCOUNTED_LOCAL auto& threadInTLS = thread.leakRef();
 #if !HAVE(FAST_TLS)
     ASSERT(s_key != InvalidThreadSpecificKey);
     threadSpecificSet(s_key, &threadInTLS);
@@ -599,8 +609,8 @@ void Thread::destructTLS(void* data)
     _pthread_setspecific_direct(WTF_THREAD_DATA_KEY, thread);
     pthread_key_init_np(WTF_THREAD_DATA_KEY, &destructTLS);
 #endif
-    // Destructor of ClientData can rely on Thread::current() (e.g. AtomStringTable).
-    // We destroy it after re-setting Thread::current() so that we can ensure destruction
+    // Destructor of ClientData can rely on Thread::currentSingleton() (e.g. AtomStringTable).
+    // We destroy it after re-setting Thread::currentSingleton() so that we can ensure destruction
     // can still access to it.
     thread->m_clientData = nullptr;
 }

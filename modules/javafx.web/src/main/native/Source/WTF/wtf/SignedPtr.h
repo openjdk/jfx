@@ -35,7 +35,7 @@ namespace WTF {
 template<typename T, const uintptr_t Tag>
 class SignedPtr {
 public:
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SignedPtr);
 public:
     constexpr SignedPtr()
         : m_value(nullptr)
@@ -136,7 +136,7 @@ struct SignedPtrTraits {
 
     static ALWAYS_INLINE T* unwrap(const StorageType& ptr) { return ptr.get(); }
 
-    static StorageType hashTableDeletedValue() { return bitwise_cast<StorageType>(static_cast<uintptr_t>(-1)); }
+    static StorageType hashTableDeletedValue() { return std::bit_cast<StorageType>(static_cast<uintptr_t>(-1)); }
     static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr == hashTableDeletedValue(); }
 };
 

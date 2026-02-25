@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(ARM_THUMB2)
 
 #include "AssemblerBuffer.h"
@@ -2487,8 +2489,8 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_formatter.label();
-        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
-            if (UNLIKELY(static_cast<int>(result.offset()) + 4 <= m_indexOfTailOfLastWatchpoint))
+        while (static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint) [[unlikely]] {
+            if (static_cast<int>(result.offset()) + 4 <= m_indexOfTailOfLastWatchpoint) [[unlikely]]
                 nopw();
             else
                 nop();
@@ -2550,28 +2552,34 @@ public:
 
         const int paddingSize = JUMP_ENUM_SIZE(jumpType);
 
+        const auto isAligned = [paddingSize](const int linkSize) constexpr {
+            // Let's skip compactions that would cause later instructions to become unaligned
+            // This way, we don't need to fix up concurrently-patchable branches later on.
+            return (paddingSize - linkSize) % sizeof(uint32_t) == 0;
+        };
+
         if (jumpType == JumpCondition) {
             // 2-byte conditional T1
             const uint16_t* jumpT1Location = reinterpret_cast_ptr<const uint16_t*>(from - (paddingSize - JUMP_ENUM_SIZE(LinkJumpT1)));
-            if (canBeJumpT1(jumpT1Location, to))
+            if (canBeJumpT1(jumpT1Location, to) && isAligned(JUMP_ENUM_SIZE(LinkJumpT1)))
                 return LinkJumpT1;
             // 4-byte conditional T3
             const uint16_t* jumpT3Location = reinterpret_cast_ptr<const uint16_t*>(from - (paddingSize - JUMP_ENUM_SIZE(LinkJumpT3)));
-            if (canBeJumpT3(jumpT3Location, to))
+            if (canBeJumpT3(jumpT3Location, to) && isAligned(JUMP_ENUM_SIZE(LinkJumpT3)))
                 return LinkJumpT3;
             // 4-byte conditional T4 with IT
             const uint16_t* conditionalJumpT4Location =
             reinterpret_cast_ptr<const uint16_t*>(from - (paddingSize - JUMP_ENUM_SIZE(LinkConditionalJumpT4)));
-            if (canBeJumpT4(conditionalJumpT4Location, to))
+            if (canBeJumpT4(conditionalJumpT4Location, to) && isAligned(JUMP_ENUM_SIZE(LinkConditionalJumpT4)))
                 return LinkConditionalJumpT4;
         } else {
             // 2-byte unconditional T2
             const uint16_t* jumpT2Location = reinterpret_cast_ptr<const uint16_t*>(from - (paddingSize - JUMP_ENUM_SIZE(LinkJumpT2)));
-            if (canBeJumpT2(jumpT2Location, to))
+            if (canBeJumpT2(jumpT2Location, to) && isAligned(JUMP_ENUM_SIZE(LinkJumpT2)))
                 return LinkJumpT2;
             // 4-byte unconditional T4
             const uint16_t* jumpT4Location = reinterpret_cast_ptr<const uint16_t*>(from - (paddingSize - JUMP_ENUM_SIZE(LinkJumpT4)));
-            if (canBeJumpT4(jumpT4Location, to))
+            if (canBeJumpT4(jumpT4Location, to) && isAligned(JUMP_ENUM_SIZE(LinkJumpT4)))
                 return LinkJumpT4;
             // use long jump sequence
             return LinkBX;
@@ -2723,7 +2731,7 @@ public:
         ASSERT(isEven(from));
         ASSERT(isEven(to));
 
-        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(from);
+        intptr_t offset = std::bit_cast<intptr_t>(to) - std::bit_cast<intptr_t>(from);
         ASSERT(static_cast<int>(offset) == offset);
 
         if (isInt<25>(offset))
@@ -2759,8 +2767,8 @@ public:
 
     static void replaceWithJump(void* instructionStart, void* to)
     {
-        ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
-        ASSERT(!(bitwise_cast<uintptr_t>(to) & 1));
+        ASSERT(!(std::bit_cast<uintptr_t>(instructionStart) & 1));
+        ASSERT(!(std::bit_cast<uintptr_t>(to) & 1));
 
 #if OS(LINUX)
         if (canBeJumpT4(reinterpret_cast<uint16_t*>(instructionStart), to)) {
@@ -2849,7 +2857,7 @@ public:
     {
         // 'from' holds the address of the branch instruction. The branch range however is relative
         // to the architectural value of the PC which is 4 larger than the address of the branch.
-        intptr_t offset = bitwise_cast<intptr_t>(to) - (bitwise_cast<intptr_t>(from) + 4);
+        intptr_t offset = std::bit_cast<intptr_t>(to) - (std::bit_cast<intptr_t>(from) + 4);
         return isInt<25>(offset);
     }
 
@@ -3178,7 +3186,7 @@ private:
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
         ASSERT(!(reinterpret_cast<intptr_t>(target) & 1));
 
-        linkBX(writeTarget, instruction, target);
+        linkBX<copy>(writeTarget, instruction, target);
         uint16_t newInstruction = ifThenElse(cond, true, true) | OP_IT;
         machineCodeCopy<copy>(writeTarget - 6, &newInstruction, sizeof(uint16_t));
     }
@@ -3226,11 +3234,11 @@ private:
         ASSERT(isEven(to));
         ASSERT(link == BranchWithLink::Yes ? isBL(from - 2) : isB(from - 2));
 
-        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+        intptr_t offset = std::bit_cast<intptr_t>(to) - std::bit_cast<intptr_t>(fromInstruction);
 #if ENABLE(JUMP_ISLANDS)
         if (!isInt<25>(offset)) {
-            to = ExecutableAllocator::singleton().getJumpIslandToUsingJITMemcpy(bitwise_cast<void*>(fromInstruction), to);
-            offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+            to = ExecutableAllocator::singleton().getJumpIslandToUsingJITMemcpy(std::bit_cast<void*>(fromInstruction), to);
+            offset = std::bit_cast<intptr_t>(to) - std::bit_cast<intptr_t>(fromInstruction);
         }
 #endif
         RELEASE_ASSERT(isInt<25>(offset));
@@ -3388,7 +3396,7 @@ private:
         size_t codeSize() const { return m_buffer.codeSize(); }
         AssemblerLabel label() const { return m_buffer.label(); }
         bool isAligned(int alignment) const { return m_buffer.isAligned(alignment); }
-        void* data() const { return m_buffer.data(); }
+        void* data() const LIFETIME_BOUND { return m_buffer.data(); }
 
         unsigned debugOffset() { return m_buffer.debugOffset(); }
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Igalia S.L.
- * Copyright (c) 2021 Apple Inc.
+ * Copyright (c) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #pragma once
 
 #include "ScrollbarsController.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -40,7 +41,7 @@ namespace WebCore {
 // the internal setting setMockScrollbarsControllerEnabled().
 
 class ScrollbarsControllerMock final : public ScrollbarsController {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollbarsControllerMock);
     WTF_MAKE_NONCOPYABLE(ScrollbarsControllerMock);
 public:
     ScrollbarsControllerMock(ScrollableArea&, Function<void(const String&)>&&);

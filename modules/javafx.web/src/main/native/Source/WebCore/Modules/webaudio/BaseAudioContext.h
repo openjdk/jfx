@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,7 @@ class DynamicsCompressorNode;
 class GainNode;
 class IIRFilterNode;
 class MediaElementAudioSourceNode;
+class MediaSessionManagerInterface;
 class OscillatorNode;
 class PannerNode;
 class PeriodicWave;
@@ -103,11 +104,17 @@ public:
     uint64_t contextID() const { return m_contextID; }
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
     bool isInitialized() const { return m_isInitialized; }
 
     virtual bool isOfflineContext() const = 0;
     virtual AudioDestinationNode& destination() = 0;
+    Ref<AudioDestinationNode> protectedDestination() { return destination(); }
     virtual const AudioDestinationNode& destination() const = 0;
+    Ref<const AudioDestinationNode> protectedDestination() const { return destination(); }
+#if PLATFORM(IOS_FAMILY)
+    virtual const String& sceneIdentifier() const { return nullString(); }
+#endif
 
     size_t currentSampleFrame() const { return destination().currentSampleFrame(); }
     double currentTime() const { return destination().currentTime(); }
@@ -147,8 +154,8 @@ public:
     ExceptionOr<Ref<AudioBuffer>> createBuffer(unsigned numberOfChannels, unsigned length, float sampleRate);
 
     // ActiveDOMObject.
-    void ref() const final { ThreadSafeRefCounted::ref(); }
-    void deref() const final { ThreadSafeRefCounted::deref(); }
+    void ref() const override { ThreadSafeRefCounted::ref(); }
+    void deref() const override { ThreadSafeRefCounted::deref(); }
 
     // Called at the start of each render quantum.
     void handlePreRenderTasks(const AudioIOPosition& outputPosition);
@@ -182,7 +189,7 @@ public:
     //
 
     void setAudioThread(Thread& thread) { m_audioThread = &thread; } // FIXME: check either not initialized or the same
-    bool isAudioThread() const { return m_audioThread == &Thread::current(); }
+    bool isAudioThread() const { return m_audioThread == &Thread::currentSingleton(); }
 
     // Returns true only after the audio thread has been started and then shutdown.
     bool isAudioThreadFinished() const { return m_isAudioThreadFinished; }
@@ -215,10 +222,10 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const override { return m_logger.get(); }
-    const void* logIdentifier() const override { return m_logIdentifier; }
+    uint64_t logIdentifier() const override { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
-    const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
-    const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
+    uint64_t nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
+    uint64_t nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
 #endif
 
     void postTask(Function<void()>&&);
@@ -235,7 +242,7 @@ public:
     void addAudioParamDescriptors(const String& processorName, Vector<AudioParamDescriptor>&&);
     const MemoryCompactRobinHoodHashMap<String, Vector<AudioParamDescriptor>>& parameterDescriptorMap() const { return m_parameterDescriptorMap; }
 
-    NoiseInjectionPolicy noiseInjectionPolicy() const { return m_noiseInjectionPolicy; }
+    OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const { return m_noiseInjectionPolicies; }
 
 protected:
     explicit BaseAudioContext(Document&);
@@ -250,6 +257,8 @@ protected:
     void setState(State);
 
     void clear();
+
+    RefPtr<MediaSessionManagerInterface> mediaSessionManager() const;
 
 protected:
     // Only accessed when the graph lock is held.
@@ -286,15 +295,15 @@ private:
     void disableOutputsForFinishedTailProcessingNodes();
 
 #if !RELEASE_LOG_DISABLED
-    Ref<Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
     uint64_t m_nextAudioNodeIdentifier { 0 };
     uint64_t m_nextAudioParameterIdentifier { 0 };
 #endif
 
     uint64_t m_contextID;
 
-    Ref<AudioWorklet> m_worklet;
+    const Ref<AudioWorklet> m_worklet;
 
     // Either accessed when the graph lock is held, or on the main thread when the audio thread has finished.
     Vector<AudioConnectionRefPtr<AudioNode>> m_referencedSourceNodes;
@@ -351,7 +360,7 @@ private:
     Vector<AudioNode*> m_deferredBreakConnectionList;
     Vector<Vector<DOMPromiseDeferred<void>>> m_stateReactions;
 
-    Ref<AudioListener> m_listener;
+    const Ref<AudioListener> m_listener;
 
     std::atomic<Thread*> m_audioThread;
 
@@ -378,7 +387,7 @@ private:
     bool m_isAudioThreadFinished { false };
     bool m_automaticPullNodesNeedUpdating { false };
     bool m_hasFinishedAudioSourceNodes { false };
-    NoiseInjectionPolicy m_noiseInjectionPolicy { NoiseInjectionPolicy::None };
+    OptionSet<NoiseInjectionPolicy> m_noiseInjectionPolicies;
 };
 
 } // WebCore

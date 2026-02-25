@@ -31,6 +31,7 @@
 #include "JSElement.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "HTMLFrameElementBase.h"
 #include "HTMLNames.h"
 #include "JSAttr.h"
@@ -44,7 +45,9 @@
 #include "JSSVGElementWrapperFactory.h"
 #include "MathMLElement.h"
 #include "NodeList.h"
+#include "Quirks.h"
 #include "SVGElement.h"
+#include "Settings.h"
 #include "WebCoreJSClientData.h"
 
 
@@ -99,7 +102,7 @@ static JSValue getElementsArrayAttribute(JSGlobalObject& lexicalGlobalObject, co
         const_cast<JSElement&>(thisObject).putDirect(vm, builtinNames(vm).cachedAttrAssociatedElementsPrivateName(), cachedObject);
     }
 
-    std::optional<Vector<Ref<Element>>> elements = thisObject.wrapped().getElementsArrayAttribute(attributeName);
+    std::optional<Vector<Ref<Element>>> elements = thisObject.wrapped().getElementsArrayAttributeForBindings(attributeName);
     auto propertyName = PropertyName(Identifier::fromString(vm, attributeName.toString()));
     JSValue cachedValue = cachedObject->getDirect(vm, propertyName);
     if (!cachedValue.isEmpty()) {
@@ -146,6 +149,24 @@ JSValue JSElement::ariaLabelledByElements(JSGlobalObject& lexicalGlobalObject) c
 JSValue JSElement::ariaOwnsElements(JSGlobalObject& lexicalGlobalObject) const
 {
     return getElementsArrayAttribute(lexicalGlobalObject, *this, WebCore::HTMLNames::aria_ownsAttr);
+}
+
+bool JSElement::shouldEnableWebkitRequestFullScreen(ScriptExecutionContext* context)
+{
+#if ENABLE(FULLSCREEN_API)
+    RefPtr document = dynamicDowncast<Document>(context);
+    if (!document)
+        return false;
+
+    if (document->quirks().shouldDisableElementFullscreenQuirk())
+        return false;
+
+    return document->settings().fullScreenEnabled()
+        || document->quirks().shouldEnterNativeFullscreenWhenCallingElementRequestFullscreenQuirk();
+#else
+    UNUSED_PARAM(context);
+    return false;
+#endif
 }
 
 } // namespace WebCore

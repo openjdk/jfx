@@ -27,13 +27,14 @@
 
 #include "FilterStyle.h"
 #include "GraphicsContextSwitcher.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class TransparencyLayerContextSwitcher : public GraphicsContextSwitcher {
-    WTF_MAKE_FAST_ALLOCATED;
+class TransparencyLayerContextSwitcher final : public GraphicsContextSwitcher {
+    WTF_MAKE_TZONE_ALLOCATED(TransparencyLayerContextSwitcher);
 public:
-    TransparencyLayerContextSwitcher(GraphicsContext& destinationContext, const FloatRect &sourceImageRect, RefPtr<Filter>&&);
+    TransparencyLayerContextSwitcher(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, RefPtr<Filter>&&);
 
 private:
     void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect) override;

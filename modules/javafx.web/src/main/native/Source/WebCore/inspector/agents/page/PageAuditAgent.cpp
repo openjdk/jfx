@@ -33,6 +33,7 @@
 #include "JSInspectorAuditAccessibilityObject.h"
 #include "JSInspectorAuditDOMObject.h"
 #include "JSInspectorAuditResourcesObject.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include <JavaScriptCore/CallFrame.h>
@@ -41,12 +42,15 @@
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageAuditAgent);
 
 PageAuditAgent::PageAuditAgent(PageAgentContext& context)
     : InspectorAuditAgent(context)
@@ -60,7 +64,7 @@ InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Inspector::Pr
 {
     if (executionContextId)
         return injectedScriptManager().injectedScriptForId(*executionContextId);
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame()))
+    if (RefPtr localMainFrame = m_inspectedPage->localMainFrame())
         return injectedScriptManager().injectedScriptFor(&mainWorldGlobalObject(*localMainFrame));
     return InjectedScript();
 }

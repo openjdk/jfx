@@ -28,6 +28,7 @@
 #include "Options.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Platform.h>
 #include <wtf/PtrTag.h>
 
 namespace JSC {
@@ -51,14 +52,14 @@ public:
     template<typename PtrType>
     void* map(PtrType pointer) const
     {
-        return m_validatedOperations.get(removeCodePtrTag(bitwise_cast<void*>(pointer)));
+        return m_validatedOperations.get(removeCodePtrTag(std::bit_cast<void*>(pointer)));
     }
 
 #if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
     template<typename PtrType>
     void* inverseMap(PtrType pointer) const
     {
-        return m_validatedOperationsInverseMap.get(bitwise_cast<void*>(pointer));
+        return m_validatedOperationsInverseMap.get(std::bit_cast<void*>(pointer));
     }
 #endif
 
@@ -102,9 +103,9 @@ private:
     void addInverseMap(void* validationEntry, void* pointer);
 #endif
 
-    HashMap<void*, void*> m_validatedOperations;
+    UncheckedKeyHashMap<void*, void*> m_validatedOperations;
 #if ENABLE(JIT_OPERATION_VALIDATION_ASSERT)
-    HashMap<void*, void*> m_validatedOperationsInverseMap;
+    UncheckedKeyHashMap<void*, void*> m_validatedOperationsInverseMap;
 #endif
 #endif // ENABLE(JIT_OPERATION_VALIDATION)
 };
@@ -122,13 +123,13 @@ inline JITOperationList& JITOperationList::singleton()
 
 ALWAYS_INLINE void JITOperationList::populatePointersInJavaScriptCore()
 {
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabelsInJavaScriptCore();
 }
 
 ALWAYS_INLINE void JITOperationList::populatePointersInJavaScriptCoreForLLInt()
 {
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabelsInJavaScriptCoreForLLInt();
 }
 

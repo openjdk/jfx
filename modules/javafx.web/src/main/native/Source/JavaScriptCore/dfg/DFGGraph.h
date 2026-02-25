@@ -30,6 +30,7 @@
 #include "AssemblyHelpers.h"
 #include "BytecodeLivenessAnalysisInlines.h"
 #include "CodeBlock.h"
+#include "ConcatKeyAtomStringCache.h"
 #include "DFGArgumentPosition.h"
 #include "DFGBasicBlock.h"
 #include "DFGFrozenValue.h"
@@ -75,24 +76,46 @@ using SSADominators = Dominators<SSACFG>;
 using CPSNaturalLoops = NaturalLoops<CPSCFG>;
 using SSANaturalLoops = NaturalLoops<SSACFG>;
 
-#define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) do {            \
+#define APPLY_THING_TO_DO(node, edge, thingToDo) thingToDo(node, edge);
+#define APPLY_THING_TO_DO_BREAK_ON_DONE(node, edge, thingToDo) \
+    if (thingToDo(node, edge) == IterationStatus::Done)     \
+        return;
+
+#define ALWAYS_TRUE(edge) true
+#define NON_NULL_EDGE(edge) (!!(edge))
+
+#define DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, CHILD_CHECK)    \
+    do {                                                                                    \
         Node* _node = (node);                                           \
         if (_node->flags() & NodeHasVarArgs) {                          \
             for (unsigned _childIdx = _node->firstChild();              \
                 _childIdx < _node->firstChild() + _node->numChildren(); \
                 _childIdx++) {                                          \
-                if (!!(graph).m_varArgChildren[_childIdx])              \
-                    thingToDo(_node, (graph).m_varArgChildren[_childIdx]); \
+                Edge& _edge = (graph).m_varArgChildren[_childIdx];                           \
+                if (CHILD_CHECK(_edge))                                                      \
+                    THING_TO_DO(_node, _edge, thingToDo);                                    \
             }                                                           \
         } else {                                                        \
             for (unsigned _edgeIndex = 0; _edgeIndex < AdjacencyList::Size; _edgeIndex++) { \
                 Edge& _edge = _node->children.child(_edgeIndex);        \
-                if (!_edge)                                             \
+                if (!CHILD_CHECK(_edge))                                                     \
                     break;                                              \
-                thingToDo(_node, _edge);                                \
+                THING_TO_DO(_node, _edge, thingToDo);                                        \
             }                                                           \
         }                                                               \
     } while (false)
+
+#define DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, ALWAYS_TRUE)
+
+#define DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, THING_TO_DO) \
+    DFG_NODE_DO_TO_CHILDREN_GENERIC(graph, node, thingToDo, THING_TO_DO, NON_NULL_EDGE)
+
+#define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) \
+    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO)
+
+#define DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(graph, node, thingToDo) \
+    DFG_NODE_DO_TO_CHILDREN_COMMON(graph, node, thingToDo, APPLY_THING_TO_DO_BREAK_ON_DONE)
 
 #define DFG_ASSERT(graph, node, assertion, ...) do {                    \
         if (!!(assertion))                                              \
@@ -218,6 +241,11 @@ public:
         ASSERT(!child->replacement());
     }
 
+    Node* cloneAndAdd(const Node& node)
+    {
+        return m_nodes.cloneAndAdd(node);
+    }
+
     template<typename... Params>
     Node* addNode(Params... params)
     {
@@ -269,7 +297,17 @@ public:
     void assertIsRegistered(Structure* structure);
 
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
-    void dump(PrintStream& = WTF::dataFile(), DumpContext* = nullptr);
+    void dump() const
+    {
+        const_cast<Graph&>(*this).dump(WTF::dataFile(), nullptr);
+    }
+
+    void dump(PrintStream& out) const
+    {
+        const_cast<Graph&>(*this).dump(out, nullptr);
+    }
+
+    void dump(PrintStream&, DumpContext*);
 
     bool terminalsAreValid();
 
@@ -526,7 +564,7 @@ public:
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
 
-    void appendBlock(Ref<BasicBlock>&& basicBlock)
+    void appendBlock(std::unique_ptr<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
         m_blocks.append(WTFMove(basicBlock));
@@ -752,34 +790,41 @@ public:
         return NaturalBlockIterable(*this);
     }
 
-    template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildrenWithNode(Node* node, const ChildFunctor& functor)
-    {
-        DFG_NODE_DO_TO_CHILDREN(*this, node, functor);
-    }
-
-    template<typename ChildFunctor>
-    ALWAYS_INLINE void doToChildren(Node* node, const ChildFunctor& functor)
-    {
+    template<typename Functor>
         class ForwardingFunc {
         public:
-            ForwardingFunc(const ChildFunctor& functor)
+        explicit ForwardingFunc(const Functor& functor)
                 : m_functor(functor)
             {
             }
 
-            // This is a manually written func because we want ALWAYS_INLINE.
-            ALWAYS_INLINE void operator()(Node*, Edge& edge) const
+        template<typename NodeType>
+        ALWAYS_INLINE auto operator()(NodeType*, Edge& edge) const -> decltype(std::declval<Functor>()(edge))
             {
-                m_functor(edge);
+            return m_functor(edge);
             }
 
         private:
-            const ChildFunctor& m_functor;
+        const Functor& m_functor;
         };
 
-        doToChildrenWithNode(node, ForwardingFunc(functor));
+    template<typename ChildFunctor>
+    ALWAYS_INLINE void doToChildren(Node* node, const ChildFunctor& functor)
+    {
+        DFG_NODE_DO_TO_CHILDREN(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
     }
+
+    template<typename ChildFunctor>
+    ALWAYS_INLINE void doToAllChildren(Node* node, const ChildFunctor& functor)
+    {
+        DFG_NODE_DO_TO_ALL_CHILDREN_COMMON(*this, node, (ForwardingFunc<ChildFunctor>(functor)), APPLY_THING_TO_DO);
+            }
+
+    template<typename ChildFunctor>
+    ALWAYS_INLINE void doToChildrenBreakOnDone(Node* node, const ChildFunctor& functor)
+            {
+        DFG_NODE_DO_TO_CHILDREN_BREAK_ON_DONE(*this, node, (ForwardingFunc<ChildFunctor>(functor)));
+            }
 
     bool uses(Node* node, Node* child)
     {
@@ -867,11 +912,32 @@ public:
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StructureCacheClearedWatchpointSet);
     }
 
-    bool isWatchingStringSymbolReplaceWatchpoint(Node* node)
+    bool isWatchingStringToStringWatchpoint(const CodeOrigin& semanticOrigin)
     {
-        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringToStringWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringToStringWatchpointSet);
+    }
+
+    bool isWatchingStringValueOfWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringValueOfWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringValueOfWatchpointSet);
+    }
+
+    bool isWatchingStringSymbolReplaceWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
         InlineWatchpointSet& set = globalObject->stringSymbolReplaceWatchpointSet();
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolReplaceWatchpointSet);
+    }
+
+    bool isWatchingStringSymbolToPrimitiveWatchpoint(const CodeOrigin& semanticOrigin)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(semanticOrigin);
+        InlineWatchpointSet& set = globalObject->stringSymbolToPrimitiveWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet);
     }
 
     bool isWatchingRegExpPrimordialPropertiesWatchpoint(Node* node)
@@ -925,6 +991,8 @@ public:
     // Checks if it's known that loading from the given object at the given offset is fine. This is
     // computed by tracking which conditions we track with watchCondition().
     bool isSafeToLoad(JSObject* base, PropertyOffset);
+
+    GetByOffsetMethod promoteToConstant(GetByOffsetMethod);
 
     // This uses either constant property inference or property type inference to derive a good abstract
     // value for some property accessed with the given abstract value base.
@@ -1026,6 +1094,7 @@ public:
             case op_call_varargs:
             case op_tail_call_varargs:
             case op_construct_varargs:
+            case op_super_construct_varargs:
                 // When inlining varargs call, uses include array used for varargs. But when we are in inlined function,
                 // the content of this is already read and flushed to the stack. So, at this point, we no longer need to
                 // keep these use registers. We can use the liveness at LivenessCalculationPoint::AfterUse point.
@@ -1159,6 +1228,7 @@ public:
     bool isNeverResizableOrGrowableSharedTypedArrayIncludingDataView(const AbstractValue&);
 
     const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String&);
+    const ConcatKeyAtomStringCache* tryAddConcatKeyAtomStringCache(const String&, const String&, ConcatKeyAtomStringCache::Mode);
 
     bool afterFixup() { return m_planStage >= PlanStage::AfterFixup; }
 
@@ -1168,7 +1238,7 @@ public:
     CodeBlock* const m_codeBlock;
     CodeBlock* const m_profiledBlock;
 
-    Vector<RefPtr<BasicBlock>, 8> m_blocks;
+    Vector<std::unique_ptr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
 
@@ -1185,9 +1255,10 @@ public:
     Vector<SimpleJumpTable> m_switchJumpTables;
     Vector<const UnlinkedStringJumpTable*> m_unlinkedStringSwitchJumpTables;
     Vector<StringJumpTable> m_stringSwitchJumpTables;
-    HashMap<String, std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
+    UncheckedKeyHashMap<String, std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
+    Vector<std::unique_ptr<ConcatKeyAtomStringCache>> m_concatKeyAtomStringCaches;
 
-    HashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
+    UncheckedKeyHashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
     SegmentedVector<FrozenValue, 16> m_frozenValues;
 
     Vector<uint32_t> m_uint32ValuesInUse;
@@ -1197,7 +1268,7 @@ public:
     // In CPS, this is all of the SetArgumentDefinitely nodes for the arguments in the machine code block
     // that survived DCE. All of them except maybe "this" will survive DCE, because of the Flush
     // nodes. In SSA, this has no meaning. It's empty.
-    HashMap<BasicBlock*, ArgumentsVector> m_rootToArguments;
+    UncheckedKeyHashMap<BasicBlock*, ArgumentsVector> m_rootToArguments;
 
     // In SSA, this is the argument speculation that we've locked in for an entrypoint block.
     //
@@ -1233,6 +1304,8 @@ public:
     Bag<MultiGetByOffsetData> m_multiGetByOffsetData;
     Bag<MultiPutByOffsetData> m_multiPutByOffsetData;
     Bag<MultiDeleteByOffsetData> m_multiDeleteByOffsetData;
+    Bag<MultiGetByValData> m_multiGetByValData;
+    Bag<MultiPutByValData> m_multiPutByValData;
     Bag<MatchStructureData> m_matchStructureData;
     Bag<ObjectMaterializationData> m_objectMaterializationData;
     Bag<CallVarargsData> m_callVarargsData;
@@ -1244,8 +1317,8 @@ public:
     Bag<GetByIdData> m_getByIdData;
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
-    HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
-    HashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
+    UncheckedKeyHashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
+    UncheckedKeyHashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
     Vector<Ref<Snippet>> m_domJITSnippets;
     std::unique_ptr<CPSDominators> m_cpsDominators;
     std::unique_ptr<SSADominators> m_ssaDominators;
@@ -1269,19 +1342,19 @@ public:
 
     // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
     // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
-    HashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
+    UncheckedKeyHashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
     Vector<CatchEntrypointData> m_catchEntrypoints;
 
-    HashSet<String> m_localStrings;
-    HashSet<String> m_copiedStrings;
+    UncheckedKeyHashSet<String> m_localStrings;
+    UncheckedKeyHashSet<String> m_copiedStrings;
 
 #if USE(JSVALUE32_64)
-    HashMap<GenericHashKey<int64_t>, double*> m_doubleConstantsMap;
+    UncheckedKeyHashMap<GenericHashKey<int64_t>, double*> m_doubleConstantsMap;
     Bag<double> m_doubleConstants;
 #endif
 
     Vector<LinkerIR::Value> m_constantPool;
-    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
+    UncheckedKeyHashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
 
     OptimizationFixpointState m_fixpointState;
     StructureRegistrationState m_structureRegistrationState;
@@ -1293,7 +1366,7 @@ public:
     bool m_hasExceptionHandlers { false };
     bool m_isInSSAConversion { false };
     bool m_isValidating { false };
-    bool m_frozenValuesAreFinalized { false };
+    bool m_shouldFixAvailability { false };
     std::optional<uint32_t> m_maxLocalsForCatchOSREntry;
     std::unique_ptr<FlowIndexing> m_indexingCache;
     std::unique_ptr<FlowMap<AbstractValue>> m_abstractValuesCache;
@@ -1302,13 +1375,11 @@ public:
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
 
-    HashSet<Node*> m_slowGetByVal;
-    HashSet<Node*> m_slowPutByVal;
+    UncheckedKeyHashSet<Node*> m_slowGetByVal;
+    UncheckedKeyHashSet<Node*> m_slowPutByVal;
 
 private:
     template<typename Visitor> void visitChildrenImpl(Visitor&);
-
-    bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);
 
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);
 

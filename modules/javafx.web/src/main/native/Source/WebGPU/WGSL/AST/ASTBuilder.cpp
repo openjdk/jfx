@@ -30,70 +30,21 @@
 
 namespace WGSL::AST {
 
-DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WGSLAST);
-
 Builder::Builder(Builder&& other)
 {
-    m_arena = std::exchange(other.m_arena, nullptr);
-    m_arenaEnd = std::exchange(other.m_arenaEnd, nullptr);
-    m_arenas = WTFMove(other.m_arenas);
     m_nodes = WTFMove(other.m_nodes);
-}
-
-inline uint8_t* Builder::arena()
-{
-    ASSERT(m_arenaEnd);
-    return m_arenaEnd - arenaSize;
-}
-
-Builder::~Builder()
-{
-    size_t size = m_nodes.size();
-    for (size_t i = 0; i < size; ++i)
-        m_nodes[i]->~Node();
-}
-
-void Builder::allocateArena()
-{
-    m_arenas.append(MallocPtr<uint8_t, WGSLASTMalloc>::malloc(arenaSize));
-    m_arena = m_arenas.last().get();
-    m_arenaEnd = m_arena + arenaSize;
-    ASSERT(arena() == m_arena);
 }
 
 auto Builder::saveCurrentState() -> State
 {
     State state;
-    state.m_arena = m_arena;
-#if ASSERT_ENABLED
-    state.m_arenaEnd = m_arenaEnd;
-    if (m_arenaEnd)
-        state.m_arenaStart = arena();
-    else
-        state.m_arenaStart = nullptr;
-#endif
-    state.m_numberOfArenas = m_arenas.size();
     state.m_numberOfNodes = m_nodes.size();
-    allocateArena();
     return state;
 }
 
 void Builder::restore(State&& state)
 {
-    for (size_t i = state.m_numberOfNodes; i < m_nodes.size(); ++i)
-        m_nodes[i]->~Node();
     m_nodes.shrink(state.m_numberOfNodes);
-    m_arena = state.m_arena;
-    m_arenas.shrink(state.m_numberOfArenas);
-    if (m_arenas.isEmpty())
-        m_arenaEnd = nullptr;
-    else {
-        m_arenaEnd = m_arenas.last().get() + arenaSize;
-#if ASSERT_ENABLED
-        ASSERT(state.m_arenaStart == m_arenas.last().get());
-        ASSERT(state.m_arenaEnd == m_arenaEnd);
-#endif
-    }
 }
 
 } // namespace WGSL::AST

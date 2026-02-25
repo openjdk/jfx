@@ -35,6 +35,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.concurrent.TimeUnit;
 
@@ -44,6 +45,7 @@ public class SWTCursorsTest extends SWTTest {
 
     private FXCanvas canvas;
 
+    @Disabled("JDK-8367599")
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testImageCursor() throws Throwable {

@@ -31,7 +31,7 @@
 #include "MediaQuery.h"
 #include "StyleRuleType.h"
 #include <map>
-#include <variant>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -52,8 +52,8 @@ class StyleSheetContents;
 using CascadeLayerName = Vector<AtomString>;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleBase);
-class StyleRuleBase : public RefCounted<StyleRuleBase> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase);
+class StyleRuleBase : public RefCounted<StyleRuleBase>, public NoVirtualDestructorBase {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleBase, StyleRuleBase);
 public:
     StyleRuleType type() const { return static_cast<StyleRuleType>(m_type); }
 
@@ -68,8 +68,9 @@ public:
     bool isNamespaceRule() const { return type() == StyleRuleType::Namespace; }
     bool isMediaRule() const { return type() == StyleRuleType::Media; }
     bool isPageRule() const { return type() == StyleRuleType::Page; }
-    bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting; }
+    bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting || type() == StyleRuleType::NestedDeclarations; }
     bool isStyleRuleWithNesting() const { return type() == StyleRuleType::StyleWithNesting; }
+    bool isNestedDeclarationsRule() const { return type() == StyleRuleType::NestedDeclarations; }
     bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container || type() == StyleRuleType::Scope || type() == StyleRuleType::StartingStyle; }
     bool isSupportsRule() const { return type() == StyleRuleType::Supports; }
     bool isImportRule() const { return type() == StyleRuleType::Import; }
@@ -79,6 +80,7 @@ public:
     bool isScopeRule() const { return type() == StyleRuleType::Scope; }
     bool isStartingStyleRule() const { return type() == StyleRuleType::StartingStyle; }
     bool isViewTransitionRule() const { return type() == StyleRuleType::ViewTransition; }
+    bool isPositionTryRule() const { return type() == StyleRuleType::PositionTry; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -114,7 +116,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRule);
 class StyleRule : public StyleRuleBase {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRule);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRule, StyleRule);
 public:
     static Ref<StyleRule> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&);
     Ref<StyleRule> copy() const;
@@ -164,7 +166,7 @@ private:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
 class StyleRuleWithNesting final : public StyleRule {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting, StyleRuleWithNesting);
 public:
     static Ref<StyleRuleWithNesting> create(Ref<StyleProperties>&&, bool hasDocumentSecurityOrigin, CSSSelectorList&&, Vector<Ref<StyleRuleBase>>&& nestedRules);
     static Ref<StyleRuleWithNesting> create(StyleRule&&);
@@ -186,6 +188,20 @@ private:
 
     Vector<Ref<StyleRuleBase>> m_nestedRules;
     CSSSelectorList m_originalSelectorList;
+};
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations);
+class StyleRuleNestedDeclarations final : public StyleRule {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations, StyleRuleNestedDeclarations);
+public:
+    static Ref<StyleRuleNestedDeclarations> create(Ref<StyleProperties>&& properties) { return adoptRef(*new StyleRuleNestedDeclarations(WTFMove(properties))); }
+    ~StyleRuleNestedDeclarations() = default;
+    Ref<StyleRuleNestedDeclarations> copy() const { return adoptRef(*new StyleRuleNestedDeclarations(*this)); }
+
+    String debugDescription() const;
+private:
+    explicit StyleRuleNestedDeclarations(Ref<StyleProperties>&&);
+    StyleRuleNestedDeclarations(const StyleRuleNestedDeclarations&) = default;
 };
 
 class StyleRuleFontFace final : public StyleRuleBase {
@@ -357,7 +373,7 @@ private:
     StyleRuleLayer(CascadeLayerName&&, Vector<Ref<StyleRuleBase>>&&);
     StyleRuleLayer(const StyleRuleLayer&) = default;
 
-    std::variant<CascadeLayerName, Vector<CascadeLayerName>> m_nameVariant;
+    Variant<CascadeLayerName, Vector<CascadeLayerName>> m_nameVariant;
 };
 
 class StyleRuleContainer final : public StyleRuleGroup {
@@ -514,6 +530,10 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleWithNesting)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isStyleRuleWithNesting(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleNestedDeclarations)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isNestedDeclarationsRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleGroup)

@@ -43,9 +43,6 @@ public:
 private:
     void frameOwnerElement() const = delete;
 
-    bool shouldComputeSizeAsReplaced() const override;
-    bool isInlineBlockOrInlineTable() const override;
-
     void layout() override;
 
     ASCIILiteral renderName() const override { return "RenderIFrame"_s; }

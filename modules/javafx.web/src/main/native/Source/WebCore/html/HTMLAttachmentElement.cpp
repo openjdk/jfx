@@ -52,6 +52,7 @@
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "RenderAttachment.h"
+#include "RenderObjectInlines.h"
 #include "ShadowRoot.h"
 #include "SharedBuffer.h"
 #include "UserAgentStyleSheets.h"
@@ -93,10 +94,8 @@ static CString compactStackTrace(StackTrace& stackTrace)
 {
     StringPrintStream stack;
     stackTrace.forEachFrame([&stack](int, void*, const char* fullName) {
-        constexpr size_t maxWorkLen = 1023;
-        constexpr bool is8Bit = true;
-        StringView name { fullName ? fullName : "?", fullName ? unsigned(std::min(strlen(fullName), maxWorkLen)) : 1u, is8Bit };
-
+        constexpr size_t maxWorkLength = 1023;
+        auto name = StringView::fromLatin1(fullName ? fullName : "?").left(maxWorkLength);
         for (const auto& prefix : { "auto void "_s, "auto "_s }) {
             if (name.startsWith(prefix)) {
                 name = name.substring(prefix.length());
@@ -848,7 +847,7 @@ void HTMLAttachmentElement::updateAssociatedElementWithData(const String& conten
         return;
 
     auto associatedElementType = associatedElement->attachmentAssociatedElementType();
-    associatedElement->asHTMLElement().setAttributeWithoutSynchronization((associatedElementType == AttachmentAssociatedElementType::Source) ? HTMLNames::srcsetAttr : HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), buffer->extractData(), mimeType)) });
+    associatedElement->asHTMLElement().setAttributeWithoutSynchronization((associatedElementType == AttachmentAssociatedElementType::Source) ? HTMLNames::srcsetAttr : HTMLNames::srcAttr, AtomString { DOMURL::createObjectURL(document(), Blob::create(protectedDocument().ptr(), buffer->extractData(), mimeType)) });
 }
 
 void HTMLAttachmentElement::updateImage()
@@ -856,34 +855,13 @@ void HTMLAttachmentElement::updateImage()
     if (!m_imageElement)
         return;
 
-    if (!m_thumbnailForWideLayout.isEmpty()) {
-        dispatchEvent(Event::create(eventNames().loadeddataEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        m_imageElement->setSrc(AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), Vector<uint8_t>(m_thumbnailForWideLayout), "image/png"_s)) });
-        return;
-    }
-
     if (!m_iconForWideLayout.isEmpty()) {
         dispatchEvent(Event::create(eventNames().loadeddataEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        m_imageElement->setSrc(AtomString { DOMURL::createObjectURL(document(), Blob::create(&document(), Vector<uint8_t>(m_iconForWideLayout), "image/png"_s)) });
+        m_imageElement->setAttributeWithoutSynchronization(srcAttr, AtomString { DOMURL::createObjectURL(document(), Blob::create(protectedDocument().ptr(), Vector<uint8_t>(m_iconForWideLayout), "image/png"_s)) });
         return;
     }
 
-    m_imageElement->setSrc(nullAtom());
-}
-
-void HTMLAttachmentElement::updateThumbnailForNarrowLayout(const RefPtr<Image>& thumbnail)
-{
-    ASSERT(!isWideLayout());
-    m_thumbnail = thumbnail;
-    removeAttribute(HTMLNames::progressAttr);
-    invalidateRendering();
-}
-
-void HTMLAttachmentElement::updateThumbnailForWideLayout(Vector<uint8_t>&& thumbnailSrcData)
-{
-    ASSERT(isWideLayout());
-    m_thumbnailForWideLayout = WTFMove(thumbnailSrcData);
-    updateImage();
+    m_imageElement->removeAttribute(srcAttr);
 }
 
 void HTMLAttachmentElement::updateIconForNarrowLayout(const RefPtr<Image>& icon, const WebCore::FloatSize& iconSize)
@@ -927,6 +905,11 @@ void HTMLAttachmentElement::requestWideLayoutIconIfNeeded()
 
     if (!m_imageElement)
         return;
+
+// FIXME: Remove after rdar://136373445 is fixed.
+#if PLATFORM(MAC)
+    RELEASE_LOG(Editing, "HTMLAttachmentElement[uuid=%s] requestAttachmentIcon with type='%s'", uniqueIdentifier().utf8().data(), attachmentType().utf8().data());
+#endif
 
     dispatchEvent(Event::create(eventNames().beforeloadEvent, Event::CanBubble::No, Event::IsCancelable::No));
     document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), FloatSize(attachmentIconSize, attachmentIconSize));

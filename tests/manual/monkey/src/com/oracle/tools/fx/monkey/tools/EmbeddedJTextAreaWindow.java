@@ -24,18 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.tools;
 
-import java.awt.BorderLayout;
-import java.awt.ComponentOrientation;
 import java.awt.EventQueue;
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import javax.swing.JComboBox;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.border.EmptyBorder;
-import javax.swing.text.JTextComponent;
 import javafx.embed.swing.SwingNode;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.CheckBox;
@@ -47,62 +36,27 @@ import javafx.scene.layout.BorderPane;
  */
 public class EmbeddedJTextAreaWindow extends BorderPane {
     private final SwingNode swingNode;
-    private JTextArea textArea;
-    private JTextField textField;
+    private JTextPanel panel;
 
     public EmbeddedJTextAreaWindow() {
         swingNode = new SwingNode();
 
-        CheckBox rtl = new CheckBox("right-to-left (Swing ComponentOrientation)");
+        CheckBox rtl = new CheckBox("right-to-left (FX Scene.NodeOrientation)");
         rtl.selectedProperty().addListener((s, p, c) -> {
-            EventQueue.invokeLater(() -> {
-                ComponentOrientation ori = c ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT;
-                textArea.setComponentOrientation(ori);
-                textField.setComponentOrientation(ori);
-            });
-        });
-
-        CheckBox rtl2 = new CheckBox("right-to-left (FX Scene.NodeOrientation)");
-        rtl2.selectedProperty().addListener((s, p, c) -> {
-            // ha ha mirror images the text area, including text!
+            // why does it mirror images the text area, including text??
+            // https://bugs.openjdk.org/browse/JDK-8317835
             NodeOrientation v = (c) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT;
             getScene().setNodeOrientation(v);
         });
 
-        ToolBar tb = new ToolBar(rtl, rtl2);
+        ToolBar tb = new ToolBar(rtl);
 
         setTop(tb);
         setCenter(swingNode);
 
         EventQueue.invokeLater(() -> {
-            int fontSize = 36;
-
-            textArea = new JTextArea("Arabic: العربية\nHebrew: עברית");
-            updateFont(textArea, fontSize);
-            textField = new JTextField("Arabic: العربية Hebrew: עברית");
-            updateFont(textField, fontSize);
-
-            String[] names = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
-            JComboBox<String> fonts = new JComboBox(names);
-            fonts.addActionListener((ev) -> {
-                String name = (String)fonts.getSelectedItem();
-                Font f = new Font(name, Font.PLAIN, fontSize);
-                textArea.setFont(f);
-                textField.setFont(f);
-            });
-
-            JPanel p = new JPanel(new BorderLayout());
-            JScrollPane sp = new JScrollPane(textArea);
-            p.add(fonts, BorderLayout.NORTH);
-            p.add(sp, BorderLayout.CENTER);
-            p.add(textField, BorderLayout.SOUTH);
-            p.setBorder(new EmptyBorder(10, 10, 10, 10));
-            swingNode.setContent(p);
+            panel = new JTextPanel();
+            swingNode.setContent(panel);
         });
-    }
-
-    private static void updateFont(JTextComponent c, float size) {
-        Font f = c.getFont().deriveFont(size);
-        c.setFont(f);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "SpeechRecognitionCaptureSource.h"
 #include "SpeechRecognitionConnectionClientIdentifier.h"
 #include "SpeechRecognitionError.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 #if HAVE(SPEECHRECOGNIZER)
@@ -51,7 +52,7 @@ class SpeechRecognitionRequest;
 class SpeechRecognitionUpdate;
 
 class SpeechRecognizer : public CanMakeWeakPtr<SpeechRecognizer> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SpeechRecognizer, WEBCORE_EXPORT);
 public:
     using DelegateCallback = Function<void(const SpeechRecognitionUpdate&)>;
     WEBCORE_EXPORT explicit SpeechRecognizer(DelegateCallback&&, UniqueRef<SpeechRecognitionRequest>&&);
@@ -86,7 +87,7 @@ private:
     void stopRecognition();
 
     DelegateCallback m_delegateCallback;
-    UniqueRef<SpeechRecognitionRequest> m_request;
+    const UniqueRef<SpeechRecognitionRequest> m_request;
     std::unique_ptr<SpeechRecognitionCaptureSource> m_source;
     State m_state { State::Inactive };
 

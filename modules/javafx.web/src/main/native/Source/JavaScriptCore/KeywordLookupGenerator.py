@@ -118,12 +118,11 @@ class Trie:
             return self
         if len(self.keys) != 1:
             return self
-        # Python 3: for() loop for compatibility. Use next() when Python 2.6 is the baseline.
-        for (prefix, suffix) in self.keys.items():
-            res = Trie(self.prefix + prefix)
-            res.value = suffix.value
-            res.keys = suffix.keys
-            return res
+        prefix, suffix = next(iter(self.keys.items()))
+        res = Trie(self.prefix + prefix)
+        res.value = suffix.value
+        res.keys = suffix.keys
+        return res
 
     def fillOut(self, prefix=""):
         self.fullPrefix = prefix + self.prefix
@@ -141,7 +140,7 @@ class Trie:
         str = makePadding(indent)
 
         if self.value != None:
-            print(str + "if (LIKELY(cannotBeIdentPartOrEscapeStart(code[%d]))) {" % (len(self.fullPrefix)))
+            print(str + "if (cannotBeIdentPartOrEscapeStart(code[%d])) [[likely]] {" % (len(self.fullPrefix)))
             print(str + "    internalShift<%d>();" % len(self.fullPrefix))
             print(str + "    if (shouldCreateIdentifier)")
             print(str + ("        data->ident = &m_vm.propertyNames->%sKeyword;" % self.fullPrefix))
@@ -182,19 +181,21 @@ class Trie:
         return max
 
     def printAsC(self):
+        print("WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN")
+        print("")
         print("namespace JSC {")
         print("")
         print("static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(LChar);")
-        print("static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(UChar);")
+        print("static ALWAYS_INLINE bool cannotBeIdentPartOrEscapeStart(char16_t);")
         # max length + 1 so we don't need to do any bounds checking at all
         print("static constexpr int maxTokenLength = %d;" % (self.maxLength() + 1))
         print("")
         print("template <>")
-        print("template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::parseKeyword(JSTokenData* data)")
+        print("template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<char16_t>::parseKeyword(JSTokenData* data)")
         print("{")
         print("    ASSERT(m_codeEnd - m_code >= maxTokenLength);")
         print("")
-        print("    const UChar* code = m_code;")
+        print("    const char16_t* code = m_code;")
         self.printSubTreeAsC("UCHAR", 4)
         print("    return IDENT;")
         print("}")
@@ -210,6 +211,8 @@ class Trie:
         print("}")
         print("")
         print("} // namespace JSC")
+        print("")
+        print("WTF_ALLOW_UNSAFE_BUFFER_USAGE_END")
 
 keywords = parseKeywords(keywordsText)
 trie = Trie("")

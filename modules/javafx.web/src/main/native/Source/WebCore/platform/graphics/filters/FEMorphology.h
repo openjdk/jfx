@@ -32,7 +32,9 @@ enum class MorphologyOperatorType : uint8_t {
     Dilate
 };
 
-class FEMorphology : public FilterEffect {
+class FEMorphology final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEMorphology);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEMorphology);
 public:
     WEBCORE_EXPORT static Ref<FEMorphology> create(MorphologyOperatorType, float radiusX, float radiusY, DestinationColorSpace = DestinationColorSpace::SRGB());
 
@@ -54,7 +56,7 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 

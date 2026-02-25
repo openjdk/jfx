@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ControlStyle.h"
 #include "FloatRect.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -36,7 +37,7 @@ class FloatRect;
 class FloatRoundedRect;
 
 class PlatformControl {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformControl);
 
 public:
     PlatformControl(ControlPart& owningPart)

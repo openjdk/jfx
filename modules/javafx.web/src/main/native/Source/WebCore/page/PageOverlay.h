@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,8 @@
 #include "FloatPoint.h"
 #include "IntRect.h"
 #include "Timer.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WallTime.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -60,9 +61,9 @@ public:
         virtual Vector<String> copyAccessibilityAttributeNames(PageOverlay&, bool /* parameterizedNames */)  { return { }; }
 };
 
-class PageOverlay final : public RefCounted<PageOverlay>, public CanMakeWeakPtr<PageOverlay> {
+class PageOverlay final : public RefCountedAndCanMakeWeakPtr<PageOverlay> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PageOverlay, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(PageOverlay);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class OverlayType : bool {
         View, // Fixed to the view size; does not scale or scroll with the document, repaints on scroll.
@@ -75,12 +76,12 @@ public:
     };
 
     WEBCORE_EXPORT static Ref<PageOverlay> create(PageOverlayClient&, OverlayType = OverlayType::View, AlwaysTileOverlayLayer = AlwaysTileOverlayLayer::No);
-    WEBCORE_EXPORT virtual ~PageOverlay();
+    WEBCORE_EXPORT ~PageOverlay();
 
     WEBCORE_EXPORT PageOverlayController* controller() const;
 
     typedef uint64_t PageOverlayID;
-    virtual PageOverlayID pageOverlayID() const { return m_pageOverlayID; }
+    PageOverlayID pageOverlayID() const { return m_pageOverlayID; }
 
     void setPage(Page*);
     WEBCORE_EXPORT Page* page() const;
@@ -120,7 +121,8 @@ public:
     void setShouldIgnoreMouseEventsOutsideBounds(bool flag) { m_shouldIgnoreMouseEventsOutsideBounds = flag; }
 
     // FIXME: PageOverlay should own its layer, instead of PageOverlayController.
-    WEBCORE_EXPORT GraphicsLayer& layer();
+    WEBCORE_EXPORT GraphicsLayer& layer() const;
+    WEBCORE_EXPORT Ref<GraphicsLayer> protectedLayer() const;
 
     bool needsSynchronousScrolling() const { return m_needsSynchronousScrolling; }
     void setNeedsSynchronousScrolling(bool needsSynchronousScrolling) { m_needsSynchronousScrolling = needsSynchronousScrolling; }

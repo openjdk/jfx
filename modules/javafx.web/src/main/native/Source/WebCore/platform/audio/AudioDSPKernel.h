@@ -32,14 +32,16 @@
 #define AudioDSPKernel_h
 
 #include "AudioDSPKernelProcessor.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 // AudioDSPKernel does the processing for one channel of an AudioDSPKernelProcessor.
 
 class AudioDSPKernel {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioDSPKernel);
     WTF_MAKE_NONCOPYABLE(AudioDSPKernel);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     AudioDSPKernel(AudioDSPKernelProcessor* kernelProcessor)
         : m_kernelProcessor(kernelProcessor)
@@ -48,15 +50,14 @@ public:
     }
 
     AudioDSPKernel(float sampleRate)
-        : m_kernelProcessor(0)
-        , m_sampleRate(sampleRate)
+        : m_sampleRate(sampleRate)
     {
     }
 
     virtual ~AudioDSPKernel() { };
 
     // Subclasses must override process() to do the processing and reset() to reset DSP state.
-    virtual void process(const float* source, float* destination, size_t framesToProcess) = 0;
+    virtual void process(std::span<const float> source, std::span<float> destination) = 0;
 
     // Subclasses that have AudioParams must override this to process the AudioParams.
     virtual void processOnlyAudioParams(size_t) { }
@@ -66,15 +67,15 @@ public:
     float sampleRate() const { return m_sampleRate; }
     double nyquist() const { return 0.5 * sampleRate(); }
 
-    AudioDSPKernelProcessor* processor() { return m_kernelProcessor; }
-    const AudioDSPKernelProcessor* processor() const { return m_kernelProcessor; }
+    AudioDSPKernelProcessor* processor() { return m_kernelProcessor.get(); }
+    const AudioDSPKernelProcessor* processor() const { return m_kernelProcessor.get(); }
 
     virtual double tailTime() const = 0;
     virtual double latencyTime() const = 0;
     virtual bool requiresTailProcessing() const = 0;
 
 protected:
-    AudioDSPKernelProcessor* m_kernelProcessor;
+    CheckedPtr<AudioDSPKernelProcessor> m_kernelProcessor;
     float m_sampleRate;
 };
 

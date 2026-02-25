@@ -30,9 +30,9 @@
 #include "UserStyleSheet.h"
 #include <memory>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
@@ -52,7 +52,7 @@ class StyleSheetList;
 class WeakPtrImplWithEventTargetData;
 
 class ExtensionStyleSheets final : public CanMakeCheckedPtr<ExtensionStyleSheets> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ExtensionStyleSheets);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExtensionStyleSheets);
 public:
     explicit ExtensionStyleSheets(Document&);
@@ -63,6 +63,8 @@ public:
     const Vector<RefPtr<CSSStyleSheet>>& injectedUserStyleSheets() const;
     const Vector<RefPtr<CSSStyleSheet>>& injectedAuthorStyleSheets() const;
     const Vector<RefPtr<CSSStyleSheet>>& authorStyleSheetsForTesting() const { return m_authorStyleSheetsForTesting; }
+
+    bool hasCachedInjectedStyleSheets() const;
 
     void clearPageUserSheet();
     void updatePageUserSheet();
@@ -94,7 +96,7 @@ private:
 
     mutable Vector<RefPtr<CSSStyleSheet>> m_injectedUserStyleSheets;
     mutable Vector<RefPtr<CSSStyleSheet>> m_injectedAuthorStyleSheets;
-    mutable HashMap<RefPtr<CSSStyleSheet>, String> m_injectedStyleSheetToSource;
+    mutable HashMap<Ref<CSSStyleSheet>, String> m_injectedStyleSheetToSource;
     mutable bool m_injectedStyleSheetCacheValid { false };
 
     Vector<RefPtr<CSSStyleSheet>> m_userStyleSheets;

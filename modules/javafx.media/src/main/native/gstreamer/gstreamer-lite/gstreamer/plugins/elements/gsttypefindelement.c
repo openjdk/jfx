@@ -720,8 +720,8 @@ gst_type_find_element_sink_event (GstPad * pad, GstObject * parent,
           typefind->cached_events = NULL;
           gst_adapter_clear (typefind->adapter);
           GST_OBJECT_UNLOCK (typefind);
-          /* fall through */
         }
+          /* FALLTHROUGH */
         case GST_EVENT_FLUSH_START:
           res = gst_pad_push_event (typefind->src, event);
           break;

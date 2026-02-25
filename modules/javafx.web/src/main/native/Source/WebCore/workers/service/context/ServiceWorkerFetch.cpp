@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -104,6 +104,10 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, s
         return;
     }
 
+    // As per https://fetch.spec.whatwg.org/#main-fetch step 9, copy request's url list in response's url list if empty.
+    if (resourceResponse.url().isNull())
+        resourceResponse.setURL(URL { requestURL });
+
     if (resourceResponse.isRedirection() && resourceResponse.httpHeaderFields().contains(HTTPHeaderName::Location)) {
         client->didReceiveRedirection(resourceResponse);
         return;
@@ -112,7 +116,7 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, s
     // In case of main resource and mime type is the default one, we set it to text/html to pass more service worker WPT tests.
     // FIXME: We should refine our MIME type sniffing strategy for synthetic responses.
     if (mode == FetchOptions::Mode::Navigate) {
-        if (resourceResponse.mimeType() == defaultMIMEType()) {
+        if (resourceResponse.mimeType() == defaultMIMEType() && !resourceResponse.isNosniff()) {
             resourceResponse.setMimeType("text/html"_s);
             resourceResponse.setTextEncodingName("UTF-8"_s);
         }
@@ -121,11 +125,7 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, s
             resourceResponse.setCertificateInfo(WTFMove(certificateInfo));
     }
 
-    // As per https://fetch.spec.whatwg.org/#main-fetch step 9, copy request's url list in response's url list if empty.
-    if (resourceResponse.url().isNull())
-        resourceResponse.setURL(requestURL);
-
-    client->didReceiveResponse(resourceResponse);
+    client->didReceiveResponse(WTFMove(resourceResponse));
 
     if (response->isBodyReceivedByChunk()) {
         client->setCancelledCallback([response = WeakPtr { response.get() }] {
@@ -139,9 +139,10 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, s
                 return;
             }
 
-            if (auto* chunk = result.returnValue())
-                client->didReceiveData(SharedBuffer::create(*chunk));
-            else
+            if (auto* chunk = result.returnValue()) {
+                Ref buffer = SharedBuffer::create(*chunk);
+                client->didReceiveData(buffer);
+            } else
                 client->didFinish(response ? response->networkLoadMetrics() : NetworkLoadMetrics { });
         });
         return;

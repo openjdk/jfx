@@ -28,13 +28,85 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
+#include "GPUDevice.h"
+#include "GPUTextureDescriptor.h"
+#include "GPUTextureFormat.h"
+#include "WebXRViewport.h"
+#include <wtf/TZoneMallocInlines.h>
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRGPUSubImage);
 
-XRGPUSubImage::XRGPUSubImage(Ref<WebGPU::XRSubImage>&& backing)
-    : m_backing(WTFMove(backing))
+static auto makeTextureViewDescriptor(WebGPU::XREye eye)
 {
+    return GPUTextureViewDescriptor {
+        .format = std::nullopt,
+        .dimension = GPUTextureViewDimension::_2d,
+        .aspect = GPUTextureAspect::All,
+        .baseMipLevel = 0,
+        .mipLevelCount = std::nullopt,
+        .baseArrayLayer = (eye == WebGPU::XREye::Right ? 1u : 0u),
+        .arrayLayerCount = 1u,
+    };
+}
+
+XRGPUSubImage::XRGPUSubImage(Ref<WebGPU::XRSubImage>&& backing, WebGPU::XREye eye, std::array<uint16_t, 2>&& physicalSize, WebCore::IntRect&& viewport, GPUDevice& device)
+    : m_backing(WTFMove(backing))
+    , m_device(device)
+    , m_descriptor(makeTextureViewDescriptor(eye))
+    , m_viewport(WebXRViewport::create(WTFMove(viewport)))
+    , m_width(physicalSize[0])
+    , m_height(physicalSize[1])
+{
+}
+
+static GPUTextureDescriptor textureDescriptor(GPUTextureFormat format, unsigned width, unsigned height)
+{
+    return GPUTextureDescriptor {
+        { "canvas backing"_s },
+        GPUExtent3DDict { width, height, 1 },
+        1,
+        1,
+        GPUTextureDimension::_2d,
+        format,
+        GPUTextureUsage::RENDER_ATTACHMENT,
+        { }
+    };
+}
+
+ExceptionOr<Ref<GPUTexture>> XRGPUSubImage::colorTexture()
+{
+    RefPtr texture = m_backing->colorTexture();
+    if (!texture)
+        return Exception { ExceptionCode::InvalidStateError };
+
+    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Bgra8unorm, m_width, m_height), m_device);
+}
+
+RefPtr<GPUTexture> XRGPUSubImage::depthStencilTexture()
+{
+    RefPtr texture = m_backing->depthStencilTexture();
+    if (!texture)
+        return nullptr;
+
+    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Depth24plus, m_width, m_height), m_device);
+}
+
+RefPtr<GPUTexture> XRGPUSubImage::motionVectorTexture()
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+const GPUTextureViewDescriptor& XRGPUSubImage::getViewDescriptor() const
+{
+    return m_descriptor;
+}
+
+const WebXRViewport& XRGPUSubImage::viewport() const
+{
+    return m_viewport;
 }
 
 } // namespace WebCore

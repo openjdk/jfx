@@ -33,6 +33,7 @@
 #include "FloatRect.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
+#include "PlatformDynamicRangeLimit.h"
 #include <memory>
 #include <wtf/Forward.h>
 
@@ -61,10 +62,12 @@ struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
-class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
+class HTMLCanvasElement final : public HTMLElement, public ActiveDOMObject, public CanvasBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLCanvasElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLCanvasElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     static Ref<HTMLCanvasElement> create(Document&);
     static Ref<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
@@ -118,7 +121,7 @@ public:
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
@@ -132,13 +135,15 @@ public:
 
     bool needsPreparationForDisplay();
     void prepareForDisplay();
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
+    WEBCORE_EXPORT std::optional<double> getContextEffectiveDynamicRangeLimitValue() const;
 
     void setIsSnapshotting(bool isSnapshotting) { m_isSnapshotting = isSnapshotting; }
     bool isSnapshotting() const { return m_isSnapshotting; }
 
     bool isControlledByOffscreen() const;
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
 
     // ActiveDOMObject.
@@ -162,6 +167,7 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
 
     bool canContainRangeEndPoint() const final;
     bool canStartSelection() const final;
@@ -175,22 +181,20 @@ private:
 
     bool usesContentsAsLayerContents() const;
 
-    void refCanvasBase() const final { HTMLElement::ref(); }
-    void derefCanvasBase() const final { HTMLElement::deref(); }
-
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
     bool m_ignoreReset { false };
     mutable bool m_didClearImageBuffer { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
+
+    std::unique_ptr<CanvasRenderingContext> m_context;
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
+    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);

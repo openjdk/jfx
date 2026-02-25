@@ -25,10 +25,9 @@
 
 namespace WebCore {
 
-class CSSStyleDeclaration;
+class CSSPageDescriptors;
 class CSSStyleSheet;
 class StyleRulePage;
-class StyleRuleCSSStyleDeclaration;
 
 class CSSPageRule final : public CSSRule {
 public:
@@ -36,7 +35,7 @@ public:
 
     virtual ~CSSPageRule();
 
-    WEBCORE_EXPORT CSSStyleDeclaration& style();
+    WEBCORE_EXPORT CSSPageDescriptors& style();
 
     WEBCORE_EXPORT String selectorText() const;
     WEBCORE_EXPORT void setSelectorText(const String&);
@@ -49,7 +48,7 @@ private:
     void reattach(StyleRuleBase&) final;
 
     Ref<StyleRulePage> m_pageRule;
-    mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
+    mutable RefPtr<CSSPageDescriptors> m_propertiesCSSOMWrapper;
 };
 
 } // namespace WebCore

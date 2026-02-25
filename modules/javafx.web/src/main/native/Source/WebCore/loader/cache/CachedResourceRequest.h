@@ -65,7 +65,7 @@ public:
     const std::optional<ResourceLoadPriority>& priority() const { return m_priority; }
     void setPriority(std::optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
 
-    RequestPriority fetchPriorityHint() const { return m_options.fetchPriorityHint; }
+    RequestPriority fetchPriority() const { return m_options.fetchPriority; }
 
     void setInitiator(Element&);
     void setInitiatorType(const AtomString&);
@@ -113,7 +113,7 @@ public:
     void clearFragmentIdentifier() { m_fragmentIdentifier = { }; }
 
     static String splitFragmentIdentifierFromRequestURL(ResourceRequest&);
-    static String acceptHeaderValueFromType(CachedResource::Type);
+    static String acceptHeaderValueFromType(CachedResource::Type, bool usingSecureProtocol);
 
     void setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier);
     void setSelectedServiceWorkerRegistrationIdentifierIfNeeded(ServiceWorkerRegistrationIdentifier);

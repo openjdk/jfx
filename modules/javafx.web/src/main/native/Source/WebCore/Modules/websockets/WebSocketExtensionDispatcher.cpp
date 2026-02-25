@@ -53,7 +53,7 @@ void WebSocketExtensionDispatcher::addProcessor(std::unique_ptr<WebSocketExtensi
     }
     ASSERT(processor->handshakeString().length());
     ASSERT(!processor->handshakeString().contains('\n'));
-    ASSERT(!processor->handshakeString().contains(static_cast<UChar>('\0')));
+    ASSERT(!processor->handshakeString().contains(static_cast<char16_t>('\0')));
     m_processors.append(WTFMove(processor));
 }
 
@@ -95,7 +95,8 @@ bool WebSocketExtensionDispatcher::processHeaderValue(const String& headerValue)
     }
 
     const CString headerValueData = headerValue.utf8();
-    WebSocketExtensionParser parser(headerValueData.data(), headerValueData.data() + headerValueData.length());
+    // FIXME: Is UTF-8 the encoding that WebSocketExtensionParser expects? It doesn't specify.
+    WebSocketExtensionParser parser(byteCast<uint8_t>(headerValueData.span()));
     while (!parser.finished()) {
         String extensionToken;
         HashMap<String, String> extensionParameters;

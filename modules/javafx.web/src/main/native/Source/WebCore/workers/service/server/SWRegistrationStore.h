@@ -27,6 +27,8 @@
 
 #include <optional>
 #include <wtf/Forward.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -35,16 +37,19 @@ class ServiceWorkerRegistrationKey;
 
 struct ServiceWorkerContextData;
 
-class SWRegistrationStore {
-    WTF_MAKE_FAST_ALLOCATED;
+class SWRegistrationStore : public RefCountedAndCanMakeWeakPtr<SWRegistrationStore> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(SWRegistrationStore);
 public:
     virtual ~SWRegistrationStore() = default;
     virtual void clearAll(CompletionHandler<void()>&&) = 0;
     virtual void flushChanges(CompletionHandler<void()>&&) = 0;
     virtual void closeFiles(CompletionHandler<void()>&&) = 0;
-    virtual void importRegistrations(CompletionHandler<void(std::optional<Vector<ServiceWorkerContextData>>)>&&) = 0;
+    virtual void importRegistrations(CompletionHandler<void(std::optional<Vector<ServiceWorkerContextData>>&&)>&&) = 0;
     virtual void updateRegistration(const ServiceWorkerContextData&) = 0;
     virtual void removeRegistration(const ServiceWorkerRegistrationKey&) = 0;
+
+protected:
+    SWRegistrationStore() = default;
 };
 
 } // namespace WebCore

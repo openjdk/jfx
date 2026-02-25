@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2015 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,17 @@
 #include "config.h"
 #include "VisibleSelection.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Editing.h"
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
+#include "PositionInlines.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"
+#include "TreeScopeInlines.h"
 #include "VisibleUnits.h"
 #include <stdio.h>
 #include <wtf/Assertions.h>
@@ -52,40 +55,36 @@ const VisibleSelection& VisibleSelection::emptySelection()
     return selection.get();
 }
 
-VisibleSelection::VisibleSelection()
-    : m_anchorIsFirst(true)
-    , m_isDirectional(false)
-{
-}
+VisibleSelection::VisibleSelection() = default;
 
-VisibleSelection::VisibleSelection(const Position& anchor, const Position& focus, Affinity affinity, bool isDirectional)
+VisibleSelection::VisibleSelection(const Position& anchor, const Position& focus, Affinity affinity, Directionality directionality)
     : m_anchor(anchor)
     , m_focus(focus)
     , m_affinity(affinity)
-    , m_isDirectional(isDirectional)
+    , m_directionality(directionality)
 {
     validate();
 }
 
-VisibleSelection::VisibleSelection(const Position& position, Affinity affinity, bool isDirectional)
-    : VisibleSelection(position, position, affinity, isDirectional)
+VisibleSelection::VisibleSelection(const Position& position, Affinity affinity, Directionality directionality)
+    : VisibleSelection(position, position, affinity, directionality)
 {
 }
 
-VisibleSelection::VisibleSelection(const VisiblePosition& position, bool isDirectional)
-    : VisibleSelection(position.deepEquivalent(), position.affinity(), isDirectional)
+VisibleSelection::VisibleSelection(const VisiblePosition& position, Directionality directionality)
+    : VisibleSelection(position.deepEquivalent(), position.affinity(), directionality)
 {
     // FIXME: Wasteful that this re-canonicalizes, but risky to change since the VisiblePosition object could be from before a mutation and its position may no longer be canonical.
 }
 
-VisibleSelection::VisibleSelection(const VisiblePosition& anchor, const VisiblePosition& focus, bool isDirectional)
-    : VisibleSelection(anchor.deepEquivalent(), focus.deepEquivalent(), anchor.affinity(), isDirectional)
+VisibleSelection::VisibleSelection(const VisiblePosition& anchor, const VisiblePosition& focus, Directionality directionality)
+    : VisibleSelection(anchor.deepEquivalent(), focus.deepEquivalent(), anchor.affinity(), directionality)
 {
     // FIXME: Wasteful that this re-canonicalizes, but risky to change since the VisiblePosition objects could be from before a mutation and their positions may no longer be canonical.
 }
 
-VisibleSelection::VisibleSelection(const SimpleRange& range, Affinity affinity, bool isDirectional)
-    : VisibleSelection(makeDeprecatedLegacyPosition(range.start), makeDeprecatedLegacyPosition(range.end), affinity, isDirectional)
+VisibleSelection::VisibleSelection(const SimpleRange& range, Affinity affinity, Directionality directionality)
+    : VisibleSelection(makeDeprecatedLegacyPosition(range.start), makeDeprecatedLegacyPosition(range.end), affinity, directionality)
 {
 }
 
@@ -109,9 +108,7 @@ std::optional<SimpleRange> VisibleSelection::range() const
 {
     auto start = uncanonicalizedStart();
     auto end = uncanonicalizedEnd();
-    ASSERT(!start.document() || !end.document()
-        || start.document()->settings().liveRangeSelectionEnabled() == end.document()->settings().liveRangeSelectionEnabled());
-    if (start.document() && start.document()->settings().liveRangeSelectionEnabled())
+    if (start.document())
         return makeSimpleRange(start, end);
     return makeSimpleRange(start.parentAnchoredEquivalent(), end.parentAnchoredEquivalent());
 }
@@ -142,9 +139,9 @@ bool VisibleSelection::isOrphan() const
 {
     if (m_base.isOrphan() || m_extent.isOrphan() || m_start.isOrphan() || m_end.isOrphan())
         return true;
-    if (m_anchor.isOrphan() && m_anchor.document()->settings().liveRangeSelectionEnabled())
+    if (m_anchor.isOrphan())
         return true;
-    if (m_focus.isOrphan() && m_focus.document()->settings().liveRangeSelectionEnabled())
+    if (m_focus.isOrphan())
         return true;
     return false;
 }
@@ -154,14 +151,14 @@ RefPtr<Document> VisibleSelection::document() const
     RefPtr document { m_base.document() };
     if (!document) {
         document = m_anchor.document();
-        if (!document || !document->settings().liveRangeSelectionEnabled())
+        if (!document)
             return nullptr;
     }
 
     if (m_extent.document() != document.get() || m_start.document() != document.get() || m_end.document() != document.get())
         return nullptr;
 
-    if (document->settings().liveRangeSelectionEnabled() && (m_anchor.document() != document.get() || m_focus.document() != document.get()))
+    if (m_anchor.document() != document.get() || m_focus.document() != document.get())
         return nullptr;
 
     return document;
@@ -243,7 +240,7 @@ void VisibleSelection::appendTrailingWhitespace()
 
     CharacterIterator charIt(*makeSimpleRange(m_end, makeBoundaryPointAfterNodeContents(*scope)), TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
     for (; !charIt.atEnd() && charIt.text().length(); charIt.advance(1)) {
-        UChar c = charIt.text()[0];
+        char16_t c = charIt.text()[0];
         if ((!deprecatedIsSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
             break;
         m_end = makeDeprecatedLegacyPosition(charIt.range().end);
@@ -526,7 +523,7 @@ static bool isInUserAgentShadowRootOrHasEditableShadowAncestor(Node& node)
     if (shadowRoot->mode() == ShadowRootMode::UserAgent)
         return true;
 
-    for (RefPtr currentNode = &node; currentNode; currentNode = currentNode->parentOrShadowHostNode()) {
+    for (RefPtr currentNode = node; currentNode; currentNode = currentNode->parentOrShadowHostNode()) {
         if (currentNode->hasEditableStyle())
             return true;
     }
@@ -716,7 +713,7 @@ bool VisibleSelection::canEnableWritingSuggestions() const
 bool VisibleSelection::isInAutoFilledAndViewableField() const
 {
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(enclosingTextFormControl(start())))
-        return input->isAutoFilledAndViewable();
+        return input->autofilledAndViewable();
     return false;
 }
 
@@ -727,14 +724,14 @@ void VisibleSelection::debugPosition() const
     fprintf(stderr, "VisibleSelection ===============\n");
 
     if (!m_start.anchorNode())
-        fputs("pos:   null", stderr);
+        SAFE_FPRINTF(stderr, "pos:   null");
     else if (m_start == m_end) {
-        fprintf(stderr, "pos:   %s ", m_start.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "pos:   %s ", m_start.anchorNode()->nodeName().utf8());
         m_start.showAnchorTypeAndOffset();
     } else {
-        fprintf(stderr, "start: %s ", m_start.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "start: %s ", m_start.anchorNode()->nodeName().utf8());
         m_start.showAnchorTypeAndOffset();
-        fprintf(stderr, "end:   %s ", m_end.anchorNode()->nodeName().utf8().data());
+        SAFE_FPRINTF(stderr, "end:   %s ", m_end.anchorNode()->nodeName().utf8());
         m_end.showAnchorTypeAndOffset();
     }
 
@@ -751,27 +748,27 @@ String VisibleSelection::debugDescription() const
 void VisibleSelection::showTreeForThis() const
 {
     if (RefPtr startAnchorNode = start().anchorNode()) {
-        startAnchorNode->showTreeAndMark(startAnchorNode.get(), "S", end().protectedAnchorNode().get(), "E");
-        fputs("start: ", stderr);
+        startAnchorNode->showTreeAndMark(startAnchorNode.get(), "S"_s, end().protectedAnchorNode().get(), "E"_s);
+        SAFE_FPRINTF(stderr, "start: ");
         start().showAnchorTypeAndOffset();
-        fputs("end: ", stderr);
+        SAFE_FPRINTF(stderr, "end: ");
         end().showAnchorTypeAndOffset();
     }
 }
 
 #endif
 
-TextStream& operator<<(TextStream& stream, const VisibleSelection& v)
+TextStream& operator<<(TextStream& ts, const VisibleSelection& v)
 {
-    TextStream::GroupScope scope(stream);
-    stream << "VisibleSelection " << &v;
+    TextStream::GroupScope scope(ts);
+    ts << "VisibleSelection "_s << &v;
 
-    stream.dumpProperty("base", v.base());
-    stream.dumpProperty("extent", v.extent());
-    stream.dumpProperty("start", v.start());
-    stream.dumpProperty("end", v.end());
+    ts.dumpProperty("base"_s, v.base());
+    ts.dumpProperty("extent"_s, v.extent());
+    ts.dumpProperty("start"_s, v.start());
+    ts.dumpProperty("end"_s, v.end());
 
-    return stream;
+    return ts;
 }
 
 } // namespace WebCore

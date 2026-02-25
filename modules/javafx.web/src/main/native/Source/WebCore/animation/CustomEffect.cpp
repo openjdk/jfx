@@ -36,7 +36,7 @@ using namespace JSC;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CustomEffect);
 
-ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Ref<CustomEffectCallback>&& callback, std::optional<std::variant<double, EffectTiming>>&& options)
+ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Document& document, Ref<CustomEffectCallback>&& callback, std::optional<Variant<double, EffectTiming>>&& options)
 {
     auto customEffect = adoptRef(*new CustomEffect(WTFMove(callback)));
 
@@ -44,13 +44,17 @@ ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Ref<CustomEffectCallback>&& 
         OptionalEffectTiming timing;
         auto optionsValue = options.value();
         if (std::holds_alternative<double>(optionsValue)) {
-            std::variant<double, String> duration = std::get<double>(optionsValue);
+            Variant<double, String> duration = std::get<double>(optionsValue);
             timing.duration = duration;
         } else {
             auto effectTimingOptions = std::get<EffectTiming>(optionsValue);
 
+            auto convertedDuration = effectTimingOptions.durationAsDoubleOrString();
+            if (!convertedDuration)
+                return Exception { ExceptionCode::TypeError };
+
             timing = {
-                effectTimingOptions.duration,
+                *convertedDuration,
                 effectTimingOptions.iterations,
                 effectTimingOptions.delay,
                 effectTimingOptions.endDelay,
@@ -60,7 +64,7 @@ ExceptionOr<Ref<CustomEffect>> CustomEffect::create(Ref<CustomEffectCallback>&& 
                 effectTimingOptions.direction
             };
         }
-        auto updateTimingResult = customEffect->updateTiming(timing);
+        auto updateTimingResult = customEffect->updateTiming(document, timing);
         if (updateTimingResult.hasException())
             return updateTimingResult.releaseException();
     }
@@ -79,7 +83,7 @@ void CustomEffect::animationDidTick()
     if (!computedTiming.progress)
         return;
 
-    m_callback->handleEvent(*computedTiming.progress);
+    m_callback->invoke(*computedTiming.progress);
 }
 
 } // namespace WebCore

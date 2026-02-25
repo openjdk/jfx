@@ -26,6 +26,7 @@
 #pragma once
 
 #include "HTMLElement.h"
+#include "ToggleEventTask.h"
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class HTMLDialogElement final : public HTMLElement {
 public:
     template<typename... Args> static Ref<HTMLDialogElement> create(Args&&... args) { return adoptRef(*new HTMLDialogElement(std::forward<Args>(args)...)); }
 
-    bool isOpen() const { return hasAttribute(HTMLNames::openAttr); }
+    bool isOpen() const;
 
     const String& returnValue() const { return m_returnValue; }
     void setReturnValue(String&& value) { m_returnValue = WTFMove(value); }
@@ -43,6 +44,7 @@ public:
     ExceptionOr<void> show();
     ExceptionOr<void> showModal();
     void close(const String&);
+    void requestClose(const String&);
 
     bool isModal() const { return m_isModal; };
 
@@ -51,7 +53,9 @@ public:
     void runFocusingSteps();
 
     bool isValidCommandType(const CommandType) final;
-    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) final;
+    bool handleCommandInternal(HTMLButtonElement& invoker, const CommandType&) final;
+
+    void queueDialogToggleEventTask(ToggleState oldState, ToggleState newState);
 
 private:
     HTMLDialogElement(const QualifiedName&, Document&);
@@ -63,6 +67,8 @@ private:
     String m_returnValue;
     bool m_isModal { false };
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_previouslyFocusedElement;
+
+    RefPtr<ToggleEventTask> m_toggleEventTask;
 };
 
 } // namespace WebCore

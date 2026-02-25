@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,7 +72,7 @@ public:
     WEBCORE_EXPORT ~ShareableResource();
 
     unsigned size() const;
-    std::span<const uint8_t> span() const;
+    std::span<const uint8_t> span() const LIFETIME_BOUND;
 
 private:
     friend class ShareableResourceHandle;
@@ -80,7 +80,7 @@ private:
     ShareableResource(Ref<SharedMemory>&&, unsigned offset, unsigned size);
     RefPtr<SharedBuffer> wrapInSharedBuffer();
 
-    Ref<SharedMemory> m_sharedMemory;
+    const Ref<SharedMemory> m_sharedMemory;
 
     const unsigned m_offset;
     const unsigned m_size;

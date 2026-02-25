@@ -25,6 +25,8 @@
 
 #pragma once
 
+DECLARE_SYSTEM_HEADER
+
 #include <CoreFoundation/CoreFoundation.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -53,4 +55,3 @@ CFRange CFStringGetRangeOfCharacterClusterAtIndex(CFStringRef, CFIndex charIndex
 void _CFStringGetUserDefaultEncoding(UInt32* scriptValue, UInt32* regionValue);
 
 }
-

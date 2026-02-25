@@ -45,7 +45,7 @@
 
 namespace JSC { namespace B3 {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(Procedure);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Procedure);
 
 Procedure::Procedure(bool usesSIMD)
     : m_cfg(new CFG(*this))
@@ -144,9 +144,9 @@ Value* Procedure::addConstant(Origin origin, Type type, uint64_t bits)
     case Int64:
         return add<Const64Value>(origin, bits);
     case Float:
-        return add<ConstFloatValue>(origin, bitwise_cast<float>(static_cast<int32_t>(bits)));
+        return add<ConstFloatValue>(origin, std::bit_cast<float>(static_cast<int32_t>(bits)));
     case Double:
-        return add<ConstDoubleValue>(origin, bitwise_cast<double>(bits));
+        return add<ConstDoubleValue>(origin, std::bit_cast<double>(bits));
     case V128:
         RELEASE_ASSERT(!bits);
         return addConstant(origin, type, v128_t { });

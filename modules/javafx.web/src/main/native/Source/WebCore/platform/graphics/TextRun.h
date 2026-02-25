@@ -25,8 +25,10 @@
 
 #include "TabSize.h"
 #include "TextFlags.h"
+#include "TextSpacing.h"
 #include "WritingMode.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -41,7 +43,7 @@ class Font;
 struct GlyphData;
 
 class TextRun final : public CanMakeCheckedPtr<TextRun> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextRun);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextRun);
     friend void add(Hasher&, const TextRun&);
 public:
@@ -116,11 +118,11 @@ public:
         return result;
     }
 
-    UChar operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
-    std::span<const LChar> span8() const { ASSERT(is8Bit()); return m_text.span8(); }
-    std::span<const UChar> span16() const { ASSERT(!is8Bit()); return m_text.span16(); }
-    std::span<const LChar> subspan8(unsigned i) const { return span8().subspan(i); }
-    std::span<const UChar> subspan16(unsigned i) const { return span16().subspan(i); }
+    char16_t operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
+    std::span<const LChar> span8() const LIFETIME_BOUND { ASSERT(is8Bit()); return m_text.span8(); }
+    std::span<const char16_t> span16() const LIFETIME_BOUND { ASSERT(!is8Bit()); return m_text.span16(); }
+    std::span<const LChar> subspan8(unsigned i) const LIFETIME_BOUND { return span8().subspan(i); }
+    std::span<const char16_t> subspan16(unsigned i) const LIFETIME_BOUND { return span16().subspan(i); }
 
     bool is8Bit() const { return m_text.is8Bit(); }
     unsigned length() const { return m_text.length(); }
@@ -149,11 +151,14 @@ public:
     void setDirection(TextDirection direction) { m_direction = static_cast<unsigned>(direction); }
     void setDirectionalOverride(bool override) { m_directionalOverride = override; }
     void setCharacterScanForCodePath(bool scan) { m_characterScanForCodePath = scan; }
-    StringView text() const { return m_text; }
+    StringView text() const LIFETIME_BOUND { return m_text; }
 
     TextRun isolatedCopy() const;
 
     const String& textAsString() const { return m_text; }
+
+    void setTextSpacingState(TextSpacing::SpacingState spacingState) { m_textSpacingState = spacingState; }
+    TextSpacing::SpacingState textSpacingState() const { return m_textSpacingState; }
 
 private:
     String m_text;
@@ -169,6 +174,9 @@ private:
 
     float m_expansion;
     ExpansionBehavior m_expansionBehavior;
+
+    TextSpacing::SpacingState m_textSpacingState;
+
     unsigned m_allowTabs : 1;
     unsigned m_direction : 1;
     unsigned m_directionalOverride : 1; // Was this direction set by an override character.

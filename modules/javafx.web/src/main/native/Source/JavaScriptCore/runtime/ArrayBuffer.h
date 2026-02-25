@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,10 @@
  */
 
 #pragma once
+
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #include "ArrayBufferSharingMode.h"
 #include "BufferMemoryHandle.h"
@@ -64,7 +68,7 @@ public:
         return adoptRef(*new SharedArrayBufferContents(data, maxByteLength, WTFMove(memoryHandle), WTFMove(destructor), mode));
     }
 
-    void* data() const { return m_data.getMayBeNull(); }
+    void* data() const LIFETIME_BOUND { return m_data.getMayBeNull(); }
 
     size_t sizeInBytes(std::memory_order order) const
     {
@@ -187,8 +191,8 @@ public:
 
     explicit operator bool() { return !!m_data; }
 
-    void* data() const { return m_data.getMayBeNull(); }
-    void* dataWithoutPACValidation() const { return m_data.getUnsafe(); }
+    void* data() const LIFETIME_BOUND { return m_data.getMayBeNull(); }
+    void* dataWithoutPACValidation() const LIFETIME_BOUND { return m_data.getUnsafe(); }
     size_t sizeInBytes(std::memory_order order = std::memory_order_seq_cst) const
     {
         if (m_hasMaxByteLength) {
@@ -204,8 +208,8 @@ public:
         return std::nullopt;
     }
 
-    std::span<uint8_t> mutableSpan() { return { static_cast<uint8_t*>(data()), sizeInBytes() }; }
-    std::span<const uint8_t> span() const { return { static_cast<const uint8_t*>(data()), sizeInBytes() }; }
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return { static_cast<uint8_t*>(data()), sizeInBytes() }; }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return { static_cast<const uint8_t*>(data()), sizeInBytes() }; }
 
     bool isShared() const { return m_shared; }
     bool isResizableOrGrowableShared() const { return m_hasMaxByteLength; }
@@ -285,13 +289,13 @@ public:
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createUninitialized(size_t numElements, unsigned elementByteSize);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreateUninitialized(size_t numElements, unsigned elementByteSize);
 
-    inline void* data();
-    inline const void* data() const;
+    inline void* data() LIFETIME_BOUND;
+    inline const void* data() const LIFETIME_BOUND;
     inline size_t byteLength(std::memory_order = std::memory_order_relaxed) const;
     inline std::optional<size_t> maxByteLength() const;
 
-    inline void* dataWithoutPACValidation();
-    inline const void* dataWithoutPACValidation() const;
+    inline void* dataWithoutPACValidation() LIFETIME_BOUND;
+    inline const void* dataWithoutPACValidation() const LIFETIME_BOUND;
 
     void makeShared();
     void setSharingMode(ArrayBufferSharingMode);
@@ -334,8 +338,8 @@ public:
     Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength);
     Expected<int64_t, GrowFailReason> resize(VM&, size_t newByteLength);
 
-    std::span<uint8_t> mutableSpan() { return { static_cast<uint8_t*>(data()), byteLength() }; }
-    std::span<const uint8_t> span() const { return { static_cast<const uint8_t*>(data()), byteLength() }; }
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return { static_cast<uint8_t*>(data()), byteLength() }; }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return { static_cast<const uint8_t*>(data()), byteLength() }; }
     Vector<uint8_t> toVector() const { return { span() }; }
 
 private:
@@ -436,7 +440,7 @@ JS_EXPORT_PRIVATE ASCIILiteral errorMessageForTransfer(ArrayBuffer*);
 // https://tc39.es/proposal-resizablearraybuffer/#sec-makeidempotentarraybufferbytelengthgetter
 template<std::memory_order order>
 class IdempotentArrayBufferByteLengthGetter {
-    WTF_MAKE_TZONE_ALLOCATED(IdempotentArrayBufferByteLengthGetter);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(IdempotentArrayBufferByteLengthGetter);
 public:
     IdempotentArrayBufferByteLengthGetter() = default;
 
@@ -453,6 +457,10 @@ private:
     std::optional<size_t> m_byteLength;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<std::memory_order order>, IdempotentArrayBufferByteLengthGetter<order>);
+
 } // namespace JSC
 
 using JSC::ArrayBuffer;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

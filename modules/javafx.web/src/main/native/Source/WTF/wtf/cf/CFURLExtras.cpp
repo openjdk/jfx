@@ -26,7 +26,10 @@
 #include "config.h"
 #include <wtf/cf/CFURLExtras.h>
 
+#include <wtf/MallocSpan.h>
+#include <wtf/SystemMalloc.h>
 #include <wtf/URL.h>
+#include <wtf/cf/VectorCF.h>
 
 namespace WTF {
 
@@ -41,10 +44,10 @@ RetainPtr<CFDataRef> bytesAsCFData(CFURLRef url)
         return nullptr;
     auto bytesLength = CFURLGetBytes(url, nullptr, 0);
     RELEASE_ASSERT(bytesLength != -1);
-    auto buffer = static_cast<uint8_t*>(malloc(bytesLength));
+    auto buffer = MallocSpan<uint8_t, SystemMalloc>::malloc(bytesLength);
     RELEASE_ASSERT(buffer);
-    CFURLGetBytes(url, buffer, bytesLength);
-    return adoptCF(CFDataCreateWithBytesNoCopy(nullptr, buffer, bytesLength, kCFAllocatorMalloc));
+    CFURLGetBytes(url, buffer.mutableSpan().data(), bytesLength);
+    return toCFDataNoCopy(buffer.leakSpan(), kCFAllocatorMalloc);
 }
 
 String bytesAsString(CFURLRef url)
@@ -54,9 +57,9 @@ String bytesAsString(CFURLRef url)
     auto bytesLength = CFURLGetBytes(url, nullptr, 0);
     RELEASE_ASSERT(bytesLength != -1);
     RELEASE_ASSERT(bytesLength <= static_cast<CFIndex>(String::MaxLength));
-    LChar* buffer;
+    std::span<LChar> buffer;
     auto result = String::createUninitialized(bytesLength, buffer);
-    CFURLGetBytes(url, buffer, bytesLength);
+    CFURLGetBytes(url, buffer.data(), buffer.size());
     return result;
 }
 
@@ -66,14 +69,14 @@ Vector<uint8_t, URLBytesVectorInlineCapacity> bytesAsVector(CFURLRef url)
         return { };
 
     Vector<uint8_t, URLBytesVectorInlineCapacity> result(URLBytesVectorInlineCapacity);
-    auto bytesLength = CFURLGetBytes(url, result.data(), URLBytesVectorInlineCapacity);
+    auto bytesLength = CFURLGetBytes(url, result.mutableSpan().data(), URLBytesVectorInlineCapacity);
     if (bytesLength != -1)
         result.shrink(bytesLength);
     else {
         bytesLength = CFURLGetBytes(url, nullptr, 0);
         RELEASE_ASSERT(bytesLength != -1);
         result.grow(bytesLength);
-        CFURLGetBytes(url, result.data(), bytesLength);
+        CFURLGetBytes(url, result.mutableSpan().data(), bytesLength);
     }
 
     // This may look like it copies the bytes in the vector, but due to the return value optimization it does not.

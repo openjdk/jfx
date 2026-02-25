@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "ClientOrigin.h"
 #include "WebLockIdentifier.h"
 #include "WebLockMode.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -42,14 +42,13 @@ class WebLockRegistry;
 struct ClientOrigin;
 struct WebLockManagerSnapshot;
 
-class WebLockManager : public RefCounted<WebLockManager>, public CanMakeWeakPtr<WebLockManager>, public ActiveDOMObject {
+class WebLockManager : public RefCountedAndCanMakeWeakPtr<WebLockManager>, public ActiveDOMObject {
 public:
-    static Ref<WebLockManager> create(NavigatorBase&);
-    ~WebLockManager();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    static Ref<WebLockManager> create(NavigatorBase&);
+    ~WebLockManager();
 
     struct Options {
         WebLockMode mode { WebLockMode::Exclusive };
@@ -75,9 +74,10 @@ private:
     // ActiveDOMObject.
     void stop() final;
     bool virtualHasPendingActivity() const final;
+    void suspend(ReasonForSuspension) final;
 
     class MainThreadBridge;
-    RefPtr<MainThreadBridge> m_mainThreadBridge;
+    const RefPtr<MainThreadBridge> m_mainThreadBridge;
 
     HashMap<WebLockIdentifier, RefPtr<DeferredPromise>> m_releasePromises;
 

@@ -33,8 +33,12 @@ namespace JSC {
 
 namespace Yarr {
 
+enum class YarrRegisters { DefaultRegisters, AllocatedRegisters };
+
 struct YarrJITDefaultRegisters {
 public:
+    static constexpr YarrRegisters registersAssignments = YarrRegisters::DefaultRegisters;
+
 #if CPU(ARM_THUMB2)
     static constexpr GPRReg input = ARMRegisters::r0;
     static constexpr GPRReg index = ARMRegisters::r1;
@@ -71,15 +75,19 @@ public:
     static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
 
-    static constexpr GPRReg leadingSurrogateTag = ARM64Registers::x13;
-    static constexpr GPRReg trailingSurrogateTag = ARM64Registers::x14;
+#if ENABLE(YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP)
+    static constexpr GPRReg firstCharacterAdditionalReadSize { ARM64Registers::x12 };
+#else
+    static constexpr GPRReg firstCharacterAdditionalReadSize { InvalidGPRReg };
+#endif
+
+#define HAVE_YARR_SURROGATE_REGISTERS 1
+    static constexpr GPRReg surrogateTagMask = ARM64Registers::x13;
+    static constexpr GPRReg surrogatePairTags = ARM64Registers::x14;
     static constexpr GPRReg endOfStringAddress = ARM64Registers::x15;
 
     static constexpr GPRReg returnRegister = ARM64Registers::x0;
     static constexpr GPRReg returnRegister2 = ARM64Registers::x1;
-
-    static constexpr MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
 #elif CPU(X86_64)
     // Argument registers
     static constexpr GPRReg input = X86Registers::edi;
@@ -104,10 +112,8 @@ public:
     static constexpr GPRReg returnRegister = X86Registers::eax;
     static constexpr GPRReg returnRegister2 = X86Registers::edx;
 
-    static constexpr MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    static constexpr MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    static constexpr MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
+    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xdc00dc00);
+    static constexpr MacroAssembler::TrustedImm32 surrogatePairTags = MacroAssembler::TrustedImm32(0xdc00d800);
 #elif CPU(RISCV64)
     // Argument registers
     static constexpr GPRReg input = RISCV64Registers::x10;
@@ -131,10 +137,8 @@ public:
     static constexpr GPRReg returnRegister = RISCV64Registers::x10;
     static constexpr GPRReg returnRegister2 = RISCV64Registers::x11;
 
-    static constexpr MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    static constexpr MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    static constexpr MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
+    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xdc00dc00);
+    static constexpr MacroAssembler::TrustedImm32 surrogatePairTags = MacroAssembler::TrustedImm32(0xdc00d800);
 #endif
 };
 
@@ -190,13 +194,9 @@ public:
     GPRReg unicodeAndSubpatternIdTemp { InvalidGPRReg };
     GPRReg endOfStringAddress { InvalidGPRReg };
     GPRReg firstCharacterAdditionalReadSize { InvalidGPRReg };
-
-    const MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    const MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    const MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    const MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
 };
 #endif
+
 
 } } // namespace JSC::Yarr
 

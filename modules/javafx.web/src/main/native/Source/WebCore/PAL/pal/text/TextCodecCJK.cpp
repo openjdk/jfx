@@ -28,12 +28,16 @@
 
 #include "EncodingTables.h"
 #include <mutex>
+#include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CodePointIterator.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace PAL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecCJK);
 
 enum class TextCodecCJK::Encoding : uint8_t {
     EUC_JP,
@@ -163,7 +167,7 @@ void TextCodecCJK::registerCodecs(TextCodecRegistrar registrar)
     });
 }
 
-using JIS0208EncodeIndex = std::array<std::pair<UChar, uint16_t>, sizeof(jis0208()) / sizeof(jis0208()[0])>;
+using JIS0208EncodeIndex = std::array<std::pair<char16_t, uint16_t>, sizeof(jis0208()) / sizeof(jis0208()[0])>;
 static const JIS0208EncodeIndex& jis0208EncodeIndex()
 {
     // Allocate this at runtime because building it at compile time would make the binary much larger and this is often not used.
@@ -179,7 +183,7 @@ static const JIS0208EncodeIndex& jis0208EncodeIndex()
     return *table;
 }
 
-String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
+String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bool stopOnError, bool& sawError, NOESCAPE const Function<SawError(uint8_t, StringBuilder&)>& byteParser)
 {
     StringBuilder result;
     result.reserveCapacity(bytes.size());
@@ -220,12 +224,12 @@ String TextCodecCJK::decodeCommon(std::span<const uint8_t> bytes, bool flush, bo
     return result.toString();
 }
 
-static std::optional<UChar> codePointJIS0208(uint16_t pointer)
+static std::optional<char16_t> codePointJIS0208(uint16_t pointer)
 {
     return findFirstInSortedPairs(jis0208(), pointer);
 }
 
-static std::optional<UChar> codePointJIS0212(uint16_t pointer)
+static std::optional<char16_t> codePointJIS0212(uint16_t pointer)
 {
     return findFirstInSortedPairs(jis0212(), pointer);
 }
@@ -274,7 +278,7 @@ static Vector<uint8_t> eucJPEncode(StringView string, Function<void(char32_t, Ve
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -331,12 +335,12 @@ String TextCodecCJK::iso2022JPDecode(std::span<const uint8_t> bytes, bool flush,
             }
             if (byte == 0x5C) {
                 m_iso2022JPOutput = false;
-                result.append(static_cast<UChar>(0x00A5));
+                result.append(static_cast<char16_t>(0x00A5));
                 break;
             }
             if (byte == 0x7E) {
                 m_iso2022JPOutput = false;
-                result.append(static_cast<UChar>(0x203E));
+                result.append(static_cast<char16_t>(0x203E));
                 break;
             }
             if (byte <= 0x7F && byte != 0x0E && byte != 0x0F && byte != 0x1B && byte != 0x5C && byte != 0x7E) {
@@ -353,7 +357,7 @@ String TextCodecCJK::iso2022JPDecode(std::span<const uint8_t> bytes, bool flush,
             }
             if (byte >= 0x21 && byte <= 0x5F) {
                 m_iso2022JPOutput = false;
-                result.append(static_cast<UChar>(0xFF61 - 0x21 + byte));
+                result.append(static_cast<char16_t>(0xFF61 - 0x21 + byte));
                 break;
             }
             m_iso2022JPOutput = false;
@@ -480,7 +484,7 @@ String TextCodecCJK::iso2022JPDecode(std::span<const uint8_t> bytes, bool flush,
             break;
         case ISO2022JPDecoderState::TrailByte:
             m_iso2022JPDecoderState = ISO2022JPDecoderState::LeadByte;
-            FALLTHROUGH;
+            [[fallthrough]];
         case ISO2022JPDecoderState::EscapeStart:
             sawError = true;
             result.append(replacementCharacter);
@@ -591,7 +595,7 @@ static Vector<uint8_t> iso2022JPEncode(StringView string, Function<void(char32_t
     };
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator)
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator)
         parseCodePoint(*iterator);
 
     if (state != State::ASCII)
@@ -610,7 +614,7 @@ String TextCodecCJK::shiftJISDecode(std::span<const uint8_t> bytes, bool flush, 
             if ((byte >= 0x40 && byte <= 0x7E) || (byte >= 0x80 && byte <= 0xFC)) {
                 uint16_t pointer = (lead - leadOffset) * 188 + byte - offset;
                 if (pointer >= 8836 && pointer <= 10715) {
-                    result.append(static_cast<UChar>(0xE000 - 8836 + pointer));
+                    result.append(static_cast<char16_t>(0xE000 - 8836 + pointer));
                     return SawError::No;
                 }
                 if (auto codePoint = codePointJIS0208(pointer)) {
@@ -627,7 +631,7 @@ String TextCodecCJK::shiftJISDecode(std::span<const uint8_t> bytes, bool flush, 
             return SawError::No;
         }
         if (byte >= 0xA1 && byte <= 0xDF) {
-            result.append(static_cast<UChar>(0xFF61 - 0xA1 + byte));
+            result.append(static_cast<char16_t>(0xFF61 - 0xA1 + byte));
             return SawError::No;
         }
         if ((byte >= 0x81 && byte <= 0x9F) || (byte >= 0xE0 && byte <= 0xFC)) {
@@ -645,7 +649,7 @@ static Vector<uint8_t> shiftJISEncode(StringView string, Function<void(char32_t,
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint) || codePoint == 0x0080) {
             result.append(codePoint);
@@ -667,14 +671,14 @@ static Vector<uint8_t> shiftJISEncode(StringView string, Function<void(char32_t,
             codePoint = 0xFF0D;
 
         auto range = findInSortedPairs(jis0208EncodeIndex(), codePoint);
-        if (range.first == range.second) {
+        if (range.empty()) {
             unencodableHandler(codePoint, result);
             continue;
         }
 
-        ASSERT(range.first + 3 >= range.second);
-        for (auto pair = range.first; pair < range.second; pair++) {
-            uint16_t pointer = pair->second;
+        ASSERT(range.size() <= 3);
+        for (auto& pair : range) {
+            uint16_t pointer = pair.second;
             if (pointer >= 8272 && pointer <= 8835)
                 continue;
             uint8_t lead = pointer / 188;
@@ -689,7 +693,7 @@ static Vector<uint8_t> shiftJISEncode(StringView string, Function<void(char32_t,
     return result;
 }
 
-using EUCKREncodingIndex = std::array<std::pair<UChar, uint16_t>, sizeof(eucKR()) / sizeof(eucKR()[0])>;
+using EUCKREncodingIndex = std::array<std::pair<char16_t, uint16_t>, sizeof(eucKR()) / sizeof(eucKR()[0])>;
 static const EUCKREncodingIndex& eucKREncodingIndex()
 {
     // Allocate this at runtime because building it at compile time would make the binary much larger and this is often not used.
@@ -713,7 +717,7 @@ static Vector<uint8_t> eucKREncode(StringView string, Function<void(char32_t, Ve
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -784,24 +788,24 @@ static Vector<uint8_t> big5Encode(StringView string, Function<void(char32_t, Vec
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
             continue;
         }
 
-        auto pointerRange = findInSortedPairs(big5EncodeIndex(), codePoint);
-        if (pointerRange.first == pointerRange.second) {
+        auto range = findInSortedPairs(big5EncodeIndex(), codePoint);
+        if (range.empty()) {
             unencodableHandler(codePoint, result);
             continue;
         }
 
         uint16_t pointer = 0;
         if (codePoint == 0x2550 || codePoint == 0x255E || codePoint == 0x2561 || codePoint == 0x256A || codePoint == 0x5341 || codePoint == 0x5345)
-            pointer = (pointerRange.second - 1)->second;
+            pointer = range.back().second;
         else
-            pointer = pointerRange.first->second;
+            pointer = range.front().second;
 
         if (pointer < 157 * (0xA1 - 0x81)) {
             unencodableHandler(codePoint, result);
@@ -858,10 +862,10 @@ static std::optional<char32_t> gb18030RangesCodePoint(uint32_t pointer)
         return std::nullopt;
     if (pointer == 7457)
         return 0xE7C7;
-    auto upperBound = std::upper_bound(gb18030Ranges().begin(), gb18030Ranges().end(), makeFirstAdapter(pointer), CompareFirst { });
-    ASSERT(upperBound != gb18030Ranges().begin());
-    uint32_t offset = (upperBound - 1)->first;
-    char32_t codePointOffset = (upperBound - 1)->second;
+    auto& ranges = gb18030Ranges();
+    auto upperBound = std::ranges::upper_bound(ranges, makeFirstAdapter(pointer), CompareFirst { });
+    ASSERT(upperBound != ranges.begin());
+    auto [offset, codePointOffset] = ranges[upperBound - ranges.begin() - 1];
     return codePointOffset + pointer - offset;
 }
 
@@ -870,14 +874,14 @@ static uint32_t gb18030RangesPointer(char32_t codePoint)
 {
     if (codePoint == 0xE7C7)
         return 7457;
-    auto upperBound = std::upper_bound(gb18030Ranges().begin(), gb18030Ranges().end(), makeSecondAdapter(codePoint), CompareSecond { });
-    ASSERT(upperBound != gb18030Ranges().begin());
-    uint32_t pointerOffset = (upperBound - 1)->first;
-    char32_t offset = (upperBound - 1)->second;
+    auto& ranges = gb18030Ranges();
+    auto upperBound = std::ranges::upper_bound(ranges, makeSecondAdapter(codePoint), CompareSecond { });
+    ASSERT(upperBound != ranges.begin());
+    auto [pointerOffset, offset] = ranges[upperBound - ranges.begin() - 1];
     return pointerOffset + codePoint - offset;
 }
 
-using GB18030EncodeIndex = std::array<std::pair<UChar, uint16_t>, 23940>;
+using GB18030EncodeIndex = std::array<std::pair<char16_t, uint16_t>, 23940>;
 static const GB18030EncodeIndex& gb18030EncodeIndex()
 {
     // Allocate this at runtime because building it at compile time would make the binary much larger and this is often not used.
@@ -896,51 +900,27 @@ static const GB18030EncodeIndex& gb18030EncodeIndex()
 // https://unicode-org.atlassian.net/browse/ICU-22357
 // The 2-byte values are handled correctly by values from gb18030()
 // but these need to be exceptions from gb18030Ranges().
-static std::optional<uint32_t> gb180302022Encode(char32_t codePoint)
+static std::optional<uint16_t> gb18030AsymmetricEncode(char16_t codePoint)
 {
     switch (codePoint) {
-    case 0xE81E: return 0x82359037;
-    case 0xE826: return 0x82359038;
-    case 0xE82B: return 0x82359039;
-    case 0xE82C: return 0x82359130;
-    case 0xE832: return 0x82359131;
-    case 0xE843: return 0x82359132;
-    case 0xE854: return 0x82359133;
-    case 0xE864: return 0x82359134;
-    case 0xE78D: return 0x84318236;
-    case 0xE78F: return 0x84318237;
-    case 0xE78E: return 0x84318238;
-    case 0xE790: return 0x84318239;
-    case 0xE791: return 0x84318330;
-    case 0xE792: return 0x84318331;
-    case 0xE793: return 0x84318332;
-    case 0xE794: return 0x84318333;
-    case 0xE795: return 0x84318334;
-    case 0xE796: return 0x84318335;
-    }
-    return std::nullopt;
-}
-static std::optional<char32_t> gb180302022Decode(uint8_t first, uint8_t second, uint8_t third, uint8_t fourth)
-{
-    switch (static_cast<uint32_t>(first) << 24 | static_cast<uint32_t>(second) << 16 | static_cast<uint32_t>(third) << 8 | fourth) {
-    case 0x82359037: return 0xE81E;
-    case 0x82359038: return 0xE826;
-    case 0x82359039: return 0xE82B;
-    case 0x82359130: return 0xE82C;
-    case 0x82359131: return 0xE832;
-    case 0x82359132: return 0xE843;
-    case 0x82359133: return 0xE854;
-    case 0x82359134: return 0xE864;
-    case 0x84318236: return 0xE78D;
-    case 0x84318237: return 0xE78F;
-    case 0x84318238: return 0xE78E;
-    case 0x84318239: return 0xE790;
-    case 0x84318330: return 0xE791;
-    case 0x84318331: return 0xE792;
-    case 0x84318332: return 0xE793;
-    case 0x84318333: return 0xE794;
-    case 0x84318334: return 0xE795;
-    case 0x84318335: return 0xE796;
+    case 0xE81E: return 0xFE59;
+    case 0xE826: return 0xFE61;
+    case 0xE82B: return 0xFE66;
+    case 0xE82C: return 0xFE67;
+    case 0xE832: return 0xFE6D;
+    case 0xE843: return 0xFE7E;
+    case 0xE854: return 0xFE90;
+    case 0xE864: return 0xFEA0;
+    case 0xE78D: return 0xA6D9;
+    case 0xE78F: return 0xA6DB;
+    case 0xE78E: return 0xA6DA;
+    case 0xE790: return 0xA6DC;
+    case 0xE791: return 0xA6DD;
+    case 0xE792: return 0xA6DE;
+    case 0xE793: return 0xA6DF;
+    case 0xE794: return 0xA6EC;
+    case 0xE795: return 0xA6ED;
+    case 0xE796: return 0xA6F3;
     }
     return std::nullopt;
 }
@@ -970,10 +950,6 @@ String TextCodecCJK::gb18030Decode(std::span<const uint8_t> bytes, bool flush, b
             uint8_t first = std::exchange(m_gb18030First, 0x00);
             uint8_t second = std::exchange(m_gb18030Second, 0x00);
             uint8_t third = std::exchange(m_gb18030Third, 0x00);
-            if (auto codePoint = gb180302022Decode(first, second, third, byte)) {
-                result.append(*codePoint);
-                return SawError::No;
-            }
             if (auto codePoint = gb18030RangesCodePoint(((first - 0x81) * 10 * 126 * 10) + ((second - 0x30) * 10 * 126) + ((third - 0x81) * 10) + byte - 0x30)) {
                 result.append(*codePoint);
                 return SawError::No;
@@ -1046,7 +1022,7 @@ static Vector<uint8_t> gbEncodeShared(StringView string, Function<void(char32_t,
     result.reserveInitialCapacity(string.length());
 
     auto characters = string.upconvertedCharacters();
-    for (WTF::CodePointIterator<UChar> iterator(characters); !iterator.atEnd(); ++iterator) {
+    for (WTF::CodePointIterator<char16_t> iterator(characters); !iterator.atEnd(); ++iterator) {
         auto codePoint = *iterator;
         if (isASCII(codePoint)) {
             result.append(codePoint);
@@ -1056,21 +1032,18 @@ static Vector<uint8_t> gbEncodeShared(StringView string, Function<void(char32_t,
             unencodableHandler(codePoint, result);
             continue;
         }
-        if (isGBK == IsGBK::Yes) {
-            if (codePoint == 0x20AC) {
+        if (isGBK == IsGBK::Yes && codePoint == 0x20AC) {
             result.append(0x80);
             continue;
         }
-        } else if (auto encoded = gb180302022Encode(codePoint)) {
-            result.append(*encoded >> 24);
-            result.append(*encoded >> 16);
+        if (auto encoded = gb18030AsymmetricEncode(codePoint)) {
             result.append(*encoded >> 8);
             result.append(*encoded);
             continue;
         }
-        auto pointerRange = findInSortedPairs(gb18030EncodeIndex(), codePoint);
-        if (pointerRange.first != pointerRange.second) {
-            uint16_t pointer = pointerRange.first->second;
+        auto range = findInSortedPairs(gb18030EncodeIndex(), codePoint);
+        if (!range.empty()) {
+            uint16_t pointer = range[0].second;
             uint8_t lead = pointer / 190 + 0x81;
             uint8_t trail = pointer % 190;
             uint8_t offset = trail < 0x3F ? 0x40 : 0x41;
@@ -1117,9 +1090,9 @@ constexpr size_t maxUChar32Digits = 10;
 
 static void appendDecimal(char32_t c, Vector<uint8_t>& result)
 {
-    uint8_t buffer[lengthOfIntegerAsString(std::numeric_limits<decltype(c)>::max())];
-    writeIntegerToBuffer(c, buffer);
-    result.append(std::span { buffer, lengthOfIntegerAsString(c) });
+    std::array<uint8_t, lengthOfIntegerAsString(std::numeric_limits<decltype(c)>::max())> buffer;
+    writeIntegerToBuffer(c, std::span<uint8_t> { buffer });
+    result.append(std::span { buffer }.first(lengthOfIntegerAsString(c)));
 }
 
 static void urlEncodedEntityUnencodableHandler(char32_t c, Vector<uint8_t>& result)

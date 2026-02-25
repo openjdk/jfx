@@ -33,11 +33,13 @@ public:
     virtual ~FormAssociatedElement() { RELEASE_ASSERT(!m_form); }
     virtual HTMLElement& asHTMLElement() = 0;
     virtual const HTMLElement& asHTMLElement() const = 0;
+    Ref<const HTMLElement> asProtectedHTMLElement() const { return asHTMLElement(); }
     virtual bool isFormListedElement() const = 0;
 
     virtual void formWillBeDestroyed() { m_form = nullptr; }
 
     HTMLFormElement* form() const { return m_form.get(); }
+    virtual HTMLFormElement* formForBindings() const;
 
     void setForm(RefPtr<HTMLFormElement>&&);
     virtual void elementInsertedIntoAncestor(Element&, Node::InsertionType);

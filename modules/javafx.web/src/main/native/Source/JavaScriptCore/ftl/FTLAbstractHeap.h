@@ -141,7 +141,7 @@ public:
 private:
     const AbstractHeap& returnInitialized(AbstractHeap& field, ptrdiff_t index)
     {
-        if (UNLIKELY(!field.isInitialized()))
+        if (!field.isInitialized()) [[unlikely]]
             initialize(field, index);
         return field;
     }
@@ -159,9 +159,9 @@ private:
         static void constructDeletedValue(ptrdiff_t& slot) { slot = 1; }
         static bool isDeletedValue(ptrdiff_t value) { return value == 1; }
     };
-    typedef HashMap<ptrdiff_t, std::unique_ptr<AbstractHeap>, WTF::IntHash<ptrdiff_t>, WithoutZeroOrOneHashTraits> MapType;
+    typedef UncheckedKeyHashMap<ptrdiff_t, std::unique_ptr<AbstractHeap>, WTF::IntHash<ptrdiff_t>, WithoutZeroOrOneHashTraits> MapType;
 
-    std::unique_ptr<MapType> m_largeIndices;
+    MapType m_largeIndices;
     Vector<CString, 16> m_largeIndexNames;
 };
 
@@ -198,7 +198,7 @@ public:
 
     const AbstractHeap& at(const void* address)
     {
-        return m_indexedHeap.at(bitwise_cast<ptrdiff_t>(address));
+        return m_indexedHeap.at(std::bit_cast<ptrdiff_t>(address));
     }
 
     const AbstractHeap& operator[](const void* address) { return at(address); }

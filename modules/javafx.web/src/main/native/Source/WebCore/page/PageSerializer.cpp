@@ -38,6 +38,7 @@
 #include "CSSStyleRule.h"
 #include "CachedImage.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
@@ -74,7 +75,7 @@ static bool isCharsetSpecifyingNode(const HTMLMetaElement& element)
     if (!element.hasAttributes())
         return false;
     Vector<std::pair<StringView, StringView>> attributes;
-    for (auto& attribute : element.attributesIterator()) {
+    for (auto& attribute : element.attributes()) {
         if (attribute.name().hasPrefix())
             continue;
         attributes.append({ StringView { attribute.name().localName() }, StringView { attribute.value() } });
@@ -114,7 +115,7 @@ private:
 };
 
 PageSerializer::SerializerMarkupAccumulator::SerializerMarkupAccumulator(PageSerializer& serializer, Document& document, Vector<Ref<Node>>* nodes)
-    : MarkupAccumulator(nodes, ResolveURLs::Yes, document.isHTMLDocument() ? SerializationSyntax::HTML : SerializationSyntax::XML)
+    : MarkupAccumulator(nodes, ResolveURLs::Yes, MarkupAccumulator::serializationSyntax(document))
     , m_serializer(serializer)
     , m_document(document)
 {
@@ -173,8 +174,8 @@ PageSerializer::PageSerializer(Vector<PageSerializer::Resource>& resources)
 
 void PageSerializer::serialize(Page& page)
 {
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
-        serializeFrame(localMainFrame);
+    if (RefPtr localMainFrame = page.localMainFrame())
+        serializeFrame(localMainFrame.get());
 }
 
 void PageSerializer::serializeFrame(LocalFrame* frame)
@@ -229,8 +230,8 @@ void PageSerializer::serializeFrame(LocalFrame* frame)
         }
     }
 
-    for (auto* childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(childFrame);
+    for (RefPtr childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(childFrame.get());
         if (!localFrame)
             continue;
         serializeFrame(localFrame);

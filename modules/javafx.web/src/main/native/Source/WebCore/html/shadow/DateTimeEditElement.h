@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateComponents.h"
 #include "DateTimeFieldElement.h"
 
@@ -78,6 +76,7 @@ public:
     virtual ~DateTimeEditElement();
     void addField(Ref<DateTimeFieldElement>);
     Element& fieldsWrapperElement() const;
+    Ref<Element> protectedFieldsWrapperElement() const;
     void focusByOwner();
     void resetFields();
     void setEmptyValue(const LayoutParameters&);
@@ -124,5 +123,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

@@ -28,14 +28,16 @@
 
 #include "ConstantValue.h"
 #include <charconv>
+#include <wtf/FastFloat.h>
 #include <wtf/SortedArrayMap.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WGSL {
 
-static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierStart(char16_t character, std::span<const char16_t> code)
 {
     if (character == '_')
         return 1;
@@ -48,7 +50,7 @@ static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
     return 0;
 }
 
-static unsigned isIdentifierContinue(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierContinue(char16_t character, std::span<const char16_t> code)
 {
     if (auto length = isIdentifierStart(character, code))
         return length;
@@ -82,9 +84,10 @@ Vector<Token> Lexer<T>::lex()
         switch (token.type) {
         case TokenType::GtGtEq:
             tokens.append(makeToken(TokenType::Placeholder));
-            FALLTHROUGH;
+            [[fallthrough]];
         case TokenType::GtGt:
         case TokenType::GtEq:
+        case TokenType::MinusMinus:
             tokens.append(makeToken(TokenType::Placeholder));
             break;
         default:
@@ -218,7 +221,6 @@ Token Lexer<T>::nextToken()
             shift();
             return makeToken(TokenType::StarEq);
         default:
-        // FIXME: Report unbalanced block comments, such as "this is an unbalanced comment. */"
         return makeToken(TokenType::Star);
         }
     case '/':
@@ -286,7 +288,7 @@ Token Lexer<T>::nextToken()
             return lexNumber();
         if (auto consumed = isIdentifierStart(m_current, m_code.span())) {
             unsigned length = consumed;
-            auto* startOfToken = m_code.position();
+            auto startOfToken = m_code.span();
             shift(consumed);
             while (!isAtEndOfFile()) {
                 auto consumed = isIdentifierContinue(m_current, m_code.span());
@@ -296,14 +298,13 @@ Token Lexer<T>::nextToken()
                 shift(consumed);
             }
 
-            // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
-            String view(StringImpl::createWithoutCopying({ startOfToken, currentTokenLength() }));
+            String view(StringImpl::createWithoutCopying(startOfToken.subspan(0, currentTokenLength())));
 
             static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
-                { "_", TokenType::Underbar },
+                { "_"_s, TokenType::Underbar },
 
 #define MAPPING_ENTRY(lexeme, name)\
-                { #lexeme, TokenType::Keyword##name },
+                { #lexeme##_s, TokenType::Keyword##name },
 FOREACH_KEYWORD(MAPPING_ENTRY)
 #undef MAPPING_ENTRY
 
@@ -312,151 +313,151 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
 
             // https://www.w3.org/TR/WGSL/#reserved-words
             static constexpr ComparableASCIILiteral reservedWords[] {
-                "NULL",
-                "Self",
-                "abstract",
-                "active",
-                "alignas",
-                "alignof",
-                "as",
-                "asm",
-                "asm_fragment",
-                "async",
-                "attribute",
-                "auto",
-                "await",
-                "become",
-                "binding_array",
-                "cast",
-                "catch",
-                "class",
-                "co_await",
-                "co_return",
-                "co_yield",
-                "coherent",
-                "column_major",
-                "common",
-                "compile",
-                "compile_fragment",
-                "concept",
-                "const_cast",
-                "consteval",
-                "constexpr",
-                "constinit",
-                "crate",
-                "debugger",
-                "decltype",
-                "delete",
-                "demote",
-                "demote_to_helper",
-                "do",
-                "dynamic_cast",
-                "enum",
-                "explicit",
-                "export",
-                "extends",
-                "extern",
-                "external",
-                "fallthrough",
-                "filter",
-                "final",
-                "finally",
-                "friend",
-                "from",
-                "fxgroup",
-                "get",
-                "goto",
-                "groupshared",
-                "highp",
-                "impl",
-                "implements",
-                "import",
-                "inline",
-                "instanceof",
-                "interface",
-                "layout",
-                "lowp",
-                "macro",
-                "macro_rules",
-                "match",
-                "mediump",
-                "meta",
-                "mod",
-                "module",
-                "move",
-                "mut",
-                "mutable",
-                "namespace",
-                "new",
-                "nil",
-                "noexcept",
-                "noinline",
-                "nointerpolation",
-                "noperspective",
-                "null",
-                "nullptr",
-                "of",
-                "operator",
-                "package",
-                "packoffset",
-                "partition",
-                "pass",
-                "patch",
-                "pixelfragment",
-                "precise",
-                "precision",
-                "premerge",
-                "priv",
-                "protected",
-                "pub",
-                "public",
-                "readonly",
-                "ref",
-                "regardless",
-                "register",
-                "reinterpret_cast",
-                "require",
-                "resource",
-                "restrict",
-                "self",
-                "set",
-                "shared",
-                "sizeof",
-                "smooth",
-                "snorm",
-                "static",
-                "static_assert",
-                "static_cast",
-                "std",
-                "subroutine",
-                "super",
-                "target",
-                "template",
-                "this",
-                "thread_local",
-                "throw",
-                "trait",
-                "try",
-                "type",
-                "typedef",
-                "typeid",
-                "typename",
-                "typeof",
-                "union",
-                "unless",
-                "unorm",
-                "unsafe",
-                "unsized",
-                "use",
-                "using",
-                "varying",
-                "virtual",
-                "volatile",
-                "wgsl",
-                "where",
-                "with",
-                "writeonly",
-                "yield",
+                "NULL"_s,
+                "Self"_s,
+                "abstract"_s,
+                "active"_s,
+                "alignas"_s,
+                "alignof"_s,
+                "as"_s,
+                "asm"_s,
+                "asm_fragment"_s,
+                "async"_s,
+                "attribute"_s,
+                "auto"_s,
+                "await"_s,
+                "become"_s,
+                "binding_array"_s,
+                "cast"_s,
+                "catch"_s,
+                "class"_s,
+                "co_await"_s,
+                "co_return"_s,
+                "co_yield"_s,
+                "coherent"_s,
+                "column_major"_s,
+                "common"_s,
+                "compile"_s,
+                "compile_fragment"_s,
+                "concept"_s,
+                "const_cast"_s,
+                "consteval"_s,
+                "constexpr"_s,
+                "constinit"_s,
+                "crate"_s,
+                "debugger"_s,
+                "decltype"_s,
+                "delete"_s,
+                "demote"_s,
+                "demote_to_helper"_s,
+                "do"_s,
+                "dynamic_cast"_s,
+                "enum"_s,
+                "explicit"_s,
+                "export"_s,
+                "extends"_s,
+                "extern"_s,
+                "external"_s,
+                "fallthrough"_s,
+                "filter"_s,
+                "final"_s,
+                "finally"_s,
+                "friend"_s,
+                "from"_s,
+                "fxgroup"_s,
+                "get"_s,
+                "goto"_s,
+                "groupshared"_s,
+                "highp"_s,
+                "impl"_s,
+                "implements"_s,
+                "import"_s,
+                "inline"_s,
+                "instanceof"_s,
+                "interface"_s,
+                "layout"_s,
+                "lowp"_s,
+                "macro"_s,
+                "macro_rules"_s,
+                "match"_s,
+                "mediump"_s,
+                "meta"_s,
+                "mod"_s,
+                "module"_s,
+                "move"_s,
+                "mut"_s,
+                "mutable"_s,
+                "namespace"_s,
+                "new"_s,
+                "nil"_s,
+                "noexcept"_s,
+                "noinline"_s,
+                "nointerpolation"_s,
+                "noperspective"_s,
+                "null"_s,
+                "nullptr"_s,
+                "of"_s,
+                "operator"_s,
+                "package"_s,
+                "packoffset"_s,
+                "partition"_s,
+                "pass"_s,
+                "patch"_s,
+                "pixelfragment"_s,
+                "precise"_s,
+                "precision"_s,
+                "premerge"_s,
+                "priv"_s,
+                "protected"_s,
+                "pub"_s,
+                "public"_s,
+                "readonly"_s,
+                "ref"_s,
+                "regardless"_s,
+                "register"_s,
+                "reinterpret_cast"_s,
+                "require"_s,
+                "resource"_s,
+                "restrict"_s,
+                "self"_s,
+                "set"_s,
+                "shared"_s,
+                "sizeof"_s,
+                "smooth"_s,
+                "snorm"_s,
+                "static"_s,
+                "static_assert"_s,
+                "static_cast"_s,
+                "std"_s,
+                "subroutine"_s,
+                "super"_s,
+                "target"_s,
+                "template"_s,
+                "this"_s,
+                "thread_local"_s,
+                "throw"_s,
+                "trait"_s,
+                "try"_s,
+                "type"_s,
+                "typedef"_s,
+                "typeid"_s,
+                "typename"_s,
+                "typeof"_s,
+                "union"_s,
+                "unless"_s,
+                "unorm"_s,
+                "unsafe"_s,
+                "unsized"_s,
+                "use"_s,
+                "using"_s,
+                "varying"_s,
+                "virtual"_s,
+                "volatile"_s,
+                "wgsl"_s,
+                "where"_s,
+                "with"_s,
+                "writeonly"_s,
+                "yield"_s,
             };
             static constexpr SortedArraySet reservedWordSet { reservedWords };
 
@@ -464,11 +465,11 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
             if (tokenType != TokenType::Invalid)
                 return makeToken(tokenType);
 
-            if (UNLIKELY(reservedWordSet.contains(view)))
+            if (reservedWordSet.contains(view)) [[unlikely]]
                 return makeToken(TokenType::ReservedWord);
 
 
-            if (UNLIKELY(length >= 2 && *startOfToken == '_' && *(startOfToken + 1) == '_'))
+            if (length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_') [[unlikely]]
                 return makeToken(TokenType::Invalid);
 
 
@@ -490,7 +491,7 @@ T Lexer<T>::shift(unsigned i)
     m_code.advanceBy(i);
     m_currentPosition.offset += i;
     m_currentPosition.lineOffset += i;
-    if (LIKELY(m_code.hasCharactersRemaining()))
+    if (m_code.hasCharactersRemaining()) [[likely]]
         m_current = m_code[0];
     return last;
 }
@@ -498,7 +499,7 @@ T Lexer<T>::shift(unsigned i)
 template <typename T>
 T Lexer<T>::peek(unsigned i)
 {
-    if (UNLIKELY(i >= m_code.lengthRemaining()))
+    if (i >= m_code.lengthRemaining()) [[unlikely]]
         return 0;
     return m_code[i];
 }
@@ -536,7 +537,6 @@ bool Lexer<T>::skipBlockComments()
             newLine();
     }
 
-    // FIXME: Report unbalanced block comments, such as "/* this is an unbalanced comment."
     return false;
 }
 
@@ -703,7 +703,8 @@ Token Lexer<T>::lexNumber()
     char suffix = '\0';
     char exponentSign = '\0';
     bool isHex = false;
-    auto* integral = m_code.position();
+    auto start = m_code.span();
+    auto integral = m_code.span();
     const T* fract = nullptr;
     const T* exponent = nullptr;
 
@@ -858,7 +859,7 @@ Token Lexer<T>::lexNumber()
             break;
         case Hex:
             isHex = true;
-            integral = m_code.position();
+            integral = m_code.span();
             if (m_current == '.')
                 state = HexFloatFractNoIntegral;
             else if (isASCIIHexDigit(m_current))
@@ -1007,52 +1008,35 @@ Token Lexer<T>::lexNumber()
         return makeToken(TokenType::Invalid);
     };
 
-    auto* end = m_code.position() - (suffix ? 1 : 0);
     if (!fract && !exponent) {
-        auto length = static_cast<size_t>(end - integral);
-        if (length > 19)
-            return makeToken(TokenType::Invalid);
-
-        char ascii[20];
-        const char* asciiStart;
-        const char* asciiEnd;
-        if constexpr (sizeof(T) == 1) {
-            asciiStart = bitwise_cast<const char*>(integral);
-            asciiEnd = bitwise_cast<const char*>(end);
-        } else {
-            for (unsigned i = 0; i < length; ++i) {
-                auto digit = integral[i];
-                RELEASE_ASSERT(isASCIIHexDigit(digit));
-                ascii[i] = digit;
-            }
-            ascii[length] = '\0';
-            asciiStart = ascii;
-            asciiEnd = ascii + length;
-        }
-
-        int64_t result;
         auto base = isHex ? 16 : 10;
-        auto remaining = std::from_chars(asciiStart, asciiEnd, result, base);
-        RELEASE_ASSERT(remaining.ptr == asciiEnd);
-        if (remaining.ec == std::errc::result_out_of_range)
+        auto result = WTF::parseInteger<int64_t>(integral, base, WTF::TrailingJunkPolicy::Allow);
+        if (!result)
             return makeToken(TokenType::Invalid);
-        return convert(result);
+        return convert(result.value());
     }
 
     if (!isHex) {
         size_t parsedLength;
-        double result = parseDouble(std::span { integral, m_code.position() }, parsedLength);
-        ASSERT(integral + parsedLength == end);
+        double result = WTF::parseDouble(integral, parsedLength);
         return convert(result);
     }
 
-    char* parseEnd;
-    double result = std::strtod(bitwise_cast<const char*>(integral) - 2, &parseEnd);
-    ASSERT(parseEnd == bitwise_cast<const char*>(end));
-    return convert(result);
+    auto length = static_cast<size_t>(m_code.position() - start.data());
+    if (suffix)
+        length--;
+    Vector<char, 256> buffer(length + 1);
+    for (unsigned i = 0; i < length; ++i)
+        buffer[i] = start[i];
+    buffer[length] = '\0';
+    size_t parsedLength;
+    auto maybeResult = stringToDouble(buffer.span(), parsedLength);
+    if (!maybeResult || parsedLength != length)
+        return makeToken(TokenType::Invalid);
+    return convert(*maybeResult);
 }
 
 template class Lexer<LChar>;
-template class Lexer<UChar>;
+template class Lexer<char16_t>;
 
 }

@@ -25,6 +25,10 @@
 #ifndef __GST_EVENT_H__
 #define __GST_EVENT_H__
 
+#ifdef _MSC_VER
+#pragma warning(disable: 5287)
+#endif
+
 typedef struct _GstEvent GstEvent;
 
 /**
@@ -486,7 +490,7 @@ GstStructure *  gst_event_writable_structure    (GstEvent *event);
 GST_API
 gboolean        gst_event_has_name              (GstEvent *event, const gchar *name);
 
-GST_API
+GST_DEPRECATED_FOR(gst_event_has_name)
 gboolean        gst_event_has_name_id           (GstEvent *event, GQuark name);
 
 /* identifiers for events and messages */

@@ -36,9 +36,11 @@
 #include "InspectorOverlayLabel.h"
 #include "Path.h"
 #include "Timer.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakPtr.h>
@@ -57,13 +59,14 @@ class WeakPtrImplWithEventTargetData;
 class FontCascade;
 class FloatPoint;
 class GraphicsContext;
-class InspectorClient;
+class InspectorBackendClient;
+class InspectorController;
 class Node;
 class NodeList;
 class Page;
 
 struct InspectorOverlayHighlight {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(InspectorOverlayHighlight);
 
     enum class Type : uint8_t {
             None, // Provides only non-quad information, including grid overlays.
@@ -73,7 +76,7 @@ struct InspectorOverlayHighlight {
         };
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
             Color content;
             Color contentOutline;
             Color padding;
@@ -84,10 +87,10 @@ struct InspectorOverlayHighlight {
         };
 
         struct GridHighlightOverlay {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(GridHighlightOverlay);
 
             struct Area {
-                WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Area);
                 String name;
                 FloatQuad quad;
             };
@@ -100,7 +103,7 @@ struct InspectorOverlayHighlight {
         };
 
         struct FlexHighlightOverlay {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FlexHighlightOverlay);
 
             Color color;
             FloatQuad containerBounds;
@@ -137,19 +140,22 @@ struct InspectorOverlayHighlight {
         using Bounds = FloatRect;
 };
 
-class InspectorOverlay {
-    WTF_MAKE_FAST_ALLOCATED;
+class InspectorOverlay : public CanMakeWeakPtr<InspectorOverlay> {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorOverlay);
 public:
-    InspectorOverlay(Page&, InspectorClient*);
+    InspectorOverlay(InspectorController&, InspectorBackendClient*);
     ~InspectorOverlay();
+
+    void ref() const;
+    void deref() const;
 
     using Highlight = InspectorOverlayHighlight;
 
     struct Grid {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Grid);
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
 
             Color gridColor;
             bool showLineNames;
@@ -164,10 +170,10 @@ public:
     };
 
     struct Flex {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Flex);
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
 
             Color flexColor;
             bool showOrderNumbers;
@@ -244,8 +250,10 @@ private:
     bool removeGridOverlayForNode(Node&);
     bool removeFlexOverlayForNode(Node&);
 
-    Page& m_page;
-    InspectorClient* m_client;
+    Page& page() const;
+
+    const WeakRef<InspectorController> m_controller;
+    InspectorBackendClient* m_client;
 
     RefPtr<Node> m_highlightNode;
     RefPtr<NodeList> m_highlightNodeList;

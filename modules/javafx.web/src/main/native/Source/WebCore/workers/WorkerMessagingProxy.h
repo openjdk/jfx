@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,9 @@
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerObjectProxy.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -39,11 +41,17 @@ class DedicatedWorkerThread;
 class WorkerInspectorProxy;
 class WorkerUserGestureForwarder;
 
-class WorkerMessagingProxy final : public ThreadSafeRefCounted<WorkerMessagingProxy>, public WorkerGlobalScopeProxy, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
-    WTF_MAKE_FAST_ALLOCATED;
+class WorkerMessagingProxy final : public ThreadSafeRefCounted<WorkerMessagingProxy>, public WorkerGlobalScopeProxy, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy, public CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerMessagingProxy);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerMessagingProxy);
 public:
     explicit WorkerMessagingProxy(Worker&);
     virtual ~WorkerMessagingProxy();
+
+    uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::decrementCheckedPtrCount(); }
 
 private:
     // Implementations of WorkerGlobalScopeProxy.
@@ -92,7 +100,7 @@ private:
 
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
     ScriptExecutionContextIdentifier m_loaderContextIdentifier;
-    RefPtr<WorkerInspectorProxy> m_inspectorProxy;
+    const Ref<WorkerInspectorProxy> m_inspectorProxy;
     RefPtr<WorkerUserGestureForwarder> m_userGestureForwarder;
     Worker* m_workerObject;
     bool m_mayBeDestroyed { false };

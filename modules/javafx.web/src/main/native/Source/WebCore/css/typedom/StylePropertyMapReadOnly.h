@@ -41,6 +41,16 @@ class StyledElement;
 class StylePropertyMapReadOnly : public RefCounted<StylePropertyMapReadOnly> {
 public:
     using StylePropertyMapEntry = KeyValuePair<String, Vector<RefPtr<CSSStyleValue>>>;
+
+    enum class Type {
+        Computed,
+        Declared,
+        HashMap,
+        Inline,
+    };
+
+    virtual Type type() const = 0;
+
     class Iterator {
     public:
         explicit Iterator(StylePropertyMapReadOnly&, ScriptExecutionContext*);
@@ -53,16 +63,22 @@ public:
     Iterator createIterator(ScriptExecutionContext* context) { return Iterator(*this, context); }
 
     virtual ~StylePropertyMapReadOnly() = default;
-    virtual ExceptionOr<RefPtr<CSSStyleValue>> get(ScriptExecutionContext&, const AtomString& property) const = 0;
+    using CSSStyleValueOrUndefined = Variant<std::monostate, RefPtr<CSSStyleValue>>;
+    virtual ExceptionOr<CSSStyleValueOrUndefined> get(ScriptExecutionContext&, const AtomString& property) const = 0;
     virtual ExceptionOr<Vector<RefPtr<CSSStyleValue>>> getAll(ScriptExecutionContext&, const AtomString&) const = 0;
     virtual ExceptionOr<bool> has(ScriptExecutionContext&, const AtomString&) const = 0;
     virtual unsigned size() const = 0;
 
-    static RefPtr<CSSStyleValue> reifyValue(RefPtr<CSSValue>&&, std::optional<CSSPropertyID>, Document&);
-    static Vector<RefPtr<CSSStyleValue>> reifyValueToVector(RefPtr<CSSValue>&&, std::optional<CSSPropertyID>, Document&);
+    static RefPtr<CSSStyleValue> reifyValue(Document&, RefPtr<CSSValue>&&, std::optional<CSSPropertyID>);
+    static Vector<RefPtr<CSSStyleValue>> reifyValueToVector(Document&, RefPtr<CSSValue>&&, std::optional<CSSPropertyID>);
 
 protected:
     virtual Vector<StylePropertyMapEntry> entries(ScriptExecutionContext*) const = 0;
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CSSOM_STYLE_PROPERTY_MAP(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::StylePropertyMapReadOnly& value) { return value.type() == predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()

@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorScriptProfilerAgent);
 
 InspectorScriptProfilerAgent::InspectorScriptProfilerAgent(AgentContext& context)
     : InspectorAgentBase("ScriptProfiler"_s)
-    , m_frontendDispatcher(makeUnique<ScriptProfilerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<ScriptProfilerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(ScriptProfilerBackendDispatcher::create(context.backendDispatcher, this))
     , m_environment(context.environment)
 {
@@ -50,7 +50,7 @@ InspectorScriptProfilerAgent::InspectorScriptProfilerAgent(AgentContext& context
 
 InspectorScriptProfilerAgent::~InspectorScriptProfilerAgent() = default;
 
-void InspectorScriptProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorScriptProfilerAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -178,7 +178,7 @@ static Ref<Protocol::ScriptProfiler::Samples> buildSamples(VM& vm, Vector<Sampli
         auto frames = JSON::ArrayOf<Protocol::ScriptProfiler::StackFrame>::create();
         for (SamplingProfiler::StackFrame& stackFrame : stackTrace.frames) {
             auto frameObject = Protocol::ScriptProfiler::StackFrame::create()
-                .setSourceID(String::number(stackFrame.sourceID()))
+                .setSourceID(String::number(std::get<1>(stackFrame.sourceProviderAndID())))
                 .setName(stackFrame.displayName(vm))
                 .setLine(stackFrame.functionStartLine())
                 .setColumn(stackFrame.functionStartColumn())

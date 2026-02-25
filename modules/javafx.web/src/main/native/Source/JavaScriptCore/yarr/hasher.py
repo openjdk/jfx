@@ -242,7 +242,7 @@ def createHashTable(keys, hashTableName):
             if depth > maxDepth:
                 maxDepth = depth
 
-        string = "static const struct CompactHashIndex {}[{}] = {{\n".format(hashTableName, compactSize)
+        string = "static constinit const struct CompactHashIndex {}[{}] = {{\n".format(hashTableName, compactSize)
         for i in range(compactSize):
             T = -1
             if i in table:

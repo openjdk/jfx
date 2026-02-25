@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,17 @@
 
 #include "ElementInlines.h"
 #include "HTMLSlotElement.h"
+#include "InspectorInstrumentation.h"
 #include "RenderTreeUpdater.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SlotAssignment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedSlotAssignment::Slot);
 
 using namespace HTMLNames;
 
@@ -74,7 +80,7 @@ static HTMLSlotElement* findSlotElement(ShadowRoot& shadowRoot, const AtomString
 static HTMLSlotElement* nextSlotElementSkippingSubtree(ContainerNode& startingNode, ContainerNode* skippedSubtree)
 {
     auto nextNode = [&](Node& node) {
-        if (UNLIKELY(&node == skippedSubtree))
+        if (&node == skippedSubtree) [[unlikely]]
             return NodeTraversal::nextSkippingChildren(node);
         return NodeTraversal::next(node);
     };
@@ -305,15 +311,25 @@ void NamedSlotAssignment::didChangeSlot(const AtomString& slotAttrValue, ShadowR
     RenderTreeUpdater::tearDownRenderersAfterSlotChange(shadowRootHost);
     shadowRootHost->invalidateStyleForSubtree();
 
-    slot->assignedNodes.clear();
+    auto assignedNodes = std::exchange(slot->assignedNodes, { });
     m_slotAssignmentsIsValid = false;
 
-    RefPtr slotElement { findFirstSlotElement(*slot) };
-    if (!slotElement)
-        return;
-
+    if (RefPtr slotElement = findFirstSlotElement(*slot)) {
     if (shadowRoot.shouldFireSlotchangeEvent())
         slotElement->enqueueSlotChangeEvent();
+
+    if (slotElement->selfOrPrecedingNodesAffectDirAuto())
+        slotElement->updateEffectiveTextDirection();
+
+    slotElement->updateAccessibilityOnSlotChange();
+    }
+
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+        for (auto& weakAssignedNode : assignedNodes) {
+            if (RefPtr assignedNode = weakAssignedNode.get())
+                InspectorInstrumentation::didChangeAssignedSlot(*assignedNode);
+        }
+    }
 }
 
 void NamedSlotAssignment::didRemoveAllChildrenOfShadowHost(ShadowRoot& shadowRoot)
@@ -362,7 +378,7 @@ const Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>* NamedSlotAssignment
     return &slot->assignedNodes;
 }
 
-void NamedSlotAssignment::willRemoveAssignedNode(const Node& node, ShadowRoot&)
+void NamedSlotAssignment::willRemoveAssignedNode(Node& node, ShadowRoot&)
 {
     if (!m_slotAssignmentsIsValid)
         return;
@@ -377,6 +393,8 @@ void NamedSlotAssignment::willRemoveAssignedNode(const Node& node, ShadowRoot&)
     slot->assignedNodes.removeFirstMatching([&node](const auto& item) {
         return item.get() == &node;
     });
+
+    InspectorInstrumentation::didChangeAssignedSlot(node);
 }
 
 const AtomString& NamedSlotAssignment::slotNameForHostChild(const Node& child) const
@@ -396,8 +414,16 @@ void NamedSlotAssignment::assignSlots(ShadowRoot& shadowRoot)
     ASSERT(!m_slotAssignmentsIsValid);
     m_slotAssignmentsIsValid = true;
 
-    for (auto& entry : m_slots)
-        entry.value->assignedNodes.shrink(0);
+    for (auto& entry : m_slots) {
+        auto assignedNodes = std::exchange(entry.value->assignedNodes, { });
+
+        if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+            for (auto& weakAssignedNode : assignedNodes) {
+                if (RefPtr assignedNode = weakAssignedNode.get())
+                    InspectorInstrumentation::didChangeAssignedSlot(*assignedNode);
+            }
+        }
+    }
 
     if (auto* host = shadowRoot.host()) {
         for (RefPtr child = host->firstChild(); child; child = child->nextSibling()) {
@@ -419,13 +445,14 @@ void NamedSlotAssignment::assignToSlot(Node& child, const AtomString& slotName)
         auto defaultSlotEntry = m_slots.find(defaultSlotName());
         if (defaultSlotEntry != m_slots.end())
             defaultSlotEntry->value->assignedNodes.append(child);
-        return;
-    }
-
+    } else {
     auto addResult = m_slots.ensure(slotName, [] {
         return makeUnique<Slot>();
     });
     addResult.iterator->value->assignedNodes.append(child);
+    }
+
+    InspectorInstrumentation::didChangeAssignedSlot(child);
 }
 
 HTMLSlotElement* ManualSlotAssignment::findAssignedSlot(const Node& node)
@@ -573,7 +600,7 @@ void ManualSlotAssignment::hostChildElementDidChangeSlotAttribute(Element&, cons
 {
 }
 
-void ManualSlotAssignment::willRemoveAssignedNode(const Node& node, ShadowRoot& shadowRoot)
+void ManualSlotAssignment::willRemoveAssignedNode(Node& node, ShadowRoot& shadowRoot)
 {
     ++m_slottableVersion;
     if (RefPtr slot = node.assignedSlot(); slot && slot->containingShadowRoot() == &shadowRoot && shadowRoot.shouldFireSlotchangeEvent())

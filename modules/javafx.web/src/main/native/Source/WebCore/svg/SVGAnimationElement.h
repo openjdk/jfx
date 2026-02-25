@@ -24,9 +24,11 @@
 
 #pragma once
 
+#include "SVGAttributeAnimator.h"
 #include "SVGSMILElement.h"
 #include "SVGTests.h"
 #include "UnitBezier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -80,10 +82,10 @@ public:
     enum class AttributeType : uint8_t { CSS, XML, Auto };
     AttributeType attributeType() const { return m_attributeType; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
+
 protected:
     SVGAnimationElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
 
     virtual void resetAnimation();
 

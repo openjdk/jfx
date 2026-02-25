@@ -40,7 +40,7 @@ Vector<const FeatureSchema*> MediaQueryParser::featureSchemas()
     return Features::allSchemas();
 }
 
-MediaQueryList MediaQueryParser::parse(const String& string, const MediaQueryParserContext& context)
+MediaQueryList MediaQueryParser::parse(const String& string, const CSSParserContext& context)
 {
     auto tokenizer = CSSTokenizer::tryCreate(string);
     if (!tokenizer)
@@ -50,12 +50,12 @@ MediaQueryList MediaQueryParser::parse(const String& string, const MediaQueryPar
     return parse(range, context);
 }
 
-MediaQueryList MediaQueryParser::parse(CSSParserTokenRange range, const MediaQueryParserContext& context)
+MediaQueryList MediaQueryParser::parse(CSSParserTokenRange range, const CSSParserContext& context)
 {
     return consumeMediaQueryList(range, context);
 }
 
-std::optional<MediaQuery> MediaQueryParser::parseCondition(CSSParserTokenRange range, const MediaQueryParserContext& context)
+std::optional<MediaQuery> MediaQueryParser::parseCondition(CSSParserTokenRange range, const CSSParserContext& context)
 {
     range.consumeWhitespace();
 
@@ -69,7 +69,7 @@ std::optional<MediaQuery> MediaQueryParser::parseCondition(CSSParserTokenRange r
     return MediaQuery { { }, { }, condition };
 }
 
-MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& range, const MediaQueryParserContext& context)
+MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     range.consumeWhitespace();
 
@@ -79,11 +79,11 @@ MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& rang
     MediaQueryList list;
 
     while (true) {
-        auto begin = range.begin();
+        auto begin = range;
         while (!range.atEnd() && range.peek().type() != CommaToken)
             range.consumeComponentValue();
 
-        auto subrange = range.makeSubRange(begin, &range.peek());
+        auto subrange = begin.rangeUntil(range);
 
         auto consumeMediaQueryOrNotAll = [&] {
             if (auto query = consumeMediaQuery(subrange, context))
@@ -102,7 +102,7 @@ MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& rang
     return list;
 }
 
-std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRange& range, const MediaQueryParserContext& context)
+std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // <media-condition>
 
@@ -175,7 +175,7 @@ std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRang
     return MediaQuery { prefix, mediaType, condition };
 }
 
-const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name, const MediaQueryParserContext& context, State& state)
+const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name, const CSSParserContext& context, State& state)
 {
     auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name, context, state);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,13 @@
 #include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
+// FIXME: This should be `: private BitVector`.
 class FixedBitVector final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FixedBitVector);
     using WordType = decltype(BitVector::m_bitsOrPointer);
 
 public:
@@ -47,6 +50,11 @@ public:
     {
     }
 
+    FixedBitVector(BitVector&& other)
+        : m_bitVector(WTFMove(other))
+    {
+    }
+
     bool concurrentTestAndSet(size_t bitIndex, Dependency = Dependency());
     bool concurrentTestAndClear(size_t bitIndex, Dependency = Dependency());
 
@@ -54,9 +62,14 @@ public:
     bool testAndClear(size_t bitIndex);
     bool test(size_t bitIndex);
 
+    inline void merge(const FixedBitVector& other);
+    inline void filter(const FixedBitVector& other);
+    inline void exclude(const FixedBitVector& other);
+
     // Note that BitVector will be in inline mode with fixed size when
     // the BitVector is constructed with size less or equal to `maxInlineBits`.
     size_t size() const { return m_bitVector.size(); }
+    size_t bitCount() const { return m_bitVector.bitCount(); }
 
     bool isEmpty() const { return m_bitVector.isEmpty(); }
 
@@ -68,8 +81,8 @@ public:
 
     void dump(PrintStream& out) const;
 
-    BitVector::iterator begin() const { return m_bitVector.begin(); }
-    BitVector::iterator end() const { return m_bitVector.end(); }
+    BitVector::iterator begin() const LIFETIME_BOUND { return m_bitVector.begin(); }
+    BitVector::iterator end() const LIFETIME_BOUND { return m_bitVector.end(); }
 
 private:
     static constexpr unsigned wordSize = sizeof(WordType) * 8;
@@ -80,13 +93,13 @@ private:
 
 ALWAYS_INLINE bool FixedBitVector::concurrentTestAndSet(size_t bitIndex, Dependency dependency)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
     size_t wordIndex = bitIndex / wordSize;
-    WordType* data = dependency.consume(m_bitVector.bits()) + wordIndex;
-    return !bitwise_cast<Atomic<WordType>*>(data)->transactionRelaxed(
+    WordType* data = dependency.consume(m_bitVector.words().data()) + wordIndex;
+    return !std::bit_cast<Atomic<WordType>*>(data)->transactionRelaxed(
         [&](WordType& value) -> bool {
             if (value & mask)
                 return false;
@@ -98,13 +111,13 @@ ALWAYS_INLINE bool FixedBitVector::concurrentTestAndSet(size_t bitIndex, Depende
 
 ALWAYS_INLINE bool FixedBitVector::concurrentTestAndClear(size_t bitIndex, Dependency dependency)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
     size_t wordIndex = bitIndex / wordSize;
-    WordType* data = dependency.consume(m_bitVector.bits()) + wordIndex;
-    return bitwise_cast<Atomic<WordType>*>(data)->transactionRelaxed(
+    WordType* data = dependency.consume(m_bitVector.words().data()) + wordIndex;
+    return std::bit_cast<Atomic<WordType>*>(data)->transactionRelaxed(
         [&](WordType& value) -> bool {
             if (!(value & mask))
                 return false;
@@ -116,12 +129,12 @@ ALWAYS_INLINE bool FixedBitVector::concurrentTestAndClear(size_t bitIndex, Depen
 
 ALWAYS_INLINE bool FixedBitVector::testAndSet(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
     size_t wordIndex = bitIndex / wordSize;
-    WordType* bits = m_bitVector.bits();
+    WordType* bits = m_bitVector.words().data();
     bool previousValue = bits[wordIndex] & mask;
     bits[wordIndex] |= mask;
     return previousValue;
@@ -129,12 +142,12 @@ ALWAYS_INLINE bool FixedBitVector::testAndSet(size_t bitIndex)
 
 ALWAYS_INLINE bool FixedBitVector::testAndClear(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
     size_t wordIndex = bitIndex / wordSize;
-    WordType* bits = m_bitVector.bits();
+    WordType* bits = m_bitVector.words().data();
     bool previousValue = bits[wordIndex] & mask;
     bits[wordIndex] &= ~mask;
     return previousValue;
@@ -142,12 +155,12 @@ ALWAYS_INLINE bool FixedBitVector::testAndClear(size_t bitIndex)
 
 ALWAYS_INLINE bool FixedBitVector::test(size_t bitIndex)
 {
-    if (UNLIKELY(bitIndex >= size()))
+    if (bitIndex >= size()) [[unlikely]]
         return false;
 
     WordType mask = one << (bitIndex % wordSize);
     size_t wordIndex = bitIndex / wordSize;
-    return m_bitVector.bits()[wordIndex] & mask;
+    return m_bitVector.words().data()[wordIndex] & mask;
 }
 
 ALWAYS_INLINE size_t FixedBitVector::findBit(size_t startIndex, bool value) const
@@ -163,6 +176,24 @@ ALWAYS_INLINE unsigned FixedBitVector::hash() const
 ALWAYS_INLINE void FixedBitVector::dump(PrintStream& out) const
 {
     m_bitVector.dump(out);
+}
+
+ALWAYS_INLINE void FixedBitVector::merge(const FixedBitVector& other)
+{
+    ASSERT(size() == other.size());
+    m_bitVector.merge(other.m_bitVector);
+}
+
+ALWAYS_INLINE void FixedBitVector::filter(const FixedBitVector& other)
+{
+    ASSERT(size() == other.size());
+    m_bitVector.filter(other.m_bitVector);
+}
+
+ALWAYS_INLINE void FixedBitVector::exclude(const FixedBitVector& other)
+{
+    ASSERT(size() == other.size());
+    m_bitVector.exclude(other.m_bitVector);
 }
 
 struct FixedBitVectorHash {
@@ -181,3 +212,5 @@ template<> struct HashTraits<FixedBitVector> : public CustomHashTraits<FixedBitV
 } // namespace WTF
 
 using WTF::FixedBitVector;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

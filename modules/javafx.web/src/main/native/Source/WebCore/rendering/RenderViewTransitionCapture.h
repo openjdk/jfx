@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ImageBuffer.h"
 #include "RenderReplaced.h"
 
 namespace WebCore {
@@ -33,7 +34,7 @@ class RenderViewTransitionCapture final : public RenderReplaced {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderViewTransitionCapture);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderViewTransitionCapture);
 public:
-    RenderViewTransitionCapture(Type, Document&, RenderStyle&&);
+    RenderViewTransitionCapture(Type, Document&, RenderStyle&&, bool isRootElement);
     virtual ~RenderViewTransitionCapture();
 
     void setImage(RefPtr<ImageBuffer>);
@@ -42,6 +43,8 @@ public:
     void paintReplaced(PaintInfo&, const LayoutPoint& paintOffset) override;
     void intrinsicSizeChanged() override;
 
+    void styleDidChange(StyleDifference, const RenderStyle*) override;
+
     void layout() override;
 
     FloatSize scale() const { return m_scale; }
@@ -49,10 +52,18 @@ public:
     // Rect covered by the captured contents, in RenderLayer coordinates of the captured renderer
     LayoutRect captureOverflowRect() const { return m_overflowRect; }
 
+    LayoutRect captureLocalOverflowRect() const { return m_localOverflowRect; }
+
     // Inset of the scaled capture from the visualOverflowRect()
     LayoutPoint captureContentInset() const;
 
     bool canUseExistingLayers() const { return !hasNonVisibleOverflow(); }
+
+    bool paintsContent() const final;
+
+    bool isRootElementCapture() const { return m_isRootElementCapture; }
+
+    RefPtr<ImageBuffer> image() { return m_oldImage; }
 
 private:
     ASCIILiteral renderName() const override { return "RenderViewTransitionCapture"_s; }
@@ -76,6 +87,7 @@ private:
     LayoutSize m_imageIntrinsicSize;
     // Scale factor between the intrinsic size and the replaced content rect size.
     FloatSize m_scale;
+    bool m_isRootElementCapture;
 };
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2006, 2015-2016 Apple Inc.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -75,11 +75,10 @@ public:
     float zoomFactor() const;
 
     LocalFrameView& frameView() const { return m_frameView.get(); }
-    Ref<LocalFrameView> protectedFrameView() const { return m_frameView.get(); }
 
     Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
     const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
-    Layout::LayoutState& layoutState() { return *m_layoutState; }
+    Layout::LayoutState& layoutState() { return m_layoutState; }
     void updateQuirksMode();
 
     bool needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly() const { return m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly; };
@@ -107,7 +106,7 @@ public:
 
     LayoutRect viewRect() const;
 
-    void updateHitTestResult(HitTestResult&, const LayoutPoint&) override;
+    void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
 
     void setPageLogicalSize(LayoutSize);
     LayoutUnit pageOrViewLogicalHeight() const;
@@ -175,7 +174,7 @@ public:
 
     uint64_t rendererCount() const { return m_rendererCount; }
     void didCreateRenderer() { ++m_rendererCount; }
-    void didDestroyRenderer() { --m_rendererCount; }
+    void willDestroyRenderer() { --m_rendererCount; }
 
     void updateVisibleViewportRect(const IntRect&);
     void registerForVisibleInViewportCallback(RenderElement&);
@@ -200,9 +199,6 @@ public:
         bool m_wasAccumulatingRepaintRegion { false };
     };
 
-    void layerChildrenChangedDuringStyleChange(RenderLayer&);
-    RenderLayer* takeStyleChangeLayerTreeMutationRoot();
-
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
@@ -211,14 +207,26 @@ public:
     void unregisterContainerQueryBox(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
-    SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
-    void setViewTransitionRoot(RenderElement& renderer);
+    void registerAnchor(const RenderBoxModelObject&);
+    void unregisterAnchor(const RenderBoxModelObject&);
+    const SingleThreadWeakHashSet<const RenderBoxModelObject>& anchors() const { return m_anchors; }
+
+    void registerPositionTryBox(const RenderBox&);
+    void unregisterPositionTryBox(const RenderBox&);
+    const SingleThreadWeakHashSet<const RenderBox>& positionTryBoxes() const { return m_positionTryBoxes; }
+
+    SingleThreadWeakPtr<RenderBlockFlow> viewTransitionContainingBlock() const;
+    void setViewTransitionContainingBlock(RenderBlockFlow& renderer);
+
+    void addViewTransitionGroup(const AtomString&, RenderBox&);
+    void removeViewTransitionGroup(const AtomString&);
+    RenderBox* viewTransitionGroupForName(const AtomString&);
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     bool requiresColumns(int desiredColumnCount) const override;
 
@@ -235,19 +243,17 @@ private:
 
     void updateInitialContainingBlockSize();
 
-    CheckedRef<LocalFrameView> m_frameView;
+    const CheckedRef<LocalFrameView> m_frameView;
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };
 
     // Note that currently RenderView::layoutBox(), if it exists, is a child of m_initialContainingBlock.
-    UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
-    UniqueRef<Layout::LayoutState> m_layoutState;
+    const UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
+    const UniqueRef<Layout::LayoutState> m_layoutState;
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     RenderSelection m_selection;
-
-    SingleThreadWeakPtr<RenderLayer> m_styleChangeLayerMutationRoot;
 
     // FIXME: Only used by embedded WebViews inside AppKit NSViews.  Find a way to remove.
     struct LegacyPrinting {
@@ -283,8 +289,11 @@ private:
 
     SingleThreadWeakHashSet<const RenderBox> m_boxesWithScrollSnapPositions;
     SingleThreadWeakHashSet<const RenderBox> m_containerQueryBoxes;
+    SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
+    SingleThreadWeakHashSet<const RenderBox> m_positionTryBoxes;
 
-    SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
+    SingleThreadWeakPtr<RenderBlockFlow> m_viewTransitionContainingBlock;
+    HashMap<AtomString, SingleThreadWeakPtr<RenderBox>> m_viewTransitionGroups;
 };
 
 } // namespace WebCore

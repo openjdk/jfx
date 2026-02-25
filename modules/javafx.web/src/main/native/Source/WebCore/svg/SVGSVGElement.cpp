@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2019 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
- * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Google Inc. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@
 #include "config.h"
 #include "SVGSVGElement.h"
 
-#include "CSSHelper.h"
+#include "ContainerNodeInlines.h"
 #include "DOMMatrix2DInit.h"
 #include "DOMWrapperWorld.h"
 #include "ElementIterator.h"
@@ -34,8 +34,10 @@
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGViewportContainer.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "RenderBoxInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderView.h"
@@ -46,6 +48,7 @@
 #include "SVGLength.h"
 #include "SVGMatrix.h"
 #include "SVGNumber.h"
+#include "SVGParsingError.h"
 #include "SVGPoint.h"
 #include "SVGRect.h"
 #include "SVGTransform.h"
@@ -91,7 +94,7 @@ SVGSVGElement::~SVGSVGElement()
 {
     if (RefPtr viewSpec = m_viewSpec)
         viewSpec->resetContextElement();
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->unregisterForDocumentSuspensionCallbacks(*this);
     document->checkedSVGExtensions()->removeTimeContainer(*this);
 }
@@ -194,7 +197,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         }
     }
 
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -205,7 +208,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         break;
     case AttributeNames::widthAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a missing/removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Width, "100%"_s);
@@ -215,7 +218,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
     }
     case AttributeNames::heightAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Height, "100%"_s);
@@ -311,25 +314,25 @@ static bool checkEnclosureWithoutUpdatingLayout(SVGElement& element, SVGRect& re
 
 Ref<NodeList> SVGSVGElement::getIntersectionList(SVGRect& rect, SVGElement* referenceElement)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkIntersectionWithoutUpdatingLayout);
 }
 
 Ref<NodeList> SVGSVGElement::getEnclosureList(SVGRect& rect, SVGElement* referenceElement)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkEnclosureWithoutUpdatingLayout);
 }
 
 bool SVGSVGElement::checkIntersection(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element.ptr());
     return checkIntersectionWithoutUpdatingLayout(element, rect);
 }
 
 bool SVGSVGElement::checkEnclosure(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element.ptr());
     return checkEnclosureWithoutUpdatingLayout(element, rect);
 }
 
@@ -392,7 +395,7 @@ Ref<SVGTransform> SVGSVGElement::createSVGTransformFromMatrix(DOMMatrix2DInit&& 
     return SVGTransform::create(transform);
 }
 
-AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const
+AffineTransform SVGSVGElement::localCoordinateSpaceTransform(CTMScope mode) const
 {
     AffineTransform viewBoxTransform;
     if (!hasEmptyViewBox()) {
@@ -417,7 +420,7 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
     if (!isOutermostSVGSVGElement()) {
         SVGLengthContext lengthContext(this);
         transform.translate(x().value(lengthContext), y().value(lengthContext));
-    } else if (mode == SVGLocatable::ScreenScope) {
+    } else if (mode == CTMScope::ScreenScope) {
         if (CheckedPtr renderer = this->renderer()) {
             FloatPoint location;
             float zoomFactor = 1;
@@ -480,6 +483,11 @@ RenderPtr<RenderElement> SVGSVGElement::createElementRenderer(RenderStyle&& styl
     return createRenderer<LegacyRenderSVGViewportContainer>(*this, WTFMove(style));
 }
 
+bool SVGSVGElement::isReplaced(const RenderStyle*) const
+{
+    return isOutermostSVGSVGElement();
+}
+
 Node::InsertedIntoAncestorResult SVGSVGElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     if (insertionType.connectedToDocument) {
@@ -501,7 +509,7 @@ Node::InsertedIntoAncestorResult SVGSVGElement::insertedIntoAncestor(InsertionTy
 void SVGSVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (removalType.disconnectedFromDocument) {
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         document->checkedSVGExtensions()->removeTimeContainer(*this);
         pauseAnimations();
     }
@@ -583,7 +591,11 @@ FloatRect SVGSVGElement::currentViewBoxRect() const
     if (!viewBox.isEmpty())
         return viewBox;
 
-    auto isEmbeddedThroughSVGImage = [](const RenderElement* renderer) -> bool {
+    auto isEmbeddedThroughSVGImage = [this](const RenderElement* renderer) -> bool {
+        auto isDocumentElement = document().documentElement() == this;
+        if (!isDocumentElement)
+            return false;
+
         if (!renderer)
             return false;
 
@@ -713,16 +725,9 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
         LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(renderer);
     };
 
-    if (fragmentIdentifier.startsWith("xpointer("_s)) {
-        // FIXME: XPointer references are ignored (https://bugs.webkit.org/show_bug.cgi?id=17491)
-        if (renderer && hadUseCurrentView)
-            invalidateView(*renderer);
-        return false;
-    }
-
     if (fragmentIdentifier.startsWith("svgView("_s)) {
         if (!view)
-            view = &currentView(); // Create the SVGViewSpec.
+            view = currentView(); // Create the SVGViewSpec.
         if (view->parseViewSpec(fragmentIdentifier))
             m_useCurrentView = true;
         else
@@ -732,8 +737,8 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
         return m_useCurrentView;
     }
 
-    // Spec: If the SVG fragment identifier addresses a "view" element within an SVG document (e.g., MyDrawing.svg#MyView
-    // or MyDrawing.svg#xpointer(id('MyView'))) then the closest ancestor "svg" element is displayed in the viewport.
+    // Spec: If the SVG fragment identifier addresses a "view" element within an SVG document (e.g., MyDrawing.svg#MyView)
+    // then the closest ancestor "svg" element is displayed in the viewport.
     // Any view specification attributes included on the given "view" element override the corresponding view specification
     // attributes on the closest ancestor "svg" element.
     if (RefPtr viewElement = findViewAnchor(fragmentIdentifier)) {
@@ -839,7 +844,7 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
     if (id.isNull())
         return nullptr;
 
-    if (UNLIKELY(!isInTreeScope())) {
+    if (!isInTreeScope()) [[unlikely]] {
         for (auto& element : descendantsOfType<Element>(*this)) {
             if (element.getIdAttribute() == id)
                 return &element;

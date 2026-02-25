@@ -62,7 +62,7 @@ static PAS_ALWAYS_INLINE pas_heap* pas_get_heap(void* ptr,
             page_base = page_and_kind.page_base;
             goto bitfit_case_with_page_base;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return NULL;
         }
     }
@@ -109,6 +109,7 @@ static PAS_ALWAYS_INLINE pas_heap* pas_get_heap(void* ptr,
         entry = pas_large_map_find(begin);
 
         PAS_ASSERT(!pas_large_map_entry_is_empty(entry));
+        PAS_PROFILE(LARGE_MAP_FOUND_ENTRY, &config, entry.begin, entry.end);
         PAS_ASSERT(entry.begin == begin);
         PAS_ASSERT(entry.end > begin);
 
@@ -119,7 +120,7 @@ static PAS_ALWAYS_INLINE pas_heap* pas_get_heap(void* ptr,
         return result;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 
 bitfit_case_with_page_base:

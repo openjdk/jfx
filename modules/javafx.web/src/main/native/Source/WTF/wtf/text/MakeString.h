@@ -27,6 +27,7 @@
 #pragma once
 
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -44,23 +45,23 @@ RefPtr<StringImpl> tryMakeStringImplFromAdaptersInternal(unsigned length, bool a
 {
     ASSERT(length <= String::MaxLength);
     if (areAllAdapters8Bit) {
-        LChar* buffer;
+        std::span<LChar> buffer;
         RefPtr result = StringImpl::tryCreateUninitialized(length, buffer);
         if (!result)
             return nullptr;
 
-        if (buffer)
+        if (buffer.data())
             stringTypeAdapterAccumulator(buffer, adapters...);
 
         return result;
     }
 
-    UChar* buffer;
+    std::span<char16_t> buffer;
     RefPtr result = StringImpl::tryCreateUninitialized(length, buffer);
     if (!result)
         return nullptr;
 
-    if (buffer)
+    if (buffer.data())
         stringTypeAdapterAccumulator(buffer, adapters...);
 
     return result;
@@ -121,13 +122,13 @@ AtomString tryMakeAtomStringFromAdapters(StringTypeAdapters ...adapters)
         constexpr size_t maxLengthToUseStackVariable = 64;
         if (length < maxLengthToUseStackVariable) {
             if (areAllAdapters8Bit) {
-                LChar buffer[maxLengthToUseStackVariable];
-                stringTypeAdapterAccumulator(buffer, adapters...);
-                return std::span<const LChar> { buffer, length };
+                std::array<LChar, maxLengthToUseStackVariable> buffer;
+                stringTypeAdapterAccumulator(std::span<LChar> { buffer }, adapters...);
+                return std::span<const LChar> { buffer }.first(length);
             }
-            UChar buffer[maxLengthToUseStackVariable];
-            stringTypeAdapterAccumulator(buffer, adapters...);
-            return std::span<const UChar> { buffer, length };
+            std::array<char16_t, maxLengthToUseStackVariable> buffer;
+            stringTypeAdapterAccumulator(std::span<char16_t> { buffer }, adapters...);
+            return std::span<const char16_t> { buffer }.first(length);
         }
         return tryMakeStringImplFromAdaptersInternal(length, areAllAdapters8Bit, adapters...).get();
     }

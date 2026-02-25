@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 
 #include "AnimationTimeline.h"
 #include "CSSAnimation.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "Document.h"
 #include "KeyframeEffect.h"
@@ -36,10 +35,12 @@
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
 #include "Settings.h"
+#include "StyleInterpolation.h"
 #include "TransformOperations.h"
 #include "TranslateTransformOperation.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <ranges>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -52,8 +53,10 @@ bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
 {
     // To qualify for membership in an effect stack, an effect must have a target, an animation, a timeline and be relevant.
     // This method will be called in WebAnimation and KeyframeEffect as those properties change.
-    if (!effect.targetStyleable() || !effect.animation() || !effect.animation()->timeline() || !effect.animation()->isRelevant())
+    if (!effect.targetStyleable() || !effect.animation() || !effect.animation()->isRelevant())
         return false;
+
+    ASSERT(!m_effects.contains(&effect));
 
     m_effects.append(effect);
     m_isSorted = false;
@@ -80,7 +83,7 @@ void KeyframeEffectStack::removeEffect(KeyframeEffect& effect)
         startAcceleratedAnimationsIfPossible();
 }
 
-bool KeyframeEffectStack::hasMatchingEffect(const Function<bool(const KeyframeEffect&)>& function) const
+bool KeyframeEffectStack::hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>& function) const
 {
     for (auto& effect : m_effects) {
         if (function(*effect))
@@ -128,17 +131,9 @@ void KeyframeEffectStack::ensureEffectsAreSorted()
     if (m_isSorted || m_effects.size() < 2)
         return;
 
-    std::stable_sort(m_effects.begin(), m_effects.end(), [](auto& lhs, auto& rhs) {
-        RELEASE_ASSERT(lhs.get());
-        RELEASE_ASSERT(rhs.get());
-
-        auto* lhsAnimation = lhs->animation();
-        auto* rhsAnimation = rhs->animation();
-
-        RELEASE_ASSERT(lhsAnimation);
-        RELEASE_ASSERT(rhsAnimation);
-
-        return compareAnimationsByCompositeOrder(*lhsAnimation, *rhsAnimation);
+    std::ranges::stable_sort(m_effects, compareAnimationsByCompositeOrder, [](auto& weakEffect) -> WebAnimation& {
+        RELEASE_ASSERT(weakEffect->animation());
+        return *weakEffect->animation();
     });
 
     m_isSorted = true;
@@ -155,12 +150,12 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
 {
     OptionSet<AnimationImpact> impact;
 
-    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyle();
+    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyleSingleton();
 
     auto transformRelatedPropertyChanged = [&]() -> bool {
-        return !arePointingToEqualData(targetStyle.translate(), previousStyle.translate())
-            || !arePointingToEqualData(targetStyle.scale(), previousStyle.scale())
-            || !arePointingToEqualData(targetStyle.rotate(), previousStyle.rotate())
+        return targetStyle.translate() != previousStyle.translate()
+            || targetStyle.scale() != previousStyle.scale()
+            || targetStyle.rotate() != previousStyle.rotate()
             || targetStyle.transform() != previousStyle.transform();
     }();
 
@@ -169,8 +164,7 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
     for (const auto& effect : sortedEffects()) {
         auto keyframeRecomputationReason = effect->recomputeKeyframesIfNecessary(previousLastStyleChangeEventStyle, unanimatedStyle, resolutionContext);
 
-        ASSERT(effect->animation());
-        auto* animation = effect->animation();
+        Ref animation = *effect->animation();
         impact.add(animation->resolve(targetStyle, resolutionContext));
 
         if (effect->isRunningAccelerated() || effect->isAboutToRunAccelerated())
@@ -184,11 +178,11 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
 
         // If one of the effect's resolved property changed it could affect whether that effect's animation is removed.
         if (keyframeRecomputationReason && *keyframeRecomputationReason == KeyframeEffect::RecomputationReason::LogicalPropertyChange) {
-            ASSERT(animation->timeline());
-            animation->timeline()->animationTimingDidChange(*animation);
+            if (RefPtr timeline = animation->timeline())
+                timeline->animationTimingDidChange(animation.get());
         }
 
-        affectedProperties.formUnion(effect->animatedProperties());
+        affectedProperties.addAll(effect->animatedProperties());
     }
 
     return impact;
@@ -247,7 +241,7 @@ bool KeyframeEffectStack::allowsAcceleration() const
                 return false;
             }
         }
-        allAcceleratedProperties.add(acceleratedProperties.begin(), acceleratedProperties.end());
+        allAcceleratedProperties.addAll(acceleratedProperties);
     }
 
     return true;
@@ -278,7 +272,7 @@ void KeyframeEffectStack::cascadeDidOverrideProperties(const HashSet<AnimatableC
 {
     HashSet<AnimatableCSSProperty> acceleratedPropertiesOverriddenByCascade;
     for (auto animatedProperty : overriddenProperties) {
-        if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(animatedProperty, document.settings()))
+        if (Style::Interpolation::isAccelerated(animatedProperty, document.settings()))
                 acceleratedPropertiesOverriddenByCascade.add(animatedProperty);
         }
 

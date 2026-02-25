@@ -21,8 +21,8 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include <algorithm>
 #include <optional>
-#include <wtf/Algorithms.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,12 +37,12 @@ struct OpusEncoderConfig {
     bool isValid()
     {
         float frameDurationMs = frameDuration / 1000.0;
-        if (!WTF::anyOf(Vector<float> { 2.5, 5, 10, 20, 40, 60, 120 }, [frameDurationMs](auto value) -> bool {
+        if (!std::ranges::any_of(std::initializer_list<float> { 2.5, 5, 10, 20, 40, 60, 120 }, [frameDurationMs](auto value) {
             return WTF::areEssentiallyEqual(value, frameDurationMs);
-        }))
+        })) {
             return false;
-
-        if (complexity && *complexity > 10)
+        }
+        if (complexity > 10)
             return false;
 
         if (packetlossperc > 100)
@@ -54,7 +54,7 @@ struct OpusEncoderConfig {
     using BitstreamFormat = OpusBitstreamFormat;
     OpusBitstreamFormat format { OpusBitstreamFormat::Opus };
     uint64_t frameDuration { 20000 };
-    std::optional<size_t> complexity;
+    size_t complexity { 9 };
     size_t packetlossperc { 0 };
     bool useinbandfec { false };
     bool usedtx { false };

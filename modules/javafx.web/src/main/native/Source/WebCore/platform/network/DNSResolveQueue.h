@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,10 +39,13 @@ class DNSResolveQueue {
     friend NeverDestroyed<DNSResolveQueue>;
 
 public:
-    DNSResolveQueue();
     virtual ~DNSResolveQueue() = default;
 
     static DNSResolveQueue& singleton();
+
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
 
     virtual void resolve(const String& hostname, uint64_t identifier, DNSCompletionHandler&&) = 0;
     virtual void stopResolve(uint64_t identifier) = 0;
@@ -53,6 +56,7 @@ public:
     }
 
 protected:
+    DNSResolveQueue();
     bool isUsingProxy();
 
     bool m_isUsingProxy { true };

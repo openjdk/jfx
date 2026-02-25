@@ -26,11 +26,10 @@
 #pragma once
 
 #include "DiagnosticLoggingDomain.h"
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CryptographicallyRandomNumber.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,14 +38,14 @@ enum DiagnosticLoggingResultType : uint8_t;
 enum class ShouldSample : bool { No, Yes };
 
 struct DiagnosticLoggingDictionary {
-    using Payload = std::variant<String, uint64_t, int64_t, bool, double>;
+    using Payload = Variant<String, uint64_t, int64_t, bool, double>;
     using Dictionary = HashMap<String, Payload>;
     Dictionary dictionary;
     void set(String key, Payload value) { dictionary.set(WTFMove(key), WTFMove(value)); }
 };
 
 class DiagnosticLoggingClient : public CanMakeCheckedPtr<DiagnosticLoggingClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DiagnosticLoggingClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DiagnosticLoggingClient);
 public:
     virtual void logDiagnosticMessage(const String& message, const String& description, ShouldSample) = 0;

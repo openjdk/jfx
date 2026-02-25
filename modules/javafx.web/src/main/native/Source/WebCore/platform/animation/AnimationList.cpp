@@ -60,6 +60,8 @@ void AnimationList::fillUnsetProperties()
     FILL_UNSET_PROPERTY(isPropertySet, property, fillProperty);
     FILL_UNSET_PROPERTY(isCompositeOperationSet, compositeOperation, fillCompositeOperation);
     FILL_UNSET_PROPERTY(isAllowsDiscreteTransitionsSet, allowsDiscreteTransitions, fillAllowsDiscreteTransitions);
+    FILL_UNSET_PROPERTY(isRangeStartSet, rangeStart, fillRangeStart);
+    FILL_UNSET_PROPERTY(isRangeEndSet, rangeEnd, fillRangeEnd);
 }
 
 bool AnimationList::operator==(const AnimationList& other) const
@@ -75,13 +77,13 @@ bool AnimationList::operator==(const AnimationList& other) const
 
 TextStream& operator<<(TextStream& ts, const AnimationList& animationList)
 {
-    ts << "[";
+    ts << '[';
     for (size_t i = 0; i < animationList.size(); ++i) {
         if (i > 0)
-            ts << ", ";
+            ts << ", "_s;
         ts << animationList.animation(i);
     }
-    ts << "]";
+    ts << ']';
     return ts;
 }
 

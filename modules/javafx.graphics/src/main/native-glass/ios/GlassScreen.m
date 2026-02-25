@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,9 +87,11 @@ jobjectArray createJavaScreens(JNIEnv* env) {
                                                       mat_jScreenClass,
                                                       NULL);
 
-    for (NSUInteger index = 0; index < [screens count]; index++) {
-        jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
-        (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+    if (screenArray != NULL) {
+        for (NSUInteger index = 0; index < [screens count]; index++) {
+            jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
+            (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+        }
     }
 
     return screenArray;

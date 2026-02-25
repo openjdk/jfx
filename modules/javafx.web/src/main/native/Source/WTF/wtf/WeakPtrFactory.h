@@ -28,15 +28,23 @@
 
 #include <wtf/CompactRefPtrTuple.h>
 #include <wtf/Packed.h>
+#include <wtf/RefPtr.h>
 #include <wtf/WeakRef.h>
 
 namespace WTF {
+
+#define USING_CAN_MAKE_WEAKPTR(BASE) \
+    using BASE::weakImpl; \
+    using BASE::weakImplIfExists; \
+    using BASE::weakCount; \
+    using BASE::WeakValueType; \
+    using BASE::WeakPtrImplType;
 
 // Note: you probably want to inherit from CanMakeWeakPtr rather than use this directly.
 template<typename T, typename WeakPtrImpl = DefaultWeakPtrImpl>
 class WeakPtrFactory {
     WTF_MAKE_NONCOPYABLE(WeakPtrFactory);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakPtrFactory);
 public:
     using ObjectType = T;
     using WeakPtrImplType = WeakPtrImpl;
@@ -118,7 +126,7 @@ private:
 template<typename T, typename WeakPtrImpl = DefaultWeakPtrImpl>
 class WeakPtrFactoryWithBitField {
     WTF_MAKE_NONCOPYABLE(WeakPtrFactoryWithBitField);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakPtrFactoryWithBitField);
 public:
     using ObjectType = T;
     using WeakPtrImplType = WeakPtrImpl;

@@ -31,7 +31,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GCReachableRef.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -53,6 +52,7 @@ class MutationObserverRegistration;
 class MutationRecord;
 class Node;
 class WindowEventLoop;
+template<typename> class ExceptionOr;
 
 enum class MutationObserverOptionType : uint8_t {
     // MutationType
@@ -107,7 +107,6 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
     MutationCallback& callback() const { return m_callback.get(); }
-    Ref<MutationCallback> protectedCallback() const;
 
     static void enqueueSlotChangeEvent(HTMLSlotElement&);
 
@@ -124,7 +123,7 @@ private:
 
     static bool validateOptions(MutationObserverOptions);
 
-    Ref<MutationCallback> m_callback;
+    const Ref<MutationCallback> m_callback;
     Vector<Ref<MutationRecord>> m_records;
     HashSet<GCReachableRef<Node>> m_pendingTargets;
     WeakHashSet<MutationObserverRegistration> m_registrations;

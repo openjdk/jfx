@@ -1,4 +1,9 @@
-set(CMAKE_CXX_STANDARD 20)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    message(STATUS "Building on macOS with Apple Clang")
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP OFF)
@@ -20,7 +25,7 @@ if (WTF_CPU_ARM)
     int main() {}
    ")
 
-    if (COMPILER_IS_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
+    if (COMPILER_IS_GCC_OR_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
         set(CLANG_EXTRA_ARM_ARGS " -mthumb")
     endif ()
 
@@ -219,6 +224,68 @@ if (USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif ()
 
+# Detect the kind of C++ standard library being used, to enable assertions.
+set(CXX_STDLIB_VARIANT "UNKNOWN")
+set(CXX_STDLIB_ASSERTIONS_MACRO)
+set(CXX_STDLIB_TEST_SOURCE "
+    #if defined(__clang__)
+    #include <utility>
+    int main() { return _LIBCPP_VERSION; }
+    #else
+    #error Clang needed for libc++
+    #endif
+")
+check_cxx_source_compiles("${CXX_STDLIB_TEST_SOURCE}" CXX_STDLIB_IS_LIBCPP)
+if (CXX_STDLIB_IS_LIBCPP)
+    set(CXX_STDLIB_TEST_SOURCE "
+        #include <utility>
+        #if _LIBCPP_VERSION >= 190000
+        int main() { }
+        #else
+        #error libc++ is older than 19.x
+        #endif
+    ")
+    check_cxx_source_compiles("${CXX_STDLIB_TEST_SOURCE}" CXX_STDLIB_IS_LIBCPP_19_OR_NEWER)
+    if (CXX_STDLIB_IS_LIBCPP_19_OR_NEWER)
+        set(CXX_STDLIB_VARIANT "LIBCPP 19+")
+        set(CXX_STDLIB_ASSERTIONS_MACRO _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+    else ()
+        set(CXX_STDLIB_VARIANT "LIBCPP <19")
+        set(CXX_STDLIB_ASSERTIONS_MACRO _LIBCPP_ENABLE_ASSERTIONS=1)
+    endif ()
+else ()
+    set(CXX_STDLIB_TEST_SOURCE "
+    #include <utility>
+    int main() { return _GLIBCXX_RELEASE; }
+    ")
+    check_cxx_source_compiles("${CXX_STDLIB_TEST_SOURCE}" CXX_STDLIB_IS_GLIBCXX)
+    if (CXX_STDLIB_IS_GLIBCXX)
+        set(CXX_STDLIB_VARIANT "GLIBCXX")
+        set(CXX_STDLIB_ASSERTIONS_MACRO _GLIBCXX_ASSERTIONS=1)
+    endif ()
+endif ()
+message(STATUS "C++ standard library in use: ${CXX_STDLIB_VARIANT}")
+
+if (CXX_STDLIB_ASSERTIONS_MACRO)
+    set(USE_CXX_STDLIB_ASSERTIONS_DEFAULT ON)
+else ()
+    set(USE_CXX_STDLIB_ASSERTIONS_DEFAULT OFF)
+endif ()
+option(USE_CXX_STDLIB_ASSERTIONS
+    "Enable lightweight run-time assertions in the C++ standard library"
+    ${USE_CXX_STDLIB_ASSERTIONS_DEFAULT})
+
+if (USE_CXX_STDLIB_ASSERTIONS)
+    if (CXX_STDLIB_ASSERTIONS_MACRO)
+        message(STATUS "  Assertions enabled, ${CXX_STDLIB_ASSERTIONS_MACRO}")
+        add_compile_definitions("${CXX_STDLIB_ASSERTIONS_MACRO}")
+    else ()
+        message(STATUS "  Assertions disabled, CXX_STDLIB_ASSERTIONS_MACRO undefined")
+    endif ()
+else ()
+    message(STATUS "  Assertions disabled, USE_CXX_STDLIB_ASSERTIONS=${USE_CXX_STDLIB_ASSERTIONS}")
+endif ()
+
 # GTK and WPE use the GNU installation directories as defaults.
 if (NOT PORT STREQUAL "GTK" AND NOT PORT STREQUAL "WPE")
     set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Absolute path to library installation directory")
@@ -258,7 +325,6 @@ WEBKIT_CHECK_HAVE_FUNCTION(HAVE_ALIGNED_MALLOC _aligned_malloc malloc.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_LOCALTIME_R localtime_r time.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_MALLOC_TRIM malloc_trim malloc.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_STATX statx sys/stat.h)
-WEBKIT_CHECK_HAVE_FUNCTION(HAVE_STRNSTR strnstr string.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_TIMEGM timegm time.h)
 WEBKIT_CHECK_HAVE_FUNCTION(HAVE_VASPRINTF vasprintf stdio.h)
 

@@ -82,7 +82,7 @@ String RTCDTMFSender::toneBuffer() const
     return m_tones;
 }
 
-static inline bool isToneCharacterInvalid(UChar character)
+static inline bool isToneCharacterInvalid(char16_t character)
 {
     if (character >= '0' && character <= '9')
         return false;
@@ -108,8 +108,8 @@ ExceptionOr<void> RTCDTMFSender::insertDTMF(const String& tones, size_t duration
         return { };
 
     m_isPendingPlayoutTask = true;
-    scriptExecutionContext()->postTask([this, protectedThis = Ref { *this }](auto&) {
-        playNextTone();
+    scriptExecutionContext()->postTask([protectedThis = Ref { *this }](auto&) {
+        protectedThis->playNextTone();
     });
     return { };
 }

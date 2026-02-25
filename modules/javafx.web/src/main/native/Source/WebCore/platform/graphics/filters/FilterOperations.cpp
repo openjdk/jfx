@@ -27,14 +27,18 @@
 #include "FilterOperations.h"
 
 #include "AnimationUtilities.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "FEGaussianBlur.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
 #include "LengthFunctions.h"
 #include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterOperations);
 
 FilterOperations::FilterOperations(Vector<Ref<FilterOperation>>&& operations)
     : m_operations(WTFMove(operations))
@@ -45,7 +49,7 @@ bool FilterOperations::operator==(const FilterOperations& other) const
 {
     static_assert(std::ranges::sized_range<decltype(m_operations)>);
 
-    return std::ranges::equal(m_operations, other.m_operations, [](auto& a, auto& b) { return a.get() == b.get(); });
+    return std::ranges::equal(m_operations, other.m_operations, [](auto& a, auto& b) { return arePointingToEqualData(a, b); });
 }
 
 bool FilterOperations::operationsMatch(const FilterOperations& other) const
@@ -78,8 +82,9 @@ IntOutsets FilterOperations::outsets() const
             totalOutsets += outsets;
             break;
         }
-        case FilterOperation::Type::DropShadow: {
-            auto& dropShadowOperation = downcast<DropShadowFilterOperation>(operation.get());
+        case FilterOperation::Type::DropShadow:
+        case FilterOperation::Type::DropShadowWithStyleColor: {
+            auto& dropShadowOperation = downcast<DropShadowFilterOperationBase>(operation.get());
             float stdDeviation = dropShadowOperation.stdDeviation();
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
 
@@ -237,6 +242,15 @@ FilterOperations FilterOperations::blend(const FilterOperations& to, const Blend
     }
 
     return FilterOperations { WTFMove(operations) };
+}
+
+bool FilterOperations::requiresRepaintForCurrentColorChange() const
+{
+    for (auto& operation : m_operations) {
+        if (operation->requiresRepaintForCurrentColorChange())
+            return true;
+    }
+    return false;
 }
 
 TextStream& operator<<(TextStream& ts, const FilterOperations& filters)

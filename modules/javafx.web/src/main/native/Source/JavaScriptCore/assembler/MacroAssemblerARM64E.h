@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(ARM64E)
 
 #include "DisallowMacroScratchRegisterUsage.h"
@@ -37,6 +39,7 @@
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "MacroAssemblerARM64.h"
+#include <wtf/TZoneMalloc.h>
 
 #if OS(DARWIN)
 #include <mach/vm_param.h>
@@ -47,6 +50,7 @@ namespace JSC {
 using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerARM64E : public MacroAssemblerARM64 {
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssemblerARM64E);
 public:
     static constexpr unsigned numberOfPointerBits = sizeof(void*) * CHAR_BIT;
     static constexpr unsigned maxNumberOfAllowedPACBits = numberOfPointerBits - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);

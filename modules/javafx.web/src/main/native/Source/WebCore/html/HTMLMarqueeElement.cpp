@@ -24,6 +24,7 @@
 #include "HTMLMarqueeElement.h"
 
 #include "Attribute.h"
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ElementInlines.h"
@@ -118,7 +119,7 @@ void HTMLMarqueeElement::collectPresentationalHintsForAttribute(const QualifiedN
         break;
     case AttributeNames::scrolldelayAttr:
         if (!value.isEmpty())
-            addHTMLNumberToStyle(style, CSSPropertyWebkitMarqueeSpeed, value);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitMarqueeSpeed, limitToOnlyHTMLNonNegative(value, RenderStyle::initialMarqueeSpeed()), CSSUnitType::CSS_MS);
         break;
     case AttributeNames::loopAttr:
         if (!value.isEmpty()) {
@@ -176,7 +177,7 @@ void HTMLMarqueeElement::setScrollDelay(unsigned scrollDelay)
 
 int HTMLMarqueeElement::loop() const
 {
-    int loopValue = getIntegralAttribute(loopAttr);
+    int loopValue = integralAttribute(loopAttr);
     return loopValue > 0 ? loopValue : -1;
 }
 

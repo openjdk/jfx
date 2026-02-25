@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <type_traits>
+#include <wtf/IndexedRange.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -63,6 +64,21 @@ protected:
         VectorTypeOperations<T>::initializeIfNonPOD(begin(), end());
     }
 
+    explicit TrailingArray(std::initializer_list<T> initializerList)
+        : m_size(initializerList.size())
+    {
+        static_assert(std::is_final_v<Derived>);
+        std::uninitialized_copy(initializerList.begin(), initializerList.end(), begin());
+    }
+
+    template<typename U, size_t Extent>
+    TrailingArray(std::span<U, Extent> span)
+        : m_size(span.size())
+    {
+        static_assert(std::is_final_v<Derived>);
+        std::uninitialized_copy(span.begin(), span.end(), begin());
+    }
+
     template<typename InputIterator>
     TrailingArray(unsigned size, InputIterator first, InputIterator last)
         : m_size(size)
@@ -80,6 +96,16 @@ protected:
         VectorTypeOperations<T>::initializeWithArgs(begin(), end(), std::forward<Args>(args)...);
     }
 
+    template<std::invocable<size_t> Generator>
+    explicit TrailingArray(unsigned size, NOESCAPE Generator&& generator)
+        : m_size(size)
+    {
+        static_assert(std::is_final_v<Derived>);
+
+        for (auto[i, item] : indexedRange(span()))
+            new (NotNull, std::addressof(item)) T(generator(i));
+    }
+
     // This constructor, which is used via the `Failable` token, will attempt
     // to initialize the array from the generator. The generator returns
     // `std::optional` values, and if one is `nullopt`, that indicates a failure.
@@ -91,20 +117,32 @@ protected:
     // to the `size` the caller passed in. If it is not, that is failure, and
     // should be used as appropriate.
     struct Failable { };
-    template<std::invocable<size_t> Generator>
-    explicit TrailingArray(Failable, unsigned size, Generator&& generator)
+    template<std::invocable<size_t> FailableGenerator>
+    explicit TrailingArray(Failable, unsigned size, NOESCAPE FailableGenerator&& generator)
         : m_size(size)
     {
         static_assert(std::is_final_v<Derived>);
 
-        for (size_t i = 0; i < m_size; ++i) {
+        for (auto[i, item] : indexedRange(span())) {
             if (auto value = generator(i))
-                new (NotNull, std::addressof(begin()[i])) T(WTFMove(*value));
+                new (NotNull, std::addressof(item)) T(WTFMove(*value));
             else {
                 m_size = i;
                 return;
             }
         }
+    }
+
+    template<typename SizedRange, typename Mapper>
+    explicit TrailingArray(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+        : m_size(size)
+    {
+        static_assert(std::is_final_v<Derived>);
+
+        auto span = this->span();
+        size_t index = 0;
+        for (const auto& element : range)
+            new (NotNull, std::addressof(span[index++])) T(mapper(element));
     }
 
     ~TrailingArray()
@@ -122,44 +160,34 @@ public:
     bool isEmpty() const { return !size(); }
     unsigned byteSize() const { return size() * sizeof(T); }
 
-    pointer data() { return bitwise_cast<T*>(bitwise_cast<uint8_t*>(static_cast<Derived*>(this)) + offsetOfData()); }
-    const_pointer data() const { return bitwise_cast<const T*>(bitwise_cast<const uint8_t*>(static_cast<const Derived*>(this)) + offsetOfData()); }
-    std::span<T> span() { return { data(), size() }; }
-    std::span<const T> span() const { return { data(), size() }; }
+    std::span<T> span() LIFETIME_BOUND { return unsafeMakeSpan(data(), size()); }
+    std::span<const T> span() const LIFETIME_BOUND { return unsafeMakeSpan(data(), size()); }
 
-    iterator begin() { return data(); }
-    iterator end() { return data() + size(); }
-    const_iterator begin() const { return cbegin(); }
-    const_iterator end() const { return cend(); }
-    const_iterator cbegin() const { return data(); }
-    const_iterator cend() const { return data() + size(); }
+    iterator begin() LIFETIME_BOUND { return std::to_address(span().begin()); }
+    iterator end() LIFETIME_BOUND { return std::to_address(span().end()); }
+    const_iterator begin() const LIFETIME_BOUND { return cbegin(); }
+    const_iterator end() const LIFETIME_BOUND { return cend(); }
+    const_iterator cbegin() const LIFETIME_BOUND { return std::to_address(span().begin()); }
+    const_iterator cend() const LIFETIME_BOUND { return std::to_address(span().end()); }
 
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rbegin() const { return crbegin(); }
-    const_reverse_iterator rend() const { return crend(); }
-    const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator crend() const { return const_reverse_iterator(begin()); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return reverse_iterator(end()); }
+    reverse_iterator rend() LIFETIME_BOUND { return reverse_iterator(begin()); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return crbegin(); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return crend(); }
+    const_reverse_iterator crbegin() const LIFETIME_BOUND { return const_reverse_iterator(end()); }
+    const_reverse_iterator crend() const LIFETIME_BOUND { return const_reverse_iterator(begin()); }
 
-    reference at(unsigned i)
-    {
-        RELEASE_ASSERT(i < size());
-        return begin()[i];
-    }
+    reference at(unsigned i) LIFETIME_BOUND { return span()[i]; }
 
-    const_reference at(unsigned i) const
-    {
-        RELEASE_ASSERT(i < size());
-        return begin()[i];
-    }
+    const_reference at(unsigned i) const LIFETIME_BOUND { return span()[i]; }
 
-    reference operator[](unsigned i) { return at(i); }
-    const_reference operator[](unsigned i) const { return at(i); }
+    reference operator[](unsigned i) LIFETIME_BOUND { return at(i); }
+    const_reference operator[](unsigned i) const LIFETIME_BOUND { return at(i); }
 
-    T& first() { return (*this)[0]; }
-    const T& first() const { return (*this)[0]; }
-    T& last() { return (*this)[size() - 1]; }
-    const T& last() const { return (*this)[size() - 1]; }
+    T& first() LIFETIME_BOUND { return (*this)[0]; }
+    const T& first() const LIFETIME_BOUND { return (*this)[0]; }
+    T& last() LIFETIME_BOUND { return (*this)[size() - 1]; }
+    const T& last() const LIFETIME_BOUND { return (*this)[size() - 1]; }
 
     void fill(const T& val)
     {
@@ -173,6 +201,11 @@ public:
     }
 
 protected:
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    pointer data() LIFETIME_BOUND { return std::bit_cast<T*>(std::bit_cast<uint8_t*>(static_cast<Derived*>(this)) + offsetOfData()); }
+    const_pointer data() const LIFETIME_BOUND { return std::bit_cast<const T*>(std::bit_cast<const uint8_t*>(static_cast<const Derived*>(this)) + offsetOfData()); }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
     unsigned m_size { 0 };
 };
 

@@ -26,17 +26,21 @@
 #include "config.h"
 #include "InspectorAnimationAgent.h"
 
+#include "Animation.h"
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "BlendingKeyframes.h"
 #include "CSSAnimation.h"
 #include "CSSPropertyNames.h"
+#include "CSSSerializationContext.h"
 #include "CSSTransition.h"
 #include "CSSValue.h"
-#include "ComputedStyleExtractor.h"
+#include "CSSValuePool.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "Event.h"
 #include "FillMode.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
@@ -48,6 +52,7 @@
 #include "Page.h"
 #include "PlaybackDirection.h"
 #include "RenderElement.h"
+#include "StyleExtractor.h"
 #include "StyleOriginatedAnimation.h"
 #include "Styleable.h"
 #include "TimingFunction.h"
@@ -60,6 +65,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Seconds.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -68,6 +74,8 @@
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorAnimationAgent);
 
 static std::optional<double> protocolValueForSeconds(const Seconds& seconds)
 {
@@ -126,7 +134,7 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
         // Synthesize CSS style declarations for each keyframe so the frontend can display them.
 
         auto pseudoElementIdentifier = target->pseudoId() == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { target->pseudoId() });
-        ComputedStyleExtractor computedStyleExtractor(target, false, pseudoElementIdentifier);
+        Style::Extractor computedStyleExtractor(target, false, pseudoElementIdentifier);
 
         for (size_t i = 0; i < blendingKeyframes.size(); ++i) {
             auto& blendingKeyframe = blendingKeyframes[i];
@@ -154,15 +162,19 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
             for (auto property : properties) {
                 --count;
                 WTF::switchOn(property,
-                    [&] (CSSPropertyID cssPropertyId) {
-                        stylePayloadBuilder.append(nameString(cssPropertyId), ": "_s);
-                if (auto value = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, renderer))
-                    stylePayloadBuilder.append(value->cssText());
+                    [&](CSSPropertyID cssPropertyId) {
+                        stylePayloadBuilder.append(
+                            nameString(cssPropertyId),
+                            ": "_s,
+                            computedStyleExtractor.propertyValueSerializationInStyle(style, cssPropertyId, CSS::defaultSerializationContext(), CSSValuePool::singleton(), renderer)
+                        );
                     },
-                    [&] (const AtomString& customProperty) {
-                        stylePayloadBuilder.append(customProperty, ": "_s);
-                        if (auto value = computedStyleExtractor.customPropertyValue(customProperty))
-                            stylePayloadBuilder.append(value->cssText());
+                    [&](const AtomString& customProperty) {
+                        stylePayloadBuilder.append(
+                            customProperty,
+                            ": "_s,
+                            computedStyleExtractor.customPropertyValueSerialization(customProperty, CSS::defaultSerializationContext())
+                        );
                     }
                 );
                 stylePayloadBuilder.append(';');
@@ -186,7 +198,7 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
                 keyframePayload->setEasing(timingFunction->cssText());
 
             if (!parsedKeyframe.style->isEmpty())
-                keyframePayload->setStyle(parsedKeyframe.style->asText());
+                keyframePayload->setStyle(parsedKeyframe.style->asText(CSS::defaultSerializationContext()));
 
             keyframesPayload->addItem(WTFMove(keyframePayload));
         }
@@ -200,17 +212,26 @@ static Ref<Inspector::Protocol::Animation::Effect> buildObjectForEffect(Animatio
     auto effectPayload = Inspector::Protocol::Animation::Effect::create()
         .release();
 
-    if (auto startDelay = protocolValueForSeconds(effect.delay()))
-        effectPayload->setStartDelay(startDelay.value());
+    // FIXME: convert this to WebAnimationTime.
+    if (auto delayTime = effect.delay().time()) {
+        if (auto delay = protocolValueForSeconds(*delayTime))
+            effectPayload->setStartDelay(*delay);
+    }
 
-    if (auto endDelay = protocolValueForSeconds(effect.endDelay()))
-        effectPayload->setEndDelay(endDelay.value());
+    // FIXME: convert this to WebAnimationTime.
+    if (auto endDelayTime = effect.endDelay().time()) {
+        if (auto endDelay = protocolValueForSeconds(*endDelayTime))
+            effectPayload->setEndDelay(*endDelay);
+    }
 
     effectPayload->setIterationCount(effect.iterations() == std::numeric_limits<double>::infinity() ? -1 : effect.iterations());
     effectPayload->setIterationStart(effect.iterationStart());
 
-    if (auto iterationDuration = protocolValueForSeconds(effect.iterationDuration()))
+    // FIXME: convert this to WebAnimationTime.
+    if (auto durationTime = effect.iterationDuration().time()) {
+        if (auto iterationDuration = protocolValueForSeconds(*durationTime))
         effectPayload->setIterationDuration(iterationDuration.value());
+    }
 
     if (auto* timingFunction = effect.timingFunction())
         effectPayload->setTimingFunction(timingFunction->cssText());
@@ -229,7 +250,7 @@ static Ref<Inspector::Protocol::Animation::Effect> buildObjectForEffect(Animatio
 
 InspectorAnimationAgent::InspectorAnimationAgent(PageAgentContext& context)
     : InspectorAgentBase("Animation"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::AnimationFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::AnimationFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::AnimationBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
     , m_inspectedPage(context.inspectedPage)
@@ -240,7 +261,7 @@ InspectorAnimationAgent::InspectorAnimationAgent(PageAgentContext& context)
 
 InspectorAnimationAgent::~InspectorAnimationAgent() = default;
 
-void InspectorAnimationAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorAnimationAgent::didCreateFrontendAndBackend()
 {
     ASSERT(m_instrumentingAgents.persistentAnimationAgent() != this);
     m_instrumentingAgents.setPersistentAnimationAgent(this);
@@ -265,7 +286,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorAnimationAgent::enable()
     const auto existsInCurrentPage = [&] (ScriptExecutionContext* scriptExecutionContext) {
         // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's WebSockets
         RefPtr document = dynamicDowncast<Document>(scriptExecutionContext);
-        return document && document->page() == &m_inspectedPage;
+        return document && document->page() == m_inspectedPage.ptr();
     };
 
     {
@@ -287,6 +308,23 @@ Inspector::Protocol::ErrorStringOr<void> InspectorAnimationAgent::disable()
     return { };
 }
 
+Inspector::Protocol::ErrorStringOr<RefPtr<Inspector::Protocol::Animation::Effect>> InspectorAnimationAgent::requestEffect(const Inspector::Protocol::Animation::AnimationId& animationId)
+{
+    Inspector::Protocol::ErrorString errorString;
+
+    auto* animation = assertAnimation(errorString, animationId);
+    if (!animation)
+        return makeUnexpected(errorString);
+
+    m_animationsIgnoringEffectChanges.remove(*animation);
+
+    RefPtr effect = animation->effect();
+    if (!effect)
+        return { nullptr };
+
+    return { buildObjectForEffect(*effect) };
+}
+
 Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> InspectorAnimationAgent::requestEffectTarget(const Inspector::Protocol::Animation::AnimationId& animationId)
 {
     Inspector::Protocol::ErrorString errorString;
@@ -294,6 +332,8 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> Ins
     auto* animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
+
+    m_animationsIgnoringTargetChanges.remove(*animation);
 
     auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
     if (!domAgent)
@@ -464,23 +504,30 @@ void InspectorAnimationAgent::didSetWebAnimationEffect(WebAnimation& animation)
 
 void InspectorAnimationAgent::didChangeWebAnimationEffectTiming(WebAnimation& animation)
 {
+    if (m_animationsIgnoringEffectChanges.contains(animation))
+        return;
+
     // The `animationId` may be empty if Animation is tracking but not enabled.
     auto animationId = findAnimationId(animation);
     if (animationId.isEmpty())
         return;
 
-    if (auto* effect = animation.effect())
-        m_frontendDispatcher->effectChanged(animationId, buildObjectForEffect(*effect));
-    else
-        m_frontendDispatcher->effectChanged(animationId, nullptr);
+    m_animationsIgnoringEffectChanges.add(animation);
+
+    m_frontendDispatcher->effectChanged(animationId);
 }
 
 void InspectorAnimationAgent::didChangeWebAnimationEffectTarget(WebAnimation& animation)
 {
+    if (m_animationsIgnoringTargetChanges.contains(animation))
+        return;
+
     // The `animationId` may be empty if Animation is tracking but not enabled.
     auto animationId = findAnimationId(animation);
     if (animationId.isEmpty())
         return;
+
+    m_animationsIgnoringTargetChanges.add(animation);
 
     m_frontendDispatcher->targetChanged(animationId);
 }
@@ -567,11 +614,11 @@ void InspectorAnimationAgent::bindAnimation(WebAnimation& animation, RefPtr<Insp
     else if (auto* cssTransition = dynamicDowncast<CSSTransition>(animation))
         animationPayload->setCssTransitionProperty(cssTransition->transitionProperty());
 
-    if (auto* effect = animation.effect())
-        animationPayload->setEffect(buildObjectForEffect(*effect));
-
     if (backtrace)
         animationPayload->setStackTrace(backtrace.releaseNonNull());
+
+    m_animationsIgnoringEffectChanges.add(animation);
+    m_animationsIgnoringTargetChanges.add(animation);
 
     m_frontendDispatcher->animationCreated(WTFMove(animationPayload));
 }

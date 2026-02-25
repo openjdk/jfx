@@ -25,38 +25,52 @@
 
 #pragma once
 
+#include "BoxSides.h"
 #include "WritingMode.h"
 #include <array>
+#include <concepts>
 #include <wtf/OptionSet.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-enum class BoxSideFlag : uint8_t {
-    Top     = 1 << static_cast<unsigned>(BoxSide::Top),
-    Right   = 1 << static_cast<unsigned>(BoxSide::Right),
-    Bottom  = 1 << static_cast<unsigned>(BoxSide::Bottom),
-    Left    = 1 << static_cast<unsigned>(BoxSide::Left)
-};
-
-using BoxSideSet = OptionSet<BoxSideFlag>;
-
 template<typename T> class RectEdges {
 public:
-    RectEdges() = default;
+    RectEdges() requires (std::is_default_constructible_v<T>)
+        : m_sides { }
+    {
+    }
+
+    RectEdges(const T& value)
+        : m_sides { value, value, value, value }
+    {
+    }
 
     RectEdges(const RectEdges&) = default;
     RectEdges& operator=(const RectEdges&) = default;
 
     template<typename U>
     RectEdges(U&& top, U&& right, U&& bottom, U&& left)
-        : m_sides({ { std::forward<T>(top), std::forward<T>(right), std::forward<T>(bottom), std::forward<T>(left) } })
-    { }
+        : m_sides({ { std::forward<U>(top), std::forward<U>(right), std::forward<U>(bottom), std::forward<U>(left) } })
+    {
+    }
 
     template<typename U>
     RectEdges(const RectEdges<U>& other)
         : RectEdges(other.top(), other.right(), other.bottom(), other.left())
-    { }
+    {
+    }
+
+    template<typename U, typename Mapper>
+    static RectEdges<T> map(RectEdges<U>&& other, NOESCAPE Mapper&& mapper)
+    {
+        return RectEdges<T> {
+            mapper(other.top()),
+            mapper(other.right()),
+            mapper(other.bottom()),
+            mapper(other.left()),
+        };
+    }
 
     T& at(BoxSide side) { return m_sides[static_cast<size_t>(side)]; }
     T& operator[](BoxSide side) { return m_sides[static_cast<size_t>(side)]; }
@@ -93,43 +107,65 @@ public:
         return copy;
     }
 
-    T& before(WritingMode writingMode) { return at(mapLogicalSideToPhysicalSide(writingMode, LogicalBoxSide::BlockStart)); }
-    T& after(WritingMode writingMode) { return at(mapLogicalSideToPhysicalSide(writingMode, LogicalBoxSide::BlockEnd)); }
-    T& start(WritingMode writingMode, TextDirection direction = TextDirection::LTR) { return at(mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), LogicalBoxSide::InlineStart)); }
-    T& end(WritingMode writingMode, TextDirection direction = TextDirection::LTR) { return at(mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), LogicalBoxSide::InlineEnd)); }
+    T& before(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::BlockStart)); }
+    T& after(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::BlockEnd)); }
+    T& start(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::InlineStart)); }
+    T& end(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::InlineEnd)); }
+    T& logicalLeft(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::LogicalLeft)); }
+    T& logicalRight(WritingMode writingMode) { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::LogicalRight)); }
 
-    const T& before(WritingMode writingMode) const { return at(mapLogicalSideToPhysicalSide(writingMode, LogicalBoxSide::BlockStart)); }
-    const T& after(WritingMode writingMode) const { return at(mapLogicalSideToPhysicalSide(writingMode, LogicalBoxSide::BlockEnd)); }
-    const T& start(WritingMode writingMode, TextDirection direction = TextDirection::LTR) const { return at(mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), LogicalBoxSide::InlineStart)); }
-    const T& end(WritingMode writingMode, TextDirection direction = TextDirection::LTR) const { return at(mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), LogicalBoxSide::InlineEnd)); }
+    const T& before(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::BlockStart)); }
+    const T& after(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::BlockEnd)); }
+    const T& start(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::InlineStart)); }
+    const T& end(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::InlineEnd)); }
+    const T& logicalLeft(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::LogicalLeft)); }
+    const T& logicalRight(WritingMode writingMode) const { return at(mapSideLogicalToPhysical(writingMode, LogicalBoxSide::LogicalRight)); }
 
     void setBefore(const T& before, WritingMode writingMode) { this->before(writingMode) = before; }
     void setAfter(const T& after, WritingMode writingMode) { this->after(writingMode) = after; }
-    void setStart(const T& start, WritingMode writingMode, TextDirection direction = TextDirection::LTR) { this->start(writingMode, direction) = start; }
-    void setEnd(const T& end, WritingMode writingMode, TextDirection direction = TextDirection::LTR) { this->end(writingMode, direction) = end; }
+    void setStart(const T& start, WritingMode writingMode) { this->start(writingMode) = start; }
+    void setEnd(const T& end, WritingMode writingMode) { this->end(writingMode) = end; }
+    void setLogicalLeft(const T& logicalLeft, WritingMode writingMode) { this->logicalLeft(writingMode) = logicalLeft; }
+    void setLogicalRight(const T& logicalRight, WritingMode writingMode) { this->logicalRight(writingMode) = logicalRight; }
 
     RectEdges<T> blockFlippedCopy(WritingMode writingMode) const
     {
-        if (isHorizontalWritingMode(writingMode))
+        if (writingMode.isHorizontal())
             return yFlippedCopy();
         return xFlippedCopy();
     }
     RectEdges<T> inlineFlippedCopy(WritingMode writingMode) const
     {
-        if (isHorizontalWritingMode(writingMode))
+        if (writingMode.isHorizontal())
             return xFlippedCopy();
         return yFlippedCopy();
     }
 
-    friend bool operator==(const RectEdges&, const RectEdges&) = default;
-
-    bool isZero() const
+    template<typename F> bool anyOf(F&& functor) const
     {
-        return !top() && !right() && !bottom() && !left();
+        return std::ranges::any_of(m_sides, std::forward<F>(functor));
     }
 
+    template<typename F> bool allOf(F&& functor) const
+    {
+        return std::ranges::all_of(m_sides, std::forward<F>(functor));
+    }
+
+    template<typename F> bool noneOf(F&& functor) const
+    {
+        return std::ranges::none_of(m_sides, std::forward<F>(functor));
+    }
+
+    bool isZero() const
+        requires (requires { { !std::declval<T>() } -> std::same_as<bool>; })
+    {
+        return allOf([](auto& edge) { return !edge; });
+    }
+
+    bool operator==(const RectEdges<T>&) const = default;
+
 private:
-    std::array<T, 4> m_sides { };
+    std::array<T, 4> m_sides;
 };
 
 template<typename T>
@@ -151,9 +187,45 @@ inline RectEdges<T>& operator+=(RectEdges<T>& a, const RectEdges<T>& b)
 }
 
 template<typename T>
+constexpr RectEdges<T> operator-(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return {
+        a.top() - b.top(),
+        a.right() - b.right(),
+        a.bottom() - b.bottom(),
+        a.left() - b.left()
+    };
+}
+
+template<typename T>
+inline RectEdges<T>& operator-=(RectEdges<T>& a, const RectEdges<T>& b)
+{
+    a = a - b;
+    return a;
+}
+
+
+template<typename T, typename F>
+inline RectEdges<T> blend(const RectEdges<T>& a, const RectEdges<T>& b, F&& functor)
+{
+    return {
+        functor(a.top(), b.top(), BoxSide::Top),
+        functor(a.right(), b.right(), BoxSide::Right),
+        functor(a.bottom(), b.bottom(), BoxSide::Bottom),
+        functor(a.left(), b.left(), BoxSide::Left)
+    };
+}
+
+template<typename T>
+inline RectEdges<T> max(const RectEdges<T>& a, const RectEdges<T>& b)
+{
+    return blend(a, b, [](const T& a, const T& b, BoxSide) { return std::max(a, b); });
+}
+
+template<typename T>
 TextStream& operator<<(TextStream& ts, const RectEdges<T>& edges)
 {
-    ts << "[top " << edges.top() << " right " << edges.right() << " bottom " << edges.bottom() << " left " << edges.left() << "]";
+    ts << "[top "_s << edges.top() << " right "_s << edges.right() << " bottom "_s << edges.bottom() << " left "_s << edges.left() << ']';
     return ts;
 }
 

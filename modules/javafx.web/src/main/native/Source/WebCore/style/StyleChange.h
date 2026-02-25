@@ -25,6 +25,12 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
+
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class RenderStyle;
@@ -32,15 +38,20 @@ class RenderStyle;
 namespace Style {
 
 enum class Change : uint8_t {
-    None,
-    NonInherited,
-    FastPathInherited,
-    Inherited,
-    Descendants,
-    Renderer
+    NonInherited = 1 << 0,
+    Inherited = 1 << 1,
+    FastPathInherited = 1 << 2,
+    Container = 1 << 3,
+    Renderer = 1 << 4
 };
 
-WEBCORE_EXPORT Change determineChange(const RenderStyle&, const RenderStyle&);
+constexpr OptionSet<Change> inheritedChanges() { return { Change::Inherited, Change::FastPathInherited }; }
+
+WEBCORE_EXPORT OptionSet<Change> determineChanges(const RenderStyle&, const RenderStyle&);
+
+WTF::TextStream& operator<<(WTF::TextStream&, Change);
+WTF::TextStream& operator<<(WTF::TextStream&, OptionSet<Change>);
 
 }
+
 }

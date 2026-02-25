@@ -34,13 +34,16 @@
 #include "InspectorInstrumentation.h"
 #include "InspectorPageAgent.h"
 #include "InspectorWebAgentBase.h"
+#include "NetworkResourcesData.h"
 #include "WebSocket.h"
+#include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/RegularExpression.h>
 #include <wtf/Forward.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace Inspector {
 class ConsoleMessage;
@@ -65,8 +68,8 @@ class WebSocket;
 struct WebSocketFrame;
 
 class InspectorNetworkAgent : public InspectorAgentBase, public Inspector::NetworkBackendDispatcherHandler {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorNetworkAgent);
     WTF_MAKE_NONCOPYABLE(InspectorNetworkAgent);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     ~InspectorNetworkAgent() override;
 
@@ -78,7 +81,7 @@ public:
     static bool cachedResourceContent(CachedResource&, String* result, bool* base64Encoded);
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) final;
 
     // NetworkBackendDispatcherHandler
@@ -137,7 +140,7 @@ public:
     void searchInRequest(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::RequestId&, const String& query, bool caseSensitive, bool isRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>&);
 
 protected:
-    InspectorNetworkAgent(WebAgentContext&);
+    InspectorNetworkAgent(WebAgentContext&, const NetworkResourcesData::Settings&);
 
     virtual Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*) = 0;
     virtual Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*) = 0;
@@ -168,8 +171,8 @@ private:
     double timestamp();
 
     class PendingInterceptRequest {
+        WTF_MAKE_TZONE_ALLOCATED(PendingInterceptRequest);
         WTF_MAKE_NONCOPYABLE(PendingInterceptRequest);
-        WTF_MAKE_FAST_ALLOCATED;
     public:
         PendingInterceptRequest(RefPtr<ResourceLoader> loader, Function<void(const ResourceRequest&)>&& callback)
             : m_loader(loader)
@@ -193,8 +196,8 @@ private:
     };
 
     class PendingInterceptResponse {
+        WTF_MAKE_TZONE_ALLOCATED(PendingInterceptResponse);
         WTF_MAKE_NONCOPYABLE(PendingInterceptResponse);
-        WTF_MAKE_FAST_ALLOCATED;
     public:
         PendingInterceptResponse(const ResourceResponse& originalResponse, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&& completionHandler)
             : m_originalResponse(originalResponse)
@@ -230,11 +233,11 @@ private:
         bool m_responded { false };
     };
 
-    std::unique_ptr<Inspector::NetworkFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::NetworkBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::NetworkFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::NetworkBackendDispatcher> m_backendDispatcher;
     Inspector::InjectedScriptManager& m_injectedScriptManager;
 
-    std::unique_ptr<NetworkResourcesData> m_resourcesData;
+    const UniqueRef<NetworkResourcesData> m_resourcesData;
 
     MemoryCompactRobinHoodHashMap<String, String> m_extraRequestHeaders;
     HashSet<ResourceLoaderIdentifier> m_hiddenRequestIdentifiers;
@@ -245,7 +248,21 @@ private:
         bool isRegex { false };
         Inspector::Protocol::Network::NetworkStage networkStage { Inspector::Protocol::Network::NetworkStage::Response };
 
-        friend bool operator==(const Intercept&, const Intercept&) = default;
+        inline bool operator==(const Intercept& other) const
+        {
+            return url == other.url
+                && caseSensitive == other.caseSensitive
+                && isRegex == other.isRegex
+                && networkStage == other.networkStage;
+        }
+
+        bool matches(const String& url, Inspector::Protocol::Network::NetworkStage);
+
+    private:
+        std::optional<Inspector::ContentSearchUtilities::Searcher> m_urlSearcher;
+
+        // Avoid having to (re)match the searcher each time a URL is requested.
+        HashSet<String> m_knownMatchingURLs;
     };
     Vector<Intercept> m_intercepts;
     MemoryCompactRobinHoodHashMap<String, std::unique_ptr<PendingInterceptRequest>> m_pendingInterceptRequests;

@@ -100,6 +100,11 @@ TextOnlySimpleLineBuilder::TextOnlySimpleLineBuilder(InlineFormattingContext& in
 
 LineLayoutResult TextOnlySimpleLineBuilder::layoutInlineContent(const LineInput& lineInput, const std::optional<PreviousLine>& previousLine)
 {
+    if (auto lineLayoutResult = placeSingleCharacterContentIfApplicable(lineInput)) {
+        ASSERT(!previousLine);
+        return *lineLayoutResult;
+    }
+
     initialize(lineInput.needsLayoutRange, lineInput.initialLogicalRect, previousLine);
     auto& rootStyle = this->rootStyle();
     auto placedContentEnd = isWrappingAllowed() ? placeInlineTextContent(rootStyle, lineInput.needsLayoutRange) : placeNonWrappingInlineTextContent(rootStyle, lineInput.needsLayoutRange);
@@ -148,6 +153,31 @@ void TextOnlySimpleLineBuilder::initialize(const InlineItemRange& layoutRange, c
     m_lineLogicalRect = initialLogicalRect;
     m_trimmedTrailingWhitespaceWidth = { };
     m_overflowContentLogicalWidth = { };
+}
+
+std::optional<LineLayoutResult> TextOnlySimpleLineBuilder::placeSingleCharacterContentIfApplicable(const LineInput& lineInput)
+{
+    if (m_inlineItemList.size() != 1)
+        return { };
+    auto* inlineTextItem = dynamicDowncast<InlineTextItem>(m_inlineItemList[0]);
+    if (!inlineTextItem || inlineTextItem->length() > 1 || inlineTextItem->isWhitespace())
+        return { };
+    ASSERT(lineInput.needsLayoutRange.start.index + 1 == lineInput.needsLayoutRange.end.index && !lineInput.needsLayoutRange.start.offset && !lineInput.needsLayoutRange.end.offset);
+
+    auto lineRect = lineInput.initialLogicalRect;
+    auto contentWidth = inlineTextItem->width().value_or(0.f);
+    Line::RunList singleRun;
+    singleRun.append({ Line::Run(*inlineTextItem, inlineTextItem->style(), { }, contentWidth) });
+
+    auto contentLeft = InlineFormattingUtils::horizontalAlignmentOffset(rootStyle(), contentWidth, lineRect.width(), { }, singleRun, true);
+    auto contentRight = contentLeft + contentWidth;
+
+    return LineLayoutResult { lineInput.needsLayoutRange
+        , WTFMove(singleRun)
+        , { }
+        , { contentLeft, contentWidth, contentRight, std::max(0.f, contentRight - lineRect.right()) }
+        , { lineRect.topLeft(), lineRect.width(), lineRect.left() }
+    };
 }
 
 InlineItemPosition TextOnlySimpleLineBuilder::placeInlineTextContent(const RenderStyle& rootStyle, const InlineItemRange& layoutRange)
@@ -436,15 +466,16 @@ size_t TextOnlySimpleLineBuilder::revertToLastNonOverflowingItem(const RenderSty
 
 InlineLayoutUnit TextOnlySimpleLineBuilder::availableWidth() const
 {
+    auto epsilon = intrinsicWidthMode() == IntrinsicWidthMode::Minimum ? 0.f : LayoutUnit::epsilon();
     auto contentLogicalRight = m_line.contentLogicalRight();
-    return (m_lineLogicalRect.width() + LayoutUnit::epsilon()) - (!std::isnan(contentLogicalRight) ? contentLogicalRight : 0.f);
+    return (m_lineLogicalRect.width() + epsilon) - (!std::isnan(contentLogicalRight) ? contentLogicalRight : 0.f);
 }
 
 bool TextOnlySimpleLineBuilder::isEligibleForSimplifiedTextOnlyInlineLayoutByContent(const InlineContentCache::InlineItems& inlineItems, const PlacedFloats& placedFloats)
 {
     if (inlineItems.isEmpty())
         return false;
-    if (!inlineItems.hasTextAndLineBreakOnlyContent() || inlineItems.hasInlineBoxes() || inlineItems.requiresVisualReordering())
+    if (!inlineItems.hasTextAndLineBreakOnlyContent() || inlineItems.hasInlineBoxes() || inlineItems.requiresVisualReordering() || inlineItems.hasTextAutospace())
         return false;
     if (!placedFloats.isEmpty())
         return false;
@@ -456,7 +487,7 @@ bool TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(const
 {
     if (style.fontCascade().wordSpacing())
         return false;
-    if (!style.isLeftToRightDirection())
+    if (style.writingMode().isBidiRTL())
         return false;
     if (style.wordBreak() == WordBreak::AutoPhrase)
         return false;
@@ -468,9 +499,9 @@ bool TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(const
         return false;
     if (!style.hangingPunctuation().isEmpty())
         return false;
-    if (style.hyphenationLimitLines() != RenderStyle::initialHyphenationLimitLines())
+    if (!style.hyphenateLimitLines().isNoLimit())
         return false;
-    if (style.textWrapMode() == TextWrapMode::Wrap && style.textWrapStyle() == TextWrapStyle::Balance)
+    if (style.textWrapMode() == TextWrapMode::Wrap && (style.textWrapStyle() == TextWrapStyle::Balance || style.textWrapStyle() == TextWrapStyle::Pretty))
         return false;
     if (style.lineAlign() != LineAlign::None || style.lineSnap() != LineSnap::None)
         return false;

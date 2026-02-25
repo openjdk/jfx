@@ -196,7 +196,7 @@ public:
 
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {
-        if (UNLIKELY(other.isFat()))
+        if (other.isFat()) [[unlikely]]
             return copySlow(other);
         freeFatEntry();
         m_bits = other.m_bits;
@@ -335,7 +335,7 @@ private:
     static const intptr_t FlagBits = 6;
 
     class FatEntry {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FatEntry, SymbolTableEntryFatEntry);
     public:
         FatEntry(intptr_t bits)
             : m_bits(bits & ~SlimFlag)
@@ -357,18 +357,18 @@ private:
     const FatEntry* fatEntry() const
     {
         ASSERT(isFat());
-        return bitwise_cast<const FatEntry*>(m_bits);
+        return std::bit_cast<const FatEntry*>(m_bits);
     }
 
     FatEntry* fatEntry()
     {
         ASSERT(isFat());
-        return bitwise_cast<FatEntry*>(m_bits);
+        return std::bit_cast<FatEntry*>(m_bits);
     }
 
     FatEntry* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fatEntry();
         return inflateSlow();
     }
@@ -391,7 +391,7 @@ private:
 
     void freeFatEntry()
     {
-        if (LIKELY(!isFat()))
+        if (!isFat()) [[likely]]
             return;
         freeFatEntrySlow();
     }
@@ -436,7 +436,7 @@ private:
 };
 
 struct SymbolTableIndexHashTraits : HashTraits<SymbolTableEntry> {
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 };
 
 class SymbolTable final : public JSCell {
@@ -446,10 +446,10 @@ public:
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    typedef HashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
-    typedef HashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
-    typedef HashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
-    typedef HashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
+    typedef UncheckedKeyHashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
     typedef Vector<SymbolTableEntry*> LocalToEntryVec;
     typedef WTF::IteratorRange<typename PrivateNameEnvironment::iterator> PrivateNameIteratorRange;
 
@@ -466,7 +466,7 @@ public:
         return symbolTable;
     }
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
@@ -666,14 +666,14 @@ public:
 
     bool trySetArgumentsLength(VM& vm, uint32_t length)
     {
-        if (UNLIKELY(!m_arguments)) {
+        if (!m_arguments) [[unlikely]] {
             ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         } else {
             ScopedArgumentsTable* table = m_arguments->trySetLength(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         }
@@ -766,7 +766,7 @@ public:
     void dump(PrintStream&) const;
 
     struct SymbolTableRareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SymbolTableRareData);
         UniqueIDMap m_uniqueIDMap;
         OffsetToVariableMap m_offsetToVariableMap;
         UniqueTypeSetMap m_uniqueTypeSetMap;
@@ -779,7 +779,7 @@ private:
     ~SymbolTable();
     SymbolTableRareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

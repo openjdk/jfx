@@ -33,6 +33,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -62,10 +63,11 @@ struct CharacterFallbackMapKeyHash {
 };
 
 class SystemFallbackFontCache {
+    WTF_MAKE_TZONE_ALLOCATED(SystemFallbackFontCache);
     WTF_MAKE_NONCOPYABLE(SystemFallbackFontCache);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     static SystemFallbackFontCache& forCurrentThread();
+    static SystemFallbackFontCache* forCurrentThreadIfExists();
 
     SystemFallbackFontCache() = default;
 

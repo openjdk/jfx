@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ public:
     {
     }
 
-    RenderElement& parent() const { return m_parent; }
+    RenderElement& parent() const { return m_parent.get(); }
     RenderObject* nextSibling() const { ASSERT(m_hasValidNextSibling); return m_nextSibling.get(); }
 
     void computeNextSibling(const Node&);
@@ -53,7 +53,7 @@ public:
     RenderObject* nextSiblingRenderer(const Node&) const;
 
 private:
-    RenderElement& m_parent;
+    const CheckedRef<RenderElement> m_parent;
     SingleThreadWeakPtr<RenderObject> m_nextSibling;
     bool m_hasValidNextSibling { false };
 #if ASSERT_ENABLED

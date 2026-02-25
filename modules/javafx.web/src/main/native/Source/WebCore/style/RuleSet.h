@@ -37,6 +37,7 @@ namespace WebCore {
 
 class CSSSelector;
 class StyleSheetContents;
+class StyleRulePositionTry;
 class StyleRuleViewTransition;
 
 namespace MQ {
@@ -50,7 +51,11 @@ class RuleSet;
 
 using CascadeLayerPriority = uint16_t;
 
-using InvalidationRuleSetVector = Vector<RefPtr<const RuleSet>, 1>;
+struct RuleSetAndNegation {
+    RefPtr<const RuleSet> ruleSet;
+    IsNegation isNegation { IsNegation::No };
+};
+using InvalidationRuleSetVector = Vector<RuleSetAndNegation, 1>;
 
 struct DynamicMediaQueryEvaluationChanges {
     enum class Type { InvalidateStyle, ResetStyle };
@@ -115,7 +120,7 @@ public:
     bool hasAttributeRules() const { return !m_attributeLocalNameRules.isEmpty(); }
     bool hasUserAgentPartRules() const { return !m_userAgentPartRules.isEmpty(); }
     bool hasHostPseudoClassRulesMatchingInShadowTree() const { return m_hasHostPseudoClassRulesMatchingInShadowTree; }
-    bool hasHostPseudoClassRulesInUniversalBucket() const { return m_hasHostPseudoClassRulesInUniversalBucket; }
+    bool hasHostOrScopePseudoClassRulesInUniversalBucket() const { return m_hasHostOrScopePseudoClassRulesInUniversalBucket; }
 
     static constexpr auto cascadeLayerPriorityForPresentationalHints = std::numeric_limits<CascadeLayerPriority>::min();
     static constexpr auto cascadeLayerPriorityForUnlayered = std::numeric_limits<CascadeLayerPriority>::max();
@@ -128,6 +133,8 @@ public:
 
     bool hasScopeRules() const { return !m_scopeRules.isEmpty(); }
     Vector<Ref<const StyleRuleScope>> scopeRulesFor(const RuleData&) const;
+
+    const RefPtr<const StyleRulePositionTry> positionTryRuleForName(const AtomString&) const;
 
 private:
     friend class RuleSetBuilder;
@@ -226,9 +233,12 @@ private:
     Vector<ScopeAndParent> m_scopeRules;
     Vector<ScopeRuleIdentifier> m_scopeRuleIdentifierForRulePosition;
 
+    // @position-try
+    HashMap<AtomString, RefPtr<const StyleRulePositionTry>> m_positionTryRules;
+
     bool m_hasHostPseudoClassRulesMatchingInShadowTree { false };
     bool m_hasViewportDependentMediaQueries { false };
-    bool m_hasHostPseudoClassRulesInUniversalBucket { false };
+    bool m_hasHostOrScopePseudoClassRulesInUniversalBucket { false };
 };
 
 inline const RuleSet::RuleDataVector* RuleSet::attributeRules(const AtomString& key, bool isHTMLName) const

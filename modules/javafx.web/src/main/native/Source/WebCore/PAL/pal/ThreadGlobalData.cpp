@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +29,17 @@
 
 #include "TextCodecICU.h"
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
 #include <wtf/text/StringImpl.h>
 
 namespace PAL {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadGlobalData);
+
 ThreadGlobalData::ThreadGlobalData()
-    : m_cachedConverterICU(makeUnique<ICUConverterWrapper>())
+    : m_cachedConverterICU(makeUniqueRef<ICUConverterWrapper>())
 {
 }
 

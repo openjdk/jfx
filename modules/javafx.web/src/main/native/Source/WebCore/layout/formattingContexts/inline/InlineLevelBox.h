@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -67,11 +68,8 @@ public:
     bool hasContent() const { return m_hasContent; }
     void setHasContent();
 
-    struct VerticalAlignment {
-        VerticalAlign type { VerticalAlign::Baseline };
-        std::optional<InlineLayoutUnit> baselineOffset;
-    };
-    VerticalAlignment verticalAlign() const { return m_style.verticalAlignment; }
+    using VerticalAlignment = Variant<CSS::Keyword::Baseline, CSS::Keyword::Sub, CSS::Keyword::Super, CSS::Keyword::Top, CSS::Keyword::TextTop, CSS::Keyword::Middle, CSS::Keyword::Bottom, CSS::Keyword::TextBottom, CSS::Keyword::WebkitBaselineMiddle, InlineLayoutUnit>;
+    const VerticalAlignment& verticalAlign() const { return m_style.verticalAlignment; }
     bool hasLineBoxRelativeAlignment() const;
 
     InlineLayoutUnit preferredLineHeight() const;
@@ -82,6 +80,8 @@ public:
     const FontMetrics& primarymetricsOfPrimaryFont() const { return m_style.primaryFontMetrics; }
     InlineLayoutUnit fontSize() const { return m_style.primaryFontSize; }
 
+    TextBoxTrim textBoxTrim() const { return m_style.textBoxTrim; }
+    TextEdge textBoxEdge() const { return m_style.textBoxEdge; }
     TextEdge lineFitEdge() const { return m_style.lineFitEdge; }
     InlineLayoutUnit inlineBoxContentOffsetForTextBoxTrim() const { return m_inlineBoxContentOffsetForTextBoxTrim; }
 
@@ -164,8 +164,10 @@ private:
     struct Style {
         const FontMetrics& primaryFontMetrics;
         const Length& lineHeight;
+        TextBoxTrim textBoxTrim;
+        TextEdge textBoxEdge;
         TextEdge lineFitEdge;
-        OptionSet<LineBoxContain> lineBoxContain;
+        OptionSet<WebCore::Style::LineBoxContain> lineBoxContain;
         InlineLayoutUnit primaryFontSize { 0 };
         VerticalAlignment verticalAlignment { };
     };
@@ -187,22 +189,17 @@ inline void InlineLevelBox::setHasContent()
 inline InlineLayoutUnit InlineLevelBox::preferredLineHeight() const
 {
     if (isPreferredLineHeightFontMetricsBased())
-        return primarymetricsOfPrimaryFont().intLineSpacing();
-#if !PLATFORM(JAVA)
+        return primarymetricsOfPrimaryFont().lineSpacing();
+
     if (m_style.lineHeight.isPercentOrCalculated())
         return minimumValueForLength(m_style.lineHeight, fontSize());
     return m_style.lineHeight.value();
-#else // required to round a floating-point number down to the nearest integer value otherwise it will introduce 1px extra height
-    if (m_style.lineHeight.isPercentOrCalculated())
-        return floorf(minimumValueForLength(m_style.lineHeight, fontSize()));
-    return floorf(m_style.lineHeight.value());
-#endif
 }
 
 inline bool InlineLevelBox::hasLineBoxRelativeAlignment() const
 {
-    auto verticalAlignment = verticalAlign().type;
-    return verticalAlignment == VerticalAlign::Top || verticalAlignment == VerticalAlign::Bottom;
+    return WTF::holdsAlternative<CSS::Keyword::Top>(m_style.verticalAlignment)
+        || WTF::holdsAlternative<CSS::Keyword::Bottom>(m_style.verticalAlignment);
 }
 
 inline void InlineLevelBox::AscentAndDescent::round()
@@ -213,4 +210,3 @@ inline void InlineLevelBox::AscentAndDescent::round()
 
 }
 }
-

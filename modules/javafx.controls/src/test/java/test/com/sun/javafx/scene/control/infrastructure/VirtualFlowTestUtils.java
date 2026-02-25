@@ -24,11 +24,8 @@
  */
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.List;
+import com.sun.javafx.scene.control.LabeledText;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
@@ -46,8 +43,13 @@ import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.util.Callback;
-import com.sun.javafx.scene.control.LabeledText;
-import com.sun.javafx.scene.control.VirtualScrollBar;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VirtualFlowTestUtils {
 
@@ -332,11 +334,6 @@ public class VirtualFlowTestUtils {
     }
 
     public static VirtualFlow<?> getVirtualFlow(Control control) {
-        StageLoader sl = null;
-        if (control.getScene() == null) {
-            sl = new StageLoader(control);
-        }
-
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
@@ -346,8 +343,9 @@ public class VirtualFlowTestUtils {
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
 
-        if (sl != null) {
-            sl.dispose();
+        if (flow == null) {
+            throw new IllegalArgumentException("VirtualFlow could not be found for: " + control + ". "
+                    + "Make sure that the Control is inside a Scene.");
         }
 
         return flow;

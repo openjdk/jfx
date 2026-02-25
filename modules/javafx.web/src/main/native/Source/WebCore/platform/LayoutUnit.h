@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2012-2017, Google Inc. All rights reserved.
- * Copyright (c) 2012-2024, Apple Inc. All rights reserved.
+ * Copyright (c) 2012-2024 Google Inc. All rights reserved.
+ * Copyright (c) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@
 #include <limits>
 #include <math.h>
 #include <stdlib.h>
+#include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/MathExtras.h>
 #include <wtf/SaturatedArithmetic.h>
@@ -59,10 +60,10 @@ while (0)
 
 #endif
 
-static const int kLayoutUnitFractionalBits = 6;
-static constexpr int kFixedPointDenominator = 1 << kLayoutUnitFractionalBits;
-const int intMaxForLayoutUnit = INT_MAX / kFixedPointDenominator;
-const int intMinForLayoutUnit = INT_MIN / kFixedPointDenominator;
+inline constexpr int kLayoutUnitFractionalBits = 6;
+inline constexpr int kFixedPointDenominator = 1 << kLayoutUnitFractionalBits;
+inline constexpr int intMaxForLayoutUnit = INT_MAX / kFixedPointDenominator;
+inline constexpr int intMinForLayoutUnit = INT_MIN / kFixedPointDenominator;
 
 class LayoutUnit {
 public:
@@ -87,20 +88,16 @@ public:
     LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
-    friend bool operator==(LayoutUnit, LayoutUnit) = default;
+    friend auto operator<=>(LayoutUnit, LayoutUnit) = default;
 
     static LayoutUnit fromFloatCeil(float value)
     {
-        LayoutUnit v;
-        v.m_value = clampToInteger(ceilf(value * kFixedPointDenominator));
-        return v;
+        return fromRawValue(clampToInteger(ceilf(value * kFixedPointDenominator)));
     }
 
     static LayoutUnit fromFloatFloor(float value)
     {
-        LayoutUnit v;
-        v.m_value = clampToInteger(floorf(value * kFixedPointDenominator));
-        return v;
+        return fromRawValue(clampToInteger(floorf(value * kFixedPointDenominator)));
     }
 
     static LayoutUnit fromFloatRound(float value)
@@ -110,7 +107,7 @@ public:
         return clamp(value - epsilon() / 2.0f);
     }
 
-    static LayoutUnit fromRawValue(int value)
+    static constexpr LayoutUnit fromRawValue(int value)
     {
         LayoutUnit v;
         v.m_value = value;
@@ -143,14 +140,12 @@ public:
 
     LayoutUnit abs() const
     {
-        LayoutUnit returnValue;
-        returnValue.setRawValue(::abs(m_value));
-        return returnValue;
+        return fromRawValue(::abs(m_value));
     }
 
     int ceil() const
     {
-        if (UNLIKELY(m_value >= INT_MAX - kFixedPointDenominator + 1))
+        if (m_value >= INT_MAX - kFixedPointDenominator + 1) [[unlikely]]
             return intMaxForLayoutUnit;
         if (m_value >= 0)
             return (m_value + kFixedPointDenominator - 1) / kFixedPointDenominator;
@@ -164,7 +159,7 @@ public:
 
     int floor() const
     {
-        if (UNLIKELY(m_value <= INT_MIN + kFixedPointDenominator - 1))
+        if (m_value <= INT_MIN + kFixedPointDenominator - 1) [[unlikely]]
             return intMinForLayoutUnit;
         return m_value >> kLayoutUnitFractionalBits;
     }
@@ -183,9 +178,7 @@ public:
     {
         // Add the fraction to the size (as opposed to the full location) to avoid overflows.
         // Compute fraction using the mod operator to preserve the sign of the value as it may affect rounding.
-        LayoutUnit fraction;
-        fraction.setRawValue(rawValue() % kFixedPointDenominator);
-        return fraction;
+        return fromRawValue(rawValue() % kFixedPointDenominator);
     }
 
     bool mightBeSaturated() const
@@ -194,33 +187,25 @@ public:
             || rawValue() == std::numeric_limits<int>::min();
     }
 
-    static float epsilon() { return 1.0f / kFixedPointDenominator; }
+    static constexpr float epsilon() { return 1.0f / kFixedPointDenominator; }
 
-    static const LayoutUnit max()
+    static constexpr LayoutUnit max()
     {
-        LayoutUnit m;
-        m.m_value = std::numeric_limits<int>::max();
-        return m;
+        return fromRawValue(std::numeric_limits<int>::max());
     }
-    static const LayoutUnit min()
+    static constexpr LayoutUnit min()
     {
-        LayoutUnit m;
-        m.m_value = std::numeric_limits<int>::min();
-        return m;
+        return fromRawValue(std::numeric_limits<int>::min());
     }
 
     // Versions of max/min that are slightly smaller/larger than max/min() to allow for roinding without overflowing.
-    static const LayoutUnit nearlyMax()
+    static constexpr LayoutUnit nearlyMax()
     {
-        LayoutUnit m;
-        m.m_value = std::numeric_limits<int>::max() - kFixedPointDenominator / 2;
-        return m;
+        return fromRawValue(std::numeric_limits<int>::max() - kFixedPointDenominator / 2);
     }
-    static const LayoutUnit nearlyMin()
+    static constexpr LayoutUnit nearlyMin()
     {
-        LayoutUnit m;
-        m.m_value = std::numeric_limits<int>::min() + kFixedPointDenominator / 2;
-        return m;
+        return fromRawValue(std::numeric_limits<int>::min() + kFixedPointDenominator / 2);
     }
 
     static LayoutUnit clamp(double value)
@@ -262,129 +247,14 @@ private:
     int m_value;
 };
 
-inline bool operator<=(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() <= b.rawValue();
-}
-
-inline bool operator<=(const LayoutUnit& a, float b)
-{
-    return a.toFloat() <= b;
-}
-
-inline bool operator<=(const LayoutUnit& a, int b)
-{
-    return a <= LayoutUnit(b);
-}
-
-inline bool operator<=(const float a, const LayoutUnit& b)
-{
-    return a <= b.toFloat();
-}
-
-inline bool operator<=(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) <= b;
-}
-
-inline bool operator>=(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() >= b.rawValue();
-}
-
-inline bool operator>=(const LayoutUnit& a, int b)
-{
-    return a >= LayoutUnit(b);
-}
-
-inline bool operator>=(const float a, const LayoutUnit& b)
-{
-    return a >= b.toFloat();
-}
-
-inline bool operator>=(const LayoutUnit& a, float b)
-{
-    return a.toFloat() >= b;
-}
-
-inline bool operator>=(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) >= b;
-}
-
-inline bool operator<(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() < b.rawValue();
-}
-
-inline bool operator<(const LayoutUnit& a, int b)
-{
-    return a < LayoutUnit(b);
-}
-
-inline bool operator<(const LayoutUnit& a, float b)
-{
-    return a.toFloat() < b;
-}
-
-inline bool operator<(const LayoutUnit& a, double b)
-{
-    return a.toDouble() < b;
-}
-
-inline bool operator<(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) < b;
-}
-
-inline bool operator<(const float a, const LayoutUnit& b)
-{
-    return a < b.toFloat();
-}
-
-inline bool operator>(const LayoutUnit& a, const LayoutUnit& b)
-{
-    return a.rawValue() > b.rawValue();
-}
-
-inline bool operator>(const LayoutUnit& a, double b)
-{
-    return a.toDouble() > b;
-}
-
-inline bool operator>(const LayoutUnit& a, float b)
-{
-    return a.toFloat() > b;
-}
-
-inline bool operator>(const LayoutUnit& a, int b)
-{
-    return a > LayoutUnit(b);
-}
-
-inline bool operator>(const int a, const LayoutUnit& b)
-{
-    return LayoutUnit(a) > b;
-}
-
-inline bool operator>(const float a, const LayoutUnit& b)
-{
-    return a > b.toFloat();
-}
-
-inline bool operator>(const double a, const LayoutUnit& b)
-{
-    return a > b.toDouble();
-}
-
 inline bool operator==(const LayoutUnit& a, int b)
 {
     return a == LayoutUnit(b);
 }
 
-inline bool operator==(const int a, const LayoutUnit& b)
+inline auto operator<=>(const LayoutUnit& a, int b)
 {
-    return LayoutUnit(a) == b;
+    return a <=> LayoutUnit(b);
 }
 
 inline bool operator==(const LayoutUnit& a, float b)
@@ -392,9 +262,14 @@ inline bool operator==(const LayoutUnit& a, float b)
     return a.toFloat() == b;
 }
 
-inline bool operator==(const float a, const LayoutUnit& b)
+inline auto operator<=>(const LayoutUnit& a, float b)
 {
-    return a == b.toFloat();
+    return a.toFloat() <=> b;
+}
+
+inline auto operator<=>(const LayoutUnit& a, double b)
+{
+    return a.toDouble() <=> b;
 }
 
 // For multiplication that's prone to overflow, this bounds it to LayoutUnit::max() and ::min()
@@ -408,9 +283,7 @@ inline LayoutUnit boundedMultiply(const LayoutUnit& a, const LayoutUnit& b)
     if (high != low >> 31)
         result = saturated;
 
-    LayoutUnit returnVal;
-    returnVal.setRawValue(static_cast<int>(result));
-    return returnVal;
+    return LayoutUnit::fromRawValue(static_cast<int>(result));
 }
 
 inline LayoutUnit operator*(const LayoutUnit& a, const LayoutUnit& b)
@@ -490,10 +363,8 @@ inline double operator*(const double a, const LayoutUnit& b)
 
 inline LayoutUnit operator/(const LayoutUnit& a, const LayoutUnit& b)
 {
-    LayoutUnit returnVal;
     long long rawVal = static_cast<long long>(kFixedPointDenominator) * a.rawValue() / b.rawValue();
-    returnVal.setRawValue(clampTo<int>(rawVal));
-    return returnVal;
+    return LayoutUnit::fromRawValue(clampTo<int>(rawVal));
 }
 
 inline float operator/(const LayoutUnit& a, float b)
@@ -568,9 +439,7 @@ inline LayoutUnit operator/(unsigned long long a, const LayoutUnit& b)
 
 inline LayoutUnit operator+(const LayoutUnit& a, const LayoutUnit& b)
 {
-    LayoutUnit returnVal;
-    returnVal.setRawValue(saturatedSum<int>(a.rawValue(), b.rawValue()));
-    return returnVal;
+    return LayoutUnit::fromRawValue(saturatedSum<int>(a.rawValue(), b.rawValue()));
 }
 
 inline LayoutUnit operator+(const LayoutUnit& a, int b)
@@ -605,9 +474,7 @@ inline double operator+(const double a, const LayoutUnit& b)
 
 inline LayoutUnit operator-(const LayoutUnit& a, const LayoutUnit& b)
 {
-    LayoutUnit returnVal;
-    returnVal.setRawValue(saturatedDifference<int>(a.rawValue(), b.rawValue()));
-    return returnVal;
+    return LayoutUnit::fromRawValue(saturatedDifference<int>(a.rawValue(), b.rawValue()));
 }
 
 inline LayoutUnit operator-(const LayoutUnit& a, int b)
@@ -641,27 +508,21 @@ inline LayoutUnit operator-(const LayoutUnit& a)
     if (a == LayoutUnit::min())
         return LayoutUnit::max();
 
-    LayoutUnit returnVal;
-    returnVal.setRawValue(-a.rawValue());
-    return returnVal;
+    return LayoutUnit::fromRawValue(-a.rawValue());
 }
 
 // For returning the remainder after a division with integer results.
 inline LayoutUnit intMod(const LayoutUnit& a, const LayoutUnit& b)
 {
     // This calculates the modulo so that: a = static_cast<int>(a / b) * b + intMod(a, b).
-    LayoutUnit returnVal;
-    returnVal.setRawValue(a.rawValue() % b.rawValue());
-    return returnVal;
+    return LayoutUnit::fromRawValue(a.rawValue() % b.rawValue());
 }
 
 inline LayoutUnit operator%(const LayoutUnit& a, const LayoutUnit& b)
 {
     // This calculates the modulo so that: a = (a / b) * b + a % b.
-    LayoutUnit returnVal;
     long long rawVal = (static_cast<long long>(kFixedPointDenominator) * a.rawValue()) % b.rawValue();
-    returnVal.setRawValue(rawVal / kFixedPointDenominator);
-    return returnVal;
+    return LayoutUnit::fromRawValue(rawVal / kFixedPointDenominator);
 }
 
 inline LayoutUnit operator%(const LayoutUnit& a, int b)
@@ -815,7 +676,7 @@ inline bool isIntegerValue(const LayoutUnit value)
 
 inline namespace StringLiterals {
 
-inline LayoutUnit operator"" _lu(unsigned long long value)
+inline LayoutUnit operator""_lu(unsigned long long value)
 {
     return LayoutUnit(value);
 }
@@ -829,7 +690,7 @@ namespace WTF {
 template<> struct DefaultHash<WebCore::LayoutUnit> {
     static unsigned hash(const WebCore::LayoutUnit& p) { return DefaultHash<int>::hash(p.rawValue()); }
     static bool equal(const WebCore::LayoutUnit& a, const WebCore::LayoutUnit& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 // The empty value is INT_MIN, the deleted value is INT_MAX. During the course of layout
@@ -839,12 +700,23 @@ template<> struct HashTraits<WebCore::LayoutUnit> : GenericHashTraits<WebCore::L
     static constexpr bool emptyValueIsZero = false;
     static WebCore::LayoutUnit emptyValue()
     {
-        WebCore::LayoutUnit value;
-        value.setRawValue(std::numeric_limits<int>::min());
-        return value;
+        return WebCore::LayoutUnit::fromRawValue(std::numeric_limits<int>::min());
     }
     static void constructDeletedValue(WebCore::LayoutUnit& slot) { slot.setRawValue(std::numeric_limits<int>::max()); }
     static bool isDeletedValue(WebCore::LayoutUnit value) { return value.rawValue() == std::numeric_limits<int>::max(); }
+};
+
+template<>
+struct MarkableTraits<WebCore::LayoutUnit> {
+    static bool isEmptyValue(WebCore::LayoutUnit value)
+    {
+        return value == WebCore::LayoutUnit(-1);
+    }
+
+    static WebCore::LayoutUnit emptyValue()
+    {
+        return WebCore::LayoutUnit(-1);
+    }
 };
 
 } // namespace WTF

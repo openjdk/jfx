@@ -28,12 +28,16 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
+#include "CSSSerializationContext.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "RenderStyleInlines.h"
+#include "StyleCustomProperty.h"
+#include "StyleExtractor.h"
 #include "StylePropertyShorthand.h"
 #include "StyleScope.h"
+#include <ranges>
 #include <wtf/KeyValuePair.h>
 
 namespace WebCore {
@@ -50,65 +54,80 @@ ComputedStylePropertyMapReadOnly::ComputedStylePropertyMapReadOnly(Element& elem
 
 RefPtr<CSSValue> ComputedStylePropertyMapReadOnly::propertyValue(CSSPropertyID propertyID) const
 {
-    return ComputedStyleExtractor(m_element.ptr()).propertyValue(propertyID, ComputedStyleExtractor::UpdateLayout::Yes, ComputedStyleExtractor::PropertyValueType::Computed);
+    return Style::Extractor { m_element.get() }.propertyValue(propertyID, Style::Extractor::UpdateLayout::Yes, Style::ExtractorState::PropertyValueType::Computed);
 }
 
 String ComputedStylePropertyMapReadOnly::shorthandPropertySerialization(CSSPropertyID propertyID) const
 {
-    auto value = propertyValue(propertyID);
-    return value ? value->cssText() : String();
+    return Style::Extractor { m_element.get() }.propertyValueSerialization(propertyID, CSS::defaultSerializationContext(), Style::Extractor::UpdateLayout::Yes, Style::ExtractorState::PropertyValueType::Computed);
 }
 
 RefPtr<CSSValue> ComputedStylePropertyMapReadOnly::customPropertyValue(const AtomString& property) const
 {
-    return ComputedStyleExtractor(m_element.ptr()).customPropertyValue(property);
+    return Style::Extractor { m_element.get() }.customPropertyValue(property);
 }
 
 unsigned ComputedStylePropertyMapReadOnly::size() const
 {
     // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-size
+    RefPtr element = m_element.get();
+    if (!element)
+        return 0;
 
-    ComputedStyleExtractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
+    Style::Extractor::updateStyleIfNeededForProperty(*element.get(), CSSPropertyCustom);
 
-    auto* style = m_element->computedStyle();
+    auto* style = element->computedStyle();
     if (!style)
         return 0;
 
-    return m_element->document().exposedComputedCSSPropertyIDs().size() + style->inheritedCustomProperties().size() + style->nonInheritedCustomProperties().size();
+    return element->document().exposedComputedCSSPropertyIDs().size() + style->inheritedCustomProperties().size() + style->nonInheritedCustomProperties().size();
 }
 
 Vector<StylePropertyMapReadOnly::StylePropertyMapEntry> ComputedStylePropertyMapReadOnly::entries(ScriptExecutionContext*) const
 {
+    RefPtr element = m_element.get();
+    if (!element)
+        return { };
+
     // https://drafts.css-houdini.org/css-typed-om-1/#the-stylepropertymap
     Vector<StylePropertyMapReadOnly::StylePropertyMapEntry> values;
 
     // Ensure custom property counts are correct.
-    ComputedStyleExtractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
+    Style::Extractor::updateStyleIfNeededForProperty(*element.get(), CSSPropertyCustom);
 
-    auto* style = m_element->computedStyle();
+    auto* style = element->computedStyle();
     if (!style)
         return values;
 
-    Ref document = m_element->protectedDocument();
+    Ref document = element->document();
     const auto& inheritedCustomProperties = style->inheritedCustomProperties();
     const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
     const auto& exposedComputedCSSPropertyIDs = document->exposedComputedCSSPropertyIDs();
     values.reserveInitialCapacity(exposedComputedCSSPropertyIDs.size() + inheritedCustomProperties.size() + nonInheritedCustomProperties.size());
 
-    ComputedStyleExtractor extractor { m_element.ptr() };
+    Style::Extractor computedStyleExtractor { element.get() };
     values.appendContainerWithMapping(exposedComputedCSSPropertyIDs, [&](auto propertyID) {
-        auto value = extractor.propertyValue(propertyID, ComputedStyleExtractor::UpdateLayout::No, ComputedStyleExtractor::PropertyValueType::Computed);
-        return makeKeyValuePair(nameString(propertyID), StylePropertyMapReadOnly::reifyValueToVector(WTFMove(value), propertyID, document));
+        auto value = computedStyleExtractor.propertyValue(propertyID, Style::Extractor::UpdateLayout::No, Style::ExtractorState::PropertyValueType::Computed);
+        return makeKeyValuePair(nameString(propertyID), StylePropertyMapReadOnly::reifyValueToVector(document, WTFMove(value), propertyID));
     });
 
     for (auto* map : { &nonInheritedCustomProperties, &inheritedCustomProperties }) {
         map->forEach([&](auto& it) {
-            values.append(makeKeyValuePair(it.key, StylePropertyMapReadOnly::reifyValueToVector(const_cast<CSSCustomPropertyValue*>(it.value.get()), std::nullopt, document)));
+            values.append(
+                makeKeyValuePair(
+                    it.key,
+                    StylePropertyMapReadOnly::reifyValueToVector(
+                        document,
+                        computedStyleExtractor.customPropertyValue(it.value->name()),
+                        std::nullopt
+                    )
+                )
+            );
             return IterationStatus::Continue;
         });
     }
 
-    std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) {
+    std::ranges::sort(values, [](const auto& a, const auto& b) {
         const auto& nameA = a.key;
         const auto& nameB = b.key;
         if (nameA.startsWith("--"_s))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.oracle.tools.fx.monkey.options;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
+import com.oracle.tools.fx.monkey.util.CustomPane;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 
 /**
@@ -41,7 +42,9 @@ public class GraphicOption extends ObjectOption<Node> {
         addChoice("Wide", ImageTools.createImageView(128, 16));
         addChoice("Tall", ImageTools.createImageView(16, 128));
         addChoice("Large", ImageTools.createImageView(256, 256));
-        // TODO include active content (see tooltip)
+        addChoiceSupplier("Complex Pane", () -> {
+            return CustomPane.create();
+        });
 
         selectInitialValue();
     }

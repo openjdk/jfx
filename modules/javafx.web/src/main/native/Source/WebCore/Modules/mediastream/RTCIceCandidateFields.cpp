@@ -30,21 +30,17 @@
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCUtils.h"
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/pc/webrtc_sdp.h>
 
-ALLOW_COMMA_END
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
 std::optional<RTCIceCandidateFields> parseIceCandidateSDP(const String& sdp)
 {
-    cricket::Candidate candidate;
+    webrtc::Candidate candidate;
     if (!webrtc::ParseCandidate(sdp.utf8().data(), &candidate, nullptr, true))
         return { };
 

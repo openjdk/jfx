@@ -33,6 +33,7 @@
 #include <mutex>
 #include <stdint.h>
 #include <wtf/Atomics.h>
+#include <wtf/Compiler.h>
 #include <wtf/Expected.h>
 #include <wtf/FastTLS.h>
 #include <wtf/Function.h>
@@ -140,7 +141,7 @@ public:
     WTF_EXPORT_PRIVATE static Ref<Thread> create(ASCIILiteral threadName, Function<void()>&&, ThreadType = ThreadType::Unknown, QOS = QOS::UserInitiated, SchedulingPolicy = SchedulingPolicy::Other);
 
     // Returns Thread object.
-    static Thread& current();
+    static Thread& currentSingleton();
 
     // Set of all WTF::Thread created threads.
     WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
@@ -153,7 +154,7 @@ public:
 #if OS(WINDOWS)
     // Returns ThreadIdentifier directly. It is useful if the user only cares about identity
     // of threads. At that time, users should know that holding this ThreadIdentifier does not ensure
-    // that the thread information is alive. While Thread::current() is not safe if it is called
+    // that the thread information is alive. While Thread::currentSingleton() is not safe if it is called
     // from the destructor of the other TLS data, currentID() always returns meaningful thread ID.
     WTF_EXPORT_PRIVATE static ThreadIdentifier currentID();
 
@@ -169,7 +170,7 @@ public:
 
     private:
         static constexpr size_t s_maxKeys = 32;
-        static Atomic<int> s_numberOfKeys;
+        static Atomic<size_t> s_numberOfKeys;
         static std::array<Atomic<DestroyFunction>, s_maxKeys> s_destroyFunctions;
         std::array<void*, s_maxKeys> m_slots { };
     };
@@ -208,6 +209,8 @@ public:
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInteractive(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static void setCurrentThreadIsUserInitiated(int relativePriority = 0);
     WTF_EXPORT_PRIVATE static QOS currentThreadQOS();
+    WTF_EXPORT_PRIVATE static bool currentThreadIsRealtime();
+    bool isRealtime() const { return m_isRealtime; }
 
 #if HAVE(QOS_CLASSES)
     WTF_EXPORT_PRIVATE static void setGlobalMaxQOSClass(qos_class_t);
@@ -378,6 +381,8 @@ protected:
     bool m_isJSThread : 1 { false };
     unsigned m_gcThreadType : 2 { static_cast<unsigned>(GCThreadType::None) };
 
+    bool m_isRealtime : 1 { false };
+
     // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
     // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
     WordLock m_mutex;
@@ -426,19 +431,19 @@ inline Thread* Thread::currentMayBeNull()
 }
 #endif
 
-inline Thread& Thread::current()
+inline Thread& Thread::currentSingleton()
 {
     // WRT WebCore:
-    //    Thread::current() is used on main thread before it could possibly be used
+    //    Thread::currentSingleton() is used on main thread before it could possibly be used
     //    on secondary ones, so there is no need for synchronization here.
     // WRT JavaScriptCore:
     //    Thread::initializeTLSKey() is initially called from initialize(), ensuring
     //    this is initially called in a std::call_once locked context.
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
-    if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
+    if (Thread::s_key == InvalidThreadSpecificKey) [[unlikely]]
         WTF::initialize();
 #endif
-    if (auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); thread) [[likely]]
         return *thread;
     return initializeCurrentTLS();
 }

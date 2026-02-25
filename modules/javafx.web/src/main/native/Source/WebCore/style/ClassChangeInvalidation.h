@@ -37,7 +37,7 @@ namespace Style {
 
 class ClassChangeInvalidation {
 public:
-    ClassChangeInvalidation(Element&, const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses);
+    ClassChangeInvalidation(Ref<Element>&&, const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses);
     ~ClassChangeInvalidation();
 
 private:
@@ -46,15 +46,15 @@ private:
     void invalidateAfterChange();
 
     const bool m_isEnabled;
-    Element& m_element;
+    const Ref<Element> m_element;
 
     Invalidator::MatchElementRuleSets m_beforeChangeRuleSets;
     Invalidator::MatchElementRuleSets m_afterChangeRuleSets;
 };
 
-inline ClassChangeInvalidation::ClassChangeInvalidation(Element& element, const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
-    : m_isEnabled(element.needsStyleInvalidation())
-    , m_element(element)
+inline ClassChangeInvalidation::ClassChangeInvalidation(Ref<Element>&& element, const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
+    : m_isEnabled(element->needsStyleInvalidation())
+    , m_element(WTFMove(element))
 
 {
     if (!m_isEnabled)

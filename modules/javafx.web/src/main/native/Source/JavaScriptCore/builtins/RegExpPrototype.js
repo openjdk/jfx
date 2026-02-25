@@ -24,19 +24,6 @@
  */
 
 @linkTimeConstant
-@constructor
-function RegExpStringIterator(regExp, string, global, fullUnicode)
-{
-    "use strict";
-
-    @putByIdDirectPrivate(this, "regExpStringIteratorRegExp", regExp);
-    @putByIdDirectPrivate(this, "regExpStringIteratorString", string);
-    @putByIdDirectPrivate(this, "regExpStringIteratorGlobal", global);
-    @putByIdDirectPrivate(this, "regExpStringIteratorUnicode", fullUnicode);
-    @putByIdDirectPrivate(this, "regExpStringIteratorDone", false);
-}
-
-@linkTimeConstant
 function advanceStringIndex(string, index, unicode)
 {
     // This function implements AdvanceStringIndex described in ES6 21.2.5.2.3.
@@ -88,13 +75,32 @@ function hasObservableSideEffectsForRegExpMatch(regexp)
     if (regexpExec !== @regExpBuiltinExec)
         return true;
 
+    var regexpFlags = @tryGetById(regexp, "flags");
+    if (regexpFlags !== @regExpProtoFlagsGetter)
+        return true;
+
+    // These are accessed by the builtin flags getter.
     var regexpGlobal = @tryGetById(regexp, "global");
     if (regexpGlobal !== @regExpProtoGlobalGetter)
+        return true;
+    var regexpHasIndices = @tryGetById(regexp, "hasIndices");
+    if (regexpHasIndices !== @regExpProtoHasIndicesGetter)
+        return true;
+    var regexpIgnoreCase = @tryGetById(regexp, "ignoreCase");
+    if (regexpIgnoreCase !== @regExpProtoIgnoreCaseGetter)
+        return true;
+    var regexpMultiline = @tryGetById(regexp, "multiline");
+    if (regexpMultiline !== @regExpProtoMultilineGetter)
+        return true;
+    var regexpSticky = @tryGetById(regexp, "sticky");
+    if (regexpSticky !== @regExpProtoStickyGetter)
+        return true;
+    var regexpDotAll = @tryGetById(regexp, "dotAll");
+    if (regexpDotAll !== @regExpProtoDotAllGetter)
         return true;
     var regexpUnicode = @tryGetById(regexp, "unicode");
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
         return true;
-
     var regexpUnicodeSets = @tryGetById(regexp, "unicodeSets");
     if (regexpUnicodeSets !== @regExpProtoUnicodeSetsGetter)
         return true;
@@ -107,10 +113,13 @@ function matchSlow(regexp, str)
 {
     "use strict";
 
-    if (!regexp.global)
+    var flags = @toString(regexp.flags);
+    var global = @stringIncludesInternal.@call(flags, "g");
+
+    if (!global)
         return @regExpExec(regexp, str);
     
-    var unicode = regexp.unicode;
+    var unicode = @stringIncludesInternal.@call(flags, "u") || @stringIncludesInternal.@call(flags, "v");
     regexp.lastIndex = 0;
     var resultList = [];
 
@@ -175,7 +184,7 @@ function matchAll(strArg)
     var global = @stringIncludesInternal.@call(flags, "g");
     var fullUnicode = @stringIncludesInternal.@call(flags, "u") || @stringIncludesInternal.@call(flags, "v");
 
-    return new @RegExpStringIterator(matcher, string, global, fullUnicode);
+    return @regExpStringIteratorCreate(matcher, string, global, fullUnicode);
 }
 
 @linkTimeConstant
@@ -295,11 +304,12 @@ function replace(strArg, replace)
     if (!functionalReplace)
         replace = @toString(replace);
 
-    var global = regexp.global;
+    var flags = @toString(regexp.flags);
+    var global = @stringIncludesInternal.@call(flags, "g");
     var unicode = false;
 
     if (global) {
-        unicode = regexp.unicode;
+        unicode = @stringIncludesInternal.@call(flags, "u") || @stringIncludesInternal.@call(flags, "v");
         regexp.lastIndex = 0;
     }
 
@@ -381,53 +391,6 @@ function replace(strArg, replace)
         return  accumulatedResult;
 
     return accumulatedResult + @stringSubstring.@call(str, nextSourcePosition);
-}
-
-// 21.2.5.9 RegExp.prototype[@@search] (string)
-@overriddenName="[Symbol.search]"
-function search(strArg)
-{
-    "use strict";
-
-    var regexp = this;
-
-    // Check for observable side effects and call the fast path if there aren't any.
-    if (@isRegExpObject(regexp)
-        && @tryGetById(regexp, "exec") === @regExpBuiltinExec
-        && typeof regexp.lastIndex === "number")
-        return @regExpSearchFast.@call(regexp, strArg);
-
-    // 1. Let rx be the this value.
-    // 2. If Type(rx) is not Object, throw a TypeError exception.
-    if (!@isObject(this))
-        @throwTypeError("RegExp.prototype.@@search requires that |this| be an Object");
-
-    // 3. Let S be ? ToString(string).
-    var str = @toString(strArg)
-
-    // 4. Let previousLastIndex be ? Get(rx, "lastIndex").
-    var previousLastIndex = regexp.lastIndex;
-
-    // 5. If SameValue(previousLastIndex, 0) is false, then
-    // 5.a. Perform ? Set(rx, "lastIndex", 0, true).
-    if (!@sameValue(previousLastIndex, 0))
-        regexp.lastIndex = 0;
-
-    // 6. Let result be ? RegExpExec(rx, S).
-    var result = @regExpExec(regexp, str);
-
-    // 7. Let currentLastIndex be ? Get(rx, "lastIndex").
-    // 8. If SameValue(currentLastIndex, previousLastIndex) is false, then
-    // 8.a. Perform ? Set(rx, "lastIndex", previousLastIndex, true).
-    if (!@sameValue(regexp.lastIndex, previousLastIndex))
-        regexp.lastIndex = previousLastIndex;
-
-    // 9. If result is null, return -1.
-    if (result === null)
-        return -1;
-
-    // 10. Return ? Get(result, "index").
-    return result.index;
 }
 
 @linkTimeConstant
@@ -619,33 +582,3 @@ function split(string, limit)
     return result;
 }
 
-// ES 21.2.5.13 RegExp.prototype.test(string)
-@intrinsic=RegExpTestIntrinsic
-function test(strArg)
-{
-    "use strict";
-
-    var regexp = this;
-
-    // Check for observable side effects and call the fast path if there aren't any.
-    if (@isRegExpObject(regexp)
-        && @tryGetById(regexp, "exec") === @regExpBuiltinExec
-        && typeof regexp.lastIndex === "number")
-        return @regExpTestFast.@call(regexp, strArg);
-
-    // 1. Let R be the this value.
-    // 2. If Type(R) is not Object, throw a TypeError exception.
-    if (!@isObject(regexp))
-        @throwTypeError("RegExp.prototype.test requires that |this| be an Object");
-
-    // 3. Let string be ? ToString(S).
-    var str = @toString(strArg);
-
-    // 4. Let match be ? RegExpExec(R, string).
-    var match = @regExpExec(regexp, str);
-
-    // 5. If match is not null, return true; else return false.
-    if (match !== null)
-        return true;
-    return false;
-}

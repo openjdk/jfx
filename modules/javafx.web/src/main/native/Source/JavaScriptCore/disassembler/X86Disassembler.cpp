@@ -31,13 +31,16 @@
 #include "AssemblyComments.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Zydis.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, void*, void*, const char* prefix, PrintStream& out)
 {
     ZydisDecoder decoder;
-    ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
+    ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
 
     ZydisFormatter formatter;
     ZydisFormatterInit(&formatter, ZYDIS_FORMATTER_STYLE_ATT);
@@ -51,13 +54,14 @@ bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, vo
     const auto* data = codePtr.dataLocation<unsigned char*>();
     ZyanUSize offset = 0;
     ZydisDecodedInstruction instruction;
+    ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
     char formatted[1024];
-    while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data + offset, size - offset, &instruction))) {
-        if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(&formatter, &instruction, formatted, sizeof(formatted), bitwise_cast<unsigned long long>(data + offset))))
-            out.printf("%s%#16llx: %s", prefix, static_cast<unsigned long long>(bitwise_cast<uintptr_t>(data + offset)), formatted);
+    while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, data + offset, size - offset, &instruction, operands))) {
+        if (ZYAN_SUCCESS(ZydisFormatterFormatInstruction(&formatter, &instruction, operands, instruction.operand_count, formatted, sizeof(formatted), std::bit_cast<unsigned long long>(data + offset), nullptr)))
+            out.printf("%s%#16llx: %s", prefix, static_cast<unsigned long long>(std::bit_cast<uintptr_t>(data + offset)), formatted);
         else
-            out.printf("%s%#16llx: failed-to-format", prefix, static_cast<unsigned long long>(bitwise_cast<uintptr_t>(data + offset)));
-        if (auto str = AssemblyCommentRegistry::singleton().comment(reinterpret_cast<void*>(static_cast<unsigned long long>(bitwise_cast<uintptr_t>(data + offset)))))
+            out.printf("%s%#16llx: failed-to-format", prefix, static_cast<unsigned long long>(std::bit_cast<uintptr_t>(data + offset)));
+        if (auto str = AssemblyCommentRegistry::singleton().comment(reinterpret_cast<void*>(std::bit_cast<uintptr_t>(data + offset))))
             out.printf("; %s\n", str->ascii().data());
         else
             out.printf("\n");
@@ -68,5 +72,7 @@ bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, vo
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ZYDIS)

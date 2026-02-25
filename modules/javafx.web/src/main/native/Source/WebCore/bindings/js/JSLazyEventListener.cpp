@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -72,7 +72,7 @@ static TextPosition convertZeroToOne(const TextPosition& position)
 }
 
 JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const URL& sourceURL, const TextPosition& sourcePosition)
-    : JSEventListener(nullptr, arguments.wrapper, true, CreatedFromMarkup::Yes, mainThreadNormalWorld())
+    : JSEventListener(nullptr, arguments.wrapper, true, CreatedFromMarkup::Yes, mainThreadNormalWorldSingleton())
     , m_functionName(arguments.attributeName.localName().string())
     , m_functionParameters(functionParameters(arguments.shouldUseSVGEventName))
     , m_code(arguments.attributeValue)
@@ -137,14 +137,14 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         return nullptr;
 
     ASSERT_WITH_MESSAGE(document->settings().scriptMarkupEnabled(), "Scripting element attributes should have been stripped during parsing");
-    if (UNLIKELY(!document->settings().scriptMarkupEnabled()))
+    if (!document->settings().scriptMarkupEnabled()) [[unlikely]]
         return nullptr;
 
     if (!executionContextDocument->frame())
         return nullptr;
 
     RefPtr isolatedWorld = this->isolatedWorld();
-    if (UNLIKELY(!isolatedWorld))
+    if (!isolatedWorld) [[unlikely]]
         return nullptr;
 
     auto* globalObject = toJSDOMWindow(*executionContextDocument->protectedFrame(), *isolatedWorld);
@@ -171,7 +171,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         lexicalGlobalObject, WTFMove(code), lexicallyScopedFeatures, Identifier::fromString(vm, m_functionName),
         SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document->charset()) },
         m_sourceURL.string(), m_sourceTaintedOrigin, m_sourcePosition, overrideLineNumber, functionConstructorParametersEndPosition);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         reportCurrentException(lexicalGlobalObject);
         scope.clearException();
         return nullptr;
@@ -210,6 +210,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
         sourceURL = arguments.document.url();
     }
 
+    JSLockHolder locker(arguments.document.vm());
     return adoptRef(*new JSLazyEventListener(WTFMove(arguments), sourceURL, position));
 }
 
@@ -230,7 +231,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(LocalDOMWindow& window, 
     ASSERT(window.document());
     auto& document = *window.document();
     ASSERT(document.frame());
-    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
+    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorldSingleton()), document.isSVGDocument() });
 }
 
 } // namespace WebCore

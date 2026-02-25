@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,12 +42,12 @@ public:
     using Base = Plan;
 
     bool hasWork() const final { return !m_completed; }
-    void work(CompilationEffort) final;
+    void work() final;
     bool multiThreaded() const final { return false; }
-    uint32_t functionIndex() const { return m_functionIndex; }
+    FunctionCodeIndex functionIndex() const { return m_functionIndex; }
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, uint32_t functionIndex, CompletionTask&&);
+    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<EntryPlan>&&, FunctionCodeIndex functionIndex, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
@@ -60,8 +60,8 @@ private:
         runCompletionTasks();
     }
 
-    Ref<LLIntPlan> m_plan;
-    uint32_t m_functionIndex;
+    const Ref<EntryPlan> m_plan;
+    FunctionCodeIndex m_functionIndex;
     bool m_completed { false };
 };
 

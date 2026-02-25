@@ -33,6 +33,8 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class JSArrayBufferView;
@@ -85,10 +87,10 @@ public:
 
     size_t byteOffset() const
     {
-        if (UNLIKELY(isDetached()))
+        if (isDetached()) [[unlikely]]
             return 0;
 
-        if (LIKELY(!isResizableOrGrowableShared()))
+        if (!isResizableOrGrowableShared()) [[likely]]
             return byteOffsetRaw();
 
         size_t bufferByteLength = m_buffer->byteLength(std::memory_order_seq_cst);
@@ -98,7 +100,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength) [[unlikely]]
             return 0;
         return byteOffsetRaw();
     }
@@ -107,10 +109,10 @@ public:
 
     size_t byteLength() const
     {
-        if (UNLIKELY(isDetached()))
+        if (isDetached()) [[unlikely]]
             return 0;
 
-        if (LIKELY(!isResizableOrGrowableShared()))
+        if (!isResizableOrGrowableShared()) [[likely]]
             return byteLengthRaw();
 
         size_t bufferByteLength = m_buffer->byteLength(std::memory_order_seq_cst);
@@ -120,7 +122,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength) [[unlikely]]
             return 0;
         if (!isAutoLength())
             return byteLengthRaw();
@@ -266,3 +268,5 @@ bool ArrayBufferView::zeroRangeImpl(size_t byteOffset, size_t rangeByteLength)
 } // namespace JSC
 
 using JSC::ArrayBufferView;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

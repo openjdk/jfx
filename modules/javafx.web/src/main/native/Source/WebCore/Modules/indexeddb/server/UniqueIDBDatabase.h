@@ -30,6 +30,7 @@
 #include "IDBDatabaseInfo.h"
 #include "IDBDatabaseNameAndVersion.h"
 #include "IDBGetResult.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "ServerOpenDBRequest.h"
 #include "UniqueIDBDatabaseTransaction.h"
@@ -38,6 +39,7 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace IDBServer {
@@ -78,7 +80,7 @@ using GetAllResultsCallback = Function<void(const IDBError&, const IDBGetAllResu
 using CountCallback = Function<void(const IDBError&, uint64_t)>;
 
 class UniqueIDBDatabase : public CanMakeWeakPtr<UniqueIDBDatabase> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(UniqueIDBDatabase, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT UniqueIDBDatabase(UniqueIDBDatabaseManager&, const IDBDatabaseIdentifier&);
     UniqueIDBDatabase(UniqueIDBDatabase&) = delete;
@@ -99,10 +101,11 @@ public:
     void deleteObjectStore(UniqueIDBDatabaseTransaction&, const String& objectStoreName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void renameObjectStore(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void clearObjectStore(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
-    void createIndex(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
+    void createIndexAsync(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&);
+    void didGenerateIndexKeyForRecord(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID);
     void deleteIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, const String& indexName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
-    void renameIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&);
+    void renameIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
+    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&);
     void putOrAddAfterSpaceCheck(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&, bool isKeyGenerated, const IndexIDToIndexKeyMap&, const IDBObjectStoreInfo&, SpaceCheckResult);
     void getRecord(const IDBRequestData&, const IDBGetRecordData&, GetResultCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&, GetAllResultsCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
@@ -159,8 +162,10 @@ private:
     void close();
 
     void clearStalePendingOpenDBRequests();
-
     void clearTransactionsOnConnection(UniqueIDBDatabaseConnection&);
+    void createIndexAsyncAfterQuotaCheck(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, SpaceCheckResult);
+    enum class DidCreateIndexInBackingStore : bool { No, Yes };
+    void didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, const IDBError&, DidCreateIndexInBackingStore = DidCreateIndexInBackingStore::Yes);
 
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
     IDBDatabaseIdentifier m_identifier;

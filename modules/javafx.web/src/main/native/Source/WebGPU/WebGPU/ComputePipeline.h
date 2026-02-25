@@ -27,12 +27,13 @@
 
 #import "BindGroupLayout.h"
 #import "Pipeline.h"
+#import "PipelineLayout.h"
 
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
@@ -46,12 +47,12 @@ class Device;
 class PipelineLayout;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepipeline
-class ComputePipeline : public WGPUComputePipelineImpl, public RefCounted<ComputePipeline>, public CanMakeWeakPtr<ComputePipeline> {
+class ComputePipeline : public RefCountedAndCanMakeWeakPtr<ComputePipeline>, public WGPUComputePipelineImpl {
     WTF_MAKE_TZONE_ALLOCATED(ComputePipeline);
 public:
-    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, Device& device)
+    static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, Device& device)
     {
-        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, WTFMove(minimumBufferSizes), device));
+        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, WTFMove(minimumBufferSizes), uniqueId, device));
     }
     static Ref<ComputePipeline> createInvalid(Device& device)
     {
@@ -63,18 +64,20 @@ public:
     Ref<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
     void setLabel(String&&);
 
-    bool isValid() const { return m_computePipelineState; }
+    bool isValid() const { return m_computePipelineState && m_pipelineLayout->isValid(); }
 
     id<MTLComputePipelineState> computePipelineState() const { return m_computePipelineState; }
 
     Device& device() const { return m_device; }
     MTLSize threadsPerThreadgroup() const { return m_threadsPerThreadgroup; }
 
-    PipelineLayout& pipelineLayout() const;
-    const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
+    PipelineLayout& pipelineLayout() const { return m_pipelineLayout; }
+    Ref<PipelineLayout> protectedPipelineLayout() const { return m_pipelineLayout; }
 
+    const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
+    uint64_t uniqueId() const { return m_uniqueId; }
 private:
-    ComputePipeline(id<MTLComputePipelineState>, Ref<PipelineLayout>&&, MTLSize, BufferBindingSizesForPipeline&&, Device&);
+    ComputePipeline(id<MTLComputePipelineState>, Ref<PipelineLayout>&&, MTLSize, BufferBindingSizesForPipeline&&, uint64_t uniqueId, Device&);
     ComputePipeline(Device&);
 
     const id<MTLComputePipelineState> m_computePipelineState { nil };
@@ -83,6 +86,7 @@ private:
     const MTLSize m_threadsPerThreadgroup;
     const Ref<PipelineLayout> m_pipelineLayout;
     const BufferBindingSizesForPipeline m_minimumBufferSizes;
+    const uint64_t m_uniqueId { 0 };
 };
 
 } // namespace WebGPU

@@ -38,6 +38,8 @@
 
 namespace JSC {
 
+static constexpr EncodedJSValue poisonedDeadOSRExitValue = 0xbad0beef;
+
 struct DumpContext;
 struct InlineCallFrame;
 

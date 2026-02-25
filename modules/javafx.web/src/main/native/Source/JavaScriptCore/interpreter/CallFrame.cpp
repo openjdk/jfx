@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CallFrame.h"
 
 #include "CodeBlock.h"
+#include "DebuggerCallFrame.h"
 #include "ExecutableAllocator.h"
 #include "InlineCallFrame.h"
 #include "JSCInlines.h"
@@ -38,6 +39,9 @@
 #include "VMEntryScopeInlines.h"
 #include "WasmContext.h"
 #include <wtf/StringPrintStream.h>
+#include <wtf/URL.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -202,7 +206,7 @@ SourceOrigin CallFrame::callerSourceOrigin(VM& vm)
             // instead of the source origin of the forEach function.
             if (static_cast<FunctionExecutable*>(visitor->codeBlock()->ownerExecutable())->isBuiltinFunction())
                 return IterationStatus::Continue;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case StackVisitor::Frame::CodeType::Eval:
         case StackVisitor::Frame::CodeType::Module:
@@ -285,7 +289,7 @@ void CallFrame::dump(PrintStream& out) const
         case NativeCallee::Category::Wasm: {
 #if ENABLE(WEBASSEMBLY)
             auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
-        out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", Wasm::makeString(wasmCallee->compilationMode()), "]");
+            out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", wasmCallee->compilationMode(), " ", RawPointer(callee().rawPtr()), "]");
             out.print("(JSWebAssemblyInstance: ", RawPointer(wasmInstance()), ")");
 #else
         out.print(RawPointer(returnPCForInspection()));
@@ -300,7 +304,7 @@ void CallFrame::dump(PrintStream& out) const
     }
 
     if (CodeBlock* codeBlock = this->codeBlock()) {
-        out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
+        out.print(codeBlock->inferredNameWithHash(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
 
         out.print("(");
         thisValue().dumpForBacktrace(out);
@@ -312,6 +316,25 @@ void CallFrame::dump(PrintStream& out) const
         }
 
         out.print(")");
+
+        String source = codeBlock->ownerExecutable()->sourceURL();
+        if (!source.isEmpty()) {
+            out.print(" at ");
+
+            URL url = URL(source);
+            if (url.hasPath())
+                out.print(url.lastPathComponent());
+            else
+                out.print(source);
+
+            VM& vm = deprecatedVM();
+
+            if (RefPtr<DebuggerCallFrame> currentDebuggerCallFrame = DebuggerCallFrame::create(vm, const_cast<CallFrame*>(this))) {
+                int lineNumber = currentDebuggerCallFrame->line() + 1;
+                int columnNumber = currentDebuggerCallFrame->column() + 1;
+                out.print(":", lineNumber, ":", columnNumber);
+            }
+        }
 
         return;
     }
@@ -415,7 +438,7 @@ JSWebAssemblyInstance* CallFrame::wasmInstance() const
 {
     ASSERT(callee().isNativeCallee());
 #if USE(JSVALUE32_64)
-    return bitwise_cast<JSWebAssemblyInstance*>(this[static_cast<int>(CallFrameSlot::codeBlock)].asanUnsafePointer());
+    return std::bit_cast<JSWebAssemblyInstance*>(this[static_cast<int>(CallFrameSlot::codeBlock)].asanUnsafePointer());
 #else
     return jsCast<JSWebAssemblyInstance*>(this[static_cast<int>(CallFrameSlot::codeBlock)].jsValue());
 #endif
@@ -424,3 +447,5 @@ JSWebAssemblyInstance* CallFrame::wasmInstance() const
 
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

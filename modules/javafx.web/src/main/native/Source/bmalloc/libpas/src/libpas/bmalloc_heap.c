@@ -32,6 +32,7 @@
 #if PAS_ENABLE_BMALLOC
 
 #include "bmalloc_heap_inlines.h"
+#include "bmalloc_heap_internal.h"
 #include "pas_deallocate.h"
 #include "pas_ensure_heap_forced_into_reserved_memory.h"
 #include "pas_get_allocation_size.h"
@@ -52,15 +53,23 @@ pas_heap bmalloc_common_primitive_heap =
         BMALLOC_HEAP_CONFIG,
         &bmalloc_intrinsic_runtime_config.base);
 
+const bmalloc_type bmalloc_compact_primitive_type = BMALLOC_TYPE_INITIALIZER(1, 1, "Compact Primitive");
+
+pas_primitive_heap_ref bmalloc_compact_primitive_heap_ref =  BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&bmalloc_compact_primitive_type, pas_bmalloc_heap_ref_kind_compact);
+
 pas_allocator_counts bmalloc_allocator_counts;
 
 PAS_NEVER_INLINE void* bmalloc_try_allocate_casual(size_t size, pas_allocation_mode allocation_mode)
 {
+    if (allocation_mode == pas_always_compact_allocation_mode && PAS_USE_COMPACT_ONLY_HEAP)
+        return (void*)bmalloc_try_allocate_auxiliary(&bmalloc_compact_primitive_heap_ref, size, allocation_mode);
     return (void*)bmalloc_try_allocate_impl_casual_case(size, 1, allocation_mode).begin;
 }
 
 PAS_NEVER_INLINE void* bmalloc_allocate_casual(size_t size, pas_allocation_mode allocation_mode)
 {
+    if (allocation_mode == pas_always_compact_allocation_mode && PAS_USE_COMPACT_ONLY_HEAP)
+        return (void*)bmalloc_allocate_auxiliary(&bmalloc_compact_primitive_heap_ref, size, allocation_mode);
     return (void*)bmalloc_allocate_impl_casual_case(size, 1, allocation_mode).begin;
 }
 

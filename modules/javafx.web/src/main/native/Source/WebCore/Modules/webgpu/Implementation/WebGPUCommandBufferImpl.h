@@ -30,13 +30,14 @@
 #include "WebGPUCommandBuffer.h"
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class CommandBufferImpl final : public CommandBuffer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CommandBufferImpl);
 public:
     static Ref<CommandBufferImpl> create(WebGPUPtr<WGPUCommandBuffer>&& commandBuffer, ConvertToBackingContext& convertToBackingContext)
     {
@@ -60,7 +61,7 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUCommandBuffer> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

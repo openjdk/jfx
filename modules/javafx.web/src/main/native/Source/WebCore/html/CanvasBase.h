@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CanvasNoiseInjection.h"
 #include "FloatRect.h"
 #include "IntSize.h"
 #include "PixelBuffer.h"
 #include "TaskSource.h"
 #include <atomic>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -61,8 +63,6 @@ class ScriptExecutionContext;
 class SecurityOrigin;
 class WebCoreOpaqueRoot;
 
-struct CSSParserContext;
-
 enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
 class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
@@ -72,14 +72,9 @@ public:
     virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
-class CanvasBase {
+class CanvasBase : public AbstractRefCountedAndCanMakeWeakPtr<CanvasBase> {
 public:
     virtual ~CanvasBase();
-
-    virtual void refCanvasBase() const = 0;
-    virtual void derefCanvasBase() const = 0;
-    void ref() const { refCanvasBase(); }
-    void deref() const { derefCanvasBase(); }
 
     virtual bool isHTMLCanvasElement() const { return false; }
     virtual bool isOffscreenCanvas() const { return false; }
@@ -109,7 +104,7 @@ public:
 
     virtual CanvasRenderingContext* renderingContext() const = 0;
 
-    virtual const CSSParserContext& cssParserContext() const = 0;
+    const CSSParserContext& cssParserContext() const;
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
@@ -137,7 +132,7 @@ public:
 
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
-    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
+    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
 
     bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
@@ -154,10 +149,13 @@ public:
     void setHasCreatedImageBuffer(bool hasCreatedImageBuffer) { m_hasCreatedImageBuffer = hasCreatedImageBuffer; }
     bool hasCreatedImageBuffer() const { return m_hasCreatedImageBuffer; }
 
+    RefPtr<ImageBuffer> createImageForNoiseInjection() const;
+
 protected:
-    explicit CanvasBase(IntSize, const std::optional<NoiseInjectionHashSalt>&);
+    explicit CanvasBase(IntSize, ScriptExecutionContext&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
+    virtual std::unique_ptr<CSSParserContext> createCSSParserContext() const = 0;
 
     virtual void setSize(const IntSize&);
 
@@ -175,22 +173,33 @@ private:
     mutable RefPtr<ImageBuffer> m_imageBuffer;
     mutable std::atomic<size_t> m_imageBufferMemoryCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 
     String m_lastFillText;
 
+    WeakHashSet<CanvasObserver> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
+
     CanvasNoiseInjection m_canvasNoiseInjection;
     Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
+
     bool m_originClean { true };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     bool m_hasCreatedImageBuffer { false };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
-    WeakHashSet<CanvasObserver> m_observers;
-    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 WebCoreOpaqueRoot root(CanvasBase*);
+
+
+inline const CSSParserContext& CanvasBase::cssParserContext() const
+{
+    if (!m_cssParserContext) [[unlikely]]
+        m_cssParserContext = createCSSParserContext();
+    return *m_cssParserContext;
+}
 
 } // namespace WebCore
 

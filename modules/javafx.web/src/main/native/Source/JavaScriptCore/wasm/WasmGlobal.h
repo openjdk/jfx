@@ -35,6 +35,8 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class JSWebAssemblyGlobal;
@@ -84,7 +86,7 @@ public:
 
     static Global& fromBinding(Value& value)
     {
-        return *bitwise_cast<Global*>(bitwise_cast<uint8_t*>(&value) - offsetOfValue());
+        return *std::bit_cast<Global*>(std::bit_cast<uint8_t*>(&value) - offsetOfValue());
     }
 
     Value* valuePointer() { return &m_value; }
@@ -92,6 +94,7 @@ public:
 private:
     Global(Wasm::Type type, Wasm::Mutability mutability, uint64_t initialValue)
         : m_type(type)
+        , m_typeDefinition(TypeInformation::getRef(type.index))
         , m_mutability(mutability)
     {
         ASSERT(m_type != Types::V128);
@@ -100,6 +103,7 @@ private:
 
     Global(Wasm::Type type, Wasm::Mutability mutability, v128_t initialValue)
         : m_type(type)
+        , m_typeDefinition(TypeInformation::getRef(type.index))
         , m_mutability(mutability)
     {
         ASSERT(m_type == Types::V128);
@@ -107,11 +111,15 @@ private:
     }
 
     Wasm::Type m_type;
+    // If m_type came from a TypeDefinition, the following retains the definition to prevent a dangling m_type.
+    RefPtr<const Wasm::TypeDefinition> m_typeDefinition;
     Wasm::Mutability m_mutability;
     JSWebAssemblyGlobal* m_owner { nullptr };
     Value m_value;
 };
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

@@ -38,20 +38,19 @@
 #include "ScrollingTreeFrameScrollingNode.h"
 #include "ScrollingTreeOverflowScrollProxyNode.h"
 #include "ScrollingTreeOverflowScrollingNode.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeStickyNode);
+
 ScrollingTreeStickyNode::ScrollingTreeStickyNode(ScrollingTree& scrollingTree, ScrollingNodeID nodeID)
-    : ScrollingTreeNode(scrollingTree, ScrollingNodeType::Sticky, nodeID)
+    : ScrollingTreeViewportConstrainedNode(scrollingTree, ScrollingNodeType::Sticky, nodeID)
 {
-    scrollingTree.fixedOrStickyNodeAdded();
 }
 
-ScrollingTreeStickyNode::~ScrollingTreeStickyNode()
-{
-    scrollingTree().fixedOrStickyNodeRemoved();
-}
+ScrollingTreeStickyNode::~ScrollingTreeStickyNode() = default;
 
 bool ScrollingTreeStickyNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
@@ -67,17 +66,27 @@ bool ScrollingTreeStickyNode::commitStateBeforeChildren(const ScrollingStateNode
 
 void ScrollingTreeStickyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "sticky node";
+    ts << "sticky node"_s;
     ScrollingTreeNode::dumpProperties(ts, behavior);
-    ts.dumpProperty("sticky constraints", m_constraints);
+    ts.dumpProperty("sticky constraints"_s, m_constraints);
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerPositions)
-        ts.dumpProperty("layer top left", layerTopLeft());
+        ts.dumpProperty("layer top left"_s, layerTopLeft());
 }
 
-FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
+FloatPoint ScrollingTreeStickyNode::computeClippingLayerPosition() const
+{
+    if (!hasViewportClippingLayer()) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+
+    return computeLayerPosition();
+}
+
+std::optional<FloatRect> ScrollingTreeStickyNode::findConstrainingRect() const
 {
     FloatSize offsetFromStickyAncestors;
-    auto computeLayerPositionForScrollingNode = [&](ScrollingTreeNode& scrollingNode) {
+    auto computeConstrainingRectForScrollingNode = [&](ScrollingTreeNode& scrollingNode) {
         FloatRect constrainingRect;
         if (auto* frameScrollingNode = dynamicDowncast<ScrollingTreeFrameScrollingNode>(scrollingNode))
             constrainingRect = frameScrollingNode->layoutViewport();
@@ -86,39 +95,63 @@ FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
             constrainingRect.move(overflowScrollingNode->scrollDeltaSinceLastCommit());
         }
         constrainingRect.move(-offsetFromStickyAncestors);
-        return m_constraints.layerPositionForConstrainingRect(constrainingRect);
+        return constrainingRect;
     };
 
     for (RefPtr ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
         if (auto* overflowProxyNode = dynamicDowncast<ScrollingTreeOverflowScrollProxyNode>(*ancestor)) {
-            auto overflowNode = scrollingTree().nodeForID(overflowProxyNode->overflowScrollingNodeID());
+            auto overflowNode = scrollingTree()->nodeForID(overflowProxyNode->overflowScrollingNodeID());
             if (!overflowNode)
                 break;
 
-            return computeLayerPositionForScrollingNode(*overflowNode);
+            return computeConstrainingRectForScrollingNode(*overflowNode);
         }
 
         if (is<ScrollingTreeScrollingNode>(*ancestor))
-            return computeLayerPositionForScrollingNode(*ancestor);
+            return computeConstrainingRectForScrollingNode(*ancestor);
 
         if (auto* stickyNode = dynamicDowncast<ScrollingTreeStickyNode>(*ancestor))
             offsetFromStickyAncestors += stickyNode->scrollDeltaSinceLastCommit();
 
         if (is<ScrollingTreeFixedNode>(*ancestor)) {
             // FIXME: Do we need scrolling tree nodes at all for nested cases?
-            return m_constraints.layerPositionAtLastLayout();
+            return std::nullopt;
         }
     }
     ASSERT_NOT_REACHED();
-    return m_constraints.layerPositionAtLastLayout();
+    return std::nullopt;
+}
+
+std::pair<std::optional<FloatRect>, FloatPoint> ScrollingTreeStickyNode::computeConstrainingRectAndAnchorLayerPosition() const
+{
+    if (auto constrainingRect = findConstrainingRect())
+        return { constrainingRect, m_constraints.anchorLayerPositionForConstrainingRect(*constrainingRect) };
+
+    return { std::nullopt, m_constraints.layerPositionAtLastLayout() };
 }
 
 FloatSize ScrollingTreeStickyNode::scrollDeltaSinceLastCommit() const
 {
-    auto layerPosition = computeLayerPosition();
-    return layerPosition - m_constraints.layerPositionAtLastLayout();
+    auto anchorLayerPosition = computeConstrainingRectAndAnchorLayerPosition().second;
+    return anchorLayerPosition - m_constraints.anchorLayerPositionAtLastLayout();
+}
+
+bool ScrollingTreeStickyNode::isCurrentlySticking() const
+{
+    auto constrainingRect = findConstrainingRect();
+    return constrainingRect && isCurrentlySticking(*constrainingRect);
+}
+
+bool ScrollingTreeStickyNode::isCurrentlySticking(const FloatRect& constrainingRect) const
+{
+    auto stickyOffset = m_constraints.computeStickyOffset(constrainingRect);
+    auto stickyRect = m_constraints.stickyBoxRect();
+    auto containingRect = m_constraints.containingBlockRect();
+
+    // FIXME: This should also account for horizontal scrolling.
+    return stickyOffset.height() > 0 && stickyOffset.height() < containingRect.height() - stickyRect.height();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
+#endif // ENABLE(ASYNC_SCROLLING)

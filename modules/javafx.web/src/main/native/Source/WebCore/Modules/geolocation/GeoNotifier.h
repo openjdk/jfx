@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011, 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright 2010, The Android Open Source Project
  *
  * Redistribution and use in source and binary forms, with or without
@@ -63,14 +63,12 @@ public:
     void timerFired();
     bool hasZeroTimeout() const;
 
-    Ref<PositionCallback> protectedSuccessCallback() { return m_successCallback; }
-
 private:
     GeoNotifier(Geolocation&, Ref<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, PositionOptions&&);
 
-    Ref<Geolocation> m_geolocation;
-    Ref<PositionCallback> m_successCallback;
-    RefPtr<PositionErrorCallback> m_errorCallback;
+    const Ref<Geolocation> m_geolocation;
+    const Ref<PositionCallback> m_successCallback;
+    const RefPtr<PositionErrorCallback> m_errorCallback;
     PositionOptions m_options;
     Timer m_timer;
     RefPtr<GeolocationPositionError> m_fatalError;

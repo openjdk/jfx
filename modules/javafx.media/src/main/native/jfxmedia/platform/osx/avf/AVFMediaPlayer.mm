@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -766,66 +766,80 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader
         shouldWaitForLoadingOfRequestedResource:
         (AVAssetResourceLoadingRequest *)loadingRequest {
-    AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
-    AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
+    @synchronized(self) {
+        AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
+        AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
 
-    if (locatorStream == NULL) {
-        return NO;
-    }
-
-    if (contentRequest != nil) {
-        contentRequest.contentType = [self getContentTypeFromURL:loadingRequest.request.URL.absoluteString];
-        contentRequest.contentLength = locatorStream->GetSizeHint();
-        contentRequest.byteRangeAccessSupported = YES;
-    }
-
-    if (dataRequest != nil) {
-        long position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
-        if (position != dataRequest.requestedOffset) {
+        if (locatorStream == NULL) {
             return NO;
         }
 
-        // If requestsAllDataToEndOfResource is YES, than requestedLength is
-        // invalid and we need to provide all data to the end of file.
-        long requestedLength = 0;
-        if (dataRequest.requestsAllDataToEndOfResource) {
-           int64_t sizeHint = locatorStream->GetSizeHint();
-           requestedLength = sizeHint - dataRequest.requestedOffset;
-        } else {
-           requestedLength = dataRequest.requestedLength;
+        if (contentRequest != nil) {
+            contentRequest.contentType = [self getContentTypeFromURL:loadingRequest.request.URL.absoluteString];
+            contentRequest.contentLength = locatorStream->GetSizeHint();
+            contentRequest.byteRangeAccessSupported = YES;
         }
 
-        // Do not provide more then MAX_READ_SIZE at one call, otherwise
-        // AVFoundation might fail if we provide too much data.
-        // We will be requested again if not all data provided.
-        if (requestedLength > MAX_READ_SIZE) {
-           requestedLength = MAX_READ_SIZE;
-        }
-
-        NSMutableData* readData = nil;
-        while (requestedLength > 0) {
-            unsigned int blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
-            if (blockSize <= 0) {
-                break;
+        if (dataRequest != nil) {
+            // If requestsAllDataToEndOfResource is YES, than requestedLength is
+            // invalid and we need to provide all data to the end of file.
+            long requestedLength = 0;
+            if (dataRequest.requestsAllDataToEndOfResource) {
+               int64_t sizeHint = locatorStream->GetSizeHint();
+               requestedLength = sizeHint - dataRequest.requestedOffset;
+            } else {
+                requestedLength = dataRequest.requestedLength;
             }
 
-            unsigned int readSize =
-                    (blockSize > (unsigned int)dataRequest.requestedLength) ?
-                    (unsigned int)dataRequest.requestedLength : blockSize;
-            readData = [NSMutableData dataWithLength:readSize];
+            // Do not provide more then MAX_READ_SIZE at one call, otherwise
+            // AVFoundation might fail if we provide too much data.
+            // We will be requested again if not all data provided.
+            if (requestedLength > MAX_READ_SIZE) {
+                requestedLength = MAX_READ_SIZE;
+            }
 
-            locatorStream->GetCallbacks()->CopyBlock((void*)[readData bytes], readSize);
-            [loadingRequest.dataRequest respondWithData:readData];
+            NSMutableData* readData = nil;
+            bool isRandomAccess = locatorStream->GetCallbacks()->IsRandomAccess();
+            int64_t position = -1;
+            if (isRandomAccess) {
+                position = dataRequest.requestedOffset;
+            } else {
+                position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
+                if (position != dataRequest.requestedOffset) {
+                    return NO;
+                }
+            }
 
-            requestedLength -= readSize;
+            while (requestedLength > 0) {
+                unsigned int blockSize = -1;
+                if (isRandomAccess) {
+                    blockSize = locatorStream->GetCallbacks()->ReadBlock(position, requestedLength);
+                } else {
+                    blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
+                }
+                if (blockSize <= 0) {
+                    break;
+                }
+
+                unsigned int readSize =
+                        (blockSize > (unsigned int)dataRequest.requestedLength) ?
+                        (unsigned int)dataRequest.requestedLength : blockSize;
+                readData = [NSMutableData dataWithLength:readSize];
+
+                locatorStream->GetCallbacks()->CopyBlock((void*)[readData bytes], readSize);
+                [loadingRequest.dataRequest respondWithData:readData];
+
+                requestedLength -= readSize;
+                position += readSize;
+            }
+
+            [loadingRequest finishLoading];
+
+            return YES;
         }
 
-        [loadingRequest finishLoading];
-
-        return YES;
+        return NO;
     }
-
-    return NO;
 }
 
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader

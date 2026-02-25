@@ -66,7 +66,7 @@ public:
     ~Type() = default;
 
     static const unsigned numberOfPrimitiveTypes = V128 + 1;
-    static Type tupleFromIndex(unsigned index) { ASSERT(!(index & tupleFlag)); return bitwise_cast<Type>(index | tupleFlag); }
+    static Type tupleFromIndex(unsigned index) { ASSERT(!(index & tupleFlag)); return std::bit_cast<Type>(index | tupleFlag); }
 
     TypeKind kind() const { return m_kind & tupleFlag ? Tuple : m_kind; }
     uint32_t tupleIndex() const { ASSERT(m_kind & tupleFlag); return m_kind & tupleIndexMask; }
@@ -139,6 +139,11 @@ constexpr Type pointerType()
 {
     if (is32Bit())
         return Int32;
+    return Int64;
+}
+
+constexpr Type wasmRefType()
+{
     return Int64;
 }
 

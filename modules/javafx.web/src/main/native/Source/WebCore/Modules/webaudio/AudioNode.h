@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,6 @@
 #include "ChannelCountMode.h"
 #include "ChannelInterpretation.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 
@@ -38,12 +36,13 @@
 namespace WebCore {
 
 class AudioNodeInput;
-struct AudioNodeOptions;
 class AudioNodeOutput;
 class AudioParam;
 class BaseAudioContext;
+struct AudioNodeOptions;
+template<typename> class ExceptionOr;
 
-enum class NoiseInjectionPolicy : bool;
+enum class NoiseInjectionPolicy : uint8_t;
 
 // An AudioNode is the basic building block for handling audio within an AudioContext.
 // It may be an audio source, an intermediate processing module, or an audio destination.
@@ -197,7 +196,7 @@ public:
     bool isTailProcessing() const { return m_isTailProcessing; }
     void setIsTailProcessing(bool isTailProcessing) { m_isTailProcessing = isTailProcessing; }
 
-    NoiseInjectionPolicy noiseInjectionPolicy() const;
+    OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const;
     virtual float noiseInjectionMultiplier() const { return 0; }
 
 protected:
@@ -227,7 +226,7 @@ protected:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "AudioNode"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -237,7 +236,7 @@ protected:
     virtual void updatePullStatus() { }
 
 private:
-    using WeakOrStrongContext = std::variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>>;
+    using WeakOrStrongContext = Variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>>;
     static WeakOrStrongContext toWeakOrStrongContext(BaseAudioContext&, NodeType);
 
     // EventTarget
@@ -275,7 +274,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     mutable Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
 
     unsigned m_channelCount { 2 };
@@ -286,14 +285,14 @@ private:
 template<typename T> struct AudioNodeConnectionRefDerefTraits {
     static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->incrementConnectionCount();
         return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->decrementConnectionCount();
     }
 };

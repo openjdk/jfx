@@ -31,21 +31,29 @@
 #include <wtf/RefCounted.h>
 #include <wtf/Ref.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleBackgroundData);
 class StyleBackgroundData : public RefCounted<StyleBackgroundData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleBackgroundData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleBackgroundData, StyleBackgroundData);
 public:
     static Ref<StyleBackgroundData> create() { return adoptRef(*new StyleBackgroundData); }
     Ref<StyleBackgroundData> copy() const;
 
     bool operator==(const StyleBackgroundData&) const;
 
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleBackgroundData&) const;
+#endif
+
     bool isEquivalentForPainting(const StyleBackgroundData&, bool currentColorDiffers) const;
 
     DataRef<FillLayer> background;
-    StyleColor color;
+    Style::Color color;
     OutlineValue outline;
 
     void dump(TextStream&, DumpStyleValues = DumpStyleValues::All) const;
@@ -53,6 +61,8 @@ public:
 private:
     StyleBackgroundData();
     StyleBackgroundData(const StyleBackgroundData&);
+
+    bool containsCurrentColor() const;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleBackgroundData&);

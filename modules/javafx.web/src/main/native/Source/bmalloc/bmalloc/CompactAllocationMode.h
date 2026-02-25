@@ -27,16 +27,19 @@
 
 #include "BAssert.h"
 #include "BInline.h"
+#include <cstdint>
 
 #if BUSE(LIBPAS)
+BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "pas_allocation_mode.h"
+BALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
 
 namespace bmalloc {
 
-enum class CompactAllocationMode {
-    Compact,
-    NonCompact
+enum class CompactAllocationMode : uint8_t {
+    NonCompact,
+    Compact
 };
 
 static constexpr unsigned numAllocationModes = 2;
@@ -46,10 +49,10 @@ static constexpr unsigned numAllocationModes = 2;
 BINLINE constexpr pas_allocation_mode asPasAllocationMode(CompactAllocationMode mode)
 {
     switch (mode) {
-    case CompactAllocationMode::Compact:
-        return pas_compact_allocation_mode;
     case CompactAllocationMode::NonCompact:
         return pas_non_compact_allocation_mode;
+    case CompactAllocationMode::Compact:
+        return pas_always_compact_allocation_mode;
     }
     RELEASE_BASSERT_NOT_REACHED();
 }

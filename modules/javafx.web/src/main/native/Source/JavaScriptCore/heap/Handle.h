@@ -115,6 +115,8 @@ public:
         setSlot(o.slot());
     }
 
+    virtual ~Handle() = default;
+
     void swap(Handle& other) { HandleBase::swap(other); }
 
     ExternalType get() const { return HandleTypes<T>::getFromSlot(this->slot()); }
@@ -148,11 +150,6 @@ template <typename T, typename U> inline bool operator==(const Handle<T>& a, con
 template <typename T, typename U> inline bool operator==(const Handle<T>& a, U* b)
 {
     return a.get() == b;
-}
-
-template <typename T, typename U> inline bool operator==(T* a, const Handle<U>& b)
-{
-    return a == b.get();
 }
 
 } // namespace JSC

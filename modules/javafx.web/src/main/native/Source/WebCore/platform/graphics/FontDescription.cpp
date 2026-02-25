@@ -39,7 +39,7 @@ namespace WebCore {
 FontDescription::FontDescription()
     : m_variantAlternates(FontCascadeDescription::initialVariantAlternates())
     , m_fontPalette({ FontPalette::Type::Normal, nullAtom() })
-    , m_fontSelectionRequest { FontCascadeDescription::initialWeight(), FontCascadeDescription::initialStretch(), FontCascadeDescription::initialItalic() }
+    , m_fontSelectionRequest { FontCascadeDescription::initialWeight(), FontCascadeDescription::initialWidth(), FontCascadeDescription::initialItalic() }
     , m_orientation(enumToUnderlyingType(FontOrientation::Horizontal))
     , m_nonCJKGlyphOrientation(enumToUnderlyingType(NonCJKGlyphOrientation::Mixed))
     , m_widthVariant(enumToUnderlyingType(FontWidthVariant::RegularWidth))
@@ -107,7 +107,7 @@ void FontDescription::setSpecifiedLocale(const AtomString& locale)
 {
     ASSERT(isMainThread());
     m_specifiedLocale = locale;
-    m_script = localeToScriptCodeForFontSelection(m_specifiedLocale);
+    m_script = localeToScriptCode(m_specifiedLocale);
     m_locale = m_script == USCRIPT_HAN ? specializedChineseLocale() : m_specifiedLocale;
 }
 

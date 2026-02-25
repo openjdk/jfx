@@ -36,8 +36,11 @@
 #include "Notification.h"
 
 #include "DedicatedWorkerGlobalScope.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindow.h"
@@ -118,7 +121,7 @@ ExceptionOr<Ref<Notification>> Notification::createForServiceWorker(ScriptExecut
 Ref<Notification> Notification::create(ScriptExecutionContext& context, NotificationData&& data)
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, { }, WTFMove(data.defaultActionURL) };
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, data.navigateURL.string() };
 #else
     Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent };
 #endif
@@ -134,8 +137,8 @@ Ref<Notification> Notification::create(ScriptExecutionContext& context, const UR
     Options options;
     if (payload.options) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { }, { } };
-        options.defaultActionURL = payload.defaultActionURL;
+        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { } };
+        options.navigate = payload.defaultActionURL.string();
 #else
         options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent };
 #endif
@@ -181,12 +184,10 @@ Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier
         RELEASE_ASSERT_NOT_REACHED();
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    if (options.defaultActionURL.isValid())
-        m_defaultActionURL = WTFMove(options.defaultActionURL).isolatedCopy();
-    else if (!options.defaultAction.isEmpty()) {
-        auto defaultActionURL = context.completeURL(WTFMove(options.defaultAction).isolatedCopy());
-        if (defaultActionURL.isValid())
-            m_defaultActionURL = WTFMove(defaultActionURL);
+    if (!options.navigate.isEmpty()) {
+        auto navigate = context.completeURL(WTFMove(options.navigate).isolatedCopy());
+        if (navigate.isValid())
+            m_navigate = WTFMove(navigate);
     }
 #endif
 
@@ -219,8 +220,8 @@ void Notification::stopResourcesLoader()
 
 void Notification::showSoon()
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
-        show();
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [](auto& notification) {
+        notification.show();
     });
 }
 
@@ -262,7 +263,7 @@ void Notification::show(CompletionHandler<void()>&& callback)
     // Wait for any fetches to complete and notification's image resource, icon resource, and badge resource to be set (if any),
     // as well as the icon resources for the notification's actions (if any).
     m_resourcesLoader = makeUnique<NotificationResourcesLoader>(*this);
-    m_resourcesLoader->start([this, client, callback = scope.release()](RefPtr<NotificationResources>&& resources) mutable {
+    m_resourcesLoader->start([this, protectedThis = Ref { *this }, client, callback = scope.release()](RefPtr<NotificationResources>&& resources) mutable {
         CompletionHandlerCallingScope scope { WTFMove(callback) };
 
         RefPtr context = scriptExecutionContext();
@@ -346,9 +347,9 @@ void Notification::dispatchClickEvent()
     ASSERT(m_notificationSource != NotificationSource::ServiceWorker);
     ASSERT(!isPersistent());
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [](auto& notification) {
         WindowFocusAllowedIndicator windowFocusAllowed;
-        dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        notification.dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 
@@ -399,9 +400,9 @@ auto Notification::permission(ScriptExecutionContext& context) -> Permission
 void Notification::requestPermission(Document& document, RefPtr<NotificationPermissionCallback>&& callback, Ref<DeferredPromise>&& promise)
 {
     auto resolvePromiseAndCallback = [document = Ref { document }, callback = WTFMove(callback), promise = WTFMove(promise)](Permission permission) mutable {
-        document->eventLoop().queueTask(TaskSource::DOMManipulation, [callback = WTFMove(callback), promise = WTFMove(promise), permission]() mutable {
+        document->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [callback = WTFMove(callback), promise = WTFMove(promise), permission]() mutable {
             if (callback)
-                callback->handleEvent(permission);
+                callback->invoke(permission);
             promise->resolve<IDLEnumeration<NotificationPermission>>(permission);
         });
     };
@@ -415,7 +416,13 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
         return resolvePromiseAndCallback(Permission::Denied);
     }
 
-    RefPtr window = document.frame() ? document.frame()->window() : nullptr;
+    if (!document.isSameOriginAsTopDocument()) {
+        document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "The Notification permission may only be requested in a browsing context with the same security origin as the top level browsing context."_s);
+        return resolvePromiseAndCallback(Permission::Denied);
+    }
+
+    RefPtr frame = document.frame();
+    RefPtr window = frame ? frame->window() : nullptr;
     if (!window || !window->consumeTransientActivation()) {
         document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Notification prompting can only be done from a user gesture."_s);
         return resolvePromiseAndCallback(Permission::Denied);
@@ -443,13 +450,13 @@ bool Notification::virtualHasPendingActivity() const
 
 NotificationData Notification::data() const
 {
-    auto& context = *scriptExecutionContext();
-    auto sessionID = context.sessionID();
+    Ref context = *scriptExecutionContext();
+    auto sessionID = context->sessionID();
     RELEASE_ASSERT(sessionID);
 
     return {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        m_defaultActionURL,
+        m_navigate,
 #else
         { },
 #endif
@@ -459,10 +466,10 @@ NotificationData Notification::data() const
         m_tag,
         m_lang,
         m_direction,
-        scriptExecutionContext()->securityOrigin()->toString(),
+        context->protectedSecurityOrigin()->toString(),
         m_serviceWorkerRegistrationURL,
         identifier(),
-        context.identifier(),
+        context->identifier(),
         *sessionID,
         MonotonicTime::now(),
         m_dataForBindings->wireBytes(),
@@ -484,7 +491,8 @@ void Notification::ensureOnNotificationThread(ScriptExecutionContextIdentifier c
 
 void Notification::ensureOnNotificationThread(const NotificationData& notification, Function<void(Notification*)>&& task)
 {
-    ensureOnNotificationThread(notification.contextIdentifier, notification.notificationID, WTFMove(task));
+    RELEASE_ASSERT(notification.contextIdentifier);
+    ensureOnNotificationThread(*notification.contextIdentifier, notification.notificationID, WTFMove(task));
 }
 
 } // namespace WebCore

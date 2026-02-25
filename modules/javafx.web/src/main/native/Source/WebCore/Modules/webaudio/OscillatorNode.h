@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,8 +60,8 @@ private:
     // Returns true if there are sample-accurate timeline parameter changes.
     bool calculateSampleAccuratePhaseIncrements(size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
 
-    double processARate(int, float* destP, double virtualReadIndex, float* phaseIncrements) WTF_REQUIRES_LOCK(m_processLock);
-    double processKRate(int, float* destP, double virtualReadIndex) WTF_REQUIRES_LOCK(m_processLock);
+    double processARate(int, std::span<float> destP, double virtualReadIndex, std::span<float> phaseIncrements) WTF_REQUIRES_LOCK(m_processLock);
+    double processKRate(int, std::span<float> destP, double virtualReadIndex) WTF_REQUIRES_LOCK(m_processLock);
 
     bool propagatesSilence() const final;
 

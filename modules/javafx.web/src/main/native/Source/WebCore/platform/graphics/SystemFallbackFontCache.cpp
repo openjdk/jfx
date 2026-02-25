@@ -32,13 +32,25 @@
 
 #include "FontCache.h"
 #include "FontCascade.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SystemFallbackFontCache);
+
 SystemFallbackFontCache& SystemFallbackFontCache::forCurrentThread()
 {
-    return FontCache::forCurrentThread().systemFallbackFontCache();
+    return FontCache::forCurrentThread()->systemFallbackFontCache();
+}
+
+SystemFallbackFontCache* SystemFallbackFontCache::forCurrentThreadIfExists()
+{
+    CheckedPtr cache = FontCache::forCurrentThreadIfExists();
+    if (!cache)
+        return nullptr;
+
+    return &cache->systemFallbackFontCache();
 }
 
 RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacterCluster(const Font* font, StringView characterCluster, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont)
@@ -67,10 +79,10 @@ RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacterCluster(cons
             break;
         }
 
-        auto fallbackFont = FontCache::forCurrentThread().systemFallbackForCharacterCluster(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, stringBuilder).get();
+        RefPtr fallbackFont = FontCache::forCurrentThread()->systemFallbackForCharacterCluster(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, stringBuilder);
         if (fallbackFont)
             fallbackFont->setIsUsedInSystemFallbackFontCache();
-        return fallbackFont;
+        return fallbackFont.get();
     }).iterator->value;
 }
 

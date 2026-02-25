@@ -32,8 +32,13 @@
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace Inspector {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::BaseConnection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RemoteInspectorSocketEndpoint::ClientConnection);
 
 RemoteInspectorSocketEndpoint& RemoteInspectorSocketEndpoint::singleton()
 {
@@ -61,7 +66,7 @@ RemoteInspectorSocketEndpoint::RemoteInspectorSocketEndpoint()
 
 RemoteInspectorSocketEndpoint::~RemoteInspectorSocketEndpoint()
 {
-    ASSERT(m_workerThread.get() != &Thread::current());
+    ASSERT(m_workerThread.get() != &Thread::currentSingleton());
 
     m_shouldAbortWorkerThread = true;
     wakeupWorkerThread();
@@ -278,7 +283,7 @@ void RemoteInspectorSocketEndpoint::recvIfEnabled(ConnectionID id)
     Locker locker { m_connectionsLock };
     if (const auto& connection = m_clients.get(id)) {
         Vector<uint8_t> recvBuffer(Socket::BufferSize);
-        if (auto readSize = Socket::read(connection->socket, recvBuffer.data(), recvBuffer.size())) {
+        if (auto readSize = Socket::read(connection->socket, recvBuffer.mutableSpan().data(), recvBuffer.size())) {
             if (*readSize > 0) {
                 recvBuffer.shrink(*readSize);
                 locker.unlockEarly();
@@ -305,7 +310,7 @@ void RemoteInspectorSocketEndpoint::sendIfEnabled(ConnectionID id)
         if (buffer.isEmpty())
             return;
 
-        if (auto writeSize = Socket::write(connection->socket, buffer.data(), std::min(buffer.size(), Socket::BufferSize))) {
+        if (auto writeSize = Socket::write(connection->socket, buffer.span().data(), std::min(buffer.size(), Socket::BufferSize))) {
             auto size = *writeSize;
             if (size == buffer.size()) {
                 buffer.clear();
@@ -313,7 +318,7 @@ void RemoteInspectorSocketEndpoint::sendIfEnabled(ConnectionID id)
             }
 
             if (size > 0)
-                buffer.remove(0, size);
+                buffer.removeAt(0, size);
         }
 
         Socket::markWaitingWritable(connection->poll);
@@ -337,7 +342,7 @@ void RemoteInspectorSocketEndpoint::send(ConnectionID id, std::span<const uint8_
             return;
 
         // Copy remaining data to send later.
-        connection->sendBuffer.appendRange(data.data() + offset, data.data() + data.size());
+        connection->sendBuffer.append(data.subspan(offset));
         Socket::markWaitingWritable(connection->poll);
 
         wakeupWorkerThread();

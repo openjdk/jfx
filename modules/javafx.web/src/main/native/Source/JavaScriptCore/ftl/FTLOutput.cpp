@@ -190,6 +190,11 @@ LValue Output::neg(LValue value)
     return m_block->appendNew<Value>(m_proc, B3::Neg, origin(), value);
 }
 
+LValue Output::purifyNaN(LValue value)
+{
+    return m_block->appendNew<Value>(m_proc, B3::PurifyNaN, origin(), value);
+}
+
 LValue Output::doubleAdd(LValue left, LValue right)
 {
     return m_block->appendNew<B3::Value>(m_proc, B3::Add, origin(), left, right);
@@ -292,19 +297,9 @@ LValue Output::doubleFloor(LValue operand)
     return m_block->appendNew<B3::Value>(m_proc, B3::Floor, origin(), operand);
 }
 
-LValue Output::doubleTrunc(LValue value)
+LValue Output::doubleTrunc(LValue operand)
 {
-    if (MacroAssembler::supportsFloatingPointRounding()) {
-        PatchpointValue* result = patchpoint(Double);
-        result->append(value, ValueRep::SomeRegister);
-        result->setGenerator(
-            [] (CCallHelpers& jit, const StackmapGenerationParams& params) {
-                jit.roundTowardZeroDouble(params[1].fpr(), params[0].fpr());
-            });
-        result->effects = Effects::none();
-        return result;
-    }
-    return callWithoutSideEffects(Double, Math::truncDouble, value);
+    return m_block->appendNew<B3::Value>(m_proc, B3::FTrunc, origin(), operand);
 }
 
 LValue Output::doubleUnary(DFG::Arith::UnaryType type, LValue value)
@@ -342,7 +337,7 @@ LValue Output::doubleMin(LValue lhs, LValue rhs)
     return m_block->appendNew<B3::Value>(m_proc, B3::FMin, origin(), lhs, rhs);
 }
 
-LValue Output::doubleToInt(LValue value)
+LValue Output::doubleToInt32(LValue value)
 {
     PatchpointValue* result = patchpoint(Int32);
     result->append(value, ValueRep::SomeRegister);
@@ -366,7 +361,7 @@ LValue Output::doubleToInt64(LValue value)
     return result;
 }
 
-LValue Output::doubleToUInt(LValue value)
+LValue Output::doubleToUInt32(LValue value)
 {
     PatchpointValue* result = patchpoint(Int32);
     result->append(value, ValueRep::SomeRegister);
@@ -955,13 +950,13 @@ TypedPointer Output::absolute(const void* address)
 
 void Output::incrementSuperSamplerCount()
 {
-    TypedPointer counter = absolute(bitwise_cast<void*>(&g_superSamplerCount));
+    TypedPointer counter = absolute(std::bit_cast<void*>(&g_superSamplerCount));
     store32(add(load32(counter), int32One), counter);
 }
 
 void Output::decrementSuperSamplerCount()
 {
-    TypedPointer counter = absolute(bitwise_cast<void*>(&g_superSamplerCount));
+    TypedPointer counter = absolute(std::bit_cast<void*>(&g_superSamplerCount));
     store32(sub(load32(counter), int32One), counter);
 }
 

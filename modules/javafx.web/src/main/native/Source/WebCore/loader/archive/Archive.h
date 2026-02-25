@@ -42,10 +42,12 @@ public:
     virtual bool shouldUseMainResourceEncoding() const = 0;
     virtual bool shouldUseMainResourceURL() const = 0;
 
-    ArchiveResource* mainResource() { return m_mainResource.get(); }
+    ArchiveResource* mainResource() const { return m_mainResource.get(); }
     const Vector<Ref<ArchiveResource>>& subresources() const { return m_subresources; }
     const Vector<Ref<Archive>>& subframeArchives() const { return m_subframeArchives; }
     WEBCORE_EXPORT Expected<Vector<String>, ArchiveError> saveResourcesToDisk(const String& directory);
+
+    virtual bool isLegacyWebArchive() const { return false; }
 
 protected:
     // These methods are meant for subclasses for different archive types to add resources in to the archive,

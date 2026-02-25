@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,16 @@
 #include "WebInjectedScriptManager.h"
 
 #include "CommandLineAPIModule.h"
+#include "Document.h"
 #include "JSExecState.h"
 #include "LocalDOMWindow.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebInjectedScriptManager);
 
 WebInjectedScriptManager::WebInjectedScriptManager(InspectorEnvironment& environment, Ref<InjectedScriptHost>&& host)
     : InjectedScriptManager(environment, WTFMove(host))
@@ -74,7 +78,7 @@ void WebInjectedScriptManager::discardInjectedScriptsFor(LocalDOMWindow& window)
     if (m_scriptStateToId.isEmpty())
         return;
 
-    auto* document = window.document();
+    RefPtr document = window.document();
     if (!document)
         return;
 

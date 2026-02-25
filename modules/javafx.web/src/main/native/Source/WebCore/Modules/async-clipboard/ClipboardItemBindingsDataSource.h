@@ -28,7 +28,7 @@
 #include "ClipboardItemDataSource.h"
 #include "ExceptionCode.h"
 #include "FileReaderLoaderClient.h"
-#include <variant>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -42,7 +42,7 @@ class PasteboardCustomData;
 class ScriptExecutionContext;
 
 class ClipboardItemBindingsDataSource : public ClipboardItemDataSource {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ClipboardItemBindingsDataSource);
 public:
     ClipboardItemBindingsDataSource(ClipboardItem&, Vector<KeyValuePair<String, Ref<DOMPromise>>>&&);
     ~ClipboardItemBindingsDataSource();
@@ -55,7 +55,7 @@ private:
     void clearItemTypeLoaders();
     void invokeCompletionHandler();
 
-    using BufferOrString = std::variant<String, Ref<SharedBuffer>>;
+    using BufferOrString = Variant<String, Ref<SharedBuffer>>;
     class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader> {
     public:
         static Ref<ClipboardItemTypeLoader> create(Clipboard& writingDestination, const String& type, CompletionHandler<void()>&& completionHandler)

@@ -46,13 +46,11 @@
 #define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include <string.h>             /* memcpy */
-#include "gsterror.h"
 #include "gstenumtypes.h"
 #include "gstinfo.h"
 #include "gstmessage.h"
 #include "gsttaglist.h"
 #include "gstutils.h"
-#include "gstquark.h"
 #include "gstvalue.h"
 
 
@@ -116,8 +114,6 @@ static GstMessageQuarks message_quarks[] = {
   {0, NULL, 0}
 };
 
-static GQuark details_quark = 0;
-
 GType _gst_message_type = 0;
 GST_DEFINE_MINI_OBJECT_TYPE (GstMessage, gst_message);
 
@@ -132,7 +128,6 @@ _priv_gst_message_initialize (void)
     message_quarks[i].quark =
         g_quark_from_static_string (message_quarks[i].name);
   }
-  details_quark = g_quark_from_static_string ("details");
 
   _gst_message_type = gst_message_get_type ();
 }
@@ -399,6 +394,134 @@ gst_message_new_eos (GstObject * src)
   return message;
 }
 
+/* Internal function for setting details on a message. Checks for valid
+ * arguments should be done before calling this.
+ *
+ * Will create a message structure if it doesn't have one already
+ **/
+static void
+message_set_details (GstMessage * message, GstStructure * details)
+{
+  GValue v = G_VALUE_INIT;
+
+  if (GST_MESSAGE_STRUCTURE (message) == NULL) {
+    const gchar *message_name = gst_message_type_get_name (message->type);
+    g_return_if_fail (message_name);
+    GstStructure *structure = gst_structure_new_static_str_empty (message_name);
+    gst_structure_set_parent_refcount (structure,
+        &message->mini_object.refcount);
+    GST_MESSAGE_STRUCTURE (message) = structure;
+  }
+  g_value_init (&v, GST_TYPE_STRUCTURE);
+  g_value_take_boxed (&v, details);
+  gst_structure_take_value (GST_MESSAGE_STRUCTURE (message), "details", &v);
+}
+
+/**
+ * gst_message_set_details:
+ * @message: A #GstMessage
+ * @details: (transfer full) (nullable): A GstStructure with details
+ *
+ * Add @details to @message. Will fail if the message already has details set on
+ * it or if it is not writable.
+ *
+ * Since: 1.26
+ */
+void
+gst_message_set_details (GstMessage * message, GstStructure * details)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (gst_message_is_writable (message));
+  g_return_if_fail (details);
+
+  if (GST_MESSAGE_STRUCTURE (message)
+      && gst_structure_has_field (GST_MESSAGE_STRUCTURE (message), "details")) {
+    gst_structure_free (details);
+    g_critical ("Message already has details");
+    return;
+  }
+
+  message_set_details (message, details);
+}
+
+/* Internal function for parsing details of a message.
+ * Checks for valid arguments should be done before calling this.
+ *
+ * Will create a details structure if create_if_missing is TRUE
+ */
+static void
+message_parse_details (GstMessage * message, GstStructure ** details,
+    gboolean create_if_missing)
+{
+  *details = NULL;
+
+  if (GST_MESSAGE_STRUCTURE (message) == NULL && !create_if_missing)
+    return;
+
+  if (GST_MESSAGE_STRUCTURE (message) &&
+      gst_structure_has_field (GST_MESSAGE_STRUCTURE (message), "details")) {
+    const GValue *v = gst_structure_get_value (GST_MESSAGE_STRUCTURE (message),
+        "details");
+    if (v && G_VALUE_TYPE (v) == GST_TYPE_STRUCTURE) {
+      *details = g_value_get_boxed (v);
+    }
+  } else if (create_if_missing) {
+    *details = gst_structure_new_static_str_empty ("message-details");
+    message_set_details (message, (GstStructure *) * details);
+  }
+}
+
+/**
+ * gst_message_get_details:
+ * @message: A #GstMessage
+ *
+ * Returns the optional details structure of the message. May be NULL if none.
+ *
+ * The returned structure must not be freed.
+ *
+ * Returns: (transfer none) (nullable): The details, or NULL if none.
+ *
+ * Since: 1.26
+ */
+const GstStructure *
+gst_message_get_details (GstMessage * message)
+{
+  const GstStructure *details;
+
+  g_return_val_if_fail (GST_IS_MESSAGE (message), NULL);
+
+  message_parse_details (message, (GstStructure **) & details, FALSE);
+
+  return details;
+}
+
+/**
+ * gst_message_writable_details:
+ * @message: A writable #GstMessage
+ *
+ * Returns the details structure of the @message. If not present it will be
+ * created. Use this function (instead of gst_message_get_details()) if you
+ * want to write to the @details structure.
+ *
+ * The returned structure must not be freed.
+ *
+ * Returns: (transfer none): The details
+ *
+ * Since: 1.26
+ */
+GstStructure *
+gst_message_writable_details (GstMessage * message)
+{
+  GstStructure *details;
+
+  g_return_val_if_fail (GST_IS_MESSAGE (message), NULL);
+  g_return_val_if_fail (gst_message_is_writable (message), NULL);
+
+  message_parse_details (message, &details, TRUE);
+
+  return details;
+}
+
 /**
  * gst_message_new_error_with_details:
  * @src: (transfer none) (nullable): The object originating the message.
@@ -428,17 +551,11 @@ gst_message_new_error_with_details (GstObject * src, GError * error,
         "string is not valid UTF-8. Please file a bug.");
   }
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_ERROR),
-      GST_QUARK (GERROR), G_TYPE_ERROR, error,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  structure = gst_structure_new_static_str ("GstMessageError",
+      "gerror", G_TYPE_ERROR, error, "debug", G_TYPE_STRING, debug, NULL);
   message = gst_message_new_custom (GST_MESSAGE_ERROR, src, structure);
   if (details) {
-    GValue v = G_VALUE_INIT;
-
-    g_value_init (&v, GST_TYPE_STRUCTURE);
-    g_value_take_boxed (&v, details);
-    gst_structure_id_take_value (GST_MESSAGE_STRUCTURE (message), details_quark,
-        &v);
+    message_set_details (message, details);
   }
 
   return message;
@@ -479,18 +596,33 @@ void
 gst_message_parse_error_details (GstMessage * message,
     const GstStructure ** structure)
 {
-  const GValue *v;
-
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR);
   g_return_if_fail (structure != NULL);
 
-  *structure = NULL;
-  v = gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (message),
-      details_quark);
-  if (v) {
-    *structure = g_value_get_boxed (v);
-  }
+  message_parse_details (message, (GstStructure **) structure, FALSE);
+}
+
+/**
+ * gst_message_parse_error_writable_details:
+ * @message: The writable message object
+ * @structure: (optional) (nullable) (transfer none) (out): A pointer to the returned details
+ *
+ * Returns the details structure if present or will create one if not present.
+ * The returned structure must not be freed.
+ *
+ * Since: 1.26
+ */
+void
+gst_message_parse_error_writable_details (GstMessage * message,
+    GstStructure ** structure)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR);
+  g_return_if_fail (gst_message_is_writable (message));
+  g_return_if_fail (structure != NULL);
+
+  message_parse_details (message, (GstStructure **) structure, TRUE);
 }
 
 /**
@@ -520,17 +652,11 @@ gst_message_new_warning_with_details (GstObject * src, GError * error,
         "string is not valid UTF-8. Please file a bug.");
   }
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_WARNING),
-      GST_QUARK (GERROR), G_TYPE_ERROR, error,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  structure = gst_structure_new_static_str ("GstMessageWarning",
+      "gerror", G_TYPE_ERROR, error, "debug", G_TYPE_STRING, debug, NULL);
   message = gst_message_new_custom (GST_MESSAGE_WARNING, src, structure);
   if (details) {
-    GValue v = G_VALUE_INIT;
-
-    g_value_init (&v, GST_TYPE_STRUCTURE);
-    g_value_take_boxed (&v, details);
-    gst_structure_id_take_value (GST_MESSAGE_STRUCTURE (message), details_quark,
-        &v);
+    message_set_details (message, details);
   }
 
   return message;
@@ -569,18 +695,33 @@ void
 gst_message_parse_warning_details (GstMessage * message,
     const GstStructure ** structure)
 {
-  const GValue *v;
-
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_WARNING);
   g_return_if_fail (structure != NULL);
 
-  *structure = NULL;
-  v = gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (message),
-      details_quark);
-  if (v) {
-    *structure = g_value_get_boxed (v);
-  }
+  message_parse_details (message, (GstStructure **) structure, FALSE);
+}
+
+/**
+ * gst_message_parse_warning_writable_details:
+ * @message: The writable message object
+ * @structure: (optional) (nullable) (transfer none) (out): A pointer to the returned details
+ *
+ * Returns the details structure if present or will create one if not present.
+ * The returned structure must not be freed.
+ *
+ * Since: 1.26
+ */
+void
+gst_message_parse_warning_writable_details (GstMessage * message,
+    GstStructure ** structure)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_WARNING);
+  g_return_if_fail (gst_message_is_writable (message));
+  g_return_if_fail (structure != NULL);
+
+  message_parse_details (message, (GstStructure **) structure, TRUE);
 }
 
 /**
@@ -610,17 +751,11 @@ gst_message_new_info_with_details (GstObject * src, GError * error,
         "string is not valid UTF-8. Please file a bug.");
   }
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_INFO),
-      GST_QUARK (GERROR), G_TYPE_ERROR, error,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  structure = gst_structure_new_static_str ("GstMessageInfo",
+      "gerror", G_TYPE_ERROR, error, "debug", G_TYPE_STRING, debug, NULL);
   message = gst_message_new_custom (GST_MESSAGE_INFO, src, structure);
   if (details) {
-    GValue v = G_VALUE_INIT;
-
-    g_value_init (&v, GST_TYPE_STRUCTURE);
-    g_value_take_boxed (&v, details);
-    gst_structure_id_take_value (GST_MESSAGE_STRUCTURE (message), details_quark,
-        &v);
+    message_set_details (message, details);
   }
 
   return message;
@@ -659,18 +794,33 @@ void
 gst_message_parse_info_details (GstMessage * message,
     const GstStructure ** structure)
 {
-  const GValue *v;
-
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_INFO);
   g_return_if_fail (structure != NULL);
 
-  *structure = NULL;
-  v = gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (message),
-      details_quark);
-  if (v) {
-    *structure = g_value_get_boxed (v);
-  }
+  message_parse_details (message, (GstStructure **) structure, FALSE);
+}
+
+/**
+ * gst_message_parse_info_writable_details:
+ * @message: The writable message object
+ * @structure: (optional) (nullable) (transfer none) (out): A pointer to the returned details
+ *
+ * Returns the details structure if present or will create one if not present.
+ * The returned structure must not be freed.
+ *
+ * Since: 1.26
+ */
+void
+gst_message_parse_info_writable_details (GstMessage * message,
+    GstStructure ** structure)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_INFO);
+  g_return_if_fail (gst_message_is_writable (message));
+  g_return_if_fail (structure != NULL);
+
+  message_parse_details (message, (GstStructure **) structure, TRUE);
 }
 
 /**
@@ -694,10 +844,10 @@ gst_message_new_tag (GstObject * src, GstTagList * tag_list)
 
   g_return_val_if_fail (GST_IS_TAG_LIST (tag_list), NULL);
 
-  s = gst_structure_new_id_empty (GST_QUARK (MESSAGE_TAG));
+  s = gst_structure_new_static_str_empty ("GstMessageTag");
   g_value_init (&val, GST_TYPE_TAG_LIST);
   g_value_take_boxed (&val, tag_list);
-  gst_structure_id_take_value (s, GST_QUARK (TAGLIST), &val);
+  gst_structure_take_value (s, "taglist", &val);
   message = gst_message_new_custom (GST_MESSAGE_TAG, src, s);
   return message;
 }
@@ -733,12 +883,12 @@ gst_message_new_buffering (GstObject * src, gint percent)
 
   buffering_left = (percent == 100 ? 0 : -1);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_BUFFERING),
-      GST_QUARK (BUFFER_PERCENT), G_TYPE_INT, percent,
-      GST_QUARK (BUFFERING_MODE), GST_TYPE_BUFFERING_MODE, GST_BUFFERING_STREAM,
-      GST_QUARK (AVG_IN_RATE), G_TYPE_INT, -1,
-      GST_QUARK (AVG_OUT_RATE), G_TYPE_INT, -1,
-      GST_QUARK (BUFFERING_LEFT), G_TYPE_INT64, buffering_left, NULL);
+  structure = gst_structure_new_static_str ("GstMessageBuffering",
+      "buffer-percent", G_TYPE_INT, percent,
+      "buffering-mode", GST_TYPE_BUFFERING_MODE, GST_BUFFERING_STREAM,
+      "avg-in-rate", G_TYPE_INT, -1,
+      "avg-out-rate", G_TYPE_INT, -1,
+      "buffering-left", G_TYPE_INT64, buffering_left, NULL);
   message = gst_message_new_custom (GST_MESSAGE_BUFFERING, src, structure);
 
   return message;
@@ -765,10 +915,10 @@ gst_message_new_state_changed (GstObject * src,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_STATE_CHANGED),
-      GST_QUARK (OLD_STATE), GST_TYPE_STATE, (gint) oldstate,
-      GST_QUARK (NEW_STATE), GST_TYPE_STATE, (gint) newstate,
-      GST_QUARK (PENDING_STATE), GST_TYPE_STATE, (gint) pending, NULL);
+  structure = gst_structure_new_static_str ("GstMessageStateChanged",
+      "old-state", GST_TYPE_STATE, (gint) oldstate,
+      "new-state", GST_TYPE_STATE, (gint) newstate,
+      "pending-state", GST_TYPE_STATE, (gint) pending, NULL);
   message = gst_message_new_custom (GST_MESSAGE_STATE_CHANGED, src, structure);
 
   return message;
@@ -820,9 +970,8 @@ gst_message_new_clock_provide (GstObject * src, GstClock * clock,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_CLOCK_PROVIDE),
-      GST_QUARK (CLOCK), GST_TYPE_CLOCK, clock,
-      GST_QUARK (READY), G_TYPE_BOOLEAN, ready, NULL);
+  structure = gst_structure_new_static_str ("GstMessageClockProvide",
+      "clock", GST_TYPE_CLOCK, clock, "ready", G_TYPE_BOOLEAN, ready, NULL);
   message = gst_message_new_custom (GST_MESSAGE_CLOCK_PROVIDE, src, structure);
 
   return message;
@@ -850,8 +999,8 @@ gst_message_new_clock_lost (GstObject * src, GstClock * clock)
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_CLOCK_LOST),
-      GST_QUARK (CLOCK), GST_TYPE_CLOCK, clock, NULL);
+  structure = gst_structure_new_static_str ("GstMessageClockLost",
+      "clock", GST_TYPE_CLOCK, clock, NULL);
   message = gst_message_new_custom (GST_MESSAGE_CLOCK_LOST, src, structure);
 
   return message;
@@ -875,8 +1024,8 @@ gst_message_new_new_clock (GstObject * src, GstClock * clock)
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_NEW_CLOCK),
-      GST_QUARK (CLOCK), GST_TYPE_CLOCK, clock, NULL);
+  structure = gst_structure_new_static_str ("GstMessageNewClock",
+      "clock", GST_TYPE_CLOCK, clock, NULL);
   message = gst_message_new_custom (GST_MESSAGE_NEW_CLOCK, src, structure);
 
   return message;
@@ -910,10 +1059,9 @@ gst_message_new_structure_change (GstObject * src, GstStructureChangeType type,
   /* g_return_val_if_fail (GST_PAD_DIRECTION (src) == GST_PAD_SINK, NULL); */
   g_return_val_if_fail (GST_IS_ELEMENT (owner), NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_STRUCTURE_CHANGE),
-      GST_QUARK (TYPE), GST_TYPE_STRUCTURE_CHANGE_TYPE, type,
-      GST_QUARK (OWNER), GST_TYPE_ELEMENT, owner,
-      GST_QUARK (BUSY), G_TYPE_BOOLEAN, busy, NULL);
+  structure = gst_structure_new_static_str ("GstMessageStructureChange",
+      "type", GST_TYPE_STRUCTURE_CHANGE_TYPE, type,
+      "owner", GST_TYPE_ELEMENT, owner, "busy", G_TYPE_BOOLEAN, busy, NULL);
 
   message = gst_message_new_custom (GST_MESSAGE_STRUCTURE_CHANGE, src,
       structure);
@@ -943,9 +1091,9 @@ gst_message_new_segment_start (GstObject * src, GstFormat format,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_SEGMENT_START),
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (POSITION), G_TYPE_INT64, position, NULL);
+  structure = gst_structure_new_static_str ("GstMessageSegmentStart",
+      "format", GST_TYPE_FORMAT, format,
+      "position", G_TYPE_INT64, position, NULL);
   message = gst_message_new_custom (GST_MESSAGE_SEGMENT_START, src, structure);
 
   return message;
@@ -973,9 +1121,9 @@ gst_message_new_segment_done (GstObject * src, GstFormat format,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_SEGMENT_DONE),
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (POSITION), G_TYPE_INT64, position, NULL);
+  structure = gst_structure_new_static_str ("GstMessageSegmentDone",
+      "format", GST_TYPE_FORMAT, format,
+      "position", G_TYPE_INT64, position, NULL);
   message = gst_message_new_custom (GST_MESSAGE_SEGMENT_DONE, src, structure);
 
   return message;
@@ -1044,7 +1192,7 @@ gst_message_new_duration_changed (GstObject * src)
   GstMessage *message;
 
   message = gst_message_new_custom (GST_MESSAGE_DURATION_CHANGED, src,
-      gst_structure_new_id_empty (GST_QUARK (MESSAGE_DURATION_CHANGED)));
+      gst_structure_new_static_str_empty ("GstMessageDurationChanged"));
 
   return message;
 }
@@ -1090,8 +1238,8 @@ gst_message_new_async_done (GstObject * src, GstClockTime running_time)
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_ASYNC_DONE),
-      GST_QUARK (RUNNING_TIME), G_TYPE_UINT64, running_time, NULL);
+  structure = gst_structure_new_static_str ("GstMessageAsyncDone",
+      "running-time", G_TYPE_UINT64, running_time, NULL);
   message = gst_message_new_custom (GST_MESSAGE_ASYNC_DONE, src, structure);
 
   return message;
@@ -1137,8 +1285,8 @@ gst_message_new_request_state (GstObject * src, GstState state)
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_REQUEST_STATE),
-      GST_QUARK (NEW_STATE), GST_TYPE_STATE, (gint) state, NULL);
+  structure = gst_structure_new_static_str ("GstMessageRequestState",
+      "new-state", GST_TYPE_STATE, (gint) state, NULL);
   message = gst_message_new_custom (GST_MESSAGE_REQUEST_STATE, src, structure);
 
   return message;
@@ -1192,8 +1340,8 @@ gst_message_writable_structure (GstMessage * message)
 
   if (structure == NULL) {
     structure =
-        gst_structure_new_id_empty (gst_message_type_to_quark (GST_MESSAGE_TYPE
-            (message)));
+        gst_structure_new_static_str_empty (gst_message_type_get_name
+        (GST_MESSAGE_TYPE (message)));
     gst_structure_set_parent_refcount (structure,
         &message->mini_object.refcount);
     GST_MESSAGE_STRUCTURE (message) = structure;
@@ -1260,8 +1408,8 @@ gst_message_parse_tag (GstMessage * message, GstTagList ** tag_list)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_TAG);
   g_return_if_fail (tag_list != NULL);
 
-  gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (TAGLIST), GST_TYPE_TAG_LIST, tag_list, NULL);
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "taglist", GST_TYPE_TAG_LIST, tag_list, NULL);
 }
 
 /**
@@ -1282,8 +1430,8 @@ gst_message_parse_buffering (GstMessage * message, gint * percent)
 
   if (percent)
     *percent =
-        g_value_get_int (gst_structure_id_get_value (GST_MESSAGE_STRUCTURE
-            (message), GST_QUARK (BUFFER_PERCENT)));
+        g_value_get_int (gst_structure_get_value (GST_MESSAGE_STRUCTURE
+            (message), "buffer-percent"));
 }
 
 /**
@@ -1303,11 +1451,11 @@ gst_message_set_buffering_stats (GstMessage * message, GstBufferingMode mode,
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_BUFFERING);
 
-  gst_structure_id_set (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (BUFFERING_MODE), GST_TYPE_BUFFERING_MODE, mode,
-      GST_QUARK (AVG_IN_RATE), G_TYPE_INT, avg_in,
-      GST_QUARK (AVG_OUT_RATE), G_TYPE_INT, avg_out,
-      GST_QUARK (BUFFERING_LEFT), G_TYPE_INT64, buffering_left, NULL);
+  gst_structure_set (GST_MESSAGE_STRUCTURE (message),
+      "buffering-mode", GST_TYPE_BUFFERING_MODE, mode,
+      "avg-in-rate", G_TYPE_INT, avg_in,
+      "avg-out-rate", G_TYPE_INT, avg_out,
+      "buffering-left", G_TYPE_INT64, buffering_left, NULL);
 }
 
 /**
@@ -1333,18 +1481,18 @@ gst_message_parse_buffering_stats (GstMessage * message,
   structure = GST_MESSAGE_STRUCTURE (message);
   if (mode)
     *mode = (GstBufferingMode)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (BUFFERING_MODE)));
+        g_value_get_enum (gst_structure_get_value (structure,
+            "buffering-mode"));
   if (avg_in)
-    *avg_in = g_value_get_int (gst_structure_id_get_value (structure,
-            GST_QUARK (AVG_IN_RATE)));
+    *avg_in = g_value_get_int (gst_structure_get_value (structure,
+            "avg-in-rate"));
   if (avg_out)
-    *avg_out = g_value_get_int (gst_structure_id_get_value (structure,
-            GST_QUARK (AVG_OUT_RATE)));
+    *avg_out = g_value_get_int (gst_structure_get_value (structure,
+            "avg-out-rate"));
   if (buffering_left)
     *buffering_left =
-        g_value_get_int64 (gst_structure_id_get_value (structure,
-            GST_QUARK (BUFFERING_LEFT)));
+        g_value_get_int64 (gst_structure_get_value (structure,
+            "buffering-left"));
 }
 
 /**
@@ -1389,16 +1537,13 @@ gst_message_parse_state_changed (GstMessage * message,
   structure = GST_MESSAGE_STRUCTURE (message);
   if (oldstate)
     *oldstate = (GstState)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (OLD_STATE)));
+        g_value_get_enum (gst_structure_get_value (structure, "old-state"));
   if (newstate)
     *newstate = (GstState)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (NEW_STATE)));
+        g_value_get_enum (gst_structure_get_value (structure, "new-state"));
   if (pending)
     *pending = (GstState)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (PENDING_STATE)));
+        g_value_get_enum (gst_structure_get_value (structure, "pending-state"));
 }
 
 /**
@@ -1424,14 +1569,12 @@ gst_message_parse_clock_provide (GstMessage * message, GstClock ** clock,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_CLOCK_PROVIDE);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  clock_gvalue = gst_structure_id_get_value (structure, GST_QUARK (CLOCK));
+  clock_gvalue = gst_structure_get_value (structure, "clock");
   g_return_if_fail (clock_gvalue != NULL);
   g_return_if_fail (G_VALUE_TYPE (clock_gvalue) == GST_TYPE_CLOCK);
 
   if (ready)
-    *ready =
-        g_value_get_boolean (gst_structure_id_get_value (structure,
-            GST_QUARK (READY)));
+    *ready = g_value_get_boolean (gst_structure_get_value (structure, "ready"));
   if (clock)
     *clock = (GstClock *) g_value_get_object (clock_gvalue);
 }
@@ -1456,7 +1599,7 @@ gst_message_parse_clock_lost (GstMessage * message, GstClock ** clock)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_CLOCK_LOST);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  clock_gvalue = gst_structure_id_get_value (structure, GST_QUARK (CLOCK));
+  clock_gvalue = gst_structure_get_value (structure, "clock");
   g_return_if_fail (clock_gvalue != NULL);
   g_return_if_fail (G_VALUE_TYPE (clock_gvalue) == GST_TYPE_CLOCK);
 
@@ -1485,7 +1628,7 @@ gst_message_parse_new_clock (GstMessage * message, GstClock ** clock)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_NEW_CLOCK);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  clock_gvalue = gst_structure_id_get_value (structure, GST_QUARK (CLOCK));
+  clock_gvalue = gst_structure_get_value (structure, "clock");
   g_return_if_fail (clock_gvalue != NULL);
   g_return_if_fail (G_VALUE_TYPE (clock_gvalue) == GST_TYPE_CLOCK);
 
@@ -1517,20 +1660,17 @@ gst_message_parse_structure_change (GstMessage * message,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STRUCTURE_CHANGE);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  owner_gvalue = gst_structure_id_get_value (structure, GST_QUARK (OWNER));
+  owner_gvalue = gst_structure_get_value (structure, "owner");
   g_return_if_fail (owner_gvalue != NULL);
   g_return_if_fail (G_VALUE_TYPE (owner_gvalue) == GST_TYPE_ELEMENT);
 
   if (type)
     *type = (GstStructureChangeType)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (TYPE)));
+        g_value_get_enum (gst_structure_get_value (structure, "type"));
   if (owner)
     *owner = (GstElement *) g_value_get_object (owner_gvalue);
   if (busy)
-    *busy =
-        g_value_get_boolean (gst_structure_id_get_value (structure,
-            GST_QUARK (BUSY)));
+    *busy = g_value_get_boolean (gst_structure_get_value (structure, "busy"));
 }
 
 /**
@@ -1572,9 +1712,8 @@ gst_message_parse_error (GstMessage * message, GError ** gerror, gchar ** debug)
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR);
 
-  gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "gerror", G_TYPE_ERROR, gerror, "debug", G_TYPE_STRING, debug, NULL);
 }
 
 /**
@@ -1596,9 +1735,8 @@ gst_message_parse_warning (GstMessage * message, GError ** gerror,
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_WARNING);
 
-  gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "gerror", G_TYPE_ERROR, gerror, "debug", G_TYPE_STRING, debug, NULL);
 }
 
 /**
@@ -1619,9 +1757,8 @@ gst_message_parse_info (GstMessage * message, GError ** gerror, gchar ** debug)
   g_return_if_fail (GST_IS_MESSAGE (message));
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_INFO);
 
-  gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (GERROR), G_TYPE_ERROR, gerror,
-      GST_QUARK (DEBUG), G_TYPE_STRING, debug, NULL);
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "gerror", G_TYPE_ERROR, gerror, "debug", G_TYPE_STRING, debug, NULL);
 }
 
 /**
@@ -1646,12 +1783,10 @@ gst_message_parse_segment_start (GstMessage * message, GstFormat * format,
   structure = GST_MESSAGE_STRUCTURE (message);
   if (format)
     *format = (GstFormat)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (FORMAT)));
+        g_value_get_enum (gst_structure_get_value (structure, "format"));
   if (position)
     *position =
-        g_value_get_int64 (gst_structure_id_get_value (structure,
-            GST_QUARK (POSITION)));
+        g_value_get_int64 (gst_structure_get_value (structure, "position"));
 }
 
 /**
@@ -1676,12 +1811,10 @@ gst_message_parse_segment_done (GstMessage * message, GstFormat * format,
   structure = GST_MESSAGE_STRUCTURE (message);
   if (format)
     *format = (GstFormat)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (FORMAT)));
+        g_value_get_enum (gst_structure_get_value (structure, "format"));
   if (position)
     *position =
-        g_value_get_int64 (gst_structure_id_get_value (structure,
-            GST_QUARK (POSITION)));
+        g_value_get_int64 (gst_structure_get_value (structure, "position"));
 }
 
 /**
@@ -1704,8 +1837,8 @@ gst_message_parse_async_done (GstMessage * message, GstClockTime * running_time)
   structure = GST_MESSAGE_STRUCTURE (message);
   if (running_time)
     *running_time =
-        g_value_get_uint64 (gst_structure_id_get_value (structure,
-            GST_QUARK (RUNNING_TIME)));
+        g_value_get_uint64 (gst_structure_get_value (structure,
+            "running-time"));
 }
 
 /**
@@ -1728,8 +1861,7 @@ gst_message_parse_request_state (GstMessage * message, GstState * state)
   structure = GST_MESSAGE_STRUCTURE (message);
   if (state)
     *state = (GstState)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (NEW_STATE)));
+        g_value_get_enum (gst_structure_get_value (structure, "new-state"));
 }
 
 /**
@@ -1752,9 +1884,9 @@ gst_message_new_stream_status (GstObject * src, GstStreamStatusType type,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_STREAM_STATUS),
-      GST_QUARK (TYPE), GST_TYPE_STREAM_STATUS_TYPE, (gint) type,
-      GST_QUARK (OWNER), GST_TYPE_ELEMENT, owner, NULL);
+  structure = gst_structure_new_static_str ("GstMessageStreamStatus",
+      "type", GST_TYPE_STREAM_STATUS_TYPE, (gint) type,
+      "owner", GST_TYPE_ELEMENT, owner, NULL);
   message = gst_message_new_custom (GST_MESSAGE_STREAM_STATUS, src, structure);
 
   return message;
@@ -1783,13 +1915,12 @@ gst_message_parse_stream_status (GstMessage * message,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STREAM_STATUS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  owner_gvalue = gst_structure_id_get_value (structure, GST_QUARK (OWNER));
+  owner_gvalue = gst_structure_get_value (structure, "owner");
   g_return_if_fail (owner_gvalue != NULL);
 
   if (type)
     *type = (GstStreamStatusType)
-        g_value_get_enum (gst_structure_id_get_value (structure,
-            GST_QUARK (TYPE)));
+        g_value_get_enum (gst_structure_get_value (structure, "type"));
   if (owner)
     *owner = (GstElement *) g_value_get_object (owner_gvalue);
 }
@@ -1812,7 +1943,7 @@ gst_message_set_stream_status_object (GstMessage * message,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STREAM_STATUS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_set_value (structure, GST_QUARK (OBJECT), object);
+  gst_structure_set_value_static_str (structure, "object", object);
 }
 
 /**
@@ -1837,7 +1968,7 @@ gst_message_get_stream_status_object (GstMessage * message)
       NULL);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  result = gst_structure_id_get_value (structure, GST_QUARK (OBJECT));
+  result = gst_structure_get_value (structure, "object");
 
   return result;
 }
@@ -1871,14 +2002,13 @@ gst_message_new_step_done (GstObject * src, GstFormat format, guint64 amount,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_STEP_DONE),
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (AMOUNT), G_TYPE_UINT64, amount,
-      GST_QUARK (RATE), G_TYPE_DOUBLE, rate,
-      GST_QUARK (FLUSH), G_TYPE_BOOLEAN, flush,
-      GST_QUARK (INTERMEDIATE), G_TYPE_BOOLEAN, intermediate,
-      GST_QUARK (DURATION), G_TYPE_UINT64, duration,
-      GST_QUARK (EOS), G_TYPE_BOOLEAN, eos, NULL);
+  structure = gst_structure_new_static_str ("GstMessageStepDone",
+      "format", GST_TYPE_FORMAT, format,
+      "amount", G_TYPE_UINT64, amount,
+      "rate", G_TYPE_DOUBLE, rate,
+      "flush", G_TYPE_BOOLEAN, flush,
+      "intermediate", G_TYPE_BOOLEAN, intermediate,
+      "duration", G_TYPE_UINT64, duration, "eos", G_TYPE_BOOLEAN, eos, NULL);
   message = gst_message_new_custom (GST_MESSAGE_STEP_DONE, src, structure);
 
   return message;
@@ -1910,14 +2040,13 @@ gst_message_parse_step_done (GstMessage * message, GstFormat * format,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STEP_DONE);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (AMOUNT), G_TYPE_UINT64, amount,
-      GST_QUARK (RATE), G_TYPE_DOUBLE, rate,
-      GST_QUARK (FLUSH), G_TYPE_BOOLEAN, flush,
-      GST_QUARK (INTERMEDIATE), G_TYPE_BOOLEAN, intermediate,
-      GST_QUARK (DURATION), G_TYPE_UINT64, duration,
-      GST_QUARK (EOS), G_TYPE_BOOLEAN, eos, NULL);
+  gst_structure_get (structure,
+      "format", GST_TYPE_FORMAT, format,
+      "amount", G_TYPE_UINT64, amount,
+      "rate", G_TYPE_DOUBLE, rate,
+      "flush", G_TYPE_BOOLEAN, flush,
+      "intermediate", G_TYPE_BOOLEAN, intermediate,
+      "duration", G_TYPE_UINT64, duration, "eos", G_TYPE_BOOLEAN, eos, NULL);
 }
 
 /**
@@ -1952,13 +2081,13 @@ gst_message_new_step_start (GstObject * src, gboolean active, GstFormat format,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_STEP_START),
-      GST_QUARK (ACTIVE), G_TYPE_BOOLEAN, active,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (AMOUNT), G_TYPE_UINT64, amount,
-      GST_QUARK (RATE), G_TYPE_DOUBLE, rate,
-      GST_QUARK (FLUSH), G_TYPE_BOOLEAN, flush,
-      GST_QUARK (INTERMEDIATE), G_TYPE_BOOLEAN, intermediate, NULL);
+  structure = gst_structure_new_static_str ("GstMessageStepStart",
+      "active", G_TYPE_BOOLEAN, active,
+      "format", GST_TYPE_FORMAT, format,
+      "amount", G_TYPE_UINT64, amount,
+      "rate", G_TYPE_DOUBLE, rate,
+      "flush", G_TYPE_BOOLEAN, flush,
+      "intermediate", G_TYPE_BOOLEAN, intermediate, NULL);
   message = gst_message_new_custom (GST_MESSAGE_STEP_START, src, structure);
 
   return message;
@@ -1989,13 +2118,13 @@ gst_message_parse_step_start (GstMessage * message, gboolean * active,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STEP_START);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (ACTIVE), G_TYPE_BOOLEAN, active,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (AMOUNT), G_TYPE_UINT64, amount,
-      GST_QUARK (RATE), G_TYPE_DOUBLE, rate,
-      GST_QUARK (FLUSH), G_TYPE_BOOLEAN, flush,
-      GST_QUARK (INTERMEDIATE), G_TYPE_BOOLEAN, intermediate, NULL);
+  gst_structure_get (structure,
+      "active", G_TYPE_BOOLEAN, active,
+      "format", GST_TYPE_FORMAT, format,
+      "amount", G_TYPE_UINT64, amount,
+      "rate", G_TYPE_DOUBLE, rate,
+      "flush", G_TYPE_BOOLEAN, flush,
+      "intermediate", G_TYPE_BOOLEAN, intermediate, NULL);
 }
 
 /**
@@ -2032,18 +2161,18 @@ gst_message_new_qos (GstObject * src, gboolean live, guint64 running_time,
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_QOS),
-      GST_QUARK (LIVE), G_TYPE_BOOLEAN, live,
-      GST_QUARK (RUNNING_TIME), G_TYPE_UINT64, running_time,
-      GST_QUARK (STREAM_TIME), G_TYPE_UINT64, stream_time,
-      GST_QUARK (TIMESTAMP), G_TYPE_UINT64, timestamp,
-      GST_QUARK (DURATION), G_TYPE_UINT64, duration,
-      GST_QUARK (JITTER), G_TYPE_INT64, (gint64) 0,
-      GST_QUARK (PROPORTION), G_TYPE_DOUBLE, (gdouble) 1.0,
-      GST_QUARK (QUALITY), G_TYPE_INT, (gint) 1000000,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, GST_FORMAT_UNDEFINED,
-      GST_QUARK (PROCESSED), G_TYPE_UINT64, (guint64) - 1,
-      GST_QUARK (DROPPED), G_TYPE_UINT64, (guint64) - 1, NULL);
+  structure = gst_structure_new_static_str ("GstMessageQOS",
+      "live", G_TYPE_BOOLEAN, live,
+      "running-time", G_TYPE_UINT64, running_time,
+      "stream-time", G_TYPE_UINT64, stream_time,
+      "timestamp", G_TYPE_UINT64, timestamp,
+      "duration", G_TYPE_UINT64, duration,
+      "jitter", G_TYPE_INT64, (gint64) 0,
+      "proportion", G_TYPE_DOUBLE, (gdouble) 1.0,
+      "quality", G_TYPE_INT, (gint) 1000000,
+      "format", GST_TYPE_FORMAT, GST_FORMAT_UNDEFINED,
+      "processed", G_TYPE_UINT64, (guint64) - 1,
+      "dropped", G_TYPE_UINT64, (guint64) - 1, NULL);
   message = gst_message_new_custom (GST_MESSAGE_QOS, src, structure);
 
   return message;
@@ -2072,10 +2201,10 @@ gst_message_set_qos_values (GstMessage * message, gint64 jitter,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_QOS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_set (structure,
-      GST_QUARK (JITTER), G_TYPE_INT64, jitter,
-      GST_QUARK (PROPORTION), G_TYPE_DOUBLE, proportion,
-      GST_QUARK (QUALITY), G_TYPE_INT, quality, NULL);
+  gst_structure_set_static_str (structure,
+      "jitter", G_TYPE_INT64, jitter,
+      "proportion", G_TYPE_DOUBLE, proportion,
+      "quality", G_TYPE_INT, quality, NULL);
 }
 
 /**
@@ -2107,10 +2236,10 @@ gst_message_set_qos_stats (GstMessage * message, GstFormat format,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_QOS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_set (structure,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (PROCESSED), G_TYPE_UINT64, processed,
-      GST_QUARK (DROPPED), G_TYPE_UINT64, dropped, NULL);
+  gst_structure_set_static_str (structure,
+      "format", GST_TYPE_FORMAT, format,
+      "processed", G_TYPE_UINT64, processed,
+      "dropped", G_TYPE_UINT64, dropped, NULL);
 }
 
 /**
@@ -2145,12 +2274,12 @@ gst_message_parse_qos (GstMessage * message, gboolean * live,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_QOS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (LIVE), G_TYPE_BOOLEAN, live,
-      GST_QUARK (RUNNING_TIME), G_TYPE_UINT64, running_time,
-      GST_QUARK (STREAM_TIME), G_TYPE_UINT64, stream_time,
-      GST_QUARK (TIMESTAMP), G_TYPE_UINT64, timestamp,
-      GST_QUARK (DURATION), G_TYPE_UINT64, duration, NULL);
+  gst_structure_get (structure,
+      "live", G_TYPE_BOOLEAN, live,
+      "running-time", G_TYPE_UINT64, running_time,
+      "stream-time", G_TYPE_UINT64, stream_time,
+      "timestamp", G_TYPE_UINT64, timestamp,
+      "duration", G_TYPE_UINT64, duration, NULL);
 }
 
 /**
@@ -2178,10 +2307,10 @@ gst_message_parse_qos_values (GstMessage * message, gint64 * jitter,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_QOS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (JITTER), G_TYPE_INT64, jitter,
-      GST_QUARK (PROPORTION), G_TYPE_DOUBLE, proportion,
-      GST_QUARK (QUALITY), G_TYPE_INT, quality, NULL);
+  gst_structure_get (structure,
+      "jitter", G_TYPE_INT64, jitter,
+      "proportion", G_TYPE_DOUBLE, proportion,
+      "quality", G_TYPE_INT, quality, NULL);
 }
 
 /**
@@ -2214,10 +2343,10 @@ gst_message_parse_qos_stats (GstMessage * message, GstFormat * format,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_QOS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (FORMAT), GST_TYPE_FORMAT, format,
-      GST_QUARK (PROCESSED), G_TYPE_UINT64, processed,
-      GST_QUARK (DROPPED), G_TYPE_UINT64, dropped, NULL);
+  gst_structure_get (structure,
+      "format", GST_TYPE_FORMAT, format,
+      "processed", G_TYPE_UINT64, processed,
+      "dropped", G_TYPE_UINT64, dropped, NULL);
 }
 
 /**
@@ -2249,12 +2378,11 @@ gst_message_new_progress (GstObject * src, GstProgressType type,
   if (type == GST_PROGRESS_TYPE_START || type == GST_PROGRESS_TYPE_CONTINUE)
     percent = 0;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_PROGRESS),
-      GST_QUARK (TYPE), GST_TYPE_PROGRESS_TYPE, type,
-      GST_QUARK (CODE), G_TYPE_STRING, code,
-      GST_QUARK (TEXT), G_TYPE_STRING, text,
-      GST_QUARK (PERCENT), G_TYPE_INT, percent,
-      GST_QUARK (TIMEOUT), G_TYPE_INT, timeout, NULL);
+  structure = gst_structure_new_static_str ("GstMessageProgress",
+      "type", GST_TYPE_PROGRESS_TYPE, type,
+      "code", G_TYPE_STRING, code,
+      "text", G_TYPE_STRING, text,
+      "percent", G_TYPE_INT, percent, "timeout", G_TYPE_INT, timeout, NULL);
   message = gst_message_new_custom (GST_MESSAGE_PROGRESS, src, structure);
 
   return message;
@@ -2279,10 +2407,9 @@ gst_message_parse_progress (GstMessage * message, GstProgressType * type,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_PROGRESS);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure,
-      GST_QUARK (TYPE), GST_TYPE_PROGRESS_TYPE, type,
-      GST_QUARK (CODE), G_TYPE_STRING, code,
-      GST_QUARK (TEXT), G_TYPE_STRING, text, NULL);
+  gst_structure_get (structure,
+      "type", GST_TYPE_PROGRESS_TYPE, type,
+      "code", G_TYPE_STRING, code, "text", G_TYPE_STRING, text, NULL);
 }
 
 /**
@@ -2305,9 +2432,8 @@ gst_message_new_toc (GstObject * src, GstToc * toc, gboolean updated)
 
   g_return_val_if_fail (toc != NULL, NULL);
 
-  toc_struct = gst_structure_new_id (GST_QUARK (MESSAGE_TOC),
-      GST_QUARK (TOC), GST_TYPE_TOC, toc,
-      GST_QUARK (UPDATED), G_TYPE_BOOLEAN, updated, NULL);
+  toc_struct = gst_structure_new_static_str ("GstMessageToc",
+      "toc", GST_TYPE_TOC, toc, "updated", G_TYPE_BOOLEAN, updated, NULL);
 
   return gst_message_new_custom (GST_MESSAGE_TOC, src, toc_struct);
 }
@@ -2331,9 +2457,8 @@ gst_message_parse_toc (GstMessage * message, GstToc ** toc, gboolean * updated)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_TOC);
   g_return_if_fail (toc != NULL);
 
-  gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-      GST_QUARK (TOC), GST_TYPE_TOC, toc,
-      GST_QUARK (UPDATED), G_TYPE_BOOLEAN, updated, NULL);
+  gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+      "toc", GST_TYPE_TOC, toc, "updated", G_TYPE_BOOLEAN, updated, NULL);
 }
 
 /**
@@ -2356,8 +2481,8 @@ gst_message_new_reset_time (GstObject * src, GstClockTime running_time)
 
   g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (running_time), NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_RESET_TIME),
-      GST_QUARK (RUNNING_TIME), G_TYPE_UINT64, running_time, NULL);
+  structure = gst_structure_new_static_str ("GstMessageResetTime",
+      "running-time", G_TYPE_UINT64, running_time, NULL);
   message = gst_message_new_custom (GST_MESSAGE_RESET_TIME, src, structure);
 
   return message;
@@ -2384,8 +2509,8 @@ gst_message_parse_reset_time (GstMessage * message, GstClockTime * running_time)
   structure = GST_MESSAGE_STRUCTURE (message);
   if (running_time)
     *running_time =
-        g_value_get_uint64 (gst_structure_id_get_value (structure,
-            GST_QUARK (RUNNING_TIME)));
+        g_value_get_uint64 (gst_structure_get_value (structure,
+            "running-time"));
 }
 
 /**
@@ -2406,7 +2531,7 @@ gst_message_new_stream_start (GstObject * src)
   GstMessage *message;
   GstStructure *s;
 
-  s = gst_structure_new_id_empty (GST_QUARK (MESSAGE_STREAM_START));
+  s = gst_structure_new_static_str_empty ("GstMessageStreamStart");
   message = gst_message_new_custom (GST_MESSAGE_STREAM_START, src, s);
 
   return message;
@@ -2441,8 +2566,7 @@ gst_message_set_group_id (GstMessage * message, guint group_id)
   g_return_if_fail (group_id != GST_GROUP_ID_INVALID);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_set (structure, GST_QUARK (GROUP_ID), G_TYPE_UINT, group_id,
-      NULL);
+  gst_structure_set (structure, "group-id", G_TYPE_UINT, group_id, NULL);
 }
 
 /**
@@ -2476,7 +2600,7 @@ gst_message_parse_group_id (GstMessage * message, guint * group_id)
 
   structure = GST_MESSAGE_STRUCTURE (message);
 
-  v = gst_structure_id_get_value (structure, GST_QUARK (GROUP_ID));
+  v = gst_structure_get_value (structure, "group-id");
   if (!v)
     return FALSE;
 
@@ -2505,8 +2629,8 @@ gst_message_new_need_context (GstObject * src, const gchar * context_type)
 
   g_return_val_if_fail (context_type != NULL, NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_NEED_CONTEXT),
-      GST_QUARK (CONTEXT_TYPE), G_TYPE_STRING, context_type, NULL);
+  structure = gst_structure_new_static_str ("GstMessageNeedContext",
+      "context-type", G_TYPE_STRING, context_type, NULL);
   message = gst_message_new_custom (GST_MESSAGE_NEED_CONTEXT, src, structure);
 
   return message;
@@ -2536,7 +2660,7 @@ gst_message_parse_context_type (GstMessage * message,
   structure = GST_MESSAGE_STRUCTURE (message);
 
   if (context_type) {
-    value = gst_structure_id_get_value (structure, GST_QUARK (CONTEXT_TYPE));
+    value = gst_structure_get_value (structure, "context-type");
     *context_type = g_value_get_string (value);
   }
 
@@ -2562,8 +2686,8 @@ gst_message_new_have_context (GstObject * src, GstContext * context)
   GstMessage *message;
   GstStructure *structure;
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_HAVE_CONTEXT),
-      GST_QUARK (CONTEXT), GST_TYPE_CONTEXT, context, NULL);
+  structure = gst_structure_new_static_str ("GstMessageHaveContext",
+      "context", GST_TYPE_CONTEXT, context, NULL);
   message = gst_message_new_custom (GST_MESSAGE_HAVE_CONTEXT, src, structure);
   gst_context_unref (context);
 
@@ -2589,8 +2713,8 @@ gst_message_parse_have_context (GstMessage * message, GstContext ** context)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_HAVE_CONTEXT);
 
   if (context)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (CONTEXT), GST_TYPE_CONTEXT, context, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "context", GST_TYPE_CONTEXT, context, NULL);
 }
 
 #ifndef GSTREAMER_LITE
@@ -2616,8 +2740,8 @@ gst_message_new_device_added (GstObject * src, GstDevice * device)
   g_return_val_if_fail (device != NULL, NULL);
   g_return_val_if_fail (GST_IS_DEVICE (device), NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_DEVICE_ADDED),
-      GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+  structure = gst_structure_new_static_str ("GstMessageDeviceAdded",
+      "device", GST_TYPE_DEVICE, device, NULL);
   message = gst_message_new_custom (GST_MESSAGE_DEVICE_ADDED, src, structure);
 
   return message;
@@ -2642,8 +2766,8 @@ gst_message_parse_device_added (GstMessage * message, GstDevice ** device)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_DEVICE_ADDED);
 
   if (device)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "device", GST_TYPE_DEVICE, device, NULL);
 }
 
 /**
@@ -2668,8 +2792,8 @@ gst_message_new_device_removed (GstObject * src, GstDevice * device)
   g_return_val_if_fail (device != NULL, NULL);
   g_return_val_if_fail (GST_IS_DEVICE (device), NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_DEVICE_REMOVED),
-      GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+  structure = gst_structure_new_static_str ("GstMessageDeviceRemoved",
+      "device", GST_TYPE_DEVICE, device, NULL);
   message = gst_message_new_custom (GST_MESSAGE_DEVICE_REMOVED, src, structure);
 
   return message;
@@ -2694,8 +2818,8 @@ gst_message_parse_device_removed (GstMessage * message, GstDevice ** device)
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_DEVICE_REMOVED);
 
   if (device)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "device", GST_TYPE_DEVICE, device, NULL);
 }
 
 /**
@@ -2723,9 +2847,9 @@ gst_message_new_device_changed (GstObject * src, GstDevice * device,
   g_return_val_if_fail (device != NULL, NULL);
   g_return_val_if_fail (GST_IS_DEVICE (device), NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_DEVICE_CHANGED),
-      GST_QUARK (DEVICE), GST_TYPE_DEVICE, device,
-      GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
+  structure = gst_structure_new_static_str ("GstMessageDeviceChanged",
+      "device", GST_TYPE_DEVICE, device,
+      "device-changed", GST_TYPE_DEVICE, changed_device, NULL);
   message = gst_message_new_custom (GST_MESSAGE_DEVICE_CHANGED, src, structure);
 
   return message;
@@ -2754,12 +2878,12 @@ gst_message_parse_device_changed (GstMessage * message, GstDevice ** device,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_DEVICE_CHANGED);
 
   if (device)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "device", GST_TYPE_DEVICE, device, NULL);
 
   if (changed_device)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "device-changed", GST_TYPE_DEVICE, changed_device, NULL);
 }
 #endif // GSTREAMER_LITE
 
@@ -2783,13 +2907,13 @@ gst_message_new_property_notify (GstObject * src, const gchar * property_name,
   g_return_val_if_fail (GST_IS_OBJECT (src), NULL);
   g_return_val_if_fail (property_name != NULL, NULL);
 
-  structure = gst_structure_new_id_empty (GST_QUARK (MESSAGE_PROPERTY_NOTIFY));
+  structure = gst_structure_new_static_str_empty ("GstMessagePropertyNotify");
   g_value_init (&name_val, G_TYPE_STRING);
   /* should already be interned, but let's make sure */
   g_value_set_static_string (&name_val, g_intern_string (property_name));
-  gst_structure_id_take_value (structure, GST_QUARK (PROPERTY_NAME), &name_val);
+  gst_structure_take_value (structure, "property-name", &name_val);
   if (val != NULL)
-    gst_structure_id_take_value (structure, GST_QUARK (PROPERTY_VALUE), val);
+    gst_structure_take_value (structure, "property-value", val);
 
   return gst_message_new_custom (GST_MESSAGE_PROPERTY_NOTIFY, src, structure);
 }
@@ -2827,13 +2951,12 @@ gst_message_parse_property_notify (GstMessage * message, GstObject ** object,
   if (property_name) {
     const GValue *name_value;
 
-    name_value = gst_structure_id_get_value (s, GST_QUARK (PROPERTY_NAME));
+    name_value = gst_structure_get_value (s, "property-name");
     *property_name = g_value_get_string (name_value);
   }
 
   if (property_value)
-    *property_value =
-        gst_structure_id_get_value (s, GST_QUARK (PROPERTY_VALUE));
+    *property_value = gst_structure_get_value (s, "property-value");
 }
 
 /**
@@ -2859,8 +2982,8 @@ gst_message_new_stream_collection (GstObject * src,
   g_return_val_if_fail (GST_IS_STREAM_COLLECTION (collection), NULL);
 
   structure =
-      gst_structure_new_id (GST_QUARK (MESSAGE_STREAM_COLLECTION),
-      GST_QUARK (COLLECTION), GST_TYPE_STREAM_COLLECTION, collection, NULL);
+      gst_structure_new_static_str ("GstMessageStreamCollection",
+      "collection", GST_TYPE_STREAM_COLLECTION, collection, NULL);
   message =
       gst_message_new_custom (GST_MESSAGE_STREAM_COLLECTION, src, structure);
 
@@ -2886,8 +3009,8 @@ gst_message_parse_stream_collection (GstMessage * message,
       GST_MESSAGE_STREAM_COLLECTION);
 
   if (collection)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (COLLECTION), GST_TYPE_STREAM_COLLECTION, collection, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "collection", GST_TYPE_STREAM_COLLECTION, collection, NULL);
 }
 
 /**
@@ -2922,10 +3045,10 @@ gst_message_new_streams_selected (GstObject * src,
   g_return_val_if_fail (GST_IS_STREAM_COLLECTION (collection), NULL);
 
   structure =
-      gst_structure_new_id (GST_QUARK (MESSAGE_STREAMS_SELECTED),
-      GST_QUARK (COLLECTION), GST_TYPE_STREAM_COLLECTION, collection, NULL);
+      gst_structure_new_static_str ("GstMessageStreamsSelected",
+      "collection", GST_TYPE_STREAM_COLLECTION, collection, NULL);
   g_value_init (&val, GST_TYPE_ARRAY);
-  gst_structure_id_take_value (structure, GST_QUARK (STREAMS), &val);
+  gst_structure_take_value (structure, "streams", &val);
   message =
       gst_message_new_custom (GST_MESSAGE_STREAMS_SELECTED, src, structure);
 
@@ -2951,9 +3074,7 @@ gst_message_streams_selected_get_size (GstMessage * msg)
   g_return_val_if_fail (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_STREAMS_SELECTED,
       0);
 
-  val =
-      gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (msg),
-      GST_QUARK (STREAMS));
+  val = gst_structure_get_value (GST_MESSAGE_STRUCTURE (msg), "streams");
   return gst_value_array_get_size (val);
 }
 
@@ -2977,8 +3098,8 @@ gst_message_streams_selected_add (GstMessage * msg, GstStream * stream)
   g_return_if_fail (GST_IS_STREAM (stream));
 
   val =
-      (GValue *) gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (msg),
-      GST_QUARK (STREAMS));
+      (GValue *) gst_structure_get_value (GST_MESSAGE_STRUCTURE (msg),
+      "streams");
   g_value_init (&to_add, GST_TYPE_STREAM);
   g_value_set_object (&to_add, stream);
   gst_value_array_append_and_take_value (val, &to_add);
@@ -3004,9 +3125,7 @@ gst_message_streams_selected_get_stream (GstMessage * msg, guint idx)
   g_return_val_if_fail (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_STREAMS_SELECTED,
       NULL);
 
-  streams =
-      gst_structure_id_get_value (GST_MESSAGE_STRUCTURE (msg),
-      GST_QUARK (STREAMS));
+  streams = gst_structure_get_value (GST_MESSAGE_STRUCTURE (msg), "streams");
   val = gst_value_array_get_value (streams, idx);
   if (val) {
     return (GstStream *) g_value_dup_object (val);
@@ -3033,8 +3152,8 @@ gst_message_parse_streams_selected (GstMessage * message,
   g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_STREAMS_SELECTED);
 
   if (collection)
-    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
-        GST_QUARK (COLLECTION), GST_TYPE_STREAM_COLLECTION, collection, NULL);
+    gst_structure_get (GST_MESSAGE_STRUCTURE (message),
+        "collection", GST_TYPE_STREAM_COLLECTION, collection, NULL);
 }
 
 /**
@@ -3090,12 +3209,12 @@ gst_message_new_redirect (GstObject * src, const gchar * location,
   g_value_init (&entry_taglists_gvalue, GST_TYPE_LIST);
   g_value_init (&entry_structures_gvalue, GST_TYPE_LIST);
 
-  structure = gst_structure_new_id_empty (GST_QUARK (MESSAGE_REDIRECT));
-  gst_structure_id_take_value (structure, GST_QUARK (REDIRECT_ENTRY_LOCATIONS),
+  structure = gst_structure_new_static_str_empty ("GstMessageRedirect");
+  gst_structure_take_value_static_str (structure, "redirect-entry-locations",
       &entry_locations_gvalue);
-  gst_structure_id_take_value (structure, GST_QUARK (REDIRECT_ENTRY_TAGLISTS),
+  gst_structure_take_value_static_str (structure, "redirect-entry-taglists",
       &entry_taglists_gvalue);
-  gst_structure_id_take_value (structure, GST_QUARK (REDIRECT_ENTRY_STRUCTURES),
+  gst_structure_take_value_static_str (structure, "redirect-entry-structures",
       &entry_structures_gvalue);
 
   message = gst_message_new_custom (GST_MESSAGE_REDIRECT, src, structure);
@@ -3137,16 +3256,15 @@ gst_message_add_redirect_entry (GstMessage * message, const gchar * location,
   structure = GST_MESSAGE_STRUCTURE (message);
 
   entry_locations_gvalue =
-      (GValue *) gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_LOCATIONS));
+      (GValue *) gst_structure_get_value (structure,
+      "redirect-entry-locations");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_locations_gvalue));
   entry_taglists_gvalue =
-      (GValue *) gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_TAGLISTS));
+      (GValue *) gst_structure_get_value (structure, "redirect-entry-taglists");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_taglists_gvalue));
   entry_structures_gvalue =
-      (GValue *) gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_STRUCTURES));
+      (GValue *) gst_structure_get_value (structure,
+      "redirect-entry-structures");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_structures_gvalue));
 
   g_value_init (&val, G_TYPE_STRING);
@@ -3202,16 +3320,13 @@ gst_message_parse_redirect_entry (GstMessage * message, gsize entry_index,
   structure = GST_MESSAGE_STRUCTURE (message);
 
   entry_locations_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_LOCATIONS));
+      gst_structure_get_value (structure, "redirect-entry-locations");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_locations_gvalue));
   entry_taglists_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_TAGLISTS));
+      gst_structure_get_value (structure, "redirect-entry-taglists");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_taglists_gvalue));
   entry_structures_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_STRUCTURES));
+      gst_structure_get_value (structure, "redirect-entry-structures");
   g_return_if_fail (GST_VALUE_HOLDS_LIST (entry_structures_gvalue));
 
   if (location) {
@@ -3256,16 +3371,13 @@ gst_message_get_num_redirect_entries (GstMessage * message)
   structure = GST_MESSAGE_STRUCTURE (message);
 
   entry_locations_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_LOCATIONS));
+      gst_structure_get_value (structure, "redirect-entry-locations");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_locations_gvalue), 0);
   entry_taglists_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_TAGLISTS));
+      gst_structure_get_value (structure, "redirect-entry-taglists");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_taglists_gvalue), 0);
   entry_structures_gvalue =
-      gst_structure_id_get_value (structure,
-      GST_QUARK (REDIRECT_ENTRY_STRUCTURES));
+      gst_structure_get_value (structure, "redirect-entry-structures");
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (entry_structures_gvalue), 0);
 
   size = gst_value_list_get_size (entry_locations_gvalue);
@@ -3301,8 +3413,8 @@ gst_message_new_instant_rate_request (GstObject * src, gdouble rate_multiplier)
 
   g_return_val_if_fail (rate_multiplier != 0.0, NULL);
 
-  structure = gst_structure_new_id (GST_QUARK (MESSAGE_INSTANT_RATE_REQUEST),
-      GST_QUARK (RATE), G_TYPE_DOUBLE, rate_multiplier, NULL);
+  structure = gst_structure_new_static_str ("GstMessageInstantRateRequest",
+      "rate", G_TYPE_DOUBLE, rate_multiplier, NULL);
   message =
       gst_message_new_custom (GST_MESSAGE_INSTANT_RATE_REQUEST, src, structure);
 
@@ -3329,8 +3441,7 @@ gst_message_parse_instant_rate_request (GstMessage * message,
       GST_MESSAGE_INSTANT_RATE_REQUEST);
 
   structure = GST_MESSAGE_STRUCTURE (message);
-  gst_structure_id_get (structure, GST_QUARK (RATE), G_TYPE_DOUBLE,
-      rate_multiplier, NULL);
+  gst_structure_get (structure, "rate", G_TYPE_DOUBLE, rate_multiplier, NULL);
 }
 
 /**

@@ -31,10 +31,12 @@
 
 namespace WebCore {
 
+class CustomElementRegistry;
 class Document;
 class Element;
 class HTMLAttachmentElement;
 class HTMLElement;
+class TreeScope;
 
 enum class AttachmentAssociatedElementType : uint8_t {
     None,
@@ -62,13 +64,13 @@ public:
 
 protected:
     void copyAttachmentAssociatedPropertiesFromElement(const AttachmentAssociatedElement&);
-    void cloneAttachmentAssociatedElementWithoutAttributesAndChildren(AttachmentAssociatedElement&, Document&);
+    void cloneAttachmentAssociatedElementWithoutAttributesAndChildren(AttachmentAssociatedElement&, Document&) const;
 
 private:
     virtual void refAttachmentAssociatedElement() const = 0;
     virtual void derefAttachmentAssociatedElement() const = 0;
 
-    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) = 0;
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const = 0;
     virtual void copyNonAttributePropertiesFromElement(const Element&) = 0;
 
     virtual AttachmentAssociatedElement* asAttachmentAssociatedElement() = 0;

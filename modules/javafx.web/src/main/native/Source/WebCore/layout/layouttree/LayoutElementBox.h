@@ -46,7 +46,6 @@ public:
     enum class ListMarkerAttribute : uint8_t {
         Image = 1 << 0,
         Outside = 1 << 1,
-        HasListElementAncestor = 1 << 2
     };
     ElementBox(ElementAttributes&&, OptionSet<ListMarkerAttribute>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
 
@@ -62,9 +61,11 @@ public:
     const Box* firstChild() const { return m_firstChild.get(); }
     const Box* firstInFlowChild() const;
     const Box* firstInFlowOrFloatingChild() const;
+    const Box* firstOutOfFlowChild() const;
     const Box* lastChild() const { return m_lastChild.get(); }
     const Box* lastInFlowChild() const;
     const Box* lastInFlowOrFloatingChild() const;
+    const Box* lastOutOfFlowChild() const;
 
     // FIXME: This is currently needed for style updates.
     Box* firstChild() { return m_firstChild.get(); }
@@ -93,7 +94,10 @@ public:
 
     bool isListMarkerImage() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Image); }
     bool isListMarkerOutside() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Outside); }
-    bool isListMarkerInsideList() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::HasListElementAncestor); }
+
+    // FIXME: This is temporary until after list marker content is accessible by IFC (webkit.org/b/294342)
+    void setListMarkerLayoutBounds(std::pair<int, int> layoutBounds) { m_replacedData->layoutBounds = layoutBounds; }
+    std::pair<int, int> layoutBoundsForListMarker() const { return m_replacedData ? m_replacedData->layoutBounds : std::pair<int, int>(); }
 
     // FIXME: This doesn't belong.
     CachedImage* cachedImage() const { return m_replacedData ? m_replacedData->cachedImage : nullptr; }
@@ -104,9 +108,11 @@ private:
     friend class Box;
 
     struct ReplacedData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ReplacedData);
 
         OptionSet<ListMarkerAttribute> listMarkerAttributes;
+        std::pair<int, int> layoutBounds;
+
         std::optional<LayoutSize> intrinsicSize;
         std::optional<LayoutUnit> intrinsicRatio;
         CachedImage* cachedImage { nullptr };

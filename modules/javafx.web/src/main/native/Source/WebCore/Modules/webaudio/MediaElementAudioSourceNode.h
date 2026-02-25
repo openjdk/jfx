@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,9 +46,7 @@ public:
 
     virtual ~MediaElementAudioSourceNode();
 
-    using AudioNode::weakPtrFactory;
-    using AudioNode::WeakValueType;
-    using AudioNode::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(AudioNode);
 
     HTMLMediaElement& mediaElement() { return m_mediaElement; }
 
@@ -62,7 +60,7 @@ public:
 
 private:
     MediaElementAudioSourceNode(BaseAudioContext&, Ref<HTMLMediaElement>&&);
-    void provideInput(AudioBus*, size_t framesToProcess);
+    void provideInput(AudioBus&, size_t framesToProcess);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }
@@ -73,7 +71,7 @@ private:
 
     bool wouldTaintOrigin();
 
-    Ref<HTMLMediaElement> m_mediaElement;
+    const Ref<HTMLMediaElement> m_mediaElement;
     Lock m_processLock;
 
     unsigned m_sourceNumberOfChannels WTF_GUARDED_BY_LOCK(m_processLock) { 0 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "MediaRecorderPrivateOptions.h"
 #include "MediaStream.h"
 #include "MediaStreamTrackPrivate.h"
@@ -41,6 +41,7 @@ namespace WebCore {
 class Blob;
 class Document;
 class MediaRecorderPrivate;
+template<typename> class ExceptionOr;
 
 class MediaRecorder final
     : public ActiveDOMObject
@@ -50,6 +51,9 @@ class MediaRecorder final
     , private MediaStreamTrackPrivateObserver {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaRecorder);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     enum class RecordingState { Inactive, Recording, Paused };
 
     ~MediaRecorder();
@@ -66,10 +70,6 @@ public:
     RecordingState state() const { return m_state; }
     const String& mimeType() const { return m_options.mimeType; }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     ExceptionOr<void> startRecording(std::optional<unsigned>);
     void stopRecording();
     ExceptionOr<void> requestData();
@@ -81,14 +81,12 @@ public:
 
     MediaStream& stream() { return m_stream.get(); }
 
-    using EventTarget::weakPtrFactory;
-    using EventTarget::WeakValueType;
-    using EventTarget::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
 private:
     MediaRecorder(Document&, Ref<MediaStream>&&, Options&&);
 
-    static ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> createMediaRecorderPrivate(Document&, MediaStreamPrivate&, const Options&);
+    static ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> createMediaRecorderPrivate(MediaStreamPrivate&, const Options&);
 
     Document* document() const;
 
@@ -107,8 +105,10 @@ private:
     void dispatchError(Exception&&);
 
     enum class TakePrivateRecorder : bool { No, Yes };
-    using FetchDataCallback = Function<void(RefPtr<FragmentedSharedBuffer>&&, const String& mimeType, double)>;
+    using FetchDataCallback = Function<void(MediaRecorder&, Ref<FragmentedSharedBuffer>&&, const String& mimeType, double)>;
     void fetchData(FetchDataCallback&&, TakePrivateRecorder);
+    enum class ReturnDataIfEmpty : bool { No, Yes };
+    ExceptionOr<void> requestDataInternal(ReturnDataIfEmpty);
 
     // MediaStream::Observer
     void didAddTrack(MediaStreamTrackPrivate&) final { handleTrackChange(); }
@@ -125,14 +125,16 @@ private:
     void computeInitialBitRates() { computeBitRates(nullptr); }
     void updateBitRates() { computeBitRates(&m_stream->privateStream()); }
     void computeBitRates(const MediaStreamPrivate*);
+    void timeSlicerTimerFired();
 
     static CreatorFunction m_customCreator;
 
     Options m_options;
-    Ref<MediaStream> m_stream;
+    const Ref<MediaStream> m_stream;
     std::unique_ptr<MediaRecorderPrivate> m_private;
     RecordingState m_state { RecordingState::Inactive };
     Vector<Ref<MediaStreamTrackPrivate>> m_tracks;
+    static constexpr unsigned m_mimimumTimeSlice { 100 };
     std::optional<unsigned> m_timeSlice;
     Timer m_timeSliceTimer;
 

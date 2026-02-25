@@ -25,16 +25,18 @@
 
 #pragma once
 
+#include "CalleeBits.h"
 #include "ImplementationVisibility.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace JSC {
 
 class LLIntOffsetsExtractor;
 
-class NativeCallee : public ThreadSafeRefCounted<NativeCallee> {
-    WTF_MAKE_TZONE_ALLOCATED(NativeCallee);
+class NativeCallee : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<NativeCallee> {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(NativeCallee);
 public:
     enum class Category : uint8_t {
         InlineCache,
@@ -54,6 +56,25 @@ protected:
 private:
     Category m_category;
     ImplementationVisibility m_implementationVisibility { ImplementationVisibility::Public };
+};
+
+// This lets you do a RefPtr<NativeCallee, BoxedNativeCalleePtrTraits<NativeCallee>>
+template<typename T>
+class BoxedNativeCalleePtrTraits {
+public:
+    using StorageType = CalleeBits;
+    // Use an intermediate cast to uintptr_t to silence unsafe casting warning. It's locally "obvious" (other than the fact that RefPtr uses StorageType's constructor instead of a wrap) the
+    // return value is of type T.
+    static T* unwrap(const CalleeBits& calleeBits) { return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(calleeBits.asNativeCallee())); }
+    static T* exchange(CalleeBits& calleeBits, T* newCallee)
+    {
+        T* result = unwrap(calleeBits);
+        calleeBits = newCallee;
+        return result;
+    }
+
+    // FIXME: This isn't hashable since we don't have hashTableDeletedValue() or isHashTableDeletedValue()
+    // but those probably shouldn't be hard to add if needed.
 };
 
 } // namespace JSC

@@ -133,6 +133,7 @@ PAS_HEAP_CONFIG_SPECIALIZATION_DECLARATIONS(jit_heap_config);
             .heap_config_ptr = &jit_heap_config, \
             .page_config_ptr = &jit_heap_config.variant_lowercase ## _bitfit_config.base, \
             .page_config_kind = pas_page_config_kind_bitfit, \
+            .page_config_size_category = pas_page_config_size_category_ ## variant_lowercase, \
             .min_align_shift = JIT_ ## variant_uppercase ## _BITFIT_MIN_ALIGN_SHIFT, \
             .page_size = JIT_ ## variant_uppercase ## _PAGE_SIZE, \
             .granule_size = JIT_ ## variant_uppercase ## _GRANULE_SIZE, \
@@ -166,6 +167,7 @@ PAS_HEAP_CONFIG_SPECIALIZATION_DECLARATIONS(jit_heap_config);
                 .heap_config_ptr = &jit_heap_config, \
                 .page_config_ptr = &jit_heap_config.small_segregated_config.base, \
                 .page_config_kind = pas_page_config_kind_segregated, \
+                .page_config_size_category = pas_page_config_size_category_small, \
                 .min_align_shift = JIT_SMALL_SEGREGATED_MIN_ALIGN_SHIFT, \
                 .page_size = JIT_SMALL_PAGE_SIZE, \
                 .granule_size = JIT_SMALL_GRANULE_SIZE, \
@@ -180,6 +182,7 @@ PAS_HEAP_CONFIG_SPECIALIZATION_DECLARATIONS(jit_heap_config);
             .kind = pas_segregated_page_config_kind_jit_small_segregated, \
             .wasteage_handicap = 1., \
             .sharing_shift = PAS_SMALL_SHARING_SHIFT, \
+            .partial_view_padding = 0, \
             .num_alloc_bits = PAS_BASIC_SEGREGATED_NUM_ALLOC_BITS(JIT_SMALL_SEGREGATED_MIN_ALIGN_SHIFT, \
                                                                   JIT_SMALL_PAGE_SIZE), \
             .shared_payload_offset = 0, \

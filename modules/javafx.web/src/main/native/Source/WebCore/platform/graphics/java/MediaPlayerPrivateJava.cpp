@@ -406,7 +406,7 @@ bool MediaPlayerPrivate::hasAudio() const
     return m_hasAudio;
 }
 
-void MediaPlayerPrivate::setPageIsVisible(bool visible,String&& sceneIdentifier)
+void MediaPlayerPrivate::setPageIsVisible(bool visible)
 {
     if (m_isVisible != visible) {
         PLOG_TRACE2("MediaPlayerPrivate setPageIsVisible: %d => %d\n", m_isVisible ? 1 : 0, visible ? 1 : 0);
@@ -464,6 +464,10 @@ void MediaPlayerPrivate::seek(float time)
 bool MediaPlayerPrivate::seeking() const
 {
     return m_seeking;
+}
+constexpr MediaPlayerType MediaPlayerPrivate::mediaPlayerType() const
+{
+    return MediaPlayerType::Null;
 }
 
 MediaTime MediaPlayerPrivate::startTime() const

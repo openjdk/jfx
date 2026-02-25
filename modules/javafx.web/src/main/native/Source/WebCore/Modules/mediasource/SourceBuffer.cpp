@@ -40,14 +40,17 @@
 #include "BufferSource.h"
 #include "BufferedChangeEvent.h"
 #include "ContentTypeUtilities.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "MediaDescription.h"
 #include "MediaSource.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "SourceBufferList.h"
@@ -146,6 +149,17 @@ public:
         ScriptExecutionContext::postTaskTo(m_identifier, [wrapper = WTFMove(weakWrapper)](auto&) {
             wrapper();
         });
+    }
+
+    Ref<MediaPromise> sourceBufferPrivateDidAttach(InitializationSegment&& segment) final
+    {
+        MediaPromise::AutoRejectProducer producer(PlatformMediaError::BufferRemoved);
+        auto promise = producer.promise();
+
+        ensureWeakOnDispatcher([producer = WTFMove(producer), segment = WTFMove(segment)](SourceBuffer& parent) mutable {
+            parent.sourceBufferPrivateDidAttach(WTFMove(segment))->chainTo(WTFMove(producer));
+        });
+        return promise;
     }
 
 private:
@@ -409,6 +423,9 @@ ExceptionOr<void> SourceBuffer::remove(const MediaTime& start, const MediaTime& 
 
 void SourceBuffer::rangeRemoval(const MediaTime& start, const MediaTime& end)
 {
+    if (isRemoved())
+        return;
+
     // 3.5.7 Range Removal
     // https://rawgit.com/w3c/media-source/7bbe4aa33c61ec025bc7acbd80354110f6a000f9/media-source.html#sourcebuffer-range-removal
     // 1. Let start equal the starting presentation timestamp for the removal range.
@@ -564,7 +581,7 @@ void SourceBuffer::seekToTime(const MediaTime& time)
 
 bool SourceBuffer::virtualHasPendingActivity() const
 {
-    return m_source;
+    return !!m_source;
 }
 
 bool SourceBuffer::isRemoved() const
@@ -693,6 +710,7 @@ void SourceBuffer::sourceBufferPrivateDidReceiveRenderingError(int64_t error)
 
     ERROR_LOG(LOGIDENTIFIER, error);
 
+    if (!isRemoved())
         m_source->streamEndedWithError(MediaSource::EndOfStreamError::Decode);
 }
 
@@ -769,6 +787,9 @@ void SourceBuffer::setActive(bool active)
 Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&& segment)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    if (isRemoved())
+        return MediaPromise::createAndReject(PlatformMediaError::NotReady);
 
     // 3.5.8 Initialization Segment Received (ctd)
     // https://rawgit.com/w3c/media-source/c3ad59c7a370d04430969ba73d18dc9bcde57a33/index.html#sourcebuffer-init-segment-received [Editor's Draft 09 January 2015]
@@ -1035,7 +1056,9 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
         // 5.6 Set first initialization segment flag to true.
         m_receivedFirstInitializationSegment = true;
 
+#if !PLATFORM(WPE)
         if (hasVideo())
+#endif
             m_private->setMaximumBufferSize(maximumBufferSize());
     }
 
@@ -1138,6 +1161,11 @@ bool SourceBuffer::hasAudio() const
 bool SourceBuffer::hasVideo() const
 {
     return m_videoTracks && m_videoTracks->length();
+}
+
+ScriptExecutionContext* SourceBuffer::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void SourceBuffer::videoTrackSelectedChanged(VideoTrack& track)
@@ -1263,6 +1291,7 @@ void SourceBuffer::textTrackLanguageChanged(TextTrack& track)
 
 Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDurationChanged(const MediaTime& duration)
 {
+    if (!isRemoved())
     m_source->setDurationInternal(duration);
     if (m_textTracks)
         m_textTracks->setDuration(duration);
@@ -1276,6 +1305,7 @@ void SourceBuffer::sourceBufferPrivateHighestPresentationTimestampChanged(const 
 
 void SourceBuffer::sourceBufferPrivateDidDropSample()
 {
+    if (!isRemoved())
     m_source->incrementDroppedFrameCount();
 }
 
@@ -1408,8 +1438,7 @@ void SourceBuffer::updateBuffered()
 
         queueTaskToDispatchEvent(*this, TaskSource::MediaElement, BufferedChangeEvent::create(WTFMove(addedTimeRanges), WTFMove(removedTimeRanges)));
     }
-        if (isRemoved())
-            return;
+        if (!isRemoved())
         m_source->monitorSourceBuffers();
     });
 
@@ -1466,8 +1495,10 @@ void SourceBuffer::setBufferedDirty(bool flag)
 {
     if (m_bufferedDirty == flag)
         return;
+
     m_bufferedDirty = flag;
-    if (flag && m_source)
+
+    if (!isRemoved() && flag)
         m_source->sourceBufferBufferedChanged();
 }
 
@@ -1492,6 +1523,8 @@ void SourceBuffer::memoryPressure()
 {
     if (!isManaged())
         return;
+
+    if (!isRemoved())
     m_private->memoryPressure(m_source->currentTime());
 }
 
@@ -1517,6 +1550,95 @@ bool SourceBuffer::enabledForContext(ScriptExecutionContext& context)
 size_t SourceBuffer::evictableSize() const
 {
     return m_private->evictionData().evictableSize;
+}
+
+void SourceBuffer::detach()
+{
+    setActive(false);
+    m_private->detach();
+}
+
+void SourceBuffer::attach()
+{
+    m_private->attach();
+}
+
+Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidAttach(SourceBufferPrivateClient::InitializationSegment&& segment)
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+
+    ASSERT(m_receivedFirstInitializationSegment);
+
+    if (isRemoved())
+        return MediaPromise::createAndReject(PlatformMediaError::NotReady);
+
+    // 3.2 Add the appropriate track descriptions from this initialization segment to each of the track buffers.
+    ASSERT(segment.audioTracks.size() == audioTracks().length());
+    for (auto& audioTrackInfo : segment.audioTracks) {
+        auto audioTrack = audioTracks().getTrackById(audioTrackInfo.track->id());
+        ASSERT(audioTrack);
+        audioTrack->setPrivate(*audioTrackInfo.track);
+        if (isMainThread())
+            m_source->addAudioTrackToElement(*audioTrack);
+        else {
+            // 11.5.7.7.9 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+            // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+            // Let mirrored audio track be a new AudioTrack object.
+            // Assign the same property values to mirrored audio track as were determined for new audio track.
+            // Add mirrored audio track to the audioTracks attribute on the HTMLMediaElement.
+            m_source->addAudioTrackMirrorToElement(*audioTrackInfo.track, audioTrack->enabled());
+        }
+    }
+
+    ASSERT(segment.videoTracks.size() == videoTracks().length());
+    for (auto& videoTrackInfo : segment.videoTracks) {
+        auto videoTrack = videoTracks().getTrackById(videoTrackInfo.track->id());
+        ASSERT(videoTrack);
+        videoTrack->setPrivate(*videoTrackInfo.track);
+        // 5.3.6 Add new video track to the videoTracks attribute on the HTMLMediaElement.
+        // 5.3.7 Queue a task to fire a trusted event named addtrack, that does not bubble and is
+        // not cancelable, and that uses the TrackEvent interface, at the VideoTrackList object
+        // referenced by the videoTracks attribute on the HTMLMediaElement.
+        if (isMainThread())
+            m_source->addVideoTrackToElement(*videoTrack);
+        else {
+            // 11.5.7.7.3.9 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+            // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+            // Let mirrored audio track be a new VideoTrack object.
+            // Assign the same property values to mirrored video track as were determined for new video track.
+            // Add mirrored video track to the videoTracks attribute on the HTMLMediaElement.
+            m_source->addVideoTrackMirrorToElement(*videoTrackInfo.track, videoTrack->selected());
+        }
+    }
+
+    ASSERT(segment.textTracks.size() == textTracks().length());
+    for (auto& textTrackInfo : segment.textTracks) {
+        auto textTrack = textTracks().getTrackById(textTrackInfo.track->id());
+        ASSERT(textTrack);
+        downcast<InbandTextTrack>(*textTrack).setPrivate(*textTrackInfo.track);
+        // 5.4.5 Add new text track to the textTracks attribute on the HTMLMediaElement.
+        // 5.4.6 Queue a task to fire a trusted event named addtrack, that does not bubble and is
+        // not cancelable, and that uses the TrackEvent interface, at the TextTrackList object
+        // referenced by the textTracks attribute on the HTMLMediaElement.
+        if (isMainThread())
+            m_source->addTextTrackToElement(*textTrack);
+        else {
+            // 11.5.7.7.4.10 If the parent media source was constructed in a DedicatedWorkerGlobalScope:
+            // Post an internal create track mirror message to [[port to main]] whose implicit handler in Window runs the following steps:
+            // Let mirrored text track be a new TextTrack object.
+            // Assign the same property values to mirrored text track as were determined for new text track.
+            // Add mirrored text track to the textTracks attribute on the HTMLMediaElement.
+            m_source->addTextTrackMirrorToElement(*textTrackInfo.track);
+        }
+    }
+
+    setActive(true);
+
+    // 6. If the HTMLMediaElement.readyState attribute is HAVE_NOTHING, then run the following steps:
+    m_source->sourceBufferReceivedFirstInitializationSegmentChanged();
+    m_source->monitorSourceBuffers();
+
+    return MediaPromise::createAndResolve();
 }
 
 } // namespace WebCore

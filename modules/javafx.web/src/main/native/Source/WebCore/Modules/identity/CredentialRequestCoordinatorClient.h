@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,38 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "CredentialRequestCoordinator.h"
-#include "ExceptionData.h"
+#include "DigitalCredentialsProtocols.h"
+#include "UnvalidatedDigitalCredentialRequest.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-struct DigitalCredentialRequestOptions;
-class LocalFrame;
+class SecurityOriginData;
+class Document;
+template<typename T> class ExceptionOr;
 
-using DigitalCredentialRequestCompletionHandler = CompletionHandler<void(WebCore::ExceptionData&&)>;
+struct DigitalCredentialsRequestData;
+struct DigitalCredentialsResponseData;
+struct DigitalCredentialsRevalidationResult;
+struct ExceptionData;
+struct MobileDocumentRequest;
+struct OpenID4VPRequest;
 
-class CredentialRequestCoordinatorClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class CredentialRequestCoordinatorClient : public RefCounted<CredentialRequestCoordinatorClient> {
+    WTF_MAKE_TZONE_ALLOCATED(CredentialRequestCoordinatorClient);
     WTF_MAKE_NONCOPYABLE(CredentialRequestCoordinatorClient);
 
 public:
     CredentialRequestCoordinatorClient() = default;
     virtual ~CredentialRequestCoordinatorClient() = default;
+    virtual void showDigitalCredentialsPicker(Vector<UnvalidatedDigitalCredentialRequest>&&, const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&&) = 0;
+    virtual void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&&) = 0;
+    virtual ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&) = 0;
 
-    virtual void requestDigitalCredential(const LocalFrame&, const DigitalCredentialRequestOptions&, DigitalCredentialRequestCompletionHandler&&) = 0;
-    virtual void cancel(CompletionHandler<void()>&&) = 0;
+    void ref() const { RefCounted::ref(); }
+    void deref() const { RefCounted::deref(); }
 };
 
 } // namespace WebCore

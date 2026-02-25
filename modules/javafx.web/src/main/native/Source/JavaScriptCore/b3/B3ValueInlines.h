@@ -67,10 +67,12 @@ namespace JSC { namespace B3 {
     case Identity: \
     case Opaque: \
     case Neg: \
+    case PurifyNaN: \
     case Clz: \
     case Abs: \
     case Ceil: \
     case Floor: \
+    case FTrunc: \
     case Sqrt: \
     case SExt8: \
     case SExt16: \
@@ -91,6 +93,8 @@ namespace JSC { namespace B3 {
     case Add: \
     case Sub: \
     case Mul: \
+    case MulHigh: \
+    case UMulHigh: \
     case Div: \
     case UDiv: \
     case Mod: \
@@ -194,6 +198,8 @@ namespace JSC { namespace B3 {
     case VectorAddSat: \
     case VectorSubSat: \
     case VectorMul: \
+    case VectorMulHigh: \
+    case VectorMulLow: \
     case VectorDotProduct: \
     case VectorDiv: \
     case VectorMin: \
@@ -238,6 +244,7 @@ namespace JSC { namespace B3 {
     case VectorShiftByVector: \
     case VectorRelaxedMAdd: \
     case VectorRelaxedNMAdd: \
+    case VectorRelaxedLaneSelect: \
         return MACRO(SIMDValue); \
     default: \
         RELEASE_ASSERT_NOT_REACHED(); \

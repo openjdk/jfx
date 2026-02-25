@@ -53,7 +53,7 @@ extension ContiguousBytes {
             let result = VectorUInt8(buf.count)
             buf.copyBytes(
                 to: UnsafeMutableRawBufferPointer(
-                    start: UnsafeMutableRawPointer(mutating: result.__dataUnsafe()),
+                    start: UnsafeMutableRawPointer(mutating: result.span().__dataUnsafe()),
                     count: result.size()), count: result.size())
             return result
         }
@@ -272,6 +272,15 @@ extension Curve25519.KeyAgreement.PrivateKey {
         let pub = try Curve25519.KeyAgreement.PublicKey(
             rawRepresentation: Data.temporaryDataFromSpan(spanNoCopy: pubSpan))
         return try self.sharedSecretFromKeyAgreement(with: pub).copyToVectorUInt8()
+    }
+}
+
+extension Curve25519.KeyAgreement.PublicKey {
+    init(span: SpanConstUInt8) throws {
+        if span.empty() {
+            throw UnsafeErrors.emptySpan
+        }
+        try self.init(rawRepresentation: Data.temporaryDataFromSpan(spanNoCopy: span))
     }
 }
 

@@ -33,6 +33,7 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 #include <wtf/URLParser.h>
 #include <wtf/text/MakeString.h>
@@ -44,7 +45,7 @@ static void append(Vector<uint8_t>& vector, size_t length)
 {
     RELEASE_ASSERT(length <= std::numeric_limits<uint32_t>::max());
     uint32_t integer = length;
-    vector.append(std::span { reinterpret_cast<const uint8_t*>(&integer), sizeof(integer) });
+    vector.append(asByteSpan(integer));
 }
 
 static void append(Vector<uint8_t>& vector, const CString& string)
@@ -54,8 +55,7 @@ static void append(Vector<uint8_t>& vector, const CString& string)
 
 static size_t deserializeLength(std::span<const uint8_t> span, size_t offset)
 {
-    RELEASE_ASSERT(span.size() >= offset + sizeof(uint32_t));
-    return *reinterpret_cast<const uint32_t*>(span.data() + offset);
+    return reinterpretCastSpanStartTo<const uint32_t>(span.subspan(offset));
 }
 
 static String deserializeUTF8String(std::span<const uint8_t> span, size_t offset, size_t length)
@@ -69,9 +69,8 @@ static void writeLengthToVectorAtOffset(Vector<uint8_t>& vector, size_t offset)
     auto length = vector.size() - offset;
     RELEASE_ASSERT(length <= std::numeric_limits<uint32_t>::max());
     uint32_t integer = length;
-    RELEASE_ASSERT(vector.size() >= offset + sizeof(uint32_t));
-    RELEASE_ASSERT(!*reinterpret_cast<uint32_t*>(vector.data() + offset));
-    *reinterpret_cast<uint32_t*>(vector.data() + offset) = integer;
+    RELEASE_ASSERT(!reinterpretCastSpanStartTo<uint32_t>(vector.subspan(offset)));
+    reinterpretCastSpanStartTo<uint32_t>(vector.mutableSpan().subspan(offset)) = integer;
 }
 
 Expected<ModifyHeadersAction, std::error_code> ModifyHeadersAction::parse(const JSON::Object& modifyHeaders)
@@ -169,7 +168,7 @@ void ModifyHeadersAction::applyToRequest(ResourceRequest& request, HashMap<Strin
 
 void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
-    std::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
         ModifyHeadersOperationType previouslyAppliedHeaderOperation = headerNameToFirstOperationApplied.get(operation.header);
         if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Remove)
             return;
@@ -243,7 +242,7 @@ void ModifyHeadersAction::ModifyHeaderInfo::serialize(Vector<uint8_t>& vector) c
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(operation.index());
-    std::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
         append(vector, operation.header.utf8());
     }, [&] (const auto& operation) {
         auto valueUTF8 = operation.value.utf8();
@@ -333,7 +332,7 @@ void RedirectAction::serialize(Vector<uint8_t>& vector) const
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(action.index());
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         append(vector, action.extensionPath.utf8());
     }, [&](const RegexSubstitutionAction& action) {
         action.serialize(vector);
@@ -372,7 +371,7 @@ size_t RedirectAction::serializedLength(std::span<const uint8_t> span)
 
 void RedirectAction::applyToRequest(ResourceRequest& request, const URL& extensionBaseURL)
 {
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         auto url = extensionBaseURL;
         url.setPath(action.extensionPath);
         request.setURL(WTFMove(url));
@@ -446,8 +445,8 @@ void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
         auto string = adopt(JSValueToStringCopy(context, value, nullptr));
         size_t bufferSize = JSStringGetMaximumUTF8CStringSize(string.get());
         Vector<char> buffer(bufferSize);
-        JSStringGetUTF8CString(string.get(), buffer.data(), buffer.size());
-        return String::fromUTF8(buffer.data());
+        JSStringGetUTF8CString(string.get(), buffer.mutableSpan().data(), buffer.size());
+        return String::fromUTF8(buffer.span().data());
     };
 
     // Effectively execute this JavaScript:
@@ -594,7 +593,7 @@ void RedirectAction::URLTransformAction::serialize(Vector<uint8_t>& vector) cons
         }
     if (hasQuery) {
         vector.append(queryTransform.index());
-        std::visit(WTF::makeVisitor([&](const String&) {
+        WTF::visit(WTF::makeVisitor([&](const String&) {
             append(vector, queryStringUTF8.length());
             append(vector, queryStringUTF8);
         }, [&](const QueryTransform& transform) {
@@ -724,7 +723,7 @@ void RedirectAction::URLTransformAction::applyToURL(URL& url) const
         url.setPath(path);
     if (!!port)
         url.setPort(*port);
-    std::visit(WTF::makeVisitor([&] (const String& query) {
+    WTF::visit(WTF::makeVisitor([&] (const String& query) {
         if (!query.isNull())
             url.setQuery(query.isEmpty() ? StringView() : StringView(query));
     }, [&] (const URLTransformAction::QueryTransform& transform) {

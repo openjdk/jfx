@@ -36,7 +36,7 @@ enum class AXLoggingOptions : uint8_t {
     OffMainThread = 1 << 1, // Logs messages off the main thread.
 };
 
-enum class AXStreamOptions : uint8_t {
+enum class AXStreamOptions : uint16_t {
     ObjectID = 1 << 0,
     Role = 1 << 1,
     ParentID = 1 << 2,
@@ -47,6 +47,7 @@ enum class AXStreamOptions : uint8_t {
 #if ENABLE(AX_THREAD_TEXT_APIS)
     TextRuns = 1 << 7,
 #endif
+    RendererOrNode = 1 << 8,
 };
 
 #if !LOG_DISABLED
@@ -60,12 +61,12 @@ public:
     void log(const char*);
     void log(const AXCoreObject&);
     void log(RefPtr<AXCoreObject>);
-    void log(const Vector<RefPtr<AXCoreObject>>&);
-    void log(const std::pair<Ref<AccessibilityObject>, AXObjectCache::AXNotification>&);
-    void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
+    void log(const Vector<Ref<AXCoreObject>>&);
+    void log(const std::pair<Ref<AccessibilityObject>, AXNotification>&);
+    void log(const std::pair<RefPtr<AXCoreObject>, AXNotification>&);
     void log(const AccessibilitySearchCriteria&);
     void log(AccessibilityObjectInclusion);
-    void log(AXRelationType);
+    void log(AXRelation);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void log(AXIsolatedTree&);
 #endif
@@ -91,6 +92,6 @@ private:
 #endif // !LOG_DISABLED
 
 void streamAXCoreObject(TextStream&, const AXCoreObject&, const OptionSet<AXStreamOptions>&);
-void streamSubtree(TextStream&, const RefPtr<AXCoreObject>&, const OptionSet<AXStreamOptions>&);
+void streamSubtree(TextStream&, const Ref<AXCoreObject>&, const OptionSet<AXStreamOptions>&);
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,10 +55,12 @@ public abstract class VisualTestBase {
     // Singleton Application instance
     private static MyApp myApp;
     // Scene instances used for testing
-    private List<Stage> stages = new ArrayList<>();
+    private static List<Stage> stages = new ArrayList<>();
 
     // Glass Robot instance
     Robot robot;
+
+    protected static boolean clearStages = true;
 
     protected Robot getRobot() {
         return robot;
@@ -96,22 +98,20 @@ public abstract class VisualTestBase {
 
     @BeforeEach
     public void doSetup() {
+        if (clearStages) {
+            runAndWait(() -> {
+                if (!stages.isEmpty()) {
+                    for (final Stage stage : stages) {
+                        if (stage.isShowing()) {
+                            stage.hide();
+                        }
+                    }
+                    stages.clear();
+                }
+            });
+        }
         runAndWait(() -> robot = new Robot());
         Util.parkCursor(robot);
-    }
-
-    @AfterEach
-    public void doTeardown() {
-        runAndWait(() -> {
-            if (!stages.isEmpty()) {
-                for (final Stage stage : stages) {
-                    if (stage.isShowing()) {
-                        stage.hide();
-                    }
-                }
-                stages.clear();
-            }
-        });
     }
 
     protected void runAndWait(final Runnable r) {

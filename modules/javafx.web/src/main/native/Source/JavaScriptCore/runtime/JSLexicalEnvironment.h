@@ -32,6 +32,8 @@
 #include "JSSymbolTableObject.h"
 #include "SymbolTable.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class LLIntOffsetsExtractor;
@@ -43,7 +45,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction);
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
         return &vm.variableSizedCellSpace();
     }
 
@@ -52,7 +54,7 @@ public:
 
     WriteBarrierBase<Unknown>* variables()
     {
-        return bitwise_cast<WriteBarrierBase<Unknown>*>(bitwise_cast<char*>(this) + offsetOfVariables());
+        return std::bit_cast<WriteBarrierBase<Unknown>*>(std::bit_cast<char*>(this) + offsetOfVariables());
     }
 
     bool isValidScopeOffset(ScopeOffset offset)
@@ -114,6 +116,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     inline static Structure* createStructure(VM&, JSGlobalObject*);
 
 protected:
@@ -121,7 +125,6 @@ protected:
 
     DECLARE_DEFAULT_FINISH_CREATION;
 
-    DECLARE_VISIT_CHILDREN;
     static void analyzeHeap(JSCell*, HeapAnalyzer&);
 };
 
@@ -136,3 +139,5 @@ inline JSLexicalEnvironment::JSLexicalEnvironment(VM& vm, Structure* structure, 
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

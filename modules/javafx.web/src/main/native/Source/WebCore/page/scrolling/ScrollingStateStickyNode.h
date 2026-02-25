@@ -37,6 +37,7 @@ namespace WebCore {
 class StickyPositionViewportConstraints;
 
 class ScrollingStateStickyNode final : public ScrollingStateNode {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingStateStickyNode, WEBCORE_EXPORT);
 public:
     template<typename... Args> static Ref<ScrollingStateStickyNode> create(Args&&... args) { return adoptRef(*new ScrollingStateStickyNode(std::forward<Args>(args)...)); }
 
@@ -47,19 +48,26 @@ public:
     WEBCORE_EXPORT void updateConstraints(const StickyPositionViewportConstraints&);
     const StickyPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
 
+    const LayerRepresentation& viewportAnchorLayer() const { return m_viewportAnchorLayer; }
+    WEBCORE_EXPORT void setViewportAnchorLayer(const LayerRepresentation&);
+
 private:
-    WEBCORE_EXPORT ScrollingStateStickyNode(ScrollingNodeID, Vector<Ref<ScrollingStateNode>>&&, OptionSet<ScrollingStateNodeProperty>, std::optional<PlatformLayerIdentifier>, StickyPositionViewportConstraints&&);
+    WEBCORE_EXPORT ScrollingStateStickyNode(ScrollingNodeID, Vector<Ref<ScrollingStateNode>>&&, OptionSet<ScrollingStateNodeProperty>, std::optional<PlatformLayerIdentifier>, StickyPositionViewportConstraints&&, LayerRepresentation&&);
     ScrollingStateStickyNode(ScrollingStateTree&, ScrollingNodeID);
     ScrollingStateStickyNode(const ScrollingStateStickyNode&, ScrollingStateTree&);
 
-    FloatPoint computeLayerPosition(const LayoutRect& viewportRect) const;
+    FloatPoint computeClippingLayerPosition(const LayoutRect& viewportRect) const;
+    FloatPoint computeAnchorLayerPosition(const LayoutRect& viewportRect) const;
     void reconcileLayerPositionForViewportRect(const LayoutRect& viewportRect, ScrollingLayerPositionAction) final;
     FloatSize scrollDeltaSinceLastCommit(const LayoutRect& viewportRect) const;
 
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const final;
     OptionSet<ScrollingStateNode::Property> applicableProperties() const final;
 
+    bool hasViewportClippingLayer() const;
+
     StickyPositionViewportConstraints m_constraints;
+    LayerRepresentation m_viewportAnchorLayer;
 };
 
 } // namespace WebCore

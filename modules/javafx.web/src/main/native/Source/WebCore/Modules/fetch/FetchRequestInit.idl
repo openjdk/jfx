@@ -41,6 +41,7 @@ dictionary FetchRequestInit {
     boolean keepalive;
     // FIXME: 'signal' should be of type AbortSignal?.
     any signal;
-    [EnabledBySetting=FetchPriorityEnabled] RequestPriority priority;
+    RequestPriority priority;
     any window; // can only be set to null
+    [EnabledBySetting=LocalNetworkAccessEnabled] IPAddressSpace targetAddressSpace;
 };

@@ -29,8 +29,14 @@
 #include "RenderBox.h"
 #include "RenderView.h"
 #include <wtf/HexNumber.h>
+#include <wtf/TZoneMallocInlines.h>
+
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatingObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatingObjects);
+
 
 struct SameSizeAsFloatingObject {
     SingleThreadWeakPtr<RenderBox> renderer;
@@ -108,7 +114,9 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
 
 TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    stream << "(" << &object << ") renderer (" << &object.renderer() << ")";
+    stream << "(" << &object << ") renderer (";
+    object.hasRenderer() ? stream  << &object.renderer() << ")" : stream << "destroyed)";
+
     if (object.isPlaced())
         stream << " " << object.frameRect();
     else
@@ -417,12 +425,19 @@ LayoutUnit FloatingObjects::logicalRightOffset(LayoutUnit fixedOffset, LayoutUni
 
 void FloatingObjects::shiftFloatsBy(LayoutUnit blockShift)
 {
-    LayoutUnit shiftX = (m_horizontalWritingMode) ? 0_lu : -blockShift;
-    LayoutUnit shiftY = (m_horizontalWritingMode) ? blockShift : 0_lu;
+    auto shiftX = (m_horizontalWritingMode) ? 0_lu : -blockShift;
+    auto shiftY = (m_horizontalWritingMode) ? blockShift : 0_lu;
 
-    for (auto& floater : m_set) {
-        floater->m_frameRect.move(shiftX, shiftY);
-        floater->renderer().move(shiftX, shiftY);
+    for (auto& floatBox : m_set) {
+        auto isPlaced = floatBox->isPlaced();
+        if (isPlaced)
+            removePlacedObject(floatBox.get());
+
+        floatBox->m_frameRect.move(shiftX, shiftY);
+        floatBox->renderer().move(shiftX, shiftY);
+
+        if (isPlaced)
+            addPlacedObject(floatBox.get());
     }
 }
 

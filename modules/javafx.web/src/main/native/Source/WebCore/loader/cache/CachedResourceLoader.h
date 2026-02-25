@@ -37,6 +37,7 @@
 #include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/WeakListHashSet.h>
 #include <wtf/text/StringHash.h>
@@ -52,7 +53,9 @@ class CachedFont;
 class CachedImage;
 class CachedRawResource;
 class CachedScript;
+#if ENABLE(VIDEO)
 class CachedTextTrack;
+#endif
 class CachedXSLStyleSheet;
 class Document;
 class DocumentLoader;
@@ -79,8 +82,8 @@ const String& convertEnumerationToString(FetchMetadataSite);
 // RefPtr<CachedResourceLoader> for their lifetime (and will create one if they
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
-class CachedResourceLoader : public RefCounted<CachedResourceLoader>, public CanMakeWeakPtr<CachedResourceLoader> {
-    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+class CachedResourceLoader : public RefCountedAndCanMakeWeakPtr<CachedResourceLoader> {
+    WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResourceLoader, Loader);
 friend class ImageLoader;
 friend class ResourceCacheValidationSuppressor;
 
@@ -110,6 +113,7 @@ public:
     ResourceErrorOr<CachedResourceHandle<CachedApplicationManifest>> requestApplicationManifest(CachedResourceRequest&&);
 #endif
 #if ENABLE(MODEL_ELEMENT)
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestEnvironmentMapResource(CachedResourceRequest&&);
     ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestModelResource(CachedResourceRequest&&);
 #endif
 
@@ -163,7 +167,7 @@ public:
     void stopUnusedPreloadsTimer();
 
     bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, FetchMetadataSite, const URL& preRedirectURL);
-    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL()) const;
+    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL(), bool shouldReportViolationAsConsoleMessage = true) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
 
@@ -192,7 +196,7 @@ private:
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
     void updateHTTPRequestHeaders(FrameLoader&, CachedResource::Type, CachedResourceRequest&);
 
-    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload, MixedContentChecker::IsUpgradable);
+    bool canRequest(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ForPreload, MixedContentChecker::IsUpgradable, bool isLinkPreload);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
@@ -236,7 +240,7 @@ private:
 
 class ResourceCacheValidationSuppressor {
     WTF_MAKE_NONCOPYABLE(ResourceCacheValidationSuppressor);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceCacheValidationSuppressor, Loader);
 public:
     ResourceCacheValidationSuppressor(CachedResourceLoader& loader)
         : m_loader(loader)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -24,6 +24,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
@@ -129,12 +130,12 @@ void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recompu
     if (document().settings().layerBasedSVGEngineEnabled())
         return;
 
-    const auto* textShadow = style().textShadow();
-    if (!textShadow)
+    const auto& textShadow = style().textShadow();
+    if (textShadow.isNone())
         return;
 
-    LayoutRect borderRect = borderBoxRect();
-    textShadow->adjustRectForShadow(borderRect);
+    auto borderRect = borderBoxRect();
+    Style::adjustRectForShadow(borderRect, textShadow);
     addVisualOverflow(snappedIntRect(borderRect));
 }
 
@@ -186,14 +187,14 @@ void RenderSVGBlock::mapLocalToContainer(const RenderLayerModelObject* ancestorC
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* RenderSVGBlock::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGBlock::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderBlock::pushMappingToContainer(ancestorToStopAt, geometryMap);
     return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
 }
 
-LayoutSize RenderSVGBlock::offsetFromContainer(RenderElement& container, const LayoutPoint&, bool*) const
+LayoutSize RenderSVGBlock::offsetFromContainer(const RenderElement& container, const LayoutPoint&, bool*) const
 {
     ASSERT_UNUSED(container, &container == this->container());
     ASSERT(!isInFlowPositioned());

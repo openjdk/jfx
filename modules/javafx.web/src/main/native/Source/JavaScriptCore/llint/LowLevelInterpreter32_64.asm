@@ -395,6 +395,10 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
     end
 end
 
+llintOpWithMetadata(op_super_construct_varargs, OpSuperConstructVarargs, macro (size, get, dispatch, metadata, return)
+    doCallVarargs(op_super_construct_varargs, size, get, OpSuperConstructVarargs, m_valueProfile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_super_construct_varargs, prepareForRegularCall, invokeForRegularCall, prepareForSlowRegularCall, dispatchAfterRegularCall)
+end)
+
 op(llint_handle_uncaught_exception, macro()
     getVMFromCallFrame(t3, t0)
     restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(t3, t0)
@@ -724,9 +728,9 @@ macro functionArityCheck(opcodeName, doneLabel)
     subp cfr, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
-        bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
     else
-        bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_softStackLimit[t0], t5, .stackHeightOK
     end
 
     prepareStateForCCall()
@@ -2246,19 +2250,25 @@ llintOpWithJump(op_switch_imm, OpSwitchImm, macro (size, get, jump, dispatch)
     loadp UnlinkedCodeBlock::RareData::m_unlinkedSwitchJumpTables + UnlinkedSimpleJumpTableFixedVector::m_storage[t2], t2
     addp (constexpr (UnlinkedSimpleJumpTableFixedVector::Storage::offsetOfData())), t2
     addp t3, t2
+
     bineq t1, Int32Tag, .opSwitchImmNotInt
-    subi UnlinkedSimpleJumpTable::m_min[t2], t0
-    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t2
-    btpz t2, .opSwitchImmFallThrough
-    biaeq t0, Int32FixedVector::Storage::m_size[t2], .opSwitchImmFallThrough
-    loadi (constexpr (Int32FixedVector::Storage::offsetOfData()))[t2, t0, 4], t1
+
+    btinz UnlinkedSimpleJumpTable::m_isList[t2], .opSwitchImmSlow
+    loadi UnlinkedSimpleJumpTable::m_min[t2], t3
+
+    subi t3, t0
+    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
+    btpz t3, .opSwitchImmFallThrough
+    biaeq t0, Int32FixedVector::Storage::m_size[t3], .opSwitchImmFallThrough
+    loadi (constexpr (Int32FixedVector::Storage::offsetOfData()))[t3, t0, 4], t1
     btiz t1, .opSwitchImmFallThrough
     dispatchIndirect(t1)
 
 .opSwitchImmNotInt:
     bib t1, LowestTag, .opSwitchImmSlow  # Go to slow path if it's a double.
 .opSwitchImmFallThrough:
-    jump(m_defaultOffset)
+    loadis UnlinkedSimpleJumpTable::m_defaultOffset[t2], t1
+    dispatchIndirect(t1)
 
 .opSwitchImmSlow:
     callSlowPath(_llint_slow_path_switch_imm)
@@ -2277,11 +2287,16 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
     loadp UnlinkedCodeBlock::RareData::m_unlinkedSwitchJumpTables + UnlinkedSimpleJumpTableFixedVector::m_storage[t2], t2
     addp (constexpr (UnlinkedSimpleJumpTableFixedVector::Storage::offsetOfData())), t2
     addp t3, t2
+
     bineq t1, CellTag, .opSwitchCharFallThrough
     bbneq JSCell::m_type[t0], StringType, .opSwitchCharFallThrough
     loadp JSString::m_fiber[t0], t1
     btpnz t1, isRopeInPointer, .opSwitchOnRope
     bineq StringImpl::m_length[t1], 1, .opSwitchCharFallThrough
+
+    loadi UnlinkedSimpleJumpTable::m_min[t2], t3
+    bieq t3, (constexpr INT32_MAX), .opSwitchSlow
+
     loadp StringImpl::m_data8[t1], t0
     btinz StringImpl::m_hashAndFlags[t1], HashFlags8BitBuffer, .opSwitchChar8Bit
     loadh [t0], t0
@@ -2289,21 +2304,22 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
 .opSwitchChar8Bit:
     loadb [t0], t0
 .opSwitchCharReady:
-    subi UnlinkedSimpleJumpTable::m_min[t2], t0
-    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t2
-    btpz t2, .opSwitchCharFallThrough
-    biaeq t0, Int32FixedVector::Storage::m_size[t2], .opSwitchCharFallThrough
-    loadi (constexpr (Int32FixedVector::Storage::offsetOfData()))[t2, t0, 4], t1
+    subi t3, t0
+    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
+    btpz t3, .opSwitchCharFallThrough
+    biaeq t0, Int32FixedVector::Storage::m_size[t3], .opSwitchCharFallThrough
+    loadi (constexpr (Int32FixedVector::Storage::offsetOfData()))[t3, t0, 4], t1
     btiz t1, .opSwitchCharFallThrough
     dispatchIndirect(t1)
 
 .opSwitchCharFallThrough:
-    jump(m_defaultOffset)
+    loadis UnlinkedSimpleJumpTable::m_defaultOffset[t2], t1
+    dispatchIndirect(t1)
 
 .opSwitchOnRope:
     bineq JSRopeString::m_compactFibers + JSRopeString::CompactFibers::m_length[t0], 1, .opSwitchCharFallThrough
 
-.opSwitchOnRopeChar:
+.opSwitchSlow:
     callSlowPath(_llint_slow_path_switch_char)
     nextInstruction()
 end)
@@ -2601,7 +2617,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     btpz a2, (constexpr JSFunction::rareDataTag), .isExecutable
     loadp (FunctionRareData::m_executable - (constexpr JSFunction::rareDataTag))[a2], a2
 .isExecutable:
-    loadp JSFunction::m_scope[a0], a0
+    loadp JSCallee::m_scope[a0], a0
     loadp JSGlobalObject::m_vm[a0], a1
     storep cfr, VM::topCallFrame[a1]
     move cfr, a1
@@ -2614,7 +2630,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     end
 
     loadp Callee + PayloadOffset[cfr], t3
-    loadp JSFunction::m_scope[t3], t3
+    loadp JSCallee::m_scope[t3], t3
     loadp JSGlobalObject::m_vm[t3], t3
 
     addp 8, sp
@@ -3338,6 +3354,9 @@ op(loop_osr_entry_gate, macro ()
     crash() # Should never reach here.
 end)
 
+op(op_instanceof_return_location, macro ()
+    crash() # Should never reach here.
+end)
 
 llintOpWithMetadata(op_check_private_brand, OpCheckPrivateBrand, macro (size, get, dispatch, metadata, return)
     metadata(t5, t2)
@@ -3429,3 +3448,4 @@ slowPathOp(enumerator_has_own_property)
 slowPathOp(mod)
 
 llintSlowPathOp(has_structure_with_flags)
+llintSlowPathOp(instanceof)

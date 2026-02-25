@@ -57,12 +57,12 @@ public:
 
     ProgramCodeBlock* codeBlock() const
     {
-        return bitwise_cast<ProgramCodeBlock*>(Base::codeBlock());
+        return std::bit_cast<ProgramCodeBlock*>(Base::codeBlock());
     }
 
     UnlinkedProgramCodeBlock* unlinkedCodeBlock() const
     {
-        return bitwise_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
+        return std::bit_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
     Ref<JSC::JITCode> generatedJITCode()
@@ -74,6 +74,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 private:
@@ -81,8 +83,6 @@ private:
     friend class ScriptExecutable;
 
     ProgramExecutable(JSGlobalObject*, const SourceCode&);
-
-    DECLARE_VISIT_CHILDREN;
 
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };

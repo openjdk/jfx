@@ -32,8 +32,11 @@
 #include "ScrollingThread.h"
 #include "ThreadedScrollingTree.h"
 #include "WheelEventTestMonitor.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadedScrollingCoordinator);
 
 ThreadedScrollingCoordinator::ThreadedScrollingCoordinator(Page* page)
     : AsyncScrollingCoordinator(page)
@@ -55,7 +58,7 @@ void ThreadedScrollingCoordinator::pageDestroyed()
 
 void ThreadedScrollingCoordinator::commitTreeStateIfNeeded()
 {
-    scrollingStateTrees().forEach([&] (auto& key, auto& value) {
+    scrollingStateTrees().forEach([&](auto& key, auto& value) {
         willCommitTree(key);
 
         LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::commitTreeState, has changes " << value->hasChangedProperties());

@@ -23,10 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "IsoMallocFallback.h"
 
-#include "DebugHeap.h"
+#if !BUSE(TZONE)
+
 #include "Environment.h"
+#include "SystemHeap.h"
 #include "bmalloc.h"
 
 namespace bmalloc { namespace IsoMallocFallback {
@@ -34,6 +37,15 @@ namespace bmalloc { namespace IsoMallocFallback {
 MallocFallbackState mallocFallbackState;
 
 namespace {
+
+static BINLINE int bstrcasecmp(const char* str1, const char* str2)
+{
+#if BOS(WINDOWS)
+    return _stricmp(str1, str2);
+#else
+    return strcasecmp(str1, str2);
+#endif
+}
 
 void determineMallocFallbackState()
 {
@@ -44,13 +56,13 @@ void determineMallocFallbackState()
             if (mallocFallbackState != MallocFallbackState::Undecided)
                 return;
 
-            if (Environment::get()->isDebugHeapEnabled()) {
+            if (Environment::get()->isSystemHeapEnabled()) {
                 mallocFallbackState = MallocFallbackState::FallBackToMalloc;
                 return;
             }
 
             const char* env = getenv("bmalloc_IsoHeap");
-            if (env && (!strcasecmp(env, "false") || !strcasecmp(env, "no") || !strcmp(env, "0")))
+            if (env && (!bstrcasecmp(env, "false") || !bstrcasecmp(env, "no") || !strcmp(env, "0")))
                 mallocFallbackState = MallocFallbackState::FallBackToMalloc;
             else
                 mallocFallbackState = MallocFallbackState::DoNotFallBack;
@@ -112,3 +124,5 @@ bool tryFree(
 }
 
 } } // namespace bmalloc::IsoMallocFallback
+
+#endif // !BUSE(TZONE)

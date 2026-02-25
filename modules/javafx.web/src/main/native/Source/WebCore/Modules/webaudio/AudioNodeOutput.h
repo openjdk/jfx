@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #include "AudioParam.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -39,24 +41,24 @@ class AudioNodeInput;
 // It may be connected to one or more AudioNodeInputs.
 
 class AudioNodeOutput {
+    WTF_MAKE_TZONE_ALLOCATED(AudioNodeOutput);
     WTF_MAKE_NONCOPYABLE(AudioNodeOutput);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     // It's OK to pass 0 for numberOfChannels in which case setNumberOfChannels() must be called later on.
     AudioNodeOutput(AudioNode*, unsigned numberOfChannels);
 
     // Can be called from any thread.
-    AudioNode* node() const { return m_node; }
+    AudioNode* node() const { return m_node.get(); }
     BaseAudioContext& context() { return m_node->context(); }
 
     // Causes our AudioNode to process if it hasn't already for this render quantum.
     // It returns the bus containing the processed audio for this output, returning inPlaceBus if in-place processing was possible.
     // Called from context's audio thread.
-    AudioBus* pull(AudioBus* inPlaceBus, size_t framesToProcess);
+    AudioBus& pull(AudioBus* inPlaceBus, size_t framesToProcess);
 
     // bus() will contain the rendered audio after pull() is called for each rendering time quantum.
     // Called from context's audio thread.
-    AudioBus* bus() const;
+    AudioBus& bus() const;
 
     // renderingFanOutCount() is the number of AudioNodeInputs that we're connected to during rendering.
     // Unlike fanOutCount() it will not change during the course of a render quantum.
@@ -92,7 +94,7 @@ public:
     void updateRenderingState();
 
 private:
-    AudioNode* m_node;
+    WeakPtr<AudioNode, WeakPtrImplWithEventTargetData> m_node;
 
     friend class AudioNodeInput;
     friend class AudioParam;
@@ -136,10 +138,9 @@ private:
     unsigned m_desiredNumberOfChannels;
 
     // m_internalBus and m_inPlaceBus must only be changed in the audio thread with the context's graph lock (or constructor).
-    RefPtr<AudioBus> m_internalBus;
+    Ref<AudioBus> m_internalBus;
+    // If m_inPlaceBus is non-null, use m_inPlaceBus as the valid AudioBus; If null, use the default m_internalBus.
     RefPtr<AudioBus> m_inPlaceBus;
-    // If m_isInPlace is true, use m_inPlaceBus as the valid AudioBus; If false, use the default m_internalBus.
-    bool m_isInPlace { false };
 
     using InputsMap = HashMap<AudioNodeInput*, AudioConnectionRefPtr<AudioNode>>;
     InputsMap m_inputs;

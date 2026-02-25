@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLPreElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
@@ -42,13 +43,6 @@ extern "C" {
 
 #define IMPL (static_cast<HTMLPreElement*>(jlong_to_ptr(peer)))
 
-
-// Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::widthAttr);
-}
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_setWidthImpl(JNIEnv*, jclass, jlong peer, jint value)
 {

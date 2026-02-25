@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2006, 2010, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -31,45 +31,64 @@
 #include "RenderMenuList.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderTable.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-// FIXME: This shouldn't need LegacyInlineIterator
-static bool generatesLineBoxesForInlineChild(RenderBlock& current, RenderObject* inlineObj)
-{
-    LegacyInlineIterator it(&current, inlineObj, 0);
-    while (!it.atEnd() && !requiresLineBox(it))
-        it.increment();
-    return !it.atEnd();
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::List);
 
-static RenderBlock* getParentOfFirstLineBox(RenderBlock& current, RenderObject& marker)
+static std::pair<RenderBlock*, RenderBlock*> findParentOfEmptyOrFirstLineBox(RenderBlock& blockContainer, const RenderListMarker& marker)
 {
-    bool inQuirksMode = current.document().inQuirksMode();
-    for (auto& child : childrenOfType<RenderObject>(current)) {
+    auto inQuirksMode = blockContainer.document().inQuirksMode();
+    RenderBlock* fallbackParent = { };
+
+    for (auto& child : childrenOfType<RenderObject>(blockContainer)) {
         if (&child == &marker)
             continue;
 
-        if (child.isInline() && (!is<RenderInline>(child) || generatesLineBoxesForInlineChild(current, &child)))
-            return &current;
+        if (child.isInline()) {
+            if (!is<RenderInline>(child) || !isEmptyInline(downcast<RenderInline>(child)))
+                return { &blockContainer, { } };
+            fallbackParent = &blockContainer;
+        }
 
         if (child.isFloating() || child.isOutOfFlowPositioned() || is<RenderMenuList>(child))
             continue;
 
-        if (!is<RenderBlock>(child) || is<RenderTable>(child))
-            break;
-
         if (auto* renderBox = dynamicDowncast<RenderBox>(child); renderBox && renderBox->isWritingModeRoot())
             break;
 
-        if (is<RenderListItem>(current) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))
+        if (is<RenderListItem>(blockContainer) && inQuirksMode && child.node() && isHTMLListElement(*child.node()))
             break;
 
-        if (RenderBlock* lineBox = getParentOfFirstLineBox(downcast<RenderBlock>(child), marker))
-            return lineBox;
+        if (!is<RenderBlock>(child) || is<RenderTable>(child))
+            break;
+
+        auto& blockChild = downcast<RenderBlock>(child);
+        auto [ nestedParent, nestedFallbackParent ] = findParentOfEmptyOrFirstLineBox(blockChild, marker);
+        if (nestedParent)
+            return { nestedParent, { } };
+
+        if (!fallbackParent) {
+            if (nestedFallbackParent)
+                fallbackParent = nestedFallbackParent;
+            else if (auto* firstInFlowChild = blockChild.firstInFlowChild(); !firstInFlowChild || firstInFlowChild == &marker)
+                fallbackParent = &blockChild;
+    }
     }
 
-    return nullptr;
+    return { { }, fallbackParent };
+}
+
+static RenderBlock* parentCandidateForMarker(RenderListItem& listItemRenderer, const RenderListMarker& marker)
+{
+    if (marker.isInside()) {
+        if (auto* firstChild = dynamicDowncast<RenderBlock>(listItemRenderer.firstChild()); firstChild && !firstChild->isAnonymous())
+            return &listItemRenderer;
+        return findParentOfEmptyOrFirstLineBox(listItemRenderer, marker).first;
+    }
+    auto [parentCandidate, fallbackParent] = findParentOfEmptyOrFirstLineBox(listItemRenderer, marker);
+    return parentCandidate ? parentCandidate : fallbackParent;
 }
 
 static RenderObject* firstNonMarkerChild(RenderBlock& parent)
@@ -89,50 +108,57 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
 {
     auto& style = listItemRenderer.style();
 
-    if (style.listStyleType().type == ListStyleType::Type::None && (!style.listStyleImage() || style.listStyleImage()->errorOccurred())) {
+    if (style.listStyleType().isNone() && (!style.listStyleImage() || style.listStyleImage()->errorOccurred())) {
         if (auto* marker = listItemRenderer.markerRenderer())
             m_builder.destroy(*marker);
         return;
     }
 
     auto newStyle = listItemRenderer.computeMarkerStyle();
-    RenderPtr<RenderListMarker> newMarkerRenderer;
-    auto* markerRenderer = listItemRenderer.markerRenderer();
-    if (markerRenderer)
+    if (auto* markerRenderer = listItemRenderer.markerRenderer()) {
         markerRenderer->setStyle(WTFMove(newStyle));
-    else {
-        newMarkerRenderer = WebCore::createRenderer<RenderListMarker>(listItemRenderer, WTFMove(newStyle));
-        newMarkerRenderer->initializeStyle();
-        markerRenderer = newMarkerRenderer.get();
-        listItemRenderer.setMarkerRenderer(*markerRenderer);
+        auto* currentParent = markerRenderer->parent();
+        if (!currentParent) {
+            ASSERT_NOT_REACHED();
+            return;
     }
 
-    RenderElement* currentParent = markerRenderer->parent();
-    RenderBlock* newParent = getParentOfFirstLineBox(listItemRenderer, *markerRenderer);
+        auto* newParent = parentCandidateForMarker(listItemRenderer, *markerRenderer);
     if (!newParent) {
-        // If the marker is currently contained inside an anonymous box,
-        // then we are the only item in that anonymous box (since no line box
-        // parent was found). It's ok to just leave the marker where it is
-        // in this case.
-        if (currentParent && currentParent->isAnonymousBlock())
+            if (currentParent->isAnonymousBlock()) {
+                // If the marker is currently contained inside an anonymous box. then we are the only item in that anonymous box
+                // (since no line box parent was found). It's ok to just leave the marker where it is in this case.
             return;
+            }
+            newParent = &listItemRenderer;
         if (auto* multiColumnFlow = listItemRenderer.multiColumnFlow())
             newParent = multiColumnFlow;
-        else
-            newParent = &listItemRenderer;
     }
 
     if (newParent == currentParent)
         return;
 
-    if (currentParent)
         m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, WillBeDestroyed::No, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
-    else
-        m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
-
     // If current parent is an anonymous block that has lost all its children, destroy it.
-    if (currentParent && currentParent->isAnonymousBlock() && !currentParent->firstChild() && !downcast<RenderBlock>(*currentParent).continuation())
+        if (currentParent->isAnonymousBlock() && !currentParent->firstChild() && !downcast<RenderBlock>(*currentParent).continuation())
         m_builder.destroy(*currentParent);
+        return;
+    }
+
+    RenderPtr<RenderListMarker> newMarkerRenderer = WebCore::createRenderer<RenderListMarker>(listItemRenderer, WTFMove(newStyle));
+    newMarkerRenderer->initializeStyle();
+    listItemRenderer.setMarkerRenderer(*newMarkerRenderer);
+    auto* newParent = parentCandidateForMarker(listItemRenderer, *newMarkerRenderer);
+    if (!newParent) {
+        // If the marker is currently contained inside an anonymous box,
+        // then we are the only item in that anonymous box (since no line box
+        // parent was found). It's ok to just leave the marker where it is
+        // in this case.
+        newParent = &listItemRenderer;
+        if (auto* multiColumnFlow = listItemRenderer.multiColumnFlow())
+            newParent = multiColumnFlow;
+    }
+    m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
 }
 
 }

@@ -39,13 +39,14 @@ public:
     }
 
     CallbackResult<unsigned short> acceptNode(Node&) override;
+    CallbackResult<unsigned short> acceptNodeRethrowingException(Node&) override;
 
 private:
     WEBCORE_EXPORT explicit NativeNodeFilter(ScriptExecutionContext*, Ref<NodeFilterCondition>&&);
 
     bool hasCallback() const final;
 
-    Ref<NodeFilterCondition> m_condition;
+    const Ref<NodeFilterCondition> m_condition;
 };
 
 } // namespace WebCore

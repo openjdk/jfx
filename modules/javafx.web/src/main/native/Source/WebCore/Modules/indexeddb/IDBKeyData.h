@@ -26,9 +26,9 @@
 #pragma once
 
 #include "IDBKey.h"
-#include <variant>
 #include <wtf/Hasher.h>
 #include <wtf/StdSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ class KeyedDecoder;
 class KeyedEncoder;
 
 class IDBKeyData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBKeyData, WEBCORE_EXPORT);
 public:
     struct Date {
         double value { 0.0 };
@@ -46,7 +46,7 @@ public:
     struct Min { Min isolatedCopy() const { return { }; } };
     struct Max { Max isolatedCopy() const { return { }; } };
     struct Invalid { Invalid isolatedCopy() const { return { }; } };
-    using ValueVariant = std::variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
+    using ValueVariant = Variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
 
     enum IsolatedCopyTag { IsolatedCopy };
 
@@ -54,7 +54,11 @@ public:
     IDBKeyData(ValueVariant&& value)
         : m_value(WTFMove(value)) { }
     IDBKeyData(const IDBKeyData&, IsolatedCopyTag);
+    IDBKeyData(bool isPlaceholder, ValueVariant&& value)
+        : m_isPlaceholder(isPlaceholder)
+        , m_value(WTFMove(value)) { }
     WEBCORE_EXPORT IDBKeyData(const IDBKey*);
+    bool isPlaceholder() const { return m_isPlaceholder; }
 
     static IDBKeyData minimum()
     {
@@ -70,6 +74,13 @@ public:
         return result;
     }
 
+    static IDBKeyData placeholder()
+    {
+        IDBKeyData result;
+        result.m_isPlaceholder = true;
+        return result;
+    }
+
     WEBCORE_EXPORT RefPtr<IDBKey> maybeCreateIDBKey() const;
 
     WEBCORE_EXPORT IDBKeyData isolatedCopy() const;
@@ -77,41 +88,20 @@ public:
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
     WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(KeyedDecoder&, IDBKeyData&);
 
-    // compare() has the same semantics as strcmp().
-    //   - Returns negative if this IDBKeyData is less than other.
-    //   - Returns positive if this IDBKeyData is greater than other.
-    //   - Returns zero if this IDBKeyData is equal to other.
-    WEBCORE_EXPORT int compare(const IDBKeyData& other) const;
-
     void setArrayValue(const Vector<IDBKeyData>&);
     void setBinaryValue(const ThreadSafeDataBuffer&);
     void setStringValue(const String&);
     void setDateValue(double);
     WEBCORE_EXPORT void setNumberValue(double);
 
-#if !LOG_DISABLED
     WEBCORE_EXPORT String loggingString() const;
-#endif
 
     bool isNull() const { return std::holds_alternative<std::nullptr_t>(m_value); }
     bool isValid() const;
+    WEBCORE_EXPORT static bool isValidValue(const ValueVariant&);
     IndexedDB::KeyType type() const;
 
-    bool operator<(const IDBKeyData&) const;
-    bool operator>(const IDBKeyData& other) const
-    {
-        return !(*this < other) && !(*this == other);
-    }
-
-    bool operator<=(const IDBKeyData& other) const
-    {
-        return !(*this > other);
-    }
-
-    bool operator>=(const IDBKeyData& other) const
-    {
-        return !(*this < other);
-    }
+    WEBCORE_EXPORT friend std::weak_ordering operator<=>(const IDBKeyData&, const IDBKeyData&);
 
     bool operator==(const IDBKeyData& other) const;
 
@@ -148,6 +138,7 @@ private:
     friend struct IDBKeyDataHashTraits;
 
     bool m_isDeletedValue { false };
+    bool m_isPlaceholder { false };
     ValueVariant m_value;
 };
 

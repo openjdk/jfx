@@ -43,8 +43,8 @@ __gst_audio_element_proxy_caps (GstElement * element, GstCaps * templ_caps,
   gint caps_size = gst_caps_get_size (caps);
 
   for (i = 0; i < templ_caps_size; i++) {
-    GQuark q_name =
-        gst_structure_get_name_id (gst_caps_get_structure (templ_caps, i));
+    const GstIdStr *name =
+        gst_structure_get_name_id_str (gst_caps_get_structure (templ_caps, i));
     GstCapsFeatures *features = gst_caps_get_features (templ_caps, i);
 
     for (j = 0; j < caps_size; j++) {
@@ -52,7 +52,7 @@ __gst_audio_element_proxy_caps (GstElement * element, GstCaps * templ_caps,
       const GValue *val;
       GstStructure *s;
 
-      s = gst_structure_new_id_empty (q_name);
+      s = gst_structure_new_id_str_empty (name);
       if ((val = gst_structure_get_value (caps_s, "rate")))
         gst_structure_set_value (s, "rate", val);
       if ((val = gst_structure_get_value (caps_s, "channels")))
@@ -218,13 +218,16 @@ exit:
 }
 
 #ifdef G_OS_WIN32
+typedef HANDLE (WINAPI * AvSetMmThreadCharacteristicsPtr) (LPCSTR, LPDWORD);
+typedef BOOL (WINAPI * AvRevertMmThreadCharacteristicsPtr) (HANDLE);
+
 /* *INDENT-OFF* */
 static struct
 {
   HMODULE dll;
 
-  FARPROC AvSetMmThreadCharacteristics;
-  FARPROC AvRevertMmThreadCharacteristics;
+  AvSetMmThreadCharacteristicsPtr AvSetMmThreadCharacteristics;
+  AvRevertMmThreadCharacteristicsPtr AvRevertMmThreadCharacteristics;
 } _gst_audio_avrt_tbl = { 0 };
 /* *INDENT-ON* */
 #endif
@@ -246,6 +249,7 @@ __gst_audio_init_thread_priority (void)
     }
 
     _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics =
+        (AvSetMmThreadCharacteristicsPtr)
         GetProcAddress (_gst_audio_avrt_tbl.dll,
         "AvSetMmThreadCharacteristicsA");
     if (!_gst_audio_avrt_tbl.AvSetMmThreadCharacteristics) {
@@ -255,6 +259,7 @@ __gst_audio_init_thread_priority (void)
     }
 
     _gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics =
+        (AvRevertMmThreadCharacteristicsPtr)
         GetProcAddress (_gst_audio_avrt_tbl.dll,
         "AvRevertMmThreadCharacteristics");
 

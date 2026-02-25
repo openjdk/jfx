@@ -33,38 +33,37 @@
 #include "PermissionsPolicy.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "UserMediaRequest.h"
+#include <algorithm>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UserMediaController);
 
 ASCIILiteral UserMediaController::supplementName()
 {
     return "UserMediaController"_s;
 }
 
-UserMediaController::UserMediaController(UserMediaClient* client)
-    : m_client(client)
+UserMediaController::UserMediaController(Ref<UserMediaClient>&& client)
+    : m_client(WTFMove(client))
 {
 }
 
-UserMediaController::~UserMediaController()
+void provideUserMediaTo(Page* page, Ref<UserMediaClient>&& client)
 {
-    m_client->pageDestroyed();
-}
-
-void provideUserMediaTo(Page* page, UserMediaClient* client)
-{
-    UserMediaController::provideTo(page, UserMediaController::supplementName(), makeUnique<UserMediaController>(client));
+    UserMediaController::provideTo(page, UserMediaController::supplementName(), makeUnique<UserMediaController>(WTFMove(client)));
 }
 
 void UserMediaController::logGetUserMediaDenial(Document& document)
 {
-    if (RefPtr window = document.domWindow())
+    if (RefPtr window = document.window())
         window->printErrorMessage("Not allowed to call getUserMedia."_s);
 }
 
 void UserMediaController::logGetDisplayMediaDenial(Document& document)
 {
-    if (RefPtr window = document.domWindow())
+    if (RefPtr window = document.window())
         window->printErrorMessage("Not allowed to call getDisplayMedia."_s);
 }
 
@@ -73,8 +72,47 @@ void UserMediaController::logEnumerateDevicesDenial(Document& document)
     // We redo the check to print to the console log.
     PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Camera, document);
     PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document);
-    if (RefPtr window = document.domWindow())
+    if (RefPtr window = document.window())
         window->printErrorMessage("Not allowed to call enumerateDevices."_s);
+}
+
+void UserMediaController::setShouldListenToVoiceActivity(Document& document, bool shouldListen)
+{
+    if (shouldListen) {
+        ASSERT(!m_voiceActivityDocuments.contains(document));
+        m_voiceActivityDocuments.add(document);
+    } else {
+        ASSERT(m_voiceActivityDocuments.contains(document));
+        m_voiceActivityDocuments.remove(document);
+    }
+    checkDocumentForVoiceActivity(nullptr);
+}
+
+void UserMediaController::checkDocumentForVoiceActivity(const Document* document)
+{
+    if (document) {
+        if (m_shouldListenToVoiceActivity == document->mediaState().containsAny(MediaProducer::IsCapturingAudioMask))
+            return;
+    }
+
+    bool shouldListenToVoiceActivity = std::ranges::any_of(m_voiceActivityDocuments, [](auto& document) {
+        return document.mediaState().containsAny(MediaProducer::IsCapturingAudioMask);
+    });
+    if (m_shouldListenToVoiceActivity == shouldListenToVoiceActivity)
+        return;
+
+    m_shouldListenToVoiceActivity = shouldListenToVoiceActivity;
+    if (RefPtr mediaClient = m_client)
+        mediaClient->setShouldListenToVoiceActivity(m_shouldListenToVoiceActivity);
+}
+
+void UserMediaController::voiceActivityDetected()
+{
+#if ENABLE(MEDIA_SESSION)
+    for (RefPtr document : m_voiceActivityDocuments)
+        document->voiceActivityDetected();
+
+#endif
 }
 
 } // namespace WebCore

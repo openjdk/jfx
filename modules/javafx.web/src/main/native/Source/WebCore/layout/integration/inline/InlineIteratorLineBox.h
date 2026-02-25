@@ -29,7 +29,6 @@
 #include "InlineIteratorLineBoxLegacyPath.h"
 #include "InlineIteratorLineBoxModernPath.h"
 #include "RenderBlockFlow.h"
-#include <variant>
 
 namespace WebCore {
 
@@ -45,7 +44,7 @@ struct EndLineBoxIterator { };
 
 class LineBox {
 public:
-    using PathVariant = std::variant<
+    using PathVariant = Variant<
         LineBoxIteratorModernPath,
         LineBoxIteratorLegacyPath
     >;
@@ -81,7 +80,6 @@ public:
     RenderObject::HighlightState ellipsisSelectionState() const;
 
     const RenderBlockFlow& formattingContextRoot() const;
-    RenderFragmentContainer* containingFragment() const;
 
     bool isHorizontal() const;
     FontBaseline baselineType() const;
@@ -89,8 +87,12 @@ public:
     bool isFirst() const;
     bool isFirstAfterPageBreak() const;
 
-    LeafBoxIterator firstLeafBox() const;
-    LeafBoxIterator lastLeafBox() const;
+    // Text-relative left/right
+    LeafBoxIterator lineLeftmostLeafBox() const;
+    LeafBoxIterator lineRightmostLeafBox() const;
+    // Coordinate-relative left/right
+    inline LeafBoxIterator logicalLeftmostLeafBox() const;
+    inline LeafBoxIterator logicalRightmostLeafBox() const;
 
     LineBoxIterator next() const;
     LineBoxIterator previous() const;
@@ -301,13 +303,6 @@ inline const RenderBlockFlow& LineBox::formattingContextRoot() const
 {
     return WTF::switchOn(m_pathVariant, [](const auto& path) -> const RenderBlockFlow& {
         return path.formattingContextRoot();
-    });
-}
-
-inline RenderFragmentContainer* LineBox::containingFragment() const
-{
-    return WTF::switchOn(m_pathVariant, [](const auto& path) {
-        return path.containingFragment();
     });
 }
 

@@ -29,6 +29,8 @@
 #include "CachedTypes.h"
 #include "UnlinkedFunctionExecutable.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 void CachedBytecode::addGlobalUpdate(Ref<CachedBytecode> bytecode)
@@ -69,7 +71,7 @@ void CachedBytecode::commitUpdates(const ForEachUpdateCallback& callback) const
             const CacheUpdate::FunctionUpdate& functionUpdate = update.asFunction();
             payload = &functionUpdate.m_payload;
             {
-                ptrdiff_t kindOffset = functionUpdate.m_kind == CodeForCall ? CachedFunctionExecutableOffsets::codeBlockForCallOffset() : CachedFunctionExecutableOffsets::codeBlockForConstructOffset();
+                ptrdiff_t kindOffset = functionUpdate.m_kind == CodeSpecializationKind::CodeForCall ? CachedFunctionExecutableOffsets::codeBlockForCallOffset() : CachedFunctionExecutableOffsets::codeBlockForConstructOffset();
                 ptrdiff_t codeBlockOffset = functionUpdate.m_base + kindOffset + CachedWriteBarrierOffsets::ptrOffset() + CachedPtrOffsets::offsetOffset();
                 ptrdiff_t offsetPayload = static_cast<ptrdiff_t>(offset) - codeBlockOffset;
                 static_assert(std::is_same<decltype(VariableLengthObjectBase::m_offset), ptrdiff_t>::value);
@@ -90,3 +92,5 @@ void CachedBytecode::commitUpdates(const ForEachUpdateCallback& callback) const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

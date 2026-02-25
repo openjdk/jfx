@@ -27,16 +27,16 @@ namespace WebCore {
 
 class Quad final : public RectBase {
 public:
-    Quad(Ref<CSSPrimitiveValue> value)
+    Quad(Ref<CSSValue> value)
         : RectBase(WTFMove(value))
     { }
-    Quad(Ref<CSSPrimitiveValue> top, Ref<CSSPrimitiveValue> right, Ref<CSSPrimitiveValue> bottom, Ref<CSSPrimitiveValue> left)
+    Quad(Ref<CSSValue> top, Ref<CSSValue> right, Ref<CSSValue> bottom, Ref<CSSValue> left)
         : RectBase(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left))
     { }
 
-    String cssText() const
+    String cssText(const CSS::SerializationContext& context) const
     {
-        return serialize(top().cssText(), right().cssText(), bottom().cssText(), left().cssText());
+        return serialize(top().cssText(context), right().cssText(context), bottom().cssText(context), left().cssText(context));
     }
 
     static String serialize(const String& top, const String& right, const String& bottom, const String& left)

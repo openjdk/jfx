@@ -47,7 +47,6 @@ public:
         virtual ~SpinButtonOwner() = default;
         virtual void focusAndSelectSpinButtonOwner() = 0;
         virtual bool shouldSpinButtonRespondToMouseEvents() const = 0;
-        virtual bool shouldSpinButtonRespondToWheelEvents() const = 0;
         virtual void spinButtonStepDown() = 0;
         virtual void spinButtonStepUp() = 0;
 };
@@ -70,23 +69,19 @@ public:
     void releaseCapture();
     void removeSpinButtonOwner() { m_spinButtonOwner = nullptr; }
 
-    using HTMLDivElement::weakPtrFactory;
-    using HTMLDivElement::WeakValueType;
-    using HTMLDivElement::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(HTMLDivElement);
 
     void step(int amount);
 
     bool willRespondToMouseMoveEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
 
-    void forwardEvent(Event&);
-
 private:
     SpinButtonElement(Document&, SpinButtonOwner&);
 
     void willDetachRenderers() override;
     bool isSpinButtonElement() const override { return true; }
-    bool isDisabledFormControl() const override { return shadowHost() && shadowHost()->isDisabledFormControl(); }
+    bool isDisabledFormControl() const override;
     bool matchesReadWritePseudoClass() const override;
     void defaultEventHandler(Event&) override;
     void willOpenPopup() override;

@@ -32,8 +32,15 @@
 #include <AvailabilityMacros.h>
 #include <TargetConditionals.h>
 #endif
-
 #define BPLATFORM_JAVA 1
+#ifndef BASSERT_ENABLED
+#ifdef NDEBUG
+#define BASSERT_ENABLED 0
+#else
+#define BASSERT_ENABLED 1
+#endif
+#endif
+
 #define BPLATFORM(PLATFORM) (defined BPLATFORM_##PLATFORM && BPLATFORM_##PLATFORM)
 #define BOS(OS) (defined BOS_##OS && BOS_##OS)
 
@@ -178,6 +185,7 @@
 || defined(__ARM_ARCH_6J__) \
 || defined(__ARM_ARCH_6K__) \
 || defined(__ARM_ARCH_6Z__) \
+|| defined(__ARM_ARCH_6KZ__) \
 || defined(__ARM_ARCH_6ZK__) \
 || defined(__ARM_ARCH_6T2__) \
 || defined(__ARMV6__)
@@ -332,14 +340,16 @@
 #endif
 
 /* Enable this to put each IsoHeap and other allocation categories into their own malloc heaps, so that tools like vmmap can show how big each heap is. */
+#if !defined(BENABLE_MALLOC_HEAP_BREAKDOWN)
 #define BENABLE_MALLOC_HEAP_BREAKDOWN 0
+#endif
 
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
 /* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
 #if !defined(BENABLE_LIBPAS)
-#if BCPU(ADDRESS64) && (BOS(DARWIN) || (!BOS(LINUX) && !BPLATFORM(GTK) && !BPLATFORM(WPE)))
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || BOS(WINDOWS) || (BOS(LINUX) && (BCPU(X86_64) || BCPU(ARM64))) || BPLATFORM(PLAYSTATION))
 #define BENABLE_LIBPAS 1
 #ifndef PAS_BMALLOC
 #define PAS_BMALLOC 1
@@ -366,7 +376,7 @@
 #define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K 1
 #endif
 
-/* We only export the mallocSize and mallocGoodSize APIs if they're supported by the DebugHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
+/* We only export the mallocSize and mallocGoodSize APIs if they're supported by the SystemHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
 #if BUSE(LIBPAS) && BOS(DARWIN)
 #define BENABLE_MALLOC_SIZE 1
 #define BENABLE_MALLOC_GOOD_SIZE 1
@@ -374,11 +384,19 @@
 #define BENABLE_MALLOC_SIZE 0
 #define BENABLE_MALLOC_GOOD_SIZE 0
 #endif
-/*disbale BUSE_TZONE for ARM64 too*/
+
 #if !defined(BUSE_TZONE)
-#if BUSE(LIBPAS) && BOS(DARWIN) && BCPU(ARM64)
-#define BUSE_TZONE 0
+#if BUSE(LIBPAS) && BOS(DARWIN) && (BCPU(ARM64) || BCPU(X86_64))
+#define BUSE_TZONE 1
 #else
 #define BUSE_TZONE 0
+#endif
+#endif
+
+#if !defined(BUSE_DYNAMIC_TZONE_COMPACTION)
+#if BUSE(TZONE) && (BASAN_ENABLED || BASSERT_ENABLED)
+#define BUSE_DYNAMIC_TZONE_COMPACTION 0
+#else
+#define BUSE_DYNAMIC_TZONE_COMPACTION 0
 #endif
 #endif

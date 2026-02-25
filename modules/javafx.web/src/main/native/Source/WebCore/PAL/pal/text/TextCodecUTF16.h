@@ -27,10 +27,12 @@
 
 #include "TextCodec.h"
 #include <optional>
+#include <wtf/TZoneMalloc.h>
 
 namespace PAL {
 
 class TextCodecUTF16 final : public TextCodec {
+    WTF_MAKE_TZONE_ALLOCATED(TextCodecUTF16);
 public:
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
@@ -44,7 +46,7 @@ private:
 
     bool m_littleEndian;
     std::optional<uint8_t> m_leadByte;
-    std::optional<UChar> m_leadSurrogate;
+    std::optional<char16_t> m_leadSurrogate;
     bool m_shouldStripByteOrderMark { false };
 };
 

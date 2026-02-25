@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2010 Rob Buis <rwlbuis@gmail.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,6 +23,7 @@
 #include "config.h"
 #include "SVGTextPathElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "NodeName.h"
 #include "RenderSVGTextPath.h"
@@ -29,6 +31,7 @@
 #include "SVGElementInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGPathElement.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -68,7 +71,7 @@ void SVGTextPathElement::clearResourceReferences()
 
 void SVGTextPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::startOffsetAttr:
@@ -161,6 +164,15 @@ void SVGTextPathElement::buildPendingResource()
         }
     } else if (RefPtr pathElement = dynamicDowncast<SVGPathElement>(*target.element))
         pathElement->addReferencingElement(*this);
+
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return;
+
+    CheckedPtr renderer = this->renderer();
+    if (!renderer)
+        return;
+
+    LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
 }
 
 Node::InsertedIntoAncestorResult SVGTextPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)

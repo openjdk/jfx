@@ -34,7 +34,7 @@ class StyleSheetContents;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleImport);
 class StyleRuleImport final : public StyleRuleBase {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleImport);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRuleImport, StyleRuleImport);
 public:
     struct SupportsCondition {
         String text;
@@ -73,7 +73,7 @@ private:
     public:
         ImportedStyleSheetClient(StyleRuleImport* ownerRule) : m_ownerRule(ownerRule) { }
         virtual ~ImportedStyleSheetClient() = default;
-        void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet* sheet) final
+        void setCSSStyleSheet(const String& href, const URL& baseURL, ASCIILiteral charset, const CachedCSSStyleSheet* sheet) final
         {
             m_ownerRule->setCSSStyleSheet(href, baseURL, charset, sheet);
         }
@@ -81,7 +81,7 @@ private:
         StyleRuleImport* m_ownerRule;
     };
 
-    void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet*);
+    void setCSSStyleSheet(const String& href, const URL& baseURL, ASCIILiteral charset, const CachedCSSStyleSheet*);
     friend class ImportedStyleSheetClient;
 
     StyleRuleImport(const String& href, MQ::MediaQueryList&&, std::optional<CascadeLayerName>&&, SupportsCondition&&);

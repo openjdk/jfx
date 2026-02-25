@@ -31,12 +31,15 @@
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
 #include "ScrollingTreeFrameScrollingNode.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeNode);
+
 ScrollingTreeNode::ScrollingTreeNode(ScrollingTree& scrollingTree, ScrollingNodeType nodeType, ScrollingNodeID nodeID)
-    : m_scrollingTree(scrollingTree)
+    : m_scrollingTree(&scrollingTree)
     , m_nodeType(nodeType)
     , m_nodeID(nodeID)
 {
@@ -46,7 +49,7 @@ ScrollingTreeNode::~ScrollingTreeNode() = default;
 
 void ScrollingTreeNode::appendChild(Ref<ScrollingTreeNode>&& childNode)
 {
-    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
+    RELEASE_ASSERT(scrollingTree()->inCommitTreeState());
 
     childNode->setParent(this);
 
@@ -55,7 +58,7 @@ void ScrollingTreeNode::appendChild(Ref<ScrollingTreeNode>&& childNode)
 
 void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
 {
-    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
+    RELEASE_ASSERT(scrollingTree()->inCommitTreeState());
 
     size_t index = m_children.findIf([&](auto& child) {
         return &node == child.ptr();
@@ -64,7 +67,7 @@ void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
     // The index will be notFound if the node to remove is a deeper-than-1-level descendant or
     // if node is the root state node.
     if (index != notFound) {
-        m_children.remove(index);
+        m_children.removeAt(index);
         return;
     }
 
@@ -74,20 +77,20 @@ void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
 
 void ScrollingTreeNode::removeAllChildren()
 {
-    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
+    RELEASE_ASSERT(scrollingTree()->inCommitTreeState());
 
     m_children.clear();
 }
 
 bool ScrollingTreeNode::isRootNode() const
 {
-    return m_scrollingTree.rootNode() == this;
+    return scrollingTree()->rootNode() == this;
 }
 
 void ScrollingTreeNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
-        ts.dumpProperty("nodeID", scrollingNodeID());
+        ts.dumpProperty("nodeID"_s, scrollingNodeID());
 }
 
 RefPtr<ScrollingTreeFrameScrollingNode> ScrollingTreeNode::enclosingFrameNodeIncludingSelf()

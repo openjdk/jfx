@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 #include "JSDestructibleObject.h"
 #include "JSObject.h"
 #include "MemoryMode.h"
-#include "WasmOps.h"
+#include "WasmFormat.h"
 #include <wtf/Bag.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
@@ -52,7 +52,7 @@ class SymbolTable;
 class JSWebAssemblyModule final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -63,21 +63,22 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     JS_EXPORT_PRIVATE static JSWebAssemblyModule* create(VM&, Structure*, Ref<Wasm::Module>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     const Wasm::ModuleInformation& moduleInformation() const;
     SymbolTable* exportSymbolTable() const;
-    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
+    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(Wasm::FunctionSpaceIndex functionIndexSpace) const;
 
     JS_EXPORT_PRIVATE Wasm::Module& module();
 
 private:
     JSWebAssemblyModule(VM&, Structure*, Ref<Wasm::Module>&&);
     void finishCreation(VM&);
-    DECLARE_VISIT_CHILDREN;
 
-    Ref<Wasm::Module> m_module;
+    const Ref<Wasm::Module> m_module;
     WriteBarrier<SymbolTable> m_exportSymbolTable;
 };
 

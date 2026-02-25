@@ -30,6 +30,7 @@
 #include "CryptoAlgorithmAesCbcCfbParams.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
@@ -106,7 +107,7 @@ void CryptoAlgorithmAESCBC::generateKey(const CryptoAlgorithmParameters& paramet
     callback(WTFMove(result));
 }
 
-void CryptoAlgorithmAESCBC::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmAESCBC::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmAESCBCInternal;
 
@@ -147,7 +148,7 @@ void CryptoAlgorithmAESCBC::importKey(CryptoKeyFormat format, KeyData&& data, co
     callback(*result);
 }
 
-void CryptoAlgorithmAESCBC::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmAESCBC::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmAESCBCInternal;
     const auto& aesKey = downcast<CryptoKeyAES>(key.get());
@@ -188,7 +189,7 @@ void CryptoAlgorithmAESCBC::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& k
     callback(format, WTFMove(result));
 }
 
-ExceptionOr<size_t> CryptoAlgorithmAESCBC::getKeyLength(const CryptoAlgorithmParameters& parameters)
+ExceptionOr<std::optional<size_t>> CryptoAlgorithmAESCBC::getKeyLength(const CryptoAlgorithmParameters& parameters)
 {
     return CryptoKeyAES::getKeyLength(parameters);
 }

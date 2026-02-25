@@ -35,6 +35,7 @@
 #include "ResourceResponse.h"
 #include <JavaScriptCore/TypedArrays.h>
 #include <span>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -62,6 +63,7 @@ public:
     virtual ~FetchResponse();
 
     WEBCORE_EXPORT static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, FetchHeaders::Guard, ResourceResponse&&);
+    static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
 
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBody::Init>&&, Init&&);
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBodyWithType>&&, Init&&);
@@ -92,7 +94,7 @@ public:
     void feedStream() final;
     void cancel() final;
 
-    using ResponseData = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+    using ResponseData = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
     ResponseData consumeBody();
     void setBodyData(ResponseData&&, uint64_t bodySizeWithPadding);
 
@@ -149,7 +151,8 @@ private:
     void processReceivedError();
 
     class Loader final : public FetchLoaderClient {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Loader);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Loader);
     public:
         Loader(FetchResponse&, NotificationCallback&&);
         ~Loader();
@@ -172,14 +175,16 @@ private:
         void didReceiveResponse(const ResourceResponse&) final;
         void didReceiveData(const SharedBuffer&) final;
 
-        FetchResponse& m_response;
+        WeakRef<FetchResponse> m_response;
         NotificationCallback m_responseCallback;
         ConsumeDataByChunkCallback m_consumeDataCallback;
         std::unique_ptr<FetchLoader> m_loader;
-        Ref<PendingActivity<FetchResponse>> m_pendingActivity;
+        const Ref<PendingActivity<FetchResponse>> m_pendingActivity;
         FetchOptions::Credentials m_credentials;
         bool m_shouldStartStreaming { false };
     };
+
+    CheckedPtr<Loader> checkedLoader() { return m_loader.get(); }
 
     mutable std::optional<ResourceResponse> m_filteredResponse;
     ResourceResponse m_internalResponse;

@@ -261,9 +261,6 @@ public:
 
 private:
     using WebGLRenderingContextBase::WebGLRenderingContextBase;
-
-    bool isWebGL2() const final { return true; }
-
     void initializeContextState() final;
 
     RefPtr<ArrayBufferView> arrayBufferViewSliceFactory(ASCIILiteral functionName, const ArrayBufferView& data, unsigned startByte, unsigned bytelength);
@@ -275,8 +272,8 @@ private:
     void initializeDefaultObjects() final;
     bool validateBufferTarget(ASCIILiteral functionName, GCGLenum target) final;
     bool validateBufferTargetCompatibility(ASCIILiteral, GCGLenum, WebGLBuffer*);
-    WebGLBuffer* validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage) final;
-    WebGLBuffer* validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target) final;
+    RefPtr<WebGLBuffer> validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage) final;
+    RefPtr<WebGLBuffer> validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target) final;
     bool validateAndCacheBufferBinding(const AbstractLocker&, ASCIILiteral functionName, GCGLenum target, WebGLBuffer*) final;
     GCGLint maxDrawBuffers() final;
     GCGLint maxColorAttachments() final;
@@ -320,6 +317,10 @@ private:
     };
     void updateBuffersToAutoClear(ClearBufferCaller, GCGLenum buffer, GCGLint drawbuffer);
 
+    RefPtr<WebGLTransformFeedback> protectedBoundTransformFeedback() const { return m_boundTransformFeedback; }
+    RefPtr<WebGLVertexArrayObjectBase> protectedBoundVertexArrayObject() const { return m_boundVertexArrayObject; }
+    RefPtr<WebGLFramebuffer> protectedFramebufferBinding() const { return m_framebufferBinding; }
+
     WebGLBindingPoint<WebGLFramebuffer> m_readFramebufferBinding;
     WebGLBindingPoint<WebGLTransformFeedback> m_boundTransformFeedback;
     RefPtr<WebGLTransformFeedback> m_defaultTransformFeedback;
@@ -332,7 +333,7 @@ private:
     WebGLBindingPoint<WebGLBuffer, GraphicsContextGL::UNIFORM_BUFFER> m_boundUniformBuffer;
     Vector<WebGLBindingPoint<WebGLBuffer, GraphicsContextGL::UNIFORM_BUFFER>> m_boundIndexedUniformBuffers;
 
-    RefPtr<WebGLQuery> m_activeQueries[ActiveQueryKey::NumKeys];
+    std::array<RefPtr<WebGLQuery>, ActiveQueryKey::NumKeys> m_activeQueries;
 
     Vector<RefPtr<WebGLSampler>> m_boundSamplers;
 

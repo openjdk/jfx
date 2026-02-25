@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 David Smith <catfish.man@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -30,7 +30,9 @@
 #include "TagCollection.h"
 #include <new>
 #include <wtf/HashSet.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -45,7 +47,7 @@ template<typename ListType> struct NodeListTypeIdentifier;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 class NodeListsNodeData {
     WTF_MAKE_NONCOPYABLE(NodeListsNodeData);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData, NodeListsNodeData);
 public:
     NodeListsNodeData() = default;
 
@@ -163,7 +165,7 @@ public:
     void removeCacheWithAtomName(NodeListType& list, const AtomString& name)
     {
         ASSERT(&list == m_atomNameCaches.get(namedNodeListKey<NodeListType>(name)));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list.protectedOwnerNode()))
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list.ownerNode()))
             return;
         m_atomNameCaches.remove(namedNodeListKey<NodeListType>(name));
     }
@@ -172,7 +174,7 @@ public:
     {
         QualifiedName name(nullAtom(), localName, namespaceURI);
         ASSERT(&collection == m_tagCollectionNSCache.get(name));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection.protectedOwnerNode()))
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection.ownerNode()))
             return;
         m_tagCollectionNSCache.remove(name);
     }
@@ -213,7 +215,8 @@ private:
 };
 
 class NodeMutationObserverData {
-    WTF_MAKE_NONCOPYABLE(NodeMutationObserverData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NodeMutationObserverData);
+    WTF_MAKE_NONCOPYABLE(NodeMutationObserverData);
 public:
     Vector<std::unique_ptr<MutationObserverRegistration>> registry;
     WeakHashSet<MutationObserverRegistration> transientRegistry;
@@ -222,9 +225,9 @@ public:
 };
 
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
-class NodeRareData {
+class NodeRareData : public NoVirtualDestructorBase {
     WTF_MAKE_NONCOPYABLE(NodeRareData);
-    WTF_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData, NodeRareData);
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
     enum class UseType : uint32_t {
@@ -256,6 +259,8 @@ public:
         Popover = 1 << 25,
         DisplayContentsOrNoneStyle = 1 << 26,
         CustomStateSet = 1 << 27,
+        UserInfo = 1 << 28,
+        InvokedPopover = 1 << 29,
     };
 #endif
 

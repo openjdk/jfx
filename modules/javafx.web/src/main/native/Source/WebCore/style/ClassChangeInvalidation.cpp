@@ -106,11 +106,11 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
 
     if (mayAffectStyleInShadowTree) {
         // FIXME: We should do fine-grained invalidation for shadow tree.
-        m_element.invalidateStyleForSubtree();
+        m_element->invalidateStyleForSubtree();
     }
 
     if (shouldInvalidateCurrent)
-        m_element.invalidateStyle();
+        m_element->invalidateStyle();
 
     auto invalidateBeforeAndAfterChange = [](MatchElement matchElement) {
         switch (matchElement) {
@@ -129,6 +129,8 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
         case MatchElement::ParentSibling:
         case MatchElement::AncestorSibling:
         case MatchElement::HasChild:
+        case MatchElement::HasChildParent:
+        case MatchElement::HasChildAncestor:
         case MatchElement::HasDescendant:
         case MatchElement::HasSibling:
         case MatchElement::HasSiblingDescendant:
@@ -168,9 +170,9 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
     }
     };
 
-    collect(m_element.styleResolver().ruleSets());
+    collect(m_element->styleResolver().ruleSets());
 
-    if (auto* shadowRoot = m_element.shadowRoot())
+    if (auto* shadowRoot = m_element->shadowRoot())
         collect(shadowRoot->styleScope().resolver().ruleSets(), MatchElement::Host);
 }
 

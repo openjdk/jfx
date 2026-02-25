@@ -337,6 +337,10 @@ struct _QtDemuxStreamStsdEntry
   GstMemory *rgb8_palette;
   guint interlace_mode;
   guint field_order;
+  gboolean content_light_level_set;
+  GstVideoContentLightLevel content_light_level;
+  gboolean mastering_display_info_set;
+  GstVideoMasteringDisplayInfo mastering_display_info;
 
   /* audio info */
   gdouble rate;
@@ -347,6 +351,8 @@ struct _QtDemuxStreamStsdEntry
   guint bytes_per_sample;
   guint bytes_per_frame;
   guint compression;
+  gboolean needs_reorder;
+  gint reorder_map[64];
 
   /* if we use chunks or samples */
   gboolean sampled;
@@ -423,6 +429,10 @@ struct _QtDemuxStream
                                  * Currently only set for raw audio streams*/
 
   /* video info */
+  GstVideoInfo info;
+  GstVideoInfo pre_info;        /* Original file info, may be unaligned */
+  gboolean needs_row_alignment;
+
   /* aspect ratio */
   gint display_width;
   gint display_height;

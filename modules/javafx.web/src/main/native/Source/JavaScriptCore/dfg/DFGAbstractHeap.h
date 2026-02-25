@@ -61,6 +61,7 @@ namespace JSC { namespace DFG {
     macro(JSPropertyNameEnumerator_cachedPropertyNames) \
     macro(RegExpObject_lastIndex) \
     macro(NamedProperties) \
+    macro(IndexedProperties) \
     macro(IndexedInt32Properties) \
     macro(IndexedDoubleProperties) \
     macro(IndexedContiguousProperties) \
@@ -92,7 +93,7 @@ namespace JSC { namespace DFG {
     /* Use this for writes only, just to indicate that hoisting the node is invalid. This works because we don't hoist anything that has any side effects at all. */\
     macro(SideState)
 
-enum AbstractHeapKind {
+enum AbstractHeapKind : uint8_t {
 #define ABSTRACT_HEAP_DECLARATION(name) name,
     FOR_EACH_ABSTRACT_HEAP_KIND(ABSTRACT_HEAP_DECLARATION)
 #undef ABSTRACT_HEAP_DECLARATION
@@ -123,7 +124,7 @@ public:
 
         Payload(const void* pointer)
             : m_isTop(false)
-            , m_value(bitwise_cast<intptr_t>(pointer))
+            , m_value(static_cast<int64_t>(reinterpret_cast<uintptr_t>(pointer)))
         {
         }
 
@@ -214,7 +215,7 @@ public:
 
     bool operator!() const { return kind() == InvalidAbstractHeap && !payloadImpl().isTop(); }
 
-    AbstractHeapKind kind() const { return static_cast<AbstractHeapKind>(m_value & ((1 << topShift) - 1)); }
+    AbstractHeapKind kind() const { return static_cast<AbstractHeapKind>((m_value & kindMask) >> kindShift); }
     Payload payload() const
     {
         ASSERT(kind() != World && kind() != InvalidAbstractHeap);
@@ -232,15 +233,9 @@ public:
         switch (kind()) {
         case World:
             return AbstractHeap();
-        case Heap:
-        case SideState:
-            return World;
         default:
-            if (payload().isTop()) {
-                if (kind() == Stack)
-                    return World;
-                return Heap;
-            }
+            if (payload().isTop())
+                return superKind(kind());
             return AbstractHeap(kind());
         }
     }
@@ -299,29 +294,97 @@ public:
         return kind() == InvalidAbstractHeap && payloadImpl().isTop();
     }
 
+    static AbstractHeapKind superKind(AbstractHeapKind kind)
+    {
+        switch (kind) {
+        case InvalidAbstractHeap:
+        case World:
+            return InvalidAbstractHeap;
+
+        case Heap:
+        case Stack:
+        case SideState:
+            return World;
+
+        case IndexedInt32Properties:
+        case IndexedDoubleProperties:
+        case IndexedContiguousProperties:
+        case IndexedArrayStorageProperties:
+        case DirectArgumentsProperties:
+        case ScopeProperties:
+        case TypedArrayProperties:
+            return IndexedProperties;
+
+        case IndexedProperties:
+            return Heap;
+
+        case NamedProperties:
+            return Heap;
+
+        case Butterfly_publicLength:
+        case Butterfly_vectorLength:
+        case GetterSetter_getter:
+        case GetterSetter_setter:
+        case JSCell_cellState:
+        case JSCell_indexingType:
+        case JSCell_structureID:
+        case JSCell_typeInfoFlags:
+        case JSObject_butterfly:
+        case JSPropertyNameEnumerator_cachedPropertyNames:
+        case RegExpObject_lastIndex:
+        case HeapObjectCount:
+        case RegExpState:
+        case MathDotRandomState:
+        case JSDateFields:
+        case JSGlobalProxy_target:
+        case JSMapFields:
+        case JSSetFields:
+        case JSMapIteratorFields:
+        case JSSetIteratorFields:
+        case JSWeakMapFields:
+        case JSWeakSetFields:
+        case JSInternalFields:
+        case InternalState:
+        case CatchLocals:
+        case Absolute:
+        case DOMState:
+        case Watchpoint_fire:
+        case MiscFields:
+            return Heap;
+        }
+
+        return InvalidAbstractHeap;
+    }
+
     void dump(PrintStream& out) const;
 
 private:
-    static constexpr unsigned valueShift = 15;
-    static constexpr unsigned topShift = 14;
-    static_assert((64 - valueShift) >= Operand::maxBits, "Operand should fit in Payload's encoded format");
+    static constexpr unsigned kindShift = 48;
+    static_assert(48 >= OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH));
+
+    static constexpr unsigned kindBits = 7;
+    static constexpr uint64_t kindMask = ((1ull << (kindBits)) - 1) << kindShift;
+    static constexpr uint64_t kindAndTopMask = ((1ull << (kindBits + 1)) - 1) << kindShift;
+    static constexpr unsigned topShift = kindShift + kindBits;
+    static_assert(48 >= Operand::maxBits, "Operand should fit in the bottom 48 bit region");
 
     Payload payloadImpl() const
     {
-        return Payload((m_value >> topShift) & 1, m_value >> valueShift);
+        return Payload((m_value >> topShift) & 1, m_value & ~kindAndTopMask);
     }
 
     static int64_t encode(AbstractHeapKind kind, Payload payload)
     {
-        int64_t kindAsInt = static_cast<int64_t>(kind);
-        ASSERT(kindAsInt < (1 << topShift));
-        return kindAsInt | (static_cast<uint64_t>(payload.isTop()) << topShift) | (bitwise_cast<uint64_t>(payload.valueImpl()) << valueShift);
+        uint64_t kindAsInt = static_cast<uint64_t>(kind);
+        ASSERT(kindAsInt < (1u << kindBits));
+        ASSERT(!(std::bit_cast<uint64_t>(payload.valueImpl()) & kindAndTopMask));
+        return (kindAsInt << kindShift) | (static_cast<uint64_t>(payload.isTop()) << topShift) | std::bit_cast<uint64_t>(payload.valueImpl());
     }
 
     // The layout of the value is:
-    // Low 14 bits: the Kind
-    // 15th bit: whether or not the payload is TOP.
-    // The upper bits: the payload.value().
+    // Low 48 bits: the payload.value().
+    // Next 7 bits: the Kind.
+    // 55th bit: whether or not the payload is TOP.
     int64_t m_value;
 };
 

@@ -27,9 +27,9 @@
 #include "EventInit.h"
 #include "EventInterfaces.h"
 #include "EventOptions.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/MonotonicTime.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -38,13 +38,17 @@ namespace WTF {
 class TextStream;
 }
 
+namespace JSC {
+class JSGlobalObject;
+}
+
 namespace WebCore {
 
 class EventPath;
 class EventTarget;
 class ScriptExecutionContext;
 
-class Event : public ScriptWrappable, public RefCounted<Event> {
+class Event : public ScriptWrappable, public RefCountedAndCanMakeWeakPtr<Event> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Event);
 public:
     using IsTrusted = EventIsTrusted;
@@ -75,6 +79,7 @@ public:
     enum EventInterfaceType interfaceType() const { return static_cast<enum EventInterfaceType>(m_eventInterface); }
 
     EventTarget* target() const { return m_target.get(); }
+    RefPtr<EventTarget> protectedTarget() const;
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
@@ -93,7 +98,7 @@ public:
     MonotonicTime timeStamp() const { return m_createTime; }
 
     void setEventPath(const EventPath&);
-    Vector<Ref<EventTarget>> composedPath() const;
+    Vector<Ref<EventTarget>> composedPath(JSC::JSGlobalObject&) const;
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }
@@ -158,6 +163,9 @@ public:
 
     virtual String debugDescription() const;
 
+    bool isAutofillEvent() { return m_isAutofillEvent; }
+    void setIsAutofillEvent() { m_isAutofillEvent = true; }
+
 protected:
     explicit Event(enum EventInterfaceType, IsTrusted = IsTrusted::No);
     Event(enum EventInterfaceType, const AtomString& type, CanBubble, IsCancelable, IsComposed = IsComposed::No);
@@ -186,6 +194,7 @@ private:
     unsigned m_isTrusted : 1;
     unsigned m_isExecutingPassiveEventListener : 1;
     unsigned m_currentTargetIsInShadowTree : 1;
+    unsigned m_isAutofillEvent : 1;
 
     unsigned m_eventPhase : 2;
 
@@ -195,7 +204,7 @@ private:
 
     unsigned m_eventInterface : 7 { 0 };
 
-    // 10-bits left.
+    // 9-bits left.
 
     AtomString m_type;
 

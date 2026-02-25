@@ -56,8 +56,7 @@ public:
     bool stillNeedsLoad() const override { return !m_loadInitiated; }
 
     virtual bool ensureCustomFontData();
-    static RefPtr<FontCustomPlatformData> createCustomFontData(SharedBuffer&, const String& itemInCollection, bool& wrapping);
-    static RefPtr<FontCustomPlatformData> createCustomFontDataExperimentalParser(SharedBuffer&, const String& itemInCollection, bool& wrapping);
+    static RefPtr<FontCustomPlatformData> createCustomFontData(SharedBuffer&, const String& itemInCollection, bool& wrapping, DownloadableBinaryFontTrustedTypes);
     static FontPlatformData platformDataFromCustomData(FontCustomPlatformData&, const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
     virtual RefPtr<Font> createFont(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontCreationContext&);
@@ -70,6 +69,10 @@ protected:
     bool ensureCustomFontData(SharedBuffer* data);
 
 private:
+    static RefPtr<FontCustomPlatformData> createCustomFontDataWithPolicy(SharedBuffer&, const String& itemInCollection, bool& wrapping, FontParsingPolicy);
+    static RefPtr<FontCustomPlatformData> createCustomFontDataSystemParser(SharedBuffer&, const String& itemInCollection, bool& wrapping);
+    static RefPtr<FontCustomPlatformData> createCustomFontDataSafeFontParser(SharedBuffer&, const String& itemInCollection, bool& wrapping);
+
     String calculateItemInCollection() const;
 
     void checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) override;
@@ -99,4 +102,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedFont, CachedResource::Type::FontResource)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CachedFont)
+    static bool isType(const WebCore::CachedResource& resource) { return resource.type() == WebCore::CachedResource::Type::FontResource || resource.type() == WebCore::CachedResource::Type::SVGFontResource; }
+SPECIALIZE_TYPE_TRAITS_END()

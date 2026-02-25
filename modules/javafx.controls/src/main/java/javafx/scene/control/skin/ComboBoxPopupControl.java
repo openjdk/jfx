@@ -443,7 +443,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
 
         final Node popupContent = getPopupContent();
-        sizePopup();
+        sizePopup(true);
 
         Point2D p = getPrefPopupPosition();
 
@@ -458,10 +458,10 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         // second call to sizePopup here to enable proper sizing _after_ the popup
         // has been displayed. See JDK-8095352 for more detail.
-        sizePopup();
+        sizePopup(false);
     }
 
-    private void sizePopup() {
+    private void sizePopup(boolean first) {
         final Node popupContent = getPopupContent();
 
         if (popupContent instanceof Region) {
@@ -480,6 +480,19 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             double w = snapSizeX(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
             popupContent.resize(w, h);
+
+            // Take into account whether the popup was autofixed for JDK-8338145
+            // If it was, we might need to adjust the position
+            // to retain the relative position to the combo box itself
+            if (!first) {
+                double topY = getSkinnable().localToScreen(0, 0).getY();
+                // The popup does not directly store information on whether it was autofixed
+                // We can determine this by looking whether it was moved upward
+                boolean wasAutofixed = popup.getY() < topY;
+                if (wasAutofixed) {
+                    popup.setY(topY - h);
+                }
+            }
         } else {
             popupContent.autosize();
         }

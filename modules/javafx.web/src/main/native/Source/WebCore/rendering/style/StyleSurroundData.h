@@ -25,20 +25,30 @@
 #pragma once
 
 #include "BorderData.h"
-#include "LengthBox.h"
+#include "StyleInset.h"
+#include "StyleMargin.h"
+#include "StylePadding.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleSurroundData);
 class StyleSurroundData : public RefCounted<StyleSurroundData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleSurroundData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleSurroundData, StyleSurroundData);
 public:
     static Ref<StyleSurroundData> create() { return adoptRef(*new StyleSurroundData); }
     Ref<StyleSurroundData> copy() const;
 
     bool operator==(const StyleSurroundData&) const;
+
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleSurroundData&) const;
+#endif
 
     // Here instead of in BorderData to pack up against the refcount.
     bool hasExplicitlySetBorderBottomLeftRadius : 1;
@@ -46,9 +56,14 @@ public:
     bool hasExplicitlySetBorderTopLeftRadius : 1;
     bool hasExplicitlySetBorderTopRightRadius : 1;
 
-    LengthBox offset;
-    LengthBox margin;
-    LengthBox padding;
+    bool hasExplicitlySetPaddingBottom : 1;
+    bool hasExplicitlySetPaddingLeft : 1;
+    bool hasExplicitlySetPaddingRight : 1;
+    bool hasExplicitlySetPaddingTop : 1;
+
+    Style::InsetBox inset;
+    Style::MarginBox margin;
+    Style::PaddingBox padding;
     BorderData border;
 
 private:

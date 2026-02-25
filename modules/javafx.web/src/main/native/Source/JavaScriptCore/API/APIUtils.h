@@ -40,7 +40,7 @@ enum class ExceptionStatus {
 inline ExceptionStatus handleExceptionIfNeeded(JSC::CatchScope& scope, JSContextRef ctx, JSValueRef* returnedExceptionRef)
 {
     JSC::JSGlobalObject* globalObject = toJS(ctx);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         JSC::Exception* exception = scope.exception();
         if (returnedExceptionRef)
             *returnedExceptionRef = toRef(globalObject, exception->value());

@@ -29,6 +29,7 @@
 #include "FlexFormattingUtils.h"
 #include "FlexLayout.h"
 #include "FlexRect.h"
+#include "LayoutIntegrationUtils.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -45,24 +46,26 @@ public:
     IntrinsicWidthConstraints computedIntrinsicWidthConstraints();
 
     const ElementBox& root() const { return m_flexBox; }
+    CheckedRef<const ElementBox> checkedRoot() const { return m_flexBox; }
     const FlexFormattingUtils& formattingUtils() const { return m_flexFormattingUtils; }
 
     const BoxGeometry& geometryForFlexItem(const Box&) const;
     BoxGeometry& geometryForFlexItem(const Box&);
 
-    const LayoutState& layoutState() const { return m_layoutState; }
-    LayoutState& layoutState() { return m_layoutState; }
+    const IntegrationUtils& integrationUtils() const { return m_integrationUtils; }
 
 private:
     FlexLayout::LogicalFlexItems convertFlexItemsToLogicalSpace(const ConstraintsForFlexContent&);
     void setFlexItemsGeometry(const FlexLayout::LogicalFlexItems&, const FlexLayout::LogicalFlexItemRects&, const ConstraintsForFlexContent&);
+    void positionOutOfFlowChildren();
 
     std::optional<LayoutUnit> computedAutoMarginValueForFlexItems(const ConstraintsForFlexContent&);
 
 private:
-    const ElementBox& m_flexBox;
-    LayoutState& m_layoutState;
+    const CheckedRef<const ElementBox> m_flexBox;
+    const CheckedRef<LayoutState> m_globalLayoutState;
     const FlexFormattingUtils m_flexFormattingUtils;
+    const IntegrationUtils m_integrationUtils;
 };
 
 }

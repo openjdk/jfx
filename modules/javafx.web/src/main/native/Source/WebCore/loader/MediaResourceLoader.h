@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +37,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,9 +49,12 @@ class Element;
 class MediaResource;
 class WeakPtrImplWithEventTargetData;
 
+enum class LoadedFromOpaqueSource : bool;
+
 class MediaResourceLoader final : public PlatformMediaResourceLoader, public CanMakeWeakPtr<MediaResourceLoader>, public ContextDestructionObserver {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MediaResourceLoader, WEBCORE_EXPORT);
 public:
-    WEBCORE_EXPORT MediaResourceLoader(Document&, Element&, const String& crossOriginMode, FetchOptions::Destination);
+    static Ref<MediaResourceLoader> create(Document& document, Element& element, const String& crossOriginMode, FetchOptions::Destination destination) { return adoptRef(*new MediaResourceLoader(document, element, crossOriginMode, destination)); }
     WEBCORE_EXPORT virtual ~MediaResourceLoader();
 
     RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) final;
@@ -65,8 +70,12 @@ public:
     void addResponseForTesting(const ResourceResponse&);
 
     bool verifyMediaResponse(const URL& requestURL, const ResourceResponse&, const SecurityOrigin*);
+    void redirectReceived(const URL&);
+
 private:
-    void contextDestroyed() override;
+    WEBCORE_EXPORT MediaResourceLoader(Document&, Element&, const String& crossOriginMode, FetchOptions::Destination);
+
+    void contextDestroyed() final;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document WTF_GUARDED_BY_CAPABILITY(mainThread);
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_element WTF_GUARDED_BY_CAPABILITY(mainThread);
@@ -74,15 +83,20 @@ private:
     SingleThreadWeakHashSet<MediaResource> m_resources WTF_GUARDED_BY_CAPABILITY(mainThread);
     Vector<ResourceResponse> m_responsesForTesting WTF_GUARDED_BY_CAPABILITY(mainThread);
     FetchOptions::Destination m_destination WTF_GUARDED_BY_CAPABILITY(mainThread);
+
     struct ValidationInformation {
         RefPtr<const SecurityOrigin> origin;
         bool usedOpaqueResponse { false };
         bool usedServiceWorker { false };
     };
     HashMap<URL, ValidationInformation> m_validationLoadInformations WTF_GUARDED_BY_CAPABILITY(mainThread);
+
+    HashSet<URL> m_nonOpaqueLoadURLs;
+    std::optional<LoadedFromOpaqueSource> m_loadedFromOpaqueSource;
 };
 
 class MediaResource : public PlatformMediaResource, public CachedRawResourceClient {
+    WTF_MAKE_TZONE_ALLOCATED(MediaResource);
 public:
     static Ref<MediaResource> create(MediaResourceLoader&, CachedResourceHandle<CachedRawResource>&&);
     virtual ~MediaResource();
@@ -92,7 +106,7 @@ public:
     bool didPassAccessControlCheck() const override { return m_didPassAccessControlCheck.load(); }
 
     // CachedRawResourceClient
-    void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
+    void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     bool shouldCacheResponse(CachedResource&, const ResourceResponse&) override;
     void dataSent(CachedResource&, unsigned long long, unsigned long long) override;
@@ -100,7 +114,6 @@ public:
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
 private:
-    Ref<MediaResourceLoader> protectedLoader() const;
     CachedResourceHandle<CachedRawResource> protectedResource() const;
 
     MediaResource(MediaResourceLoader&, CachedResourceHandle<CachedRawResource>&&);

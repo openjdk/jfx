@@ -26,12 +26,13 @@
 #pragma once
 
 #include "InspectorNetworkAgent.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WorkerNetworkAgent final : public InspectorNetworkAgent {
     WTF_MAKE_NONCOPYABLE(WorkerNetworkAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WorkerNetworkAgent);
 public:
     WorkerNetworkAgent(WorkerAgentContext&);
     ~WorkerNetworkAgent();
@@ -48,7 +49,7 @@ private:
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&);
     bool shouldForceBufferingNetworkResourceData() const { return true; }
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    WeakRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

@@ -30,6 +30,7 @@
 #if ENABLE(MATHML)
 
 #include "RenderMathMLBlock.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
@@ -52,7 +53,7 @@ protected:
     void paint(PaintInfo&, const LayoutPoint&) override;
     void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
     void computePreferredLogicalWidths() override;
 
 private:
@@ -64,7 +65,7 @@ private:
     void setMathVariantGlyphDirty()
     {
         m_mathVariantGlyphDirty = true;
-        setNeedsLayoutAndPrefWidthsRecalc();
+        setNeedsLayoutAndPreferredWidthsUpdate();
     }
     std::optional<char32_t> m_mathVariantCodePoint { std::nullopt };
     bool m_mathVariantIsMirrored { false };

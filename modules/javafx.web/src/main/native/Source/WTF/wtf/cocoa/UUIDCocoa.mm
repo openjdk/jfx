@@ -27,12 +27,13 @@
 #import "UUID.h"
 
 #import "RetainPtr.h"
+#import "TypeCastsCocoa.h"
 
 namespace WTF {
 
-UUID::operator NSUUID *() const
+RetainPtr<NSUUID> UUID::createNSUUID() const
 {
-    return [[NSUUID alloc] initWithUUIDString:toString()];
+    return adoptNS([[NSUUID alloc] initWithUUIDString:toString().createNSString().get()]);
 }
 
 std::optional<UUID> UUID::fromNSUUID(NSUUID *nsUUID)
@@ -46,4 +47,3 @@ std::optional<UUID> UUID::fromNSUUID(NSUUID *nsUUID)
 }
 
 }
-

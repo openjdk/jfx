@@ -38,7 +38,7 @@ namespace WTF {
 // helper. Note that the type it operates on must be usable as a HashMap key.
 template<typename T>
 class OrderMaker {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(OrderMaker);
     WTF_MAKE_NONCOPYABLE(OrderMaker);
 
     struct Node : BasicRawSentinelNode<Node> {
@@ -110,8 +110,8 @@ public:
         typename SentinelLinkedList<Node>::iterator m_iter;
     };
 
-    iterator begin() const { return iterator(const_cast<SentinelLinkedList<Node>&>(m_list).begin()); }
-    iterator end() const { return iterator(const_cast<SentinelLinkedList<Node>&>(m_list).end()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(const_cast<SentinelLinkedList<Node>&>(m_list).begin()); }
+    iterator end() const LIFETIME_BOUND { return iterator(const_cast<SentinelLinkedList<Node>&>(m_list).end()); }
 
 private:
     Node* newNode(T value)

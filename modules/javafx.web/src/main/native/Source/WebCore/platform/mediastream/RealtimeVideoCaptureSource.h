@@ -51,12 +51,10 @@ public:
 
     void ensureIntrinsicSizeMaintainsAspectRatio();
 
-    void ref() const final;
-    void deref() const final;
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final;
+    WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
 protected:
-    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
+    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, std::optional<PageIdentifier>);
 
     void setSizeFrameRateAndZoom(const VideoPresetConstraints&) override;
 
@@ -87,7 +85,7 @@ private:
         double requestedFrameRate { 0 };
         double requestedZoom { 0 };
     };
-    bool supportsCaptureSize(std::optional<int>, std::optional<int>, const Function<bool(const IntSize&)>&&);
+    bool supportsCaptureSize(std::optional<int>, std::optional<int>, NOESCAPE const Function<bool(const IntSize&)>&);
 
     enum class TryPreservingSize { No, Yes };
     std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoom(const VideoPresetConstraints&, TryPreservingSize = TryPreservingSize::Yes);

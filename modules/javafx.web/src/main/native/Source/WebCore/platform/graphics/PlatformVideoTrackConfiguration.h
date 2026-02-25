@@ -29,6 +29,9 @@
 
 #include "PlatformTrackConfiguration.h"
 #include "PlatformVideoColorSpace.h"
+#include "SpatialVideoMetadata.h"
+#include "VideoProjectionMetadata.h"
+#include <optional>
 
 namespace WebCore {
 
@@ -38,6 +41,8 @@ struct PlatformVideoTrackConfiguration : PlatformTrackConfiguration {
     PlatformVideoColorSpace colorSpace;
     double framerate { 0 };
     uint64_t bitrate { 0 };
+    std::optional<SpatialVideoMetadata> spatialVideoMetadata;
+    std::optional<VideoProjectionMetadata> videoProjectionMetadata;
 
     friend bool operator==(const PlatformVideoTrackConfiguration&, const PlatformVideoTrackConfiguration&) = default;
 };

@@ -51,12 +51,9 @@ public:
     bool supportsFocus() const override { return !isDisabled(); }
 
     WEBCORE_EXPORT String formEnctype() const;
-    WEBCORE_EXPORT void setFormEnctype(const AtomString&);
     WEBCORE_EXPORT String formMethod() const;
-    WEBCORE_EXPORT void setFormMethod(const AtomString&);
     bool formNoValidate() const;
     WEBCORE_EXPORT String formAction() const;
-    WEBCORE_EXPORT void setFormAction(const AtomString&);
 
     bool formControlValueMatchesRenderer() const { return m_valueMatchesRenderer; }
     void setFormControlValueMatchesRenderer(bool b) { m_valueMatchesRenderer = b; }
@@ -89,7 +86,6 @@ public:
 #endif
 
     WEBCORE_EXPORT String autocomplete() const;
-    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
 
     AutofillMantle autofillMantle() const;
 
@@ -101,11 +97,8 @@ public:
 
     RefPtr<HTMLElement> popoverTargetElement() const;
     const AtomString& popoverTargetAction() const;
-    void setPopoverTargetAction(const AtomString& value);
 
-    RefPtr<Element> commandForElement() const;
-
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
     using Node::ref;
     using Node::deref;
@@ -126,14 +119,11 @@ protected:
 
     bool isMouseFocusable() const override;
 
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
 
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
 
-    void handlePopoverTargetAction() const;
-
-    CommandType commandType() const;
-    void handleCommand();
+    void handlePopoverTargetAction(const EventTarget*);
 
 private:
     void refFormAssociatedElement() const final { ref(); }
@@ -141,8 +131,6 @@ private:
 
     void runFocusingStepsForAutofocus() final;
     HTMLElement* validationAnchorElement() final { return this; }
-
-    bool isFormControlElement() const final { return true; }
 
     // These functions can be called concurrently for ValidityState.
     HTMLElement& asHTMLElement() final { return *this; }
@@ -161,10 +149,6 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFormControlElement)
     static bool isType(const WebCore::Element& element) { return element.isFormControlElement(); }
-    static bool isType(const WebCore::Node& node)
-    {
-        auto* element = dynamicDowncast<WebCore::Element>(node);
-        return element && isType(*element);
-    }
-    static bool isType(const WebCore::FormListedElement& element) { return element.isFormControlElement(); }
+    static bool isType(const WebCore::Node& node) { return node.isFormControlElement(); }
+    static bool isType(const WebCore::FormListedElement& listedElement) { return listedElement.asHTMLElement().isFormControlElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

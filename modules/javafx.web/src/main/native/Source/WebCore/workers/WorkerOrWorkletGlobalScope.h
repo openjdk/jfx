@@ -29,6 +29,7 @@
 #include "FetchOptions.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerThreadType.h"
+#include <pal/SessionID.h>
 
 namespace WebCore {
 
@@ -40,6 +41,7 @@ class WorkerOrWorkletScriptController;
 class WorkerOrWorkletThread;
 
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class NoiseInjectionPolicy : uint8_t;
 
 class WorkerOrWorkletGlobalScope : public RefCounted<WorkerOrWorkletGlobalScope>, public ScriptExecutionContext, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
@@ -47,9 +49,7 @@ class WorkerOrWorkletGlobalScope : public RefCounted<WorkerOrWorkletGlobalScope>
 public:
     virtual ~WorkerOrWorkletGlobalScope();
 
-    using ScriptExecutionContext::weakPtrFactory;
-    using ScriptExecutionContext::WeakValueType;
-    using ScriptExecutionContext::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(ScriptExecutionContext);
 
     bool isClosing() const { return m_isClosing; }
     WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
@@ -58,9 +58,10 @@ public:
     void clearScript();
 
     JSC::VM& vm() final;
-    WorkerInspectorController& inspectorController() const { return *m_inspectorController; }
+    JSC::VM* vmIfExists() const final;
+    WorkerInspectorController& inspectorController() const { return m_inspectorController; }
 
-    ScriptModuleLoader& moduleLoader() { return *m_moduleLoader; }
+    ScriptModuleLoader& moduleLoader() { return m_moduleLoader; }
 
     // ScriptExecutionContext.
     EventLoopTaskGroup& eventLoop() final;
@@ -76,8 +77,6 @@ public:
 
     using RefCounted::ref;
     using RefCounted::deref;
-    using RefCounted::refAllowingPartiallyDestroyed;
-    using RefCounted::derefAllowingPartiallyDestroyed;
 
     virtual void suspend() { }
     virtual void resume() { }
@@ -85,10 +84,11 @@ public:
     virtual FetchOptions::Destination destination() const = 0;
     ReferrerPolicy referrerPolicy() const final { return m_referrerPolicy; }
     std::optional<uint64_t> noiseInjectionHashSalt() const final { return m_noiseInjectionHashSalt; }
+    OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const final;
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return m_advancedPrivacyProtections; }
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>, ScriptExecutionContextIdentifier = { });
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -99,7 +99,7 @@ private:
     // ScriptExecutionContext.
     void disableEval(const String& errorMessage) final;
     void disableWebAssembly(const String& errorMessage) final;
-    void setRequiresTrustedTypes(bool required) final;
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) final;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
@@ -111,11 +111,11 @@ private:
 #endif
 
     std::unique_ptr<WorkerOrWorkletScriptController> m_script;
-    std::unique_ptr<ScriptModuleLoader> m_moduleLoader;
+    const UniqueRef<ScriptModuleLoader> m_moduleLoader;
     WorkerOrWorkletThread* m_thread;
-    RefPtr<WorkerEventLoop> m_eventLoop;
-    std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
-    std::unique_ptr<WorkerInspectorController> m_inspectorController;
+    const RefPtr<WorkerEventLoop> m_eventLoop;
+    const std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
+    const UniqueRef<WorkerInspectorController> m_inspectorController;
     PAL::SessionID m_sessionID;
     ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };

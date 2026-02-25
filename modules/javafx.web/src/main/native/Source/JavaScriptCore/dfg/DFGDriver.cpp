@@ -66,7 +66,7 @@ static CompilationResult compileImpl(
 {
     if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionsSize())
         || !ensureGlobalDFGAllowlist().contains(codeBlock))
-        return CompilationFailed;
+        return CompilationResult::CompilationFailed;
 
     numCompilations++;
 
@@ -75,8 +75,7 @@ static CompilationResult compileImpl(
     ASSERT(JITCode::isBaselineCode(codeBlock->alternative()->jitType()));
     ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITType::DFGJIT);
 
-    if (logCompilationChanges(mode))
-        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize(), "\n");
+    dataLogLnIf(logCompilationChanges(mode), "DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize());
 
     if (vm.typeProfiler())
         vm.typeProfilerLog()->processLogEntries(vm, "Preparing for DFG compilation."_s);
@@ -93,7 +92,7 @@ static CompilationResult compileImpl(
     VM&, CodeBlock*, CodeBlock*, JITCompilationMode, BytecodeIndex, const Operands<std::optional<JSValue>>&,
     Ref<DeferredCompilationCallback>&&)
 {
-    return CompilationFailed;
+    return CompilationResult::CompilationFailed;
 }
 #endif // ENABLE(DFG_JIT)
 

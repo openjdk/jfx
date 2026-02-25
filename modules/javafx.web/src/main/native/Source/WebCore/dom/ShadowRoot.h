@@ -32,6 +32,7 @@
 #include "StyleScopeOrdinal.h"
 #include "ShadowRootMode.h"
 #include "SlotAssignmentMode.h"
+#include "TreeScope.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -59,11 +60,13 @@ public:
     enum class Clonable : bool { No, Yes };
     enum class Serializable : bool { No, Yes };
     enum class AvailableToElementInternals : bool { No, Yes };
+    enum class ScopedCustomElementRegistry : bool { No, Yes };
 
     static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named,
-        DelegatesFocus delegatesFocus = DelegatesFocus::No, Clonable clonable = Clonable::No, Serializable serializable = Serializable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
+        DelegatesFocus delegatesFocus = DelegatesFocus::No, Clonable clonable = Clonable::No, Serializable serializable = Serializable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No,
+        RefPtr<CustomElementRegistry>&& registry = nullptr, ScopedCustomElementRegistry scopedRegistry = ScopedCustomElementRegistry::No, const AtomString& referenceTarget = nullAtom())
     {
-        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals, WTFMove(registry), scopedRegistry, referenceTarget));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -99,13 +102,17 @@ public:
     RefPtr<Element> protectedHost() const { return m_host.get(); }
     void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
 
-    ExceptionOr<void> setHTMLUnsafe(std::variant<RefPtr<TrustedHTML>, String>&&);
+    bool hasScopedCustomElementRegistry() const { return m_hasScopedCustomElementRegistry; }
+    CustomElementRegistry* registryForBindings() const;
+
+    ExceptionOr<void> setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&&);
     String getHTML(GetHTMLOptions&&) const;
 
     String innerHTML() const;
-    ExceptionOr<void> setInnerHTML(std::variant<RefPtr<TrustedHTML>, String>&&);
+    ExceptionOr<void> setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&&);
 
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const override;
+    SerializedNode serializeNode(CloningOperation) const override;
 
     Element* activeElement() const;
 
@@ -125,7 +132,7 @@ public:
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
-    void willRemoveAssignedNode(const Node&);
+    void willRemoveAssignedNode(Node&);
 
     void didRemoveAllChildrenOfShadowHost();
     void didMutateTextNodesOfShadowHost();
@@ -147,8 +154,16 @@ public:
 
     Vector<RefPtr<WebAnimation>> getAnimations();
 
+    bool hasReferenceTarget() const { return !m_referenceTarget.isNull(); }
+    const AtomString& referenceTarget() const { return m_referenceTarget; }
+    void setReferenceTarget(const AtomString&);
+    RefPtr<Element> referenceTargetElement() const
+    {
+        return m_referenceTarget.isNull() ? nullptr : getElementById(m_referenceTarget);
+    }
+
 private:
-    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Clonable, Serializable, AvailableToElementInternals);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Clonable, Serializable, AvailableToElementInternals, RefPtr<CustomElementRegistry>&&, ScopedCustomElementRegistry, const AtomString& referenceTarget);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
@@ -167,6 +182,7 @@ private:
     bool m_containsFocusedElement : 1 { false };
     bool m_availableToElementInternals : 1 { false };
     bool m_isDeclarativeShadowRoot : 1 { false };
+    bool m_hasScopedCustomElementRegistry : 1 { false };
     ShadowRootMode m_mode { ShadowRootMode::UserAgent };
     SlotAssignmentMode m_slotAssignmentMode { SlotAssignmentMode::Named };
 
@@ -176,6 +192,8 @@ private:
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
     mutable std::optional<PartMappings> m_partMappings;
+
+    AtomString m_referenceTarget;
 };
 
 inline Element* ShadowRoot::activeElement() const

@@ -32,13 +32,8 @@
 #include <stdlib.h>
 
 #ifdef G_OS_WIN32
-#include "win_iconv.c"
-#endif
-
-#ifdef G_PLATFORM_WIN32
-#define STRICT
 #include <windows.h>
-#undef STRICT
+#include "win_iconv.c"
 #endif
 
 #include "gconvert.h"
@@ -176,6 +171,9 @@ g_iconv_open (const gchar  *to_codeset,
  * positive number of non-reversible conversions as replacement characters were
  * used), or it may return -1 and set an error such as %EILSEQ, in such a
  * situation.
+ *
+ * See [`iconv(3posix)`](man:iconv(3posix)) and [`iconv(3)`](man:iconv(3)) for more details about behavior when an
+ * error occurs.
  *
  * Returns: count of non-reversible conversions, or -1 on error
  **/
@@ -900,7 +898,7 @@ convert_checked (const gchar      *string,
  *
  * Converts a string which is in the encoding used for strings by
  * the C runtime (usually the same as that used by the operating
- * system) in the [current locale][setlocale] into a UTF-8 string.
+ * system) in the [current locale](running.html#locale) into a UTF-8 string.
  *
  * If the source encoding is not UTF-8 and the conversion output contains a
  * nul character, the error %G_CONVERT_ERROR_EMBEDDED_NUL is set and the
@@ -995,8 +993,8 @@ _g_ctype_locale_to_utf8 (const gchar *opsysstring,
  *
  * Converts a string from UTF-8 to the encoding used for strings by
  * the C runtime (usually the same as that used by the operating
- * system) in the [current locale][setlocale]. On Windows this means
- * the system codepage.
+ * system) in the [current locale](running.html#locale).
+ * On Windows this means the system codepage.
  *
  * The input string shall not contain nul characters even if the @len
  * argument is positive. A nul character found inside the string will result
@@ -1059,8 +1057,8 @@ filename_charset_cache_free (gpointer data)
  * and said environment variables have no effect.
  *
  * `G_FILENAME_ENCODING` may be set to a comma-separated list of
- * character set names. The special token "\@locale" is taken
- * to  mean the character set for the [current locale][setlocale].
+ * character set names. The special token `@locale` is taken to mean the
+ * character set for the [current locale](running.html#locale).
  * If `G_FILENAME_ENCODING` is not set, but `G_BROKEN_FILENAMES` is,
  * the character set of the current locale is taken as the filename
  * encoding. If neither environment variable  is set, UTF-8 is taken
@@ -1205,7 +1203,7 @@ get_filename_charset (const gchar **filename_charset)
  * Converts a string which is in the encoding used by GLib for
  * filenames into a UTF-8 string. Note that on Windows GLib uses UTF-8
  * for filenames; on other platforms, this function indirectly depends on
- * the [current locale][setlocale].
+ * the [current locale](running.html#locale).
  *
  * The input string shall not contain nul characters even if the @len
  * argument is positive. A nul character found inside the string will result
@@ -1258,7 +1256,7 @@ g_filename_to_utf8 (const gchar *opsysstring,
  * Converts a string from UTF-8 to the encoding GLib uses for
  * filenames. Note that on Windows GLib uses UTF-8 for filenames;
  * on other platforms, this function indirectly depends on the
- * [current locale][setlocale].
+ * [current locale](running.html#locale).
  *
  * The input string shall not contain nul characters even if the @len
  * argument is positive. A nul character found inside the string will result

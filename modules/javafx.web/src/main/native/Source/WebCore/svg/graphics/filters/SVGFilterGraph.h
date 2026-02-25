@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,65 +33,15 @@
 
 namespace WebCore {
 
-class FilterEffect;
-class SVGFilterPrimitiveStandardAttributes;
-
 template<typename NodeType>
 class SVGFilterGraph {
 public:
     using NodeVector = Vector<Ref<NodeType>>;
 
-    SVGFilterGraph() = default;
+    virtual ~SVGFilterGraph() = default;
 
-    SVGFilterGraph(Ref<NodeType>&& sourceGraphic, Ref<NodeType>&& sourceAlpha)
-    {
-        m_sourceNodes.add(SourceGraphic::effectName(), WTFMove(sourceGraphic));
-        m_sourceNodes.add(SourceAlpha::effectName(), WTFMove(sourceAlpha));
-
-        setNodeInputs(Ref { *this->sourceGraphic() }, NodeVector { });
-        setNodeInputs(Ref { *this->sourceAlpha() }, NodeVector { *this->sourceGraphic() });
-    }
-
-    NodeType* sourceGraphic() const
-    {
-        return m_sourceNodes.get(FilterEffect::sourceGraphicName());
-    }
-
-    NodeType* sourceAlpha() const
-    {
-        return m_sourceNodes.get(FilterEffect::sourceAlphaName());
-    }
-
-    void addNamedNode(const AtomString& id, Ref<NodeType>&& node)
-    {
-        if (id.isEmpty()) {
-            m_lastNode = WTFMove(node);
-            return;
-        }
-
-        if (m_sourceNodes.contains(id))
-            return;
-
-        m_lastNode = WTFMove(node);
-        m_namedNodes.set(id, Ref { *m_lastNode });
-    }
-
-    RefPtr<NodeType> getNamedNode(const AtomString& id) const
-    {
-        if (!id.isEmpty()) {
-            if (auto sourceNode = m_sourceNodes.get(id))
-                return sourceNode;
-
-            if (auto namedNode = m_namedNodes.get(id))
-                return namedNode;
-        }
-
-        if (m_lastNode)
-            return m_lastNode;
-
-        // Fallback to the 'sourceGraphic' input.
-        return sourceGraphic();
-    }
+    virtual void addNamedNode(const AtomString& id, Ref<NodeType>&&) = 0;
+    virtual RefPtr<NodeType> getNamedNode(const AtomString& id) const = 0;
 
     std::optional<NodeVector> getNamedNodes(std::span<const AtomString> names) const
     {
@@ -129,23 +79,24 @@ public:
     NodeType* lastNode() const { return m_lastNode.get(); }
 
     template<typename Callback>
-    bool visit(Callback callback)
+    bool visit(NOESCAPE const Callback& callback)
     {
-        if (!lastNode())
+        RefPtr lastNode = m_lastNode;
+        if (!lastNode)
             return false;
 
         Vector<Ref<NodeType>> stack;
-        return visit(*lastNode(), stack, 0, callback);
+        return visit(*lastNode, stack, 0, callback);
     }
 
-private:
-    static bool isSourceName(const AtomString& id)
+protected:
+    static bool isSourceName(const AtomString& name)
     {
-        return id == SourceGraphic::effectName() || id == SourceAlpha::effectName();
+        return name == SourceGraphic::effectName() || name == SourceAlpha::effectName();
     }
 
     template<typename Callback>
-    bool visit(NodeType& node, Vector<Ref<NodeType>>& stack, unsigned level, Callback callback)
+    bool visit(NodeType& node, Vector<Ref<NodeType>>& stack, unsigned level, NOESCAPE const Callback& callback)
     {
         // A cycle is detected.
         if (stack.containsIf([&](auto& item) { return item.ptr() == &node; }))
@@ -167,13 +118,9 @@ private:
         return true;
     }
 
-    HashMap<AtomString, Ref<NodeType>> m_sourceNodes;
     HashMap<AtomString, Ref<NodeType>> m_namedNodes;
     HashMap<Ref<NodeType>, NodeVector> m_nodeInputs;
     RefPtr<NodeType> m_lastNode;
 };
-
-using SVGFilterEffectsGraph = SVGFilterGraph<FilterEffect>;
-using SVGFilterPrimitivesGraph = SVGFilterGraph<SVGFilterPrimitiveStandardAttributes>;
 
 } // namespace WebCore

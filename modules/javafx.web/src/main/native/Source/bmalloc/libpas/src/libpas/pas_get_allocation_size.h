@@ -62,7 +62,7 @@ static PAS_ALWAYS_INLINE size_t pas_get_allocation_size(void* ptr,
                 pas_page_base_get_bitfit(page_and_kind.page_base),
                 begin);
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return 0;
         }
     }
@@ -123,6 +123,7 @@ static PAS_ALWAYS_INLINE size_t pas_get_allocation_size(void* ptr,
         entry = pas_large_map_find(begin);
 
         if (!pas_large_map_entry_is_empty(entry)) {
+            PAS_PROFILE(LARGE_MAP_FOUND_ENTRY, &config, entry.begin, entry.end);
             PAS_ASSERT(entry.begin == begin);
             PAS_ASSERT(entry.end > begin);
 
@@ -135,7 +136,7 @@ static PAS_ALWAYS_INLINE size_t pas_get_allocation_size(void* ptr,
         return result;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

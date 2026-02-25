@@ -60,14 +60,14 @@ EncodedJSValue constructJSWebAnimation(JSGlobalObject* lexicalGlobalObject, Call
     auto* jsConstructor = jsCast<JSDOMConstructorBase*>(callFrame.jsCallee());
     ASSERT(jsConstructor);
     auto* context = jsConstructor->scriptExecutionContext();
-    if (UNLIKELY(!context))
+    if (!context) [[unlikely]]
         return throwConstructorScriptExecutionContextUnavailableError(*lexicalGlobalObject, throwScope, "Animation"_s);
 
     auto& document = downcast<Document>(*context);
     auto effect = convert<IDLNullable<IDLInterface<AnimationEffect>>>(*lexicalGlobalObject, callFrame.argument(0), [](JSGlobalObject& lexicalGlobalObject, ThrowScope& scope) {
         throwArgumentTypeError(lexicalGlobalObject, scope, 0, "effect"_s, "Animation"_s, nullptr, "AnimationEffect"_s);
     });
-    if (UNLIKELY(effect.hasException(throwScope)))
+    if (effect.hasException(throwScope)) [[unlikely]]
         return encodedJSValue();
 
     if (callFrame.argument(1).isUndefined()) {
@@ -78,7 +78,7 @@ EncodedJSValue constructJSWebAnimation(JSGlobalObject* lexicalGlobalObject, Call
     auto timeline = convert<IDLNullable<IDLInterface<AnimationTimeline>>>(*lexicalGlobalObject, callFrame.uncheckedArgument(1), [](JSGlobalObject& lexicalGlobalObject, ThrowScope& scope) {
         throwArgumentTypeError(lexicalGlobalObject, scope, 1, "timeline"_s, "Animation"_s, nullptr, "AnimationTimeline"_s);
     });
-    if (UNLIKELY(timeline.hasException(throwScope)))
+    if (timeline.hasException(throwScope)) [[unlikely]]
         return encodedJSValue();
 
     auto object = WebAnimation::create(document, effect.releaseReturnValue(), timeline.releaseReturnValue());

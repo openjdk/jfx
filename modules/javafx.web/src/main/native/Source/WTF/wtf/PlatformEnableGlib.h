@@ -39,6 +39,10 @@
 /* Please keep the following in alphabetical order so we can notice duplicates. */
 /* Items should only be here if they are different from the defaults in PlatformEnable.h. */
 
+#if !defined(ENABLE_COOKIE_STORE_API_BY_DEFAULT)
+#define ENABLE_COOKIE_STORE_API_BY_DEFAULT 1
+#endif
+
 #if !defined(ENABLE_KINETIC_SCROLLING) && (ENABLE(ASYNC_SCROLLING) || PLATFORM(GTK))
 #define ENABLE_KINETIC_SCROLLING 1
 #endif
@@ -51,7 +55,7 @@
 #define ENABLE_OPENTYPE_VERTICAL 1
 #endif
 
-#if !defined(ENABLE_SCROLLING_THREAD) && USE(NICOSIA)
+#if !defined(ENABLE_SCROLLING_THREAD) && USE(COORDINATED_GRAPHICS)
 #define ENABLE_SCROLLING_THREAD 1
 #endif
 
@@ -61,4 +65,8 @@
 
 #if !defined(ENABLE_WEBPROCESS_CACHE)
 #define ENABLE_WEBPROCESS_CACHE 1
+#endif
+
+#if ENABLE(WPE_PLATFORM) || PLATFORM(GTK)
+#define ENABLE_DAMAGE_TRACKING 1
 #endif

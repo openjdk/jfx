@@ -41,7 +41,7 @@ class JSArrayBuffer;
 class JSWebAssemblyMemory final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -50,10 +50,12 @@ public:
         return vm.webAssemblyMemorySpace<mode>();
     }
 
-    JS_EXPORT_PRIVATE static JSWebAssemblyMemory* tryCreate(JSGlobalObject*, VM&, Structure*);
+    JS_EXPORT_PRIVATE static JSWebAssemblyMemory* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     JS_EXPORT_PRIVATE void adopt(Ref<Wasm::Memory>&&);
     Wasm::Memory& memory() { return m_memory.get(); }
@@ -73,7 +75,6 @@ public:
 private:
     JSWebAssemblyMemory(VM&, Structure*);
     void finishCreation(VM&);
-    DECLARE_VISIT_CHILDREN;
 
     Ref<Wasm::Memory> m_memory;
     WriteBarrier<JSArrayBuffer> m_bufferWrapper;

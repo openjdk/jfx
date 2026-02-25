@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,9 @@
 #include "com_sun_glass_ui_Window_Level.h"
 #include "com_sun_glass_ui_win_WinWindow.h"
 
+#define ABM_GETAUTOHIDEBAREX 0x0000000b // multimon aware autohide bars
+
+#define HTUNSPECIFIED ('H' << 24 | 'T' << 16 | 'U' << 8 | 'N') // see WinWindow.java:nonClientHitTest
 
 // Helper LEAVE_MAIN_THREAD for GlassWindow
 #define LEAVE_MAIN_THREAD_WITH_hWnd  \
@@ -62,7 +65,8 @@ HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner)
+GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified,
+                         bool isExtended, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
     ViewContainer(),
     m_winChangingReason(Unknown),
@@ -74,6 +78,7 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_isTransparent(isTransparent),
     m_isDecorated(isDecorated),
     m_isUnified(isUnified),
+    m_isExtended(isExtended),
     m_hMenu(NULL),
     m_alpha(255),
     m_isEnabled(true),
@@ -209,6 +214,10 @@ LRESULT CALLBACK GlassWindow::CBTFilter(int nCode, WPARAM wParam, LPARAM lParam)
     return ::CallNextHookEx(GlassWindow::sm_hCBTFilter, nCode, wParam, lParam);
 }
 
+#ifndef USER_DEFAULT_SCREEN_DPI
+#define USER_DEFAULT_SCREEN_DPI 96
+#endif
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED       0x02E0
 #endif
@@ -245,6 +254,8 @@ char *StringForMsg(UINT msg) {
         case WM_MOVE: return "WM_MOVE";
         case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
+        case WM_DISPLAYCHANGE: return "WM_DISPLAYCHANGE";
+        case WM_SETTINGCHANGE: return "WM_SETTINGCHANGE";
         case WM_CLOSE: return "WM_CLOSE";
         case WM_DESTROY: return "WM_DESTROY";
         case WM_ACTIVATE: return "WM_ACTIVATE";
@@ -312,10 +323,12 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // It's possible that move/size events are reported by the platform
             // before the peer listener is set. As a result, location/size are
             // not reported, so resending them from here.
-            HandleMoveEvent(NULL);
-            HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
-            // The call below may be restricted to WS_POPUP windows
-            NotifyViewSize(GetHWND());
+            if (!::IsIconic(GetHWND())) {
+                HandleMoveEvent(NULL);
+                HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                // The call below may be restricted to WS_POPUP windows
+                NotifyViewSize(GetHWND());
+            }
 
             if (!wParam) {
                 ResetMouseTracking(GetHWND());
@@ -360,9 +373,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             HandleViewSizeEvent(GetHWND(), msg, wParam, lParam);
             break;
+        case WM_DPICHANGED:
+            HandleDPIEvent(wParam, lParam);
+            GlassScreen::HandleDisplayChange();
+            break;
         case WM_MOVING:
             m_winChangingReason = WasMoved;
             break;
+        case WM_DISPLAYCHANGE:
+        case WM_SETTINGCHANGE:
+          // Trigger a move event to notify the stage about possible changes in the window location
+          // (for instance, if this is a secondary screen and the primary screen changed its resolution,
+          // or if the screens relative position was rearranged)
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
                 HandleMoveEvent(NULL);
@@ -452,7 +474,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 //                p->rgrc[0].bottom++;
 //                return WVR_VALIDRECTS;
 //            }
+
+            if (BOOL(wParam) && m_isExtended) {
+                return HandleNCCalcSizeEvent(msg, wParam, lParam);
+            }
             break;
+        case WM_NCHITTEST: {
+            LRESULT res;
+            if (m_isExtended && HandleNCHitTestEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), res)) {
+                return res;
+            }
+            break;
+        }
         case WM_PAINT:
             HandleViewPaintEvent(GetHWND(), msg, wParam, lParam);
             break;
@@ -477,24 +510,10 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_MOUSEHWHEEL:
         case WM_MOUSELEAVE:
         case WM_MOUSEMOVE:
-            if (IsEnabled()) {
-                if (msg == WM_MOUSELEAVE && GetDelegateWindow()) {
-                    // Skip generating MouseEvent.EXIT when entering FullScreen
-                    return 0;
-                }
-                BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam);
-                if (handled && msg == WM_RBUTTONUP) {
-                    // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
-                    // Since DefWindowProc() is not called, call the mouse menu handler directly
-                    HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos ());
-                    //::DefWindowProc(GetHWND(), msg, wParam, lParam);
-                }
-                if (handled) {
-                    // Do not call the DefWindowProc() for mouse events that were handled
-                    return 0;
-                }
-            } else {
+            if (!IsEnabled()) {
                 HandleFocusDisabledEvent();
+                return 0;
+            } else if (HandleMouseEvents(msg, wParam, lParam)) {
                 return 0;
             }
             break;
@@ -546,7 +565,36 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_NCXBUTTONDOWN:
             UngrabFocus(); // ungrab itself
             CheckUngrab(); // check if other owned windows hierarchy holds the grab
+
+            if (m_isExtended) {
+                HandleNonClientMouseEvents(msg, wParam, lParam);
+
+                // We need to return 0 for clicks on the min/max/close regions, as otherwise Windows will
+                // draw very ugly buttons on top of our window.
+                if (wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE) {
+                    return 0;
+                }
+            }
+
             // Pass the event to DefWindowProc()
+            break;
+        case WM_NCLBUTTONUP:
+        case WM_NCLBUTTONDBLCLK:
+        case WM_NCRBUTTONUP:
+        case WM_NCRBUTTONDBLCLK:
+        case WM_NCMBUTTONUP:
+        case WM_NCMBUTTONDBLCLK:
+        case WM_NCXBUTTONUP:
+        case WM_NCXBUTTONDBLCLK:
+        case WM_NCMOUSELEAVE:
+        case WM_NCMOUSEMOVE:
+            if (m_isExtended) {
+                HandleNonClientMouseEvents(msg, wParam, lParam);
+
+                if (wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE) {
+                    return 0;
+                }
+            }
             break;
         case WM_TOUCH:
             if (IsEnabled()) {
@@ -571,6 +619,137 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
+}
+
+bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (msg == WM_MOUSELEAVE && GetDelegateWindow()) {
+        // Skip generating MouseEvent.EXIT when entering FullScreen
+        return true;
+    }
+
+    if (m_isExtended && HandleCaptionMouseEvents(msg, wParam, lParam)) {
+        return true;
+    }
+
+    BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam, m_isExtended);
+    if (handled && msg == WM_RBUTTONUP) {
+        // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
+        // Since DefWindowProc() is not called, call the mouse menu handler directly
+        HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos());
+        //::DefWindowProc(GetHWND(), msg, wParam, lParam);
+    }
+
+    if (handled) {
+        // Do not call the DefWindowProc() for mouse events that were handled
+        return true;
+    }
+
+    return false;
+}
+
+/*
+ * This method is only called for windows with the EXTENDED style to handle a press-drag-release interaction
+ * on the title bar, which will move the window. Ordinarily, this wouldn't be required at all, since correctly
+ * responding to the WM_NCHITTEST message tells Windows which part of our window it should treat as the title
+ * bar area; this automatically enables the press-drag-release interaction.
+ *
+ * However, there's a small problem with serious consequences: Windows will send us a WM_NCLBUTTONDOWN message
+ * when the mouse button is pressed on the title bar, but it will NOT send us a WM_NCLBUTTONUP message when the
+ * button is released again. Pressing the mouse button on the title bar area starts a move-modal message loop,
+ * and the corresponding WM_LBUTTONUP (NB: not WM_NCLBUTTONUP) event is handled inside of this modal loop;
+ * it doesn't arrive at the message loop in this class where we could react to it. This is a problem because
+ * JavaFX has its own press-drag-release detection in the Scene class, and this missing release event messes
+ * up its state.
+ *
+ * So, how can we still get a notification when the mouse button was released on the title bar? For future
+ * reference, here are potential solutions that don't work well for various reasons:
+ *
+ * 1. Listen to WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE, which are posted at the beginning and the end of a PDR
+ *    interaction. Unfortunately, a single short click on the title bar doesn't count as a PDR interaction,
+ *    and none of the messages are posted. Interestingly, a single click with about a one-second delay between
+ *    press and release does count as a PDR interaction.
+ *
+ * 2. Install a WH_MOUSE hook to intercept mouse messages before they are posted to the move-modal message loop,
+ *    and use it to discover the "missing" WM_LBUTTONUP message. While this works, some anti-virus tools might
+ *    dislike us using the SetWindowsHookEx API.
+ *
+ * What seems to work best is to not rely on Windows to start the move-modal message loop for us, but to start
+ * it ourselves. When it returns, we know that the mouse button was released. The prerequisite for this solution
+ * is that we never tell Windows that the cursor is on the title bar area, as Windows would then invariably start
+ * the move-modal message loop. So every time we determine in HandleNCHitTestEvent() that the cursor is on the
+ * title bar, we tell Windows that it's HTCLIENT instead.
+ */
+bool GlassWindow::HandleCaptionMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+        // Pressing the left mouse button on the title bar area initializes PDR tracking.
+        // We don't consume this message, so it will be handled as usual in HandleViewMouseEvent()
+        // to generate a normal JavaFX event. Note that HandleViewMouseEvent() calls SetCapture().
+        case WM_LBUTTONDOWN:
+            if (m_caption.entered) {
+                m_caption.tracking = true;
+                m_caption.dragStart = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            }
+            break;
+
+        // Releasing the left mouse button without moving the cursor cancels PDR tracking.
+        // We don't consume this message, so it will be handled as usual in HandleViewMouseEvent()
+        // to generate a normal JavaFX event.
+        case WM_LBUTTONUP:
+            if (m_caption.tracking && GetCapture() == GetHWND()) {
+                m_caption.tracking = false;
+            }
+            break;
+
+        // Moving the cursor starts up a modal message loop that handles the window movement.
+        // Note that we only start the window drag operation when the cursor movement exceeds the
+        // minimum distance for a PDR interaction.
+        case WM_MOUSEMOVE:
+            if (m_caption.tracking && GetCapture() == GetHWND()) {
+                POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                const int dx = abs(pt.x - m_caption.dragStart.x);
+                const int dy = abs(pt.y - m_caption.dragStart.y);
+                const int cx = GetSystemMetrics(SM_CXDRAG);
+                const int cy = GetSystemMetrics(SM_CYDRAG);
+
+                if (dx >= cx || dy >= cy) {
+                    // Start the move-modal message loop, and return when the drag operation has finished.
+                    ReleaseCapture();
+                    SendMessage(GetHWND(), WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+
+                    // Cancel tracking and synthesize a WM_LBUTTONUP event.
+                    m_caption.tracking = false;
+                    HandleViewMouseEvent(GetHWND(), WM_LBUTTONUP, wParam, lParam, true);
+                }
+
+                // Always consume WM_MOUSEMOVE when we're in a PDR interaction.
+                return true;
+            }
+            break;
+
+        // Cancel tracking when an in-progress PDR interaction is canceled.
+        case WM_CANCELMODE:
+        case WM_CAPTURECHANGED:
+            m_caption.tracking = false;
+            break;
+    }
+
+    return false;
+}
+
+void GlassWindow::HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    HandleViewNonClientMouseEvent(GetHWND(), msg, wParam, lParam);
+    LRESULT result;
+
+    // If the right mouse button was released on a HTCAPTION area, we synthesize a WM_CONTEXTMENU event.
+    // This allows JavaFX applications to respond to context menu events in the non-client header bar area.
+    if (msg == WM_NCRBUTTONUP
+            && HandleNCHitTestEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), result)
+            && result == HTCAPTION) {
+        HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM)GetHWND(), ::GetMessagePos());
+    }
 }
 
 void GlassWindow::HandleCloseEvent()
@@ -742,6 +921,15 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
     CheckAndClearException(env);
 }
 
+void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
+{
+    JNIEnv* env = GetEnv();
+    float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
+
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
+    CheckAndClearException(env);
+}
+
 void GlassWindow::HandleActivateEvent(jint event)
 {
     const bool active = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
@@ -761,6 +949,121 @@ void GlassWindow::HandleFocusDisabledEvent()
 
     env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocusDisabled);
     CheckAndClearException(env);
+}
+
+LRESULT GlassWindow::HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    // Capture the top before DefWindowProc applies the default frame.
+    NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS*)lParam;
+    LONG originalTop = p->rgrc[0].top;
+
+    // Apply the default window frame.
+    LRESULT res = DefWindowProc(GetHWND(), msg, wParam, lParam);
+    if (res != 0) {
+        return res;
+    }
+
+    // Restore the original top, which might have been overwritten by DefWindowProc.
+    RECT newSize = p->rgrc[0];
+    newSize.top = originalTop;
+
+    // A maximized window extends slightly beyond the screen, so we need to account for that
+    // by adding the border width to the top.
+    bool maximized = (::GetWindowLong(GetHWND(), GWL_STYLE) & WS_MAXIMIZE) != 0;
+    if (maximized && !m_isInFullScreen) {
+        // Note: there is no SM_CYPADDEDBORDER
+        newSize.top += ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
+    }
+
+    // If we have an auto-hide taskbar, we need to reduce the size of a maximized or fullscreen
+    // window a little bit where the taskbar is located, as otherwise the taskbar cannot be
+    // summoned.
+    HMONITOR monitor = ::MonitorFromWindow(GetHWND(), MONITOR_DEFAULTTONEAREST);
+    if (monitor && (maximized || m_isInFullScreen)) {
+        MONITORINFO monitorInfo = { 0 };
+        monitorInfo.cbSize = sizeof(MONITORINFO);
+        ::GetMonitorInfo(monitor, &monitorInfo);
+
+        APPBARDATA data = { 0 };
+        data.cbSize = sizeof(data);
+
+        if ((::SHAppBarMessage(ABM_GETSTATE, &data) & ABS_AUTOHIDE) == ABS_AUTOHIDE) {
+            data.rc = monitorInfo.rcMonitor;
+            DWORD appBarMsg = ::IsWindows8OrGreater() ? ABM_GETAUTOHIDEBAREX : ABM_GETAUTOHIDEBAR;
+
+            // Reduce the window size by one pixel on the taskbar side.
+            if ((data.uEdge = ABE_TOP), ::SHAppBarMessage(appBarMsg, &data) != NULL) {
+                newSize.top += 1;
+            } else if ((data.uEdge = ABE_BOTTOM), ::SHAppBarMessage(appBarMsg, &data) != NULL) {
+                newSize.bottom -= 1;
+            } else if ((data.uEdge = ABE_LEFT), ::SHAppBarMessage(appBarMsg, &data) != NULL) {
+                newSize.left += 1;
+            } else if ((data.uEdge = ABE_RIGHT), ::SHAppBarMessage(appBarMsg, &data) != NULL) {
+                newSize.right -= 1;
+            }
+        }
+    }
+
+    p->rgrc[0] = newSize;
+    return 0;
+}
+
+// Handling this message tells Windows which parts of the window are non-client regions.
+// This enables window behaviors like dragging or snap layouts.
+BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
+{
+    if (::DefWindowProc(GetHWND(), WM_NCHITTEST, 0, MAKELONG(x, y)) != HTCLIENT) {
+        return FALSE;
+    }
+
+    POINT pt = { x, y };
+
+    if (!::ScreenToClient(GetHWND(), &pt)) {
+        return FALSE;
+    }
+
+    // Unmirror the X coordinate we send to JavaFX if this is a RTL window.
+    LONG style = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    if (style & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(GetHWND(), &rect);
+        pt.x = max(0, rect.right - rect.left) - pt.x;
+    }
+
+    JNIEnv* env = GetEnv();
+    jint res = env->CallIntMethod(m_grefThis, javaIDs.WinWindow.nonClientHitTest, pt.x, pt.y);
+    CheckAndClearException(env);
+
+    // The left, right, and bottom resize borders are outside of the client area and are provided for free.
+    // In contrast, the top resize border is not outside, but inside the client area and may be below user
+    // controls. For example, if a control with HeaderDragType.NONE extends to the top of the client area,
+    // it covers the resize border at that location. We know that the cursor is on top of the caption area
+    // (and not on top of a control) when the nonClientHitTest() function returns HTCAPTION instead of
+    // HTCLIENT. In this case, we apply the default resize border.
+    // Note that HTUNSPECIFIED is a custom JavaFX classification that means the cursor is on the HeaderBar,
+    // but no user-specified HeaderDragType is known. In this case, we treat the current cursor position as
+    // HTTOP if the cursor is on the top resize border, and as HTCLIENT otherwise.
+    if (res == HTCAPTION || res == HTUNSPECIFIED) {
+        // Note: there is no SM_CYPADDEDBORDER
+        int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
+        RECT windowRect;
+
+        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+            res = HTTOP;
+        } else if (res == HTUNSPECIFIED) {
+            res = HTCLIENT;
+        }
+    }
+
+    // If the cursor is on the title bar, lie to Windows and say it's on the client area instead.
+    // See GlassWindow::HandleCaptionMouseEvents() for more information.
+    m_caption.entered = res == HTCAPTION;
+    if (res == HTCAPTION) {
+        res = HTCLIENT;
+    }
+
+    result = LRESULT(res);
+    return TRUE;
 }
 
 bool GlassWindow::HandleCommand(WORD cmdID) {
@@ -1087,6 +1390,109 @@ void GlassWindow::SetIcon(HICON hIcon)
     m_hIcon = hIcon;
 }
 
+void GlassWindow::SetDarkFrame(bool dark)
+{
+    // The value of the DWMWA_USE_IMMERSIVE_DARK_MODE constant may be different depending on the OS version.
+    // We are going to query the file version of dwmapi.dll to make sure we use the right constant, or the
+    // value 0 to indicate that we don't support this feature.
+    // See: https://github.com/MicrosoftDocs/sdk-api/commit/c19f1c8a148b930444dce998d3c717c8fb7751e1
+    static const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = []() {
+        DWORD ignored;
+        DWORD infoSize = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", &ignored);
+        if (infoSize <= 0) {
+            return 0;
+        }
+
+        std::vector<char> buffer(infoSize);
+        if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", ignored,
+                                   static_cast<DWORD>(buffer.size()), &buffer[0])) {
+            return 0;
+        }
+
+        UINT size = 0;
+        VS_FIXEDFILEINFO* fileInfo = nullptr;
+        if (!VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &size)) {
+            return 0;
+        }
+
+        WORD major = HIWORD(fileInfo->dwFileVersionMS);
+        WORD minor = LOWORD(fileInfo->dwFileVersionMS);
+        WORD build = HIWORD(fileInfo->dwFileVersionLS);
+
+        // Windows 10 before build 10.0.17763: not supported
+        if (major < 10 || (major == 10 && minor == 0 && build < 17763)) {
+            return 0;
+        }
+
+        // Windows 10 build 10.0.17763 until 10.0.18985
+        if (major == 10 && minor == 0 && build >= 17763 && build < 18985) {
+            return 19;
+        }
+
+        // Windows 10 build 10.0.18985 or later
+        return 20;
+    }();
+
+    if (DWMWA_USE_IMMERSIVE_DARK_MODE) {
+        BOOL darkMode = dark;
+        DwmSetWindowAttribute(GetHWND(), DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    }
+}
+
+void GlassWindow::ShowSystemMenu(int x, int y)
+{
+    WINDOWPLACEMENT placement;
+    if (!::GetWindowPlacement(GetHWND(), &placement)) {
+        return;
+    }
+
+    // Mirror the X coordinate we get from JavaFX if this is a RTL window.
+    LONG exStyle = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    if (exStyle & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(GetHWND(), &rect);
+        x = max(0, rect.right - rect.left) - x;
+    }
+
+    HMENU systemMenu = GetSystemMenu(GetHWND(), FALSE);
+    bool maximized = placement.showCmd == SW_SHOWMAXIMIZED;
+
+    LONG style = ::GetWindowLong(GetHWND(), GWL_STYLE);
+    bool canMinimize = (style & WS_MINIMIZEBOX) && !(exStyle & WS_EX_TOOLWINDOW);
+    bool canMaximize = (style & WS_MAXIMIZEBOX) && !maximized;
+
+    MENUITEMINFO menuItemInfo { sizeof(MENUITEMINFO) };
+    menuItemInfo.fMask = MIIM_STATE;
+    menuItemInfo.fType = MFT_STRING;
+
+    menuItemInfo.fState = maximized ? MF_ENABLED : MF_DISABLED;
+    SetMenuItemInfo(systemMenu, SC_RESTORE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = maximized ? MF_DISABLED : MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_MOVE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = !m_isResizable || maximized ? MF_DISABLED : MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_SIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = canMinimize ? MF_ENABLED : MF_DISABLED;
+    SetMenuItemInfo(systemMenu, SC_MINIMIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = canMaximize ? MF_ENABLED : MF_DISABLED;
+    SetMenuItemInfo(systemMenu, SC_MAXIMIZE, FALSE, &menuItemInfo);
+
+    menuItemInfo.fState = MF_ENABLED;
+    SetMenuItemInfo(systemMenu, SC_CLOSE, FALSE, &menuItemInfo);
+    SetMenuDefaultItem(systemMenu, UINT_MAX, FALSE);
+
+    POINT ptAbs = { x, y };
+    ::ClientToScreen(GetHWND(), &ptAbs);
+
+    BOOL menuItem = TrackPopupMenu(systemMenu, TPM_RETURNCMD, ptAbs.x, ptAbs.y, 0, GetHWND(), NULL);
+    if (menuItem != 0) {
+        PostMessage(GetHWND(), WM_SYSCOMMAND, menuItem, 0);
+    }
+}
+
 /*
  * JNI methods section
  *
@@ -1145,6 +1551,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
      ASSERT(javaIDs.Window.notifyDelegatePtr);
      if (env->ExceptionCheck()) return;
+
+     javaIDs.WinWindow.nonClientHitTest = env->GetMethodID(cls, "nonClientHitTest", "(II)I");
+     ASSERT(javaIDs.WinWindow.nonClientHitTest);
+     if (env->ExceptionCheck()) return;
 }
 
 /*
@@ -1163,6 +1573,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
 
         dwStyle = WS_CLIPCHILDREN | WS_SYSMENU;
         closeable = (mask & com_sun_glass_ui_Window_CLOSABLE) != 0;
+
+        if (mask & com_sun_glass_ui_Window_EXTENDED) {
+            mask |= com_sun_glass_ui_Window_TITLED;
+        }
 
         if (mask & com_sun_glass_ui_Window_TITLED) {
             dwExStyle = WS_EX_WINDOWEDGE;
@@ -1206,6 +1620,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                 (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
                 (mask & com_sun_glass_ui_Window_TITLED) != 0,
                 (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
+                (mask & com_sun_glass_ui_Window_EXTENDED) != 0,
                 owner);
 
         HWND hWnd = pWindow->Create(dwStyle, dwExStyle, hMonitor, owner);
@@ -1219,6 +1634,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                     ::EnableMenuItem(hSysMenu, SC_CLOSE,
                             MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
                 }
+            }
+
+            if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
+                pWindow->SetDarkFrame(true);
             }
         }
 
@@ -1458,6 +1877,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
     PERFORM();
 
     return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _setDarkFrame
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setDarkFrame
+    (JNIEnv *env, jobject jThis, jlong ptr, jboolean dark)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->SetDarkFrame(dark);
+        }
+    }
+    jboolean dark;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(dark) = dark;
+    PERFORM();
 }
 
 /*
@@ -1905,6 +2346,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setCursor
     LEAVE_MAIN_THREAD_WITH_hWnd;
 
     ARG(jCursor) = jCursor;
+    PERFORM();
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _showSystemMenu
+ * Signature: (JII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1showSystemMenu
+    (JNIEnv *env, jobject jThis, jlong ptr, jint x, jint y)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->ShowSystemMenu(x, y);
+        }
+    }
+    jint x, y;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(x) = x;
+    ARG(y) = y;
     PERFORM();
 }
 

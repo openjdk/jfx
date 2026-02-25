@@ -27,6 +27,7 @@
 #include "LayerOverlapMap.h"
 #include "Logging.h"
 #include "RenderLayer.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -62,7 +63,7 @@ struct RectList {
 
 static TextStream& operator<<(TextStream& ts, const RectList& rectList)
 {
-    ts << "bounds " << rectList.boundingRect << " (" << rectList.rects << " rects)";
+    ts << "bounds "_s << rectList.boundingRect << " ("_s << rectList.rects << " rects)"_s;
     return ts;
 }
 
@@ -72,7 +73,7 @@ static TextStream& operator<<(TextStream& ts, const RectList& rectList)
 // Checking for overlap involves finding the node for the clipping layer enclosing the given layer (or the root),
 // and comparing against the bounds of earlier siblings.
 class OverlapMapContainer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(OverlapMapContainer);
 public:
     OverlapMapContainer(const RenderLayer& rootLayer, const RenderLayer& scopeLayer)
         : m_rootScope(rootLayer)
@@ -261,7 +262,7 @@ OverlapMapContainer::ClippingScope* OverlapMapContainer::findClippingScopeForLay
 
 void OverlapMapContainer::recursiveOutputToStream(TextStream& ts, const ClippingScope& scope, unsigned depth) const
 {
-    ts << "\n" << indent << TextStream::Repeat { 2 * depth, ' ' } << " scope for layer " << &scope.layer << " rects " << scope.rectList;
+    ts << '\n' << indent << TextStream::Repeat { 2 * depth, ' ' } << " scope for layer "_s << &scope.layer << " rects "_s << scope.rectList;
     for (auto& childScope : scope.children)
         recursiveOutputToStream(ts, childScope, depth + 1);
 }

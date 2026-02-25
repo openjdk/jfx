@@ -26,6 +26,7 @@
 #pragma once
 
 #include "SecurityOriginData.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -58,7 +59,7 @@ private:
     void unregisterBlobURLHandleIfNecessary();
 
     URL m_url;
-    Markable<SecurityOriginData, SecurityOriginDataMarkableTraits> m_topOrigin;
+    Markable<SecurityOriginData> m_topOrigin;
 };
 
 } // namespace WebCore

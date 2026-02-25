@@ -25,6 +25,7 @@
 #include "SVGGraphicsElement.h"
 #include "SVGURIReference.h"
 #include "SharedStringHash.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -61,7 +62,7 @@ private:
 
     bool supportsFocus() const final;
     bool isMouseFocusable() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isURLAttribute(const Attribute&) const final;
     bool canStartSelection() const final;
     int defaultTabIndex() const final;
@@ -73,7 +74,7 @@ private:
     // This is computed only once and must not be affected by subsequent URL changes.
     mutable std::optional<SharedStringHash> m_storedVisitedLinkHash;
 
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
 };
 
 } // namespace WebCore

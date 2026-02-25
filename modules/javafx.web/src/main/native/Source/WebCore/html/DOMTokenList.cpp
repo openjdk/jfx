@@ -26,13 +26,18 @@
 #include "config.h"
 #include "DOMTokenList.h"
 
+#include "ExceptionOr.h"
+#include "NodeInlines.h"
 #include "SpaceSplitString.h"
 #include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMTokenList);
 
 DOMTokenList::DOMTokenList(Element& element, const QualifiedName& attributeName, IsSupportedTokenFunction&& isSupportedToken)
     : m_element(element)
@@ -43,7 +48,7 @@ DOMTokenList::DOMTokenList(Element& element, const QualifiedName& attributeName,
 
 static inline bool tokenContainsHTMLSpace(StringView token)
 {
-    return token.find(isASCIIWhitespace<UChar>) != notFound;
+    return token.find(isASCIIWhitespace<char16_t>) != notFound;
 }
 
 ExceptionOr<void> DOMTokenList::validateToken(StringView token)
@@ -172,9 +177,9 @@ static inline void replaceInOrderedSet(Vector<AtomString, 1>& tokens, size_t tok
 
     if (newTokenIndex > tokenIndex) {
         tokens[tokenIndex] = newToken;
-        tokens.remove(newTokenIndex);
+        tokens.removeAt(newTokenIndex);
     } else
-        tokens.remove(tokenIndex);
+        tokens.removeAt(tokenIndex);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-replace
@@ -205,18 +210,18 @@ ExceptionOr<bool> DOMTokenList::supports(StringView token)
 {
     if (!m_isSupportedToken)
         return Exception { ExceptionCode::TypeError };
-    return m_isSupportedToken(m_element.document(), token);
+    return m_isSupportedToken(m_element->document(), token);
 }
 
 // https://dom.spec.whatwg.org/#dom-domtokenlist-value
 const AtomString& DOMTokenList::value() const
 {
-    return m_element.getAttribute(m_attributeName);
+    return m_element->getAttribute(m_attributeName);
 }
 
 void DOMTokenList::setValue(const AtomString& value)
 {
-    m_element.setAttribute(m_attributeName, value);
+    m_element->setAttribute(m_attributeName, value);
 }
 
 void DOMTokenList::updateTokensFromAttributeValue(const AtomString& value)
@@ -259,18 +264,19 @@ void DOMTokenList::updateAssociatedAttributeFromTokens()
 {
     ASSERT(!m_tokensNeedUpdating);
 
-    if (m_tokens.isEmpty() && !m_element.hasAttribute(m_attributeName))
+    Ref element = m_element.get();
+    if (m_tokens.isEmpty() && !element->hasAttribute(m_attributeName))
         return;
 
     if (m_tokens.isEmpty()) {
-        m_element.setAttribute(m_attributeName, emptyAtom());
+        element->setAttribute(m_attributeName, emptyAtom());
         return;
     }
 
     bool wholeAttributeIsSingleToken = m_tokens.size() == 1;
     if (wholeAttributeIsSingleToken) {
         SetForScope inAttributeUpdate(m_inUpdateAssociatedAttributeFromTokens, true);
-        m_element.setAttribute(m_attributeName, m_tokens[0]);
+        element->setAttribute(m_attributeName, m_tokens[0]);
         return;
     }
 
@@ -284,13 +290,13 @@ void DOMTokenList::updateAssociatedAttributeFromTokens()
     AtomString serializedValue = builder.toAtomString();
 
     SetForScope inAttributeUpdate(m_inUpdateAssociatedAttributeFromTokens, true);
-    m_element.setAttribute(m_attributeName, serializedValue);
+    element->setAttribute(m_attributeName, serializedValue);
 }
 
 Vector<AtomString, 1>& DOMTokenList::tokens()
 {
     if (m_tokensNeedUpdating)
-        updateTokensFromAttributeValue(m_element.getAttribute(m_attributeName));
+        updateTokensFromAttributeValue(m_element->getAttribute(m_attributeName));
     ASSERT(!m_tokensNeedUpdating);
     return m_tokens;
 }

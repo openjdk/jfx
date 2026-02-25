@@ -44,21 +44,21 @@ struct WebGPUPtrTraits {
     static ALWAYS_INLINE void swap(StorageType& a, StorageType& b) { std::swap(a, b); }
     static ALWAYS_INLINE WGPUT unwrap(const StorageType& ptr) { return ptr; }
 
-    static StorageType hashTableDeletedValue() { return bitwise_cast<StorageType>(static_cast<uintptr_t>(-1)); }
+    static StorageType hashTableDeletedValue() { return std::bit_cast<StorageType>(static_cast<uintptr_t>(-1)); }
     static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr == hashTableDeletedValue(); }
 };
 
 template <typename T, void (*reference)(T), void(*release)(T)> struct BaseWebGPURefDerefTraits {
     static ALWAYS_INLINE T refIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             reference(t);
         return t;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             release(t);
     }
 };

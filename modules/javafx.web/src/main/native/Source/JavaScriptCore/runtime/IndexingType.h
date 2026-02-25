@@ -210,6 +210,19 @@ inline unsigned arrayIndexFromIndexingType(IndexingType indexingType)
     return (indexingType & IndexingShapeMask) >> IndexingShapeShift;
 }
 
+inline bool isNewArrayWithConstantSizeIndexingType(IndexingType indexingType)
+{
+    switch (indexingType) {
+    case ALL_DOUBLE_INDEXING_TYPES:
+    case ALL_INT32_INDEXING_TYPES:
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
 inline IndexingType indexingTypeForValue(JSValue value)
 {
     if (value.isInt32())

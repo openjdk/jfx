@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IDBCursorInfo.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -35,20 +36,25 @@ class IDBResourceIdentifier;
 
 namespace IDBServer {
 
-class MemoryCursor {
-    WTF_MAKE_FAST_ALLOCATED;
+class MemoryBackingStoreTransaction;
+
+class MemoryCursor : public RefCountedAndCanMakeWeakPtr<MemoryCursor> {
+    WTF_MAKE_TZONE_ALLOCATED(MemoryCursor);
 public:
     virtual ~MemoryCursor();
 
     virtual void currentData(IDBGetResult&) = 0;
     virtual void iterate(const IDBKeyData&, const IDBKeyData& primaryKey, uint32_t count, IDBGetResult&) = 0;
 
-    static MemoryCursor* cursorForIdentifier(const IDBResourceIdentifier&);
+    IDBCursorInfo info() const { return m_info; }
+    MemoryBackingStoreTransaction* transaction() const;
 
 protected:
-    MemoryCursor(const IDBCursorInfo&);
+    MemoryCursor(const IDBCursorInfo&, MemoryBackingStoreTransaction&);
 
+private:
     IDBCursorInfo m_info;
+    WeakPtr<MemoryBackingStoreTransaction> m_transaction;
 };
 
 } // namespace IDBServer

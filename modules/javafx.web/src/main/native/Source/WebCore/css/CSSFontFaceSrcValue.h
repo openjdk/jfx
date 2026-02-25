@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
+#include "CSSURL.h"
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
@@ -50,7 +50,7 @@ public:
     SVGFontFaceElement* svgFontFaceElement() const;
     void setSVGFontFaceElement(SVGFontFaceElement&);
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSFontFaceSrcLocalValue&) const;
 
 private:
@@ -108,29 +108,23 @@ inline ASCIILiteral cssTextFromFontTech(FontTechnology tech)
 
 class CSSFontFaceSrcResourceValue final : public CSSValue {
 public:
+    static Ref<CSSFontFaceSrcResourceValue> create(CSS::URL, String format, Vector<FontTechnology>&&);
 
-    static Ref<CSSFontFaceSrcResourceValue> create(ResolvedURL, String format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource = LoadedFromOpaqueSource::No);
-
-    bool isEmpty() const { return m_location.specifiedURLString.isEmpty(); }
+    bool isEmpty() const { return m_location.specified.isEmpty(); }
     std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext&, bool isInitiatingElementInUserAgentShadowTree);
 
-    String customCSSText() const;
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
-    void customSetReplacementURLForSubresources(const HashMap<String, String>&);
-    void customClearReplacementURLForSubresources();
+    String customCSSText(const CSS::SerializationContext&) const;
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
     bool customMayDependOnBaseURL() const;
     bool equals(const CSSFontFaceSrcResourceValue&) const;
 
 private:
-    explicit CSSFontFaceSrcResourceValue(ResolvedURL&&, String&& format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource);
+    explicit CSSFontFaceSrcResourceValue(CSS::URL&&, String&& format, Vector<FontTechnology>&&);
 
-    ResolvedURL m_location;
+    CSS::URL m_location;
     String m_format;
     Vector<FontTechnology> m_technologies;
-    LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
     CachedResourceHandle<CachedFont> m_cachedFont;
-    String m_replacementURLString;
-    bool m_shouldUseResolvedURLInCSSText { false };
 };
 
 } // namespace WebCore

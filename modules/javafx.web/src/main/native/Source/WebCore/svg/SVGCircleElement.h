@@ -23,6 +23,7 @@
 
 #include "SVGGeometryElement.h"
 #include "SVGNames.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -40,13 +41,13 @@ public:
     SVGAnimatedLength& cyAnimated() { return m_cy; }
     SVGAnimatedLength& rAnimated() { return m_r; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGCircleElement, SVGGeometryElement>;
+
+    SVGAnimatedProperty* propertyForAttribute(const QualifiedName&) const;
+
 private:
     SVGCircleElement(const QualifiedName&, Document&);
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGCircleElement, SVGGeometryElement>;
-    friend PropertyRegistry;
-
-    SVGAnimatedProperty* propertyForAttribute(const QualifiedName&) const;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
 

@@ -56,7 +56,7 @@ public:
     ~InspectorConsoleAgent() override;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
     void discardValues() final;
 
@@ -90,14 +90,14 @@ protected:
     void clearMessages(Protocol::Console::ClearReason);
 
     InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<ConsoleFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<ConsoleBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<ConsoleFrontendDispatcher> m_frontendDispatcher;
+    const Ref<ConsoleBackendDispatcher> m_backendDispatcher;
     InspectorHeapAgent* m_heapAgent { nullptr };
 
     Vector<std::unique_ptr<ConsoleMessage>> m_consoleMessages;
     int m_expiredConsoleMessageCount { 0 };
-    HashMap<String, unsigned> m_counts;
-    HashMap<String, MonotonicTime> m_times;
+    UncheckedKeyHashMap<String, unsigned> m_counts;
+    UncheckedKeyHashMap<String, MonotonicTime> m_times;
     bool m_enabled { false };
     bool m_isAddingMessageToFrontend { false };
     bool m_consoleClearAPIEnabled { true };

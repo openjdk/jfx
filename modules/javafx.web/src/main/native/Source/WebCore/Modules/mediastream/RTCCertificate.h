@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@ public:
 private:
     RTCCertificate(Ref<SecurityOrigin>&&, double expires, Vector<DtlsFingerprint>&&, String&& pemCertificate, String&& pemPrivateKey);
 
-    Ref<SecurityOrigin> m_origin;
+    const Ref<SecurityOrigin> m_origin;
     double m_expires { 0 };
     Vector<DtlsFingerprint> m_fingerprints;
     String m_pemCertificate;

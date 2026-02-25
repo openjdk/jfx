@@ -49,7 +49,7 @@ class ServiceWorkerThread;
 class WorkerClient;
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-class PushNotificationEvent;
+class DeclarativePushEvent;
 #endif
 
 enum class NotificationEventType : bool;
@@ -93,9 +93,9 @@ public:
     PushEvent* pushEvent() { return m_pushEvent.get(); }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    void dispatchPushNotificationEvent(PushNotificationEvent&);
-    PushNotificationEvent* pushNotificationEvent() { return m_pushNotificationEvent.get(); }
-    void clearPushNotificationEvent();
+    void dispatchDeclarativePushEvent(PushEvent&);
+    PushEvent* declarativePushEvent() { return m_declarativePushEvent.get(); }
+    void clearDeclarativePushEvent();
 #endif
 
     bool hasPendingSilentPushEvent() const { return m_hasPendingSilentPushEvent; }
@@ -123,6 +123,9 @@ public:
     void navigationPreloadFailed(FetchKey, ResourceError&&);
     void navigationPreloadIsReady(FetchKey, ResourceResponse&&);
 
+    bool hasFetchEventHandler() const { return m_hasFetchEventHandler; }
+    void storeEventTypesToHandle();
+
 private:
     ServiceWorkerGlobalScope(ServiceWorkerContextData&&, ServiceWorkerData&&, const WorkerParameters&, Ref<SecurityOrigin>&&, ServiceWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, std::unique_ptr<WorkerClient>&&);
     void notifyServiceWorkerPageOfCreationIfNecessary();
@@ -137,9 +140,9 @@ private:
     void resetUserGesture() { m_isProcessingUserGesture = false; }
 
     ServiceWorkerContextData m_contextData;
-    Ref<ServiceWorkerRegistration> m_registration;
-    Ref<ServiceWorker> m_serviceWorker;
-    Ref<ServiceWorkerClients> m_clients;
+    const Ref<ServiceWorkerRegistration> m_registration;
+    const Ref<ServiceWorker> m_serviceWorker;
+    const Ref<ServiceWorkerClients> m_clients;
     Vector<Ref<ExtendableEvent>> m_extendedEvents;
 
     uint64_t m_lastRequestIdentifier { 0 };
@@ -150,15 +153,16 @@ private:
     Timer m_userGestureTimer;
     RefPtr<PushEvent> m_pushEvent;
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    RefPtr<PushNotificationEvent> m_pushNotificationEvent;
+    RefPtr<PushEvent> m_declarativePushEvent;
 #endif
     MonotonicTime m_lastPushEventTime;
     bool m_consoleMessageReportingEnabled { false };
     RefPtr<CookieStore> m_cookieStore;
+    bool m_hasFetchEventHandler { false };
 
     struct FetchTask {
         RefPtr<ServiceWorkerFetch::Client> client;
-        std::variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
+        Variant<std::nullptr_t, Ref<FetchEvent>, UniqueRef<ResourceError>, UniqueRef<ResourceResponse>> navigationPreload;
     };
     HashMap<FetchKey, FetchTask> m_ongoingFetchTasks;
 };

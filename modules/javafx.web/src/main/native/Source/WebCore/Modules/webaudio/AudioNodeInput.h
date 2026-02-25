@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 #include "AudioNode.h"
 #include "AudioSummingJunction.h"
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -40,7 +42,7 @@ class AudioNodeOutput;
 
 class AudioNodeInput final : public AudioSummingJunction {
     WTF_MAKE_NONCOPYABLE(AudioNodeInput);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AudioNodeInput);
 public:
     explicit AudioNodeInput(AudioNode*);
 
@@ -49,7 +51,7 @@ public:
     void didUpdate() override;
 
     // Can be called from any thread.
-    AudioNode* node() const { return m_node; }
+    AudioNode* node() const { return m_node.get(); }
 
     // Must be called with the context's graph lock.
     void connect(AudioNodeOutput*);
@@ -66,11 +68,11 @@ public:
     // In the single connection case, it allows in-place processing where possible using inPlaceBus.
     // It returns the bus which it rendered into, returning inPlaceBus if in-place processing was performed.
     // Called from context's audio thread.
-    AudioBus* pull(AudioBus* inPlaceBus, size_t framesToProcess);
+    AudioBus& pull(AudioBus* inPlaceBus, size_t framesToProcess);
 
     // bus() contains the rendered audio after pull() has been called for each time quantum.
     // Called from context's audio thread.
-    AudioBus* bus();
+    AudioBus& bus();
 
     // updateInternalBus() updates m_internalSummingBus appropriately for the number of channels.
     // This must be called when we own the context's graph lock in the audio thread at the very start or end of the render quantum.
@@ -80,7 +82,7 @@ public:
     unsigned numberOfChannels() const;
 
 private:
-    AudioNode* m_node;
+    WeakPtr<AudioNode, WeakPtrImplWithEventTargetData> m_node;
 
     // m_disabledOutputs contains the AudioNodeOutputs which are disabled (will not be processed) by the audio graph rendering.
     // But, from JavaScript's perspective, these outputs are still connected to us.
@@ -88,10 +90,10 @@ private:
     HashSet<AudioNodeOutput*> m_disabledOutputs;
 
     // Called from context's audio thread.
-    AudioBus* internalSummingBus();
-    void sumAllConnections(AudioBus* summingBus, size_t framesToProcess);
+    AudioBus& internalSummingBus();
+    void sumAllConnections(AudioBus& summingBus, size_t framesToProcess);
 
-    RefPtr<AudioBus> m_internalSummingBus;
+    Ref<AudioBus> m_internalSummingBus;
 };
 
 } // namespace WebCore

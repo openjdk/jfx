@@ -23,6 +23,7 @@
 #include "CSSValue.h"
 #include <array>
 #include <unicode/umachine.h>
+#include <wtf/MallocSpan.h>
 
 namespace WebCore {
 
@@ -32,7 +33,7 @@ using CSSValueListBuilder = Vector<Ref<CSSValue>, CSSValueListBuilderInlineCapac
 class CSSValueContainingVector : public CSSValue {
 public:
     unsigned size() const { return m_size; }
-    const CSSValue& operator[](unsigned index) const;
+    const CSSValue& operator[](unsigned index) const LIFETIME_BOUND;
 
     struct iterator {
         using iterator_category = std::forward_iterator_tag;
@@ -50,14 +51,14 @@ public:
     };
     using const_iterator = iterator;
 
-    iterator begin() const { return { *this, 0 }; }
-    iterator end() const { return { *this, size() }; }
+    iterator begin() const LIFETIME_BOUND { return { *this, 0 }; }
+    iterator end() const LIFETIME_BOUND { return { *this, size() }; }
 
     bool hasValue(CSSValue&) const;
     bool hasValue(CSSValueID) const;
 
-    void serializeItems(StringBuilder&) const;
-    String serializeItems() const;
+    void serializeItems(StringBuilder&, const CSS::SerializationContext&) const;
+    String serializeItems(const CSS::SerializationContext&) const;
 
     bool itemsEqual(const CSSValueContainingVector&) const;
     bool containsSingleEqualItem(const CSSValue&) const;
@@ -65,19 +66,17 @@ public:
     using CSSValue::separator;
     using CSSValue::separatorCSSText;
 
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
-    void customSetReplacementURLForSubresources(const HashMap<String, String>&);
-    void customClearReplacementURLForSubresources();
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
 
     CSSValueListBuilder copyValues() const;
 
     // Consider removing these functions and having callers use size() and operator[] instead.
     unsigned length() const { return size(); }
-    const CSSValue* item(unsigned index) const { return index < size() ? &(*this)[index] : nullptr; }
+    const CSSValue* item(unsigned index) const LIFETIME_BOUND { return index < size() ? &(*this)[index] : nullptr; }
     RefPtr<const CSSValue> protectedItem(unsigned index) const { return item(index); }
-    const CSSValue* itemWithoutBoundsCheck(unsigned index) const { return &(*this)[index]; }
+    const CSSValue* itemWithoutBoundsCheck(unsigned index) const LIFETIME_BOUND { return &(*this)[index]; }
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 protected:
     friend bool CSSValue::addHash(Hasher&) const;
@@ -95,12 +94,12 @@ protected:
 private:
     unsigned m_size { 0 };
     std::array<const CSSValue*, 4> m_inlineStorage;
-    const CSSValue** m_additionalStorage;
+    MallocSpan<const CSSValue*> m_additionalStorage;
 };
 
 class CSSValueList final : public CSSValueContainingVector {
 public:
-    static Ref<CSSValueList> create(UChar separator, CSSValueListBuilder);
+    static Ref<CSSValueList> create(char16_t separator, CSSValueListBuilder);
 
     static Ref<CSSValueList> createCommaSeparated(CSSValueListBuilder);
     static Ref<CSSValueList> createCommaSeparated(Ref<CSSValue>); // FIXME: Upgrade callers to not use a list at all.
@@ -116,7 +115,7 @@ public:
     static Ref<CSSValueList> createSlashSeparated(Ref<CSSValue>); // FIXME: Upgrade callers to not use a list at all.
     static Ref<CSSValueList> createSlashSeparated(Ref<CSSValue>, Ref<CSSValue>);
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSValueList&) const;
 
 private:
@@ -134,8 +133,6 @@ inline CSSValueContainingVector::~CSSValueContainingVector()
 {
     for (auto& value : *this)
         value.deref();
-    if (m_size > m_inlineStorage.size())
-        fastFree(m_additionalStorage);
 }
 
 inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) const
@@ -145,7 +142,7 @@ inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) cons
         ASSERT(index < m_size);
         return *m_inlineStorage[index];
     }
-    RELEASE_ASSERT(index < m_size);
+    ASSERT(index < m_size);
     return *m_additionalStorage[index - maxInlineSize];
 }
 

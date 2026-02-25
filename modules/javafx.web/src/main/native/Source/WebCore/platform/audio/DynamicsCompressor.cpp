@@ -36,8 +36,11 @@
 #include "AudioUtilities.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressor);
 
 using namespace AudioUtilities;
 
@@ -87,28 +90,28 @@ float DynamicsCompressor::parameterValue(unsigned parameterID)
     return m_parameters[parameterID];
 }
 
-void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinationBus, unsigned framesToProcess)
+void DynamicsCompressor::process(const AudioBus& sourceBus, AudioBus& destinationBus, unsigned framesToProcess)
 {
     // Though numberOfChannels is retrived from destinationBus, we still name it numberOfChannels instead of numberOfDestinationChannels.
     // It's because we internally match sourceChannels's size to destinationBus by channel up/down mix. Thus we need numberOfChannels
     // to do the loop work for both m_sourceChannels and m_destinationChannels.
 
-    unsigned numberOfChannels = destinationBus->numberOfChannels();
-    unsigned numberOfSourceChannels = sourceBus->numberOfChannels();
+    unsigned numberOfChannels = destinationBus.numberOfChannels();
+    unsigned numberOfSourceChannels = sourceBus.numberOfChannels();
 
     ASSERT(numberOfChannels == m_numberOfChannels && numberOfSourceChannels);
 
     if (numberOfChannels != m_numberOfChannels || !numberOfSourceChannels) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     switch (numberOfChannels) {
     case 2: // stereo
-        m_sourceChannels[0] = sourceBus->channel(0)->data();
+        m_sourceChannels[0] = sourceBus.channel(0)->span();
 
         if (numberOfSourceChannels > 1)
-            m_sourceChannels[1] = sourceBus->channel(1)->data();
+            m_sourceChannels[1] = sourceBus.channel(1)->span();
         else
             // Simply duplicate mono channel input data to right channel for stereo processing.
             m_sourceChannels[1] = m_sourceChannels[0];
@@ -117,12 +120,12 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
     default:
         // FIXME : support other number of channels.
         ASSERT_NOT_REACHED();
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     for (unsigned i = 0; i < numberOfChannels; ++i)
-        m_destinationChannels[i] = destinationBus->channel(i)->mutableData();
+        m_destinationChannels[i] = destinationBus.channel(i)->mutableSpan();
 
     float dbThreshold = parameterValue(ParamThreshold);
     float dbKnee = parameterValue(ParamKnee);
@@ -145,11 +148,9 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
     float releaseZone4 = parameterValue(ParamReleaseZone4);
 
     // Apply compression to the source signal.
-    m_compressor.process(m_sourceChannels.get(),
-                         m_destinationChannels.get(),
-                         numberOfChannels,
+    m_compressor.process(sourceChannels(),
+                         destinationChannels(),
                          framesToProcess,
-
                          dbThreshold,
                          dbKnee,
                          ratio,
@@ -176,8 +177,8 @@ void DynamicsCompressor::reset()
 
 void DynamicsCompressor::setNumberOfChannels(unsigned numberOfChannels)
 {
-    m_sourceChannels = makeUniqueArray<const float*>(numberOfChannels);
-    m_destinationChannels = makeUniqueArray<float*>(numberOfChannels);
+    m_sourceChannels = makeUniqueArray<std::span<const float>>(numberOfChannels);
+    m_destinationChannels = makeUniqueArray<std::span<float>>(numberOfChannels);
 
     m_compressor.setNumberOfChannels(numberOfChannels);
     m_numberOfChannels = numberOfChannels;

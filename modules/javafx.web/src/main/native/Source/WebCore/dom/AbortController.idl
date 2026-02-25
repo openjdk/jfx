@@ -25,11 +25,12 @@
 
 [
     Exposed=*,
+    JSCustomMarkFunction,
     GenerateAddOpaqueRoot
 ] interface AbortController {
     [CallWith=CurrentScriptExecutionContext] constructor();
 
     [SameObject] readonly attribute AbortSignal signal;
 
-    [CallWith=CurrentGlobalObject] undefined abort(optional any reason);
+    undefined abort(optional any reason);
 };

@@ -27,6 +27,8 @@
 
 #include "ObjectConstructor.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 inline Structure* ObjectConstructor::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -279,7 +281,7 @@ ALWAYS_INLINE JSObject* tryCreateObjectViaCloning(VM& vm, JSGlobalObject* global
     return target;
 }
 
-ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject* target, JSObject* source, Vector<RefPtr<UniquedStringImpl>, 8>& properties, MarkedArgumentBuffer& values)
+ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject* target, JSObject* source, Vector<UniquedStringImpl*, 8>& properties, MarkedArgumentBuffer& values)
 {
     // |source| Structure does not have any getters. And target can perform fast put.
     // So enumerating properties and putting properties are non observable.
@@ -313,6 +315,7 @@ ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject*
     if (source->canHaveExistingOwnIndexedGetterSetterProperties())
         return false;
 
+    EnsureStillAliveScope sourceStructureScope(sourceStructure);
     sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
         if (entry.attributes() & PropertyAttribute::DontEnum)
             return true;
@@ -321,7 +324,7 @@ ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject*
         if (propertyName.isPrivateName())
             return true;
 
-        properties.append(entry.key());
+        properties.append(entry.key()); // sourceStructure ensures the lifetimes of these strings.
         values.appendWithCrashOnOverflow(source->getDirect(entry.offset()));
 
         return true;
@@ -334,9 +337,12 @@ ALWAYS_INLINE bool objectAssignFast(JSGlobalObject* globalObject, JSFinalObject*
 
     // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
     if (properties.size())
-        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
+
     return true;
 }
 
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

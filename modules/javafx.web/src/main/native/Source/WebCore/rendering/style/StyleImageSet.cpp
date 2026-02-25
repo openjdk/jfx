@@ -28,12 +28,15 @@
 #include "CSSImageSetOptionValue.h"
 #include "CSSImageSetValue.h"
 #include "CSSPrimitiveValue.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
 #include "StyleInvalidImage.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleImageSet);
 
 Ref<StyleImageSet> StyleImageSet::create(Vector<ImageWithScale>&& images, Vector<size_t>&& sortedIndices)
 {

@@ -26,6 +26,7 @@
 #pragma once
 
 #include "InspectorFrontendChannel.h"
+#include "JSExportMacros.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -48,7 +49,7 @@ enum class InspectorTargetType : uint8_t {
     ServiceWorker,
 };
 
-class JS_EXPORT_PRIVATE InspectorTarget : public CanMakeWeakPtr<InspectorTarget> {
+class InspectorTarget : public CanMakeWeakPtr<InspectorTarget> {
 public:
     virtual ~InspectorTarget() = default;
 
@@ -59,8 +60,8 @@ public:
     virtual bool isProvisional() const { return false; }
     bool isPaused() const { return m_isPaused; }
     void pause();
-    void resume();
-    void setResumeCallback(WTF::Function<void()>&&);
+    JS_EXPORT_PRIVATE void resume();
+    JS_EXPORT_PRIVATE void setResumeCallback(WTF::Function<void()>&&);
 
     // Connection management.
     virtual void connect(FrontendChannel::ConnectionType) = 0;

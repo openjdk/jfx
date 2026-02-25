@@ -108,7 +108,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
         }
 
     private:
-        NO_RETURN void threadBody()
+        [[noreturn]] void threadBody()
         {
             while (true) {
                 const WTF::Function<void ()>* function;
@@ -172,11 +172,12 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
 }
 #endif
 
-WorkQueue& WorkQueue::main()
+WorkQueue& WorkQueue::mainSingleton()
 {
     static NeverDestroyed<RefPtr<WorkQueue>> mainWorkQueue;
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
+        WTF::initialize();
         mainWorkQueue.get() = adoptRef(*new WorkQueue(CreateMain));
     });
     return *mainWorkQueue.get();
@@ -200,16 +201,6 @@ void WorkQueue::dispatch(Function<void()>&& function)
 bool WorkQueue::isCurrent() const
 {
     return currentSequence() == m_threadID;
-}
-
-void WorkQueue::ref() const
-{
-    ThreadSafeRefCounted::ref();
-}
-
-void WorkQueue::deref() const
-{
-    ThreadSafeRefCounted::deref();
 }
 
 ConcurrentWorkQueue::ConcurrentWorkQueue(ASCIILiteral name, QOS qos)

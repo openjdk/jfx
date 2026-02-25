@@ -206,7 +206,7 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement
     ASSERT(styleImage->isLoaded(renderer));
 
     LayoutBoxExtent sourceSlices = computeSlices(source, imageSlices(), styleImage->imageScaleFactor());
-    LayoutBoxExtent destinationSlices = computeSlices(destination.size(), borderSlices(), style.borderWidth(), sourceSlices);
+    LayoutBoxExtent destinationSlices = computeSlices(destination.size(), borderSlices(), Style::evaluate(style.borderWidth()), sourceSlices);
 
     scaleSlicesIfNeeded(destination.size(), destinationSlices, deviceScaleFactor);
 
@@ -290,17 +290,17 @@ bool NinePieceImage::Data::operator==(const Data& other) const
 
 TextStream& operator<<(TextStream& ts, const NinePieceImage& image)
 {
-    ts << "style-image " << image.image() << " slices " << image.imageSlices();
+    ts << "style-image "_s << image.image() << " slices "_s << image.imageSlices();
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, NinePieceImageRule rule)
 {
     switch (rule) {
-    case NinePieceImageRule::Stretch: ts << "stretch"; break;
-    case NinePieceImageRule::Round: ts << "round"; break;
-    case NinePieceImageRule::Space: ts << "space"; break;
-    case NinePieceImageRule::Repeat: ts << "repeat"; break;
+    case NinePieceImageRule::Stretch: ts << "stretch"_s; break;
+    case NinePieceImageRule::Round: ts << "round"_s; break;
+    case NinePieceImageRule::Space: ts << "space"_s; break;
+    case NinePieceImageRule::Repeat: ts << "repeat"_s; break;
     }
     return ts;
 }

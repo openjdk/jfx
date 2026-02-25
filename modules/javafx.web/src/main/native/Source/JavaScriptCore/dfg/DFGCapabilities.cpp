@@ -34,6 +34,8 @@
 #include "JSCellInlines.h"
 #include "Options.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 bool isSupported()
@@ -122,10 +124,11 @@ static bool verboseCapabilities()
 
 inline void debugFail(CodeBlock* codeBlock, OpcodeID opcodeID, CapabilityLevel result)
 {
-    if (verboseCapabilities() && !canCompile(result))
-        dataLog("DFG rejecting opcode in ", *codeBlock, " because of opcode ", opcodeNames[opcodeID], "\n");
+    dataLogLnIf(verboseCapabilities() && !canCompile(result), "DFG rejecting opcode in ", *codeBlock, " because of opcode ", opcodeNames[opcodeID]);
 }
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

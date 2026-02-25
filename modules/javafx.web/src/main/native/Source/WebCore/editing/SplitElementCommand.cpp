@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,7 +68,7 @@ void SplitElementCommand::executeApply()
 
 void SplitElementCommand::doApply()
 {
-    m_element1 = protectedElement2()->cloneElementWithoutChildren(protectedDocument());
+    m_element1 = m_element2->cloneElementWithoutChildren(document(), nullptr);
 
     executeApply();
 }
@@ -106,10 +106,10 @@ void SplitElementCommand::doReapply()
 }
 
 #ifndef NDEBUG
-void SplitElementCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void SplitElementCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(protectedElement1().get(), nodes);
-    addNodeAndDescendants(protectedElement2().ptr(), nodes);
+    addNodeAndDescendants(m_element2.ptr(), nodes);
     addNodeAndDescendants(Ref { m_atChild }.ptr(), nodes);
 }
 #endif

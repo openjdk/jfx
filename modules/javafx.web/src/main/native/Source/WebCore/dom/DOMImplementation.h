@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "XMLDocument.h"
 #include <wtf/WeakRef.h>
@@ -45,7 +44,7 @@ public:
     static bool hasFeature() { return true; }
     WEBCORE_EXPORT static Ref<CSSStyleSheet> createCSSStyleSheet(const String& title, const String& media);
 
-    static Ref<Document> createDocument(const String& contentType, LocalFrame*, const Settings&, const URL&, ScriptExecutionContextIdentifier = { });
+    static Ref<Document> createDocument(const String& contentType, LocalFrame*, const Settings&, const URL&, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
 
 private:
     Ref<Document> protectedDocument();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,6 +49,7 @@
 #include "JSReadableStream.h"
 #include "JSShadowRealmGlobalScope.h"
 #include "JSShadowRealmGlobalScopeBase.h"
+#include "JSTrustedScript.h"
 #include "JSWorkerGlobalScope.h"
 #include "JSWorkletGlobalScope.h"
 #include "JSWritableStream.h"
@@ -106,7 +107,7 @@ const ClassInfo JSDOMGlobalObject::s_info = { "DOMGlobalObject"_s, &JSGlobalObje
 
 JSDOMGlobalObject::JSDOMGlobalObject(VM& vm, Structure* structure, Ref<DOMWrapperWorld>&& world, const GlobalObjectMethodTable* globalObjectMethodTable)
     : JSGlobalObject(vm, structure, globalObjectMethodTable)
-    , m_constructors(makeUnique<DOMConstructors>())
+    , m_constructors(makeUniqueRef<DOMConstructors>())
     , m_world(WTFMove(world))
     , m_worldIsNormal(m_world->isNormal())
     , m_builtinInternalFunctions(makeUniqueRefWithoutFastMallocCheck<JSBuiltinInternalFunctions>(vm))
@@ -191,7 +192,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalWritableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* writableStream = jsDynamicCast<JSWritableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!writableStream))
+    if (!writableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(writableStream->wrapped().internalWritableStream());
 }
@@ -207,7 +208,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalReadableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* readableStream = jsDynamicCast<JSReadableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!readableStream))
+    if (!readableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(readableStream->wrapped().internalReadableStream());
 }
@@ -229,7 +230,7 @@ JSC_DEFINE_HOST_FUNCTION(addAbortAlgorithmToSignal, (JSGlobalObject* globalObjec
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     auto* jsDOMGlobalObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
@@ -245,7 +246,7 @@ JSC_DEFINE_HOST_FUNCTION(removeAbortAlgorithmFromSignal, (JSGlobalObject*, CallF
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     AbortSignal::removeAbortAlgorithmFromSignal(abortSignal->protectedWrapped().get(), callFrame->uncheckedArgument(1).asUInt32());
@@ -270,7 +271,7 @@ JSC_DEFINE_HOST_FUNCTION(signalAbort, (JSGlobalObject*, CallFrame* callFrame))
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(abortSignal))
+    if (abortSignal) [[unlikely]]
         abortSignal->protectedWrapped()->signalAbort(callFrame->uncheckedArgument(1));
     return JSValue::encode(JSC::jsUndefined());
 }
@@ -354,6 +355,11 @@ void JSDOMGlobalObject::finishCreation(VM& vm, JSObject* thisValue)
 #endif
 }
 
+RefPtr<ScriptExecutionContext> JSDOMGlobalObject::protectedScriptExecutionContext() const
+{
+    return scriptExecutionContext();
+}
+
 ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 {
     if (inherits<JSDOMWindowBase>())
@@ -372,7 +378,17 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
     return nullptr;
 }
 
-bool JSDOMGlobalObject::canCompileStrings(JSGlobalObject* globalObject, CompilationType compilationType, String codeString, JSValue bodyArgument)
+String JSDOMGlobalObject::codeForEval(JSGlobalObject* globalObject, JSValue value)
+{
+    VM& vm = globalObject->vm();
+
+    if (auto* script = JSTrustedScript::toWrapped(vm, value))
+        return script->toString();
+
+    return String();
+}
+
+bool JSDOMGlobalObject::canCompileStrings(JSGlobalObject* globalObject, CompilationType compilationType, String codeString, const ArgList& args)
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -380,14 +396,24 @@ bool JSDOMGlobalObject::canCompileStrings(JSGlobalObject* globalObject, Compilat
     auto& thisObject = static_cast<JSDOMGlobalObject&>(*globalObject);
     auto* scriptExecutionContext = thisObject.scriptExecutionContext();
 
-    auto result = canCompile(*scriptExecutionContext, compilationType, codeString, bodyArgument);
+    auto result = canCompile(*scriptExecutionContext, compilationType, codeString, args);
 
     if (result.hasException()) {
-        propagateException(*globalObject, throwScope, result.releaseException());
-        RETURN_IF_EXCEPTION(throwScope, false);
+        // https://w3c.github.io/webappsec-csp/#can-compile-strings
+        // Step 2.7. If the algorithm throws an error, throw an EvalError.
+        // This clears the existing exceptions and returns false, where the caller throws an EvalError.
+        throwScope.clearException();
+        return false;
     }
 
     return result.releaseReturnValue();
+}
+
+Structure* JSDOMGlobalObject::trustedScriptStructure(JSGlobalObject* globalObject)
+{
+    auto& thisObject = static_cast<JSDOMGlobalObject&>(*globalObject);
+
+    return getDOMStructure<JSTrustedScript>(globalObject->vm(), thisObject);
 }
 
 template<typename Visitor>
@@ -534,13 +560,13 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
     // FIXME: for efficiency, we should load blobs directly instead of going through the readableStream path.
     if (inputResponse->isBlobBody() || inputResponse->isBlobFormData()) {
         auto streamOrException = inputResponse->readableStream(*globalObject);
-        if (UNLIKELY(streamOrException.hasException())) {
+        if (streamOrException.hasException()) [[unlikely]] {
             deferred->reject(streamOrException.releaseException());
             return jsCast<JSC::JSPromise*>(deferred->promise());
         }
     }
 
-    auto compiler = JSC::Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, jsCast<JSC::JSPromise*>(deferred->promise()), importObject);
+    auto compiler = JSC::Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, jsCast<JSC::JSPromise*>(deferred->promise()), importObject, JSC::makeSource("handleResponseOnStreamingAction"_s, JSC::SourceOrigin(), JSC::SourceTaintedOrigin::Untainted));
 
     if (inputResponse->isBodyReceivedByChunk()) {
         inputResponse->consumeBodyReceivedByChunk([globalObject, compiler = WTFMove(compiler)](auto&& result) mutable {
@@ -563,7 +589,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
 
                 auto scope = DECLARE_THROW_SCOPE(vm);
                 auto error = createDOMException(*globalObject, WTFMove(exception));
-                if (UNLIKELY(scope.exception())) {
+                if (scope.exception()) [[unlikely]] {
                     ASSERT(vm.hasPendingTerminationException());
                     compiler->cancel();
                     return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,11 @@ class ScriptExecutionContext;
 class CookieStore final : public RefCounted<CookieStore>, public EventTarget, public ActiveDOMObject, public CookieChangeListener {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CookieStore);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     static Ref<CookieStore> create(ScriptExecutionContext*);
     ~CookieStore();
 
@@ -60,13 +65,6 @@ public:
 
     void remove(String&& name, Ref<DeferredPromise>&&);
     void remove(CookieStoreDeleteOptions&&, Ref<DeferredPromise>&&);
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
-    using EventTarget::weakPtrFactory;
-    using EventTarget::WeakValueType;
 
 private:
     explicit CookieStore(ScriptExecutionContext*);
@@ -89,8 +87,7 @@ private:
     RefPtr<DeferredPromise> takePromise(uint64_t promiseIdentifier);
 
     class MainThreadBridge;
-    Ref<MainThreadBridge> m_mainThreadBridge;
-    Ref<MainThreadBridge> protectedMainThreadBridge() const;
+    const Ref<MainThreadBridge> m_mainThreadBridge;
 
     bool m_hasChangeEventListener { false };
     WeakPtr<CookieJar> m_cookieJar;

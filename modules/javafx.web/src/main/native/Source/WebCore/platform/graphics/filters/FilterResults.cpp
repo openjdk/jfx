@@ -27,8 +27,11 @@
 #include "FilterResults.h"
 
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterResults);
 
 FilterResults::FilterResults(std::unique_ptr<ImageBufferAllocator>&& allocator)
     : m_allocator(allocator ? WTFMove(allocator) : makeUnique<ImageBufferAllocator>())
@@ -62,7 +65,7 @@ bool FilterResults::canCacheResult(const FilterImage& result) const
     return totalMemoryCost <= maxAllowedMemoryCost;
 }
 
-void FilterResults::setEffectResult(FilterEffect& effect, const FilterImageVector& inputs, Ref<FilterImage>&& result)
+void FilterResults::setEffectResult(FilterEffect& effect, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result)
 {
     if (!canCacheResult(result))
         return;

@@ -28,19 +28,21 @@
 #include "FreeList.h"
 #include "MarkedBlock.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 template<typename Func>
 ALWAYS_INLINE HeapCell* FreeList::allocateWithCellSize(const Func& slowPath, size_t cellSize)
 {
-    if (LIKELY(m_intervalStart < m_intervalEnd)) {
+    if (m_intervalStart < m_intervalEnd) [[likely]] {
         char* result = m_intervalStart;
         m_intervalStart += cellSize;
-        return bitwise_cast<HeapCell*>(result);
+        return std::bit_cast<HeapCell*>(result);
     }
 
     FreeCell* cell = nextInterval();
-    if (UNLIKELY(isSentinel(cell)))
+    if (isSentinel(cell)) [[unlikely]]
         return slowPath();
 
     FreeCell::advance(m_secret, m_nextInterval, m_intervalStart, m_intervalEnd);
@@ -49,7 +51,7 @@ ALWAYS_INLINE HeapCell* FreeList::allocateWithCellSize(const Func& slowPath, siz
     // should always be enough space remaining to allocate a cell.
     char* result = m_intervalStart;
     m_intervalStart += cellSize;
-    return bitwise_cast<HeapCell*>(result);
+    return std::bit_cast<HeapCell*>(result);
 }
 
 template<typename Func>
@@ -62,7 +64,7 @@ void FreeList::forEach(const Func& func) const
 
     while (true) {
         for (; intervalStart < intervalEnd; intervalStart += m_cellSize)
-            func(bitwise_cast<HeapCell*>(intervalStart));
+            func(std::bit_cast<HeapCell*>(intervalStart));
 
         // If we explore the whole interval and the cell is the sentinel value, though, we should
         // immediately exit so we don't decode anything out of bounds.
@@ -75,3 +77,4 @@ void FreeList::forEach(const Func& func) const
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

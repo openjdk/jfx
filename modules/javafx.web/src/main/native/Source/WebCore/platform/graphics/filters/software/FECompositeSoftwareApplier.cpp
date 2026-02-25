@@ -30,16 +30,19 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FECompositeSoftwareApplier);
 
 FECompositeSoftwareApplier::FECompositeSoftwareApplier(const FEComposite& effect)
     : Base(effect)
 {
-    ASSERT(m_effect.operation() != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
+    ASSERT(m_effect->operation() != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC);
 }
 
-bool FECompositeSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FECompositeSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     auto& input = inputs[0].get();
     auto& input2 = inputs[1].get();
@@ -57,7 +60,7 @@ bool FECompositeSoftwareApplier::apply(const Filter&, const FilterImageVector& i
     auto inputImageRect = input.absoluteImageRectRelativeTo(result);
     auto inputImageRect2 = input2.absoluteImageRectRelativeTo(result);
 
-    switch (m_effect.operation()) {
+    switch (m_effect->operation()) {
     case CompositeOperationType::FECOMPOSITE_OPERATOR_UNKNOWN:
         return false;
 

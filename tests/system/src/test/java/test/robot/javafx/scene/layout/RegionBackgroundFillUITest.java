@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,16 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.TimeUnit;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.paint.Color;
+import test.util.ScreenCaptureTestWatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  */
 @Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
+@ExtendWith(ScreenCaptureTestWatcher.class)
 public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     /**************************************************************************

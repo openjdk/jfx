@@ -35,10 +35,11 @@
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/VM.h>
 #include <pal/Logging.h>
-#include <wtf/FastMalloc.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -48,6 +49,8 @@ static void collect()
     JSLockHolder lock(commonVM());
     commonVM().heap.collectNow(Async, CollectionScope::Full);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GCController);
 
 GCController& GCController::singleton()
 {
@@ -68,15 +71,8 @@ GCController::GCController()
 
 void GCController::garbageCollectSoon()
 {
-    // We only use reportAbandonedObjectGraph for systems for which there's an implementation
-    // of the garbage collector timers in JavaScriptCore. We wouldn't need this if JavaScriptCore
-    // used a timer implementation from WTF like RunLoop::Timer.
-#if USE(CF) || USE(GLIB)
     JSLockHolder lock(commonVM());
     commonVM().heap.reportAbandonedObjectGraph();
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnNextRunLoop()
@@ -101,13 +97,9 @@ void GCController::garbageCollectNow()
 
 void GCController::garbageCollectNowIfNotDoneRecently()
 {
-#if USE(CF) || USE(GLIB)
     JSLockHolder lock(commonVM());
     if (!commonVM().heap.currentThreadIsDoingGCWork())
         commonVM().heap.collectNowFullIfNotDoneRecently(Async);
-#else
-    garbageCollectNow();
-#endif
 }
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
@@ -142,7 +134,7 @@ void GCController::deleteAllLinkedCode(DeleteAllCodeEffort effort)
 void GCController::dumpHeapForVM(VM& vm)
 {
     auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GCHeap"_s);
-    if (!FileSystem::isHandleValid(fileHandle)) {
+    if (!fileHandle) {
         WTFLogAlways("Dumping GC heap failed to open temporary file");
         return;
     }
@@ -162,9 +154,8 @@ void GCController::dumpHeapForVM(VM& vm)
 
     CString utf8String = jsonData.utf8();
 
-    FileSystem::writeToFile(fileHandle, utf8String.span());
-    FileSystem::closeFile(fileHandle);
-    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? ""_s : " for Worker");
+    fileHandle.write(byteCast<uint8_t>(utf8String.span()));
+    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? "" : " for Worker");
 }
 
 void GCController::dumpHeap()

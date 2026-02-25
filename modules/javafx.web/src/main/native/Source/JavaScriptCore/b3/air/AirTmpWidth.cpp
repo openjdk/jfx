@@ -76,7 +76,7 @@ void TmpWidth::recompute(Code& code)
         });
 
     if (beCareful) {
-        code.forAllTmps(assumeTheWorst);
+        code.forEachTmp(assumeTheWorst);
 
         // We fall through because the fixpoint that follows can only make things even more
         // conservative. This mode isn't meant to be fast, just safe.
@@ -170,6 +170,26 @@ void TmpWidth::recompute(Code& code)
             dataLogLn("\t", AbsoluteTmpMapper<bank>::tmpFromAbsoluteIndex(i), " : ", bankWidthsVector[i]);
     }
 }
+
+template <Bank bank>
+void TmpWidth::ensureSize(Tmp tmp)
+{
+    ASSERT(tmp.bank() == bank);
+    auto index = AbsoluteTmpMapper<bank>::absoluteIndex(tmp);
+    auto& bankWidthsVector = widthsVector(bank);
+    if (index >= bankWidthsVector.size())
+        bankWidthsVector.resize(index + 1);
+}
+
+void TmpWidth::setWidths(Tmp tmp, Width useWidth, Width defWidth)
+{
+    if (tmp.isGP())
+        ensureSize<GP>(tmp);
+    else
+        ensureSize<FP>(tmp);
+    addWidths(tmp, { useWidth, defWidth });
+}
+
 
 void TmpWidth::Widths::dump(PrintStream& out) const
 {

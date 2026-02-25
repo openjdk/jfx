@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include "CatchScope.h"
 #include "Error.h"
 #include "ExceptionHelpers.h"
@@ -40,6 +44,8 @@
 #include "MathCommon.h"
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringImpl.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
 
@@ -127,7 +133,7 @@ inline double JSValue::toIntegerOrInfinity(JSGlobalObject* globalObject) const
     if (isInt32())
         return asInt32();
     double d = toNumber(globalObject);
-    return trunc(std::isnan(d) ? 0.0 : d + 0.0);
+    return isnan(d) ? 0.0 : trunc(d) + 0.0;
 }
 
 inline bool JSValue::isUInt32() const
@@ -564,11 +570,11 @@ inline bool JSValue::isInt32() const
 
 inline int64_t reinterpretDoubleToInt64(double value)
 {
-    return bitwise_cast<int64_t>(value);
+    return std::bit_cast<int64_t>(value);
 }
 inline double reinterpretInt64ToDouble(int64_t value)
 {
-    return bitwise_cast<double>(value);
+    return std::bit_cast<double>(value);
 }
 
 ALWAYS_INLINE JSValue::JSValue(EncodeAsDoubleTag, double d)
@@ -619,7 +625,7 @@ inline JSValue::JSValue(EncodeAsBigInt32Tag, int32_t value)
 #if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
 inline JSValue::JSValue(EncodeAsUnboxedFloatTag, float value)
 {
-    u.asBits.payload = bitwise_cast<int32_t>(value);
+    u.asBits.payload = std::bit_cast<int32_t>(value);
 }
 #endif
 
@@ -917,7 +923,7 @@ ALWAYS_INLINE std::optional<uint32_t> JSValue::toUInt32AfterToNumeric(JSGlobalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue result = toBigIntOrInt32(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (LIKELY(result.isInt32()))
+    if (result.isInt32()) [[likely]]
         return static_cast<uint32_t>(result.asInt32());
     return std::nullopt;
 }
@@ -1085,7 +1091,7 @@ ALWAYS_INLINE bool JSValue::getPropertySlot(JSGlobalObject* globalObject, Proper
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     JSObject* object;
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString()) {
             bool hasProperty = asString(*this)->getStringPropertySlot(globalObject, propertyName, slot);
             RETURN_IF_EXCEPTION(scope, false);
@@ -1094,7 +1100,7 @@ ALWAYS_INLINE bool JSValue::getPropertySlot(JSGlobalObject* globalObject, Proper
         }
         object = synthesizePrototype(globalObject);
         EXCEPTION_ASSERT(!!scope.exception() == !object);
-        if (UNLIKELY(!object))
+        if (!object) [[unlikely]]
             return false;
     } else
         object = asObject(asCell());
@@ -1107,7 +1113,7 @@ ALWAYS_INLINE bool JSValue::getOwnPropertySlot(JSGlobalObject* globalObject, Pro
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     auto scope = DECLARE_THROW_SCOPE(getVM(globalObject));
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString())
             RELEASE_AND_RETURN(scope, asString(*this)->getStringPropertySlot(globalObject, propertyName, slot));
 
@@ -1130,7 +1136,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
     // If this is a primitive, we'll need to synthesize the prototype -
     // and if it's a string there are special properties to check first.
     JSObject* object;
-    if (UNLIKELY(!isObject())) {
+    if (!isObject()) [[unlikely]] {
         if (isString()) {
             bool hasProperty = asString(*this)->getStringPropertySlot(globalObject, propertyName, slot);
             RETURN_IF_EXCEPTION(scope, { });
@@ -1139,7 +1145,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
         }
         object = synthesizePrototype(globalObject);
         EXCEPTION_ASSERT(!!scope.exception() == !object);
-        if (UNLIKELY(!object))
+        if (!object) [[unlikely]]
             return JSValue();
     } else
         object = asObject(asCell());
@@ -1153,7 +1159,7 @@ ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, unsigned proper
 
 ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, uint64_t propertyName) const
 {
-    if (LIKELY(propertyName <= std::numeric_limits<unsigned>::max()))
+    if (propertyName <= std::numeric_limits<unsigned>::max()) [[likely]]
         return get(globalObject, static_cast<unsigned>(propertyName));
     return get(globalObject, Identifier::from(getVM(globalObject), static_cast<double>(propertyName)));
 }
@@ -1172,7 +1178,7 @@ ALWAYS_INLINE T JSValue::getAs(JSGlobalObject* globalObject, PropertyNameType pr
 
 inline bool JSValue::put(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitive(globalObject, propertyName, value, slot);
 
     return asCell()->methodTable()->put(asCell(), globalObject, propertyName, value, slot);
@@ -1180,14 +1186,14 @@ inline bool JSValue::put(JSGlobalObject* globalObject, PropertyName propertyName
 
 ALWAYS_INLINE bool JSValue::putInline(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitive(globalObject, propertyName, value, slot);
     return asCell()->putInline(globalObject, propertyName, value, slot);
 }
 
 inline bool JSValue::putByIndex(JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
 {
-    if (UNLIKELY(!isCell()))
+    if (!isCell()) [[unlikely]]
         return putToPrimitiveByIndex(globalObject, propertyName, value, shouldThrow);
 
     return asCell()->methodTable()->putByIndex(asCell(), globalObject, propertyName, value, shouldThrow);
@@ -1195,9 +1201,8 @@ inline bool JSValue::putByIndex(JSGlobalObject* globalObject, unsigned propertyN
 
 ALWAYS_INLINE JSValue JSValue::getPrototype(JSGlobalObject* globalObject) const
 {
-    VM& vm = getVM(globalObject);
     if (isObject())
-        return asObject(asCell())->getPrototype(vm, globalObject);
+        return asObject(asCell())->getPrototype(globalObject);
     return synthesizePrototype(globalObject);
 }
 
@@ -1442,7 +1447,7 @@ ALWAYS_INLINE bool JSValue::requireObjectCoercible(JSGlobalObject* globalObject)
 ALWAYS_INLINE bool isThisValueAltered(const PutPropertySlot& slot, JSObject* baseObject)
 {
     JSValue thisValue = slot.thisValue();
-    if (LIKELY(thisValue == baseObject))
+    if (thisValue == baseObject) [[likely]]
         return false;
 
     if (!thisValue.isObject())
@@ -1470,7 +1475,29 @@ ALWAYS_INLINE bool sameValue(JSGlobalObject* globalObject, JSValue a, JSValue b)
     bool yIsNaN = std::isnan(y);
     if (xIsNaN || yIsNaN)
         return xIsNaN && yIsNaN;
-    return bitwise_cast<uint64_t>(x) == bitwise_cast<uint64_t>(y);
+    return std::bit_cast<uint64_t>(x) == std::bit_cast<uint64_t>(y);
+}
+
+ALWAYS_INLINE bool sameValueZero(JSGlobalObject* globalObject, JSValue a, JSValue b)
+{
+    if (a == b)
+        return true;
+
+    if (!a.isNumber())
+        return JSValue::strictEqual(globalObject, a, b);
+    if (!b.isNumber())
+        return false;
+    double x = a.asNumber();
+    double y = b.asNumber();
+    if (std::isnan(x))
+        return std::isnan(y);
+    if (std::isnan(y))
+        return std::isnan(x);
+    if (!x && y == -0)
+        return true;
+    if (x == -0 && !y)
+        return true;
+    return std::bit_cast<uint64_t>(x) == std::bit_cast<uint64_t>(y);
 }
 
 } // namespace JSC

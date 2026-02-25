@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,13 +61,13 @@ void PluginInfoProvider::refresh(bool reloadPages)
             if (!localFrame)
                 continue;
             if (localFrame->loader().subframeLoader().containsPlugins()) {
-                if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
+                if (RefPtr localMainFrame = page.localMainFrame())
                     framesNeedingReload.append(*localMainFrame);
             }
         }
     }
 
-    for (auto& frame : framesNeedingReload)
+    for (Ref frame : framesNeedingReload)
         frame->loader().reload();
 }
 

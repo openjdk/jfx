@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,10 @@
 #include "config.h"
 #include "DeleteSelectionCommand.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "EditorClient.h"
 #include "ElementInlines.h"
@@ -250,7 +251,7 @@ void DeleteSelectionCommand::setStartingSelectionOnSmartDelete(const Position& s
         newBase = end;
         newExtent = start;
     }
-    setStartingSelection(VisibleSelection(newBase, newExtent, startingSelection().isDirectional()));
+    setStartingSelection(VisibleSelection(newBase, newExtent, startingSelection().directionality()));
 }
 
 bool DeleteSelectionCommand::shouldSmartDeleteParagraphSpacers()
@@ -420,16 +421,16 @@ void DeleteSelectionCommand::saveTypingStyleState()
     // However, if typing style was previously set from another text node at the previous
     // position (now deleted), we need to clear that style as well.
     if (m_upstreamStart.deprecatedNode() == m_downstreamEnd.deprecatedNode() && m_upstreamStart.deprecatedNode()->isTextNode()) {
-        protectedDocument()->selection().clearTypingStyle();
+        document().selection().clearTypingStyle();
         return;
     }
 
-    auto startNode = m_selectionToDelete.start().protectedDeprecatedNode();
+    RefPtr startNode = m_selectionToDelete.start().deprecatedNode();
     if (!startNode->isTextNode() && !startNode->hasTagName(imgTag) && !startNode->hasTagName(brTag))
         return;
 
     // Figure out the typing style in effect before the delete is done.
-    m_typingStyle = EditingStyle::create(m_selectionToDelete.start(), EditingStyle::EditingPropertiesInEffect);
+    m_typingStyle = EditingStyle::create(m_selectionToDelete.start(), EditingStyle::PropertiesToInclude::EditingPropertiesInEffect);
     m_typingStyle->removeStyleAddedByNode(enclosingAnchorElement(m_selectionToDelete.start()).get());
 
     // If we're deleting into a Mail blockquote, save the style at end() instead of start()
@@ -489,7 +490,7 @@ void DeleteSelectionCommand::insertBlockPlaceholderForTableCellIfNeeded(Element&
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         CheckedPtr renderer = dynamicDowncast<RenderTableCell>(element.renderer());
-        if (!renderer || renderer->contentHeight() > 0)
+        if (!renderer || renderer->contentBoxHeight() > 0)
             return;
     }
     insertBlockPlaceholder(firstEditablePositionInNode(&element));
@@ -563,7 +564,7 @@ void DeleteSelectionCommand::removeNode(Node& node, ShouldAssumeContentIsAlwaysE
 
         ASSERT(is<Element>(node));
         auto element = downcast<Element>(WTFMove(protectedNode));
-        protectedDocument()->updateLayoutIgnorePendingStylesheets();
+        document().updateLayoutIgnorePendingStylesheets();
         // Check if we need to insert a placeholder for descendant table cells.
         RefPtr descendant { ElementTraversal::next(element, element.ptr()) };
         while (descendant) {
@@ -605,18 +606,22 @@ void DeleteSelectionCommand::makeStylingElementsDirectChildrenOfEditableRootToPr
     if (!range)
         return;
     auto nodes = intersectingNodes(*range).begin();
+    Vector<Ref<HTMLElement>> stylingElements;
     while (nodes) {
         Ref node = *nodes;
         auto shouldMove = is<HTMLLinkElement>(node) || is<HTMLStyleElement>(node);
-        if (!shouldMove)
-            nodes.advance();
-        else {
+        if (shouldMove) {
             nodes.advanceSkippingChildren();
-            if (RefPtr rootEditableElement = node->rootEditableElement()) {
-                removeNode(node.get());
-                appendNode(node.get(), *rootEditableElement);
-            }
+            stylingElements.append(downcast<HTMLElement>(WTFMove(node)));
+        } else
+            nodes.advance();
         }
+    for (auto& stylingElement : stylingElements) {
+        RefPtr rootEditableElement = stylingElement->rootEditableElement();
+        if (!rootEditableElement)
+            continue;
+        removeNode(stylingElement.get());
+        appendNode(stylingElement.get(), *rootEditableElement);
     }
 }
 
@@ -626,7 +631,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
         return;
 
     int startOffset = m_upstreamStart.deprecatedEditingOffset();
-    auto startNode = m_upstreamStart.protectedDeprecatedNode();
+    RefPtr startNode = m_upstreamStart.deprecatedNode();
 
     makeStylingElementsDirectChildrenOfEditableRootToPreventStyleLoss();
 
@@ -695,6 +700,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                 node = nullptr;
                 continue;
             }
+
             if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
                 RefPtr parentNode = node->parentNode();
                 if (!parentNode || canHaveChildrenForEditing(*parentNode)) {
@@ -707,6 +713,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                     continue;
                 }
             }
+
                 RefPtr lastDescendant { node->lastDescendant() };
                 if (m_downstreamEnd.deprecatedNode() == lastDescendant && m_downstreamEnd.deprecatedEditingOffset() >= caretMaxOffset(*lastDescendant)) {
                     removeNode(*node);
@@ -735,7 +742,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                 } else if (!(startNodeWasDescendantOfEndNode && !m_upstreamStart.anchorNode()->isConnected())) {
                     unsigned offset = 0;
                     if (m_upstreamStart.deprecatedNode()->isDescendantOf(m_downstreamEnd.deprecatedNode())) {
-                        auto n = m_upstreamStart.protectedDeprecatedNode();
+                        RefPtr n = m_upstreamStart.deprecatedNode();
                         while (n && n->parentNode() != m_downstreamEnd.deprecatedNode())
                             n = n->parentNode();
                         if (n)
@@ -751,7 +758,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
 
 void DeleteSelectionCommand::fixupWhitespace()
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
     // FIXME: isRenderedCharacter should be removed, and we should use VisiblePosition::characterAfter and VisiblePosition::characterBefore
     if (m_leadingWhitespace.isNotNull() && !m_leadingWhitespace.isRenderedCharacter()) {
         if (RefPtr textNode = dynamicDowncast<Text>(*m_leadingWhitespace.deprecatedNode())) {
@@ -815,6 +822,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     if (mergeDestination == startOfParagraphToMove)
         return;
 
+    VisiblePosition currentStartOfParagraphToMove = startOfParagraph(startOfParagraphToMove, CanSkipOverEditingBoundary);
     VisiblePosition endOfParagraphToMove = endOfParagraph(startOfParagraphToMove, CanSkipOverEditingBoundary);
 
     if (mergeDestination == endOfParagraphToMove)
@@ -824,7 +832,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     // FIXME: Consider RTL.
     if (!m_startsAtEmptyLine && isStartOfParagraph(mergeDestination) && startOfParagraphToMove.absoluteCaretBounds().x() > mergeDestination.absoluteCaretBounds().x()) {
         if (mergeDestination.deepEquivalent().downstream().deprecatedNode()->hasTagName(brTag)) {
-            auto nodeToRemove = mergeDestination.deepEquivalent().downstream().protectedDeprecatedNode();
+            RefPtr nodeToRemove = mergeDestination.deepEquivalent().downstream().deprecatedNode();
             removeNodeAndPruneAncestors(*nodeToRemove);
             m_endingPosition = startOfParagraphToMove.deepEquivalent();
             return;
@@ -845,14 +853,14 @@ void DeleteSelectionCommand::mergeParagraphs()
     auto rangeToBeReplaced = makeSimpleRange(mergeDestination);
     if (!rangeToBeReplaced)
         return;
-    if (!protectedDocument()->editor().client()->shouldMoveRangeAfterDelete(*range, *rangeToBeReplaced))
+    if (!document().editor().client()->shouldMoveRangeAfterDelete(*range, *rangeToBeReplaced))
         return;
 
     // moveParagraphs will insert placeholders if it removes blocks that would require their use, don't let block
     // removals that it does cause the insertion of *another* placeholder.
     bool needPlaceholder = m_needPlaceholder;
-    bool paragraphToMergeIsEmpty = (startOfParagraphToMove == endOfParagraphToMove);
-    moveParagraph(startOfParagraphToMove, endOfParagraphToMove, mergeDestination, false, !paragraphToMergeIsEmpty);
+    bool paragraphToMergeIsEmpty = (currentStartOfParagraphToMove == endOfParagraphToMove);
+    moveParagraph(currentStartOfParagraphToMove, endOfParagraphToMove, mergeDestination, false, !paragraphToMergeIsEmpty);
     m_needPlaceholder = needPlaceholder;
     // The endingPosition was likely clobbered by the move, so recompute it (moveParagraph selects the moved paragraph).
 
@@ -886,7 +894,7 @@ void DeleteSelectionCommand::removePreviouslySelectedEmptyTableRows()
         }
     }
 
-    auto endTableRow = protectedEndTableRow();
+    RefPtr endTableRow = m_startTableRow;
     if (endTableRow && endTableRow->isConnected() && endTableRow != m_startTableRow) {
         if (isTableRowEmpty(*endTableRow)) {
             // Don't remove m_endTableRow if it's where we're putting the ending selection.
@@ -923,7 +931,7 @@ void DeleteSelectionCommand::calculateTypingStyleAfterDelete()
     // In this case if we start typing, the new characters should have the same style as the just deleted ones,
     // but, if we change the selection, come back and start typing that style should be lost.  Also see
     // preserveTypingStyle() below.
-    protectedDocument()->selection().setTypingStyle(m_typingStyle.copyRef());
+    document().selection().setTypingStyle(m_typingStyle.copyRef());
 }
 
 void DeleteSelectionCommand::clearTransientState()
@@ -952,7 +960,7 @@ String DeleteSelectionCommand::originalStringForAutocorrectionAtBeginningOfSelec
         return String();
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
-    for (auto& marker : protectedDocument()->markers().markersInRange(*rangeOfFirstCharacter, DocumentMarker::Type::Autocorrected)) {
+    for (auto& marker : document().markers().markersInRange(*rangeOfFirstCharacter, DocumentMarkerType::Autocorrected)) {
         int startOffset = marker->startOffset();
         if (startOffset == startOfSelection.deepEquivalent().offsetInContainerNode())
             return marker->description();
@@ -992,11 +1000,10 @@ void DeleteSelectionCommand::doApply()
 
     String originalString = originalStringForAutocorrectionAtBeginningOfSelection();
 
-    auto document = protectedDocument();
     // If the deletion is occurring in a text field, and we're not deleting to replace the selection, then let the frame call across the bridge to notify the form delegate.
     if (!m_replace) {
         if (RefPtr textControl = enclosingTextFormControl(m_selectionToDelete.start()); textControl && textControl->focused())
-            document->editor().textWillBeDeletedInTextField(*textControl);
+            document().editor().textWillBeDeletedInTextField(*textControl);
     }
 
     // save this to later make the selection with
@@ -1030,7 +1037,7 @@ void DeleteSelectionCommand::doApply()
     // want to replace it with a placeholder BR!
     if (handleSpecialCaseBRDelete()) {
         calculateTypingStyleAfterDelete();
-        setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().directionality()));
         clearTransientState();
         rebalanceWhitespace();
         return;
@@ -1054,11 +1061,11 @@ void DeleteSelectionCommand::doApply()
         // a different ending position.
         if (!m_endingPosition.containerNode() || !m_endingPosition.containerNode()->isConnected())
             return;
-        insertNodeAt(HTMLBRElement::create(document), m_endingPosition);
+        insertNodeAt(HTMLBRElement::create(document()), m_endingPosition);
     }
 
     bool shouldRebalaceWhiteSpace = true;
-    if (!document->editor().behavior().shouldRebalanceWhiteSpacesInSecureField()) {
+    if (!document().editor().behavior().shouldRebalanceWhiteSpacesInSecureField()) {
         if (RefPtr textNode = dynamicDowncast<Text>(m_endingPosition.protectedDeprecatedNode())) {
             ScriptDisallowedScope::InMainThread scriptDisallowedScope;
             if (textNode->length() && textNode->renderer())
@@ -1071,9 +1078,9 @@ void DeleteSelectionCommand::doApply()
     calculateTypingStyleAfterDelete();
 
     if (!originalString.isEmpty())
-        document->editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
+        document().editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
 
-    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().directionality()));
     clearTransientState();
 }
 

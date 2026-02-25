@@ -38,6 +38,7 @@ template<typename Visitor>
 void JSAudioWorkletGlobalScope::visitAdditionalChildren(Visitor& visitor)
 {
     addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
+
     wrapped().visitProcessors(visitor);
 }
 

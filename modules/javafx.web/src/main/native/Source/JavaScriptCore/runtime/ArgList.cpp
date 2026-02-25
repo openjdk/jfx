@@ -26,6 +26,8 @@
 
 using std::min;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ArgList);
@@ -72,7 +74,7 @@ auto MarkedVectorBase::slowEnsureCapacity(size_t requestedCapacity) -> Status
 {
     setNeedsOverflowCheck();
     auto checkedNewCapacity = CheckedInt32(requestedCapacity);
-    if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
+    if (checkedNewCapacity.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
     return expandCapacity(checkedNewCapacity);
 }
@@ -81,7 +83,7 @@ auto MarkedVectorBase::expandCapacity() -> Status
 {
     setNeedsOverflowCheck();
     auto checkedNewCapacity = CheckedInt32(m_capacity) * 2;
-    if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
+    if (checkedNewCapacity.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
     return expandCapacity(checkedNewCapacity);
 }
@@ -91,7 +93,7 @@ auto MarkedVectorBase::expandCapacity(unsigned newCapacity) -> Status
     setNeedsOverflowCheck();
     ASSERT(m_capacity < newCapacity);
     auto checkedSize = CheckedSize(newCapacity) * sizeof(EncodedJSValue);
-    if (UNLIKELY(checkedSize.hasOverflowed()))
+    if (checkedSize.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
     EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(FastMalloc::tryMalloc(checkedSize));
     if (!newBuffer)
@@ -126,3 +128,5 @@ auto MarkedVectorBase::slowAppend(JSValue v) -> Status
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

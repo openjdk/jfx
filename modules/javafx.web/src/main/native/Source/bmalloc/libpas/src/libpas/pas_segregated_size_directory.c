@@ -42,7 +42,9 @@
 #include "pas_stream.h"
 #include "pas_thread_local_cache_layout.h"
 #include "pas_utility_heap.h"
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 
 pas_segregated_size_directory* pas_segregated_size_directory_create(
     pas_segregated_heap* heap,
@@ -52,7 +54,7 @@ pas_segregated_size_directory* pas_segregated_size_directory_create(
     const pas_segregated_page_config* page_config,
     pas_segregated_size_directory_creation_mode creation_mode)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_size_directory* result;
     pas_segregated_page_config_kind page_config_kind;
@@ -520,7 +522,7 @@ pas_segregated_size_directory_select_allocator_slow(
 static pas_segregated_view take_first_eligible_direct_create_new_view_callback(
     pas_segregated_directory_iterate_config* config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_size_directory* size_directory;
     pas_segregated_view view;
@@ -571,7 +573,7 @@ static pas_segregated_view take_first_eligible_direct_create_new_view_callback(
 pas_segregated_view pas_segregated_size_directory_take_first_eligible(
     pas_segregated_size_directory* size_directory)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_directory* directory;
     pas_segregated_directory_iterate_config config;
@@ -622,7 +624,7 @@ take_last_empty_should_consider_view_parallel(
 static bool
 take_last_empty_consider_view(pas_segregated_directory_iterate_config* config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     /* We put our take_last_empty logic in consider_view because should_consider_view_parallel
        cannot really tell if a page can be taken. */

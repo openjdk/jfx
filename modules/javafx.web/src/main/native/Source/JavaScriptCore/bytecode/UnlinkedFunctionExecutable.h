@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "SourceCode.h"
 #include "VariableEnvironment.h"
 #include <wtf/FixedVector.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -148,7 +149,7 @@ public:
 
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
@@ -225,7 +226,7 @@ public:
     void finalizeUnconditionally(VM&, CollectionScope);
 
     struct ClassElementDefinition {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_TZONE_ALLOCATED(ClassElementDefinition);
 
         enum class Kind : uint8_t {
             FieldWithLiteralPropertyKey = 0,
@@ -241,7 +242,7 @@ public:
     };
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_TZONE_ALLOCATED(RareData);
 
         SourceCode m_classSource;
         String m_sourceURLDirective;
@@ -330,7 +331,7 @@ private:
 
     RareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

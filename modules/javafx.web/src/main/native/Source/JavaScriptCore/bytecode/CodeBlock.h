@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,6 +75,8 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 #if ENABLE(DFG_JIT)
@@ -97,6 +99,12 @@ class StructureStubInfo;
 class BaselineJITCode;
 class BaselineJITData;
 
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+#define ENABLE_CODEBLOCK_CRASH_ANALYSIS 1 // FIXME: rdar://149223818
+#else
+#define ENABLE_CODEBLOCK_CRASH_ANALYSIS 0
+#endif
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
 
 enum class AccessType : int8_t;
@@ -116,7 +124,7 @@ public:
     enum CopyParsedBlockTag { CopyParsedBlock };
 
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename, SubspaceAccess>
     static void subspaceFor(VM&)
@@ -137,16 +145,64 @@ protected:
 
     WriteBarrier<JSGlobalObject> m_globalObject;
 
+private:
+    struct CrashChecker {
+        enum Entry {
+            This,
+            Metadata,
+            BaselineJITData,
+            StubInfoCount,
+            DFGJITData,
+            Destructed
+        };
+
+#if ENABLE(CODEBLOCK_CRASH_ANALYSIS)
+        static constexpr bool isEnabled = true;
+
+        template<typename T>
+        static uint8_t hash(T src)
+        {
+            uintptr_t value = std::bit_cast<uintptr_t>(src);
+            value = value ^ (value >> 32);
+            value = value ^ (value >> 16);
+            value = value ^ (value >> 8);
+            return value;
+        }
+
+        template<typename T, typename U>
+        static uint8_t hash(T src1, U src2)
+        {
+            uintptr_t value1 = std::bit_cast<uintptr_t>(src1);
+            uintptr_t value2 = std::bit_cast<uintptr_t>(src2);
+            return hash(value1 ^ value2);
+        }
+
+        uint8_t get(unsigned index) { return m_data >> (index * CHAR_BIT); }
+        void set(unsigned index, uint8_t value) { m_data |= static_cast<uintptr_t>(value) << (index * CHAR_BIT); }
+
+        uintptr_t value() const { return m_data; }
+
+    private:
+        uintptr_t m_data { 0 };
+#else
+        static constexpr bool isEnabled = false;
+        template<typename T> static uint8_t hash(T) { return 0; }
+        template<typename T, typename U> static uint8_t hash(T, U) { return 0; }
+        uint8_t get(unsigned) { return 0; }
+        void set(unsigned, uint8_t) { }
+        uintptr_t value() const { return 0; }
+#endif
+    };
+
 public:
     JS_EXPORT_PRIVATE ~CodeBlock();
 
     UnlinkedCodeBlock* unlinkedCodeBlock() const { return m_unlinkedCode.get(); }
 
     CString inferredName() const;
+    String inferredNameWithHash() const;
     CodeBlockHash hash() const;
     bool hasHash() const;
-    bool isSafeToComputeHash() const;
-    CString hashAsStringIfPossible() const;
     CString sourceCodeForTools() const;
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITType) const;
@@ -269,13 +325,6 @@ public:
     const JITCodeMap& jitCodeMap();
 
     std::optional<CodeOrigin> findPC(void* pc);
-
-    // We call this when we want to reattempt compiling something with the baseline JIT. Ideally
-    // the baseline JIT would not add data to CodeBlock, but instead it would put its data into
-    // a newly created JITCode, which could be thrown away if we bail on JIT compilation. Then we
-    // would be able to get rid of this silly function.
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=159061
-    void resetBaselineJITData();
 #endif // ENABLE(JIT)
 
     void unlinkOrUpgradeIncomingCalls(VM&, CodeBlock*);
@@ -311,10 +360,11 @@ public:
     size_t predictedMachineCodeSize();
 
     unsigned instructionsSize() const { return instructions().size(); }
-    unsigned bytecodeCost() const { return m_bytecodeCost; }
+    unsigned bytecodeCost() const;
 
     // Exactly equivalent to codeBlock->ownerExecutable()->newReplacementCodeBlockFor(codeBlock->specializationKind())
     CodeBlock* newReplacement();
+    CodeBlock* replacement();
 
     void setJITCode(Ref<JSC::JITCode>&& code)
     {
@@ -345,8 +395,6 @@ public:
     CodePtr<JSEntryPtrTag> addressForCallConcurrently(const ConcurrentJSLocker&, ArityCheckMode) const;
 
 #if ENABLE(JIT)
-    CodeBlock* replacement();
-
     DFG::CapabilityLevel computeCapabilityLevel();
     DFG::CapabilityLevel capabilityLevel();
     DFG::CapabilityLevel capabilityLevelState() { return static_cast<DFG::CapabilityLevel>(m_capabilityLevelState); }
@@ -405,6 +453,8 @@ public:
         ASSERT(JITCode::isBaselineCode(jitType()));
         return m_argumentValueProfiles[argumentIndex];
     }
+
+    FixedVector<ArgumentValueProfile>& argumentValueProfiles() { return m_argumentValueProfiles; }
 
     ValueProfile& valueProfileForOffset(unsigned profileOffset) { return m_metadata->valueProfileForOffset(profileOffset); }
 
@@ -471,6 +521,7 @@ public:
 #endif
 #if ASSERT_ENABLED
     bool hasIdentifier(UniquedStringImpl*);
+    bool wasDestructed();
 #endif
 
     Vector<WriteBarrier<Unknown>>& constants() { return m_constantRegisters; }
@@ -499,7 +550,9 @@ public:
 
     FunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     int numberOfFunctionDecls() { return m_functionDecls.size(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionDecls() { return m_functionDecls.span(); }
     FunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
+    std::span<const WriteBarrier<FunctionExecutable>> functionExprs() { return m_functionExprs.span(); }
 
     const BitVector& bitVector(size_t i) { return m_unlinkedCode->bitVector(i); }
 
@@ -522,16 +575,11 @@ public:
 #if ENABLE(JIT)
     SimpleJumpTable& baselineSwitchJumpTable(int tableIndex);
     StringJumpTable& baselineStringSwitchJumpTable(int tableIndex);
-    void setBaselineJITData(std::unique_ptr<BaselineJITData>&& jitData)
-    {
-        ASSERT(!m_jitData);
-        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
-        m_jitData = jitData.release();
-    }
+    void setBaselineJITData(std::unique_ptr<BaselineJITData>&&);
     BaselineJITData* baselineJITData()
     {
         if (!JSC::JITCode::isOptimizingJIT(jitType()))
-            return bitwise_cast<BaselineJITData*>(m_jitData);
+            return std::bit_cast<BaselineJITData*>(m_jitData);
         return nullptr;
     }
 
@@ -541,12 +589,13 @@ public:
         ASSERT(!m_jitData);
         WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
         m_jitData = jitData.release();
+        checker().set(CrashChecker::DFGJITData, checker().hash(this, m_jitData));
     }
 
     DFG::JITData* dfgJITData()
     {
         if (JSC::JITCode::isOptimizingJIT(jitType()))
-            return bitwise_cast<DFG::JITData*>(m_jitData);
+            return std::bit_cast<DFG::JITData*>(m_jitData);
         return nullptr;
     }
 #endif
@@ -596,7 +645,7 @@ public:
         return m_unlinkedCode->llintExecuteCounter();
     }
 
-    typedef HashMap<std::tuple<StructureID, BytecodeIndex>, FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint>> StructureWatchpointMap;
+    typedef UncheckedKeyHashMap<std::tuple<StructureID, BytecodeIndex>, FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint>> StructureWatchpointMap;
     StructureWatchpointMap& llintGetByIdWatchpointMap() { return m_llintGetByIdWatchpointMap; }
 
     // Functions for controlling when tiered compilation kicks in. This
@@ -640,11 +689,7 @@ public:
 
     int32_t adjustedCounterValue(int32_t desiredThreshold);
 
-    static constexpr ptrdiff_t offsetOfJITExecuteCounter() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_counter); }
-    static constexpr ptrdiff_t offsetOfJITExecutionActiveThreshold() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_activeThreshold); }
-    static constexpr ptrdiff_t offsetOfJITExecutionTotalCount() { return OBJECT_OFFSETOF(CodeBlock, m_jitExecuteCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_totalCount); }
-
-    const BaselineExecutionCounter& jitExecuteCounter() const { return m_jitExecuteCounter; }
+    const BaselineExecutionCounter& baselineExecuteCounter();
 
     unsigned optimizationDelayCounter() const { return m_optimizationDelayCounter; }
 
@@ -803,7 +848,7 @@ public:
     NO_RETURN_DUE_TO_CRASH void endValidationDidFail();
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CodeBlockRareData);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RareData, CodeBlockRareData);
     public:
         Vector<HandlerInfo> m_exceptionHandlers;
 
@@ -839,7 +884,7 @@ public:
     template<typename Metadata>
     ptrdiff_t offsetInMetadataTable(Metadata* metadata)
     {
-        return bitwise_cast<uint8_t*>(metadata) - bitwise_cast<uint8_t*>(metadataTable());
+        return std::bit_cast<uint8_t*>(metadata) - std::bit_cast<uint8_t*>(metadataTable());
     }
 
     size_t metadataSizeInBytes()
@@ -954,6 +999,7 @@ private:
     SentinelLinkedList<CallLinkInfoBase, BasicRawSentinelNode<CallLinkInfoBase>> m_incomingCalls;
     uint16_t m_optimizationDelayCounter { 0 };
     uint16_t m_reoptimizationRetryCounter { 0 };
+    float m_previousCounter { 0 };
     StructureWatchpointMap m_llintGetByIdWatchpointMap;
     RefPtr<JSC::JITCode> m_jitCode;
 #if ENABLE(JIT)
@@ -979,23 +1025,34 @@ private:
 
     WriteBarrier<CodeBlock> m_alternative;
 
-    BaselineExecutionCounter m_jitExecuteCounter;
-
-    float m_previousCounter { 0 };
-
     ApproximateTime m_creationTime;
 
     std::unique_ptr<RareData> m_rareData;
+#if OS(WINDOWS) && !ENABLE(CODEBLOCK_CRASH_ANALYSIS)
+    CrashChecker& checker()
+    {
+        // This is needed because the Windows build appears to be using more space
+        // in CodeBlock than other ports for unknown reasons. The addition of
+        // m_checker appears to push it pass 224 bytes and fails the static_assert
+        // below. NO_UNIQUE_ADDRESS appears to not be supported on the Windows build
+        // as well. So, we'll apply this workaround of using a static stub instead.
+        static CrashChecker noOpCheckerStub;
+        return noOpCheckerStub;
+    }
+#else
+    NO_UNIQUE_ADDRESS CrashChecker m_checker;
+    ALWAYS_INLINE CrashChecker& checker() { return m_checker; }
+#endif
 
 #if ASSERT_ENABLED
     Lock m_cachedIdentifierUidsLock;
-    HashSet<UniquedStringImpl*> m_cachedIdentifierUids;
+    UncheckedKeyHashSet<UniquedStringImpl*> m_cachedIdentifierUids;
+    uint32_t m_magic;
 #endif
 };
 /* This check is for normal Release builds; ASSERT_ENABLED changes the size. */
 #if !ASSERT_ENABLED
-// TODO Figure out why this went up on my machine
-static_assert(sizeof(CodeBlock) <= 240, "Keep it small for memory saving");
+static_assert(sizeof(CodeBlock) <= 224, "Keep it small for memory saving");
 #endif
 
 template <typename ExecutableType>
@@ -1034,3 +1091,5 @@ namespace WTF {
 JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::CodeBlock*);
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

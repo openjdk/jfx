@@ -30,6 +30,7 @@
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"
@@ -46,7 +47,6 @@
 #include "ThreadSafeDataBuffer.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
-#include <variant>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -193,7 +193,7 @@ void IDBRequest::setVersionChangeTransaction(IDBTransaction& transaction)
     ASSERT(transaction.isVersionChange());
     ASSERT(!transaction.isFinishedOrFinishing());
 
-    m_transaction = &transaction;
+    m_transaction = transaction;
 }
 
 RefPtr<WebCore::IDBTransaction> IDBRequest::transaction() const
@@ -216,18 +216,16 @@ std::optional<IDBObjectStoreIdentifier> IDBRequest::sourceObjectStoreIdentifier(
     );
 }
 
-uint64_t IDBRequest::sourceIndexIdentifier() const
+std::optional<IDBIndexIdentifier> IDBRequest::sourceIndexIdentifier() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!m_source)
-        return 0;
+        return std::nullopt;
 
-    return WTF::switchOn(m_source.value(),
-        [] (const RefPtr<IDBObjectStore>&) -> uint64_t { return 0; },
-        [] (const RefPtr<IDBIndex>& index) -> uint64_t { return index->info().identifier(); },
-        [] (const RefPtr<IDBCursor>&) -> uint64_t { return 0; }
-    );
+    if (auto* index = std::get_if<RefPtr<IDBIndex>>(&m_source.value()))
+        return (*index)->info().identifier();
+    return std::nullopt;
 }
 
 IndexedDB::ObjectStoreRecordType IDBRequest::requestedObjectStoreRecordType() const
@@ -294,11 +292,11 @@ void IDBRequest::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
     if (!event.isTrusted()) {
-        EventDispatcher::dispatchEvent({ this }, event);
+        EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
         return;
     }
 
-    m_eventBeingDispatched = &event;
+    m_eventBeingDispatched = event;
 
     if (event.type() != eventNames().blockedEvent) {
         m_readyState = ReadyState::Done;
@@ -315,16 +313,18 @@ void IDBRequest::dispatchEvent(Event& event)
         }
     }
 
-    Vector<EventTarget*> targets { this };
-
+    bool shouldDispatchOnTransaction = false;
     if (&event == m_openDatabaseSuccessEvent)
         m_openDatabaseSuccessEvent = nullptr;
     else if (m_transaction && !m_transaction->didDispatchAbortOrCommit())
-        targets = { this, m_transaction.get(), &m_transaction->database() };
+        shouldDispatchOnTransaction = true;
 
     {
-        TransactionActivator activator(m_transaction.get());
-        EventDispatcher::dispatchEvent(targets, event);
+        TransactionActivator activator(transaction().get());
+        if (shouldDispatchOnTransaction)
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_transaction.get(), &m_transaction->database() }), event);
+        else
+            EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this }), event);
     }
 
     m_eventBeingDispatched = nullptr;
@@ -465,7 +465,7 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     ASSERT(!m_pendingCursor);
     ASSERT(&cursor == resultCursor());
 
-    m_pendingCursor = &cursor;
+    m_pendingCursor = cursor;
     m_result = NullResultType::Undefined;
 
     RefPtr context = scriptExecutionContext();

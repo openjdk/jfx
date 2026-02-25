@@ -75,7 +75,7 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
         body = PAL::decodeURLEscapeSequences(makeStringByReplacingAll(makeStringByReplacingAll(body, '&', "\r\n"_s), '+', ' '));
     }
 
-    Vector<uint8_t> bodyData(std::span<const char>("body=", static_cast<size_t>(5)));
+    Vector<uint8_t> bodyData("body="_span);
     FormDataBuilder::encodeStringAsFormData(bodyData, body.utf8());
     body = makeStringByReplacingAll(bodyData.span(), '+', "%20"_s);
 
@@ -235,7 +235,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormContro
 
     formData->setIdentifier(generateFormDataIdentifier());
 
-    auto formState = FormState::create(form, WTFMove(formValues), document, trigger);
+    auto formState = FormState::create(form, WTFMove(formValues), document, trigger, submitter.get());
 
     return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event, submitter.get()), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
 }
@@ -249,11 +249,6 @@ URL FormSubmission::requestURL() const
     if (m_method == Method::Get && !requestURL.protocolIsJavaScript())
         requestURL.setQuery(m_formData->flattenToString());
     return requestURL;
-}
-
-RefPtr<Event> FormSubmission::protectedEvent() const
-{
-    return m_event;
 }
 
 void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)

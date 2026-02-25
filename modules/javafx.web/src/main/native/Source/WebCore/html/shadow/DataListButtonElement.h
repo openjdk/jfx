@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "HTMLDivElement.h"
 
 namespace WebCore {
@@ -51,10 +49,9 @@ private:
     explicit DataListButtonElement(Document&, DataListButtonOwner&);
 
     void defaultEventHandler(Event&) override;
+    bool isDisabledFormControl() const override;
 
     DataListButtonOwner& m_owner;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

@@ -50,6 +50,7 @@
 #include "InspectorInstrumentation.h"
 #include "IntRect.h"
 #include "JSCanvasRenderingContext2D.h"
+#include "JSDOMRectReadOnly.h"
 #include "JSExecState.h"
 #include "JSHTMLCanvasElement.h"
 #include "JSImageBitmap.h"
@@ -68,6 +69,7 @@
 #include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <JavaScriptCore/StrongInlines.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(OFFSCREEN_CANVAS)
@@ -84,8 +86,14 @@
 #include "WebGLRenderingContext.h"
 #endif
 
+#if ENABLE(WEBDRIVER_BIDI)
+#include "AutomationInstrumentation.h"
+#endif
+
 namespace WebCore {
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageConsoleClient);
 
 PageConsoleClient::PageConsoleClient(Page& page)
     : m_page(page)
@@ -148,10 +156,13 @@ void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& 
         page->chrome().client().addMessageToConsole(consoleMessage->source(), consoleMessage->level(), message, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
         page->chrome().client().addMessageWithArgumentsToConsole(consoleMessage->source(), consoleMessage->level(), message, additionalArguments, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
 
-        if (UNLIKELY(page->settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions()))
+        if (page->settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions()) [[unlikely]]
             logMessageToSystemConsole(*consoleMessage);
     }
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(consoleMessage);
+#endif
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(consoleMessage));
 }
 
@@ -202,6 +213,9 @@ void PageConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel l
     unsigned lineNumber = message->line();
     unsigned columnNumber = message->column();
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(message);
+#endif
     Ref page = m_page.get();
     InspectorInstrumentation::addMessageToConsole(page, WTFMove(message));
 
@@ -227,16 +241,16 @@ void PageConsoleClient::countReset(JSC::JSGlobalObject* lexicalGlobalObject, con
     InspectorInstrumentation::consoleCountReset(protectedPage(), lexicalGlobalObject, label);
 }
 
-void PageConsoleClient::profile(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profile(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::startProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::startProfiling(protectedPage(), title);
 }
 
-void PageConsoleClient::profileEnd(JSC::JSGlobalObject* lexicalGlobalObject, const String& title)
+void PageConsoleClient::profileEnd(JSC::JSGlobalObject*, const String& title)
 {
     // FIXME: <https://webkit.org/b/153499> Web Inspector: console.profile should use the new Sampling Profiler
-    InspectorInstrumentation::stopProfiling(protectedPage(), lexicalGlobalObject, title);
+    InspectorInstrumentation::stopProfiling(protectedPage(), title);
 }
 
 void PageConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String& title)
@@ -294,7 +308,7 @@ static CanvasRenderingContext* canvasRenderingContext(JSC::VM& vm, JSC::JSValue 
 
 void PageConsoleClient::record(JSC::JSGlobalObject* lexicalGlobalObject, Ref<ScriptArguments>&& arguments)
 {
-    if (LIKELY(!InspectorInstrumentation::hasFrontends()))
+    if (!InspectorInstrumentation::hasFrontends()) [[likely]]
         return;
 
     if (auto* target = objectArgumentAt(arguments, 0)) {
@@ -305,7 +319,7 @@ void PageConsoleClient::record(JSC::JSGlobalObject* lexicalGlobalObject, Ref<Scr
 
 void PageConsoleClient::recordEnd(JSC::JSGlobalObject* lexicalGlobalObject, Ref<ScriptArguments>&& arguments)
 {
-    if (LIKELY(!InspectorInstrumentation::hasFrontends()))
+    if (!InspectorInstrumentation::hasFrontends()) [[likely]]
         return;
 
     if (auto* target = objectArgumentAt(arguments, 0)) {
@@ -327,7 +341,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
         if (auto* node = JSNode::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 RefPtr<ImageBuffer> snapshot;
 
                 // Only try to do something special for subclasses of Node if they're detached from the DOM tree.
@@ -336,7 +350,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
                         if (auto* cachedImage = imageElement.cachedImage()) {
                             auto* image = cachedImage->image();
                             if (image && image != &Image::nullImage()) {
-                                snapshot = ImageBuffer::create(image->size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+                                snapshot = ImageBuffer::create(image->size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
                                 snapshot->context().drawImage(*image, FloatPoint(0, 0));
                             }
                         }
@@ -352,7 +366,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
                     else if (RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(node)) {
                         unsigned videoWidth = videoElement->videoWidth();
                         unsigned videoHeight = videoElement->videoHeight();
-                        snapshot = ImageBuffer::create(FloatSize(videoWidth, videoHeight), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+                        snapshot = ImageBuffer::create(FloatSize(videoWidth, videoHeight), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
                         videoElement->paintCurrentFrameInContext(snapshot->context(), FloatRect(0, 0, videoWidth, videoHeight));
                     }
 #endif
@@ -366,7 +380,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
                 if (dataURL.isEmpty()) {
                     if (!snapshot) {
-                        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
+                        if (RefPtr localMainFrame = m_page->localMainFrame())
                             snapshot = WebCore::snapshotNode(*localMainFrame, *node, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() });
                     }
 
@@ -376,26 +390,34 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
             }
         } else if (auto* imageData = JSImageData::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 auto sourceSize = imageData->size();
-                if (auto imageBuffer = ImageBuffer::create(sourceSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8)) {
+                if (auto imageBuffer = ImageBuffer::create(sourceSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8)) {
                     IntRect sourceRect(IntPoint(), sourceSize);
-                    imageBuffer->putPixelBuffer(imageData->pixelBuffer(), sourceRect);
+                    imageBuffer->putPixelBuffer(imageData->byteArrayPixelBuffer().get(), sourceRect);
                     dataURL = imageBuffer->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
                 }
             }
         } else if (auto* imageBitmap = JSImageBitmap::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 if (auto* imageBuffer = imageBitmap->buffer())
                     dataURL = imageBuffer->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
             }
         } else if (auto* context = canvasRenderingContext(vm, possibleTarget)) {
                 target = possibleTarget;
-                if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 if (auto result = InspectorCanvas::getContentAsDataURL(*context))
                         dataURL = result.value();
                 }
+        } else if (auto* rect = JSDOMRectReadOnly::toWrapped(vm, possibleTarget)) {
+            target = possibleTarget;
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
+                if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+                    if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, enclosingIntRect(rect->toFloatRect()), { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))
+                        dataURL = snapshot->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
+                }
+            }
         } else {
             String base64;
             if (possibleTarget.getString(lexicalGlobalObject, base64) && startsWithLettersIgnoringASCIICase(base64, "data:"_s) && base64.length() > 5) {
@@ -405,9 +427,9 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
         }
     }
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         if (!target) {
-            if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
+            if (RefPtr localMainFrame = m_page->localMainFrame()) {
             // If no target is provided, capture an image of the viewport.
                 auto viewportRect = localMainFrame->view()->unobscuredContentRect();
                 if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, viewportRect, { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))

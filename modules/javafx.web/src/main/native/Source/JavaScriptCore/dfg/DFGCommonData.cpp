@@ -45,9 +45,9 @@ void CommonData::shrinkToFit()
 }
 
 static Lock pcCodeBlockMapLock;
-inline HashMap<void*, CodeBlock*>& pcCodeBlockMap() WTF_REQUIRES_LOCK(pcCodeBlockMapLock)
+inline UncheckedKeyHashMap<void*, CodeBlock*>& pcCodeBlockMap() WTF_REQUIRES_LOCK(pcCodeBlockMapLock)
 {
-    static LazyNeverDestroyed<HashMap<void*, CodeBlock*>> pcCodeBlockMap;
+    static LazyNeverDestroyed<UncheckedKeyHashMap<void*, CodeBlock*>> pcCodeBlockMap;
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         pcCodeBlockMap.construct();
@@ -65,7 +65,7 @@ bool CommonData::invalidateLinkedCode()
     if (!m_isStillValid)
         return false;
 
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)
@@ -84,7 +84,7 @@ CommonData::~CommonData()
 {
     if (m_isUnlinked)
         return;
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)
@@ -104,7 +104,7 @@ void CommonData::installVMTrapBreakpoints(CodeBlock* owner)
 #if !defined(NDEBUG)
     // We need to be able to handle more than one invalidation point at the same pc
     // but we want to make sure we don't forget to remove a pc from the map.
-    HashSet<void*> newReplacements;
+    UncheckedKeyHashSet<void*> newReplacements;
 #endif
     for (auto& jumpReplacement : m_jumpReplacements) {
         jumpReplacement.installVMTrapBreakpoint();

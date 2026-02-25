@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,14 @@
 #include "WebGPUComputePassEncoder.h"
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class ComputePassEncoderImpl final : public ComputePassEncoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ComputePassEncoderImpl);
 public:
     static Ref<ComputePassEncoderImpl> create(WebGPUPtr<WGPUComputePassEncoder>&& computePassEncoder, ConvertToBackingContext& convertToBackingContext)
     {
@@ -63,12 +64,11 @@ private:
 
     void end() final;
 
-    void setBindGroup(Index32, const BindGroup&,
+    void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&&) final;
 
-    void setBindGroup(Index32, const BindGroup&,
-        const uint32_t* dynamicOffsetsArrayBuffer,
-        size_t dynamicOffsetsArrayBufferLength,
+    void setBindGroup(Index32, const BindGroup*,
+        std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) final;
 
@@ -79,7 +79,7 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUComputePassEncoder> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

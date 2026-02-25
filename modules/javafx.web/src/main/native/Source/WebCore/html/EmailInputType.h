@@ -31,10 +31,12 @@
 #pragma once
 
 #include "BaseTextInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class EmailInputType final : public BaseTextInputType {
+    WTF_MAKE_TZONE_ALLOCATED(EmailInputType);
 public:
     static Ref<EmailInputType> create(HTMLInputElement& element)
     {
@@ -53,7 +55,7 @@ private:
     const AtomString& formControlType() const final;
     String typeMismatchText() const final;
     bool supportsSelectionAPI() const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     void attributeChanged(const QualifiedName&) final;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class SVGPropertyAnimatorFactory {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPropertyAnimatorFactory);
 public:
     SVGPropertyAnimatorFactory() = default;
 
@@ -117,7 +117,6 @@ private:
             Pair { SVGNames::strokeAttr->impl(),         { SVGValueProperty<Color>::create, SVGPropertyAnimatorFactory::createColorAnimator } },
 
             Pair { SVGNames::font_sizeAttr->impl(),         { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
-            Pair { SVGNames::kerningAttr->impl(),           { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::letter_spacingAttr->impl(),    { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::stroke_dashoffsetAttr->impl(), { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::stroke_widthAttr->impl(),      { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },

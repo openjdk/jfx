@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -40,7 +40,7 @@ public:
     void setDataBufferingPolicy(DataBufferingPolicy);
 
     // FIXME: This is exposed for the InspectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
-    ResourceLoaderIdentifier identifier() const { return m_identifier; }
+    std::optional<ResourceLoaderIdentifier> resourceLoaderIdentifier() const { return m_resourceLoaderIdentifier; }
 
     void clear();
 
@@ -60,7 +60,7 @@ private:
     void allClientsRemoved() override;
 
     void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
-    void responseReceived(const ResourceResponse&) override;
+    void responseReceived(ResourceResponse&&) override;
     bool shouldCacheResponse(const ResourceResponse&) override;
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
 
@@ -71,10 +71,10 @@ private:
     void notifyClientsDataWasReceived(const SharedBuffer&);
 
 #if USE(QUICK_LOOK)
-    void previewResponseReceived(const ResourceResponse&) final;
+    void previewResponseReceived(ResourceResponse&&) final;
 #endif
 
-    ResourceLoaderIdentifier m_identifier;
+    Markable<ResourceLoaderIdentifier> m_resourceLoaderIdentifier;
 
     struct RedirectPair {
     public:

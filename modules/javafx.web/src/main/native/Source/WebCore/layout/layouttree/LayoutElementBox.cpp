@@ -82,6 +82,16 @@ const Box* ElementBox::firstInFlowOrFloatingChild() const
     return nullptr;
 }
 
+const Box* ElementBox::firstOutOfFlowChild() const
+{
+    if (auto* firstChild = this->firstChild()) {
+        if (firstChild->isOutOfFlowPositioned())
+            return firstChild;
+        return firstChild->nextOutOfFlowSibling();
+    }
+    return nullptr;
+}
+
 const Box* ElementBox::lastInFlowChild() const
 {
     if (auto* lastChild = this->lastChild()) {
@@ -102,13 +112,19 @@ const Box* ElementBox::lastInFlowOrFloatingChild() const
     return nullptr;
 }
 
+const Box* ElementBox::lastOutOfFlowChild() const
+{
+    if (auto* lastChild = this->lastChild()) {
+        if (lastChild->isOutOfFlowPositioned())
+            return lastChild;
+        return lastChild->previousOutOfFlowSibling();
+    }
+    return nullptr;
+}
+
 bool ElementBox::hasOutOfFlowChild() const
 {
-    for (auto* child = this->firstChild(); child; child = child->nextSibling()) {
-        if (child->isOutOfFlowPositioned())
-            return true;
-    }
-    return false;
+    return !!firstOutOfFlowChild();
 }
 
 void ElementBox::appendChild(UniqueRef<Box> childRef)
@@ -190,7 +206,9 @@ LayoutUnit ElementBox::intrinsicWidth() const
     ASSERT(hasIntrinsicWidth());
     if (m_replacedData && m_replacedData->intrinsicSize)
         return m_replacedData->intrinsicSize->width();
-    return LayoutUnit { style().logicalWidth().value() };
+
+    // FIXME: Document what invariant holds to allow not checking if the logicalWidth() is fixed.
+    return LayoutUnit { style().logicalWidth().tryFixed()->value };
 }
 
 LayoutUnit ElementBox::intrinsicHeight() const
@@ -198,7 +216,9 @@ LayoutUnit ElementBox::intrinsicHeight() const
     ASSERT(hasIntrinsicHeight());
     if (m_replacedData && m_replacedData->intrinsicSize)
         return m_replacedData->intrinsicSize->height();
-    return LayoutUnit { style().logicalHeight().value() };
+
+    // FIXME: Document what invariant holds to allow not checking if the logicalHeight() is fixed.
+    return LayoutUnit { style().logicalHeight().tryFixed()->value };;
 }
 
 LayoutUnit ElementBox::intrinsicRatio() const

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,8 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/unicode/CharacterNames.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 namespace ISO8601 {
@@ -255,7 +257,7 @@ std::optional<Duration> parseDuration(StringView string)
 
 enum class Second60Mode { Accept, Reject };
 template<typename CharacterType>
-static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>& buffer, Second60Mode second60Mode)
+static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>& buffer, Second60Mode second60Mode, bool parseSubMinutePrecision = true)
 {
     // https://tc39.es/proposal-temporal/#prod-TimeSpec
     // TimeSpec :
@@ -320,6 +322,9 @@ static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>
     } else if (!(*buffer >= '0' && (second60Mode == Second60Mode::Accept ? (*buffer <= '6') : (*buffer <= '5'))))
         return PlainTime(hour, minute, 0, 0, 0, 0);
 
+    if (!parseSubMinutePrecision)
+        return std::nullopt;
+
     unsigned second = 0;
     if (buffer.lengthRemaining() < 2)
         return std::nullopt;
@@ -371,17 +376,17 @@ static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>
 }
 
 template<typename CharacterType>
-static std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<int64_t> parseUTCOffset(StringParsingBuffer<CharacterType>& buffer, bool parseSubMinutePrecision = true)
 {
-    // TimeZoneNumericUTCOffset :
-    //     TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour
-    //     TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour : TimeZoneUTCOffsetMinute
-    //     TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour TimeZoneUTCOffsetMinute
-    //     TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour : TimeZoneUTCOffsetMinute : TimeZoneUTCOffsetSecond TimeZoneUTCOffsetFraction[opt]
-    //     TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour TimeZoneUTCOffsetMinute TimeZoneUTCOffsetSecond TimeZoneUTCOffsetFraction[opt]
+    // UTCOffset[SubMinutePrecision] :
+    //     ASCIISign Hour
+    //     ASCIISign Hour TimeSeparator[+Extended] MinuteSecond
+    //     ASCIISign Hour TimeSeparator[~Extended] MinuteSecond
+    //     [+SubMinutePrecision] ASCIISign Hour TimeSeparator[+Extended] MinuteSecond TimeSeparator[+Extended] MinuteSecond TemporalDecimalFractionopt
+    //     [+SubMinutePrecision] ASCIISign Hour TimeSeparator[~Extended] MinuteSecond TimeSeparator[~Extended] MinuteSecond TemporalDecimalFractionopt
     //
     //  This is the same to
-    //     TimeZoneUTCOffsetSign TimeSpec
+    //     ASCIISign TimeSpec
     //
     //  Maximum and minimum values are ±23:59:59.999999999 = ±86399999999999ns, which can be represented by int64_t / double's integer part.
 
@@ -398,7 +403,7 @@ static std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringParsingBuffer<
     } else
         return std::nullopt;
 
-    auto plainTime = parseTimeSpec(buffer, Second60Mode::Reject);
+    auto plainTime = parseTimeSpec(buffer, Second60Mode::Reject, parseSubMinutePrecision);
     if (!plainTime)
         return std::nullopt;
 
@@ -412,10 +417,10 @@ static std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringParsingBuffer<
     return (nsPerHour * hour + nsPerMinute * minute + nsPerSecond * second + nsPerMillisecond * millisecond + nsPerMicrosecond * microsecond + nanosecond) * factor;
 }
 
-std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringView string)
+std::optional<int64_t> parseUTCOffset(StringView string, bool parseSubMinutePrecision)
 {
-    return readCharactersForParsing(string, [](auto buffer) -> std::optional<int64_t> {
-        auto result = parseTimeZoneNumericUTCOffset(buffer);
+    return readCharactersForParsing(string, [parseSubMinutePrecision](auto buffer) -> std::optional<int64_t> {
+        auto result = parseUTCOffset(buffer, parseSubMinutePrecision);
         if (!buffer.atEnd())
             return std::nullopt;
         return result;
@@ -523,18 +528,71 @@ std::optional<int64_t> parseUTCOffsetInMinutes(StringView string)
 }
 
 template<typename CharacterType>
-static bool canBeCalendar(const StringParsingBuffer<CharacterType>& buffer)
+static bool canBeRFC9557Annotation(const StringParsingBuffer<CharacterType>& buffer)
 {
-    // https://tc39.es/proposal-temporal/#prod-Calendar
-    // Calendar :
-    //     [u-ca= CalendarName]
-    return buffer.lengthRemaining() >= 6 && buffer[0] == '[' && buffer[1] == 'u' && buffer[2] == '-' && buffer[3] == 'c' && buffer[4] == 'a' && buffer[5] == '=';
+    // https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime
+    // Step 4(a)(ii)(2)(a):
+    //  Let key be the source text matched by the AnnotationKey Parse Node contained within annotation
+    //
+    // https://tc39.es/proposal-temporal/#prod-Annotation
+    // Annotation :::
+    //     [ AnnotationCriticalFlag[opt] AnnotationKey = AnnotationValue ]
+    //
+    // AnnotationCriticalFlag :::
+    //     !
+    //
+    // AnnotationKey :::
+    //     AKeyLeadingChar
+    //     AnnotationKey AKeyChar
+    //
+    // AKeyLeadingChar :::
+    //     LowercaseAlpha
+    //     _
+    //
+    // AKeyChar :::
+    //     AKeyLeadingChar
+    //     DecimalDigit
+    //     -
+    //
+    // AnnotationValue :::
+    //     AnnotationValueComponent
+    //     AnnotationValueComponent - AnnotationValue
+    //
+    // AnnotationValueComponent :::
+    //     Alpha AnnotationValueComponent[opt]
+    //     DecimalDigit AnnotationValueComponent[opt]
+
+    // This just checks for '[', followed by an optional '!' (critical flag),
+    // followed by a valid key, followed by an '='.
+
+    size_t length = buffer.lengthRemaining();
+    // Because of `[`, `=`, `]`, `AnnotationKey`, and `AnnotationValue`,
+    // the annotation must have length >= 5.
+    if (length < 5)
+        return false;
+    if (*buffer != '[')
+        return false;
+    size_t index = 1;
+    if (buffer[index] == '!')
+        ++index;
+    if (!isASCIILower(buffer[index]) && buffer[index] != '_')
+        return false;
+    ++index;
+    while (index < length) {
+        if (buffer[index] == '=')
+            return true;
+        if (isASCIILower(buffer[index]) || isASCIIDigit(buffer[index]) || buffer[index] == '-' || buffer[index] == '_')
+            ++index;
+        else
+            return false;
+    }
+    return false;
 }
 
 template<typename CharacterType>
 static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, CharacterType character)
 {
-    switch (static_cast<UChar>(character)) {
+    switch (static_cast<char16_t>(character)) {
     // UTCDesignator
     // https://tc39.es/proposal-temporal/#prod-UTCDesignator
     case 'z':
@@ -548,10 +606,8 @@ static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, Char
     // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
     case '[': {
         // We should reject calendar extension case.
-        // https://tc39.es/proposal-temporal/#prod-Calendar
-        // Calendar :
-        //     [u-ca= CalendarName]
-        if (canBeCalendar(buffer))
+        // For BNF, see comment in canBeRFC9557Annotation()
+        if (canBeRFC9557Annotation(buffer))
             return false;
         return true;
     }
@@ -561,16 +617,14 @@ static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, Char
 }
 
 template<typename CharacterType>
-static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneBracketedAnnotation(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<Variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotation(StringParsingBuffer<CharacterType>& buffer)
 {
-    // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
-    // TimeZoneBracketedAnnotation :
-    //     [ TimeZoneBracketedName ]
-    //
-    // TimeZoneBracketedName :
+    // https://tc39.es/proposal-temporal/#prod-TimeZoneAnnotation
+    // TimeZoneAnnotation :
+    //     [ AnnotationCriticalFlag_opt TimeZoneIdentifier ]
+    // TimeZoneIdentifier :
+    //     UTCOffset_[~SubMinutePrecision]
     //     TimeZoneIANAName
-    //     Etc/GMT ASCIISign Hour
-    //     TimeZoneUTCOffsetName
 
     if (buffer.lengthRemaining() < 3)
         return std::nullopt;
@@ -582,11 +636,10 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneBrackete
     if (*buffer == '!')
         buffer.advance();
 
-    switch (static_cast<UChar>(*buffer)) {
+    switch (static_cast<char16_t>(*buffer)) {
     case '+':
     case '-': {
-        // TimeZoneUTCOffsetName is the same to TimeZoneNumericUTCOffset.
-        auto offset = parseTimeZoneNumericUTCOffset(buffer);
+        auto offset = parseUTCOffset(buffer, false);
         if (!offset)
             return std::nullopt;
         if (buffer.atEnd())
@@ -621,7 +674,7 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneBrackete
                 }
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     default: {
         // TZLeadingChar :
@@ -715,14 +768,14 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
 {
     if (buffer.atEnd())
         return std::nullopt;
-    switch (static_cast<UChar>(*buffer)) {
+    switch (static_cast<char16_t>(*buffer)) {
     // UTCDesignator
     // https://tc39.es/proposal-temporal/#prod-UTCDesignator
     case 'z':
     case 'Z': {
         buffer.advance();
         if (!buffer.atEnd() && *buffer == '[' && canBeTimeZone(buffer, *buffer)) {
-            auto timeZone = parseTimeZoneBracketedAnnotation(buffer);
+            auto timeZone = parseTimeZoneAnnotation(buffer);
             if (!timeZone)
                 return std::nullopt;
             return TimeZoneRecord { true, std::nullopt, WTFMove(timeZone.value()) };
@@ -733,11 +786,11 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
     // https://tc39.es/proposal-temporal/#prod-TimeZoneUTCOffsetSign
     case '+':
     case '-': {
-        auto offset = parseTimeZoneNumericUTCOffset(buffer);
+        auto offset = parseUTCOffset(buffer);
         if (!offset)
             return std::nullopt;
         if (!buffer.atEnd() && *buffer == '[' && canBeTimeZone(buffer, *buffer)) {
-            auto timeZone = parseTimeZoneBracketedAnnotation(buffer);
+            auto timeZone = parseTimeZoneAnnotation(buffer);
             if (!timeZone)
                 return std::nullopt;
             return TimeZoneRecord { false, offset.value(), WTFMove(timeZone.value()) };
@@ -747,7 +800,7 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
     // TimeZoneBracketedAnnotation
     // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
     case '[': {
-        auto timeZone = parseTimeZoneBracketedAnnotation(buffer);
+        auto timeZone = parseTimeZoneAnnotation(buffer);
         if (!timeZone)
             return std::nullopt;
         return TimeZoneRecord { false, std::nullopt, WTFMove(timeZone.value()) };
@@ -758,29 +811,30 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
 }
 
 template<typename CharacterType>
-static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<RFC9557Annotation> parseOneRFC9557Annotation(StringParsingBuffer<CharacterType>& buffer)
 {
-    // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
-    // Calendar :
-    //     [u-ca= CalendarName ]
-    //
-    // CalendarName :
-    //     CalendarNameComponent
-    //     CalendarNameComponent - CalendarName
-    //
-    // CalendarNameComponent :
-    //     CalChar CalChar CalChar CalChar[opt] CalChar[opt] CalChar[opt] CalChar[opt] CalChar[opt]
-    //
-    // CalChar :
-    //     Alpha
-    //     Digit
+    // For BNF, see comment in canBeRFC9557Annotation()
 
-    if (!canBeCalendar(buffer))
+    if (!canBeRFC9557Annotation(buffer))
         return std::nullopt;
-    buffer.advanceBy(6);
+    RFC9557Flag flag = buffer[1] == '!' ? RFC9557Flag::Critical : RFC9557Flag::None;
+    // Skip '[' or '[!'
+    buffer.advanceBy(flag == RFC9557Flag::Critical ? 2 : 1);
+
+    // Parse the key
+    unsigned keyLength = 0;
+    while (buffer[keyLength] != '=')
+        keyLength++;
+    if (!keyLength)
+        return std::nullopt;
+    auto key(buffer.span().first(keyLength));
+    buffer.advanceBy(keyLength);
 
     if (buffer.atEnd())
         return std::nullopt;
+
+    // Consume the '='
+    buffer.advance();
 
     unsigned nameLength = 0;
     {
@@ -795,6 +849,22 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
         if (!index)
             return std::nullopt;
         nameLength = index;
+    }
+
+    // Check if the key is equal to "u-ca"
+    if (key.size() != 4
+        || key[0] != 'u' || key[1] != '-'
+        || key[2] != 'c' || key[3] != 'a') {
+        // Annotation is unknown
+        // Consume the rest of the annotation
+        buffer.advanceBy(nameLength);
+        if (buffer.atEnd() || *buffer != ']') {
+            // Parse error
+            return std::nullopt;
+        }
+        // Consume the ']'
+        buffer.advance();
+        return RFC9557Annotation { flag, RFC9557Key::Other, { } };
     }
 
     auto isValidComponent = [&](unsigned start, unsigned end) {
@@ -841,7 +911,45 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
     if (*buffer != ']')
         return std::nullopt;
     buffer.advance();
-    return CalendarRecord { WTFMove(result) };
+    return RFC9557Annotation { flag, RFC9557Key::Calendar, WTFMove(result) };
+}
+
+template<typename CharacterType>
+static std::optional<Vector<CalendarID, 1>>
+parseCalendar(StringParsingBuffer<CharacterType>& buffer)
+{
+    // https://tc39.es/proposal-temporal/#prod-Annotations
+    //  Annotations :::
+    //      Annotation Annotations[opt]
+
+    if (!canBeRFC9557Annotation(buffer))
+        return std::nullopt;
+
+    Vector<CalendarID, 1> result;
+    // https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime
+    bool calendarWasCritical = false;
+    while (canBeRFC9557Annotation(buffer)) {
+        auto annotation = parseOneRFC9557Annotation(buffer);
+        if (!annotation)
+            return std::nullopt;
+        if (annotation->m_key == RFC9557Key::Calendar)
+            result.append(annotation->m_value);
+        if (annotation->m_flag == RFC9557Flag::Critical) {
+            // Check for unknown annotations with critical flag
+            // step 4(a)(ii)(2)(d)(i)
+            if (annotation->m_key != RFC9557Key::Calendar)
+                return std::nullopt;
+            // Check for multiple calendars and critical flag
+            // step 4(a)(ii)(2)(c)(ii)
+            if (result.size() == 1)
+                calendarWasCritical = true;
+            else
+                return std::nullopt;
+        }
+        if (calendarWasCritical && result.size() > 1)
+            return std::nullopt;
+    }
+    return result;
 }
 
 template<typename CharacterType>
@@ -1017,7 +1125,7 @@ static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::option
 }
 
 template<typename CharacterType>
-static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringParsingBuffer<CharacterType>& buffer)
 {
     // https://tc39.es/proposal-temporal/#prod-CalendarTime
     // CalendarTime :
@@ -1048,19 +1156,20 @@ static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::o
     if (buffer.atEnd())
         return std::tuple { WTFMove(plainTime.value()), WTFMove(timeZoneOptional), std::nullopt };
 
-    std::optional<CalendarRecord> calendarOptional;
-    if (canBeCalendar(buffer)) {
-        auto calendar = parseCalendar(buffer);
-        if (!calendar)
+    std::optional<CalendarID> calendarOptional;
+    if (canBeRFC9557Annotation(buffer)) {
+        auto calendars = parseCalendar(buffer);
+        if (!calendars)
             return std::nullopt;
-        calendarOptional = WTFMove(calendar);
+        if (calendars.value().size() > 0)
+            calendarOptional = WTFMove(calendars.value()[0]);
     }
 
     return std::tuple { WTFMove(plainTime.value()), WTFMove(timeZoneOptional), WTFMove(calendarOptional) };
 }
 
 template<typename CharacterType>
-static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringParsingBuffer<CharacterType>& buffer)
 {
     // https://tc39.es/proposal-temporal/#prod-DateTime
     // CalendarDateTime :
@@ -1072,14 +1181,16 @@ static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::option
 
     auto [plainDate, plainTimeOptional, timeZoneOptional] = WTFMove(dateTime.value());
 
-    if (!buffer.atEnd() && canBeCalendar(buffer)) {
-        auto calendar = parseCalendar(buffer);
-        if (!calendar)
+    std::optional<CalendarID> calendarOptional;
+    if (!buffer.atEnd() && canBeRFC9557Annotation(buffer)) {
+        auto calendars = parseCalendar(buffer);
+        if (!calendars)
             return std::nullopt;
-        return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), WTFMove(calendar) };
+        if (calendars.value().size() > 0)
+            calendarOptional = WTFMove(calendars.value()[0]);
     }
 
-    return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), std::nullopt };
+    return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), WTFMove(calendarOptional) };
 }
 
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView string)
@@ -1146,9 +1257,9 @@ static bool isAmbiguousCalendarTime(StringParsingBuffer<CharacterType>& buffer)
     return true;
 }
 
-std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView string)
+std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringView string)
 {
-    auto tuple = readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
+    auto tuple = readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> {
         auto result = parseCalendarTime(buffer);
         if (!buffer.atEnd())
             return std::nullopt;
@@ -1174,9 +1285,9 @@ std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<Time
     });
 }
 
-std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringView string)
+std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringView string)
 {
-    return readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
+    return readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> {
         auto result = parseCalendarDateTime(buffer);
         if (!buffer.atEnd())
             return std::nullopt;
@@ -1396,22 +1507,6 @@ uint8_t monthFromCode(StringView monthCode)
     return result;
 }
 
-// IsValidDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds )
-// https://tc39.es/proposal-temporal/#sec-temporal-isvalidduration
-bool isValidDuration(const Duration& duration)
-{
-    int sign = 0;
-    for (auto value : duration) {
-        if (!std::isfinite(value) || (value < 0 && sign > 0) || (value > 0 && sign < 0))
-            return false;
-
-        if (!sign && value)
-            sign = value > 0 ? 1 : -1;
-    }
-
-    return true;
-}
-
 ExactTime ExactTime::fromISOPartsAndOffset(int32_t year, uint8_t month, uint8_t day, unsigned hour, unsigned minute, unsigned second, unsigned millisecond, unsigned microsecond, unsigned nanosecond, int64_t offset)
 {
     ASSERT(month >= 1 && month <= 12);
@@ -1470,6 +1565,87 @@ static CheckedInt128 checkedCastDoubleToInt128(double n)
     return { result };
 }
 
+template<TemporalUnit unit>
+std::optional<Int128> Duration::totalNanoseconds() const
+{
+    ASSERT(unit >= TemporalUnit::Day);
+
+    CheckedInt128 resultNs { 0 };
+
+    if constexpr (unit <= TemporalUnit::Day) {
+        CheckedInt128 days = checkedCastDoubleToInt128(this->days());
+        resultNs += days * ExactTime::nsPerDay;
+    }
+    if constexpr (unit <= TemporalUnit::Hour) {
+        CheckedInt128 hours = checkedCastDoubleToInt128(this->hours());
+        resultNs += hours * ExactTime::nsPerHour;
+    }
+    if constexpr (unit <= TemporalUnit::Minute) {
+        CheckedInt128 minutes = checkedCastDoubleToInt128(this->minutes());
+        resultNs += minutes * ExactTime::nsPerMinute;
+    }
+    if constexpr (unit <= TemporalUnit::Second) {
+        CheckedInt128 seconds = checkedCastDoubleToInt128(this->seconds());
+        resultNs += seconds * ExactTime::nsPerSecond;
+    }
+    if constexpr (unit <= TemporalUnit::Millisecond) {
+        CheckedInt128 milliseconds = checkedCastDoubleToInt128(this->milliseconds());
+        resultNs += milliseconds * ExactTime::nsPerMillisecond;
+    }
+    if constexpr (unit <= TemporalUnit::Microsecond) {
+        CheckedInt128 microseconds = checkedCastDoubleToInt128(this->microseconds());
+        resultNs += microseconds * ExactTime::nsPerMicrosecond;
+    }
+    if constexpr (unit <= TemporalUnit::Nanosecond)
+        resultNs += checkedCastDoubleToInt128(this->nanoseconds());
+
+    if (resultNs.hasOverflowed())
+        return std::nullopt;
+
+    return resultNs;
+}
+template std::optional<Int128> Duration::totalNanoseconds<TemporalUnit::Day>() const;
+template std::optional<Int128> Duration::totalNanoseconds<TemporalUnit::Second>() const;
+template std::optional<Int128> Duration::totalNanoseconds<TemporalUnit::Millisecond>() const;
+template std::optional<Int128> Duration::totalNanoseconds<TemporalUnit::Microsecond>() const;
+
+static constexpr Int128 absInt128(const Int128& value)
+{
+    if (value < 0)
+        return -value;
+    return value;
+}
+
+// IsValidDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds )
+// https://tc39.es/proposal-temporal/#sec-temporal-isvalidduration
+bool isValidDuration(const Duration& duration)
+{
+    int sign = 0;
+    for (auto value : duration) {
+        if (!std::isfinite(value) || (value < 0 && sign > 0) || (value > 0 && sign < 0))
+            return false;
+
+        if (!sign && value)
+            sign = value > 0 ? 1 : -1;
+    }
+
+    // 3. If abs(years) ≥ 2^32, return false.
+    // 4. If abs(months) ≥ 2^32, return false.
+    // 5. If abs(weeks) ≥ 2^32, return false.
+    constexpr double limit = 1ULL << 32;
+    if (std::abs(duration[TemporalUnit::Year]) >= limit || std::abs(duration[TemporalUnit::Month]) >= limit || std::abs(duration[TemporalUnit::Week]) >= limit)
+        return false;
+
+    // 6. Let normalizedSeconds be days × 86,400 + hours × 3600 + minutes × 60 + seconds + ℝ(𝔽(milliseconds)) × 10^-3 + ℝ(𝔽(microseconds)) × 10^-6 + ℝ(𝔽(nanoseconds)) × 10^-9.
+    auto normalizedNanoseconds = duration.totalNanoseconds<TemporalUnit::Day>();
+    // 8. If abs(normalizedSeconds) ≥ 2^53, return false.
+    constexpr Int128 nanosecondsLimit = (Int128(1) << 53) * 1000000000;
+    if (!normalizedNanoseconds || absInt128(normalizedNanoseconds.value()) >= nanosecondsLimit)
+        return false;
+
+    return true;
+}
+
 std::optional<ExactTime> ExactTime::add(Duration duration) const
 {
     ASSERT(!duration.years());
@@ -1520,6 +1696,47 @@ Int128 ExactTime::round(Int128 quantity, unsigned increment, TemporalUnit unit, 
     return roundNumberToIncrement(quantity, incrementNs, roundingMode);
 }
 
+// https://tc39.es/proposal-temporal/#sec-temporal-datedurationsign
+static int32_t dateDurationSign(const Duration& d)
+{
+    if (d.years() > 0)
+        return 1;
+    if (d.years() < 0)
+        return -1;
+    if (d.months() > 0)
+        return 1;
+    if (d.months() < 0)
+        return -1;
+    if (d.weeks() > 0)
+        return 1;
+    if (d.weeks() < 0)
+        return -1;
+    if (d.days() > 0)
+        return 1;
+    if (d.days() < 0)
+        return -1;
+    return 0;
+}
+
+// https://tc39.es/proposal-temporal/#sec-temporal-internaldurationsign
+int32_t ISO8601::InternalDuration::sign() const
+{
+    int32_t sign = dateDurationSign(m_dateDuration);
+    if (sign)
+        return sign;
+    return timeDurationSign();
+}
+
+// https://tc39.es/proposal-temporal/#sec-temporal-combinedateandtimeduration
+InternalDuration InternalDuration::combineDateAndTimeDuration(Duration dateDuration, Int128 timeDuration)
+{
+    int32_t dateSign = dateDurationSign(dateDuration);
+    int32_t timeSign = timeDuration < 0 ? -1 : timeDuration > 0 ? 1 : 0;
+    bool signsDiffer = dateSign && timeSign && dateSign != timeSign;
+    ASSERT_UNUSED(signsDiffer, signsDiffer);
+    return InternalDuration { WTFMove(dateDuration), timeDuration };
+}
+
 // DifferenceInstant ( ns1, ns2, roundingIncrement, smallestUnit, roundingMode )
 // https://tc39.es/proposal-temporal/#sec-temporal-differenceinstant
 Int128 ExactTime::difference(ExactTime other, unsigned increment, TemporalUnit unit, RoundingMode roundingMode) const
@@ -1557,3 +1774,5 @@ bool isYearWithinLimits(double year)
 
 } // namespace ISO8601
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

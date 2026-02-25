@@ -182,11 +182,11 @@ inline namespace fundamentals_v3 {
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Unexpected.h>
+#include <wtf/Variant.h>
 
 namespace std {
 namespace experimental {
@@ -242,16 +242,16 @@ struct base {
     typedef T value_type;
     typedef E error_type;
     typedef unexpected<E> unexpected_type;
-    std::variant<value_type, error_type> s;
+    Variant<value_type, error_type> s;
     constexpr base() { }
-    constexpr base(value_tag_t, const value_type& val) : s(std::in_place_index_t<0>(), val) { }
-    constexpr base(value_tag_t, value_type&& val) : s(std::in_place_index_t<0>(), std::forward<value_type>(val)) { }
-    constexpr base(error_tag_t, const error_type& err) : s(std::in_place_index_t<1>(), err) { }
-    constexpr base(error_tag_t, error_type&& err) : s(std::in_place_index_t<1>(), std::forward<error_type>(err)) { }
+    constexpr base(value_tag_t, const value_type& val) : s(WTF::InPlaceIndexT<0>(), val) { }
+    constexpr base(value_tag_t, value_type&& val) : s(WTF::InPlaceIndexT<0>(), std::forward<value_type>(val)) { }
+    constexpr base(error_tag_t, const error_type& err) : s(WTF::InPlaceIndexT<1>(), err) { }
+    constexpr base(error_tag_t, error_type&& err) : s(WTF::InPlaceIndexT<1>(), std::forward<error_type>(err)) { }
     constexpr base(const base& o)
         : s(o.s) { }
     constexpr base(base&& o)
-        : s(std::forward<std::variant<value_type, error_type>>(o.s)) { }
+        : s(std::forward<Variant<value_type, error_type>>(o.s)) { }
 };
 
 template<class E>
@@ -273,7 +273,7 @@ struct voidbase {
 
 template<class T, class E>
 class expected : private __expected_detail::base<T, E> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(expected);
     typedef __expected_detail::base<T, E> base;
 
 public:
@@ -390,10 +390,8 @@ template<class T, class E> constexpr bool operator==(const expected<T, E>& x, co
 template<class E> constexpr bool operator==(const expected<void, E>& x, const expected<void, E>& y) { return bool(x) == bool(y) && (x ? true : x.error() == y.error()); }
 
 template<class T, class E> constexpr bool operator==(const expected<T, E>& x, const T& y) { return x ? *x == y : false; }
-template<class T, class E> constexpr bool operator==(const T& x, const expected<T, E>& y) { return y ? x == *y : false; }
 
 template<class T, class E> constexpr bool operator==(const expected<T, E>& x, const unexpected<E>& y) { return x ? false : x.error() == y.value(); }
-template<class T, class E> constexpr bool operator==(const unexpected<E>& x, const expected<T, E>& y) { return y ? false : x.value() == y.error(); }
 
 template<typename T, typename E> void swap(expected<T, E>& x, expected<T, E>& y) { x.swap(y); }
 

@@ -35,6 +35,8 @@ struct CounterDirectives {
 
 struct CounterDirectiveMap {
     HashMap<AtomString, CounterDirectives> map;
+
+    friend bool operator==(const CounterDirectiveMap&, const CounterDirectiveMap&) = default;
 };
 
 } // namespace WebCore

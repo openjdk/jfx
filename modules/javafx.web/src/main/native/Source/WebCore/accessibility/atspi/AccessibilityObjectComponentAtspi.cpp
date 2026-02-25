@@ -112,7 +112,8 @@ AccessibilityObjectAtspi* AccessibilityObjectAtspi::hitTest(const IntPoint& poin
         }
     }
 
-    m_coreObject->updateChildrenIfNecessary();
+    if (auto* axObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get()))
+        axObject->updateChildrenIfNecessary();
     if (auto* coreObject = m_coreObject->accessibilityHitTest(convertedPoint))
         return coreObject->wrapper();
 
@@ -157,14 +158,14 @@ float AccessibilityObjectAtspi::opacity() const
         return 1;
 
     if (auto* renderer = m_coreObject->renderer())
-        return renderer->style().opacity();
+        return renderer->style().opacity().value.value;
 
     return 1;
 }
 
 void AccessibilityObjectAtspi::scrollToMakeVisible(Atspi::ScrollType scrollType) const
 {
-    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
     if (!liveObject)
         return;
 

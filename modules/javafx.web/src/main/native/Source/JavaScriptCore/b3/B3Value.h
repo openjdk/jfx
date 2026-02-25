@@ -38,9 +38,12 @@
 #include "B3Width.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
@@ -52,7 +55,7 @@ class PhiChildren;
 class Procedure;
 
 class JS_EXPORT_PRIVATE Value {
-    WTF_MAKE_TZONE_ALLOCATED(Value);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Value);
 public:
     static const char* const dumpPrefix;
 
@@ -77,7 +80,6 @@ public:
     // instead of value->kind().isBlah().
     bool isChill() const { return kind().isChill(); }
     bool traps() const { return kind().traps(); }
-    bool isSensitiveToNaN() const { return kind().isSensitiveToNaN(); }
 
     Origin origin() const { return m_origin; }
     void setOrigin(Origin origin) { m_origin = origin; }
@@ -212,6 +214,8 @@ public:
     virtual Value* addConstant(Procedure&, const Value* other) const;
     virtual Value* subConstant(Procedure&, const Value* other) const;
     virtual Value* mulConstant(Procedure&, const Value* other) const;
+    virtual Value* mulHighConstant(Procedure&, const Value* other) const;
+    virtual Value* uMulHighConstant(Procedure&, const Value* other) const;
     virtual Value* checkAddConstant(Procedure&, const Value* other) const;
     virtual Value* checkSubConstant(Procedure&, const Value* other) const;
     virtual Value* checkMulConstant(Procedure&, const Value* other) const;
@@ -238,7 +242,9 @@ public:
     virtual Value* absConstant(Procedure&) const;
     virtual Value* ceilConstant(Procedure&) const;
     virtual Value* floorConstant(Procedure&) const;
+    virtual Value* fTruncConstant(Procedure&) const;
     virtual Value* sqrtConstant(Procedure&) const;
+    virtual Value* purifyNaNConstant(Procedure&) const;
 
     virtual Value* vectorAndConstant(Procedure&, const Value* other) const;
     virtual Value* vectorOrConstant(Procedure&, const Value* other) const;
@@ -367,27 +373,27 @@ protected:
     // The specific value of VarArgs does not matter, but the value of the others is assumed to match their meaning.
     enum NumChildren : uint8_t { Zero = 0, One = 1, Two = 2, Three = 3, VarArgs = 4};
 
-    char* childrenAlloc() { return bitwise_cast<char*>(this) + m_adjacencyListOffset; }
-    const char* childrenAlloc() const { return bitwise_cast<const char*>(this) + m_adjacencyListOffset; }
+    char* childrenAlloc() { return std::bit_cast<char*>(this) + m_adjacencyListOffset; }
+    const char* childrenAlloc() const { return std::bit_cast<const char*>(this) + m_adjacencyListOffset; }
     Vector<Value*, 3>& childrenVector()
     {
         ASSERT(m_numChildren == VarArgs);
-        return *bitwise_cast<Vector<Value*, 3>*>(childrenAlloc());
+        return *std::bit_cast<Vector<Value*, 3>*>(childrenAlloc());
     }
     const Vector<Value*, 3>& childrenVector() const
     {
         ASSERT(m_numChildren == VarArgs);
-        return *bitwise_cast<Vector<Value*, 3> const*>(childrenAlloc());
+        return *std::bit_cast<Vector<Value*, 3> const*>(childrenAlloc());
     }
     Value** childrenArray()
     {
         ASSERT(m_numChildren != VarArgs);
-        return bitwise_cast<Value**>(childrenAlloc());
+        return std::bit_cast<Value**>(childrenAlloc());
     }
     Value* const* childrenArray() const
     {
         ASSERT(m_numChildren != VarArgs);
-        return bitwise_cast<Value* const*>(childrenAlloc());
+        return std::bit_cast<Value* const*>(childrenAlloc());
     }
 
     template<typename... Arguments>
@@ -416,10 +422,12 @@ protected:
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:
         case Floor:
+        case FTrunc:
         case Sqrt:
         case SExt8:
         case SExt16:
@@ -475,6 +483,8 @@ protected:
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -525,6 +535,8 @@ protected:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -551,6 +563,7 @@ protected:
         case VectorBitwiseSelect:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
+        case VectorRelaxedLaneSelect:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -576,7 +589,7 @@ private:
         // We must allocate enough space that replaceWithIdentity can work without buffer overflow.
         size_t allocIdentitySize = sizeof(Value) + sizeof(Value*);
         size_t allocSize = std::max(size + adjacencyListSpace, allocIdentitySize);
-        return static_cast<char*>(WTF::fastMalloc(allocSize));
+        return static_cast<char*>(SequesteredArenaMalloc::malloc(allocSize));
     }
 
 protected:
@@ -629,16 +642,16 @@ private:
 
         switch (valueToClone.m_numChildren) {
         case VarArgs:
-            new (bitwise_cast<char*>(this) + offset) Vector<Value*, 3> (valueToClone.childrenVector());
+            new (std::bit_cast<char*>(this) + offset) Vector<Value*, 3> (valueToClone.childrenVector());
             break;
         case Three:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
-            FALLTHROUGH;
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
+            [[fallthrough]];
         case Two:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
-            FALLTHROUGH;
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
+            [[fallthrough]];
         case One:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
             break;
         case Zero:
             break;
@@ -655,20 +668,22 @@ private:
         case Jump:
         case Oops:
         case EntrySwitch:
-            if (UNLIKELY(numArgs))
+            if (numArgs) [[unlikely]]
                 badKind(kind, numArgs);
             return Zero;
         case Return:
-            if (UNLIKELY(numArgs > 1))
+            if (numArgs > 1) [[unlikely]]
                 badKind(kind, numArgs);
             return numArgs ? One : Zero;
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:
         case Floor:
+        case FTrunc:
         case Sqrt:
         case SExt8:
         case SExt16:
@@ -709,12 +724,14 @@ private:
         case VectorExtaddPairwise:
         case VectorDupElement:
         case VectorRelaxedTruncSat:
-            if (UNLIKELY(numArgs != 1))
+            if (numArgs != 1) [[unlikely]]
                 badKind(kind, numArgs);
             return One;
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -756,6 +773,8 @@ private:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -775,14 +794,15 @@ private:
         case VectorShiftByVector:
         case VectorRelaxedSwizzle:
         case Stitch:
-            if (UNLIKELY(numArgs != 2))
+            if (numArgs != 2) [[unlikely]]
                 badKind(kind, numArgs);
             return Two;
         case Select:
         case VectorBitwiseSelect:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
-            if (UNLIKELY(numArgs != 3))
+        case VectorRelaxedLaneSelect:
+            if (numArgs != 3) [[unlikely]]
                 badKind(kind, numArgs);
             return Three;
         default:
@@ -1017,11 +1037,11 @@ public: \
 private: \
     Value** childrenArray() \
     { \
-        return bitwise_cast<Value**>(bitwise_cast<char*>(this) + sizeof(*this)); \
+        return std::bit_cast<Value**>(std::bit_cast<char*>(this) + sizeof(*this)); \
     } \
     Value* const* childrenArray() const \
     { \
-        return bitwise_cast<Value* const*>(bitwise_cast<char const*>(this) + sizeof(*this)); \
+        return std::bit_cast<Value* const*>(std::bit_cast<char const*>(this) + sizeof(*this)); \
     }
 
 // Only use this for classes with no subclass that add new fields (as it uses sizeof(*this))
@@ -1029,13 +1049,15 @@ private: \
 private: \
     Vector<Value*, 3>& childrenVector() \
     { \
-        return *bitwise_cast<Vector<Value*, 3>*>(bitwise_cast<char*>(this) + sizeof(*this)); \
+        return *std::bit_cast<Vector<Value*, 3>*>(std::bit_cast<char*>(this) + sizeof(*this)); \
     } \
     const Vector<Value*, 3>& childrenVector() const \
     { \
-        return *bitwise_cast<Vector<Value*, 3> const*>(bitwise_cast<char const*>(this) + sizeof(*this)); \
+        return *std::bit_cast<Vector<Value*, 3> const*>(std::bit_cast<char const*>(this) + sizeof(*this)); \
     } \
 
 } } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

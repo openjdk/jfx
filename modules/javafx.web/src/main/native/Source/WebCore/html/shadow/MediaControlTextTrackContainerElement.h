@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 #if ENABLE(VIDEO)
 
 #include "HTMLDivElement.h"
+#include "IntRect.h"
 #include "MediaControllerInterface.h"
 #include "TextTrackRepresentation.h"
 #include <wtf/LoggerHelper.h>
@@ -90,11 +91,11 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
-    const void* logIdentifier() const final;
+    uint64_t logIdentifier() const final;
     WTFLogChannel& logChannel() const final;
     ASCIILiteral logClassName() const final { return "MediaControlTextTrackContainerElement"_s; }
     mutable RefPtr<Logger> m_logger;
-    mutable const void* m_logIdentifier { nullptr };
+    mutable uint64_t m_logIdentifier { 0 };
 #endif
 
     std::unique_ptr<TextTrackRepresentation> m_textTrackRepresentation;

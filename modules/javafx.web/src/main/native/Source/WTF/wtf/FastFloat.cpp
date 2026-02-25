@@ -33,18 +33,36 @@ namespace WTF {
 double parseDouble(std::span<const LChar> string, size_t& parsedLength)
 {
     double doubleValue = 0;
-    auto stringData = byteCast<char>(string.data());
-    auto result = fast_float::from_chars(stringData, stringData + string.size(), doubleValue);
-    parsedLength = result.ptr - stringData;
+    auto stringData = byteCast<char>(string);
+    auto result = fast_float::from_chars(std::to_address(stringData.begin()), std::to_address(stringData.end()), doubleValue);
+    parsedLength = result.ptr - stringData.data();
     return doubleValue;
 }
 
-double parseDouble(std::span<const UChar> string, size_t& parsedLength)
+double parseDouble(std::span<const char16_t> string, size_t& parsedLength)
 {
     double doubleValue = 0;
-    auto stringData = reinterpret_cast<const char16_t*>(string.data());
-    auto result = fast_float::from_chars(stringData, stringData + string.size(), doubleValue);
-    parsedLength = result.ptr - stringData;
+    auto stringData = spanReinterpretCast<const char16_t>(string);
+    auto result = fast_float::from_chars(std::to_address(stringData.begin()), std::to_address(stringData.end()), doubleValue);
+    parsedLength = result.ptr - stringData.data();
+    return doubleValue;
+}
+
+double parseHexDouble(std::span<const LChar> string, size_t& parsedLength)
+{
+    double doubleValue = 0;
+    auto stringData = byteCast<char>(string);
+    auto result = fast_float::from_chars(std::to_address(stringData.begin()), std::to_address(stringData.end()), doubleValue, fast_float::chars_format::hex);
+    parsedLength = result.ptr - stringData.data();
+    return doubleValue;
+}
+
+double parseHexDouble(std::span<const char16_t> string, size_t& parsedLength)
+{
+    double doubleValue = 0;
+    auto stringData = spanReinterpretCast<const char16_t>(string);
+    auto result = fast_float::from_chars(std::to_address(stringData.begin()), std::to_address(stringData.end()), doubleValue, fast_float::chars_format::hex);
+    parsedLength = result.ptr - stringData.data();
     return doubleValue;
 }
 

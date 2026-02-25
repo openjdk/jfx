@@ -39,10 +39,10 @@ PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecution
     : m_callback(WTFMove(callback))
 {
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-        if (auto* window = document->domWindow())
-            m_performance = &window->performance();
+        if (auto* window = document->window())
+            m_performance = window->performance();
     } else if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
-        m_performance = &workerGlobalScope->performance();
+        m_performance = workerGlobalScope->performance();
     else
         ASSERT_NOT_REACHED();
 }
@@ -91,9 +91,10 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
             isBuffered = true;
             auto oldSize = m_entriesToDeliver.size();
             protectedPerformance()->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
-            auto begin = m_entriesToDeliver.begin();
-            auto oldEnd = begin + oldSize;
-            auto end = m_entriesToDeliver.end();
+            auto entriesToDeliver = m_entriesToDeliver.mutableSpan();
+            auto begin = entriesToDeliver.begin();
+            auto oldEnd = entriesToDeliver.subspan(oldSize).begin();
+            auto end = entriesToDeliver.end();
             std::stable_sort(oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
             std::inplace_merge(begin, oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
         }
@@ -143,7 +144,7 @@ void PerformanceObserver::deliver()
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
-    m_callback->handleEvent(*this, list, *this);
+    m_callback->invoke(*this, list, *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
 }
 

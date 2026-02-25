@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,9 +35,10 @@
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/StructureInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(VIDEO)
-#if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 #include "CaptionUserPreferencesMediaAF.h"
 #else
 #include "CaptionUserPreferences.h"
@@ -45,6 +46,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageGroup);
 
 static unsigned getUniqueIdentifier()
 {
@@ -68,7 +71,7 @@ PageGroup::PageGroup(Page& page)
 
 PageGroup::~PageGroup() = default;
 
-typedef HashMap<String, PageGroup*> PageGroupMap;
+using PageGroupMap = HashMap<String, PageGroup*>;
 static PageGroupMap* pageGroups = nullptr;
 
 PageGroup* PageGroup::pageGroup(const String& groupName)
@@ -112,7 +115,7 @@ void PageGroup::captionPreferencesChanged()
 CaptionUserPreferences& PageGroup::ensureCaptionPreferences()
 {
     if (!m_captionPreferences) {
-#if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
         m_captionPreferences = CaptionUserPreferencesMediaAF::create(*this);
 #else
         m_captionPreferences = CaptionUserPreferences::create(*this);
@@ -120,6 +123,11 @@ CaptionUserPreferences& PageGroup::ensureCaptionPreferences()
     }
 
     return *m_captionPreferences.get();
+}
+
+Ref<CaptionUserPreferences> PageGroup::ensureProtectedCaptionPreferences()
+{
+    return ensureCaptionPreferences();
 }
 #endif
 

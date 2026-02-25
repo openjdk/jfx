@@ -80,7 +80,8 @@
 namespace WebCore {
 namespace SelectorCompiler {
 
-using PseudoClassesSet = HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>>;
+// Using UncheckedKeyHashSet instead of HashSet improves performance on Speedometer 3.
+using PseudoClassesSet = UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>>;
 
 #if ENABLE(SELECTOR_OPERATION_STATS)
 
@@ -145,7 +146,6 @@ using PseudoClassesSet = HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::
     v(operationAttributeValueSpaceSeparatedListContainsCaseInsensitive) \
     v(operationElementIsActive) \
     v(operationElementIsHovered) \
-    v(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown) \
     v(operationIsPlaceholderShown) \
     v(operationSynchronizeStyleAttributeInternal) \
     v(operationSynchronizeAllAnimatedSVGAttribute) \
@@ -224,7 +224,6 @@ static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAddStyle
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationElementIsActive, bool, (const Element*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationElementIsHovered, bool, (const Element*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsPlaceholderShown, bool, (const Element*));
-static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element*, SelectorChecker::CheckingContext*));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeAllAnimatedSVGAttribute, void, (SVGElement&));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeStyleAttributeInternal, void, (StyledElement* styledElement));
 static JSC_DECLARE_NOEXCEPT_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationEqualIgnoringASCIICaseNonNull, bool, (const StringImpl*, const StringImpl*));
@@ -914,13 +913,11 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesAnimatingFullscreenTransitionP
     return matchesAnimatingFullscreenTransitionPseudoClass(element);
 }
 
-#if ENABLE(VIDEO)
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesInWindowFullscreenPseudoClass, bool, (const Element& element))
 {
     COUNT_SELECTOR_OPERATION(operationMatchesInWindowFullscreenPseudoClass);
     return matchesInWindowFullscreenPseudoClass(element);
 }
-#endif
 
 #endif
 
@@ -1008,10 +1005,10 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesHtmlDocumentPseudoClass, bool,
     return matchesHtmlDocumentPseudoClass(element);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesLangPseudoClass, bool, (const Element& element, const FixedVector<PossiblyQuotedIdentifier>& argumentList))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesLangPseudoClass, bool, (const Element& element, const FixedVector<PossiblyQuotedIdentifier>& langList))
 {
     COUNT_SELECTOR_OPERATION(operationMatchesLangPseudoClass);
-    return matchesLangPseudoClass(element, argumentList);
+    return matchesLangPseudoClass(element, langList);
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMatchesPopoverOpenPseudoClass, bool, (const Element& element))
@@ -1126,11 +1123,9 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClass::InternalAnimatingFullscreenTransition:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesAnimatingFullscreenTransitionPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-#if ENABLE(VIDEO)
     case CSSSelector::PseudoClass::InternalInWindowFullscreen:
         fragment.unoptimizedPseudoClasses.append(CodePtr<JSC::OperationPtrTag>(operationMatchesInWindowFullscreenPseudoClass));
         return FunctionType::SimpleSelectorChecker;
-#endif
 #endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
@@ -1232,6 +1227,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     // Optimized pseudo selectors.
     case CSSSelector::PseudoClass::AnyLink:
     case CSSSelector::PseudoClass::Link:
+    case CSSSelector::PseudoClass::PlaceholderShown:
     case CSSSelector::PseudoClass::Root:
         fragment.pseudoClasses.add(type);
         return FunctionType::SimpleSelectorChecker;
@@ -1251,8 +1247,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
 
     case CSSSelector::PseudoClass::Scope:
-        fragment.pseudoClasses.add(CSSSelector::PseudoClass::Scope);
-        return FunctionType::SelectorCheckerWithCheckingContext;
+        return FunctionType::CannotCompile;
 
     case CSSSelector::PseudoClass::Active:
     case CSSSelector::PseudoClass::Empty:
@@ -1260,7 +1255,6 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClass::Hover:
     case CSSSelector::PseudoClass::LastChild:
     case CSSSelector::PseudoClass::OnlyChild:
-    case CSSSelector::PseudoClass::PlaceholderShown:
     case CSSSelector::PseudoClass::Target:
         fragment.pseudoClasses.add(type);
         if (selectorContext == SelectorContext::QuerySelector)
@@ -1324,8 +1318,8 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         }
 
     case CSSSelector::PseudoClass::Lang:
-        ASSERT(selector.argumentList() && !selector.argumentList()->isEmpty());
-        fragment.languageArgumentsList.append(selector.argumentList());
+        ASSERT(selector.langList() && !selector.langList()->isEmpty());
+        fragment.languageArgumentsList.append(selector.langList());
         return FunctionType::SimpleSelectorChecker;
 
     case CSSSelector::PseudoClass::Is:
@@ -1345,18 +1339,25 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
 
                 if (subselector.matchesPseudoElement())
                     return FunctionType::CannotCompile;
+
                 VisitedMode ignoreVisitedMode = VisitedMode::None;
                 FunctionType localFunctionType = constructFragments(&subselector, selectorContext, *selectorFragments, FragmentsLevel::InFunctionalPseudoType, positionInRootFragments, visitedMatchEnabled, ignoreVisitedMode, pseudoElementMatchingBehavior);
                 ASSERT_WITH_MESSAGE(ignoreVisitedMode == VisitedMode::None, ":visited is disabled in the functional pseudo classes");
 
+                if (localFunctionType == FunctionType::CannotCompile)
+                    return FunctionType::CannotCompile;
+
+                // Standalone pseudo-element (like ::before) are invalid, fallback to SelectorChecker.
+                if (selectorFragments->isEmpty())
+                    return FunctionType::CannotCompile;
+
+                // Pseudo-element in functional pseudo-classes are invalid, fallback to SelectorChecker.
+                if (selectorFragments->first().pseudoElementSelector)
+                    return FunctionType::CannotCompile;
+
                 // Since this fragment never matches against the element, don't insert it to matchesList.
                 if (localFunctionType == FunctionType::CannotMatchAnything)
                     continue;
-
-                if (localFunctionType == FunctionType::CannotCompile)
-
-                // FIXME: Currently pseudo elements inside :is()/:matches() are supported in non-JIT code.
-                    return FunctionType::CannotCompile;
 
                 functionType = mostRestrictiveFunctionType(functionType, localFunctionType);
                 selectorFragments = nullptr;
@@ -1512,15 +1513,15 @@ static FunctionType constructFragmentsInternal(const CSSSelector* rootSelector, 
             break;
         }
         case CSSSelector::Match::List:
-            if (selector->value().find(isASCIIWhitespace<UChar>) != notFound)
+            if (selector->value().find(isASCIIWhitespace<char16_t>) != notFound)
                 return FunctionType::CannotMatchAnything;
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSSelector::Match::Begin:
         case CSSSelector::Match::End:
         case CSSSelector::Match::Contain:
             if (selector->value().isEmpty())
                 return FunctionType::CannotMatchAnything;
-            FALLTHROUGH;
+            [[fallthrough]];
         case CSSSelector::Match::Exact:
         case CSSSelector::Match::Hyphen:
             fragment->onlyMatchesLinksInQuirksMode = false;
@@ -1793,7 +1794,7 @@ inline SelectorCompilationStatus SelectorCodeGenerator::compile(JSC::MacroAssemb
         linkBuffer.link(m_functionCalls[i].first, m_functionCalls[i].second);
 
 #if CSS_SELECTOR_JIT_DEBUGGING
-    codeRef = linkBuffer.finalizeCodeWithDisassembly(JSC::CSSSelectorPtrTag, "CSS Selector JIT for \"%s\"", m_originalSelector->selectorText().utf8().data());
+    codeRef = linkBuffer.finalizeCodeWithDisassembly<JSC::CSSSelectorPtrTag>(true, nullptr, "CSS Selector JIT for \"%s\"", m_originalSelector->selectorText().utf8().data());
 #else
     codeRef = FINALIZE_CODE(linkBuffer, JSC::CSSSelectorPtrTag, nullptr, "CSS Selector JIT");
 #endif
@@ -2653,7 +2654,6 @@ inline void SelectorCodeGenerator::generateWalkToPreviousAdjacentElement(Assembl
 {
     Assembler::Label loopStart = m_assembler.label();
     m_assembler.loadPtr(Assembler::Address(workRegister, Node::previousSiblingMemoryOffset()), workRegister);
-    m_assembler.andPtr(Assembler::TrustedImmPtr(Node::previousSiblingPointerMask()), workRegister);
     failureCases.append(m_assembler.branchTestPtr(Assembler::Zero, workRegister));
     DOMJIT::branchTestIsElementFlagOnNode(m_assembler, Assembler::Zero, workRegister).linkTo(loopStart, &m_assembler);
 }
@@ -3316,7 +3316,7 @@ void SelectorCodeGenerator::generateElementAttributesMatching(Assembler::JumpLis
 
 static inline Assembler::Jump testIsHTMLClassOnDocument(Assembler::ResultCondition condition, Assembler& assembler, Assembler::RegisterID documentAddress)
 {
-    static_assert(sizeof(Document::DocumentClass) == 2, "Document::DocumentClass must be a 16-bit value for branchTest16");
+    static_assert(sizeof(DocumentClass) == 2, "DocumentClass must be a 16-bit value for branchTest16");
     return assembler.branchTest16(condition, Assembler::Address(documentAddress, Document::documentClassesMemoryOffset()), Assembler::TrustedImm32(Document::isHTMLDocumentClassFlag()));
 }
 
@@ -3958,18 +3958,6 @@ void SelectorCodeGenerator::generateElementIsOnlyChild(Assembler::JumpList& fail
     successCase.link(&m_assembler);
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown, bool, (const Element* element, SelectorChecker::CheckingContext* checkingContext))
-{
-    COUNT_SELECTOR_OPERATION(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(*element);
-    if (formControl && element->isTextField()) {
-        if (checkingContext->resolvingMode == SelectorChecker::Mode::ResolvingStyle)
-            checkingContext->styleRelations.append({ *element, Style::Relation::Unique, 1 });
-        return formControl->isPlaceholderVisible();
-    }
-    return false;
-}
-
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationIsPlaceholderShown, bool, (const Element* element))
 {
     COUNT_SELECTOR_OPERATION(operationIsPlaceholderShown);
@@ -3997,21 +3985,9 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationEqualIgnoringASCIICaseNonNull, bool, 
 
 void SelectorCodeGenerator::generateElementHasPlaceholderShown(Assembler::JumpList& failureCases)
 {
-    if (m_selectorContext == SelectorContext::QuerySelector) {
         FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
         functionCall.setFunctionAddress(operationIsPlaceholderShown);
         functionCall.setOneArgument(elementAddressRegister);
-        failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
-        return;
-    }
-
-    Assembler::RegisterID checkingContext = m_registerAllocator.allocateRegisterWithPreference(JSC::GPRInfo::argumentGPR1);
-    loadCheckingContext(checkingContext);
-    m_registerAllocator.deallocateRegister(checkingContext);
-
-    FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
-    functionCall.setFunctionAddress(operationMakeContextStyleUniqueIfNecessaryAndTestIsPlaceholderShown);
-    functionCall.setTwoArguments(elementAddressRegister, checkingContext);
     failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
 }
 

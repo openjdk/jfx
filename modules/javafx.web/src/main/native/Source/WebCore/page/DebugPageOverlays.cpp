@@ -44,6 +44,7 @@
 #include "RemoteFrame.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
@@ -120,7 +121,7 @@ bool MouseWheelRegionOverlay::updateRegion()
 #else
     auto region = makeUnique<Region>();
 
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -128,7 +129,7 @@ bool MouseWheelRegionOverlay::updateRegion()
             continue;
 
         Ref document = *localFrame->document();
-        auto frameRegion = document->absoluteRegionForEventTargets(document->wheelEventTargets());
+        auto frameRegion = document->absoluteRegionForWheelEventTargets();
         frameRegion.first.translate(toIntSize(localFrame->protectedView()->contentsToRootView(IntPoint())));
         region->unite(frameRegion.first);
     }
@@ -329,11 +330,11 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
         HitTestRequest::Type::AllowChildFrameContent
     };
     HitTestResult result(m_mouseLocationInContentCoordinates);
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
-    if (!localMainFrame)
+    RefPtr localTopDocument = page->localTopDocument();
+    if (!localTopDocument)
         return std::nullopt;
 
-    localMainFrame->document()->hitTest(hitType, result);
+    localTopDocument->hitTest(hitType, result);
 
     RefPtr hitNode = result.innerNode();
     if (!hitNode || !hitNode->renderer())
@@ -373,7 +374,7 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
     IntRect hitRectInOverlayCoordinates;
     float hitRegionArea = 0;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return std::nullopt;
 
@@ -488,7 +489,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     for (unsigned i = 1; i < m_settings.size(); i++)
         rect.unite(rectForSettingAtIndex(i));
 
-    rect.expand(FloatBoxExtent { 4, 4, 4, 4 });
+    rect.expand(FloatBoxExtent { 4.0f, 4.0f, 4.0f, 4.0f });
 
     {
         GraphicsContextStateSaver stateSaver(context);
@@ -549,8 +550,32 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         bool shouldClip = valueForSetting("clip"_s);
         Vector<Path> clipPaths;
 
-        if (shouldClip)
-            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->cornerRadius);
+        if (shouldClip) {
+            const auto rectInLayerCoordinates = region->rectInLayerCoordinates;
+
+            if (auto clipPath = region->clipPath) {
+                Path existingClip = *clipPath;
+                AffineTransform transform;
+
+                transform.translate(rectInLayerCoordinates.location());
+                if (RefPtr page = m_page.get())
+                    transform.scale(page->pageScaleFactor());
+
+                existingClip.transform(transform);
+                clipPaths.append(existingClip);
+            } else {
+                auto scaleFactor = 1.f;
+                if (RefPtr page = m_page.get())
+                    scaleFactor = page->pageScaleFactor();
+
+                if (region->useContinuousCorners) {
+                    Path path;
+                    path.addContinuousRoundedRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+                    clipPaths.append(path);
+                } else
+                    clipPaths = pathsForRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+            }
+        }
 
         bool shouldUseBackdropGradient = !shouldClip || !region || (!valueForSetting("wash"_s) && valueForSetting("clip"_s));
 
@@ -611,7 +636,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     RefPtr page = m_page.get();
     if (!page)
         return false;
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
     RefPtr mainFrameView = localMainFrame->view();
@@ -691,11 +716,11 @@ void SiteIsolationOverlay::drawRect(PageOverlay&, GraphicsContext& context, cons
     FontCascade font(WTFMove(fontDescription));
     font.update(nullptr);
 
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->virtualView())
             continue;
         auto frameView = frame->virtualView();
-        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toString(), ')');
+        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toUInt64(), ')');
         TextRun textRun = TextRun(debugStr);
         context.setFillColor(Color::black);
 

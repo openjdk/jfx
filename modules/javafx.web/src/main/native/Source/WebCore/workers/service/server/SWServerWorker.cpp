@@ -30,11 +30,14 @@
 #include "SWServer.h"
 #include "SWServerRegistration.h"
 #include "SWServerToContextConnection.h"
+#include "ServiceWorkerRoute.h"
 #include <cstdint>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+static constexpr size_t maxRouteConditionCount = 256;
 
 HashMap<ServiceWorkerIdentifier, WeakRef<SWServerWorker>>& SWServerWorker::allWorkers()
 {
@@ -58,11 +61,11 @@ SWServerWorker::SWServerWorker(SWServer& server, SWServerRegistration& registrat
     , m_contentSecurityPolicy(contentSecurityPolicy)
     , m_crossOriginEmbedderPolicy(crossOriginEmbedderPolicy)
     , m_referrerPolicy(WTFMove(referrerPolicy))
-    , m_topRegistrableDomain(m_registrationKey.topOrigin())
+    , m_topSite(m_registrationKey.topOrigin())
     , m_scriptResourceMap(WTFMove(scriptResourceMap))
     , m_terminationTimer(*this, &SWServerWorker::terminationTimerFired)
     , m_terminationIfPossibleTimer(*this, &SWServerWorker::terminationIfPossibleTimerFired)
-    , m_lastNavigationWasAppInitiated(m_server->clientIsAppInitiatedForRegistrableDomain(m_topRegistrableDomain))
+    , m_lastNavigationWasAppInitiated(server.clientIsAppInitiatedForRegistrableDomain(m_topSite.domain()))
 {
     m_data.scriptURL.removeFragmentIdentifier();
 
@@ -102,7 +105,7 @@ void SWServerWorker::updateAppInitiatedValue(LastNavigationWasAppInitiated lastN
     if (!isRunning())
         return;
 
-    if (CheckedPtr connection = contextConnection())
+    if (RefPtr connection = contextConnection())
         connection->updateAppInitiatedValue(identifier(), lastNavigationWasAppInitiated);
 }
 
@@ -131,7 +134,7 @@ void SWServerWorker::whenTerminated(CompletionHandler<void()>&& callback)
 
 void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
 {
-    CheckedPtr contextConnection = this->contextConnection();
+    RefPtr contextConnection = this->contextConnection();
     ASSERT(contextConnection);
     if (!contextConnection) {
         RELEASE_LOG_ERROR(ServiceWorker, "Request to terminate a worker %" PRIu64 " whose context connection does not exist", identifier().toUInt64());
@@ -144,7 +147,11 @@ void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
     setState(State::Terminating);
 
     m_terminationCallbacks.append(WTFMove(callback));
-    m_terminationTimer.startOneShot(SWServer::defaultTerminationDelay);
+
+    constexpr Seconds terminationDelayForTesting = 1_s;
+    RefPtr<SWServer> server = m_server.get();
+    m_terminationTimer.startOneShot(server && server->isProcessTerminationDelayEnabled() ? SWServer::defaultTerminationDelay : terminationDelayForTesting);
+
     m_terminationIfPossibleTimer.stop();
 
     contextConnection->terminateWorker(identifier());
@@ -165,8 +172,11 @@ void SWServerWorker::callTerminationCallbacks()
 
 void SWServerWorker::terminationTimerFired()
 {
+    RELEASE_LOG_ERROR(ServiceWorker, "Terminating service worker %" PRIu64 " due to unresponsiveness", identifier().toUInt64());
+
     ASSERT(isTerminating());
-    contextConnection()->terminateDueToUnresponsiveness();
+    if (RefPtr contextConnection = this->contextConnection())
+        contextConnection->terminateDueToUnresponsiveness();
 }
 
 const ClientOrigin& SWServerWorker::origin() const
@@ -179,7 +189,7 @@ const ClientOrigin& SWServerWorker::origin() const
 
 SWServerToContextConnection* SWServerWorker::contextConnection()
 {
-    RefPtrAllowingPartiallyDestroyed<SWServer> server = m_server.get();
+    RefPtr<SWServer> server = m_server.get();
     return server ? server->contextConnectionForRegistrableDomain(topRegistrableDomain()) : nullptr;
 }
 
@@ -272,7 +282,7 @@ void SWServerWorker::setScriptResource(URL&& url, ServiceWorkerContextData::Impo
 void SWServerWorker::didSaveScriptsToDisk(ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts)
 {
     // Send mmap'd version of the scripts to the ServiceWorker process so we can save dirty memory.
-    if (CheckedPtr contextConnection = this->contextConnection())
+    if (RefPtr contextConnection = this->contextConnection())
         contextConnection->didSaveScriptsToDisk(identifier(), mainScript, importedScripts);
 
     // The scripts were saved to disk, replace our scripts with the mmap'd version to save dirty memory.
@@ -315,6 +325,11 @@ void SWServerWorker::setHasPendingEvents(bool hasPendingEvents)
         return;
 
     registration->tryActivate();
+}
+
+bool SWServerWorker::isIdle(Seconds idleTime) const
+{
+    return !m_hasPendingEvents && (ApproximateTime::now() - m_lastNeedRunningTime) > idleTime;
 }
 
 void SWServerWorker::whenActivated(CompletionHandler<void(bool)>&& handler)
@@ -360,6 +375,7 @@ void SWServerWorker::setState(State state)
 
     switch (state) {
     case State::Running:
+        needsRunning();
         m_shouldSkipHandleFetch = false;
         break;
     case State::Terminating:
@@ -460,6 +476,40 @@ bool SWServerWorker::matchingImportedScripts(const Vector<std::pair<URL, ScriptB
             return false;
     }
     return true;
+}
+
+std::optional<ExceptionData> SWServerWorker::addRoutes(Vector<ServiceWorkerRoute>&& routes)
+{
+    for (auto& route : routes) {
+        if (auto exception = validateServiceWorkerRoute(route))
+            return exception;
+    }
+
+    size_t routesConditionCount = 0;
+    for (auto& route : routes)
+        routesConditionCount += computeServiceWorkerRouteConditionCount(route);
+    for (auto& route : m_routes)
+        routesConditionCount += computeServiceWorkerRouteConditionCount(route);
+
+    if (routesConditionCount > maxRouteConditionCount)
+        return ExceptionData { ExceptionCode::TypeError, "Too many routes are registered"_s };
+
+    m_routes.appendVector(WTFMove(routes));
+
+    return { };
+}
+
+// https://w3c.github.io/ServiceWorker/#get-router-source
+RouterSource SWServerWorker::getRouterSource(const FetchOptions& options, const ResourceRequest& request) const
+{
+    if (m_shouldSkipHandleFetch)
+        return RouterSourceEnum::Network;
+
+    for (auto& route : m_routes) {
+        if (matchRouterCondition(route.condition, options, request, isRunning()))
+            return route.source;
+    }
+    return RouterSourceEnum::FetchEvent;
 }
 
 } // namespace WebCore

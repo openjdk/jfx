@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2006, 2015 Apple Inc.
+ * Copyright (C) 2006, 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -74,6 +74,12 @@ public:
     virtual HostWindow* hostWindow() const = 0;
 
     virtual Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) = 0;
+
+    // CheckedPtr interface.
+    virtual uint32_t checkedPtrCount() const = 0;
+    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
+    virtual void incrementCheckedPtrCount() const = 0;
+    virtual void decrementCheckedPtrCount() const = 0;
 };
 
 }

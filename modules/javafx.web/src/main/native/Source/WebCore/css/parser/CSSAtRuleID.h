@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-enum CSSAtRuleID {
+enum CSSAtRuleID : uint8_t {
     CSSAtRuleInvalid = 0,
 
     CSSAtRuleCharset,
@@ -43,6 +43,7 @@ enum CSSAtRuleID {
     CSSAtRuleMedia,
     CSSAtRuleNamespace,
     CSSAtRulePage,
+    CSSAtRulePositionTry,
     CSSAtRuleSupports,
     CSSAtRuleViewTransition,
 

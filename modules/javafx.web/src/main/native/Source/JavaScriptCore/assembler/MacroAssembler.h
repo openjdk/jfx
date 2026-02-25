@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,11 @@
  */
 
 #pragma once
+
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if ENABLE(ASSEMBLER)
 
@@ -119,6 +124,7 @@ typedef Vector<PrintRecord> PrintRecordList;
 using MacroAssemblerBase = TARGET_MACROASSEMBLER;
 
 class MacroAssembler : public MacroAssemblerBase {
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssembler);
 public:
     using Base = MacroAssemblerBase;
 
@@ -158,7 +164,10 @@ public:
     using MacroAssemblerBase::branch32;
     using MacroAssemblerBase::compare32;
     using MacroAssemblerBase::move;
+    using MacroAssemblerBase::move32ToFloat;
     using MacroAssemblerBase::moveDouble;
+    using MacroAssemblerBase::move64ToDouble;
+    using MacroAssemblerBase::moveVector;
     using MacroAssemblerBase::add32;
     using MacroAssemblerBase::mul32;
     using MacroAssemblerBase::and32;
@@ -199,8 +208,6 @@ public:
     {
         return value == static_cast<int32_t>(value);
     }
-
-    static const double twoToThe32; // This is super useful for some double code.
 
     // Utilities used by the DFG JIT.
     using AbstractMacroAssemblerBase::invert;
@@ -596,6 +603,12 @@ public:
         storeDouble(scratch, dest);
     }
 
+    void moveVector(Address src, Address dest, FPRegisterID scratch)
+    {
+        loadVector(src, scratch);
+        storeVector(scratch, dest);
+    }
+
     // Ptr methods
     // On 32-bit platforms (i.e. x86), these methods directly map onto their 32-bit equivalents.
 #if !CPU(ADDRESS64)
@@ -632,6 +645,11 @@ public:
     void addPtr(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         add32(imm, src, dest);
+    }
+
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add32(TrustedImm32(imm), src, dest);
     }
 
     void addPtr(TrustedImm32 imm, AbsoluteAddress address)
@@ -677,6 +695,11 @@ public:
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         urshift32(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void urshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        urshift32(imm, srcDest);
     }
 
     void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
@@ -992,6 +1015,11 @@ public:
         add64(imm, src, dest);
     }
 
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add64(TrustedImm64(imm), src, dest);
+    }
+
     void addPtr(TrustedImm32 imm, Address address)
     {
         add64(imm, address);
@@ -1042,6 +1070,11 @@ public:
         lshift64(src, imm, dest);
     }
 
+    void lshiftPtr(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        lshift64(imm, shiftAmount, dest);
+    }
+
     void rshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         rshift64(trustedImm32ForShift(imm), srcDest);
@@ -1060,6 +1093,11 @@ public:
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         urshift64(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void urshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        urshift64(imm, srcDest);
     }
 
     void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
@@ -1469,7 +1507,7 @@ public:
 
         // Try to force normalisation, and check that there's no change
         // in the bit pattern
-        if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
+        if (std::bit_cast<uint64_t>(value * 1.0) != std::bit_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
         value = std::abs(value);
@@ -1603,7 +1641,7 @@ public:
             if (jsValue.isDouble() && !shouldBlindDouble(jsValue.asDouble()))
                 return false;
 
-            if (!shouldBlindDouble(bitwise_cast<double>(value)))
+            if (!shouldBlindDouble(std::bit_cast<double>(value)))
                 return false;
         }
         }
@@ -1818,31 +1856,27 @@ public:
 
 #endif // USE(JSVALUE64)
 
-#if CPU(X86_64) || CPU(RISCV64)
-    void moveFloat(Imm32 imm, FPRegisterID dest)
+#if CPU(X86_64)
+    void move32ToFloat(Imm32 imm, FPRegisterID dest)
     {
         move(imm, scratchRegister());
         move32ToFloat(scratchRegister(), dest);
     }
 
-    void moveDouble(Imm64 imm, FPRegisterID dest)
+    void move64ToDouble(Imm64 imm, FPRegisterID dest)
     {
         move(imm, scratchRegister());
         move64ToDouble(scratchRegister(), dest);
     }
-#endif
-
-#if CPU(ARM64)
-    void moveFloat(Imm32 imm, FPRegisterID dest)
+#else
+    void move32ToFloat(Imm32 imm, FPRegisterID dest)
     {
-        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
-        move32ToFloat(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+        MacroAssemblerBase::move32ToFloat(imm.asTrustedImm32(), dest);
     }
 
-    void moveDouble(Imm64 imm, FPRegisterID dest)
+    void move64ToDouble(Imm64 imm, FPRegisterID dest)
     {
-        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
-        move64ToDouble(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+        MacroAssemblerBase::move64ToDouble(imm.asTrustedImm64(), dest);
     }
 #endif
 
@@ -2327,6 +2361,11 @@ public:
         lshift32(src, trustedImm32ForShift(amount), dest);
     }
 
+    void lshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        lshift32(amount.asTrustedImm32(), shiftAmount, dest);
+    }
+
     void rshift32(Imm32 imm, RegisterID dest)
     {
         rshift32(trustedImm32ForShift(imm), dest);
@@ -2337,6 +2376,11 @@ public:
         rshift32(src, trustedImm32ForShift(amount), dest);
     }
 
+    void rshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        rshift32(amount.asTrustedImm32(), shiftAmount, dest);
+    }
+
     void urshift32(Imm32 imm, RegisterID dest)
     {
         urshift32(trustedImm32ForShift(imm), dest);
@@ -2345,6 +2389,11 @@ public:
     void urshift32(RegisterID src, Imm32 amount, RegisterID dest)
     {
         urshift32(src, trustedImm32ForShift(amount), dest);
+    }
+
+    void urshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        urshift32(amount.asTrustedImm32(), shiftAmount, dest);
     }
 
     void mul32(TrustedImm32 imm, RegisterID src, RegisterID dest)
@@ -2471,3 +2520,5 @@ public:
 } // namespace JSC
 
 #endif // ENABLE(ASSEMBLER)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

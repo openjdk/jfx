@@ -35,9 +35,12 @@
 #include "CSSLayerStatementRule.h"
 #include "CSSMediaRule.h"
 #include "CSSNamespaceRule.h"
+#include "CSSNestedDeclarations.h"
 #include "CSSPageRule.h"
+#include "CSSPositionTryRule.h"
 #include "CSSPropertyRule.h"
 #include "CSSScopeRule.h"
+#include "CSSSerializationContext.h"
 #include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
@@ -60,6 +63,7 @@ static_assert(sizeof(StyleRuleBase) == sizeof(SameSizeAsStyleRuleBase), "StyleRu
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRule);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations);
 
 Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet& parentSheet) const
 {
@@ -88,6 +92,8 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRule>(*this));
     case StyleRuleType::StyleWithNesting:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleWithNesting>(*this));
+    case StyleRuleType::NestedDeclarations:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleNestedDeclarations>(*this));
     case StyleRuleType::Page:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePage>(*this));
     case StyleRuleType::FontFace:
@@ -127,9 +133,9 @@ template<typename Visitor> constexpr decltype(auto) StyleRuleBase::visitDerived(
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleStartingStyle>(*this));
     case StyleRuleType::ViewTransition:
         return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRuleViewTransition>(*this));
+    case StyleRuleType::PositionTry:
+        return std::invoke(std::forward<Visitor>(visitor), uncheckedDowncast<StyleRulePositionTry>(*this));
     case StyleRuleType::Margin:
-        break;
-    case StyleRuleType::Unknown:
         break;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -169,6 +175,9 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         },
         [&](StyleRuleWithNesting& rule) -> Ref<CSSRule> {
             return CSSStyleRule::create(rule, parentSheet);
+        },
+        [&](StyleRuleNestedDeclarations& rule) -> Ref<CSSRule> {
+            return CSSNestedDeclarations::create(rule, parentSheet);
         },
         [&](StyleRulePage& rule) -> Ref<CSSRule> {
             return CSSPageRule::create(rule, parentSheet);
@@ -222,6 +231,9 @@ Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRu
         },
         [&](StyleRuleViewTransition& rule) -> Ref<CSSRule> {
             return CSSViewTransitionRule::create(rule, parentSheet);
+        },
+        [&](StyleRulePositionTry& rule) -> Ref<CSSRule> {
+            return CSSPositionTryRule::create(rule, parentSheet);
         },
         [](StyleRuleCharset&) -> Ref<CSSRule> {
             RELEASE_ASSERT_NOT_REACHED();
@@ -307,9 +319,9 @@ Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCompo
     Vector<Ref<StyleRule>> rules;
     Vector<const CSSSelector*> componentsSinceLastSplit;
 
-    for (const CSSSelector* selector = selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
+    for (auto& selector : selectorList()) {
         Vector<const CSSSelector*, 8> componentsInThisSelector;
-        for (const CSSSelector* component = selector; component; component = component->tagHistory())
+        for (const CSSSelector* component = &selector; component; component = component->tagHistory())
             componentsInThisSelector.append(component);
 
         if (componentsInThisSelector.size() + componentsSinceLastSplit.size() > maxCount && !componentsSinceLastSplit.isEmpty()) {
@@ -331,9 +343,7 @@ Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCompo
 
 String StyleRule::debugDescription() const
 {
-    StringBuilder builder;
-    builder.append("StyleRule ["_s, m_properties->asText(), ']');
-    return builder.toString();
+    return makeString("StyleRule ["_s, m_properties->asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRuleWithNesting::~StyleRuleWithNesting() = default;
@@ -346,7 +356,7 @@ Ref<StyleRuleWithNesting> StyleRuleWithNesting::copy() const
 String StyleRuleWithNesting::debugDescription() const
 {
     StringBuilder builder;
-    builder.append("StyleRuleWithNesting ["_s, properties().asText(), " "_s);
+    builder.append("StyleRuleWithNesting ["_s, properties().asText(CSS::defaultSerializationContext()), " "_s);
     for (const auto& rule : m_nestedRules)
         builder.append(rule->debugDescription());
     builder.append(']');
@@ -398,6 +408,17 @@ StyleRulePage::StyleRulePage(const StyleRulePage& o)
     , m_properties(o.m_properties->mutableCopy())
     , m_selectorList(o.m_selectorList)
 {
+}
+
+StyleRuleNestedDeclarations::StyleRuleNestedDeclarations(Ref<StyleProperties>&& properties)
+    : StyleRule(WTFMove(properties), false, { })
+{
+    setType(StyleRuleType::NestedDeclarations);
+}
+
+String StyleRuleNestedDeclarations::debugDescription() const
+{
+    return makeString("StyleRuleNestedDeclarations ["_s, properties().asText(CSS::defaultSerializationContext()), ']');
 }
 
 StyleRulePage::~StyleRulePage() = default;
@@ -497,7 +518,7 @@ void StyleRuleGroup::wrapperInsertRule(unsigned index, Ref<StyleRuleBase>&& rule
 
 void StyleRuleGroup::wrapperRemoveRule(unsigned index)
 {
-    m_childRules.remove(index);
+    m_childRules.removeAt(index);
 }
 
 String StyleRuleGroup::debugDescription() const

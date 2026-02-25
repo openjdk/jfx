@@ -46,6 +46,8 @@ public:
     bool needsWidgetUpdate() const { return m_needsWidgetUpdate; }
     void setNeedsWidgetUpdate(bool needsWidgetUpdate) { m_needsWidgetUpdate = needsWidgetUpdate; }
 
+    bool shouldBypassCSPForPDFPlugin(const String& contentType) const;
+
 protected:
     HTMLPlugInImageElement(const QualifiedName& tagName, Document&);
 
@@ -68,14 +70,13 @@ protected:
 private:
     bool isPlugInImageElement() const final { return true; }
 
-    bool shouldBypassCSPForPDFPlugin(const String&) const;
     bool canLoadPlugInContent(const String& relativeURL, const String& mimeType) const;
     bool canLoadURL(const URL&) const;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool childShouldCreateRenderer(const Node&) const override;
-    void willRecalcStyle(Style::Change) final;
-    void didRecalcStyle(Style::Change) final;
+    void willRecalcStyle(OptionSet<Style::Change>) final;
+    void didRecalcStyle(OptionSet<Style::Change>) final;
     void didAttachRenderers() final;
     void willDetachRenderers() final;
 
@@ -86,7 +87,7 @@ private:
 
     bool m_needsWidgetUpdate { false };
     bool m_needsDocumentActivationCallbacks { false };
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     bool m_needsImageReload { false };
     bool m_hasUpdateScheduledForAfterStyleResolution { false };
 };

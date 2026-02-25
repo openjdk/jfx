@@ -31,6 +31,8 @@
 #include <wtf/Gigacage.h>
 #include <wtf/Noncopyable.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class VM;
@@ -238,6 +240,10 @@ public:
     Butterfly* resizeArray(VM&, JSObject* intendedOwner, Structure*, size_t newPreCapacity, size_t newIndexingPayloadSizeInBytes); // Assumes that you're not changing whether or not the object has an indexing header.
     Butterfly* unshift(Structure*, size_t numberOfSlots);
     Butterfly* shift(Structure*, size_t numberOfSlots);
+
+    ALWAYS_INLINE static void clearOptimalVectorLengthGap(IndexingType, Butterfly*, unsigned optimalVectorLength, unsigned vectorLength);
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -33,8 +33,8 @@
 
 namespace WebCore {
 
-enum class PushSubscriptionIdentifierType { };
-using PushSubscriptionIdentifier = LegacyNullableObjectIdentifier<PushSubscriptionIdentifierType>;
+struct PushSubscriptionIdentifierType;
+using PushSubscriptionIdentifier = ObjectIdentifier<PushSubscriptionIdentifierType>;
 
 struct PushSubscriptionSetIdentifier {
     String bundleIdentifier;

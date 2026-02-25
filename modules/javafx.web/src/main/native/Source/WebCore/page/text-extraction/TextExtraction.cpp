@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,14 @@
 #include "TextExtraction.h"
 
 #include "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "ExceptionCode.h"
 #include "ExceptionOr.h"
 #include "FrameSelection.h"
 #include "HTMLBodyElement.h"
 #include "HTMLButtonElement.h"
+#include "HTMLFrameOwnerElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
@@ -46,11 +48,13 @@
 #include "RenderLayer.h"
 #include "RenderLayerModelObject.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "SimpleRange.h"
 #include "Text.h"
 #include "TextIterator.h"
 #include "WritingMode.h"
+#include <ranges>
 #include <unicode/uchar.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -219,14 +223,22 @@ static inline void merge(Item& destinationItem, Item&& sourceItem)
 
 static inline FloatRect rootViewBounds(Node& node)
 {
-    auto view = node.document().protectedView();
-    if (UNLIKELY(!view))
+    RefPtr view = node.document().view();
+    if (!view) [[unlikely]]
         return { };
 
-    if (!node.renderer())
+    CheckedPtr renderer = node.renderer();
+    if (!renderer)
         return { };
 
-    return view->contentsToRootView(node.renderer()->absoluteBoundingBoxRect());
+    IntRect absoluteRect;
+    if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(*renderer); renderElement && renderElement->firstChild())
+        absoluteRect = renderer->pixelSnappedAbsoluteClippedOverflowRect();
+
+    if (absoluteRect.isEmpty())
+        absoluteRect = renderer->absoluteBoundingBoxRect();
+
+    return view->contentsToRootView(absoluteRect);
 }
 
 static inline String labelText(HTMLElement& element)
@@ -258,9 +270,14 @@ static bool shouldTreatAsPasswordField(const Element* element)
     return input && input->hasEverBeenPasswordField();
 }
 
-static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemData(Node& node, TraversalContext& context)
+static inline Variant<SkipExtraction, ItemData, URL, Editable> extractItemData(Node& node, TraversalContext& context)
 {
     CheckedPtr renderer = node.renderer();
+
+    RefPtr element = dynamicDowncast<Element>(node);
+    if (element && element->hasDisplayContents())
+        return { SkipExtraction::Self };
+
     if (!renderer || renderer->style().opacity() < minOpacityToConsiderVisible)
         return { SkipExtraction::SelfAndSubtree };
 
@@ -278,7 +295,6 @@ static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemD
         return { SkipExtraction::Self };
     }
 
-    RefPtr element = dynamicDowncast<Element>(node);
     if (!element)
         return { SkipExtraction::Self };
 
@@ -300,7 +316,7 @@ static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemD
         return { Editable { } };
 
     if (RefPtr image = dynamicDowncast<HTMLImageElement>(element))
-        return { ImageItemData { image->src().lastPathComponent().toString(), image->altText() } };
+        return { ImageItemData { image->getURLAttribute(HTMLNames::srcAttr).lastPathComponent().toString(), image->altText() } };
 
     if (RefPtr control = dynamicDowncast<HTMLTextFormControlElement>(element); control && control->isTextField()) {
         RefPtr input = dynamicDowncast<HTMLInputElement>(control);
@@ -321,7 +337,7 @@ static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemD
     }
 
     if (CheckedPtr box = dynamicDowncast<RenderBox>(node.renderer()); box && box->canBeScrolledAndHasScrollableArea()) {
-        if (auto layer = box->checkedLayer(); layer && layer->scrollableArea())
+        if (CheckedPtr layer = box->layer(); layer && layer->scrollableArea())
             return { ScrollableItemData { layer->scrollableArea()->totalContentsSize() } };
     }
 
@@ -343,7 +359,7 @@ static inline std::variant<SkipExtraction, ItemData, URL, Editable> extractItemD
     if (element->hasTagName(HTMLNames::navTag))
         return { ItemData { ContainerType::Nav } };
 
-    if (renderer->style().hasViewportConstrainedPosition())
+    if (CheckedPtr renderElement = dynamicDowncast<RenderBox>(*renderer); renderElement && renderElement->style().hasViewportConstrainedPosition())
         return { ItemData { ContainerType::ViewportConstrained } };
 
     return { SkipExtraction::Self };
@@ -464,7 +480,7 @@ Item extractItem(std::optional<WebCore::FloatRect>&& collectionRectInRootView, P
     return root;
 }
 
-using Token = std::variant<String, IntSize>;
+using Token = Variant<String, IntSize>;
 struct TokenAndBlockOffset {
     Vector<Token> tokens;
     int offset { 0 };
@@ -479,7 +495,7 @@ static IntSize reducePrecision(FloatSize size)
     };
 }
 
-static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets, ContainerNode& node, BlockFlowDirection direction)
+static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets, ContainerNode& node, FlowDirection direction)
 {
     CheckedPtr renderer = node.renderer();
     if (!renderer)
@@ -492,13 +508,13 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
 
         auto offset = [&] {
             switch (direction) {
-            case BlockFlowDirection::TopToBottom:
+            case FlowDirection::TopToBottom:
                 return bounds.y();
-            case BlockFlowDirection::BottomToTop:
+            case FlowDirection::BottomToTop:
                 return bounds.maxY();
-            case BlockFlowDirection::LeftToRight:
+            case FlowDirection::LeftToRight:
                 return bounds.x();
-            case BlockFlowDirection::RightToLeft:
+            case FlowDirection::RightToLeft:
                 return bounds.maxX();
             }
             ASSERT_NOT_REACHED();
@@ -518,13 +534,13 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
     };
 
     if (CheckedPtr frameRenderer = dynamicDowncast<RenderIFrame>(*renderer)) {
-        if (auto contentDocument = frameRenderer->iframeElement().protectedContentDocument())
+        if (RefPtr contentDocument = frameRenderer->iframeElement().contentDocument())
             extractRenderedTokens(tokensAndOffsets, *contentDocument, direction);
         return;
     }
 
-    auto frameView = renderer->view().protectedFrameView();
-    auto appendReplacedContentOrBackgroundImage = [&](const RenderObject& renderer) {
+    RefPtr frameView = renderer->view().frameView();
+    auto appendReplacedContentOrBackgroundImage = [&](auto& renderer) {
         if (!renderer.style().hasBackgroundImage() && !is<RenderReplaced>(renderer))
             return;
 
@@ -545,26 +561,28 @@ static void extractRenderedTokens(Vector<TokenAndBlockOffset>& tokensAndOffsets,
         if (RefPtr node = descendant.node(); node && ImageOverlay::isInsideOverlay(*node))
             continue;
 
-        if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(descendant); textRenderer && textRenderer->hasRenderedText()) {
+        if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(descendant)) {
+            if (textRenderer->hasRenderedText()) {
             Vector<Token> tokens;
             for (auto token : textRenderer->text().simplifyWhiteSpace(isASCIIWhitespace).split(' ')) {
-                auto candidate = token.removeCharacters([](UChar character) {
+                    auto candidate = token.removeCharacters([](char16_t character) {
                     return !u_isalpha(character) && !u_isdigit(character);
                 });
                 if (!candidate.isEmpty())
                     tokens.append({ WTFMove(candidate) });
             }
             appendTokens(WTFMove(tokens), frameView->contentsToRootView(descendant.absoluteBoundingBoxRect()));
+            }
             continue;
         }
 
         if (CheckedPtr frameRenderer = dynamicDowncast<RenderIFrame>(descendant)) {
-            if (auto contentDocument = frameRenderer->iframeElement().protectedContentDocument())
+            if (RefPtr contentDocument = frameRenderer->iframeElement().contentDocument())
                 extractRenderedTokens(tokensAndOffsets, *contentDocument, direction);
             continue;
         }
 
-        appendReplacedContentOrBackgroundImage(descendant);
+        appendReplacedContentOrBackgroundImage(downcast<RenderElement>(descendant));
     }
 }
 
@@ -574,8 +592,8 @@ RenderedText extractRenderedText(Element& element)
     if (!renderer)
         return { };
 
-    RefPtr frameView = renderer->view().protectedFrameView();
-    auto direction = renderer->style().blockFlowDirection();
+    RefPtr frameView = renderer->view().frameView();
+    auto direction = renderer->writingMode().blockDirection();
     auto elementRectInDocument = frameView->absoluteToDocumentRect(renderer->absoluteBoundingBoxRect());
 
     Vector<TokenAndBlockOffset> allTokensAndOffsets;
@@ -583,20 +601,21 @@ RenderedText extractRenderedText(Element& element)
 
     bool ascendingOrder = [&] {
         switch (direction) {
-        case BlockFlowDirection::TopToBottom:
-        case BlockFlowDirection::LeftToRight:
+        case FlowDirection::TopToBottom:
+        case FlowDirection::LeftToRight:
             return true;
-        case BlockFlowDirection::BottomToTop:
-        case BlockFlowDirection::RightToLeft:
+        case FlowDirection::BottomToTop:
+        case FlowDirection::RightToLeft:
             return false;
         }
         ASSERT_NOT_REACHED();
         return true;
     }();
 
-    std::sort(allTokensAndOffsets.begin(), allTokensAndOffsets.end(), [&](auto& a, auto& b) {
-        return ascendingOrder ? a.offset < b.offset : a.offset > b.offset;
-    });
+    if (ascendingOrder)
+        std::ranges::sort(allTokensAndOffsets, std::ranges::less { }, &TokenAndBlockOffset::offset);
+    else
+        std::ranges::sort(allTokensAndOffsets, std::ranges::greater { }, &TokenAndBlockOffset::offset);
 
     bool hasLargeReplacedDescendant = false;
     StringBuilder textWithReplacedContent;
@@ -622,6 +641,62 @@ RenderedText extractRenderedText(Element& element)
     }
 
     return { textWithReplacedContent.toString(), textWithoutReplacedContent.toString(), hasLargeReplacedDescendant };
+}
+
+static Vector<std::pair<String, FloatRect>> extractAllTextAndRectsRecursive(Document& document)
+{
+    RefPtr bodyElement = document.body();
+    if (!bodyElement)
+        return { };
+
+    RefPtr view = document.view();
+    if (!view)
+        return { };
+
+    ListHashSet<Ref<HTMLFrameOwnerElement>> frameOwners;
+    Vector<std::pair<String, FloatRect>> result;
+    auto fullRange = makeRangeSelectingNodeContents(*bodyElement);
+    for (TextIterator iterator { fullRange, TextIteratorBehavior::EntersTextControls }; !iterator.atEnd(); iterator.advance()) {
+        RefPtr node = iterator.node();
+        if (!node)
+            continue;
+
+        if (RefPtr frameOwner = dynamicDowncast<HTMLFrameOwnerElement>(*node))
+            frameOwners.add(frameOwner.releaseNonNull());
+
+        auto trimmedText = iterator.text().trim(isASCIIWhitespace<char16_t>);
+        if (trimmedText.isEmpty())
+            continue;
+
+        CheckedPtr renderer = node->renderer();
+        if (!renderer)
+            continue;
+
+        result.append({ trimmedText.toString(), view->contentsToRootView(renderer->absoluteBoundingBoxRect()) });
+    }
+
+    for (auto& frameOwner : frameOwners) {
+        RefPtr contentDocument = frameOwner->contentDocument();
+        if (!contentDocument)
+            continue;
+
+        result.appendVector(extractAllTextAndRectsRecursive(*contentDocument));
+    }
+
+    return result;
+}
+
+Vector<std::pair<String, FloatRect>> extractAllTextAndRects(Page& page)
+{
+    RefPtr mainFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+    if (!mainFrame)
+        return { };
+
+    RefPtr document = mainFrame->document();
+    if (!document)
+        return { };
+
+    return extractAllTextAndRectsRecursive(*document);
 }
 
 } // namespace TextExtractor

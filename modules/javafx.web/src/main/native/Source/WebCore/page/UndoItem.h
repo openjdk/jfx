@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 
 #include "EventTarget.h"
 #include "VoidCallback.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -37,7 +37,7 @@ namespace WebCore {
 class Document;
 class UndoManager;
 
-class UndoItem : public RefCounted<UndoItem>, public CanMakeWeakPtr<UndoItem> {
+class UndoItem : public RefCountedAndCanMakeWeakPtr<UndoItem> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(UndoItem);
 public:
     struct Init {
@@ -73,8 +73,8 @@ private:
     }
 
     String m_label;
-    Ref<VoidCallback> m_undoHandler;
-    Ref<VoidCallback> m_redoHandler;
+    const Ref<VoidCallback> m_undoHandler;
+    const Ref<VoidCallback> m_redoHandler;
     WeakPtr<UndoManager> m_undoManager;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };

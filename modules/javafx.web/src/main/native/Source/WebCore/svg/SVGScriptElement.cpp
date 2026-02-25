@@ -23,7 +23,9 @@
 #include "SVGScriptElement.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Event.h"
+#include "NodeInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -90,11 +92,11 @@ void SVGScriptElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(href()));
+    addSubresourceURL(urls, protectedDocument()->completeURL(href()));
 }
-Ref<Element> SVGScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> SVGScriptElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
 {
-    return adoptRef(*new SVGScriptElement(tagQName(), targetDocument, false, alreadyStarted()));
+    return adoptRef(*new SVGScriptElement(tagQName(), document, false, alreadyStarted()));
 }
 
 void SVGScriptElement::dispatchErrorEvent()

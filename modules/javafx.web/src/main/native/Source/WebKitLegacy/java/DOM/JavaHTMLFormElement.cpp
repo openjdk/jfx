@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 
 
 #include <WebCore/HTMLCollection.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/JSExecState.h>
@@ -68,52 +69,16 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setActionImpl
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::actionAttr, AtomString {String(env, value)});
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getAutocompleteImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->autocomplete());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString {String(env, value)});
-}
-
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getEnctypeImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->enctype());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setEnctypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setEnctype(AtomString {String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getEncodingImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->enctype());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setEncodingImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setEnctype(AtomString {String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getMethodImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->method());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setMethodImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setMethod(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)

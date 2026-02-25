@@ -42,11 +42,15 @@ enum class AccessibilityRole : uint8_t;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
 class AccessibilityAtspi {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityAtspi, AccessibilityAtspi);
     WTF_MAKE_NONCOPYABLE(AccessibilityAtspi);
     friend NeverDestroyed<AccessibilityAtspi>;
 public:
     WEBCORE_EXPORT static AccessibilityAtspi& singleton();
+
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
 
     void connect(const String&, const String&);
 
@@ -85,7 +89,7 @@ public:
     static const char* localizedRoleName(AccessibilityRole);
 
 #if ENABLE(DEVELOPER_MODE)
-    using NotificationObserverParameter = std::variant<std::nullptr_t, String, bool, unsigned, Ref<AccessibilityObjectAtspi>>;
+    using NotificationObserverParameter = Variant<std::nullptr_t, String, bool, unsigned, Ref<AccessibilityObjectAtspi>>;
     using NotificationObserver = Function<void(AccessibilityObjectAtspi&, const char*, NotificationObserverParameter)>;
     WEBCORE_EXPORT void addNotificationObserver(void*, NotificationObserver&&);
     WEBCORE_EXPORT void removeNotificationObserver(void*);

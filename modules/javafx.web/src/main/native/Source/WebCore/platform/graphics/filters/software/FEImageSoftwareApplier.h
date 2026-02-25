@@ -26,20 +26,21 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FEImage;
 
 class FEImageSoftwareApplier final : public FilterEffectConcreteApplier<FEImage> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FEImageSoftwareApplier);
     using Base = FilterEffectConcreteApplier<FEImage>;
 
 public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

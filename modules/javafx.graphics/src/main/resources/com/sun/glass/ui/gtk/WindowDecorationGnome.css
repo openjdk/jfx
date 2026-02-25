@@ -1,0 +1,126 @@
+/*
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+.-FX-INTERNAL-header-button-container {
+    -fx-button-placement: right;
+    -fx-button-vertical-alignment: center;
+    -fx-button-default-height: 36;
+}
+
+.-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-maximize-button,
+.-FX-INTERNAL-close-button {
+    -fx-background-color: #00000009;
+    -fx-background-radius: 15;
+    -fx-background-insets: 6;
+    -fx-pref-width: 36;
+}
+
+.-FX-INTERNAL-iconify-button.dark,
+.-FX-INTERNAL-maximize-button.dark,
+.-FX-INTERNAL-close-button.dark {
+    -fx-background-color: #ffffff09;
+}
+
+.-FX-INTERNAL-iconify-button:active,
+.-FX-INTERNAL-maximize-button:active,
+.-FX-INTERNAL-close-button:active {
+    -fx-background-color: #00000015;
+}
+
+.-FX-INTERNAL-iconify-button.dark:active,
+.-FX-INTERNAL-maximize-button.dark:active,
+.-FX-INTERNAL-close-button.dark:active {
+    -fx-background-color: #ffffff15
+}
+
+.-FX-INTERNAL-iconify-button:active:hover,
+.-FX-INTERNAL-maximize-button:active:hover,
+.-FX-INTERNAL-close-button:active:hover {
+    -fx-background-color: #00000025;
+}
+
+.-FX-INTERNAL-iconify-button.dark:active:hover,
+.-FX-INTERNAL-maximize-button.dark:active:hover,
+.-FX-INTERNAL-close-button.dark:active:hover {
+    -fx-background-color: #ffffff25;
+}
+
+.-FX-INTERNAL-iconify-button:pressed,
+.-FX-INTERNAL-maximize-button:pressed,
+.-FX-INTERNAL-close-button:pressed {
+    -fx-background-color: #00000035 !important;
+}
+
+.-FX-INTERNAL-iconify-button.dark:pressed,
+.-FX-INTERNAL-maximize-button.dark:pressed,
+.-FX-INTERNAL-close-button.dark:pressed {
+    -fx-background-color: #ffffff35 !important;
+}
+
+.-FX-INTERNAL-iconify-button > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button > .-FX-INTERNAL-glyph {
+    -fx-background-color: #777;
+    -fx-background-insets: 6 -6 -6 6;
+    -fx-scale-shape: false;
+    -fx-position-shape: false;
+}
+
+.-FX-INTERNAL-iconify-button:active > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button:active > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button:active > .-FX-INTERNAL-glyph {
+    -fx-background-color: #333;
+}
+
+.-FX-INTERNAL-iconify-button.dark:active > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button.dark:active > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button.dark:active > .-FX-INTERNAL-glyph {
+    -fx-background-color: white;
+}
+
+.-FX-INTERNAL-iconify-button:disabled,
+.-FX-INTERNAL-maximize-button:disabled,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-maximize-button {
+    -fx-managed: false;
+    visibility: hidden;
+}
+
+.-FX-INTERNAL-iconify-button > .-FX-INTERNAL-glyph {
+    -fx-shape: "m 8,13 v 1 h 8 v -1 z";
+}
+
+.-FX-INTERNAL-maximize-button > .-FX-INTERNAL-glyph {
+    -fx-shape: "M 15,8.934 V 15 H 9 V 8.934 Z M 8,8 v 8 h 8 V 8 Z";
+}
+
+.-FX-INTERNAL-maximize-button.restore > .-FX-INTERNAL-glyph {
+    -fx-shape: "M 10 7 L 10 8 L 16 8 L 16 14 L 17 14 L 17 7 L 10 7 z M 8 9 L 8 16 L 15 16 L 15 9 L 8 9 z M 9 9.9238 L 14 9.9238 L 14 15 L 9 15 L 9 9.9238 z";
+}
+
+.-FX-INTERNAL-close-button > .-FX-INTERNAL-glyph {
+    -fx-shape: "m 8.1465,8.1465 a 0.5,0.5 0 0 0 0,0.707 L 11.293,12 8.1465,15.1465 a 0.5,0.5 0 0 0 0,0.707 0.5,0.5 0 0 0 0.707,0 L 12,12.707 l 3.1465,3.1465 a 0.5,0.5 0 0 0 0.707,0 0.5,0.5 0 0 0 0,-0.707 L 12.707,12 15.8535,8.8535 a 0.5,0.5 0 0 0 0,-0.707 0.5,0.5 0 0 0 -0.707,0 L 12,11.293 8.8535,8.1465 a 0.5,0.5 0 0 0 -0.707,0 z";
+}

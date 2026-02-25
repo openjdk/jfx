@@ -43,6 +43,15 @@
 #define COMPILER_HAS_ATTRIBUTE(x) 0
 #endif
 
+/* COMPILER_HAS_ATTRIBUTE() - whether the compiler supports a particular c++ attribute. */
+/* https://clang.llvm.org/docs/LanguageExtensions.html#has-cpp-attribute */
+/* https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005fcpp_005fattribute.html */
+#ifdef __has_cpp_attribute
+#define COMPILER_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+#else
+#define COMPILER_HAS_CPP_ATTRIBUTE(x) 0
+#endif
+
 /* COMPILER_HAS_CLANG_BUILTIN() - whether the compiler supports a particular clang builtin. */
 #ifdef __has_builtin
 #define COMPILER_HAS_CLANG_BUILTIN(x) __has_builtin(x)
@@ -128,7 +137,7 @@
 
 #endif
 
-#if !COMPILER(CLANG) && !COMPILER(MSVC)
+#if !COMPILER(CLANG)
 #define WTF_COMPILER_QUIRK_CONSIDERS_UNREACHABLE_CODE 1
 #endif
 
@@ -183,7 +192,7 @@
 /* ALWAYS_INLINE */
 
 /* In GCC functions marked with no_sanitize_address cannot call functions that are marked with always_inline and not marked with no_sanitize_address.
- * Therefore we need to give up on the enforcement of ALWAYS_INLINE when bulding with ASAN. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368 */
+ * Therefore we need to give up on the enforcement of ALWAYS_INLINE when building with ASAN. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368 */
 #if !defined(ALWAYS_INLINE) && defined(NDEBUG) && !(COMPILER(GCC) && ASAN_ENABLED)
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
 #endif
@@ -195,7 +204,7 @@
 /* ALWAYS_INLINE_LAMBDA */
 
 /* In GCC functions marked with no_sanitize_address cannot call functions that are marked with always_inline and not marked with no_sanitize_address.
- * Therefore we need to give up on the enforcement of ALWAYS_INLINE_LAMBDA when bulding with ASAN. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368 */
+ * Therefore we need to give up on the enforcement of ALWAYS_INLINE_LAMBDA when building with ASAN. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67368 */
 #if !defined(ALWAYS_INLINE_LAMBDA) && defined(NDEBUG) && !(COMPILER(GCC) && ASAN_ENABLED)
 #define ALWAYS_INLINE_LAMBDA __attribute__((__always_inline__))
 #endif
@@ -216,54 +225,38 @@
 
 /* FALLTHROUGH */
 
-#if !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
-
-#if __has_cpp_attribute(fallthrough)
-#define FALLTHROUGH [[fallthrough]]
-#elif __has_cpp_attribute(clang::fallthrough)
-#define FALLTHROUGH [[clang::fallthrough]]
-#elif __has_cpp_attribute(gnu::fallthrough)
-#define FALLTHROUGH [[gnu::fallthrough]]
-#endif
-
-#elif !defined(FALLTHROUGH) && !defined(__cplusplus)
+#if !defined(FALLTHROUGH) && !defined(__cplusplus)
 
 #if COMPILER_HAS_ATTRIBUTE(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
 #endif
 
-#endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
-
 #if !defined(FALLTHROUGH)
 #define FALLTHROUGH
 #endif
 
+#endif // !defined(FALLTHROUGH) && !defined(__cplusplus)
+
+/* LIFETIME_BOUND */
+
 #if !defined(LIFETIME_BOUND) && defined(__cplusplus)
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(clang::lifetimebound)
+#if COMPILER_HAS_CPP_ATTRIBUTE(clang::lifetimebound)
 #define LIFETIME_BOUND [[clang::lifetimebound]]
-#elif COMPILER_HAS_ATTRIBUTE(lifetimebound)
-#define LIFETIME_BOUND __attribute__((lifetimebound))
+#elif COMPILER_HAS_CPP_ATTRIBUTE(msvc::lifetimebound)
+#define LIFETIME_BOUND [[msvc::lifetimebound]]
+#elif COMPILER_HAS_CPP_ATTRIBUTE(lifetimebound)
+#define LIFETIME_BOUND [[lifetimebound]]
 #endif
 #endif
+
 #if !defined(LIFETIME_BOUND)
 #define LIFETIME_BOUND
-#endif
-/* LIKELY */
-
-#if !defined(LIKELY)
-#define LIKELY(x) __builtin_expect(!!(x), 1)
 #endif
 
 /* NEVER_INLINE */
 
 #if !defined(NEVER_INLINE)
 #define NEVER_INLINE __attribute__((__noinline__))
-#endif
-
-/* NO_RETURN */
-
-#if !defined(NO_RETURN)
-#define NO_RETURN __attribute((__noreturn__))
 #endif
 
 /* NOT_TAIL_CALLED */
@@ -280,29 +273,23 @@
 
 /* MUST_TAIL_CALL */
 
-#if COMPILER(CLANG)
-#if __SIZEOF_POINTER__ == 8
-#if !defined(MUST_TAIL_CALL) && defined(__cplusplus) && defined(__has_cpp_attribute)
-#if __has_cpp_attribute(clang::musttail) && !defined(__powerpc__)
+// 32-bit platforms use different calling conventions, so a MUST_TAIL_CALL function
+// written for 64-bit may fail to tail call on 32-bit.
+// It also doesn't work on ppc64le: https://github.com/llvm/llvm-project/issues/98859
+// and on Windows: https://github.com/llvm/llvm-project/issues/116568
+#if !defined(MUST_TAIL_CALL) && COMPILER(CLANG) && __SIZEOF_POINTER__ == 8 && defined(__cplusplus) && COMPILER_HAS_CPP_ATTRIBUTE(clang::musttail) && !defined(__powerpc__) && !defined(_WIN32)
 #define MUST_TAIL_CALL [[clang::musttail]]
-#endif
-#endif
-#endif
+#define HAVE_MUST_TAIL_CALL 1
 #endif
 
 #if !defined(MUST_TAIL_CALL)
 #define MUST_TAIL_CALL
+#define HAVE_MUST_TAIL_CALL 0
 #endif
 
 /* RETURNS_NONNULL */
 #if !defined(RETURNS_NONNULL)
 #define RETURNS_NONNULL __attribute__((returns_nonnull))
-#endif
-
-/* NO_RETURN_WITH_VALUE */
-
-#if !defined(NO_RETURN_WITH_VALUE)
-#define NO_RETURN_WITH_VALUE NO_RETURN
 #endif
 
 /* OBJC_CLASS */
@@ -327,6 +314,13 @@
 #define OBJC_PROTOCOL(protocolName) class protocolName
 #endif
 
+// https://clang.llvm.org/docs/AttributeReference.html#preferred-type
+#if COMPILER_HAS_ATTRIBUTE(preferred_type)
+#define PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
+#else
+#define PREFERRED_TYPE(T)
+#endif
+
 /* PURE_FUNCTION */
 
 #if !defined(PURE_FUNCTION)
@@ -343,6 +337,22 @@
 
 #if !defined(UNUSED_FUNCTION)
 #define UNUSED_FUNCTION __attribute__((unused))
+#endif
+
+/* UNUSED_MEMBER_VARIABLE */
+
+#if !defined(UNUSED_MEMBER_VARIABLE)
+#define UNUSED_MEMBER_VARIABLE __attribute__((unused))
+#endif
+
+/* TRIVIAL_ABI */
+
+#if !defined(TRIVIAL_ABI)
+#if COMPILER(CLANG)
+#define TRIVIAL_ABI __attribute__((trivial_abi))
+#else
+#define TRIVIAL_ABI
+#endif
 #endif
 
 /* UNUSED_TYPE_ALIAS */
@@ -366,12 +376,6 @@
 
 #if !defined(NO_REORDER)
 #define NO_REORDER
-#endif
-
-/* UNLIKELY */
-
-#if !defined(UNLIKELY)
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #endif
 
 /* UNUSED_LABEL */
@@ -492,9 +496,11 @@
 #if COMPILER(APPLE_CLANG) || defined(CLANG_WEBKIT_BRANCH) || !defined __clang_major__ || __clang_major__ >= 19
 #define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER(...) IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE(__VA_ARGS__)
 #define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS(...) IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE(__VA_ARGS__)
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_FUNCTION(...) IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE(__VA_ARGS__)
 #else
 #define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER(...)
 #define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS(...)
+#define IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_FUNCTION(...)
 #endif
 
 #define ALLOW_DEPRECATED_DECLARATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-declarations")
@@ -521,8 +527,17 @@
 #define SUPPRESS_USE_AFTER_MOVE \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("cplusplus.Move")
 
+#define SUPPRESS_UNCHECKED_ARG \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("alpha.webkit.UncheckedCallArgsChecker")
+
+#define SUPPRESS_UNCHECKED_LOCAL \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UncheckedLocalVarsChecker")
+
+#define SUPPRESS_UNCHECKED_MEMBER \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("webkit.NoUncheckedPtrMemberChecker")
+
 #define SUPPRESS_UNCOUNTED_ARG \
-    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UncountedCallArgsChecker")
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("alpha.webkit.UncountedCallArgsChecker")
 
 #define SUPPRESS_UNCOUNTED_LOCAL \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UncountedLocalVarsChecker")
@@ -530,8 +545,33 @@
 #define SUPPRESS_UNCOUNTED_MEMBER \
     IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("webkit.NoUncountedMemberChecker")
 
-#define SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR \
-    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_CLASS("webkit.RefCntblBaseVirtualDtor")
+#if COMPILER(APPLE_CLANG) || defined(CLANG_WEBKIT_BRANCH) || !defined __clang_major__ || __clang_major__ >= 19
+#define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("webkit.UncountedLambdaCapturesChecker")
+#define SUPPRESS_UNRETAINED_LOCAL \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedLocalVarsChecker")
+#define SUPPRESS_UNRETAINED_ARG \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.UnretainedCallArgsChecker")
+#else
+#define SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE
+#define SUPPRESS_UNRETAINED_LOCAL
+#define SUPPRESS_UNRETAINED_ARG
+#endif
+
+// To suppress webkit.RefCntblBaseVirtualDtor, use NoVirtualDestructorBase instead.
+
+#define SUPPRESS_MEMORY_UNSAFE_CAST \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE("alpha.webkit.MemoryUnsafeCastChecker")
+
+#if defined(CLANG_WEBKIT_BRANCH) || !defined __clang_major__ || __clang_major__ >= 21
+#define SUPPRESS_FORWARD_DECL_MEMBER \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_MEMBER("alpha.webkit.ForwardDeclChecker")
+#define SUPPRESS_FORWARD_DECL_ARG \
+    IGNORE_CLANG_STATIC_ANALYZER_WARNINGS_ATTRIBUTE_ON_FUNCTION("alpha.webkit.ForwardDeclChecker")
+#else
+#define SUPPRESS_FORWARD_DECL_MEMBER
+#define SUPPRESS_FORWARD_DECL_ARG
+#endif
 
 #define IGNORE_RETURN_TYPE_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("return-type")
 #define IGNORE_RETURN_TYPE_WARNINGS_END IGNORE_WARNINGS_END
@@ -539,16 +579,32 @@
 #define IGNORE_NULL_CHECK_WARNINGS_BEGIN IGNORE_WARNINGS_BEGIN("nonnull")
 #define IGNORE_NULL_CHECK_WARNINGS_END IGNORE_WARNINGS_END
 
+#if COMPILER(CLANG)
+#define DECLARE_SYSTEM_HEADER _Pragma(_COMPILER_STRINGIZE(clang system_header))
+#else
+#define DECLARE_SYSTEM_HEADER
+#endif
+
+/* NOESCAPE */
+/* This attribute promises that a function argument will only be used for the duration of the function,
+   and not stored to the heap or in a global state for later use. The compiler does not verify this claim. */
+
+#if !defined(NOESCAPE)
+#if COMPILER_HAS_CPP_ATTRIBUTE(clang::noescape)
+#define NOESCAPE [[clang::noescape]]
+#else
+#define NOESCAPE
+#endif
+#endif
+
 /* NO_UNIQUE_ADDRESS */
 
-#if !defined(NO_UNIQUE_ADDRESS) && defined(__has_cpp_attribute)
-#if __has_cpp_attribute(no_unique_address)
-#define NO_UNIQUE_ADDRESS [[no_unique_address]] // NOLINT: check-webkit-style does not understand annotations.
-#endif
-#endif
-
 #if !defined(NO_UNIQUE_ADDRESS)
+#if COMPILER_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define NO_UNIQUE_ADDRESS [[no_unique_address]] // NOLINT: check-webkit-style does not understand annotations.
+#else
 #define NO_UNIQUE_ADDRESS
+#endif
 #endif
 
 /* TLS_MODEL_INITIAL_EXEC */
@@ -562,3 +618,63 @@
 #if !defined(TLS_MODEL_INITIAL_EXEC)
 #define TLS_MODEL_INITIAL_EXEC
 #endif
+
+/* UNREACHABLE */
+
+#define WTF_UNREACHABLE(...) __builtin_unreachable();
+
+/* WTF_ALLOW_UNSAFE_BUFFER_USAGE */
+
+#if COMPILER(CLANG)
+#define WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage-in-libc-call\"")
+
+#define WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
+    _Pragma("clang diagnostic pop")
+#else
+#define WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#define WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+#endif
+
+/* WTF_UNSAFE_BUFFER_USAGE */
+
+#if COMPILER(CLANG)
+#if COMPILER_HAS_CPP_ATTRIBUTE(clang::unsafe_buffer_usage)
+#define WTF_UNSAFE_BUFFER_USAGE [[clang::unsafe_buffer_usage]]
+#elif COMPILER_HAS_ATTRIBUTE(unsafe_buffer_usage)
+#define WTF_UNSAFE_BUFFER_USAGE __attribute__((__unsafe_buffer_usage__))
+#else
+#define WTF_UNSAFE_BUFFER_USAGE
+#endif
+#else
+#define WTF_UNSAFE_BUFFER_USAGE
+#endif
+
+/* WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE */
+
+#define WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    ALLOW_COMMA_BEGIN \
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN \
+    ALLOW_UNUSED_PARAMETERS_BEGIN \
+    IGNORE_WARNINGS_BEGIN("cast-align") \
+    IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
+
+#define WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END \
+    IGNORE_CLANG_WARNINGS_END \
+    IGNORE_WARNINGS_END \
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END \
+    ALLOW_COMMA_END \
+    ALLOW_DEPRECATED_DECLARATIONS_END \
+    ALLOW_UNUSED_PARAMETERS_END
+
+// Used to indicate that a class member has a specialized implementation in Swift. See
+// "SwiftCXXThunk.h".
+#define HAS_SWIFTCXX_THUNK  NS_REFINED_FOR_SWIFT
+
+// This comment is incremented each time we add or remove a modulemap file, to force
+// rebuild of all WTF's dependencies. This is a workaround for rdar://151920332.
+// Current increment: 2.

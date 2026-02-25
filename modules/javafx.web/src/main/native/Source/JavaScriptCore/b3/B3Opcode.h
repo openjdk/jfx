@@ -90,6 +90,8 @@ enum Opcode : uint8_t {
     UDiv,
     Mod, // All bets are off as to what will happen when you execute this for -2^31%-1 and x%0.
     UMod,
+    MulHigh,
+    UMulHigh,
 
     // Polymorphic negation. Note that we only need this for floating point, since integer negation
     // is exactly like Sub(0, x). But that's not true for floating point. Sub(0, 0) is 0, while
@@ -111,6 +113,7 @@ enum Opcode : uint8_t {
     Abs,
     Ceil,
     Floor,
+    FTrunc,
     Sqrt,
     FMax,
     FMin,
@@ -141,6 +144,8 @@ enum Opcode : uint8_t {
     // Convert between double and float.
     FloatToDouble,
     DoubleToFloat,
+
+    PurifyNaN,
 
     // Polymorphic comparisons, usable with any value type. Returns int32 0 or 1. Note that "Not"
     // is just Equal(x, 0), and "ToBoolean" is just NotEqual(x, 0).
@@ -377,6 +382,8 @@ enum Opcode : uint8_t {
     VectorAddSat,
     VectorSubSat,
     VectorMul,
+    VectorMulHigh,
+    VectorMulLow,
     VectorDotProduct,
     VectorDiv,
     VectorMin,
@@ -428,6 +435,7 @@ enum Opcode : uint8_t {
     VectorRelaxedTruncSat,
     VectorRelaxedMAdd,
     VectorRelaxedNMAdd,
+    VectorRelaxedLaneSelect,
 
     // Currently only some architectures support this.
     // FIXME: Expand this to identical instructions for the other architectures as a macro.
@@ -630,13 +638,4 @@ inline Opcode signExtendOpcode(Width width)
 JS_EXPORT_PRIVATE Opcode storeOpcode(Bank bank, Width width);
 
 } } // namespace JSC::B3
-
-namespace WTF {
-
-class PrintStream;
-
-JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Opcode);
-
-} // namespace WTF
-
 #endif // ENABLE(B3_JIT)

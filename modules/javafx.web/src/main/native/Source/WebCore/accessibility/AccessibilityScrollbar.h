@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,28 +36,26 @@ class Scrollbar;
 
 class AccessibilityScrollbar final : public AccessibilityMockObject {
 public:
-    static Ref<AccessibilityScrollbar> create(Scrollbar*);
-
-    Scrollbar* scrollbar() const { return m_scrollbar.get(); }
+    static Ref<AccessibilityScrollbar> create(AXID, Scrollbar&, AXObjectCache&);
 
 private:
-    explicit AccessibilityScrollbar(Scrollbar*);
+    explicit AccessibilityScrollbar(AXID, Scrollbar&, AXObjectCache&);
 
-    bool canSetValueAttribute() const override { return true; }
+    bool canSetValueAttribute() const final { return true; }
 
-    bool isAccessibilityScrollbar() const override { return true; }
-    LayoutRect elementRect() const override;
+    bool isAccessibilityScrollbar() const final { return true; }
+    LayoutRect elementRect() const final;
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollBar; }
-    AccessibilityOrientation orientation() const override;
-    Document* document() const override;
-    bool isEnabled() const override;
+    std::optional<AccessibilityOrientation> explicitOrientation() const final;
+    Document* document() const final;
+    bool isEnabled() const final;
 
     // Assumes float [0..1]
-    bool setValue(float) override;
-    float valueForRange() const override;
+    bool setValue(float) final;
+    float valueForRange() const final;
 
-    RefPtr<Scrollbar> m_scrollbar;
+    const Ref<Scrollbar> m_scrollbar;
 };
 
 } // namespace WebCore

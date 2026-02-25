@@ -29,49 +29,38 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
+#include "AccessibilityNodeObject.h"
 #include "HTMLAreaElement.h"
 #include "HTMLMapElement.h"
 
 namespace WebCore {
 
-class AccessibilityImageMapLink final : public AccessibilityMockObject {
+class AccessibilityImageMapLink final : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityImageMapLink> create();
+    static Ref<AccessibilityImageMapLink> create(AXID, HTMLAreaElement&, AXObjectCache&);
     virtual ~AccessibilityImageMapLink();
 
-    void setHTMLAreaElement(HTMLAreaElement*);
-    HTMLAreaElement* areaElement() const { return m_areaElement.get(); }
-
-    void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }
-    HTMLMapElement* mapElement() const { return m_mapElement.get(); }
-
-    Node* node() const override { return m_areaElement.get(); }
-
     AccessibilityRole determineAccessibilityRole() final;
-    bool isEnabled() const override { return true; }
+    bool computeIsIgnored() const final;
+    bool isEnabled() const final { return true; }
 
-    Element* anchorElement() const override;
-    Element* actionElement() const override;
-    URL url() const override;
-    bool isLink() const override { return true; }
-    String title() const override;
-    String description() const override;
-    AccessibilityObject* parentObject() const override;
+    Element* anchorElement() const final;
+    Element* actionElement() const final;
+    URL url() const final;
+    String title() const final;
+    String description() const final;
+    AccessibilityObject* parentObject() const final;
 
-    LayoutRect elementRect() const override;
+    LayoutRect elementRect() const final;
 
 private:
-    AccessibilityImageMapLink();
+    explicit AccessibilityImageMapLink(AXID, HTMLAreaElement&, AXObjectCache&);
 
-    void detachFromParent() override;
-    Path elementPath() const override;
+    Path elementPath() const final;
     RenderElement* imageMapLinkRenderer() const;
-    void accessibilityText(Vector<AccessibilityText>&) const override;
+    void accessibilityText(Vector<AccessibilityText>&) const final;
     bool isImageMapLink() const final { return true; }
-    bool supportsPath() const override { return true; }
-
-    WeakPtr<HTMLAreaElement, WeakPtrImplWithEventTargetData> m_areaElement;
-    WeakPtr<HTMLMapElement, WeakPtrImplWithEventTargetData> m_mapElement;
+    bool supportsPath() const final { return true; }
 };
 
 } // namespace WebCore

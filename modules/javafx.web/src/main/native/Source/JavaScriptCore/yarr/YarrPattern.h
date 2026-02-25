@@ -85,6 +85,8 @@ inline CharacterClassWidths& operator|=(CharacterClassWidths& lhs, CharacterClas
 struct CharacterClass {
     WTF_MAKE_TZONE_ALLOCATED(CharacterClass);
 public:
+    using Table = const char*;
+
     // All CharacterClass instances have to have the full set of matches and ranges,
     // they may have an optional m_table for faster lookups (which must match the
     // specified matches and ranges)
@@ -95,7 +97,7 @@ public:
     {
     }
 
-    CharacterClass(const char* table, bool inverted)
+    CharacterClass(Table table, bool inverted)
         : m_table(table)
         , m_characterWidths(CharacterClassWidths::Unknown)
         , m_tableInverted(inverted)
@@ -129,6 +131,8 @@ public:
     {
     }
 
+    void copyOnly8BitCharacterData(const CharacterClass& other);
+
     bool hasNonBMPCharacters() const { return m_characterWidths & CharacterClassWidths::HasNonBMPChars; }
 
     bool hasOneCharacterSize() const { return m_characterWidths == CharacterClassWidths::HasBMPChars || m_characterWidths == CharacterClassWidths::HasNonBMPChars; }
@@ -142,7 +146,7 @@ public:
     Vector<char32_t> m_matchesUnicode;
     Vector<CharacterRange> m_rangesUnicode;
 
-    const char* m_table;
+    Table m_table;
     CharacterClassWidths m_characterWidths;
     bool m_tableInverted : 1;
     bool m_anyCharacter : 1;
@@ -213,6 +217,7 @@ struct PatternTerm {
         DotStarEnclosure,
     };
     Type type;
+    OptionSet<Flags> m_currentFlags;
     bool m_capture : 1;
     bool m_invert : 1;
     MatchDirection m_matchDirection : 1;
@@ -229,6 +234,8 @@ struct PatternTerm {
             unsigned lastSubpatternId;
             bool isCopy : 1;
             bool isTerminal : 1;
+            bool isStringList : 1;
+            bool isEOLStringList: 1;
         } parentheses;
         struct {
             bool bolAnchor : 1;
@@ -238,8 +245,9 @@ struct PatternTerm {
     unsigned inputPosition;
     unsigned frameLocation;
 
-    PatternTerm(char32_t ch, MatchDirection matchDirection = Forward)
+    PatternTerm(char32_t ch, OptionSet<Flags> currFlags, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::PatternCharacter)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(matchDirection)
@@ -249,8 +257,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(CharacterClass* charClass, bool invert, MatchDirection matchDirection = Forward)
+    PatternTerm(CharacterClass* charClass, bool invert, OptionSet<Flags> currFlags, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::CharacterClass)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(matchDirection)
@@ -260,8 +269,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, bool capture = false, bool invert = false, MatchDirection matchDirection = Forward)
+    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, OptionSet<Flags> currFlags, bool capture = false, bool invert = false, MatchDirection matchDirection = Forward)
         : type(type)
+        , m_currentFlags(currFlags)
         , m_capture(capture)
         , m_invert(invert)
         , m_matchDirection(matchDirection)
@@ -270,12 +280,15 @@ struct PatternTerm {
         parentheses.subpatternId = subpatternId;
         parentheses.isCopy = false;
         parentheses.isTerminal = false;
+        parentheses.isStringList = false;
+        parentheses.isEOLStringList = false;
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(Type type, bool invert = false)
+    PatternTerm(Type type, OptionSet<Flags> currFlags, bool invert = false)
         : type(type)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(Forward)
@@ -284,8 +297,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(unsigned spatternId)
+    PatternTerm(unsigned spatternId, OptionSet<Flags> currFlags)
         : type(Type::BackReference)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -295,8 +309,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(bool bolAnchor, bool eolAnchor)
+    PatternTerm(bool bolAnchor, bool eolAnchor, OptionSet<Flags> currFlags)
         : type(Type::DotStarEnclosure)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -307,26 +322,26 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    static PatternTerm ForwardReference()
+    static PatternTerm ForwardReference(OptionSet<Flags> currFlags)
     {
-        auto term = PatternTerm(Type::ForwardReference);
+        auto term = PatternTerm(Type::ForwardReference, currFlags);
         term.backReferenceSubpatternId = 0;
         return term;
     }
 
-    static PatternTerm BOL()
+    static PatternTerm BOL(OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionBOL);
+        return PatternTerm(Type::AssertionBOL, currFlags);
     }
 
-    static PatternTerm EOL()
+    static PatternTerm EOL(OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionEOL);
+        return PatternTerm(Type::AssertionEOL, currFlags);
     }
 
-    static PatternTerm WordBoundary(bool invert)
+    static PatternTerm WordBoundary(bool invert, OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionWordBoundary, invert);
+        return PatternTerm(Type::AssertionWordBoundary, currFlags, invert);
     }
 
     void convertToBackreference()
@@ -353,6 +368,21 @@ struct PatternTerm {
     bool capture()
     {
         return m_capture;
+    }
+
+    bool ignoreCase()
+    {
+        return m_currentFlags.contains(Flags::IgnoreCase);
+    }
+
+    bool multiline()
+    {
+        return m_currentFlags.contains(Flags::Multiline);
+    }
+
+    bool dotAll()
+    {
+        return m_currentFlags.contains(Flags::DotAll);
     }
 
     bool isFixedWidthCharacterClass() const
@@ -400,6 +430,7 @@ public:
         , m_hasFixedSize(false)
         , m_startsWithBOL(false)
         , m_containsBOL(false)
+        , m_isLastAlternative(false)
     {
     }
 
@@ -465,6 +496,7 @@ public:
     bool m_hasFixedSize : 1;
     bool m_startsWithBOL : 1;
     bool m_containsBOL : 1;
+    bool m_isLastAlternative : 1;
 };
 
 struct PatternDisjunction {
@@ -701,10 +733,12 @@ struct YarrPattern {
     bool m_containsBOL : 1;
     bool m_containsLookbehinds : 1;
     bool m_containsUnsignedLengthPattern : 1;
+    bool m_containsModifiers : 1;
     bool m_hasCopiedParenSubexpressions : 1;
     bool m_hasNamedCaptureGroups : 1;
     bool m_saveInitialStartValue : 1;
     OptionSet<Flags> m_flags;
+    SpecificPattern m_specificPattern { SpecificPattern::None };
     unsigned m_numSubpatterns { 0 };
     unsigned m_initialStartValueFrameLocation { 0 };
     unsigned m_numDuplicateNamedCaptureGroups { 0 };
@@ -718,8 +752,9 @@ struct YarrPattern {
     // is the subpatterenId for a non-duplicate named group.
     // For a duplicate named group, the size will be greater than 2. The first vector entry it is the
     // duplicateNamedGroupId. Subsequent vector entries are the subpatternId's for that duplicateNamedGroupId.
-    HashMap<String, Vector<unsigned>> m_namedGroupToParenIndices;
+    UncheckedKeyHashMap<String, Vector<unsigned>> m_namedGroupToParenIndices;
     Vector<unsigned> m_duplicateNamedGroupForSubpatternId;
+    String m_atom;
 
 private:
     ErrorCode compile(StringView patternString);
@@ -734,7 +769,7 @@ private:
     CharacterClass* nonspacesCached { nullptr };
     CharacterClass* nonwordcharCached { nullptr };
     CharacterClass* nonwordUnicodeIgnoreCasecharCached { nullptr };
-    HashMap<unsigned, CharacterClass*> unicodePropertiesCached;
+    UncheckedKeyHashMap<unsigned, CharacterClass*> unicodePropertiesCached;
 };
 
     void indentForNestingLevel(PrintStream&, unsigned);

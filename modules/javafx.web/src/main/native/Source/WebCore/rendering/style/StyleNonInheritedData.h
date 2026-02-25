@@ -29,6 +29,10 @@
 #include <wtf/DataRef.h>
 #include <wtf/RefCounted.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class StyleBoxData;
@@ -39,12 +43,16 @@ class StyleRareNonInheritedData;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleNonInheritedData);
 class StyleNonInheritedData : public RefCounted<StyleNonInheritedData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleNonInheritedData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleNonInheritedData, StyleNonInheritedData);
 public:
     static Ref<StyleNonInheritedData> create();
     Ref<StyleNonInheritedData> copy() const;
 
     bool operator==(const StyleNonInheritedData&) const;
+
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleNonInheritedData&) const;
+#endif
 
     DataRef<StyleBoxData> boxData;
     DataRef<StyleBackgroundData> backgroundData;

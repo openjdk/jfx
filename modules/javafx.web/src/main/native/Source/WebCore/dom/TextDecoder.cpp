@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 #include "config.h"
 #include "TextDecoder.h"
 
+#include "ExceptionOr.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
 #include <wtf/text/MakeString.h>
@@ -42,11 +43,11 @@ TextDecoder::~TextDecoder() = default;
 ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options options)
 {
     auto trimmedLabel = label.trim(isASCIIWhitespace);
-    const UChar nullCharacter = '\0';
+    const char16_t nullCharacter = '\0';
     if (trimmedLabel.contains(nullCharacter))
         return Exception { ExceptionCode::RangeError };
     auto decoder = adoptRef(*new TextDecoder(trimmedLabel, options));
-    if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
+    if (!decoder->m_textEncoding.isValid() || decoder->m_textEncoding.name() == "replacement"_s)
         return Exception { ExceptionCode::RangeError };
     return decoder;
 }
@@ -66,10 +67,6 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
             m_codec->stripByteOrderMark();
     }
 
-    m_decodedBytes += data.size();
-    if (m_decodedBytes > String::MaxLength)
-        return Exception { ExceptionCode::RangeError };
-
     bool sawError = false;
     String result = m_codec->decode(data, !options.stream, m_options.fatal, sawError);
 
@@ -83,7 +80,7 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
 
 String TextDecoder::encoding() const
 {
-    return makeString(asASCIILowercase(StringView::fromLatin1(m_textEncoding.name())));
+    return StringView(m_textEncoding.name()).convertToASCIILowercase();
 }
 
 }

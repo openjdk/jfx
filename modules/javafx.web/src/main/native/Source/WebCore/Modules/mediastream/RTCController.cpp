@@ -27,7 +27,7 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "RTCNetworkManager.h"
 #include "RTCPeerConnection.h"
 #include "WebRTCProvider.h"
@@ -40,6 +40,7 @@
 #if USE(GSTREAMER_WEBRTC)
 #include "GStreamerWebRTCLogSink.h"
 #endif
+
 #endif
 
 namespace WebCore {
@@ -73,9 +74,9 @@ void RTCController::remove(RTCPeerConnection& connection)
 
 static inline bool matchDocumentOrigin(Document& document, SecurityOrigin& topOrigin, SecurityOrigin& clientOrigin)
 {
-    if (topOrigin.isSameOriginAs(document.securityOrigin()))
+    if (topOrigin.isSameOriginAs(document.protectedSecurityOrigin()))
         return true;
-    return topOrigin.isSameOriginAs(document.topOrigin()) && clientOrigin.isSameOriginAs(document.securityOrigin());
+    return topOrigin.isSameOriginAs(document.protectedTopOrigin()) && clientOrigin.isSameOriginAs(document.protectedSecurityOrigin());
 }
 
 bool RTCController::shouldDisableICECandidateFiltering(Document& document)
@@ -153,18 +154,18 @@ void RTCController::enableICECandidateFiltering()
 }
 
 #if USE(LIBWEBRTC)
-static String toWebRTCLogLevel(rtc::LoggingSeverity severity)
+static String toWebRTCLogLevel(webrtc::LoggingSeverity severity)
 {
     switch (severity) {
-    case rtc::LoggingSeverity::LS_VERBOSE:
+    case webrtc::LoggingSeverity::LS_VERBOSE:
         return "verbose"_s;
-    case rtc::LoggingSeverity::LS_INFO:
+    case webrtc::LoggingSeverity::LS_INFO:
         return "info"_s;
-    case rtc::LoggingSeverity::LS_WARNING:
+    case webrtc::LoggingSeverity::LS_WARNING:
         return "warning"_s;
-    case rtc::LoggingSeverity::LS_ERROR:
+    case webrtc::LoggingSeverity::LS_ERROR:
         return "error"_s;
-    case rtc::LoggingSeverity::LS_NONE:
+    case webrtc::LoggingSeverity::LS_NONE:
         return "none"_s;
     }
     ASSERT_NOT_REACHED();
@@ -188,12 +189,13 @@ void RTCController::startGatheringLogs(Document& document, LogCallback&& callbac
         m_logSink = makeUnique<LibWebRTCLogSink>([weakThis = WeakPtr { *this }] (auto&& logLevel, auto&& logMessage) {
             ensureOnMainThread([weakThis, logMessage = fromStdString(logMessage).isolatedCopy(), logLevel] () mutable {
                 if (auto protectedThis = weakThis.get())
-                    protectedThis->m_callback("logs"_s, WTFMove(logMessage), toWebRTCLogLevel(logLevel), nullptr);
+                    protectedThis->m_callback("backend-logs"_s, WTFMove(logMessage), toWebRTCLogLevel(logLevel), nullptr);
             });
         });
         m_logSink->start();
     }
 #endif
+
 #if USE(GSTREAMER_WEBRTC)
     if (!m_logSink) {
         m_logSink = makeUnique<GStreamerWebRTCLogSink>([weakThis = WeakPtr { *this }](const auto& logLevel, const auto& logMessage) {

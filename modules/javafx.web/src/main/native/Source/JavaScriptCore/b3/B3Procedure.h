@@ -41,6 +41,7 @@
 #include <wtf/IndexedContainerIterator.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/SharedTask.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
@@ -61,13 +62,14 @@ class Dominators;
 class NaturalLoops;
 class Value;
 class Variable;
+class WasmBoundsCheckValue;
 
 namespace Air {
 class Code;
 class StackSlot;
 } // namespace Air
 
-typedef void WasmBoundsCheckGeneratorFunction(CCallHelpers&, GPRReg);
+typedef void WasmBoundsCheckGeneratorFunction(CCallHelpers&, WasmBoundsCheckValue*, GPRReg);
 typedef SharedTask<WasmBoundsCheckGeneratorFunction> WasmBoundsCheckGenerator;
 
 // This represents B3's view of a piece of code. Note that this object must exist in a 1:1
@@ -79,7 +81,7 @@ typedef SharedTask<WasmBoundsCheckGeneratorFunction> WasmBoundsCheckGenerator;
 
 class Procedure {
     WTF_MAKE_NONCOPYABLE(Procedure);
-    WTF_MAKE_TZONE_ALLOCATED(Procedure);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Procedure);
 public:
 
     JS_EXPORT_PRIVATE Procedure(bool usesSIMD = false);
@@ -135,7 +137,7 @@ public:
     Value* addIntConstant(Origin, Type, int64_t value);
     Value* addIntConstant(Value*, int64_t value);
 
-    // bits is a bitwise_cast of the constant you want.
+    // bits is a std::bit_cast of the constant you want.
     JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, uint64_t bits);
     JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, v128_t bits);
 
@@ -282,7 +284,7 @@ public:
     JS_EXPORT_PRIVATE void freeUnneededB3ValuesAfterLowering();
 
     bool shouldDumpIR() const { return m_shouldDumpIR; }
-    void setShouldDumpIR();
+    JS_EXPORT_PRIVATE void setShouldDumpIR();
 
     void setUsessSIMD()
     {
@@ -316,7 +318,7 @@ private:
     std::unique_ptr<NaturalLoops> m_naturalLoops;
     std::unique_ptr<BackwardsCFG> m_backwardsCFG;
     std::unique_ptr<BackwardsDominators> m_backwardsDominators;
-    HashSet<ValueKey> m_fastConstants;
+    UncheckedKeyHashSet<ValueKey> m_fastConstants;
     const char* m_lastPhaseName;
     std::unique_ptr<OpaqueByproducts> m_byproducts;
     std::unique_ptr<Air::Code> m_code;

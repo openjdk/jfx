@@ -46,23 +46,24 @@
 
 #include "RenderLayer.h"
 #include "ScrollableArea.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class RenderMarquee;
 
 class RenderLayerScrollableArea final : public ScrollableArea, public CanMakeCheckedPtr<RenderLayerScrollableArea> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderLayerScrollableArea);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderLayerScrollableArea);
 public:
     explicit RenderLayerScrollableArea(RenderLayer&);
     virtual ~RenderLayerScrollableArea();
 
     // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
 
     RenderLayer& layer() { return m_layer; }
 
@@ -81,6 +82,7 @@ public:
 
     void setPostLayoutScrollPosition(std::optional<ScrollPosition>);
     void applyPostLayoutScrollPositionIfNeeded();
+    bool hasPostLayoutScrollPosition() { return !!m_postLayoutScrollPosition; }
 
     int scrollWidth() const;
     int scrollHeight() const;
@@ -118,7 +120,7 @@ public:
 
     Color scrollbarThumbColorStyle() const final;
     Color scrollbarTrackColorStyle() const final;
-    ScrollbarGutter scrollbarGutterStyle() const final;
+    Style::ScrollbarGutter scrollbarGutterStyle() const final;
     ScrollbarWidth scrollbarWidthStyle() const final;
 
     bool requiresScrollPositionReconciliation() const { return m_requiresScrollPositionReconciliation; }
@@ -129,14 +131,14 @@ public:
     // Returns true when there is actually scrollable overflow (requires layout to be up-to-date).
     bool hasCompositedScrollableOverflow() const { return m_hasCompositedScrollableOverflow; }
 
-    int verticalScrollbarWidth(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, bool isHorizontalWritingMode = true) const;
-    int horizontalScrollbarHeight(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, bool isHorizontalWritingMode = true) const;
+    int verticalScrollbarWidth(OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, bool isHorizontalWritingMode = true) const;
+    int horizontalScrollbarHeight(OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, bool isHorizontalWritingMode = true) const;
 
     bool hasOverflowControls() const;
     bool hitTestOverflowControls(HitTestResult&, const IntPoint& localPoint);
     bool hitTestResizerInFragments(const LayerFragments&, const HitTestLocation&, LayoutPoint& pointInFragment) const;
 
-    void paintOverflowControls(GraphicsContext&, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
+    void paintOverflowControls(GraphicsContext&, OptionSet<PaintBehavior>, const IntPoint&, const IntRect& damageRect, bool paintingOverlayControls = false);
     void paintScrollCorner(GraphicsContext&, const IntPoint&, const IntRect& damageRect);
     void paintResizer(GraphicsContext&, const LayoutPoint&, const LayoutRect& damageRect);
     void paintOverlayScrollbars(GraphicsContext&, const LayoutRect& damageRect, OptionSet<PaintBehavior>, RenderObject* subtreePaintRoot = nullptr);
@@ -197,7 +199,7 @@ public:
     IntPoint convertFromScrollbarToContainingView(const Scrollbar&, const IntPoint&) const final;
     IntPoint convertFromContainingViewToScrollbar(const Scrollbar&, const IntPoint&) const final;
     void setScrollOffset(const ScrollOffset&) final;
-    ScrollingNodeID scrollingNodeID() const final;
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> scrollingNodeID() const final;
 
     IntRect visibleContentRectInternal(VisibleContentRectIncludesScrollbars, VisibleContentRectBehavior) const final;
     IntSize overhangAmount() const final;
@@ -232,7 +234,7 @@ public:
     void updateScrollbarsAfterStyleChange(const RenderStyle* oldStyle);
     void updateScrollbarsAfterLayout();
 
-    void positionOverflowControls(const IntSize&);
+    bool positionOverflowControls(const IntSize&);
 
     void updateAllScrollbarRelatedStyle();
 
@@ -265,11 +267,17 @@ public:
     void invalidateScrollAnchoringElement() final;
     ScrollAnchoringController* scrollAnchoringController() { return m_scrollAnchoringController.get(); }
 
+    void updateAnchorPositionedAfterScroll() final;
+
     void createScrollbarsController() final;
 
-    FrameIdentifier rootFrameID() const final;
+    std::optional<FrameIdentifier> rootFrameID() const final;
 
     void scrollbarWidthChanged(ScrollbarWidth) override;
+
+#if ENABLE(FORM_CONTROL_REFRESH)
+    bool formControlRefreshEnabled() const override;
+#endif
 
 private:
     bool hasHorizontalOverflow() const;
@@ -287,8 +295,6 @@ private:
     void updateScrollCornerStyle();
     void updateResizerStyle();
 
-    void drawPlatformResizerImage(GraphicsContext&, const LayoutRect& resizerCornerRect);
-
     Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
     void destroyScrollbar(ScrollbarOrientation);
 
@@ -299,6 +305,7 @@ private:
     void registerScrollableAreaForAnimatedScroll();
 
     float deviceScaleFactor() const final;
+    void scrollDidEnd() final;
 
 private:
     bool m_scrollDimensionsDirty { true };
@@ -314,6 +321,8 @@ private:
     bool m_updatingMarqueePosition { false };
 
     bool m_isRegisteredForAnimatedScroll { false };
+
+    bool m_useDarkAppearanceForScrollbars { false };
 
     // The width/height of our scrolled area.
     int m_scrollWidth { 0 };

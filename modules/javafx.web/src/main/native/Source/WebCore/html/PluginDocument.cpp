@@ -25,7 +25,10 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "ContainerNodeInlines.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
@@ -35,12 +38,12 @@
 #include "HTMLStyleElement.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
-#include "LocalFrameView.h"
 #include "Logging.h"
 #include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include "StyleSheetContents.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -76,7 +79,11 @@ Ref<HTMLStyleElement> PluginDocumentParser::createStyleElement(Document& documen
 {
     auto styleElement = HTMLStyleElement::create(document);
 
-    constexpr auto styleSheetContents = "html, body, embed { width: 100%; height: 100%; }\nbody { margin: 0; overflow: hidden; }\n"_s;
+    constexpr auto styleSheetContents = R"CONTENTS(
+        html, body, embed { width: 100%; height: 100%; }
+        body { margin: 0; overflow: hidden; }
+        html.plugin-fits-content body { overflow: revert; }
+    )CONTENTS"_s;
 #if PLATFORM(IOS_FAMILY)
     constexpr auto bodyBackgroundColorStyle = "body { background-color: rgb(217, 224, 233) }"_s;
 #else
@@ -102,11 +109,6 @@ void PluginDocumentParser::createDocumentStructure()
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
-
-#if PLATFORM(IOS_FAMILY)
-    // Should not be able to zoom into standalone plug-in documents.
-    document.processViewport("user-scalable=no"_s, ViewportArguments::Type::PluginDocument);
-#endif
 
     auto body = HTMLBodyElement::create(document);
     rootElement->appendChild(body);
@@ -185,7 +187,7 @@ PluginViewBase* PluginDocument::pluginWidget()
 
 void PluginDocument::setPluginElement(HTMLPlugInElement& element)
 {
-    m_pluginElement = &element;
+    m_pluginElement = element;
 }
 
 void PluginDocument::detachFromPluginElement()

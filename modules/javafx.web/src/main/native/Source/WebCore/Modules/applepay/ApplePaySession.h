@@ -31,7 +31,7 @@
 #include "ApplePayPaymentAuthorizationResult.h"
 #include "ApplePayPaymentRequest.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "PaymentSession.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -57,16 +57,16 @@ struct ApplePayShippingMethod;
 struct ApplePayPaymentMethodUpdate;
 struct ApplePayShippingContactUpdate;
 struct ApplePayShippingMethodUpdate;
+template<typename> class ExceptionOr;
 
 class ApplePaySession final : public PaymentSession, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePaySession);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ExceptionOr<Ref<ApplePaySession>> create(Document&, unsigned version, ApplePayPaymentRequest&&);
     virtual ~ApplePaySession();
-
-    // ActiveDOMObject.
-    void ref() const final { PaymentSession::ref(); }
-    void deref() const final { PaymentSession::deref(); }
 
     static constexpr auto STATUS_SUCCESS = ApplePayPaymentAuthorizationResult::Success;
     static constexpr auto STATUS_FAILURE = ApplePayPaymentAuthorizationResult::Failure;
@@ -128,6 +128,7 @@ private:
     void didCancelPaymentSession(PaymentSessionError&&) override;
 
     PaymentCoordinator& paymentCoordinator() const;
+    Ref<PaymentCoordinator> protectedPaymentCoordinator() const;
 
     bool canBegin() const;
     bool canAbort() const;

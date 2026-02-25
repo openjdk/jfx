@@ -1228,10 +1228,10 @@ convert_twodigit_year (guint y)
  * @str: string to parse
  *
  * Parses a user-inputted string @str, and try to figure out what date it
- * represents, taking the [current locale][setlocale] into account. If the
- * string is successfully parsed, the date will be valid after the call.
- * Otherwise, it will be invalid. You should check using g_date_valid()
- * to see whether the parsing succeeded.
+ * represents, taking the [current locale](running.html#locale)
+ * into account. If the string is successfully parsed, the date will be
+ * valid after the call. Otherwise, it will be invalid. You should check
+ * using g_date_valid() to see whether the parsing succeeded.
  *
  * This function is not appropriate for file formats and the like; it
  * isn't very precise, and its exact behavior varies with the locale.
@@ -1392,6 +1392,7 @@ _g_localtime (time_t timet, struct tm *out_tm)
   gboolean success = TRUE;
 
 #ifdef HAVE_LOCALTIME_R
+  tzset ();
   if (!localtime_r (&timet, out_tm))
     success = FALSE;
 #else
@@ -2630,7 +2631,7 @@ win32_strftime_helper (const GDate     *d,
  * @date: valid #GDate
  *
  * Generates a printed representation of the date, in a
- * [locale][setlocale]-specific way.
+ * [locale](running.html#locale)-specific way.
  * Works just like the platform's C library strftime() function,
  * but only accepts date-related formats; time-related formats
  * give undefined results. Date must be valid. Unlike strftime()
@@ -2643,7 +2644,7 @@ win32_strftime_helper (const GDate     *d,
  * make the \%F provided by the C99 strftime() work on Windows
  * where the C library only complies to C89.
  *
- * Returns: number of characters written to the buffer, or 0 the buffer was too small
+ * Returns: number of characters written to the buffer, or `0` if the buffer was too small
  */
 #ifdef GSTREAMER_LITE
 #ifndef G_OS_WIN32

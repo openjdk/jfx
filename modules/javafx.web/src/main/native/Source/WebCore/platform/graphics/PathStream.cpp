@@ -27,8 +27,11 @@
 #include "PathStream.h"
 
 #include "GeometryUtilities.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PathStream);
 
 Ref<PathStream> PathStream::create()
 {
@@ -75,8 +78,21 @@ PathStream::PathStream(const Vector<PathSegment>& segments)
 }
 
 PathStream::PathStream(PathSegment&& segment)
-    : m_segments({ WTFMove(segment) })
 {
+    m_segments.reserveCapacity(16); // 16 is Vector's minCapacity, and we know we're going to append a second segment.
+    m_segments.append(WTFMove(segment));
+}
+
+bool PathStream::definitelyEqual(const PathImpl& other) const
+{
+    RefPtr otherAsPathStream = dynamicDowncast<PathStream>(other);
+    if (!otherAsPathStream)
+        return false;
+
+    if (otherAsPathStream.get() == this)
+        return true;
+
+    return segments() == otherAsPathStream->segments();
 }
 
 Ref<PathImpl> PathStream::copy() const
@@ -86,7 +102,7 @@ Ref<PathImpl> PathStream::copy() const
 
 const PathMoveTo* PathStream::lastIfMoveTo() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return nullptr;
 
     return std::get_if<PathMoveTo>(&m_segments.last().data());
@@ -159,6 +175,11 @@ void PathStream::add(PathRoundedRect roundedRect)
     segments().append(roundedRect);
 }
 
+void PathStream::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    segments().append(continuousRoundedRect);
+}
+
 void PathStream::add(PathCloseSubpath)
 {
     segments().append(PathCloseSubpath { });
@@ -204,46 +225,10 @@ std::optional<PathSegment> PathStream::singleSegment() const
     return m_segments.first();
 }
 
-template<class DataType>
-std::optional<DataType> PathStream::singleDataType() const
-{
-    const auto segment = singleSegment();
-    if (!segment)
-        return std::nullopt;
-    const auto data = std::get_if<DataType>(&segment->data());
-    if (!data)
-        return std::nullopt;
-    return *data;
-}
-
-std::optional<PathDataLine> PathStream::singleDataLine() const
-{
-    return singleDataType<PathDataLine>();
-}
-
-std::optional<PathArc> PathStream::singleArc() const
-{
-    return singleDataType<PathArc>();
-}
-
-std::optional<PathClosedArc> PathStream::singleClosedArc() const
-{
-    return singleDataType<PathClosedArc>();
-}
-
-std::optional<PathDataQuadCurve> PathStream::singleQuadCurve() const
-{
-    return singleDataType<PathDataQuadCurve>();
-}
-
-std::optional<PathDataBezierCurve> PathStream::singleBezierCurve() const
-{
-    return singleDataType<PathDataBezierCurve>();
-}
 
 bool PathStream::isClosed() const
 {
-    if (isEmpty())
+    if (m_segments.isEmpty())
         return false;
 
     return m_segments.last().closesSubpath();

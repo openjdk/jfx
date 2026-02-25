@@ -82,7 +82,7 @@ class JITConstant {
 
     inline uint64_t encode(void* pointer, ByteSizedEnumType type)
     {
-        uint64_t pointerBits = bitwise_cast<uint64_t>(pointer);
+        uint64_t pointerBits = std::bit_cast<uint64_t>(pointer);
         return pointerBits | static_cast<uint64_t>(type) << 48;
     }
 public:
@@ -100,7 +100,7 @@ public:
     { }
 
     inline uint32_t hash() const { return computeHash(m_encodedPointer); }
-    inline void* pointer() const { return bitwise_cast<void*>(m_encodedPointer & ~typeMask); }
+    inline void* pointer() const { return std::bit_cast<void*>(m_encodedPointer & ~typeMask); }
     void setPointer(void* pointer) { m_encodedPointer = encode(pointer, type()); }
     inline ByteSizedEnumType type() const { return static_cast<ByteSizedEnumType>((m_encodedPointer & typeMask) >> typeShift); }
     void setType(ByteSizedEnumType type) { m_encodedPointer = encode(pointer(), type); }
@@ -333,7 +333,7 @@ protected:
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
 class DirectJITCode : public JITCodeWithCodeRef {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DirectJITCode);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DirectJITCode, DirectJITCode);
 public:
     DirectJITCode(JITType);
     DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);

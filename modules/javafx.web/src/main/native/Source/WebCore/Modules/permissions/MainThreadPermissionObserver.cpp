@@ -31,8 +31,11 @@
 #include "PermissionController.h"
 #include "PermissionState.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MainThreadPermissionObserver);
 
 MainThreadPermissionObserver::MainThreadPermissionObserver(ThreadSafeWeakPtr<PermissionStatus>&& permissionStatus, ScriptExecutionContextIdentifier contextIdentifier, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page, ClientOrigin&& origin)
     : m_permissionStatus(WTFMove(permissionStatus))
@@ -44,13 +47,13 @@ MainThreadPermissionObserver::MainThreadPermissionObserver(ThreadSafeWeakPtr<Per
     , m_origin(WTFMove(origin))
 {
     ASSERT(isMainThread());
-    PermissionController::shared().addObserver(*this);
+    PermissionController::singleton().addObserver(*this);
 }
 
 MainThreadPermissionObserver::~MainThreadPermissionObserver()
 {
     ASSERT(isMainThread());
-    PermissionController::shared().removeObserver(*this);
+    PermissionController::singleton().removeObserver(*this);
 }
 
 void MainThreadPermissionObserver::stateChanged(PermissionState newPermissionState)

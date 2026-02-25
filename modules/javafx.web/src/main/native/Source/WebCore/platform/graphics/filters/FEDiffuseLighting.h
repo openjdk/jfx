@@ -28,7 +28,9 @@ namespace WebCore {
 
 class LightSource;
 
-class FEDiffuseLighting : public FELighting {
+class FEDiffuseLighting final : public FELighting {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEDiffuseLighting);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEDiffuseLighting);
 public:
     WEBCORE_EXPORT static Ref<FEDiffuseLighting> create(const Color& lightingColor, float surfaceScale, float diffuseConstant, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&&, DestinationColorSpace = DestinationColorSpace::SRGB());
 

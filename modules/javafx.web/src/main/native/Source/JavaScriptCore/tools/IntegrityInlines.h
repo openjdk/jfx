@@ -54,7 +54,7 @@ ALWAYS_INLINE bool Random::shouldAudit(VM& vm)
     uint64_t newTriggerBits = m_triggerBits;
     bool shouldAudit = newTriggerBits & 1;
     newTriggerBits = newTriggerBits >> 1;
-    if (LIKELY(!shouldAudit)) {
+    if (!shouldAudit) [[likely]] {
         m_triggerBits = newTriggerBits;
         return false;
     }
@@ -78,13 +78,13 @@ ALWAYS_INLINE void auditCell(VM& vm, JSValue value)
 
 ALWAYS_INLINE void auditCellMinimally(VM& vm, JSCell* cell)
 {
-    if (UNLIKELY(Gigacage::contains(cell)))
+    if (Gigacage::contains(cell)) [[unlikely]]
         auditCellMinimallySlow(vm, cell);
 }
 
 ALWAYS_INLINE void auditCellRandomly(VM& vm, JSCell* cell)
 {
-    if (UNLIKELY(vm.integrityRandom().shouldAudit(vm)))
+    if (vm.integrityRandom().shouldAudit(vm)) [[unlikely]]
         auditCellFully(vm, cell);
 }
 
@@ -107,7 +107,7 @@ ALWAYS_INLINE void auditStructureID(StructureID structureID)
     Structure* structure = structureID.tryDecode();
     IA_ASSERT(structure, "structureID.bits 0x%x", structureID.bits());
     // structure should be pointing to readable memory. Force a read.
-    WTF::opaque(*bitwise_cast<uintptr_t*>(structure));
+    WTF::opaque(*std::bit_cast<uintptr_t*>(structure));
 #endif
 }
 
@@ -117,7 +117,7 @@ JS_EXPORT_PRIVATE VM* doAuditSlow(VM*);
 
 ALWAYS_INLINE VM* doAudit(VM* vm)
 {
-    if (UNLIKELY(!VMInspector::isValidVM(vm)))
+    if (!VMInspector::isValidVM(vm)) [[unlikely]]
         return doAuditSlow(vm);
     return vm;
 }

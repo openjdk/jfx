@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.text;
 
+import javafx.scene.layout.Region;
 import com.sun.javafx.geom.RectBounds;
 
 /**
@@ -51,4 +52,11 @@ public interface TextSpan {
      * recommended).
      */
     public RectBounds getBounds();
+
+    /**
+     * Returns the {@code Region} which contains the layout for this TextSpan.
+     *
+     * @return the layout root, or null
+     */
+    public Region getLayoutRootRegion();
 }

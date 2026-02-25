@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,14 +47,17 @@
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageRuntimeAgent);
+
 PageRuntimeAgent::PageRuntimeAgent(PageAgentContext& context)
     : InspectorRuntimeAgent(context)
-    , m_frontendDispatcher(makeUnique<Inspector::RuntimeFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::RuntimeFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::RuntimeBackendDispatcher::create(Ref { context.backendDispatcher }, this))
     , m_instrumentingAgents(context.instrumentingAgents)
     , m_inspectedPage(context.inspectedPage)
@@ -106,7 +109,7 @@ void PageRuntimeAgent::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapper
 InjectedScript PageRuntimeAgent::injectedScriptForEval(Inspector::Protocol::ErrorString& errorString, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (!executionContextId) {
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+        RefPtr localMainFrame = m_inspectedPage->localMainFrame();
         if (!localMainFrame)
             return InjectedScript();
 
@@ -138,7 +141,7 @@ void PageRuntimeAgent::reportExecutionContextCreation()
     if (!pageAgent)
         return;
 
-    m_inspectedPage.forEachLocalFrame([&](LocalFrame& frame) {
+    m_inspectedPage->forEachLocalFrame([&](LocalFrame& frame) {
         if (!frame.script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
             return;
 
@@ -146,7 +149,7 @@ void PageRuntimeAgent::reportExecutionContextCreation()
 
         // Always send the main world first.
         auto& mainGlobalObject = mainWorldGlobalObject(frame);
-        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorld());
+        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorldSingleton());
 
         for (auto& jsWindowProxy : frame.windowProxy().jsWindowProxiesAsVector()) {
             auto* globalObject = jsWindowProxy->window();
@@ -154,7 +157,7 @@ void PageRuntimeAgent::reportExecutionContextCreation()
                 continue;
 
             Ref securityOrigin = downcast<LocalDOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
-            notifyContextCreated(frameId, globalObject, jsWindowProxy->protectedWorld(), securityOrigin.ptr());
+            notifyContextCreated(frameId, globalObject, jsWindowProxy->world(), securityOrigin.ptr());
         }
     });
 }

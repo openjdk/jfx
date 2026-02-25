@@ -206,6 +206,7 @@ enum AutoplayPolicy {
     boolean isVideoAndRequiresUserGestureForVideoRateChange;
     boolean isAudioAndRequiresUserGestureForAudioRateChange;
     boolean isVideoAndRequiresUserGestureForVideoDueToLowPowerMode;
+    boolean isVideoAndRequiresUserGestureForVideoDueToAggressiveThermalMitigation;
     boolean noUserGestureRequired;
     boolean requiresPlaybackAndIsNotPlaying;
     boolean hasEverNotifiedAboutPlaying;
@@ -337,16 +338,18 @@ enum AV1ConfigurationRange {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject
 ] dictionary CookieData {
     DOMString name;
     DOMString value;
-    DOMString domain;
-    double expires;
-    boolean isHttpOnly;
-    boolean isSecure;
-    boolean isSession;
-    boolean isSameSiteLax;
-    boolean isSameSiteStrict;
+    DOMString domain = "";
+    DOMString path = "";
+    double? expires = null;
+    boolean isHttpOnly = false;
+    boolean isSecure = false;
+    boolean isSession = false;
+    boolean isSameSiteLax = false;
+    boolean isSameSiteStrict = false;
 };
 
 [
@@ -355,15 +358,6 @@ enum AV1ConfigurationRange {
 ] dictionary TextIndicatorInfo {
     DOMRectReadOnly textBoundingRectInRootViewCoordinates;
     DOMRectList textRectsInBoundingRectCoordinates;
-};
-
-[
-    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    Conditional=ATTACHMENT_ELEMENT,
-    JSGenerateToJSObject,
-] dictionary AttachmentThumbnailInfo {
-    unsigned long width;
-    unsigned long height;
 };
 
 [
@@ -462,6 +456,26 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 };
 
 
+enum ContentsFormat {
+    "RGBA8",
+#if defined(ENABLE_PIXEL_FORMAT_RGB10)
+    "RGBA10",
+#endif
+#if defined(ENABLE_PIXEL_FORMAT_RGBA16F)
+    "RGBA16F",
+#endif
+};
+
+[
+    Conditional=DAMAGE_TRACKING,
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary FrameDamage {
+    unsigned long sequenceId;
+    DOMRectReadOnly bounds;
+    sequence<DOMRectReadOnly> rects;
+};
+
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     LegacyNoInterfaceObject,
@@ -547,6 +561,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DOMRect absoluteLineRectFromPoint(long x, long y);
 
     DOMRect absoluteCaretBounds();
+    boolean isCaretVisible();
 
     // isCaretBlinkingSuspended() returns whether the frame selection of the context document
     // is suspended, while the parameterized method returns the state for a particular document
@@ -567,6 +582,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     DOMString markerDescriptionForNode(Node node, DOMString markerType, unsigned long index);
     DOMString dumpMarkerRects(DOMString markerType);
     undefined setMarkedTextMatchesAreHighlighted(boolean flag);
+    ImageData snapshotNode(Node node);
 
     undefined invalidateFontCache();
 
@@ -585,8 +601,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     DOMString viewBaseBackgroundColor();
     undefined setViewBaseBackgroundColor(DOMString colorValue);
+    undefined setUnderPageBackgroundColorOverride(DOMString colorValue);
 
     DOMString documentBackgroundColor();
+
+    boolean displayP3Available();
 
     undefined setPagination(DOMString mode, long gap, optional long pageLength = 0);
     unsigned long long lineIndexAfterPageBreak(Element element);
@@ -596,11 +615,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean wasLastChangeUserEdit(Element textField);
     boolean elementShouldAutoComplete(HTMLInputElement inputElement);
     undefined setAutofilled(HTMLInputElement inputElement, boolean enabled);
-    undefined setAutoFilledAndViewable(HTMLInputElement inputElement, boolean enabled);
-    undefined setAutoFilledAndObscured(HTMLInputElement inputElement, boolean enabled);
-    undefined setShowAutoFillButton(HTMLInputElement inputElement, AutoFillButtonType autoFillButtonType);
-    AutoFillButtonType autoFillButtonType(HTMLInputElement inputElement);
-    AutoFillButtonType lastAutoFillButtonType(HTMLInputElement inputElement);
+    undefined setAutofilledAndViewable(HTMLInputElement inputElement, boolean enabled);
+    undefined setAutofilledAndObscured(HTMLInputElement inputElement, boolean enabled);
+    undefined setAutofillButtonType(HTMLInputElement inputElement, AutoFillButtonType autoFillButtonType);
+    AutoFillButtonType autofillButtonType(HTMLInputElement inputElement);
+    AutoFillButtonType lastAutofillButtonType(HTMLInputElement inputElement);
     sequence<DOMString> recentSearches(HTMLInputElement inputElement);
 
     undefined setCanShowPlaceholder(Element element, boolean canShowPlaceholder);
@@ -672,6 +691,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 #if defined(ENABLE_WRITING_TOOLS) && ENABLE_WRITING_TOOLS
     boolean hasWritingToolsTextSuggestionMarker(long from, long length);
 #endif
+    boolean hasTransparentContentMarker(long from, long length);
     undefined setContinuousSpellCheckingEnabled(boolean enabled);
     undefined setAutomaticQuoteSubstitutionEnabled(boolean enabled);
     undefined setAutomaticLinkDetectionEnabled(boolean enabled);
@@ -679,7 +699,10 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setAutomaticTextReplacementEnabled(boolean enabled);
     undefined setAutomaticSpellingCorrectionEnabled(boolean enabled);
 
+    undefined setMarkerFor(DOMString markerTypeString, long from, long length, DOMString data);
+
     undefined handleAcceptedCandidate(DOMString candidate, unsigned long location, unsigned long length);
+
     undefined changeSelectionListType();
     undefined changeBackToReplacedString(DOMString replacedString);
 
@@ -708,6 +731,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     unsigned long remoteImagesCountForTesting();
     undefined setAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
     undefined setForceUpdateImageDataEnabledForTesting(HTMLImageElement element, boolean enabled);
+    undefined setHasHDRContentForTesting(HTMLImageElement element);
+
+    [Conditional=WEB_CODECS] boolean hasPendingActivity(WebCodecsVideoDecoder decoder);
 
     undefined setGridMaxTracksLimit(unsigned long maxTracksLimit);
 
@@ -721,6 +747,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
+    undefined lowerAllFrameMemoryMonitorLimits();
+
+    [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.
     const unsigned short LAYER_TREE_INCLUDES_VISIBLE_RECTS = 1;
@@ -733,11 +762,13 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     const unsigned short LAYER_TREE_INCLUDES_BACKING_STORE_ATTACHED = 128;
     const unsigned short LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 256;
     const unsigned short LAYER_TREE_INCLUDES_EVENT_REGION = 512;
-    const unsigned short LAYER_TREE_INCLUDES_DEEP_COLOR = 1024;
+    const unsigned short LAYER_TREE_INCLUDES_EXTENDED_COLOR = 1024;
     const unsigned short LAYER_TREE_INCLUDES_DEVICE_SCALE = 2048;
     DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     unsigned long long layerIDForElement(Element element);
+    unsigned long long horizontalScrollbarLayerID(optional Node? node = null);
+    unsigned long long verticalScrollbarLayerID(optional Node? node = null);
     
     sequence<unsigned long long> scrollingNodeIDForNode(optional Node? node = null);
 
@@ -798,6 +829,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     unsigned long numberOfLiveNodes();
     unsigned long numberOfLiveDocuments();
     unsigned long referencingNodeCount(Document document);
+    undefined executeOpportunisticallyScheduledTasks();
     unsigned long numberOfIntersectionObservers(Document document);
     unsigned long numberOfResizeObservers(Document document);
     WindowProxy? openDummyInspectorFrontend(DOMString url);
@@ -829,14 +861,10 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setHeaderHeight(unrestricted float height);
     undefined setFooterHeight(unrestricted float height);
 
-    [Conditional=FULLSCREEN_API] undefined webkitWillEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidEnterFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitWillExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] undefined webkitDidExitFullScreenForElement(Element element);
-    [Conditional=FULLSCREEN_API] readonly attribute boolean isAnimatingFullScreen;
-
     undefined setFullscreenInsets(FullscreenInsets insets);
     undefined setFullscreenAutoHideDuration(double duration);
+
+    undefined setScreenContentsFormatsForTesting(sequence<ContentsFormat> contentsFormats);
 
     [Conditional=VIDEO] boolean isChangingPresentationMode(HTMLVideoElement element);
     [Conditional=VIDEO_PRESENTATION_MODE] undefined setMockVideoPresentationModeEnabled(boolean enabled);
@@ -872,6 +900,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean areTimersThrottled();
 
     undefined setLowPowerModeEnabled(boolean enabled);
+    undefined setAggressiveThermalMitigationEnabled(boolean enabled);
     undefined setOutsideViewportThrottlingEnabled(boolean enabled);
     readonly attribute double requestAnimationFrameInterval;
     readonly attribute boolean scriptedAnimationsAreSuspended;
@@ -882,6 +911,12 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined startTrackingStyleRecalcs();
     unsigned long styleRecalcCount();
     readonly attribute unsigned long lastStyleUpdateSize;
+
+    undefined startTrackingLayoutUpdates();
+    unsigned long layoutUpdateCount();
+
+    undefined startTrackingRenderLayerPositionUpdates();
+    unsigned long renderLayerPositionUpdateCount();
 
     undefined startTrackingCompositingUpdates();
     unsigned long compositingUpdateCount();
@@ -897,8 +932,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     // If |node| is an HTMLIFrameElement, it assumes node.contentDocument is
     // specified without security checks. Unspecified or null means this document.
     undefined updateLayoutIgnorePendingStylesheetsAndRunPostLayoutTasks(optional Node? node = null);
-
-    readonly attribute unsigned long layoutCount;
 
     // Returns a string with information about the mouse cursor used at the specified client location.
     DOMString getCurrentCursorInfo();
@@ -941,6 +974,12 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     [Conditional=VIDEO] undefined enableGStreamerHolePunching(HTMLVideoElement element);
 
+    [Conditional=VIDEO] double effectiveDynamicRangeLimitValue(HTMLMediaElement media);
+    double getContextEffectiveDynamicRangeLimitValue(HTMLCanvasElement canvas);
+    undefined setPageShouldSuppressHDR(boolean shouldSuppressHDR);
+    
+    [Conditional=VIDEO] undefined enterViewerMode(HTMLVideoElement element);
+
     undefined setIsPlayingToBluetoothOverride(optional boolean? isPlaying = null);
 
     [Conditional=LEGACY_ENCRYPTED_MEDIA] undefined initializeMockCDM();
@@ -967,10 +1006,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] unrestricted double closestTimeToTimeRanges(unrestricted double time, TimeRanges ranges);
 
     boolean isSelectPopupVisible(HTMLSelectElement element);
-
-    boolean isPluginUnavailabilityIndicatorObscured(Element element);
-    DOMString unavailablePluginReplacementText(Element element);
-    boolean isPluginSnapshotted(Element element);
 
     DOMRect selectionBounds();
     StaticRange? selectedRange();
@@ -1028,6 +1063,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] boolean isPlayerVisibleInViewport(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerMuted(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerPaused(HTMLMediaElement element);
+    [Conditional=VIDEO] undefined forceStereoDecoding(HTMLMediaElement element);
 
     MockPageOverlay installMockPageOverlay(PageOverlayType type);
     DOMString pageOverlayLayerTreeAsText(optional unsigned short flags = 0);
@@ -1061,6 +1097,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] undefined setMediaControlsHidePlaybackRates(HTMLMediaElement element, boolean hidePlaybackRates);
 
     DOMString userVisibleString(DOMURL url);
+
+    float pageMediaVolume();
     undefined setPageMediaVolume(float volume);
 
     undefined setShowAllPlugins(boolean showAll);
@@ -1118,7 +1156,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setPageIsInWindow(boolean isInWindow);
     boolean isPageActive();
 
-    [Conditional=WEB_RTC] undefined setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] undefined applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setWebRTCH265Support(boolean allowed);
     [Conditional=WEB_RTC] undefined setWebRTCVP9Support(boolean supportVP9Profile0, boolean supportVP9Profile2);
@@ -1146,6 +1183,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=MEDIA_STREAM] boolean isMediaStreamSourceEnded(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
     [Conditional=MEDIA_STREAM] boolean shouldAudioTrackPlay(AudioTrack track);
+    [Conditional=MEDIA_STREAM] DOMString mediaStreamTrackPersistentId(MediaStreamTrack track);
+    [Conditional=MEDIA_STREAM] unsigned long audioCaptureSourceCount();
 
     [Conditional=WEB_RTC] readonly attribute DOMString rtcNetworkInterfaceName;
 
@@ -1160,7 +1199,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     readonly attribute unsigned long long storageAreaMapCount;
 
     unsigned long long elementIdentifier(Element element);
-    boolean isElementAlive(unsigned long long elementIdentifier);
+    boolean isElementAlive(unsigned long long nodeIdentifier);
     unsigned long long pageIdentifier(Document document);
 
     boolean isAnyWorkletGlobalScopeAlive();
@@ -1246,8 +1285,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined reloadWithoutContentExtensions();
     undefined disableContentExtensionsChecks();
 
-    undefined setUseSystemAppearance(boolean value);
-
     unsigned long pluginCount();
     unsigned long pluginScrollPositionX(Element element);
     unsigned long pluginScrollPositionY(Element element);
@@ -1265,8 +1302,10 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     VPCodecConfigurationRecord? parseVPCodecParameters(DOMString codecParameters);
     AV1CodecConfigurationRecord? parseAV1CodecParameters(DOMString codecParameters);
     DOMString createAV1CodecParametersString(AV1CodecConfigurationRecord parameters);
+    boolean validateAV1ConfigurationRecord(DOMString codecParameters);
     boolean validateAV1PerLevelConstraints(DOMString codecParameters, VideoConfiguration configuration);
 
+    undefined setCookie(CookieData cookieData);
     sequence<CookieData> getCookies();
 
     undefined setAlwaysAllowLocalWebarchive(boolean alwaysAllowLocalWebarchive);
@@ -1296,6 +1335,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean hasSandboxMachLookupAccessToXPCServiceName(DOMString process, DOMString service);
     boolean hasSandboxIOKitOpenAccessToClass(DOMString process, DOMString ioKitClass);
     boolean hasSandboxUnixSyscallAccess(DOMString process, unsigned long syscall);
+
+#if defined(ENABLE_LOGD_BLOCKING_IN_WEBCONTENT) && ENABLE_LOGD_BLOCKING_IN_WEBCONTENT
+    boolean emitWebCoreLogs(unsigned long logCount, boolean useMainThread);
+    boolean emitLogs(DOMString logString, unsigned long logCount, boolean useMainThread);
+#endif
 
     DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
     DOMString focusRingColor();
@@ -1331,12 +1375,11 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined setContentSizeCategory(ContentSizeCategory category);
 
-    [Conditional=ATTACHMENT_ELEMENT] AttachmentThumbnailInfo attachmentThumbnailInfo(HTMLAttachmentElement element);
     [Conditional=ATTACHMENT_ELEMENT, Conditional=SERVICE_CONTROLS] boolean hasImageControls(HTMLImageElement element);
 
     [Conditional=MEDIA_SESSION] double currentMediaSessionPosition(MediaSession session);
     [Conditional=MEDIA_SESSION] undefined sendMediaSessionAction(MediaSession session, MediaSessionActionDetails actionDetails);
-    [Conditional=MEDIA_SESSION] Promise<ImageData> loadArtworkImage(DOMString url);
+    [Conditional=MEDIA_SESSION&WEB_CODECS] Promise<WebCodecsVideoFrame> loadArtworkImage(DOMString url);
     [Conditional=MEDIA_SESSION] sequence<DOMString> platformSupportedCommands();
 
     [Conditional=MEDIA_SESSION_COORDINATOR, CallWith=CurrentScriptExecutionContext] undefined registerMockMediaSessionCoordinator(StringCallback callback);
@@ -1379,20 +1422,33 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     
     boolean isUsingUISideCompositing();
 
-    boolean readyToRetrieveComputedRoleOrLabel(Element element);
     DOMString getComputedLabel(Element element);
     DOMString getComputedRole(Element element);
 
     readonly attribute boolean hasScopeBreakingHasSelectors;
 
     sequence<PDFAnnotationRect> pdfAnnotationRectsForTesting(Element element);
+    undefined setPDFTextAnnotationValueForTesting(Element element, unsigned long pageIndex, unsigned long annotationIndex, DOMString value);
     undefined registerPDFTest(VoidCallback callback, Element element);
     undefined setPDFDisplayModeForTesting(Element element, DOMString mode);
+    undefined unlockPDFDocumentForTesting(Element element, DOMString password);
     boolean sendEditingCommandToPDFForTesting(Element element, DOMString commandName, optional DOMString argument = "");
 
     readonly attribute DOMString defaultSpatialTrackingLabel;
 
     [Conditional=VIDEO] boolean isEffectivelyMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] EventTarget addInternalEventTarget(HTMLMediaElement element);
 
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();
+
+    undefined setTopDocumentURLForQuirks(DOMString urlString);
+
+#if defined(ENABLE_CONTENT_EXTENSIONS) && ENABLE_CONTENT_EXTENSIONS
+    undefined setResourceMonitorNetworkUsageThreshold(unsigned long threshold, double randomness);
+    attribute boolean shouldSkipResourceMonitorThrottling;
+#endif
+
+    [Conditional=MODEL_ELEMENT] undefined disableModelLoadDelaysForTesting();
+    [Conditional=MODEL_ELEMENT] DOMString modelElementState(HTMLModelElement element);
+    [Conditional=MODEL_ELEMENT] boolean isModelElementIntersectingViewport(HTMLModelElement element);
 };

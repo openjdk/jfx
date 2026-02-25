@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010, 2011, 2012, 2013 Google Inc. All rights reserved.
@@ -27,6 +27,7 @@
 #include "EventDispatcher.h"
 
 #include "CompositionEvent.h"
+#include "DocumentInlines.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
@@ -44,6 +45,8 @@
 #include "ShadowRoot.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
+#include "page/LocalDOMWindow.h"
+#include <wtf/Scope.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -119,15 +122,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!event.isTrusted())
         return false;
 
-    RefPtr frame = node.document().frame();
-    if (!frame)
+    RefPtr localMainFrame = node.protectedDocument()->localMainFrame();
+    if (!localMainFrame)
         return false;
 
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return false;
-
-    if (!localFrame->checkedLoader()->shouldSuppressTextInputFromEditing())
+    if (!localMainFrame->loader().shouldSuppressTextInputFromEditing())
         return false;
 
     if (auto* textEvent = dynamicDowncast<TextEvent>(event))
@@ -173,15 +172,25 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     LOG_WITH_STREAM(Events, stream << "EventDispatcher::dispatchEvent " << event << " on node " << node);
 
     Ref protectedNode { node };
-    RefPtr protectedView { node.document().view() };
+    Ref document = node.document();
+    RefPtr protectedView { document->view() };
 
     auto typeInfo = eventNames().typeInfoForEvent(event.type());
-    bool shouldDispatchEventToScripts = hasRelevantEventListener(node.document(), event);
+    bool shouldDispatchEventToScripts = hasRelevantEventListener(document, event);
+
+    RefPtr window = document->window();
+    std::optional<LocalDOMWindow::PerformanceEventTimingCandidate> pendingEventTiming;
+    if (typeInfo.isInCategory(EventCategory::EventTimingEligible) && window && document->settings().eventTimingEnabled() && event.isTrusted())
+        pendingEventTiming = window->initializeEventTimingEntry(event, typeInfo);
+    auto finalizeEntry(WTF::makeScopeExit([&, event = Ref(event)] {
+        if (pendingEventTiming)
+            window->finalizeEventTimingEntry(*pendingEventTiming, event);
+    }));
 
     bool targetOrRelatedTargetIsInShadowTree = node.isInShadowTree() || isInShadowTree(event.relatedTarget());
     // FIXME: We should also check touch target list.
-    bool hasNoEventListnerOrDefaultEventHandler = !shouldDispatchEventToScripts && !typeInfo.hasDefaultEventHandler() && !node.document().hasConnectedPluginElements();
-    if (hasNoEventListnerOrDefaultEventHandler && !targetOrRelatedTargetIsInShadowTree) {
+    bool hasNoEventListenerOrDefaultEventHandler = !shouldDispatchEventToScripts && !typeInfo.hasDefaultEventHandler() && !node.document().hasConnectedPluginElements();
+    if (hasNoEventListenerOrDefaultEventHandler && !targetOrRelatedTargetIsInShadowTree) {
         event.resetBeforeDispatch();
         event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         return;
@@ -189,7 +198,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     EventPath eventPath { node, event };
 
-    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && is<MouseEvent>(event)
+    if (event.isTrusted() && is<MouseEvent>(event)
         && (typeInfo.type() == EventType::mousedown || typeInfo.type() == EventType::mouseup || typeInfo.type() == EventType::click || typeInfo.type() == EventType::dblclick)) {
         eventPath.adjustForDisabledFormControl();
     }
@@ -200,12 +209,12 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
         // is a node and its root is a shadow root.
         if (eventContext.target()) {
-            shouldClearTargetsAfterDispatch = isInShadowTree(eventContext.target()) || isInShadowTree(eventContext.relatedTarget());
+            shouldClearTargetsAfterDispatch = isInShadowTree(eventContext.protectedTarget().get()) || isInShadowTree(eventContext.protectedRelatedTarget().get());
             break;
         }
     }
 
-    if (hasNoEventListnerOrDefaultEventHandler) {
+    if (hasNoEventListenerOrDefaultEventHandler) {
         if (shouldClearTargetsAfterDispatch)
             resetAfterDispatchInShadowTree(event);
         return;
@@ -255,20 +264,20 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 }
 
 template<typename T>
-static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
+static void dispatchEventWithType(std::span<T* const> targets, Event& event)
 {
     ASSERT(targets.size() >= 1);
-    ASSERT(*targets.begin());
+    ASSERT(targets.front());
 
     EventPath eventPath { targets };
-    event.setTarget(RefPtr { *targets.begin() });
+    event.setTarget(RefPtr { targets.front() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);
     event.resetAfterDispatch();
 }
 
-void EventDispatcher::dispatchEvent(const Vector<EventTarget*>& targets, Event& event)
+void EventDispatcher::dispatchEvent(std::span<EventTarget* const> targets, Event& event)
 {
     dispatchEventWithType<EventTarget>(targets, event);
 }

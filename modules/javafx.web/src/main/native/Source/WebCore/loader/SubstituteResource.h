@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +38,11 @@ public:
     const URL& url() const { return m_url; }
     const ResourceResponse& response() const { return m_response; }
     FragmentedSharedBuffer& data() const { return *m_data.get(); }
+    Ref<FragmentedSharedBuffer> protectedData() const { return data(); }
     void append(const SharedBuffer& buffer) { m_data.append(buffer); }
     void clear() { m_data.empty(); }
 
-    virtual void deliver(ResourceLoader& loader) { loader.deliverResponseAndData(m_response, m_data.copy()); }
+    virtual void deliver(ResourceLoader& loader) { loader.deliverResponseAndData(ResourceResponse { m_response }, m_data.copy()); }
 
 protected:
     SubstituteResource(URL&& url, ResourceResponse&& response, Ref<FragmentedSharedBuffer>&& data)

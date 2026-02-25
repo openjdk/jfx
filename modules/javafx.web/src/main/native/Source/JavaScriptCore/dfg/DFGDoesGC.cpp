@@ -85,7 +85,7 @@ bool doesGC(Graph& graph, Node* node)
     case ArithBitXor:
     case ArithBitLShift:
     case ArithBitRShift:
-    case BitURShift:
+    case ArithBitURShift:
     case ValueToInt32:
     case UInt32ToNumber:
     case DoubleAsInt32:
@@ -121,6 +121,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckArrayOrEmpty:
     case CheckDetached:
     case GetScope:
+    case GetEvalScope:
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
@@ -175,7 +176,7 @@ bool doesGC(Graph& graph, Node* node)
     case MapIteratorNext:
     case MapIteratorKey:
     case MapIteratorValue:
-    case MapStorage:
+    case MapStorageOrSentinel:
     case MapIterationNext:
     case MapIterationEntry:
     case MapIterationEntryKey:
@@ -202,6 +203,7 @@ bool doesGC(Graph& graph, Node* node)
     case MultiDeleteByOffset:
     case ValueRep:
     case DoubleRep:
+    case PurifyNaN:
     case Int52Rep:
     case GetGetter:
     case GetSetter:
@@ -223,6 +225,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -235,7 +238,7 @@ bool doesGC(Graph& graph, Node* node)
     case PhantomNewArrayBuffer:
     case PhantomSpread:
     case PhantomClonedArguments:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
     case ForwardVarargs:
@@ -273,12 +276,14 @@ bool doesGC(Graph& graph, Node* node)
     case PutByOffset:
     case WeakMapGet:
     case NumberIsNaN:
+    case NumberIsFinite:
+    case NumberIsSafeInteger:
         return false;
 
 #if ASSERT_ENABLED
     case ArrayPush:
     case ArrayPop:
-    case ArraySpliceExtract:
+    case ArraySplice:
     case PushWithScope:
     case CreateActivation:
     case CreateDirectArguments:
@@ -295,6 +300,8 @@ bool doesGC(Graph& graph, Node* node)
     case Construct:
     case ConstructForwardVarargs:
     case ConstructVarargs:
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52:
     case DefineDataProperty:
     case DefineAccessorProperty:
     case DeleteById:
@@ -361,9 +368,11 @@ bool doesGC(Graph& graph, Node* node)
     case RegExpMatchFastGlobal:
     case RegExpTest:
     case RegExpTestInline:
+    case RegExpSearch:
     case ResolveScope:
     case ResolveScopeForHoistingFuncDeclInEval:
     case Return:
+    case StringAt:
     case StringCharAt:
     case StringLocaleCompare:
     case TailCall:
@@ -406,8 +415,10 @@ bool doesGC(Graph& graph, Node* node)
     case NewArrayWithSize:
     case NewArrayWithConstantSize:
     case NewArrayWithSpecies:
+    case NewArrayWithSizeAndStructure:
     case NewArrayBuffer:
-    case NewRegexp:
+    case NewRegExp:
+    case NewRegExpUntyped:
     case NewStringObject:
     case NewMap:
     case NewSet:
@@ -420,6 +431,7 @@ bool doesGC(Graph& graph, Node* node)
     case NewAsyncFunction:
     case NewBoundFunction:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case ThrowStaticError:
     case GetPropertyEnumerator:
     case EnumeratorInByVal:
@@ -427,11 +439,13 @@ bool doesGC(Graph& graph, Node* node)
     case EnumeratorNextUpdatePropertyName:
     case EnumeratorNextUpdateIndexAndMode:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithConstantSize:
     case MaterializeNewInternalFieldObject:
     case MaterializeCreateActivation:
     case SetFunctionName:
     case StrCat:
     case StringReplace:
+    case StringReplaceAll:
     case StringReplaceRegExp:
     case StringReplaceString:
     case StringSlice:
@@ -442,16 +456,19 @@ bool doesGC(Graph& graph, Node* node)
     case CallDOMGetter:
     case CallDOM:
     case ArraySlice:
+    case ArrayIncludes:
     case ArrayIndexOf:
     case ParseInt: // We might resolve a rope even though we don't clobber anything.
     case SetAdd:
     case MapSet:
     case MapOrSetDelete:
+    case MapStorage:
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:
     case ValueBitLShift:
     case ValueBitRShift:
+    case ValueBitURShift:
     case ValueAdd:
     case ValueSub:
     case ValueMul:
@@ -471,10 +488,9 @@ bool doesGC(Graph& graph, Node* node)
 
     case ToIntegerOrInfinity:
     case ToLength:
-        return node->child1().useKind() == UntypedUse;
-
+    case GlobalIsFinite:
     case GlobalIsNaN:
-        return node->child1().useKind() != DoubleRepUse;
+        return node->child1().useKind() == UntypedUse;
 
     case CallNumberConstructor:
         switch (node->child1().useKind()) {
@@ -559,6 +575,12 @@ bool doesGC(Graph& graph, Node* node)
             return true;
         return false;
 
+    case MultiGetByVal:
+        return true;
+
+    case MultiPutByVal:
+        return true;
+
     case ResolveRope:
         return true;
 
@@ -623,7 +645,7 @@ bool doesGC(Graph& graph, Node* node)
         switch (node->switchData()->kind) {
         case SwitchCell:
             ASSERT(graph.m_plan.isFTL());
-            FALLTHROUGH;
+            [[fallthrough]];
         case SwitchImm:
             return false;
         case SwitchChar:

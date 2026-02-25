@@ -27,14 +27,58 @@
 #include "ModelPlayer.h"
 
 #include "Color.h"
+#include "FloatPoint3D.h"
+#include "ModelPlayerAnimationState.h"
+#include "ModelPlayerTransformState.h"
 #include "TransformationMatrix.h"
+#include <wtf/TZoneMallocInlines.h>
+
+#if ENABLE(MODEL_PROCESS)
+#include <WebCore/StageModeOperations.h>
+#endif
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
+
 ModelPlayer::~ModelPlayer() = default;
 
-void ModelPlayer::setBackgroundColor(Color)
+bool ModelPlayer::isPlaceholder() const
 {
+    return false;
+}
+
+std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
+{
+    return std::nullopt;
+}
+
+std::optional<std::unique_ptr<ModelPlayerTransformState>> ModelPlayer::currentTransformState() const
+{
+    return std::nullopt;
+}
+
+void ModelPlayer::reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&)
+{
+}
+
+void ModelPlayer::visibilityStateDidChange()
+{
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxCenter() const
+{
+    return std::nullopt;
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxExtents() const
+{
+    return std::nullopt;
+}
+
+std::optional<TransformationMatrix> ModelPlayer::entityTransform() const
+{
+    return std::nullopt;
 }
 
 void ModelPlayer::setEntityTransform(TransformationMatrix)
@@ -64,5 +108,79 @@ String ModelPlayer::inlinePreviewUUIDForTesting() const
 {
     return emptyString();
 }
+
+#if ENABLE(MODEL_PROCESS)
+void ModelPlayer::setAutoplay(bool)
+{
+}
+
+void ModelPlayer::setLoop(bool)
+{
+}
+
+void ModelPlayer::setPlaybackRate(double, CompletionHandler<void(double effectivePlaybackRate)>&& completionHandler)
+{
+    completionHandler(1.0);
+}
+
+double ModelPlayer::duration() const
+{
+    return 0;
+}
+
+bool ModelPlayer::paused() const
+{
+    return true;
+}
+
+void ModelPlayer::setPaused(bool, CompletionHandler<void(bool succeeded)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
+Seconds ModelPlayer::currentTime() const
+{
+    return 0_s;
+}
+
+void ModelPlayer::setCurrentTime(Seconds, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void ModelPlayer::setEnvironmentMap(Ref<SharedBuffer>&&)
+{
+}
+
+void ModelPlayer::setHasPortal(bool)
+{
+}
+
+void ModelPlayer::setStageMode(StageModeOperation)
+{
+}
+
+void ModelPlayer::beginStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::updateStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::endStageModeInteraction()
+{
+}
+
+void ModelPlayer::animateModelToFitPortal(CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
+void ModelPlayer::resetModelTransformAfterDrag()
+{
+}
+
+#endif // ENABLE(MODEL_PROCESS)
 
 }

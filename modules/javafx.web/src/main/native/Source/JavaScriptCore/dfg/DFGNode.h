@@ -82,9 +82,9 @@ class Snippet;
 
 namespace DFG {
 
+class BasicBlock;
 class Graph;
 class PromotedLocationDescriptor;
-struct BasicBlock;
 
 struct StorageAccessData {
     PropertyOffset offset;
@@ -105,6 +105,16 @@ struct MultiDeleteByOffsetData {
 
     bool writesStructures() const;
     bool allVariantsStoreEmpty() const;
+};
+
+struct MultiGetByValData {
+    ArrayModes m_arrayModes { };
+    DFG::ArrayMode m_arrayMode { };
+};
+
+struct MultiPutByValData {
+    ArrayModes m_arrayModes { };
+    DFG::ArrayMode m_arrayMode { };
 };
 
 struct MatchStructureVariant {
@@ -132,7 +142,7 @@ struct NewArrayWithSpeciesData {
     unsigned arrayMode { 0 };
     unsigned indexingMode { 0 };
 
-    uint64_t asQuadWord() const { return bitwise_cast<uint64_t>(*this); }
+    uint64_t asQuadWord() const { return std::bit_cast<uint64_t>(*this); }
 };
 static_assert(sizeof(IndexingType) <= sizeof(unsigned));
 static_assert(sizeof(ArrayMode) <= sizeof(unsigned));
@@ -152,12 +162,7 @@ struct DataViewData {
 static_assert(sizeof(DataViewData) == sizeof(uint64_t));
 
 struct BranchTarget {
-    BranchTarget()
-        : block(nullptr)
-        , count(PNaN)
-    {
-    }
-
+    BranchTarget() = default;
     explicit BranchTarget(BasicBlock* block)
         : block(block)
         , count(PNaN)
@@ -166,14 +171,14 @@ struct BranchTarget {
 
     void setBytecodeIndex(unsigned bytecodeIndex)
     {
-        block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(bytecodeIndex));
+        block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(bytecodeIndex));
     }
-    unsigned bytecodeIndex() const { return bitwise_cast<uintptr_t>(block); }
+    unsigned bytecodeIndex() const { return std::bit_cast<uintptr_t>(block); }
 
     void dump(PrintStream&) const;
 
-    BasicBlock* block;
-    float count;
+    BasicBlock* block { nullptr };
+    float count { PNaN };
 };
 
 struct BranchData {
@@ -181,8 +186,8 @@ struct BranchData {
         unsigned takenBytecodeIndex, unsigned notTakenBytecodeIndex)
     {
         BranchData result;
-        result.taken.block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(takenBytecodeIndex));
-        result.notTaken.block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(notTakenBytecodeIndex));
+        result.taken.block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(takenBytecodeIndex));
+        result.notTaken.block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(notTakenBytecodeIndex));
         return result;
     }
 
@@ -238,18 +243,19 @@ struct SwitchData {
     // Initializes most fields to obviously invalid values. Anyone
     // constructing this should make sure to initialize everything they
     // care about manually.
-    SwitchData()
-        : switchTableIndex(UINT_MAX)
-        , kind(static_cast<SwitchKind>(-1))
-        , didUseJumpTable(false)
+    SwitchData() = default;
+
+    bool hasSwitchTableIndex() const { return switchTableIndex != std::numeric_limits<size_t>::max(); }
+    void clearSwitchTableIndex()
     {
+        switchTableIndex = std::numeric_limits<size_t>::max();
     }
 
     Vector<SwitchCase> cases;
     BranchTarget fallThrough;
-    size_t switchTableIndex;
-    SwitchKind kind;
-    bool didUseJumpTable;
+    size_t switchTableIndex { std::numeric_limits<size_t>::max() };
+    SwitchKind kind { static_cast<SwitchKind>(-1) };
+    bool didUseJumpTable { false };
 };
 
 struct EntrySwitchData {
@@ -317,13 +323,15 @@ enum class BucketOwnerType : uint32_t {
 // Node represents a single operation in the data flow graph.
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DFGNode);
 struct Node {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DFGNode);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DFGNode, DFGNode);
 public:
     static const char HashSetTemplateInstantiationString[];
 
     enum VarArgTag { VarArg };
 
     Node() { }
+
+    Node(const Node&) = default;
 
     Node(NodeType op, NodeOrigin nodeOrigin, const AdjacencyList& children)
         : origin(nodeOrigin)
@@ -695,6 +703,41 @@ public:
         m_op = MultiPutByOffset;
     }
 
+    void convertToMultiGetByVal(MultiGetByValData* data)
+    {
+        ASSERT(m_op == GetByVal);
+        m_opInfo = data;
+        m_op = MultiGetByVal;
+    }
+
+    void convertToMultiPutByVal(MultiPutByValData* data)
+    {
+        ASSERT(m_op == PutByVal);
+        m_opInfo = data;
+        m_op = MultiPutByVal;
+    }
+
+    void convertToNewRegExp(FrozenValue* regExp, Edge index)
+    {
+        ASSERT(m_op == NewRegExpUntyped);
+        setOpAndDefaultFlags(NewRegExp);
+        m_opInfo = OpInfoWrapper(regExp);
+        m_opInfo2 = OpInfoWrapper();
+        children = AdjacencyList();
+        children.setChild1(index);
+    }
+
+    void convertToPhantomNewArrayWithConstantSize()
+    {
+        ASSERT(m_op == NewArrayWithConstantSize);
+        m_op = PhantomNewArrayWithConstantSize;
+        m_flags &= ~NodeHasVarArgs;
+        m_flags |= NodeMustGenerate;
+        // No need to clear the infos, as the indexing type and array
+        // size are still required for materialization when an OSR exit occurs.
+        children = AdjacencyList();
+    }
+
     void convertToPhantomNewObject()
     {
         ASSERT(m_op == NewObject);
@@ -768,10 +811,10 @@ public:
         children = AdjacencyList();
     }
 
-    void convertToPhantomNewRegexp()
+    void convertToPhantomNewRegExp()
     {
-        ASSERT(m_op == NewRegexp);
-        setOpAndDefaultFlags(PhantomNewRegexp);
+        ASSERT(m_op == NewRegExp);
+        setOpAndDefaultFlags(PhantomNewRegExp);
         m_opInfo = OpInfoWrapper();
         m_opInfo2 = OpInfoWrapper();
         children = AdjacencyList();
@@ -874,6 +917,7 @@ public:
     void convertToNewArrayBuffer(FrozenValue* immutableButterfly);
     void convertToNewArrayWithSize();
     void convertToNewArrayWithConstantSize(Graph&, uint32_t);
+    void convertToNewArrayWithSizeAndStructure(Graph&, RegisteredStructure);
 
     void convertToNewBoundFunction(FrozenValue*);
 
@@ -891,6 +935,13 @@ public:
     {
         setOp(SetRegExpObjectLastIndex);
         m_opInfo = false;
+    }
+
+    void convertToPurifyNaN(Node* input)
+    {
+        setOpAndDefaultFlags(PurifyNaN);
+        children.reset();
+        children.setChild1(Edge(input, DoubleRepUse));
     }
 
     JSValue asJSValue()
@@ -1318,9 +1369,28 @@ public:
     NodeFlags arithNodeFlags()
     {
         NodeFlags result = m_flags & NodeArithFlagsMask;
-        if (op() == ArithMul || op() == ArithDiv || op() == ValueDiv || op() == ArithMod || op() == ArithNegate || op() == ArithPow || op() == ArithRound || op() == ArithFloor || op() == ArithCeil || op() == ArithTrunc || op() == DoubleAsInt32 || op() == ValueNegate || op() == ValueMul || op() == ValueDiv)
+        switch (op()) {
+        case ArithMul:
+        case ArithDiv:
+        case ArithMod:
+        case ArithNegate:
+        case ArithPow:
+        case ArithRound:
+        case ArithFloor:
+        case ArithCeil:
+        case ArithTrunc:
+        case ValueMul:
+        case ValueDiv:
+        case ValueMod:
+        case ValueNegate:
+        case ValuePow:
+        case DoubleAsInt32:
+        case Int52Rep:
+        case MultiGetByVal:
             return result;
+        default:
         return result & ~NodeBytecodeNeedsNegZero;
+    }
     }
 
     bool mayHaveNonIntResult()
@@ -1388,6 +1458,8 @@ public:
     {
         switch (op()) {
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
             return true;
         default:
             return false;
@@ -1397,7 +1469,7 @@ public:
     unsigned newArraySize()
     {
         ASSERT(hasNewArraySize());
-        return m_opInfo2.as<unsigned>();
+        return op() == MaterializeNewArrayWithConstantSize ? objectMaterializationData().m_newArraySize : m_opInfo2.as<unsigned>();
     }
 
     bool hasIndexingType()
@@ -1406,6 +1478,8 @@ public:
         case NewArray:
         case NewArrayWithSize:
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case NewArrayWithSpecies:
@@ -1657,6 +1731,7 @@ public:
         case ValueBitNot:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ValueNegate:
             return true;
         default:
@@ -1814,7 +1889,7 @@ public:
     BasicBlock*& targetBlock()
     {
         ASSERT(isJump());
-        return *bitwise_cast<BasicBlock**>(&m_opInfo.u.pointer);
+        return *std::bit_cast<BasicBlock**>(&m_opInfo.u.pointer);
     }
 
     BranchData* branchData()
@@ -1988,6 +2063,7 @@ public:
         case GetByValMegamorphic:
         case GetByValWithThis:
         case GetByValWithThisMegamorphic:
+        case MultiGetByVal:
         case GetPrivateName:
         case GetPrivateNameById:
         case Call:
@@ -2012,16 +2088,18 @@ public:
         case GetArgument:
         case ArrayPop:
         case ArrayPush:
-        case ArraySpliceExtract:
+        case ArraySplice:
         case RegExpExec:
         case RegExpExecNonGlobalOrSticky:
         case RegExpTest:
         case RegExpTestInline:
         case RegExpMatchFast:
         case RegExpMatchFastGlobal:
+        case RegExpSearch:
         case GetGlobalVar:
         case GetGlobalLexicalVariable:
         case StringReplace:
+        case StringReplaceAll:
         case StringReplaceRegExp:
         case StringReplaceString:
         case ToObject:
@@ -2103,7 +2181,7 @@ public:
         case NewBoundFunction:
         case CreateActivation:
         case MaterializeCreateActivation:
-        case NewRegexp:
+        case NewRegExp:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case CompareEqPtr:
@@ -2206,6 +2284,7 @@ public:
         case GetTypedArrayLengthAsInt52:
         case HasIndexedProperty:
         case EnumeratorNextUpdateIndexAndMode:
+        case ArrayIncludes:
         case ArrayIndexOf:
             return true;
         default:
@@ -2328,8 +2407,11 @@ public:
         case NewAsyncGenerator:
         case NewInternalFieldObject:
         case NewStringObject:
+        case NewRegExpUntyped:
         case NewMap:
         case NewSet:
+        case NewArrayWithSizeAndStructure:
+        case NewTypedArrayBuffer:
             return true;
         default:
             return false;
@@ -2393,6 +2475,28 @@ public:
         return *m_opInfo.as<MultiDeleteByOffsetData*>();
     }
 
+    bool hasMultiGetByValData()
+    {
+        return op() == MultiGetByVal;
+    }
+
+    MultiGetByValData& multiGetByValData()
+    {
+        ASSERT(hasMultiGetByValData());
+        return *m_opInfo.as<MultiGetByValData*>();
+    }
+
+    bool hasMultiPutByValData()
+    {
+        return op() == MultiPutByVal;
+    }
+
+    MultiPutByValData& multiPutByValData()
+    {
+        ASSERT(hasMultiPutByValData());
+        return *m_opInfo.as<MultiPutByValData*>();
+    }
+
     bool hasMatchStructureData()
     {
         return op() == MatchStructure;
@@ -2408,6 +2512,7 @@ public:
     {
         switch (op()) {
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeNewInternalFieldObject:
         case MaterializeCreateActivation:
             return true;
@@ -2495,6 +2600,7 @@ public:
     bool isPhantomAllocation()
     {
         switch (op()) {
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewObject:
         case PhantomDirectArguments:
         case PhantomCreateRest:
@@ -2508,10 +2614,34 @@ public:
         case PhantomNewAsyncGeneratorFunction:
         case PhantomNewInternalFieldObject:
         case PhantomCreateActivation:
-        case PhantomNewRegexp:
+        case PhantomNewRegExp:
             return true;
         default:
             return false;
+        }
+    }
+
+    bool hasArrayModes()
+    {
+        switch (op()) {
+        case MultiGetByVal:
+        case MultiPutByVal:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    ArrayModes arrayModes()
+    {
+        ASSERT(hasArrayModes());
+        switch (op()) {
+        case MultiGetByVal:
+            return multiGetByValData().m_arrayModes;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayModes;
+        default:
+            return { };
         }
     }
 
@@ -2534,10 +2664,13 @@ public:
         case EnumeratorPutByVal:
         case GetByVal:
         case GetByValMegamorphic:
+        case MultiGetByVal:
+        case MultiPutByVal:
         case EnumeratorNextUpdateIndexAndMode:
         case EnumeratorGetByVal:
         case EnumeratorInByVal:
         case EnumeratorHasOwnProperty:
+        case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
         case StringCodePointAt:
@@ -2547,6 +2680,7 @@ public:
         case ArrayifyToStructure:
         case ArrayPush:
         case ArrayPop:
+        case ArrayIncludes:
         case ArrayIndexOf:
         case HasIndexedProperty:
         case AtomicsAdd:
@@ -2568,11 +2702,18 @@ public:
     ArrayMode arrayMode()
     {
         ASSERT(hasArrayMode());
-        if (op() == ArrayifyToStructure)
+        switch (op()) {
+        case ArrayifyToStructure:
             return ArrayMode::fromWord(m_opInfo2.as<uint32_t>());
-        if (op() == NewArrayWithSpecies)
+        case NewArrayWithSpecies:
             return ArrayMode::fromWord(newArrayWithSpeciesData().arrayMode);
+        case MultiGetByVal:
+            return multiGetByValData().m_arrayMode;
+        case MultiPutByVal:
+            return multiPutByValData().m_arrayMode;
+        default:
         return ArrayMode::fromWord(m_opInfo.as<uint32_t>());
+    }
     }
 
     bool setArrayMode(ArrayMode arrayMode)
@@ -2580,14 +2721,33 @@ public:
         ASSERT(hasArrayMode());
         if (this->arrayMode() == arrayMode)
             return false;
-        if (op() == NewArrayWithSpecies) {
+
+        switch (op()) {
+        case ArrayifyToStructure:
+            m_opInfo2 = arrayMode.asWord();
+            return true;
+        case NewArrayWithSpecies: {
             auto data = newArrayWithSpeciesData();
             data.arrayMode = arrayMode.asWord();
             m_opInfo = data.asQuadWord();
             return true;
         }
+        case MultiGetByVal:
+            multiGetByValData().m_arrayMode = arrayMode;
+            return true;
+        case MultiPutByVal:
+            multiPutByValData().m_arrayMode = arrayMode;
+            return true;
+        default:
         m_opInfo = arrayMode.asWord();
         return true;
+    }
+    }
+
+    bool mayBeResizableOrGrowableSharedArrayBuffer()
+    {
+        ASSERT(op() == DataViewGetByteLength || op() == DataViewGetByteLengthAsInt52);
+        return m_opInfo.as<bool>();
     }
 
     bool hasECMAMode()
@@ -2606,6 +2766,7 @@ public:
         case PutByValDirect:
         case PutByValWithThis:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
         case ToThis:
             return true;
@@ -2633,6 +2794,7 @@ public:
         case PutByValMegamorphic:
         case PutByValDirect:
         case EnumeratorPutByVal:
+        case MultiPutByVal:
         case PutDynamicVar:
             return ECMAMode::fromByte(m_opInfo2.as<uint8_t>());
         default:
@@ -2755,7 +2917,7 @@ public:
     DataViewData dataViewData()
     {
         ASSERT(op() == DataViewGetInt || op() == DataViewGetFloat || op() == DataViewSet);
-        return bitwise_cast<DataViewData>(m_opInfo.as<uint64_t>());
+        return std::bit_cast<DataViewData>(m_opInfo.as<uint64_t>());
     }
 
     bool shouldGenerate()
@@ -2773,6 +2935,11 @@ public:
     unsigned refCount()
     {
         return m_refCount;
+    }
+
+    unsigned decRef()
+    {
+        return m_refCount--;
     }
 
     unsigned postfixRef()
@@ -2849,6 +3016,12 @@ public:
         return isBinaryUseKind(left, right) || isBinaryUseKind(right, left);
     }
 
+    // Can handle both Int32Use and KnownInt32Use
+    bool isBinaryInt32UseKind()
+    {
+        return isInt32(child1().useKind()) && isInt32(child2().useKind());
+    }
+
     Edge childFor(UseKind useKind)
     {
         if (child1().useKind() == useKind)
@@ -2888,6 +3061,11 @@ public:
     bool shouldSpeculateInt32OrBoolean()
     {
         return isInt32OrBooleanSpeculation(prediction());
+    }
+
+    bool shouldSpeculateInt32OrOther()
+    {
+        return isInt32OrOtherSpeculation(prediction());
     }
 
     bool shouldSpeculateInt32ForArithmetic()
@@ -2937,6 +3115,11 @@ public:
         // can trivially become Int52.
         //
         return enableInt52() && isInt32OrInt52Speculation(prediction());
+    }
+
+    bool shouldSpeculateInt52OrOther()
+    {
+        return enableInt52() && isInt32OrInt52OrOtherSpeculation(prediction());
     }
 
     bool shouldSpeculateDouble()
@@ -3460,7 +3643,7 @@ public:
 
     bool hasBucketOwnerType()
     {
-        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage;
+        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage || op() == MapStorageOrSentinel;
     }
 
     unsigned numberOfBoundArguments()
@@ -3627,6 +3810,11 @@ public:
         m_opInfo2 = OpInfoWrapper();
     }
 
+    void setOpInfo(OpInfo info)
+    {
+        m_opInfo = info.m_value;
+    }
+
     void dumpChildren(PrintStream& out)
     {
         if (!child1())
@@ -3689,12 +3877,12 @@ private:
         OpInfoWrapper(RegisteredStructure structure)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(structure);
+            u.pointer = std::bit_cast<void*>(structure);
         }
         OpInfoWrapper(CacheableIdentifier identifier)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(identifier.rawBits());
+            u.pointer = std::bit_cast<void*>(identifier.rawBits());
         }
         OpInfoWrapper& operator=(uint32_t int32)
         {
@@ -3728,18 +3916,18 @@ private:
         OpInfoWrapper& operator=(RegisteredStructure structure)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(structure);
+            u.pointer = std::bit_cast<void*>(structure);
             return *this;
         }
         OpInfoWrapper& operator=(CacheableIdentifier identifier)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(identifier.rawBits());
+            u.pointer = std::bit_cast<void*>(identifier.rawBits());
             return *this;
         }
         OpInfoWrapper& operator=(NewArrayBufferData newArrayBufferData)
         {
-            u.int64 = bitwise_cast<uint64_t>(newArrayBufferData);
+            u.int64 = std::bit_cast<uint64_t>(newArrayBufferData);
             return *this;
         }
         template <typename T>
@@ -3764,16 +3952,16 @@ private:
         }
         ALWAYS_INLINE RegisteredStructure asRegisteredStructure() const
         {
-            return bitwise_cast<RegisteredStructure>(u.pointer);
+            return std::bit_cast<RegisteredStructure>(u.pointer);
         }
         ALWAYS_INLINE NewArrayBufferData asNewArrayBufferData() const
         {
-            return bitwise_cast<NewArrayBufferData>(u.int64);
+            return std::bit_cast<NewArrayBufferData>(u.int64);
         }
 
         ALWAYS_INLINE NewArrayWithSpeciesData asNewArrayWithSpeciesData() const
         {
-            return bitwise_cast<NewArrayWithSpeciesData>(u.int64);
+            return std::bit_cast<NewArrayWithSpeciesData>(u.int64);
         }
 
         union {
@@ -3807,7 +3995,7 @@ public:
 
 // Uncomment this to log NodeSet operations.
 // typedef LoggingHashSet<Node::HashSetTemplateInstantiationString, Node*> NodeSet;
-typedef HashSet<Node*> NodeSet;
+typedef UncheckedKeyHashSet<Node*> NodeSet;
 
 struct NodeComparator {
     template<typename NodePtrType>
@@ -3868,7 +4056,7 @@ template<>
 struct LoggingHashKeyTraits<JSC::DFG::Node*> {
     static void print(PrintStream& out, JSC::DFG::Node* key)
     {
-        out.print("bitwise_cast<::JSC::DFG::Node*>(", RawPointer(key), "lu)");
+        out.print("std::bit_cast<::JSC::DFG::Node*>(", RawPointer(key), "lu)");
     }
 };
 

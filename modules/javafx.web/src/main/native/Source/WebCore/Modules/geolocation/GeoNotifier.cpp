@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011, 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  * Copyright 2010, The Android Open Source Project
  *
@@ -30,6 +30,7 @@
 
 #if ENABLE(GEOLOCATION)
 
+#include "DocumentInlines.h"
 #include "Geolocation.h"
 
 namespace WebCore {
@@ -76,13 +77,13 @@ void GeoNotifier::runSuccessCallback(GeolocationPosition* position)
     if (!m_geolocation->isAllowed())
         CRASH();
 
-    protectedSuccessCallback()->handleEvent(position);
+    m_successCallback->invoke(position);
 }
 
 void GeoNotifier::runErrorCallback(GeolocationPositionError& error)
 {
-    if (RefPtr errorCallback = m_errorCallback)
-        errorCallback->handleEvent(error);
+    if (m_errorCallback)
+        m_errorCallback->invoke(error);
 }
 
 void GeoNotifier::startTimerIfNeeded()
@@ -98,10 +99,6 @@ void GeoNotifier::stopTimer()
 void GeoNotifier::timerFired()
 {
     m_timer.stop();
-
-    // Protect this GeoNotifier object, since it
-    // could be deleted by a call to clearWatch in a callback.
-    Ref<GeoNotifier> protectedThis(*this);
 
     // Test for fatal error first. This is required for the case where the Frame is
     // disconnected and requests are cancelled.
@@ -123,7 +120,7 @@ void GeoNotifier::timerFired()
 
     if (m_errorCallback) {
         auto error = GeolocationPositionError::create(GeolocationPositionError::TIMEOUT, "Timeout expired"_s);
-        m_errorCallback->handleEvent(error);
+        m_errorCallback->invoke(error);
     }
     geolocation->requestTimedOut(this);
 }

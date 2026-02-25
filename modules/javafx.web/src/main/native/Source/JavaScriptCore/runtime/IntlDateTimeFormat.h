@@ -32,12 +32,6 @@
 
 struct UDateIntervalFormat;
 
-#if !defined(HAVE_ICU_U_DATE_INTERVAL_FORMAT_FORMAT_RANGE_TO_PARTS)
-#if U_ICU_VERSION_MAJOR_NUM >= 64
-#define HAVE_ICU_U_DATE_INTERVAL_FORMAT_FORMAT_RANGE_TO_PARTS 1
-#endif
-#endif
-
 namespace JSC {
 
 enum class RelevantExtensionKey : uint8_t;
@@ -52,7 +46,7 @@ class IntlDateTimeFormat final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     static void destroy(JSCell* cell)
     {
@@ -70,6 +64,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     enum class RequiredComponent : uint8_t { Date, Time, Any };
     enum class Defaults : uint8_t { Date, Time, All };
     void initializeDateTimeFormat(JSGlobalObject*, JSValue locales, JSValue options, RequiredComponent, Defaults);
@@ -85,18 +81,15 @@ public:
     static IntlDateTimeFormat* unwrapForOldFunctions(JSGlobalObject*, JSValue);
 
     enum class HourCycle : uint8_t { None, H11, H12, H23, H24 };
-    static HourCycle hourCycleFromPattern(const Vector<UChar, 32>&);
+    static HourCycle hourCycleFromPattern(const Vector<char16_t, 32>&);
 
 private:
     IntlDateTimeFormat(VM&, Structure*);
     DECLARE_DEFAULT_FINISH_CREATION;
-    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 
     UDateIntervalFormat* createDateIntervalFormatIfNecessary(JSGlobalObject*);
-
-    static double handleDateTimeValue(JSGlobalObject*, JSValue);
 
     enum class Weekday : uint8_t { None, Narrow, Short, Long };
     enum class Era : uint8_t { None, Narrow, Short, Long };
@@ -124,10 +117,10 @@ private:
     static ASCIILiteral timeZoneNameString(TimeZoneName);
     static ASCIILiteral formatStyleString(DateTimeStyle);
 
-    static HourCycle hourCycleFromSymbol(UChar);
+    static HourCycle hourCycleFromSymbol(char16_t);
     static HourCycle parseHourCycle(const String&);
-    static void replaceHourCycleInSkeleton(Vector<UChar, 32>&, bool hour12);
-    static void replaceHourCycleInPattern(Vector<UChar, 32>&, HourCycle);
+    static void replaceHourCycleInSkeleton(Vector<char16_t, 32>&, bool hour12);
+    static void replaceHourCycleInPattern(Vector<char16_t, 32>&, HourCycle);
     static String buildSkeleton(Weekday, Era, Year, Month, Day, TriState, HourCycle, Hour, DayPeriod, Minute, Second, unsigned, TimeZoneName);
 
     using UDateFormatDeleter = ICUDeleter<udat_close>;

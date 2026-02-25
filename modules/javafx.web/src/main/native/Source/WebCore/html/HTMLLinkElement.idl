@@ -26,7 +26,8 @@
 ] interface HTMLLinkElement : HTMLElement {
     [Reflect] attribute boolean disabled;
     [CEReactions=NotNeeded, Reflect] attribute DOMString charset;
-    [CEReactions=NotNeeded, Reflect, URL] attribute USVString href;
+    [CEReactions=NotNeeded, ReflectURL] attribute USVString href;
+    [CEReactions=NotNeeded, Conditional=WEB_PAGE_SPATIAL_BACKDROP, EnabledBySetting=WebPageSpatialBackdropEnabled, ReflectURL] attribute USVString environmentMap;
     [CEReactions=NotNeeded, Reflect] attribute DOMString hreflang;
     [CEReactions=NotNeeded, Reflect] attribute DOMString media;
     [CEReactions=NotNeeded, Reflect] attribute DOMString rel;
@@ -34,15 +35,14 @@
     [PutForwards=value] readonly attribute DOMTokenList sizes;
     [CEReactions=NotNeeded, Reflect] attribute DOMString target;
     [CEReactions=NotNeeded, Reflect] attribute DOMString type;
-    [CEReactions=NotNeeded] attribute [AtomString] DOMString as;
-    [CEReactions=NotNeeded] attribute [AtomString] DOMString? crossOrigin;
-    [CEReactions=NotNeeded, Reflect, EnabledBySetting=LinkPreloadResponsiveImagesEnabled] attribute DOMString imageSrcset;
-    [CEReactions=NotNeeded, Reflect, EnabledBySetting=LinkPreloadResponsiveImagesEnabled] attribute DOMString imageSizes;
-    [CEReactions=NotNeeded, ImplementedAs=referrerPolicyForBindings] attribute [AtomString] DOMString referrerPolicy;
+    [CEReactions=NotNeeded, ReflectSetter] attribute [AtomString] DOMString as;
+    [CEReactions=NotNeeded, ReflectSetter] attribute [AtomString] DOMString? crossOrigin;
+    [CEReactions=NotNeeded, Reflect] attribute DOMString imageSrcset;
+    [CEReactions=NotNeeded, Reflect] attribute DOMString imageSizes;
+    [CEReactions=NotNeeded, ImplementedAs=referrerPolicyForBindings, ReflectSetter] attribute [AtomString] DOMString referrerPolicy;
     [PutForwards=value] readonly attribute DOMTokenList blocking;
-    [CEReactions=NotNeeded, EnabledBySetting=FetchPriorityEnabled, ImplementedAs=fetchPriorityForBindings] attribute [AtomString] DOMString fetchPriority;
+    [CEReactions=NotNeeded, ImplementedAs=fetchPriorityForBindings, ReflectSetter] attribute [AtomString] DOMString fetchPriority;
 
-    // DOM Level 2 Style
     readonly attribute StyleSheet sheet;
 
     [PutForwards=value] readonly attribute DOMTokenList relList;

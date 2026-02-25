@@ -39,6 +39,7 @@ class CachedScript;
 class ContainerNode;
 class Element;
 class LoadableModuleScript;
+class Node;
 class PendingScript;
 class ScriptSourceCode;
 
@@ -52,7 +53,7 @@ public:
 
     bool prepareScript(const TextPosition& scriptStartPosition = TextPosition());
 
-    String scriptCharset() const { return m_characterEncoding; }
+    const AtomString& scriptCharset() const { return m_characterEncoding; }
     WEBCORE_EXPORT String scriptContent() const;
     void executeClassicScript(const ScriptSourceCode&);
     void executeModuleScript(LoadableModuleScript&);
@@ -76,6 +77,7 @@ public:
     bool willExecuteWhenDocumentFinishedParsing() const { return m_willExecuteWhenDocumentFinishedParsing; }
     bool willExecuteInOrder() const { return m_willExecuteInOrder; }
     LoadableScript* loadableScript() { return m_loadableScript.get(); }
+    RefPtr<LoadableScript> protectedLoadableScript() { return m_loadableScript; }
 
     ScriptType scriptType() const { return m_scriptType; }
 
@@ -122,15 +124,16 @@ private:
     void dispatchLoadEventRespectingUserGestureIndicator();
 
     bool requestClassicScript(const String& sourceURL);
-    bool requestModuleScript(const TextPosition& scriptStartPosition);
-    bool requestImportMap(LocalFrame&, const String& sourceURL);
+    bool requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition);
+
+    void updateTaintedOriginFromSourceURL();
 
     virtual String sourceAttributeValue() const = 0;
-    virtual String charsetAttributeValue() const = 0;
+    virtual AtomString charsetAttributeValue() const = 0;
     virtual String typeAttributeValue() const = 0;
     virtual String languageAttributeValue() const = 0;
     virtual ReferrerPolicy referrerPolicy() const = 0;
-    virtual RequestPriority fetchPriorityHint() const { return RequestPriority::Auto; }
+    virtual RequestPriority fetchPriority() const { return RequestPriority::Auto; }
 
     virtual bool isScriptPreventedByAttributes() const { return false; }
 
@@ -149,12 +152,12 @@ private:
     bool m_willExecuteInOrder : 1 { false };
     bool m_childrenChangedByAPI : 1 { false };
     ScriptType m_scriptType : bitWidthOfScriptType { ScriptType::Classic };
-    String m_characterEncoding;
-    String m_fallbackCharacterEncoding;
+    AtomString m_characterEncoding;
+    AtomString m_fallbackCharacterEncoding;
     RefPtr<LoadableScript> m_loadableScript;
 
     // https://html.spec.whatwg.org/multipage/scripting.html#preparation-time-document
-    ScriptExecutionContextIdentifier m_preparationTimeDocumentIdentifier;
+    Markable<ScriptExecutionContextIdentifier> m_preparationTimeDocumentIdentifier;
 
     MonotonicTime m_creationTime;
     RefPtr<UserGestureToken> m_userGestureToken;
@@ -164,7 +167,7 @@ private:
 };
 
 // FIXME: replace with is/downcast<ScriptElement>.
-bool isScriptElement(Element&);
+bool isScriptElement(Node&);
 ScriptElement* dynamicDowncastScriptElement(Element&);
 
 }

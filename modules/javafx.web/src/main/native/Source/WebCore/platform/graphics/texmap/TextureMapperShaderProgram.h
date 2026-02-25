@@ -19,9 +19,6 @@
  */
 
 #pragma once
-#if PLATFORM(JAVA)
-#if USE(TEXTURE_MAPPER_GL)
-#endif
 
 #if USE(TEXTURE_MAPPER)
 
@@ -147,6 +144,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#if PLATFORM(JAVA)
-#endif // USE(TEXTURE_MAPPER_GL)
-#endif

@@ -70,6 +70,7 @@ const TestFeatures& TestOptions::defaults()
             { "CanvasUsesAcceleratedDrawing", true },
             { "ColorFilterEnabled", true },
             { "CustomPasteboardDataEnabled", true },
+            { "DOMAudioSessionEnabled", true },
             { "DOMPasteAllowed", true },
             { "DOMTestingAPIsEnabled", true },
             { "DeveloperExtrasEnabled", true },
@@ -84,10 +85,13 @@ const TestFeatures& TestOptions::defaults()
             { "JavaScriptCanOpenWindowsAutomatically", true },
             { "LargeImageAsyncDecodingEnabled", false },
             { "LinkPreloadEnabled", true },
+            { "ManagedMediaSourceEnabled", true },
+            { "ManagedMediaSourceNeedsAirPlay", true },
             { "MediaCapabilitiesEnabled", true },
             { "MediaDataLoadsAutomatically", true },
             { "MediaDevicesEnabled", true },
             { "MediaPreloadingEnabled", true },
+            { "MediaRecorderEnabled", true },
             { "MockScrollbarsEnabled", true },
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "PeerConnectionVideoScalingAdaptationDisabled", true },
@@ -106,6 +110,7 @@ const TestFeatures& TestOptions::defaults()
             { "UsesBackForwardCache", false },
             { "VisualViewportAPIEnabled", true },
             { "WebAudioEnabled", true },
+            { "WebRTCEncodedTransformEnabled", true },
             { "WebSQLEnabled", true },
             { "XSSAuditorEnabled", false },
 
@@ -113,13 +118,11 @@ const TestFeatures& TestOptions::defaults()
             // should either enable them or stop exposing them (as we do with with preferences).
             // All other experimental features are automatically enabled regardless of their specified defaults.
             { "AsyncClipboardAPIEnabled", false },
-            { "CSSOMViewSmoothScrollingEnabled", false },
             { "ContactPickerAPIEnabled", false },
             { "CoreMathMLEnabled", false },
             { "DigitalCredentialsEnabled", false },
             { "GenericCueAPIEnabled", false },
             { "LoginStatusAPIEnabled", false },
-            { "LazyIframeLoadingEnabled", false },
             { "LazyImageLoadingEnabled", false },
             { "RequestIdleCallbackEnabled", false },
             { "WebAuthenticationEnabled", false },
@@ -137,7 +140,6 @@ const TestFeatures& TestOptions::defaults()
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
             { "CSSInputSecurityEnabled", true },
-            { "CSSOMViewSmoothScrollingEnabled", false },
             { "CSSTextJustifyEnabled", true },
             { "CanvasColorSpaceEnabled", true },
             { "ColorFilterEnabled", false },
@@ -170,6 +172,7 @@ const TestFeatures& TestOptions::defaults()
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
             { "UseGPUProcessForWebGLEnabled", false },
 #endif
+            { "SupportHDRDisplayEnabled", true },
         };
 #if PLATFORM(WIN)
         features.uint32WebPreferenceFeatures = {

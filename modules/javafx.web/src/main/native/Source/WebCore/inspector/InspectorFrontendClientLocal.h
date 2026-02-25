@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@
 #include "InspectorFrontendClient.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,11 +50,11 @@ class LocalFrame;
 class Page;
 
 class InspectorFrontendClientLocal : public InspectorFrontendClient {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(InspectorFrontendClientLocal, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(InspectorFrontendClientLocal);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     class WEBCORE_EXPORT Settings {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED_EXPORT(Settings, WEBCORE_EXPORT);
     public:
         Settings() = default;
         virtual ~Settings() = default;
@@ -144,14 +145,16 @@ private:
     friend class FrontendMenuProvider;
     std::optional<bool> evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult);
 
-    InspectorController* m_inspectedPageController { nullptr };
+    RefPtr<InspectorController> protectedInspectedPageController() const;
+
+    WeakPtr<InspectorController> m_inspectedPageController;
     WeakPtr<Page> m_frontendPage;
     // TODO(yurys): this ref shouldn't be needed.
     RefPtr<InspectorFrontendHost> m_frontendHost;
     std::unique_ptr<InspectorFrontendClientLocal::Settings> m_settings;
     DockSide m_dockSide;
-    Ref<InspectorBackendDispatchTask> m_dispatchTask;
-    Ref<InspectorFrontendAPIDispatcher> m_frontendAPIDispatcher;
+    const Ref<InspectorBackendDispatchTask> m_dispatchTask;
+    const Ref<InspectorFrontendAPIDispatcher> m_frontendAPIDispatcher;
 };
 
 } // namespace WebCore

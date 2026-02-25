@@ -33,6 +33,7 @@
 #include "FormState.h"
 #include "FrameLoaderTypes.h"
 #include "ReferrerPolicy.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
@@ -43,7 +44,7 @@ class FormData;
 class FrameLoadRequest;
 class HTMLFormControlElement;
 
-class FormSubmission : public RefCounted<FormSubmission>, public CanMakeWeakPtr<FormSubmission> {
+class FormSubmission : public RefCountedAndCanMakeWeakPtr<FormSubmission> {
 public:
     enum class Method : uint8_t { Get, Post, Dialog };
 
@@ -92,7 +93,6 @@ public:
     const String boundary() const { return m_boundary; }
     LockHistory lockHistory() const { return m_lockHistory; }
     Event* event() const { return m_event.get(); }
-    RefPtr<Event> protectedEvent() const;
     const String& referrer() const { return m_referrer; }
     const String& origin() const { return m_origin; }
 
@@ -100,7 +100,8 @@ public:
 
     void clearTarget() { m_target = { }; }
     void setReferrer(const String& referrer) { m_referrer = referrer; }
-    void setOrigin(const String& origin) { m_origin = origin; }
+    void setReferrer(String&& referrer) { m_referrer = WTFMove(referrer); }
+    void setOrigin(String&& origin) { m_origin = WTFMove(origin); }
 
     void cancel() { m_wasCancelled = true; }
     bool wasCancelled() const { return m_wasCancelled; }
@@ -125,10 +126,10 @@ private:
     AtomString m_target;
     String m_contentType;
     RefPtr<FormState> m_formState;
-    RefPtr<FormData> m_formData;
+    const RefPtr<FormData> m_formData;
     String m_boundary;
     LockHistory m_lockHistory;
-    RefPtr<Event> m_event;
+    const RefPtr<Event> m_event;
     String m_referrer;
     String m_origin;
 

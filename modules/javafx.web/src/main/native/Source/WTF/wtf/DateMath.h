@@ -23,7 +23,7 @@
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
- * the Initial Developer. All Rights Reserved.
+ * the Initial Developer. All rights reserved.
  *
  * Contributor(s):
  *
@@ -52,13 +52,13 @@
 
 namespace WTF {
 
-enum TimeType {
+enum class TimeType : uint8_t {
     UTCTime = 0,
     LocalTime
 };
 
 struct LocalTimeOffset {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(LocalTimeOffset);
 
     LocalTimeOffset() = default;
     constexpr LocalTimeOffset(bool isDST, int offset)
@@ -89,11 +89,11 @@ inline double jsCurrentTime()
     return floor(WallTime::now().secondsSinceEpoch().milliseconds());
 }
 
-extern WTF_EXPORT_PRIVATE const ASCIILiteral weekdayName[7];
-extern WTF_EXPORT_PRIVATE const ASCIILiteral monthName[12];
-extern WTF_EXPORT_PRIVATE const ASCIILiteral monthFullName[12];
-extern WTF_EXPORT_PRIVATE const int firstDayOfMonth[2][12];
-extern WTF_EXPORT_PRIVATE const int8_t daysInMonths[12];
+extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 7> weekdayName;
+extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 12> monthName;
+extern WTF_EXPORT_PRIVATE const std::array<ASCIILiteral, 12> monthFullName;
+extern WTF_EXPORT_PRIVATE const std::array<std::array<int, 12>, 2> firstDayOfMonth;
+extern WTF_EXPORT_PRIVATE const std::array<int8_t, 12> daysInMonths;
 
 static constexpr double hoursPerDay = 24.0;
 static constexpr double minutesPerHour = 60.0;
@@ -496,10 +496,10 @@ inline int64_t equivalentTime(int64_t ms)
 
 WTF_EXPORT_PRIVATE bool isTimeZoneValid(StringView);
 WTF_EXPORT_PRIVATE bool setTimeZoneOverride(StringView);
-WTF_EXPORT_PRIVATE void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID);
+WTF_EXPORT_PRIVATE void getTimeZoneOverride(Vector<char16_t, 32>& timeZoneID);
 
 // Returns combined offset in millisecond (UTC + DST).
-WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = UTCTime);
+WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = TimeType::UTCTime);
 
 } // namespace WTF
 
@@ -531,3 +531,4 @@ using WTF::secondsPerMinute;
 using WTF::setTimeZoneOverride;
 using WTF::timeClip;
 using WTF::timeToMS;
+using WTF::TimeType;

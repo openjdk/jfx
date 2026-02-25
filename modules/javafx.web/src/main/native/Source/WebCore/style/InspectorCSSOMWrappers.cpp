@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -36,9 +36,12 @@
 #include "CSSMediaRule.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSRule.h"
+#include "CSSScopeRule.h"
+#include "CSSStartingStyleRule.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CSSSupportsRule.h"
+#include "Document.h"
 #include "ExtensionStyleSheets.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
@@ -79,6 +82,12 @@ void InspectorCSSOMWrappers::collect(ListType* listType)
             break;
         case StyleRuleType::Supports:
             collect(uncheckedDowncast<CSSSupportsRule>(cssRule));
+            break;
+        case StyleRuleType::Scope:
+            collect(uncheckedDowncast<CSSScopeRule>(cssRule));
+            break;
+        case StyleRuleType::StartingStyle:
+            collect(uncheckedDowncast<CSSStartingStyleRule>(cssRule));
             break;
         case StyleRuleType::Style:
             m_styleRuleToCSSOMWrapperMap.add(&uncheckedDowncast<CSSStyleRule>(*cssRule).styleRule(), uncheckedDowncast<CSSStyleRule>(cssRule));
@@ -124,20 +133,12 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
         collectFromStyleSheetContents(UserAgentStyle::quirksStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::svgStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mathMLStyleSheet);
-        collectFromStyleSheetContents(UserAgentStyle::mediaControlsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::horizontalFormControlsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::viewTransitionsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::htmlSwitchControlStyleSheet);
 #if ENABLE(FULLSCREEN_API)
         collectFromStyleSheetContents(UserAgentStyle::fullscreenStyleSheet);
 #endif
-#if ENABLE(DATALIST_ELEMENT)
-        collectFromStyleSheetContents(UserAgentStyle::dataListStyleSheet);
-#endif
-#if ENABLE(INPUT_TYPE_COLOR)
-        collectFromStyleSheetContents(UserAgentStyle::colorInputStyleSheet);
-#endif
-        collectFromStyleSheetContents(UserAgentStyle::plugInsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);
 
         collect(extensionStyleSheets.pageUserSheet());

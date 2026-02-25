@@ -800,9 +800,11 @@ sub printTypeHelpersHeaderFile
     print F "#pragma once\n\n";
     print F "#include \"".$parameters{namespace}."Names.h\"\n\n";
 
-    # FIXME: Remove `if` condition below once HTMLElementTypeHeaders.h is made inline.
+    # FIXME: Remove `if` condition below once HTMLElementTypeHelpers.h is made inline.
     if ($parameters{namespace} eq "SVG") {
-        print F "#include \"".$parameters{namespace}."ElementInlines.h\"\n\n";
+        print F "#include \"SVGElementInlines.h\"\n\n";
+    } elsif ($parameters{namespace} eq "MathML") {
+        print F "#include \"MathMLElement.h\"\n\n";
     }
     printTypeHelpers($F, \%allElements);
 
@@ -817,6 +819,7 @@ sub printNamesHeaderFile
 
     printLicenseHeader($F);
     printHeaderHead($F, "DOM", $parameters{namespace}, <<END, "class $parameters{namespace}QualifiedName : public QualifiedName { };\n\n");
+#include <span>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
 #include "QualifiedName.h"
@@ -840,12 +843,12 @@ END
     print F "\n";
 
     if (keys %allElements) {
-        print F "const unsigned $parameters{namespace}TagsCount = ", scalar(keys %allElements), ";\n";
-        print F "const WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags();\n";
+        print F "constexpr unsigned $parameters{namespace}TagsCount = ", scalar(keys %allElements), ";\n";
+        print F "std::span<const WebCore::$parameters{namespace}QualifiedName* const, $parameters{namespace}TagsCount> get$parameters{namespace}Tags();\n";
     }
 
     if (keys %allAttrs) {
-        print F "const unsigned $parameters{namespace}AttrsCount = ", scalar(keys %allAttrs), ";\n";
+        print F "constexpr unsigned $parameters{namespace}AttrsCount = ", scalar(keys %allAttrs), ";\n";
     }
 
     printInit($F, 1);
@@ -942,7 +945,7 @@ sub printTagNameHeaderFile
     print F "inline LazyNeverDestroyed<EnumeratedArray<TagName, AtomString, lastTagNameEnumValue>> tagNameStrings;\n";
     print F "\n";
     print F "WEBCORE_EXPORT void initializeTagNameStrings();\n";
-    print F "TagName findTagName(std::span<const UChar>);\n";
+    print F "TagName findTagName(std::span<const char16_t>);\n";
     print F "#if ASSERT_ENABLED\n";
     print F "TagName findTagName(const String&);\n";
     print F "#endif\n";
@@ -989,6 +992,8 @@ sub printTagNameCppFile
     }
     print F "#include <wtf/text/FastCharacterComparison.h>\n";
     print F "\n";
+    print F "WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN\n";
+    print F "\n";
     print F "namespace WebCore {\n";
     print F "\n";
     print F "static constexpr void* tagQualifiedNamePointers[] = {\n";
@@ -1031,7 +1036,7 @@ sub printTagNameCppFile
     generateFindBody(\%allElements, \&byElementNameOrder, "parsedTagName", "TagName", "parsedTagEnumValue");
     print F "}\n";
     print F "\n";
-    print F "TagName findTagName(std::span<const UChar> buffer)\n";
+    print F "TagName findTagName(std::span<const char16_t> buffer)\n";
     print F "{\n";
     print F "    return findTagFromBuffer(buffer);\n";
     print F "}\n";
@@ -1046,6 +1051,9 @@ sub printTagNameCppFile
     print F "#endif\n";
     print F "\n";
     print F "} // namespace WebCore\n";
+    print F "\n";
+    print F "WTF_ALLOW_UNSAFE_BUFFER_USAGE_END\n";
+    print F "\n";
     close F;
 }
 
@@ -1115,7 +1123,7 @@ sub printNodeNameHeaderFile
     print F "\n";
     print F "NodeName findNodeName(Namespace, const String&);\n";
     print F "ElementName findHTMLElementName(std::span<const LChar>);\n";
-    print F "ElementName findHTMLElementName(std::span<const UChar>);\n";
+    print F "ElementName findHTMLElementName(std::span<const char16_t>);\n";
     print F "ElementName findHTMLElementName(const String&);\n";
     print F "ElementName findSVGElementName(const String&);\n";
     print F "ElementName findMathMLElementName(const String&);\n";
@@ -1142,7 +1150,7 @@ sub printNodeNameHeaderFile
     print F "{\n";
     print F "    constexpr auto s_lastUniqueTagName = TagName::$lastUniqueTagEnumValue;\n";
     print F"\n";
-    print F "    if (LIKELY(enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)))\n";
+    print F "    if (enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)) [[likely]]\n";
     print F "        return static_cast<TagName>(elementName);\n";
     print F "\n";
     print F "    switch (elementName) {\n";
@@ -1167,10 +1175,10 @@ sub printNodeNameHeaderFile
         print F "        constexpr auto s_firstUnique${namespace}TagName = TagName::$firstUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "        constexpr auto s_lastUnique${namespace}TagName = TagName::$lastUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "\n";
-        print F "        if (UNLIKELY(tagName < s_firstUnique${namespace}TagName))\n";
+        print F "        if (tagName < s_firstUnique${namespace}TagName) [[unlikely]]\n";
         print F "            return ElementName::Unknown;\n";
         print F "\n";
-        print F "        if (LIKELY(tagName <= s_lastUnique${namespace}TagName))\n";
+        print F "        if (tagName <= s_lastUnique${namespace}TagName) [[likely]]\n";
         print F "            return static_cast<ElementName>(tagName);\n";
         print F "\n";
         my @tagKeysForNonUniqueTags = grep { elementCount($allElements{$_}{localName}) > 1 && $allElements{$_}{namespace} eq $namespace } sort byElementNameOrder keys %allElements;
@@ -1210,6 +1218,8 @@ sub printNodeNameCppFile
     }
     print F "#include \"Namespace.h\"\n";
     print F "#include <wtf/text/FastCharacterComparison.h>\n";
+    print F "\n";
+    print F "WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN\n";
     print F "\n";
     print F "namespace WebCore {\n";
     print F "\n";
@@ -1257,7 +1267,7 @@ sub printNodeNameCppFile
     print F "    return findHTMLNodeName(buffer);\n";
     print F "}\n";
     print F "\n";
-    print F "ElementName findHTMLElementName(std::span<const UChar> buffer)\n";
+    print F "ElementName findHTMLElementName(std::span<const char16_t> buffer)\n";
     print F "{\n";
     print F "    return findHTMLNodeName(buffer);\n";
     print F "}\n";
@@ -1306,6 +1316,9 @@ sub printNodeNameCppFile
     print F "}\n";
     print F "\n";
     print F "} // namespace WebCore\n";
+    print F "\n";
+    print F "WTF_ALLOW_UNSAFE_BUFFER_USAGE_END\n";
+    print F "\n";
     close F;
 }
 
@@ -1385,7 +1398,7 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
+                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span8)) {\n";
             }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";
@@ -1467,6 +1480,7 @@ sub printNamesCppFile
     printCppHead($F, "DOM", $parameters{namespace}, <<END, "WebCore");
 #include "Namespace.h"
 #include "NodeName.h"
+#include <array>
 END
 
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
@@ -1489,8 +1503,8 @@ END
             print F "WEBCORE_EXPORT LazyNeverDestroyed<const $parameters{namespace}QualifiedName> $allElements{$elementKey}{identifier}Tag;\n";
         }
 
-        print F "\n\nconst WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags()\n";
-        print F "{\n    static const WebCore::$parameters{namespace}QualifiedName* const $parameters{namespace}Tags[] = {\n";
+        print F "\n\nstd::span<const WebCore::$parameters{namespace}QualifiedName* const, $parameters{namespace}TagsCount> get$parameters{namespace}Tags()\n";
+        print F "{\n    static const std::array<const WebCore::$parameters{namespace}QualifiedName*, $parameters{namespace}TagsCount> $parameters{namespace}Tags {\n";
         for my $elementKey (sort keys %allElements) {
             print F "        &$allElements{$elementKey}{identifier}Tag.get(),\n";
         }

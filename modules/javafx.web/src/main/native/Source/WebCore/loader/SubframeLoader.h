@@ -45,7 +45,7 @@ class Widget;
 
 // This is a slight misnomer. It handles the higher level logic of loading both subframes and plugins.
 class FrameLoader::SubframeLoader {
-    WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(SubframeLoader); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SubframeLoader, Loader);
 public:
     explicit SubframeLoader(LocalFrame&);
 
@@ -67,12 +67,14 @@ private:
     bool loadPlugin(HTMLPlugInImageElement&, const URL&, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback);
 
     bool shouldUsePlugin(const URL&, const String& mimeType, bool hasFallback, bool& useFallback);
-    bool pluginIsLoadable(const URL&);
+    bool pluginIsLoadable(const URL&, const HTMLPlugInImageElement&, const String& mimeType) const;
 
     URL completeURL(const String&) const;
 
     bool shouldConvertInvalidURLsToBlank() const;
     Ref<LocalFrame> protectedFrame() const;
+
+    bool canCreateSubFrame() const;
 
     bool m_containsPlugins { false };
     WeakRef<LocalFrame> m_frame;

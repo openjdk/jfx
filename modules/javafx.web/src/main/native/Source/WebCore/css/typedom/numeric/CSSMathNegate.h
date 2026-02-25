@@ -39,7 +39,7 @@ public:
     CSSNumericValue& value() { return m_value.get(); }
     const CSSNumericValue& value() const { return m_value.get(); }
 
-    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
+    std::optional<CSSCalc::Child> toCalcTreeNode() const final;
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Negate; }
@@ -49,7 +49,7 @@ private:
     bool equals(const CSSNumericValue& other) const final;
 
     CSSMathNegate(CSSNumberish&&);
-    Ref<CSSNumericValue> m_value;
+    const Ref<CSSNumericValue> m_value;
 };
 
 } // namespace WebCore

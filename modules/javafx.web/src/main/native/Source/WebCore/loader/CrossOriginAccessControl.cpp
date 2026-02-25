@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,11 +38,12 @@
 #include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "ResourceRequest.h"
-#include "RuntimeApplicationChecks.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <mutex>
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -86,7 +87,7 @@ void updateRequestForAccessControl(ResourceRequest& request, SecurityOrigin& sec
 
 ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& request, SecurityOrigin& securityOrigin, const String& referrer, bool includeFetchMetadata)
 {
-    ResourceRequest preflightRequest(request.url());
+    ResourceRequest preflightRequest { URL { request.url() } };
     static const double platformDefaultTimeout = 0;
     preflightRequest.setTimeoutInterval(platformDefaultTimeout);
     updateRequestForAccessControl(preflightRequest, securityOrigin, StoredCredentialsPolicy::DoNotUse);
@@ -107,7 +108,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
                 unsafeHeaders.append(headerField.key.convertToASCIILowercase());
         }
 
-        std::sort(unsafeHeaders.begin(), unsafeHeaders.end(), WTF::codePointCompareLessThan);
+        std::ranges::sort(unsafeHeaders, WTF::codePointCompareLessThan);
 
         StringBuilder headerBuffer;
 
@@ -152,7 +153,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         options.mode = FetchOptions::Mode::SameOrigin;
 
     if (options.mode != FetchOptions::Mode::NoCors) {
-        if (auto* page = document.page()) {
+        if (RefPtr page = document.page()) {
             if (page->shouldDisableCorsForRequestTo(request.url()))
                 options.mode = FetchOptions::Mode::NoCors;
         }

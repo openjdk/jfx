@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "AudioDestinationCocoa.h"
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
@@ -36,14 +37,14 @@ namespace WebCore {
 class AudioIOCallback;
 
 class MockAudioDestinationCocoa final : public AudioDestinationCocoa {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MockAudioDestinationCocoa, WEBCORE_EXPORT);
 public:
-    static Ref<AudioDestination> create(AudioIOCallback& callback, float sampleRate)
+    static Ref<AudioDestination> create(const CreationOptions& options)
     {
-        return adoptRef(*new MockAudioDestinationCocoa(callback, sampleRate));
+        return adoptRef(*new MockAudioDestinationCocoa(options));
     }
 
-    WEBCORE_EXPORT MockAudioDestinationCocoa(AudioIOCallback&, float sampleRate);
+    WEBCORE_EXPORT MockAudioDestinationCocoa(const CreationOptions&);
     WEBCORE_EXPORT virtual ~MockAudioDestinationCocoa();
 
 private:
@@ -52,7 +53,7 @@ private:
 
     void tick();
 
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
     RunLoop::Timer m_timer;
     size_t m_numberOfFramesToProcess { 384 };
 };

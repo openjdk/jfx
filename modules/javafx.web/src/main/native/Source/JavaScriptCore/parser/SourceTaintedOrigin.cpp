@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "SourceTaintedOrigin.h"
 
 #include "CodeBlock.h"
+#include "JSWebAssemblyInstance.h"
 #include "StackVisitor.h"
 #include "VM.h"
 
@@ -45,21 +46,39 @@ String sourceTaintedOriginToString(SourceTaintedOrigin taintedness)
     return { };
 }
 
-SourceTaintedOrigin sourceTaintedOriginFromStack(VM& vm, CallFrame* callFrame)
+std::pair<SourceTaintedOrigin, URL> sourceTaintedOriginFromStack(VM& vm, CallFrame* callFrame)
 {
     if (!vm.mightBeExecutingTaintedCode())
-        return SourceTaintedOrigin::Untainted;
+        return { SourceTaintedOrigin::Untainted, { } };
     SourceTaintedOrigin result = SourceTaintedOrigin::IndirectlyTaintedByHistory;
 
+    URL sourceURL;
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) -> IterationStatus {
+#if ENABLE(WEBASSEMBLY)
+        if (visitor->callFrame()->callee().isNativeCallee() && visitor->callFrame()->wasmInstance()) {
+            JSWebAssemblyInstance* instance = std::bit_cast<JSWebAssemblyInstance*>(*visitor->callFrame()->addressOfCodeBlock());
+            result = std::max(result, instance->taintedness());
+            if (result != SourceTaintedOrigin::KnownTainted)
+                return IterationStatus::Continue;
+
+            sourceURL = instance->sourceURL();
+            return IterationStatus::Done;
+        }
+#endif
+
         if (!visitor->codeBlock() || !visitor->codeBlock()->couldBeTainted())
             return IterationStatus::Continue;
 
-        result = std::max(result, visitor->codeBlock()->source().provider()->sourceTaintedOrigin());
-        return result == SourceTaintedOrigin::KnownTainted ? IterationStatus::Done : IterationStatus::Continue;
+        auto* sourceProvider = visitor->codeBlock()->source().provider();
+        result = std::max(result, sourceProvider->sourceTaintedOrigin());
+        if (result != SourceTaintedOrigin::KnownTainted)
+            return IterationStatus::Continue;
+
+        sourceURL = sourceProvider->sourceOrigin().url();
+        return IterationStatus::Done;
     });
 
-    return result;
+    return { result, WTFMove(sourceURL) };
 }
 
 SourceTaintedOrigin computeNewSourceTaintedOriginFromStack(VM& vm, CallFrame* callFrame)
@@ -69,6 +88,16 @@ SourceTaintedOrigin computeNewSourceTaintedOriginFromStack(VM& vm, CallFrame* ca
 
     SourceTaintedOrigin result = SourceTaintedOrigin::IndirectlyTaintedByHistory;
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) -> IterationStatus {
+#if ENABLE(WEBASSEMBLY)
+        if (visitor->callFrame()->callee().isNativeCallee() && visitor->callFrame()->wasmInstance()) {
+            JSWebAssemblyInstance* instance = std::bit_cast<JSWebAssemblyInstance*>(*visitor->callFrame()->addressOfCodeBlock());
+            if (instance->taintedness() >= SourceTaintedOrigin::IndirectlyTainted) {
+                result = SourceTaintedOrigin::IndirectlyTainted;
+                return IterationStatus::Done;
+            }
+        }
+#endif
+
         if (visitor->codeBlock() && visitor->codeBlock()->couldBeTainted()) {
             SourceTaintedOrigin currentTaintedOrigin = visitor->codeBlock()->source().provider()->sourceTaintedOrigin();
             if (currentTaintedOrigin >= SourceTaintedOrigin::IndirectlyTainted) {

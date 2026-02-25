@@ -35,6 +35,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class GraphicsContext;
@@ -73,17 +74,17 @@ class XRProjectionLayer;
 class XRSubImage;
 
 class GPUImpl final : public GPU, public RefCounted<GPUImpl> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(GPUImpl);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<GPUImpl> create(WebGPUPtr<WGPUInstance>&& instance, ConvertToBackingContext& convertToBackingContext)
     {
         return adoptRef(*new GPUImpl(WTFMove(instance), convertToBackingContext));
     }
 
     virtual ~GPUImpl();
-
-    void ref() const final { RefCounted<GPUImpl>::ref(); }
-    void deref() const final { RefCounted<GPUImpl>::deref(); }
 
     void paintToCanvas(WebCore::NativeImage&, const WebCore::IntSize&, WebCore::GraphicsContext&) final;
 
@@ -133,7 +134,7 @@ private:
     bool isValid(const XRView&) const final;
 
     WebGPUPtr<WGPUInstance> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

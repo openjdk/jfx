@@ -33,9 +33,12 @@
 #include "ScrollingStateFrameScrollingNode.h"
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeFrameScrollingNode);
 
 ScrollingTreeFrameScrollingNode::ScrollingTreeFrameScrollingNode(ScrollingTree& scrollingTree, ScrollingNodeType nodeType, ScrollingNodeID nodeID)
     : ScrollingTreeScrollingNode(scrollingTree, nodeType, nodeID)
@@ -66,14 +69,11 @@ bool ScrollingTreeFrameScrollingNode::commitStateBeforeChildren(const ScrollingS
     if (state->hasChangedProperty(ScrollingStateNode::Property::BehaviorForFixedElements))
         m_behaviorForFixed = state->scrollBehaviorForFixedElements();
 
-    if (state->hasChangedProperty(ScrollingStateNode::Property::TopContentInset))
-        m_topContentInset = state->topContentInset();
+    if (state->hasChangedProperty(ScrollingStateNode::Property::ObscuredContentInsets))
+        m_obscuredContentInsets = state->obscuredContentInsets();
 
     if (state->hasChangedProperty(ScrollingStateNode::Property::VisualViewportIsSmallerThanLayoutViewport))
         m_visualViewportIsSmallerThanLayoutViewport = state->visualViewportIsSmallerThanLayoutViewport();
-
-    if (state->hasChangedProperty(ScrollingStateNode::Property::FixedElementsLayoutRelativeToFrame))
-        m_fixedElementsLayoutRelativeToFrame = state->fixedElementsLayoutRelativeToFrame();
 
     if (state->hasChangedProperty(ScrollingStateNode::Property::LayoutViewport))
         m_layoutViewport = state->layoutViewport();
@@ -137,36 +137,42 @@ FloatRect ScrollingTreeFrameScrollingNode::layoutViewportRespectingRubberBanding
 
 FloatSize ScrollingTreeFrameScrollingNode::viewToContentsOffset(const FloatPoint& scrollPosition) const
 {
-    return toFloatSize(scrollPosition) - FloatSize(0, headerHeight() + topContentInset());
+    auto obscuredContentInsets = this->obscuredContentInsets();
+    return toFloatSize(scrollPosition) - FloatSize(obscuredContentInsets.left(), headerHeight() + obscuredContentInsets.top());
 }
 
 void ScrollingTreeFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "frame scrolling node";
+    ts << "frame scrolling node"_s;
     ScrollingTreeScrollingNode::dumpProperties(ts, behavior);
 
-    ts.dumpProperty("layout viewport", m_layoutViewport);
-    ts.dumpProperty("min layoutViewport origin", m_minLayoutViewportOrigin);
-    ts.dumpProperty("max layoutViewport origin", m_maxLayoutViewportOrigin);
+    ts.dumpProperty("layout viewport"_s, m_layoutViewport);
+    ts.dumpProperty("min layoutViewport origin"_s, m_minLayoutViewportOrigin);
+    ts.dumpProperty("max layoutViewport origin"_s, m_maxLayoutViewportOrigin);
 
     if (m_overrideVisualViewportSize)
-        ts.dumpProperty("override visual viewport size", m_overrideVisualViewportSize.value());
+        ts.dumpProperty("override visual viewport size"_s, m_overrideVisualViewportSize.value());
 
     if (m_frameScaleFactor != 1)
-        ts.dumpProperty("frame scale factor", m_frameScaleFactor);
-    if (m_topContentInset)
-        ts.dumpProperty("top content inset", m_topContentInset);
+        ts.dumpProperty("frame scale factor"_s, m_frameScaleFactor);
+
+    if (m_obscuredContentInsets.top())
+        ts.dumpProperty("top content inset"_s, m_obscuredContentInsets.top());
+    if (m_obscuredContentInsets.bottom())
+        ts.dumpProperty("bottom content inset"_s, m_obscuredContentInsets.bottom());
+    if (m_obscuredContentInsets.left())
+        ts.dumpProperty("left content inset"_s, m_obscuredContentInsets.left());
+    if (m_obscuredContentInsets.right())
+        ts.dumpProperty("right content inset"_s, m_obscuredContentInsets.right());
 
     if (m_headerHeight)
-        ts.dumpProperty("header height", m_headerHeight);
+        ts.dumpProperty("header height"_s, m_headerHeight);
     if (m_footerHeight)
-        ts.dumpProperty("footer height", m_footerHeight);
+        ts.dumpProperty("footer height"_s, m_footerHeight);
 
-    ts.dumpProperty("behavior for fixed", m_behaviorForFixed);
-    if (m_fixedElementsLayoutRelativeToFrame)
-        ts.dumpProperty("fixed elements lay out relative to frame", m_fixedElementsLayoutRelativeToFrame);
+    ts.dumpProperty("behavior for fixed"_s, m_behaviorForFixed);
     if (m_visualViewportIsSmallerThanLayoutViewport)
-        ts.dumpProperty("visual viewport is smaller than layout viewport", m_visualViewportIsSmallerThanLayoutViewport);
+        ts.dumpProperty("visual viewport is smaller than layout viewport"_s, m_visualViewportIsSmallerThanLayoutViewport);
 }
 
 

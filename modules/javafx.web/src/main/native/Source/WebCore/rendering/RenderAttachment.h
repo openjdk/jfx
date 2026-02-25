@@ -57,14 +57,12 @@ private:
     void element() const = delete;
     ASCIILiteral renderName() const override { return "RenderAttachment"_s; }
     LayoutSize layoutWideLayoutAttachmentOnly();
-    void layoutShadowContent(const LayoutSize&);
+    void layoutShadowContent(const LayoutSize&) override;
 
     bool shouldDrawSelectionTint() const override { return isWideLayout(); }
     void paintReplaced(PaintInfo&, const LayoutPoint& offset) final;
 
     void layout() override;
-
-    LayoutUnit baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const override;
 
     LayoutUnit m_minimumIntrinsicWidth;
     bool m_shouldDrawBorder { true };

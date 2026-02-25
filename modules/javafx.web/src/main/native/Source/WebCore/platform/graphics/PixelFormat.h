@@ -33,9 +33,18 @@ enum class PixelFormat : uint8_t {
     RGBA8,
     BGRX8,
     BGRA8,
+#if ENABLE(PIXEL_FORMAT_RGB10)
     RGB10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     RGB10A8,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    RGBA16F,
+#endif
 };
+
+enum class UseLosslessCompression : bool { No, Yes };
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, PixelFormat);
 

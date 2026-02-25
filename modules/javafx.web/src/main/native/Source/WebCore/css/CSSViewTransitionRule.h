@@ -67,8 +67,8 @@ public:
     void reattach(StyleRuleBase&) final;
     StyleRuleType styleRuleType() const final { return StyleRuleType::ViewTransition; }
 
-    ViewTransitionNavigation navigation() const { return m_viewTransitionRule->computedNavigation(); }
-    Vector<AtomString> types() const { return m_viewTransitionRule->types(); }
+    AtomString navigation() const;
+    Vector<AtomString> types() const { return Ref { m_viewTransitionRule }->types(); }
 
 private:
     CSSViewTransitionRule(StyleRuleViewTransition&, CSSStyleSheet* parent);

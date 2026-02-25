@@ -46,7 +46,7 @@ namespace DFG {
 class Graph;
 
 class Disassembler {
-    WTF_MAKE_TZONE_ALLOCATED(Disassembler);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Disassembler);
 public:
     Disassembler(Graph&);
 
@@ -95,7 +95,7 @@ private:
     DumpContext m_dumpContext;
     MacroAssembler::Label m_startOfCode;
     Vector<MacroAssembler::Label> m_labelForBlockIndex;
-    HashMap<Node*, MacroAssembler::Label> m_labelForNode;
+    UncheckedKeyHashMap<Node*, MacroAssembler::Label> m_labelForNode;
     MacroAssembler::Label m_endOfMainPath;
     MacroAssembler::Label m_endOfCode;
 };

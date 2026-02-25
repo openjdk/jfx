@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "PlatformXR.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
@@ -45,14 +46,14 @@ public:
     using RefCounted<WebXRLayer>::ref;
     using RefCounted<WebXRLayer>::deref;
 
-    virtual void startFrame(const PlatformXR::FrameData&) = 0;
+    virtual void startFrame(PlatformXR::FrameData&) = 0;
     virtual PlatformXR::Device::Layer endFrame() = 0;
 
 protected:
     explicit WebXRLayer(ScriptExecutionContext*);
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget

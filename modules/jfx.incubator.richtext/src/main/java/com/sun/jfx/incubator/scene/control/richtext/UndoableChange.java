@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,17 +38,19 @@ public class UndoableChange {
     private final StyledTextModel model;
     private final TextPos start;
     private final StyledSegment[] undo;
+    private final boolean isEdit;
     private StyledSegment[] redo;
     private final TextPos endBefore;
     private TextPos endAfter;
     private UndoableChange prev;
     private UndoableChange next;
 
-    private UndoableChange(StyledTextModel model, TextPos start, TextPos end, StyledSegment[] undo) {
+    private UndoableChange(StyledTextModel model, TextPos start, TextPos end, StyledSegment[] undo, boolean isEdit) {
         this.model = model;
         this.start = start;
         this.endBefore = end;
         this.undo = undo;
+        this.isEdit = isEdit;
     }
 
     /**
@@ -61,14 +63,15 @@ public class UndoableChange {
      * @param model source model
      * @param start start text position
      * @param end end text position
+     * @param isEdit determines whether it's a content change (true) or a style change (false)
      * @throws IOException if the save point cannot be created
      */
-    public static UndoableChange create(StyledTextModel model, TextPos start, TextPos end) {
+    public static UndoableChange create(StyledTextModel model, TextPos start, TextPos end, boolean isEdit) {
         try {
             SegmentStyledOutput out = new SegmentStyledOutput(128);
             model.export(start, end, out);
             StyledSegment[] ss = out.getSegments();
-            return new UndoableChange(model, start, end, ss);
+            return new UndoableChange(model, start, end, ss, isEdit);
         } catch (IOException e) {
             // TODO log
             return null;
@@ -76,7 +79,7 @@ public class UndoableChange {
     }
 
     public static UndoableChange createHead() {
-        return new UndoableChange(null, null, null, null);
+        return new UndoableChange(null, null, null, null, false);
     }
 
     @Override
@@ -102,12 +105,12 @@ public class UndoableChange {
 
         // undo
         SegmentStyledInput in = new SegmentStyledInput(undo);
-        model.replace(resolver, start, endAfter, in, false);
+        StyledTextModelHelper.replace(model, resolver, start, endAfter, in, false, isEdit);
     }
 
     public void redo(StyleResolver resolver) throws IOException {
         SegmentStyledInput in = new SegmentStyledInput(redo);
-        model.replace(resolver, start, endBefore, in, false);
+        StyledTextModelHelper.replace(model, resolver, start, endBefore, in, false, isEdit);
     }
 
     public UndoableChange getPrev() {

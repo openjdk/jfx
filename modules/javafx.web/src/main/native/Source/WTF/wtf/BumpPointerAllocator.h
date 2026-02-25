@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,14 @@
 #include <wtf/PageAllocation.h>
 #include <wtf/PageBlock.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 #define MINIMUM_BUMP_POOL_SIZE 0x1000
 
 class BumpPointerPool {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BumpPointerPool);
 public:
     // ensureCapacity will check whether the current pool has capacity to
     // allocate 'size' bytes of memory  If it does not, it will attempt to
@@ -96,16 +98,17 @@ private:
         return reinterpret_cast<char*>(reinterpret_cast<intptr_t>(allocation.base()) + allocation.size()) - size;
     }
 
-    BumpPointerPool(const PageAllocation& allocation)
+    BumpPointerPool(const PageAllocation& allocation, size_t remainingCapacity)
         : m_current(allocation.base())
         , m_start(allocation.base())
         , m_next(nullptr)
         , m_previous(nullptr)
         , m_allocation(allocation)
+        , m_remainingCapacity(remainingCapacity)
     {
     }
 
-    static BumpPointerPool* create(size_t minimumCapacity = 0)
+    static BumpPointerPool* create(size_t remainingCapacity, size_t minimumCapacity = 0)
     {
         // Add size of BumpPointerPool object, check for overflow.
         minimumCapacity += sizeof(BumpPointerPool);
@@ -121,9 +124,12 @@ private:
                 return nullptr;
         }
 
+        if (poolSize > remainingCapacity)
+            return nullptr;
+
         PageAllocation allocation = PageAllocation::allocate(poolSize);
         if (!!allocation)
-            return new (allocation) BumpPointerPool(allocation);
+            return new (allocation) BumpPointerPool(allocation, remainingCapacity - poolSize);
         return nullptr;
     }
 
@@ -154,7 +160,9 @@ private:
         while (true) {
             if (!pool) {
                 // We've run to the end; allocate a new pool.
-                pool = BumpPointerPool::create(size);
+                pool = BumpPointerPool::create(previousPool->m_remainingCapacity, size);
+                if (!pool) [[unlikely]]
+                    return nullptr;
                 previousPool->m_next = pool;
                 pool->m_previous = previousPool;
                 return pool;
@@ -199,6 +207,7 @@ private:
     BumpPointerPool* m_next;
     BumpPointerPool* m_previous;
     PageAllocation m_allocation;
+    size_t m_remainingCapacity;
 
     friend class BumpPointerAllocator;
 };
@@ -219,7 +228,7 @@ private:
 // This allocator is non-renetrant, it is encumbant on the clients to ensure
 // startAllocator() is not called again until stopAllocator() has been called.
 class BumpPointerAllocator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BumpPointerAllocator);
 public:
     BumpPointerAllocator()
         : m_head(nullptr)
@@ -232,10 +241,10 @@ public:
             m_head->destroy();
     }
 
-    BumpPointerPool* startAllocator()
+    BumpPointerPool* startAllocator(size_t maxCapacity)
     {
         if (!m_head)
-            m_head = BumpPointerPool::create();
+            m_head = BumpPointerPool::create(maxCapacity);
         return m_head;
     }
 
@@ -252,3 +261,5 @@ private:
 }
 
 using WTF::BumpPointerAllocator;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

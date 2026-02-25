@@ -28,7 +28,9 @@
 
 namespace WebCore {
 
-class FEBlend : public FilterEffect {
+class FEBlend final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEBlend);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEBlend);
 public:
     WEBCORE_EXPORT static Ref<FEBlend> create(BlendMode, DestinationColorSpace = DestinationColorSpace::SRGB());
 

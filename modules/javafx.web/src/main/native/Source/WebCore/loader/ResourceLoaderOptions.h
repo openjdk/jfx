@@ -35,9 +35,13 @@
 #include "CrossOriginEmbedderPolicy.h"
 #include "FetchIdentifier.h"
 #include "FetchOptions.h"
+#include "FetchingWorkerIdentifier.h"
 #include "HTTPHeaderNames.h"
+#include "LoadedFromOpaqueSource.h"
 #include "RequestPriority.h"
+#include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerTypes.h"
+#include "SharedWorkerIdentifier.h"
 #include "StoredCredentialsPolicy.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -154,9 +158,6 @@ static constexpr unsigned bitWidthOfPreflightPolicy = 2;
 enum class ShouldEnableContentExtensionsCheck : bool { No, Yes };
 static constexpr unsigned bitWidthOfShouldEnableContentExtensionsCheck = 1;
 
-enum class LoadedFromOpaqueSource : bool { No, Yes };
-static constexpr unsigned bitWidthOfLoadedFromOpaqueSource = 1;
-
 enum class LoadedFromPluginElement : bool { No, Yes };
 static constexpr unsigned bitWidthOfLoadedFromPluginElement = 1;
 
@@ -191,7 +192,7 @@ struct ResourceLoaderOptions : public FetchOptions {
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
         , loadedFromFetch(LoadedFromFetch::No)
-        , fetchPriorityHint(RequestPriority::Auto)
+        , fetchPriority(RequestPriority::Auto)
         , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     { }
 
@@ -216,15 +217,15 @@ struct ResourceLoaderOptions : public FetchOptions {
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
         , loadedFromFetch(LoadedFromFetch::No)
-        , fetchPriorityHint(RequestPriority::Auto)
+        , fetchPriority(RequestPriority::Auto)
         , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     {
         this->credentials = credentials;
         this->mode = mode;
     }
 
-    Markable<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationIdentifier::MarkableTraits> serviceWorkerRegistrationIdentifier;
-    Markable<ContentSecurityPolicyResponseHeaders, ContentSecurityPolicyResponseHeaders::MarkableTraits> cspResponseHeaders;
+    Markable<ServiceWorkerRegistrationIdentifier> serviceWorkerRegistrationIdentifier;
+    Markable<ContentSecurityPolicyResponseHeaders> cspResponseHeaders;
     std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
 
     uint8_t maxRedirectCount { 20 };
@@ -250,11 +251,12 @@ struct ResourceLoaderOptions : public FetchOptions {
     LoadedFromOpaqueSource loadedFromOpaqueSource : bitWidthOfLoadedFromOpaqueSource;
     LoadedFromPluginElement loadedFromPluginElement : bitWidthOfLoadedFromPluginElement;
     LoadedFromFetch loadedFromFetch : bitWidthOfLoadedFromFetch;
-    RequestPriority fetchPriorityHint : bitWidthOfFetchPriorityHint;
+    RequestPriority fetchPriority : bitWidthOfRequestPriority;
     ShouldEnableContentExtensionsCheck shouldEnableContentExtensionsCheck : bitWidthOfShouldEnableContentExtensionsCheck;
 
-    FetchIdentifier navigationPreloadIdentifier;
+    Markable<FetchIdentifier> navigationPreloadIdentifier;
     String nonce;
+    FetchingWorkerIdentifier workerIdentifier;
 };
 
 } // namespace WebCore

@@ -28,6 +28,7 @@
 
 #include "DeviceController.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,15 +37,14 @@ class DeviceOrientationData;
 class Page;
 
 class DeviceOrientationController final : public DeviceController {
+    WTF_MAKE_TZONE_ALLOCATED(DeviceOrientationController);
     WTF_MAKE_NONCOPYABLE(DeviceOrientationController);
-    WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceOrientationController);
 public:
     explicit DeviceOrientationController(DeviceOrientationClient&);
     virtual ~DeviceOrientationController() = default;
 
     void didChangeDeviceOrientation(DeviceOrientationData*);
-    DeviceOrientationClient& deviceOrientationClient();
 
 #if PLATFORM(IOS_FAMILY)
     // FIXME: We should look to reconcile the iOS and OpenSource differences with this class
@@ -55,10 +55,14 @@ public:
     bool hasLastData() override;
     RefPtr<Event> getLastEvent() override;
 #endif
+    DeviceClient& client() final;
 
     static ASCIILiteral supplementName();
     static DeviceOrientationController* from(Page*);
     static bool isActiveAt(Page*);
+
+private:
+    WeakRef<DeviceOrientationClient> m_client;
 };
 
 } // namespace WebCore

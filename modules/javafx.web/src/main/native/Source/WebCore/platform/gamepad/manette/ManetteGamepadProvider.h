@@ -44,6 +44,10 @@ class ManetteGamepadProvider final : public GamepadProvider {
 public:
     static ManetteGamepadProvider& singleton();
 
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
+
     virtual ~ManetteGamepadProvider();
 
     void startMonitoringGamepads(GamepadProviderClient&) final;
@@ -72,7 +76,6 @@ private:
     bool m_initialGamepadsConnected { false };
 
     GRefPtr<ManetteMonitor> m_monitor;
-    RunLoop::Timer m_initialGamepadsConnectedTimer;
     RunLoop::Timer m_inputNotificationTimer;
 };
 

@@ -43,9 +43,12 @@
 #include "WorkerThread.h"
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/SourceProvider.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScheduledAction);
 
 std::unique_ptr<ScheduledAction> ScheduledAction::create(DOMWrapperWorld& isolatedWorld, Strong<JSObject>&& function)
 {
@@ -112,7 +115,7 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     arguments.ensureCapacity(m_arguments.size());
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
-    if (UNLIKELY(arguments.hasOverflowed())) {
+    if (arguments.hasOverflowed()) [[unlikely]] {
         reportException(jsFunctionGlobalObject, JSC::Exception::create(vm, createOutOfMemoryError(lexicalGlobalObject)));
         return;
     }
@@ -148,7 +151,7 @@ void ScheduledAction::execute(Document& document)
 void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
 {
     // In a Worker, the execution should always happen on a worker thread.
-    ASSERT(workerGlobalScope.thread().thread() == &Thread::current());
+    ASSERT(workerGlobalScope.thread().thread() == &Thread::currentSingleton());
 
     auto* scriptController = workerGlobalScope.script();
 

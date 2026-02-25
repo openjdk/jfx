@@ -31,8 +31,11 @@
 #include "WorkerThread.h"
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerMessagePortChannelProvider);
 
 WorkerMessagePortChannelProvider::WorkerMessagePortChannelProvider(WorkerOrWorkletGlobalScope& scope)
     : m_scope(scope)
@@ -47,10 +50,10 @@ WorkerMessagePortChannelProvider::~WorkerMessagePortChannelProvider()
     }
 }
 
-void WorkerMessagePortChannelProvider::createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote)
+void WorkerMessagePortChannelProvider::createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote, bool siteIsolationEnabled)
 {
-    callOnMainThread([local, remote] {
-        MessagePortChannelProvider::singleton().createNewMessagePortChannel(local, remote);
+    callOnMainThread([local, remote, siteIsolationEnabled] {
+        MessagePortChannelProvider::singleton().createNewMessagePortChannel(local, remote, siteIsolationEnabled);
     });
 }
 

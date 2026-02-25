@@ -35,30 +35,29 @@
 
 namespace WebCore {
 
-CSSGridIntegerRepeatValue::CSSGridIntegerRepeatValue(size_t repetitions, CSSValueListBuilder builder)
-    : CSSValueContainingVector(GridIntegerRepeatClass, SpaceSeparator, WTFMove(builder))
-    , m_repetitions(repetitions)
+CSSGridIntegerRepeatValue::CSSGridIntegerRepeatValue(Ref<CSSPrimitiveValue>&& repetitions, CSSValueListBuilder builder)
+    : CSSValueContainingVector(ClassType::GridIntegerRepeat, SpaceSeparator, WTFMove(builder))
+    , m_repetitions(WTFMove(repetitions))
 {
-    ASSERT(repetitions);
 }
 
-Ref<CSSGridIntegerRepeatValue> CSSGridIntegerRepeatValue::create(size_t repetitions, CSSValueListBuilder builder)
+Ref<CSSGridIntegerRepeatValue> CSSGridIntegerRepeatValue::create(Ref<CSSPrimitiveValue>&& repetitions, CSSValueListBuilder builder)
 {
-    return adoptRef(*new CSSGridIntegerRepeatValue(repetitions, WTFMove(builder)));
+    return adoptRef(*new CSSGridIntegerRepeatValue(WTFMove(repetitions), WTFMove(builder)));
 }
 
-String CSSGridIntegerRepeatValue::customCSSText() const
+String CSSGridIntegerRepeatValue::customCSSText(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
-    result.append("repeat("_s, repetitions(), ", "_s);
-    serializeItems(result);
+    result.append("repeat("_s, m_repetitions->cssText(context), ", "_s);
+    serializeItems(result, context);
     result.append(')');
     return result.toString();
 }
 
 bool CSSGridIntegerRepeatValue::equals(const CSSGridIntegerRepeatValue& other) const
 {
-    return m_repetitions == other.m_repetitions && itemsEqual(other);
+    return compareCSSValue(m_repetitions, other.m_repetitions) && itemsEqual(other);
 }
 
 } // namespace WebCore

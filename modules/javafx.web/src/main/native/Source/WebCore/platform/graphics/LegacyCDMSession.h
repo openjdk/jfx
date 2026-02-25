@@ -28,7 +28,9 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
 #include <JavaScriptCore/Forward.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -43,7 +45,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LegacyCDMSes
 namespace WebCore {
 
 class LegacyCDMSessionClient : public CanMakeWeakPtr<LegacyCDMSessionClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(LegacyCDMSessionClient);
 public:
     virtual ~LegacyCDMSessionClient() = default;
     virtual void sendMessage(Uint8Array*, String destinationURL) = 0;
@@ -60,10 +62,11 @@ public:
     virtual void sendError(MediaKeyErrorCode, uint32_t systemCode) = 0;
 
     virtual String mediaKeysStorageDirectory() const = 0;
+    virtual String mediaKeysHashSalt() const = 0;
 
 #if !RELEASE_LOG_DISABLED
     virtual const Logger& logger() const = 0;
-    virtual const void* logIdentifier() const = 0;
+    virtual uint64_t logIdentifier() const = 0;
 #endif
 };
 
@@ -75,9 +78,10 @@ enum LegacyCDMSessionType {
     CDMSessionTypeRemote,
 };
 
-class WEBCORE_EXPORT LegacyCDMSession {
+class WEBCORE_EXPORT LegacyCDMSession : public AbstractRefCounted {
 public:
     virtual ~LegacyCDMSession() = default;
+    virtual void invalidate() { }
 
     virtual LegacyCDMSessionType type() { return CDMSessionTypeUnknown; }
     virtual const String& sessionId() const = 0;
@@ -85,6 +89,8 @@ public:
     virtual void releaseKeys() = 0;
     virtual bool update(Uint8Array*, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, uint32_t& systemCode) = 0;
     virtual RefPtr<ArrayBuffer> cachedKeyForKeyID(const String&) const = 0;
+
+    virtual bool isRemoteLegacyCDMSession() const { return false; }
 };
 
 }

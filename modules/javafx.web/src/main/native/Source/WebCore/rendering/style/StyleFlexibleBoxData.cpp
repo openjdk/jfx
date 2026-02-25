@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,9 @@
 #include "config.h"
 #include "StyleFlexibleBoxData.h"
 
+#include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 
 namespace WebCore {
 
@@ -58,8 +60,23 @@ Ref<StyleFlexibleBoxData> StyleFlexibleBoxData::copy() const
 
 bool StyleFlexibleBoxData::operator==(const StyleFlexibleBoxData& other) const
 {
-    return flexGrow == other.flexGrow && flexShrink == other.flexShrink && flexBasis == other.flexBasis
-        && flexDirection == other.flexDirection && flexWrap == other.flexWrap;
+    return flexGrow == other.flexGrow
+        && flexShrink == other.flexShrink
+        && flexBasis == other.flexBasis
+        && flexDirection == other.flexDirection
+        && flexWrap == other.flexWrap;
 }
 
+#if !LOG_DISABLED
+void StyleFlexibleBoxData::dumpDifferences(TextStream& ts, const StyleFlexibleBoxData& other) const
+{
+    LOG_IF_DIFFERENT(flexGrow);
+    LOG_IF_DIFFERENT(flexShrink);
+    LOG_IF_DIFFERENT(flexBasis);
+
+    LOG_IF_DIFFERENT_WITH_CAST(FlexDirection, flexDirection);
+    LOG_IF_DIFFERENT_WITH_CAST(FlexWrap, flexWrap);
 }
+#endif // !LOG_DISABLED
+
+} // namespace WebCore

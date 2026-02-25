@@ -30,9 +30,12 @@
 #include "PasteboardStrategy.h"
 #include "PlatformStrategies.h"
 #include "Settings.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Pasteboard);
 
 bool Pasteboard::isSafeTypeForDOMToReadAndWrite(const String& type)
 {
@@ -60,7 +63,7 @@ Vector<String> Pasteboard::readAllStrings(const String& type)
 
 std::optional<Vector<PasteboardItemInfo>> Pasteboard::allPasteboardItemInfo() const
 {
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
         return strategy->allPasteboardItemInfo(name(), m_changeCount, context());
 #endif
@@ -69,7 +72,7 @@ std::optional<Vector<PasteboardItemInfo>> Pasteboard::allPasteboardItemInfo() co
 
 std::optional<PasteboardItemInfo> Pasteboard::pasteboardItemInfo(size_t index) const
 {
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
         return strategy->informationForItemAtIndex(index, name(), m_changeCount, context());
 #else

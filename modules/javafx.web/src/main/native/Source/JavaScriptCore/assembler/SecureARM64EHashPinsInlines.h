@@ -103,7 +103,7 @@ ALWAYS_INLINE auto SecureARM64EHashPins::findFirstEntry() -> FindResult
 
 ALWAYS_INLINE uint64_t SecureARM64EHashPins::pinForCurrentThread()
 {
-    if (LIKELY(g_jscConfig.useFastJITPermissions))
+    if (g_jscConfig.useFastJITPermissions) [[likely]]
         return findFirstEntry().entry->pin;
     return 1;
 }

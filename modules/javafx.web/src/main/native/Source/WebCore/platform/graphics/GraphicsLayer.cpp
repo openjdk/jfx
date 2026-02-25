@@ -34,8 +34,11 @@
 #include "LayoutRect.h"
 #include "MediaPlayerEnums.h"
 #include "RotateTransformOperation.h"
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/ProcessID.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -50,6 +53,13 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(KeyframeValueList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsLayer);
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty property)
@@ -111,7 +121,7 @@ String animatedPropertyIDAsString(AnimatedProperty property)
     return ""_s;
 }
 
-typedef HashMap<const GraphicsLayer*, Vector<FloatRect>> RepaintMap;
+using RepaintMap = HashMap<const GraphicsLayer*, Vector<FloatRect>>;
 static RepaintMap& repaintRectMap()
 {
     static NeverDestroyed<RepaintMap> map;
@@ -157,17 +167,19 @@ bool GraphicsLayer::supportsLayerType(Type type)
 }
 #endif
 
-#if !USE(COORDINATED_GRAPHICS)
 bool GraphicsLayer::supportsContentsTiling()
 {
+#if USE(COORDINATED_GRAPHICS)
+    return true;
+#else
     // FIXME: Enable the feature on different ports.
     return false;
-}
 #endif
+}
 
 // Singleton client used for layers on which clearClient has been called.
 class EmptyGraphicsLayerClient final : public GraphicsLayerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyGraphicsLayerClient);
 public:
     static EmptyGraphicsLayerClient& singleton();
 };
@@ -196,6 +208,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
+    , m_showFrameProcessBorders(false)
     , m_isMaskLayer(false)
     , m_isBackdropRoot(false)
     , m_isTrackingDisplayListReplay(false)
@@ -204,6 +217,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_shouldPaintUsingCompositeCopy(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     , m_isSeparated(false)
+    , m_isSeparatedImage(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     , m_isSeparatedPortal(false)
     , m_isDescendentOfSeparatedPortal(false)
@@ -406,6 +420,15 @@ void GraphicsLayer::removeFromParentInternal()
     }
 }
 
+bool GraphicsLayer::needsBackdrop() const
+{
+#if HAVE(CORE_MATERIAL)
+    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect))
+        return true;
+#endif
+    return !m_backdropFilters.isEmpty();
+}
+
 void GraphicsLayer::setPreserves3D(bool b)
 {
     ASSERT_IMPLIES(m_type == Type::Structural, b);
@@ -423,6 +446,24 @@ void GraphicsLayer::setDrawsContent(bool b)
     ASSERT_IMPLIES(m_type == Type::Structural, false);
     m_drawsContent = b;
 }
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+void GraphicsLayer::setDrawsHDRContent(bool b)
+{
+    ASSERT(m_type != Type::Structural);
+    m_drawsHDRContent = b;
+}
+
+void GraphicsLayer::setTonemappingEnabled(bool b)
+{
+    ASSERT(m_type != Type::Structural);
+    m_tonemappingEnabled = b;
+}
+
+void GraphicsLayer::setNeedsDisplayIfEDRHeadroomExceeds(float)
+{
+}
+#endif
 
 const TransformationMatrix& GraphicsLayer::transform() const
 {
@@ -633,7 +674,7 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
     m_paintingPhase = phase;
 }
 
-void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
+void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior) const
 {
     auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
     auto clipRect = clip;
@@ -759,12 +800,20 @@ void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
         return;
     }
 
+    if (isShowingFrameProcessBorders()) {
+        auto hash = intHash(static_cast<uint32_t>(getCurrentProcessID()));
+        uint8_t r = (hash >>  0) & 0xFF, g = (hash >>  8) & 0xFF, b = (hash >> 16) & 0xFF;
+        color = SRGBA<uint8_t> { r, g, b }.colorWithAlphaByte(192);
+        width = 4;
+        return;
+    }
+
     color = Color::yellow.colorWithAlphaByte(192); // container: yellow
 }
 
 void GraphicsLayer::updateDebugIndicators()
 {
-    if (!isShowingDebugBorder())
+    if (!isShowingDebugBorder() && !isShowingFrameProcessBorders())
         return;
 
     Color borderColor;
@@ -857,7 +906,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTFMove(largestRepaintRect));
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, NOESCAPE const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -879,16 +928,16 @@ void GraphicsLayer::setTileCoverage(TileCoverage coverage)
 
 void GraphicsLayer::dumpLayer(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
-    ts << indent << "(" << "GraphicsLayer";
+    ts << indent << '(' << "GraphicsLayer"_s;
 
     if (options & LayerTreeAsTextOptions::Debug) {
-        ts << " " << static_cast<void*>(const_cast<GraphicsLayer*>(this));
-        ts << " \"" << m_name << "\"";
+        ts << ' ' << static_cast<void*>(const_cast<GraphicsLayer*>(this));
+        ts << " \"" << m_name << '"';
     }
 
-    ts << "\n";
+    ts << '\n';
     dumpProperties(ts, options);
-    ts << indent << ")\n";
+    ts << indent << ")\n"_s;
 }
 
 static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, OptionSet<LayerTreeAsTextOptions> options)
@@ -927,7 +976,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (client().shouldDumpPropertyForLayer(this, "anchorPoint"_s, options)) {
         ts << indent << "(anchor "_s << m_anchorPoint.x() << ' ' << m_anchorPoint.y();
         if (m_anchorPoint.z())
-            ts << " " << m_anchorPoint.z();
+            ts << ' ' << m_anchorPoint.z();
         ts << ")\n"_s;
     }
 
@@ -955,6 +1004,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
 
     if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent"_s, options))
         ts << indent << "(drawsContent "_s << m_drawsContent << ")\n"_s;
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (m_drawsHDRContent)
+        ts << indent << "(drawsHDRContent "_s << m_drawsHDRContent << ")\n"_s;
+#endif
 
     if (!m_contentsVisible)
         ts << indent << "(contentsVisible "_s << m_contentsVisible << ")\n"_s;
@@ -994,6 +1048,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
         ts << '[' << m_childrenTransform->m31() << ' ' << m_childrenTransform->m32() << ' ' << m_childrenTransform->m33() << ' ' << m_childrenTransform->m34() << "] "_s;
         ts << '[' << m_childrenTransform->m41() << ' ' << m_childrenTransform->m42() << ' ' << m_childrenTransform->m43() << ' ' << m_childrenTransform->m44() << "])\n"_s;
     }
+
+#if HAVE(CORE_MATERIAL)
+    if (m_appleVisualEffectData.effect != AppleVisualEffect::None)
+        ts << indent << "(appleVisualEffectData "_s << m_appleVisualEffectData << ")\n"_s;
+#endif
 
     if (m_maskLayer) {
         ts << indent << "(mask layer"_s;
@@ -1062,18 +1121,20 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
         dumpChildren(childrenStream, m_children, totalChildCount, options);
 
         if (totalChildCount) {
-            ts << indent << "(children "_s << totalChildCount << "\n"_s;
+            ts << indent << "(children "_s << totalChildCount << '\n';
             ts << childrenStream.release();
             ts << indent << ")\n"_s;
         }
     }
+
+    client().dumpProperties(this, ts, options);
 }
 
 TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& layers)
 {
     for (size_t i = 0; i < layers.size(); ++i) {
         if (i)
-            ts << " ";
+            ts << ' ';
         ts << layers[i];
     }
 
@@ -1083,13 +1144,13 @@ TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& la
 TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 {
     switch (phase) {
-    case GraphicsLayerPaintingPhase::Background: ts << "background"; break;
-    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"; break;
-    case GraphicsLayerPaintingPhase::Mask: ts << "mask"; break;
-    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"; break;
-    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"; break;
-    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"; break;
-    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"; break;
+    case GraphicsLayerPaintingPhase::Background: ts << "background"_s; break;
+    case GraphicsLayerPaintingPhase::Foreground: ts << "foreground"_s; break;
+    case GraphicsLayerPaintingPhase::Mask: ts << "mask"_s; break;
+    case GraphicsLayerPaintingPhase::ClipPath: ts << "clip-path"_s; break;
+    case GraphicsLayerPaintingPhase::OverflowContents: ts << "overflow-contents"_s; break;
+    case GraphicsLayerPaintingPhase::CompositedScroll: ts << "composited-scroll"_s; break;
+    case GraphicsLayerPaintingPhase::ChildClippingMask: ts << "child-clipping-mask"_s; break;
     }
 
     return ts;
@@ -1098,15 +1159,16 @@ TextStream& operator<<(TextStream& ts, GraphicsLayerPaintingPhase phase)
 TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& customAppearance)
 {
     switch (customAppearance) {
-    case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
-    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
+    case GraphicsLayer::CustomAppearance::None: ts << "none"_s; break;
+    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"_s; break;
     }
     return ts;
 }
 
-String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options) const
+String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options, uint32_t baseIndent) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
+    ts.setIndent(baseIndent);
 
     dumpLayer(ts, options);
     return ts.release();
@@ -1126,9 +1188,8 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     // The tree is too large to print to the os log so save the tree output
     // to a file in case we don't have easy access to stderr.
     auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GraphicsLayerTree"_s);
-    if (FileSystem::isHandleValid(fileHandle)) {
-        FileSystem::writeToFile(fileHandle, output.utf8().span());
-        FileSystem::closeFile(fileHandle);
+    if (fileHandle) {
+        fileHandle.write(byteCast<uint8_t>(output.utf8().span()));
         WTFLogAlways("Saved GraphicsLayer Tree to %s", tempFilePath.utf8().data());
     } else
         WTFLogAlways("Failed to open temporary file for saving the GraphicsLayer Tree.");

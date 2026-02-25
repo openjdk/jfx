@@ -33,10 +33,14 @@ typedef struct _GDBusProxy GDBusProxy;
 namespace WTF {
 
 class RealTimeThreads {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RealTimeThreads);
     friend class LazyNeverDestroyed<RealTimeThreads>;
 public:
     WTF_EXPORT_PRIVATE static RealTimeThreads& singleton();
+
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
 
     void registerThread(Thread&);
 

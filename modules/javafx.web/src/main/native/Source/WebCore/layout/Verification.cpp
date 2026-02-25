@@ -31,6 +31,7 @@
 #if ASSERT_ENABLED
 
 #include "BlockFormattingState.h"
+#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
@@ -189,12 +190,12 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
         auto marginStart = LayoutUnit { };
         auto& marginStartStyle = layoutBox.style().marginStart();
         if (marginStartStyle.isFixed() || marginStartStyle.isPercent() || marginStartStyle.isCalculated())
-            marginStart = valueForLength(marginStartStyle, containingBlockWidth);
+            marginStart = Style::evaluate(marginStartStyle, containingBlockWidth);
 
         auto marginEnd = LayoutUnit { };
         auto& marginEndStyle = layoutBox.style().marginEnd();
         if (marginEndStyle.isFixed() || marginEndStyle.isPercent() || marginEndStyle.isCalculated())
-            marginEnd = valueForLength(marginEndStyle, containingBlockWidth);
+            marginEnd = Style::evaluate(marginEndStyle, containingBlockWidth);
 
         auto marginBefore = boxGeometry.marginBefore();
         auto marginAfter = boxGeometry.marginAfter();

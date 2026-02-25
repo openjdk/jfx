@@ -33,6 +33,7 @@
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -52,7 +53,7 @@ enum class ScrollSnapState {
 };
 
 class ScrollSnapAnimatorState {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollSnapAnimatorState);
 public:
     ScrollSnapAnimatorState(ScrollingEffectsController& scrollController)
         : m_scrollController(scrollController)
@@ -97,10 +98,10 @@ private:
     bool setupAnimationForState(ScrollSnapState, const ScrollExtents&, float pageScale, const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta);
     void teardownAnimationForState(ScrollSnapState);
 
-    bool preserveCurrentTargetForAxis(ScrollEventAxis, ElementIdentifier);
+    bool preserveCurrentTargetForAxis(ScrollEventAxis, NodeIdentifier);
 
     Vector<SnapOffset<LayoutUnit>> currentlySnappedOffsetsForAxis(ScrollEventAxis) const;
-    HashSet<ElementIdentifier> currentlySnappedBoxes(const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets) const;
+    HashSet<NodeIdentifier> currentlySnappedBoxes(const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets) const;
 
     bool setNearestScrollSnapIndexForAxisAndOffsetInternal(ScrollEventAxis, ScrollOffset, const ScrollExtents&, float pageScale);
     void updateCurrentlySnappedBoxes();
@@ -121,7 +122,7 @@ private:
 
     std::optional<unsigned> m_activeSnapIndexX;
     std::optional<unsigned> m_activeSnapIndexY;
-    HashSet<ElementIdentifier> m_currentlySnappedBoxes;
+    HashSet<NodeIdentifier> m_currentlySnappedBoxes;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ScrollSnapAnimatorState&);

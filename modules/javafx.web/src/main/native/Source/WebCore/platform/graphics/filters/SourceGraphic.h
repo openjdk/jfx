@@ -25,7 +25,9 @@
 
 namespace WebCore {
 
-class SourceGraphic : public FilterEffect {
+class SourceGraphic final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SourceGraphic);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SourceGraphic);
 public:
     WEBCORE_EXPORT static Ref<SourceGraphic> create(DestinationColorSpace = DestinationColorSpace::SRGB());
 

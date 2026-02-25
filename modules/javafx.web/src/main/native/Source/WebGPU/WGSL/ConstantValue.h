@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2023 Apple Inc. All rights reserved.
  *
@@ -26,6 +25,9 @@
 
 #pragma once
 
+#include <cmath>
+#include <type_traits>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
@@ -36,22 +38,38 @@ namespace WGSL {
 #if HAVE(FP16_HALF_SUPPORT)
 using half = __fp16;
 #else
+// Wrap a struct around the supported fp16 type.
 struct half {
+#if PLATFORM(COCOA)
+    using f16 = __fp16;
+#else
+    // _Float16 is the 16bit float type in C++23, and is often available
+    // in compilers prior to C++23.
+    using f16 = _Float16;
+#endif
     half()
     {
     }
 
-    half(auto val)
-        : value(static_cast<float>(val))
-    {
-    }
+    // Constructor from an arithmetic type. Use a template here because the
+    // explicit list of types may differ among platforms.
+    template <typename A,
+        std::enable_if_t<std::is_arithmetic_v<std::decay_t<A>>, bool> = true>
+    half(const A& val)
+        : value(static_cast<f16>(val)) { }
+
+    // Constructor from a ConstantResult.
+    template <typename C,
+        std::enable_if_t<std::is_class_v<std::decay_t<C>>, bool> = true>
+    half(const C& val)
+        : value(val.value().getHalf().value) { }
 
     operator float() const
     {
         return static_cast<float>(value);
     }
 
-    __fp16 value { 0.f };
+    f16 value { 0 };
 };
 #endif
 
@@ -125,7 +143,7 @@ struct ConstantStruct {
     HashMap<String, ConstantValue> fields;
 };
 
-using BaseValue = std::variant<float, half, double, int32_t, uint32_t, int64_t, bool, ConstantArray, ConstantVector, ConstantMatrix, ConstantStruct>;
+using BaseValue = Variant<float, half, double, int32_t, uint32_t, int64_t, bool, ConstantArray, ConstantVector, ConstantMatrix, ConstantStruct>;
 struct ConstantValue : BaseValue {
     ConstantValue() = default;
 
@@ -150,6 +168,14 @@ struct ConstantValue : BaseValue {
             return *abstractInt;
         RELEASE_ASSERT_NOT_REACHED();
     }
+    half getHalf() const
+    {
+        if (auto* f32 = std::get_if<float>(this))
+            return *f32;
+        if (auto* f64 = std::get_if<double>(this))
+            return *f64;
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 
     const ConstantVector& toVector() const
     {
@@ -161,7 +187,7 @@ template<typename To, typename From>
 std::optional<To> convertInteger(From value)
 {
     auto result = Checked<To, RecordOverflow>(value);
-    if (UNLIKELY(result.hasOverflowed()))
+    if (result.hasOverflowed()) [[unlikely]]
         return std::nullopt;
     return { result.value() };
 }

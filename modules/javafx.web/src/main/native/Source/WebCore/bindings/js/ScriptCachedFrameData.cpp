@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2008, Google Inc. All rights reserved.
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (c) 2008 Google Inc. All rights reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,9 +34,11 @@
 
 #include "CommonVM.h"
 #include "Document.h"
+#include "FrameInlines.h"
 #include "GCController.h"
 #include "JSDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "PageGroup.h"
@@ -44,9 +46,12 @@
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptCachedFrameData);
 
 ScriptCachedFrameData::ScriptCachedFrameData(LocalFrame& frame)
 {
@@ -78,8 +83,8 @@ void ScriptCachedFrameData::restore(LocalFrame& frame)
         if (auto* window = m_windows.get(world).get())
             windowProxy->setWindow(window->vm(), *window);
         else {
-            ASSERT(frame.document()->domWindow());
-            auto& domWindow = *frame.document()->domWindow();
+            ASSERT(frame.document()->window());
+            auto& domWindow = *frame.document()->window();
             if (&windowProxy->wrapped() == &domWindow)
                 continue;
 

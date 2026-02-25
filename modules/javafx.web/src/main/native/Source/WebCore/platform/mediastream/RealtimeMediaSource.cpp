@@ -50,6 +50,7 @@
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
+#include "ImageRotationSessionVT.h"
 #include "ImageTransferSessionVT.h"
 #include "VideoFrameCV.h"
 #endif
@@ -61,7 +62,7 @@
 namespace WebCore {
 
 struct VideoFrameAdaptor {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(VideoFrameAdaptor);
 
     VideoFrameAdaptor(IntSize size, double frameRate)
         : size(size)
@@ -102,33 +103,33 @@ RealtimeMediaSourceObserver::RealtimeMediaSourceObserver() = default;
 
 RealtimeMediaSourceObserver::~RealtimeMediaSourceObserver() = default;
 
-RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
+RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : m_pageIdentifier(pageIdentifier)
     , m_idHashSalts(WTFMove(hashSalts))
     , m_type(toSourceType(device.type()))
     , m_name({ device.label() })
     , m_device(device)
 {
-    initializePersistentId();
+    initializeIds();
 }
 
-RealtimeMediaSource::~RealtimeMediaSource()
-{
-}
+RealtimeMediaSource::~RealtimeMediaSource() = default;
 
 void RealtimeMediaSource::setPersistentId(const String& persistentID)
 {
     m_device.setPersistentId(persistentID);
-    initializePersistentId();
+    initializeIds();
 }
 
-void RealtimeMediaSource::initializePersistentId()
+void RealtimeMediaSource::initializeIds()
 {
     if (m_device.persistentId().isEmpty())
         m_device.setPersistentId(createVersion4UUIDString());
 
     m_hashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.persistentDeviceSalt);
     m_ephemeralHashedID = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.persistentId(), m_idHashSalts.ephemeralDeviceSalt);
+
+    m_hashedGroupId = RealtimeMediaSourceCenter::hashStringWithSalt(m_device.groupId(), m_idHashSalts.ephemeralDeviceSalt);
 }
 
 void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
@@ -222,14 +223,14 @@ void RealtimeMediaSource::setInterruptedForTesting(bool interrupted)
     notifyMutedChange(interrupted);
 }
 
-void RealtimeMediaSource::forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>& apply)
+void RealtimeMediaSource::forEachObserver(NOESCAPE const Function<void(RealtimeMediaSourceObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
     m_observers.forEach(apply);
 }
 
-void RealtimeMediaSource::forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>& apply)
+void RealtimeMediaSource::forEachVideoFrameObserver(NOESCAPE const Function<void(VideoFrameObserver&)>& apply)
 {
     Locker locker { m_videoFrameObserversLock };
     for (auto* observer : m_videoFrameObservers.keys())
@@ -338,6 +339,27 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
     updateHasStartedProducingData();
 
     Locker locker { m_videoFrameObserversLock };
+
+    bool shouldSwapAdaptorSize = false;
+    Ref currentVideoFrame = [&] -> Ref<VideoFrame> {
+#if PLATFORM(COCOA)
+        if (!m_shouldApplyRotation || videoFrame.hasNoTransformation())
+            return videoFrame;
+
+        if (!m_rotationSession)
+            m_rotationSession = makeUnique<ImageRotationSessionVT>(m_canUseIOSurface ? ImageRotationSessionVT::ShouldUseIOSurface::Yes : ImageRotationSessionVT::ShouldUseIOSurface::No);
+
+        RefPtr rotatedVideoFrame = m_rotationSession->applyRotation(videoFrame);
+        if (!rotatedVideoFrame)
+            return videoFrame;
+
+        shouldSwapAdaptorSize = videoFrame.has90DegreeRotation();
+        return rotatedVideoFrame.releaseNonNull();
+#else
+        return videoFrame;
+#endif
+    }();
+
     for (auto& [key, value] : m_videoFrameObservers) {
         if (auto* adaptor = value.get()) {
             if (adaptor->frameDecimation > 1 && ++adaptor->frameDecimationCounter % adaptor->frameDecimation)
@@ -348,18 +370,21 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
                 adaptor->frameDecimation = 1;
 
             if (!adaptor->size.isZero()) {
-                auto actualSize = expandedIntSize(videoFrame.presentationSize());
-                auto desiredSize = computeResizedVideoFrameSize(adaptor->size, actualSize);
+                auto actualSize = expandedIntSize(currentVideoFrame->presentationSize());
+                auto adaptorSize = adaptor->size;
+                if (shouldSwapAdaptorSize)
+                    adaptorSize = adaptorSize.transposedSize();
+                auto desiredSize = computeResizedVideoFrameSize(adaptorSize, actualSize);
 
                 if (desiredSize != actualSize) {
-                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, videoFrame, desiredSize)) {
+                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, currentVideoFrame, desiredSize)) {
                         key->videoFrameAvailable(*newVideoFrame, metadata);
                         continue;
                     }
                 }
             }
         }
-        key->videoFrameAvailable(videoFrame, metadata);
+        key->videoFrameAvailable(currentVideoFrame, metadata);
     }
 }
 
@@ -395,7 +420,7 @@ void RealtimeMediaSource::start()
 
 void RealtimeMediaSource::stop()
 {
-    if (!m_isProducingData)
+    if (!m_isProducingData || m_isEnded)
         return;
 
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER);
@@ -717,10 +742,10 @@ double RealtimeMediaSource::fitnessDistance(MediaConstraintType constraintType, 
 
     switch (constraintType) {
     case MediaConstraintType::EchoCancellation:
-        if (!capabilities.supportsEchoCancellation())
+        if (!capabilities.supportsEchoCancellation() || capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff)
             return 0;
 
-        return constraint.fitnessDistance(capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+        return constraint.fitnessDistance(capabilities.echoCancellation() == RealtimeMediaSourceCapabilities::EchoCancellation::On);
     case MediaConstraintType::Torch:
         if (!capabilities.supportsTorch())
             return 0;
@@ -799,6 +824,13 @@ void RealtimeMediaSource::setSizeFrameRateAndZoom(const VideoPresetConstraints& 
         setZoom(*constraints.zoom);
 }
 
+static bool booleanSettingFromConstraint(const BooleanConstraint& boolConstraint)
+{
+    bool setting = true;
+    boolConstraint.getExact(setting) || boolConstraint.getIdeal(setting);
+    return setting;
+}
+
 void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, const MediaConstraint& constraint)
 {
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, constraintType);
@@ -852,17 +884,24 @@ void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, co
         break;
     }
 
-    case MediaConstraintType::EchoCancellation: {
+    case MediaConstraintType::EchoCancellation:
         ASSERT(constraint.isBoolean());
         if (!capabilities.supportsEchoCancellation())
             return;
 
-        bool setting;
-        const BooleanConstraint& boolConstraint = downcast<BooleanConstraint>(constraint);
-        if (boolConstraint.getExact(setting) || boolConstraint.getIdeal(setting))
-            setEchoCancellation(setting);
+        setEchoCancellation([&] -> bool {
+            switch (capabilities.echoCancellation()) {
+            case RealtimeMediaSourceCapabilities::EchoCancellation::Off:
+                return false;
+            case RealtimeMediaSourceCapabilities::EchoCancellation::On:
+                return true;
+            case RealtimeMediaSourceCapabilities::EchoCancellation::OnOrOff:
+                return booleanSettingFromConstraint(downcast<BooleanConstraint>(constraint));
+            };
+            ASSERT_NOT_REACHED();
+            return true;
+        }());
         break;
-    }
 
     case MediaConstraintType::FacingMode: {
         ASSERT(constraint.isString());
@@ -1490,10 +1529,30 @@ std::pair<GstClockTime, GstClockTime> RealtimeMediaSource::queryCaptureLatency()
     return { GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE };
 }
 #endif
-#if !RELEASE_LOG_DISABLED
-void RealtimeMediaSource::setLogger(const Logger& newLogger, const void* newLogIdentifier)
+
+void RealtimeMediaSource::configurationChanged()
 {
-    m_logger = &newLogger;
+    forEachObserver([](auto& observer) {
+        observer.sourceConfigurationChanged();
+    });
+}
+
+bool RealtimeMediaSource::setShouldApplyRotation()
+{
+    ASSERT(isMainThread());
+
+#if PLATFORM(COCOA)
+    m_shouldApplyRotation = true;
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if !RELEASE_LOG_DISABLED
+void RealtimeMediaSource::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
+{
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", name(), ", ", m_hashedID, ", ", m_ephemeralHashedID);
 }
@@ -1506,7 +1565,7 @@ WTFLogChannel& RealtimeMediaSource::logChannel() const
 
 String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 2> values {
         MAKE_STATIC_STRING_IMPL("Audio"),
         MAKE_STATIC_STRING_IMPL("Video")
     };

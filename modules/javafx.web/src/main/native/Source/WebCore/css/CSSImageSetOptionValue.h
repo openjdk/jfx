@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,17 +39,18 @@ public:
     static Ref<CSSImageSetOptionValue> create(Ref<CSSValue>&&, Ref<CSSPrimitiveValue>&&, String);
 
     bool equals(const CSSImageSetOptionValue&) const;
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
-    Ref<CSSValue> image() const { return m_image; }
+    CSSValue& image() const { return m_image; }
 
-    Ref<CSSPrimitiveValue> resolution() const { return m_resolution; }
+    CSSPrimitiveValue& resolution() const { return m_resolution; }
+    Ref<CSSPrimitiveValue> protectedResolution() const { return m_resolution; }
     void setResolution(Ref<CSSPrimitiveValue>&&);
 
     String type() const { return m_mimeType; }
     void setType(String);
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_image.get()) == IterationStatus::Done)
             return IterationStatus::Done;
@@ -57,15 +58,13 @@ public:
             return IterationStatus::Done;
         return IterationStatus::Continue;
     }
-    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
-    void customSetReplacementURLForSubresources(const HashMap<String, String>&);
-    void customClearReplacementURLForSubresources();
+    bool customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>&) const;
 
 private:
     CSSImageSetOptionValue(Ref<CSSValue>&&, Ref<CSSPrimitiveValue>&&);
     CSSImageSetOptionValue(Ref<CSSValue>&&, Ref<CSSPrimitiveValue>&&, String&&);
 
-    Ref<CSSValue> m_image;
+    const Ref<CSSValue> m_image;
     Ref<CSSPrimitiveValue> m_resolution;
     String m_mimeType;
 };

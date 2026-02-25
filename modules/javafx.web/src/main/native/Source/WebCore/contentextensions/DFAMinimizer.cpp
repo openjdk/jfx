@@ -41,7 +41,7 @@ namespace ContentExtensions {
 namespace {
 
 template<typename VectorType, typename Iterable, typename Function>
-static inline void iterateIntersections(const VectorType& singularTransitionsFirsts, const Iterable& iterableTransitionList, const Function& intersectionHandler)
+static inline void iterateIntersections(const VectorType& singularTransitionsFirsts, const Iterable& iterableTransitionList, NOESCAPE const Function& intersectionHandler)
 {
     ASSERT(!singularTransitionsFirsts.isEmpty());
     auto otherIterator = iterableTransitionList.begin();
@@ -147,7 +147,7 @@ public:
 
     // The function passed as argument MUST not modify the partition.
     template<typename Function>
-    void refineGeneration(const Function& function)
+    void refineGeneration(NOESCAPE const Function& function)
     {
         for (unsigned setIndex : m_setsMarkedInCurrentGeneration) {
             SetDescriptor& setDescriptor = m_sets[setIndex];
@@ -181,7 +181,7 @@ public:
 
     // Call Function() on every node of a given subset.
     template<typename Function>
-    void iterateSet(unsigned setIndex, const Function& function)
+    void iterateSet(unsigned setIndex, NOESCAPE const Function& function)
     {
         SetDescriptor& setDescriptor = m_sets[setIndex];
         for (unsigned i = setDescriptor.start; i < setDescriptor.end(); ++i)
@@ -257,8 +257,7 @@ public:
         }
 
         // Count the number of incoming transitions per node.
-        m_flattenedTransitionsStartOffsetPerNode.resize(dfa.nodes.size());
-        memset(m_flattenedTransitionsStartOffsetPerNode.data(), 0, m_flattenedTransitionsStartOffsetPerNode.size() * sizeof(unsigned));
+        m_flattenedTransitionsStartOffsetPerNode.fill(0, dfa.nodes.size());
 
         auto singularTransitionsFirsts = WTF::map<0, ContentExtensionsOverflowHandler>(singularTransitions, [&](auto& transition) {
             return transition.first;
@@ -292,8 +291,7 @@ public:
             counter = 0;
         m_flattenedTransitions.resize(flattenedTransitionsSize);
 
-        Vector<uint32_t> transitionPerRangeOffset(m_transitionPartition.size());
-        memset(transitionPerRangeOffset.data(), 0, transitionPerRangeOffset.size() * sizeof(uint32_t));
+        Vector<uint32_t> transitionPerRangeOffset(m_transitionPartition.size(), 0);
 
         for (unsigned i = 0; i < dfa.nodes.size(); ++i) {
             const DFANode& node = dfa.nodes[i];
@@ -401,7 +399,7 @@ struct ActionKey {
         , state(Valid)
     {
         SuperFastHash hasher;
-        hasher.addCharactersAssumingAligned(reinterpret_cast<const UChar*>(&dfa->actions[actionsStart]), actionsLength * sizeof(uint64_t) / sizeof(UChar));
+        hasher.addCharactersAssumingAligned(reinterpret_cast<const char16_t*>(&dfa->actions[actionsStart]), actionsLength * sizeof(uint64_t) / sizeof(char16_t));
         hash = hasher.hash();
     }
 

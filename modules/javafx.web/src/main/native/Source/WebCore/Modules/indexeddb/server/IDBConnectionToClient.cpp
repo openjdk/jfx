@@ -45,7 +45,7 @@ IDBConnectionToClient::IDBConnectionToClient(IDBConnectionToClientDelegate& dele
 IDBConnectionIdentifier IDBConnectionToClient::identifier() const
 {
     ASSERT(m_delegate);
-    return m_delegate->identifier();
+    return *m_delegate->identifier();
 }
 
 void IDBConnectionToClient::didDeleteDatabase(const IDBResultData& result)
@@ -160,6 +160,12 @@ void IDBConnectionToClient::fireVersionChangeEvent(UniqueIDBDatabaseConnection& 
 {
     if (m_delegate)
         m_delegate->fireVersionChangeEvent(connection, requestIdentifier, requestedVersion);
+}
+
+void IDBConnectionToClient::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    if (m_delegate)
+        m_delegate->generateIndexKeyForRecord(requestIdentifier, indexInfo, keyPath, key, value, recordID);
 }
 
 void IDBConnectionToClient::didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError& error)

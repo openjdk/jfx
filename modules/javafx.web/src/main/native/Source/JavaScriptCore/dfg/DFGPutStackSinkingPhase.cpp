@@ -69,10 +69,7 @@ public:
         // the stack. It's not clear to me if this is important or not.
         // https://bugs.webkit.org/show_bug.cgi?id=145296
 
-        if (verbose) {
-            dataLog("Graph before PutStack sinking:\n");
-            m_graph.dump();
-        }
+        dataLogIf(verbose, "Graph before PutStack sinking:\n", m_graph);
 
         m_graph.ensureSSADominators();
 
@@ -97,19 +94,18 @@ public:
                 if (!block)
                     continue;
 
+                dataLogLnIf(verbose, "Starting liveness for block: ", *block);
                 Operands<bool> live = liveAtTail[block];
                 for (unsigned nodeIndex = block->size(); nodeIndex--;) {
                     Node* node = block->at(nodeIndex);
-                    if (verbose)
-                        dataLog("Live at ", node, ": ", live, "\n");
+                    dataLogLnIf(verbose, "Live at ", node, ": ", live);
 
                     Vector<Operand, 4> reads;
                     Vector<Operand, 4> writes;
                     auto escapeHandler = [&] (Operand operand) {
                         if (operand.isHeader())
                             return;
-                        if (verbose)
-                            dataLog("    ", operand, " is live at ", node, "\n");
+                        dataLogLnIf(verbose, "    ", operand, " is live at ", node);
                         reads.append(operand);
                     };
 
@@ -227,9 +223,9 @@ public:
             for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
                 Operands<FlushFormat> deferred = deferredAtHead[block];
 
+                dataLogLnIf(verbose, "Looking for deferred PutStacks in block: ", *block);
                 for (Node* node : *block) {
-                    if (verbose)
-                        dataLog("Deferred at ", node, ":", deferred, "\n");
+                    dataLogLnIf(verbose, "Deferred at ", node, ":", deferred);
 
                     if (node->op() == GetStack) {
                         // Handle the case that the input doesn't match our requirements. This is
@@ -275,15 +271,13 @@ public:
                         continue;
                     } else if (node->op() == KillStack) {
                         // We don't want to sink a PutStack past a KillStack.
-                        if (verbose)
-                            dataLogLn("Killing stack for ", node->unlinkedOperand());
+                        dataLogLnIf(verbose, "Killing stack for ", node->unlinkedOperand());
                         deferred.operand(node->unlinkedOperand()) = ConflictingFlush;
                         continue;
                     }
 
                     auto escapeHandler = [&] (Operand operand) {
-                        if (verbose)
-                            dataLog("For ", node, " escaping ", operand, "\n");
+                        dataLogLnIf(verbose, "For ", node, " escaping ", operand);
                         if (operand.isHeader())
                             return;
                         // We will materialize just before any reads.
@@ -312,14 +306,9 @@ public:
 
                 for (BasicBlock* successor : block->successors()) {
                     for (size_t i = deferred.size(); i--;) {
-                        if (verbose)
-                            dataLog("Considering ", deferred.operandForIndex(i), " at ", pointerDump(block), "->", pointerDump(successor), ": ", deferred[i], " and ", deferredAtHead[successor][i], " merges to ");
-
-                        deferredAtHead[successor][i] =
-                            merge(deferredAtHead[successor][i], deferred[i]);
-
-                        if (verbose)
-                            dataLog(deferredAtHead[successor][i], "\n");
+                        dataLogIf(verbose, "Considering ", deferred.operandForIndex(i), " at ", pointerDump(block), "->", pointerDump(successor), ": ", deferred[i], " and ", deferredAtHead[successor][i], " merges to ");
+                        deferredAtHead[successor][i] = merge(deferredAtHead[successor][i], deferred[i]);
+                        dataLogLnIf(verbose, deferredAtHead[successor][i]);
                     }
                 }
             }
@@ -361,7 +350,7 @@ public:
             indexToOperand.append(operand);
         }
 
-        HashSet<Node*> putStacksToSink;
+        UncheckedKeyHashSet<Node*> putStacksToSink;
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             for (Node* node : *block) {
@@ -396,8 +385,7 @@ public:
                 if (!isConcrete(format))
                     return nullptr;
 
-                if (verbose)
-                    dataLog("Adding Phi for ", operand, " at ", pointerDump(block), "\n");
+                dataLogLnIf(verbose, "Adding Phi for ", operand, " at ", pointerDump(block));
 
                 Node* phiNode = m_graph.addNode(SpecHeapTop, Phi, block->at(0)->origin.withInvalidExit());
                 phiNode->mergeFlags(resultFor(format));
@@ -420,32 +408,28 @@ public:
                 mapping.operand(operand) = def->value();
             }
 
-            if (verbose)
-                dataLog("Mapping at top of ", pointerDump(block), ": ", mapping, "\n");
+            dataLogLnIf(verbose, "Mapping at top of ", pointerDump(block), ": ", mapping);
 
             for (SSACalculator::Def* phiDef : ssaCalculator.phisForBlock(block)) {
                 Operand operand = indexToOperand[phiDef->variable()->index()];
 
                 insertionSet.insert(0, phiDef->value());
 
-                if (verbose)
-                    dataLog("   Mapping ", operand, " to ", phiDef->value(), "\n");
+                dataLogLnIf(verbose, "   Mapping ", operand, " to ", phiDef->value());
                 mapping.operand(operand) = phiDef->value();
             }
 
             deferred = deferredAtHead[block];
             for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
-                if (verbose)
-                    dataLog("Deferred at ", node, ":", deferred, "\n");
+                dataLogLnIf(verbose, "Deferred at ", node, ":", deferred);
 
                 switch (node->op()) {
                 case PutStack: {
                     StackAccessData* data = node->stackAccessData();
                     Operand operand = data->operand;
                     deferred.operand(operand) = data->format;
-                    if (verbose)
-                        dataLog("   Mapping ", operand, " to ", node->child1().node(), " at ", node, "\n");
+                    dataLogLnIf(verbose, "   Mapping ", operand, " to ", node->child1().node(), " at ", node);
                     mapping.operand(operand) = node->child1().node();
                     break;
                 }
@@ -484,8 +468,7 @@ public:
 
                 default: {
                     auto escapeHandler = [&] (Operand operand) {
-                        if (verbose)
-                            dataLog("For ", node, " escaping ", operand, "\n");
+                        dataLogLnIf(verbose, "For ", node, " escaping ", operand);
 
                         if (operand.isHeader())
                             return;
@@ -498,8 +481,7 @@ public:
                         }
 
                         // Gotta insert a PutStack.
-                        if (verbose)
-                            dataLog("Inserting a PutStack for ", operand, " at ", node, "\n");
+                        dataLogLnIf(verbose, "Inserting a PutStack for ", operand, " at ", node);
 
                         Node* incoming = mapping.operand(operand);
                         DFG_ASSERT(m_graph, node, incoming);
@@ -542,8 +524,7 @@ public:
                     Node* phiNode = phiDef->value();
                     SSACalculator::Variable* variable = phiDef->variable();
                     Operand operand = indexToOperand[variable->index()];
-                    if (verbose)
-                        dataLog("Creating Upsilon for ", operand, " at ", pointerDump(block), "->", pointerDump(successorBlock), "\n");
+                    dataLogLnIf(verbose, "Creating Upsilon for ", operand, " at ", pointerDump(block), "->", pointerDump(successorBlock));
                     FlushFormat format = deferredAtHead[successorBlock].operand(operand);
                     DFG_ASSERT(m_graph, nullptr, isConcrete(format), format);
                     UseKind useKind = uncheckedUseKindFor(format);
@@ -587,11 +568,7 @@ public:
             }
         }
 
-        if (verbose) {
-            dataLog("Graph after PutStack sinking:\n");
-            m_graph.dump();
-        }
-
+        dataLogIf(verbose, "Graph after PutStack sinking:\n", m_graph);
         return true;
     }
 };

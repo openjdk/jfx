@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 
 #include <WebCore/DataTransfer.h>
 #include <WebCore/Frame.h>
+#include "LocalFrameInlines.h"
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
 #include <wtf/Vector.h>
@@ -68,7 +69,7 @@ OptionSet<DragSourceAction> DragClientJava::dragSourceActionMaskForPoint(const I
     return WebCore::anyDragSourceAction();
 }
 
-void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame& localFrame)
+void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame& localFrame,const std::optional<NodeIdentifier>& nodeIdentifier)
 {
     auto& dragImage = item.image;
     auto dragImageOrigin = item.dragLocationInContentCoordinates;
@@ -95,8 +96,8 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     // for transfer-to-Java purposes.
     auto actualStoreMode = dataTransfer.storeMode();
     dataTransfer.setStoreMode(DataTransfer::StoreMode::Readonly);
-
-    Vector<String> mimeTypes(dataTransfer.types());
+    auto& localFrameRef = downcast<LocalFrame>(localFrame);
+    Vector<String> mimeTypes(dataTransfer.types(*localFrameRef.document()));
     JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
     JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     WTF::CheckAndClearException(env); // OOME

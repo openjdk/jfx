@@ -27,11 +27,15 @@
 #include "GapRects.h"
 #include "RenderBlock.h"
 #include "RenderObject.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+class FloatQuad;
+
 class RenderSelectionGeometryBase {
-    WTF_MAKE_NONCOPYABLE(RenderSelectionGeometryBase); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderSelectionGeometryBase);
+    WTF_MAKE_NONCOPYABLE(RenderSelectionGeometryBase);
 public:
     explicit RenderSelectionGeometryBase(RenderObject& renderer);
     const RenderLayerModelObject* repaintContainer() const { return m_repaintContainer; }
@@ -49,6 +53,7 @@ private:
 
 // This struct is used when the selection changes to cache the old and new state of the selection for each RenderObject.
 class RenderSelectionGeometry : public RenderSelectionGeometryBase {
+    WTF_MAKE_TZONE_ALLOCATED(RenderSelectionGeometry);
 public:
     RenderSelectionGeometry(RenderObject& renderer, bool clipToVisibleContent);
 
@@ -64,6 +69,7 @@ private:
 
 // This struct is used when the selection changes to cache the old and new state of the selection for each RenderBlock.
 class RenderBlockSelectionGeometry : public RenderSelectionGeometryBase {
+    WTF_MAKE_TZONE_ALLOCATED(RenderBlockSelectionGeometry);
 public:
     explicit RenderBlockSelectionGeometry(RenderBlock& renderer);
 

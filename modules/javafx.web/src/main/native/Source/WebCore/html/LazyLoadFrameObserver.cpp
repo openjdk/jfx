@@ -34,8 +34,11 @@
 #include "RenderStyle.h"
 
 #include <limits>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LazyLoadFrameObserver);
 
 class LazyFrameLoadIntersectionObserverCallback final : public IntersectionObserverCallback {
 public:
@@ -45,9 +48,14 @@ public:
     }
 
 private:
+    LazyFrameLoadIntersectionObserverCallback(Document& document)
+        : IntersectionObserverCallback(&document)
+    {
+    }
+
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
+    CallbackResult<void> invoke(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
 
@@ -62,9 +70,9 @@ private:
         return { };
     }
 
-    LazyFrameLoadIntersectionObserverCallback(Document& document)
-        : IntersectionObserverCallback(&document)
+    CallbackResult<void> invokeRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
     {
+        return invoke(thisObserver, entries, observer);
     }
 };
 
@@ -91,11 +99,17 @@ void LazyLoadFrameObserver::unobserve()
     frameObserver.m_observer->unobserve(m_element);
 }
 
+void LazyLoadFrameObserver::update(const AtomString& frameURL, const ReferrerPolicy& referrerPolicy)
+{
+    m_frameURL = frameURL;
+    m_referrerPolicy = referrerPolicy;
+}
+
 IntersectionObserver* LazyLoadFrameObserver::intersectionObserver(Document& document)
 {
     if (!m_observer) {
         auto callback = LazyFrameLoadIntersectionObserverCallback::create(document);
-        IntersectionObserver::Init options { std::nullopt, emptyString(), { } };
+        IntersectionObserver::Init options { std::nullopt, emptyString(), emptyString(), { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;

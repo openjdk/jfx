@@ -1,6 +1,6 @@
 /*
  *  Copyright (c) 2015, Canon Inc. All rights reserved.
- *  Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #pragma once
 
 #include <JavaScriptCore/BuiltinUtils.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/WebCoreBuiltinNamesAdditions.h>
@@ -107,12 +108,14 @@ namespace WebCore {
     macro(BufferedChangeEvent) \
     macro(Cache) \
     macro(CacheStorage) \
+    macro(CaretPosition) \
     macro(ChannelMergerNode) \
     macro(ChannelSplitterNode) \
     macro(Client) \
     macro(Clients) \
     macro(Clipboard) \
     macro(ClipboardItem) \
+    macro(CloseWatcher) \
     macro(CompressionStream) \
     macro(CompressionStreamEncoder) \
     macro(CompressionStreamTransform) \
@@ -152,6 +155,8 @@ namespace WebCore {
     macro(CSSOKLab) \
     macro(CSSPaintSize) \
     macro(CSSPerspective) \
+    macro(CSSPositionTryDescriptors) \
+    macro(CSSPositionTryRule) \
     macro(CSSRGB) \
     macro(CSSRotate) \
     macro(CSSScale) \
@@ -190,6 +195,7 @@ namespace WebCore {
     macro(ElementInternals) \
     macro(EncodedAudioChunk) \
     macro(EncodedVideoChunk) \
+    macro(EventCounts) \
     macro(ExtendableCookieChangeEvent) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
@@ -207,6 +213,7 @@ namespace WebCore {
     macro(FileSystemFileHandle) \
     macro(FileSystemHandle) \
     macro(FileSystemSyncAccessHandle) \
+    macro(FileSystemWritableFileStream) \
     macro(FragmentDirective) \
     macro(GainNode) \
     macro(GPU) \
@@ -252,6 +259,10 @@ namespace WebCore {
     macro(GamepadButton) \
     macro(GamepadEvent) \
     macro(GamepadHapticActuator) \
+    macro(Geolocation) \
+    macro(GeolocationCoordinates) \
+    macro(GeolocationPosition) \
+    macro(GeolocationPositionError) \
     macro(HighlightRegistry) \
     macro(Highlight) \
     macro(HTMLAttachmentElement) \
@@ -273,13 +284,13 @@ namespace WebCore {
     macro(IDBTransaction) \
     macro(IDBVersionChangeEvent) \
     macro(IIRFilterNode) \
-    macro(IdentityCredentialsContainer) \
     macro(ImageBitmap) \
     macro(ImageBitmapRenderingContext) \
     macro(ImageCapture) \
     macro(IdleDeadline) \
     macro(InputDeviceInfo) \
     macro(InputEvent) \
+    macro(InstallEvent) \
     macro(IntersectionObserver) \
     macro(IntersectionObserverEntry) \
     macro(KeyframeEffect) \
@@ -312,6 +323,7 @@ namespace WebCore {
     macro(MediaStreamTrackProcessor) \
     macro(MerchantValidationEvent) \
     macro(MockRTCRtpTransform) \
+    macro(MutationEvent) \
     macro(NavigateEvent) \
     macro(Navigation) \
     macro(NavigationCurrentEntryChangeEvent) \
@@ -320,7 +332,8 @@ namespace WebCore {
     macro(NavigationPreloadManager) \
     macro(NavigationTransition) \
     macro(NavigatorCredentials) \
-    macro(NavigatorIdentity) \
+    macro(NavigatorUA) \
+    macro(NavigatorUAData) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorPermissions) \
     macro(NavigatorUserMedia) \
@@ -345,6 +358,7 @@ namespace WebCore {
     macro(PaintWorkletGlobalScope) \
     macro(PerformanceEntry) \
     macro(PerformanceEntryList) \
+    macro(PerformanceEventTiming) \
     macro(PerformanceMark) \
     macro(PerformanceMeasure) \
     macro(PerformanceObserver) \
@@ -361,7 +375,6 @@ namespace WebCore {
     macro(PushEvent) \
     macro(PushManager) \
     macro(PushMessageData) \
-    macro(PushNotificationEvent) \
     macro(PushSubscription) \
     macro(PushSubscriptionChangeEvent) \
     macro(PushSubscriptionOptions) \
@@ -435,7 +448,7 @@ namespace WebCore {
     macro(StylePropertyMapReadOnly) \
     macro(StylePropertyMap) \
     macro(StorageManager) \
-    macro(StorageManagerFileSystemAccess) \
+    macro(StorageManagerFileSystem) \
     macro(Subscriber) \
     macro(SubtleCrypto) \
     macro(TestReportBody) \
@@ -455,6 +468,7 @@ namespace WebCore {
     macro(TrustedTypePolicy) \
     macro(TrustedTypePolicyFactory) \
     macro(TrustedTypePolicyOptions) \
+    macro(URLPattern) \
     macro(UndoItem) \
     macro(UndoManager) \
     macro(VideoDecoder) \
@@ -490,6 +504,8 @@ namespace WebCore {
     macro(WebKitMediaKeyNeededEvent) \
     macro(WebKitMediaKeySession) \
     macro(WebKitMediaKeys) \
+    macro(WebKitNodeInfo) \
+    macro(WebKitSerializedNode) \
     macro(WebSocket) \
     macro(WebTransport) \
     macro(WebTransportBidirectionalStream) \
@@ -542,6 +558,7 @@ namespace WebCore {
     macro(XRWebGLBinding) \
     macro(XRWebGLLayer) \
     macro(XRWebGLSubImage) \
+    macro(XSLTProcessor) \
     macro(VideoTrackGenerator) \
     macro(abortAlgorithm) \
     macro(abortSteps) \
@@ -638,13 +655,15 @@ namespace WebCore {
     macro(onbackgroundfetchfail) \
     macro(onbackgroundfetchabort) \
     macro(onbackgroundfetchclick) \
+    macro(onbeforematch) \
+    macro(oncommand) \
     macro(oncookiechange) \
     macro(onnotificationclick) \
     macro(onnotificationclose) \
     macro(onpush) \
     macro(onpushsubscriptionchange) \
     macro(onrtctransform) \
-    macro(onsearch) \
+    macro(onscrollend) \
     macro(ontouchcancel) \
     macro(ontouchend) \
     macro(ontouchmove) \
@@ -670,6 +689,7 @@ namespace WebCore {
     macro(pullAgain) \
     macro(pullAlgorithm) \
     macro(pulling) \
+    macro(pushManager) \
     macro(queue) \
     macro(queuedAddIceCandidate) \
     macro(queuedCreateAnswer) \
@@ -697,6 +717,7 @@ namespace WebCore {
     macro(showModalDialog) \
     macro(signal) \
     macro(signalAbort) \
+    macro(speechSynthesis) \
     macro(SpeechSynthesis) \
     macro(SpeechSynthesisErrorEvent) \
     macro(SpeechSynthesisEvent) \

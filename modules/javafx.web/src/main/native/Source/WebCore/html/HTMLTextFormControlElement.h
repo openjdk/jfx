@@ -26,6 +26,7 @@
 
 #include "HTMLFormControlElement.h"
 #include "PointerEventTypeNames.h"
+#include <wtf/ValueOrReference.h>
 
 namespace WebCore {
 
@@ -51,7 +52,7 @@ public:
 
     virtual ~HTMLTextFormControlElement();
 
-    void didEditInnerTextValue();
+    void didEditInnerTextValue(bool wasUserEdit);
     void forwardEvent(Event&);
 
     int maxLength() const { return m_maxLength; }
@@ -94,7 +95,7 @@ public:
     void dispatchFormControlChangeEvent() final;
     void scheduleSelectEvent();
 
-    virtual String value() const = 0;
+    virtual ValueOrReference<String> value() const = 0;
 
     virtual ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent, TextControlSetValueSelection = TextControlSetValueSelection::SetSelectionToEnd) = 0;
     virtual RefPtr<TextControlInnerTextElement> innerTextElement() const = 0;
@@ -110,7 +111,7 @@ public:
 
     String directionForFormData() const;
 
-    void setTextAsOfLastFormControlChangeEvent(const String& text) { m_textAsOfLastFormControlChangeEvent = text; }
+    void setTextAsOfLastFormControlChangeEvent(String&& text) { m_textAsOfLastFormControlChangeEvent = WTFMove(text); }
 
     WEBCORE_EXPORT virtual bool isInnerTextElementEditable() const;
 

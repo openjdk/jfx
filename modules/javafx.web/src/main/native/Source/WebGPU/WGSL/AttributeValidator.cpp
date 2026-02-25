@@ -31,6 +31,7 @@
 #include "Constraints.h"
 #include "WGSLShaderModule.h"
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/MathExtras.h>
 #include <wtf/text/MakeString.h>
 
 namespace WGSL {
@@ -64,10 +65,11 @@ private:
     void validateInvariant(const SourceSpan&, const std::optional<Builtin>&, bool);
 
     using Builtins = HashSet<Builtin, WTF::IntHash<Builtin>, WTF::StrongEnumHashTraits<Builtin>>;
-    using Locations = HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+    using Locations = HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
     void validateBuiltinIO(const SourceSpan&, const Type*, ShaderStage, Builtin, Direction, Builtins&);
     void validateLocationIO(const SourceSpan&, const Type*, ShaderStage, unsigned, Locations&);
     void validateStructIO(ShaderStage, const Types::Struct&, Direction, Builtins&, Locations&);
+    void validateAlignment(const SourceSpan&, AddressSpace, const Type*);
 
     template<typename T>
     void update(const SourceSpan&, std::optional<T>&, const T&);
@@ -271,6 +273,52 @@ void AttributeValidator::visit(AST::Variable& variable)
 
     if (isResource && (!variable.m_group || !variable.m_binding))
         error(variable.span(), "resource variables require @group and @binding attributes"_s);
+
+    if (isResource && m_errors.isEmpty())
+        validateAlignment(variable.span(), *variable.addressSpace(), variable.storeType());
+}
+
+void AttributeValidator::validateAlignment(const SourceSpan& span, AddressSpace addressSpace, const Type* type)
+{
+    const auto& requiredAlignment = [&](const Type* type) {
+        auto alignment = type->alignment();
+        if (addressSpace == AddressSpace::Uniform && (std::holds_alternative<Types::Array>(*type) || std::holds_alternative<Types::Struct>(*type)))
+            alignment = WTF::roundUpToMultipleOf(16, alignment);
+        return alignment;
+    };
+
+    if (auto* arrayType = std::get_if<Types::Array>(type)) {
+        if (arrayType->stride() % requiredAlignment(arrayType->element))
+            error(span, "array must have a stride multiple of "_s, String::number(requiredAlignment(arrayType->element)), " bytes, but has a stride of "_s, String::number(arrayType->stride()), " bytes"_s);
+
+        if (addressSpace == AddressSpace::Uniform && (arrayType->stride() % 16))
+            error(span, "arrays in the uniform address space must have a stride multiple of 16 bytes, but has a stride of "_s, String::number(arrayType->stride()), " bytes"_s);
+
+        validateAlignment(span, addressSpace, arrayType->element);
+    }
+
+    if (auto* structType = std::get_if<Types::Struct>(type)) {
+        auto& structure = structType->structure;
+        auto memberCount = structure.members().size();
+        for (unsigned i = 0; i < memberCount; ++i) {
+            auto& member = structure.members()[i];
+            auto* type = member.type().inferredType();
+
+            validateAlignment(member.span(), addressSpace, type);
+
+            if (member.offset() % requiredAlignment(type))
+                error(member.span(), "offset of struct member "_s, structure.name(), "::"_s, member.name(), " must be a multiple of "_s, String::number(requiredAlignment(type)), " bytes, but its offset is "_s, String::number(member.offset()), " bytes"_s);
+
+            if (addressSpace == AddressSpace::Uniform && std::holds_alternative<Types::Struct>(*type) && (i + 1) < memberCount) {
+                auto& nextMember = structure.members()[i + 1];
+                auto spaceBetweenMembers = nextMember.offset() - member.offset();
+                auto minimumNumberOfBytes = WTF::roundUpToMultipleOf(16, type->size());
+                if (spaceBetweenMembers < minimumNumberOfBytes)
+                    error(member.span(), "uniform address space requires that the number of bytes between "_s, structure.name(), "::"_s, member.name(), " and "_s, structure.name(), "::"_s, nextMember.name(), " must be at least "_s, String::number(minimumNumberOfBytes), " bytes, but it is "_s, String::number(spaceBetweenMembers), " bytes"_s);
+            }
+        }
+
+    }
 }
 
 void AttributeValidator::visit(AST::Structure& structure)
@@ -304,13 +352,20 @@ void AttributeValidator::visit(AST::Structure& structure)
             member.m_size = fieldSize;
         }
 
-        unsigned currentSize = UNLIKELY(size.hasOverflowed()) ? std::numeric_limits<unsigned>::max() : size.value();
+        unsigned currentSize = [&] {
+            if (size.hasOverflowed()) [[unlikely]]
+                return std::numeric_limits<unsigned>::max();
+            return size.value();
+        }();
         unsigned offset;
-        if (UNLIKELY(size.hasOverflowed()))
+        if (size.hasOverflowed()) [[unlikely]]
             offset = currentSize;
         else {
             CheckedUint32 checkedOffset = WTF::roundUpToMultipleOf(*fieldAlignment, static_cast<uint64_t>(currentSize));
-            offset = UNLIKELY(checkedOffset.hasOverflowed()) ? std::numeric_limits<unsigned>::max() : checkedOffset.value();
+            if (checkedOffset.hasOverflowed()) [[unlikely]]
+                offset = std::numeric_limits<unsigned>::max();
+            else
+                offset = checkedOffset.value();
         }
 
         member.m_offset = offset;
@@ -318,8 +373,8 @@ void AttributeValidator::visit(AST::Structure& structure)
         alignment = std::max(alignment, *fieldAlignment);
         size = offset;
         size += *fieldSize;
-        if (UNLIKELY(size.hasOverflowed()))
-            size = currentSize;
+        if (size.hasOverflowed()) [[unlikely]]
+            size = std::numeric_limits<unsigned>::max();
 
         if (previousMember)
             previousMember->m_padding = offset - previousSize;
@@ -328,15 +383,18 @@ void AttributeValidator::visit(AST::Structure& structure)
 
         previousSize = offset;
         previousSize += typeSize;
-        if (UNLIKELY(previousSize.hasOverflowed()))
+        if (previousSize.hasOverflowed()) [[unlikely]]
             previousSize = currentSize;
     }
     unsigned finalSize;
-    if (UNLIKELY(size.hasOverflowed()))
+    if (size.hasOverflowed()) [[unlikely]]
         finalSize = std::numeric_limits<unsigned>::max();
     else {
         CheckedUint32 checkedFinalSize = WTF::roundUpToMultipleOf(alignment, static_cast<uint64_t>(size.value()));
-        finalSize = UNLIKELY(checkedFinalSize.hasOverflowed()) ? std::numeric_limits<unsigned>::max() : checkedFinalSize.value();
+        if (checkedFinalSize.hasOverflowed()) [[unlikely]]
+            finalSize = std::numeric_limits<unsigned>::max();
+        else
+            finalSize = checkedFinalSize.value();
     }
     previousMember->m_padding = finalSize - previousSize;
     structure.m_alignment = alignment;
@@ -359,8 +417,13 @@ void AttributeValidator::visit(AST::StructureMember& member)
             continue;
 
         if (auto* sizeAttribute = dynamicDowncast<AST::SizeAttribute>(attribute)) {
-            // FIXME: check that the member type must have creation-fixed footprint.
             m_hasSizeOrAlignmentAttributes = true;
+
+            if (!member.type().inferredType()->hasCreationFixedFootprint()) {
+                error(attribute.span(), "@size can only be applied to members that have a type with a size that is fully determined at shader creation time."_s);
+                continue;
+            }
+
             // https://gpuweb.github.io/cts/standalone/?q=webgpu:shader,validation,parse,attribute:expressions:value=%22override%22;*
             auto& constantValue = sizeAttribute->size().constantValue();
             if (!constantValue) {
@@ -389,13 +452,22 @@ void AttributeValidator::visit(AST::StructureMember& member)
                 continue;
             }
             auto alignmentValue = constantValue->integerValue();
-            auto isPowerOf2 = !(alignmentValue & (alignmentValue - 1));
             if (alignmentValue < 1)
                 error(attribute.span(), "@align value must be positive"_s);
-            else if (!isPowerOf2)
+            else if (!isPowerOfTwo(unsignedCast(alignmentValue)))
                 error(attribute.span(), "@align value must be a power of two"_s);
-            // FIXME: validate that alignment is a multiple of RequiredAlignOf(T,C)
-            update(attribute.span(), member.m_alignment, static_cast<unsigned>(alignmentValue));
+
+            if (!m_errors.isEmpty()) [[unlikely]] {
+                // It's not safe to access Type::alignment below if errors have
+                // already occurred
+                continue;
+            }
+
+            auto* type = member.type().inferredType();
+            if (type && (alignmentValue % type->alignment()))
+                error(attribute.span(), "@align attribute "_s, alignmentValue, " of struct member is not a multiple of the type's alignment "_s, type->alignment());
+
+            update<unsigned>(attribute.span(), member.m_alignment, alignmentValue);
             continue;
         }
 
@@ -662,7 +734,7 @@ void AttributeValidator::validateStructIO(ShaderStage stage, const Types::Struct
             continue;
         }
 
-        if (auto* structType = std::get_if<Types::Struct>(member.type().inferredType())) {
+        if (auto inferredType = member.type().inferredType(); inferredType && std::holds_alternative<Types::Struct>(*inferredType)) {
             error(span, "nested structures cannot be used for entry point IO"_s);
             continue;
         }

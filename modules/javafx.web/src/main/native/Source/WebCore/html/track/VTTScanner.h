@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include "ParsingUtilities.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -50,22 +50,49 @@ class VTTScanner {
 public:
     explicit VTTScanner(const String& line);
 
-    typedef const LChar* Position;
+    using Position = const void*;
 
     class Run {
     public:
-        Run(Position start, Position end, bool is8Bit)
-            : m_start(start), m_end(end), m_is8Bit(is8Bit) { }
+        explicit Run(std::span<const LChar> data)
+            : m_is8Bit(true)
+        {
+            m_data.characters8 = data;
+        }
 
-        Position start() const { return m_start; }
-        Position end() const { return m_end; }
+        explicit Run(std::span<const char16_t> data)
+            : m_is8Bit(false)
+        {
+            m_data.characters16 = data;
+        }
 
-        bool isEmpty() const { return m_start == m_end; }
-        size_t length() const;
+        std::span<const LChar> span8() const { RELEASE_ASSERT(m_is8Bit); return m_data.characters8; }
+        std::span<const char16_t> span16() const { RELEASE_ASSERT(!m_is8Bit); return m_data.characters16; }
+
+        Position start() const
+        {
+            if (m_is8Bit)
+                return m_data.characters8.data();
+            return m_data.characters16.data();
+        }
+        Position end() const
+        {
+            if (m_is8Bit)
+                return std::to_address(m_data.characters8.end());
+            return std::to_address(m_data.characters16.end());
+        }
+
+        bool isEmpty() const { return !length(); }
+        size_t length() const { return m_is8Bit ? m_data.characters8.size() : m_data.characters16.size(); }
 
     private:
-        Position m_start;
-        Position m_end;
+        union Characters {
+            Characters()
+                : characters8()
+            { }
+            std::span<const LChar> characters8;
+            std::span<const char16_t> characters16;
+        } m_data;
         bool m_is8Bit;
     };
 
@@ -80,28 +107,24 @@ public:
     // Scan the first |charactersCount| characters of the string |characters|.
     bool scan(std::span<const LChar> characters);
 
-    // Scan the literal |characters|.
-    template<unsigned charactersCount>
-    bool scan(const char (&characters)[charactersCount]);
-
     // Skip (advance the input pointer) as long as the specified
     // |characterPredicate| returns true, and the input pointer is not passed
     // the end of the input.
-    template<bool characterPredicate(UChar)>
+    template<bool characterPredicate(char16_t)>
     void skipWhile();
 
     // Like skipWhile, but using a negated predicate.
-    template<bool characterPredicate(UChar)>
+    template<bool characterPredicate(char16_t)>
     void skipUntil();
 
     // Return the run of characters for which the specified
     // |characterPredicate| returns true. The start of the run will be the
     // current input pointer.
-    template<bool characterPredicate(UChar)>
+    template<bool characterPredicate(char16_t)>
     Run collectWhile();
 
     // Like collectWhile, but using a negated predicate.
-    template<bool characterPredicate(UChar)>
+    template<bool characterPredicate(char16_t)>
     Run collectUntil();
 
     // Scan the string |toMatch|, using the specified |run| as the sequence to
@@ -129,103 +152,103 @@ public:
     bool scanFloat(float& number, bool* isNegative = nullptr);
 
 protected:
-    Position position() const { return m_data.characters8; }
-    Position end() const { return m_end.characters8; }
+    Run createRun(Position start, Position end) const;
+    Position position() const
+    {
+        if (m_is8Bit)
+            return m_data.characters8.data();
+        return m_data.characters16.data();
+    }
+    Position end() const
+    {
+        if (m_is8Bit)
+            return std::to_address(m_data.characters8.end());
+        return std::to_address(m_data.characters16.end());
+    }
     void seekTo(Position);
-    UChar currentChar() const;
-    void advance(unsigned amount = 1);
-    // Adapt a UChar-predicate to an LChar-predicate.
-    // (For use with skipWhile/Until from ParsingUtilities.h).
-    template<bool characterPredicate(UChar)>
-    static inline bool LCharPredicateAdapter(LChar c) { return characterPredicate(c); }
-    union {
-        const LChar* characters8;
-        const UChar* characters16;
+    char16_t currentChar() const;
+    void advance(size_t amount = 1);
+    union Characters {
+        Characters()
+            : characters8()
+        { }
+        std::span<const LChar> characters8;
+        std::span<const char16_t> characters16;
     } m_data;
-    union {
-        const LChar* characters8;
-        const UChar* characters16;
-    } m_end;
     const String m_source;
     bool m_is8Bit;
 };
 
-inline size_t VTTScanner::Run::length() const
-{
-    if (m_is8Bit)
-        return m_end - m_start;
-    return reinterpret_cast<const UChar*>(m_end) - reinterpret_cast<const UChar*>(m_start);
-}
-
-template<unsigned charactersCount>
-inline bool VTTScanner::scan(const char (&characters)[charactersCount])
-{
-    return scan({ byteCast<LChar>(&characters[0]), charactersCount - 1 });
-}
-
-template<bool characterPredicate(UChar)>
+template<bool characterPredicate(char16_t)>
 inline void VTTScanner::skipWhile()
 {
     if (m_is8Bit)
-        WebCore::skipWhile<LCharPredicateAdapter<characterPredicate> >(m_data.characters8, m_end.characters8);
+        WTF::skipWhile<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
     else
-        WebCore::skipWhile<characterPredicate>(m_data.characters16, m_end.characters16);
+        WTF::skipWhile<characterPredicate>(m_data.characters16);
 }
 
-template<bool characterPredicate(UChar)>
+template<bool characterPredicate(char16_t)>
 inline void VTTScanner::skipUntil()
 {
     if (m_is8Bit)
-        WebCore::skipUntil<LCharPredicateAdapter<characterPredicate> >(m_data.characters8, m_end.characters8);
+        WTF::skipUntil<LCharPredicateAdapter<characterPredicate>>(m_data.characters8);
     else
-        WebCore::skipUntil<characterPredicate>(m_data.characters16, m_end.characters16);
+        WTF::skipUntil<characterPredicate>(m_data.characters16);
 }
 
-template<bool characterPredicate(UChar)>
+template<bool characterPredicate(char16_t)>
 inline VTTScanner::Run VTTScanner::collectWhile()
 {
     if (m_is8Bit) {
-        const LChar* current = m_data.characters8;
-        WebCore::skipWhile<LCharPredicateAdapter<characterPredicate>>(current, m_end.characters8);
-        return Run(position(), current, m_is8Bit);
+        auto current = m_data.characters8;
+        WTF::skipWhile<LCharPredicateAdapter<characterPredicate>>(current);
+        return Run { m_data.characters8.first(current.data() - m_data.characters8.data()) };
     }
-    const UChar* current = m_data.characters16;
-    WebCore::skipWhile<characterPredicate>(current, m_end.characters16);
-    return Run(position(), reinterpret_cast<Position>(current), m_is8Bit);
+    auto current = m_data.characters16;
+    WTF::skipWhile<characterPredicate>(current);
+    return Run { m_data.characters16.first(current.data() - m_data.characters16.data()) };
 }
 
-template<bool characterPredicate(UChar)>
+template<bool characterPredicate(char16_t)>
 inline VTTScanner::Run VTTScanner::collectUntil()
 {
     if (m_is8Bit) {
-        const LChar* current = m_data.characters8;
-        WebCore::skipUntil<LCharPredicateAdapter<characterPredicate> >(current, m_end.characters8);
-        return Run(position(), current, m_is8Bit);
+        auto current = m_data.characters8;
+        WTF::skipUntil<LCharPredicateAdapter<characterPredicate>>(current);
+        return Run { m_data.characters8.first(current.data() - m_data.characters8.data()) };
     }
-    const UChar* current = m_data.characters16;
-    WebCore::skipUntil<characterPredicate>(current, m_end.characters16);
-    return Run(position(), reinterpret_cast<Position>(current), m_is8Bit);
+    auto current = m_data.characters16;
+    WTF::skipUntil<characterPredicate>(current);
+    return Run { m_data.characters16.first(current.data() - m_data.characters16.data()) };
 }
 
 inline void VTTScanner::seekTo(Position position)
 {
-    ASSERT(position <= end());
-    m_data.characters8 = position;
+    if (m_is8Bit) {
+        auto span8 = m_source.span8();
+        auto* position8 = static_cast<const LChar*>(position);
+        RELEASE_ASSERT(position8 >= span8.data());
+        m_data.characters8 = span8.subspan(position8 - span8.data());
+    } else {
+        auto span16 = m_source.span16();
+        auto* position16 = static_cast<const char16_t*>(position);
+        RELEASE_ASSERT(position16 >= span16.data());
+        m_data.characters16 = span16.subspan(position16 - span16.data());
+    }
 }
 
-inline UChar VTTScanner::currentChar() const
+inline char16_t VTTScanner::currentChar() const
 {
-    ASSERT(position() < end());
-    return m_is8Bit ? *m_data.characters8 : *m_data.characters16;
+    return m_is8Bit ? m_data.characters8.front() : m_data.characters16.front();
 }
 
-inline void VTTScanner::advance(unsigned amount)
+inline void VTTScanner::advance(size_t amount)
 {
-    ASSERT(position() < end());
     if (m_is8Bit)
-        m_data.characters8 += amount;
+        skip(m_data.characters8, amount);
     else
-        m_data.characters16 += amount;
+        skip(m_data.characters16, amount);
 }
 
 } // namespace WebCore

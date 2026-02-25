@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "NotificationOptionsPayload.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
@@ -36,6 +35,7 @@ OBJC_CLASS NSDictionary;
 namespace WebCore {
 
 struct NotificationData;
+template<typename> class ExceptionOr;
 
 struct NotificationPayload {
     URL defaultActionURL;
@@ -56,8 +56,11 @@ struct NotificationPayload {
     }
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
+    WEBCORE_EXPORT static bool hasDeclarativeMessageHeader(const String& message);
     WEBCORE_EXPORT static ExceptionOr<NotificationPayload> parseJSON(const String&);
     NotificationPayload static fromNotificationData(const NotificationData&);
+
+    WEBCORE_EXPORT NotificationData toNotificationData() const;
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT static std::optional<NotificationPayload> fromDictionary(NSDictionary *);

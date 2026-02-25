@@ -28,7 +28,7 @@
 #include "config.h"
 #include "SharedMemory.h"
 
-#if USE(UNIX_DOMAIN_SOCKETS)
+#if USE(UNIX_DOMAIN_SOCKETS) && !OS(ANDROID)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -51,6 +51,12 @@
 #endif
 
 namespace WebCore {
+
+SharedMemoryHandle::SharedMemoryHandle(const SharedMemoryHandle& handle)
+{
+    m_handle = handle.m_handle.duplicate();
+    m_size = handle.m_size;
+}
 
 UnixFileDescriptor SharedMemoryHandle::releaseHandle()
 {
@@ -185,4 +191,4 @@ auto SharedMemory::createHandle(Protection) -> std::optional<Handle>
 
 } // namespace WebCore
 
-#endif
+#endif // !OS(ANDROID) && USE(UNIX_DOMAIN_SOCKETS)

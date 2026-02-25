@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "CSSStyleDeclaration.h"
-#include "ComputedStyleExtractor.h"
+#include "CSSStyleProperties.h"
 #include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"
+#include "StyleExtractor.h"
 #include <wtf/FixedVector.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -34,18 +34,18 @@ namespace WebCore {
 class Element;
 class MutableStyleProperties;
 
-class CSSComputedStyleDeclaration final : public CSSStyleDeclaration, public RefCounted<CSSComputedStyleDeclaration> {
+class CSSComputedStyleDeclaration final : public CSSStyleProperties, public RefCounted<CSSComputedStyleDeclaration> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(CSSComputedStyleDeclaration, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     enum class AllowVisited : bool { No, Yes };
     WEBCORE_EXPORT static Ref<CSSComputedStyleDeclaration> create(Element&, AllowVisited);
     static Ref<CSSComputedStyleDeclaration> create(Element&, const std::optional<Style::PseudoElementIdentifier>&);
     static Ref<CSSComputedStyleDeclaration> createEmpty(Element&);
 
     WEBCORE_EXPORT virtual ~CSSComputedStyleDeclaration();
-
-    void ref() final { RefCounted::ref(); }
-    void deref() final { RefCounted::deref(); }
 
     String getPropertyValue(CSSPropertyID) const;
 
@@ -73,12 +73,14 @@ private:
     ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, IsImportant) final;
     Ref<MutableStyleProperties> copyProperties() const final;
 
-    RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, ComputedStyleExtractor::UpdateLayout = ComputedStyleExtractor::UpdateLayout::Yes) const;
+    Ref<Element> protectedElement() const { return m_element; }
 
     const Settings* settings() const final;
     const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
-    mutable Ref<Element> m_element;
+    Style::Extractor extractor() const;
+
+    const Ref<Element> m_element;
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier { std::nullopt };
     bool m_isEmpty { false };
     bool m_allowVisitedStyle { false };

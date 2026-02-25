@@ -89,7 +89,7 @@ private:
     bool isUidMatchedToTypeMode(UniquedStringImpl* identifier);
 
     RefPtr<PropertyNameArrayData> m_data;
-    HashSet<UniquedStringImpl*> m_set;
+    UncheckedKeyHashSet<UniquedStringImpl*> m_set;
     VM& m_vm;
     PropertyNameMode m_propertyNameMode;
     PrivateSymbolMode m_privateSymbolMode;
@@ -141,7 +141,7 @@ ALWAYS_INLINE bool PropertyNameArray::isUidMatchedToTypeMode(UniquedStringImpl* 
     if (identifier->isSymbol()) {
         if (!includeSymbolProperties())
             return false;
-        if (UNLIKELY(m_privateSymbolMode == PrivateSymbolMode::Include))
+        if (m_privateSymbolMode == PrivateSymbolMode::Include) [[unlikely]]
             return true;
         return !static_cast<SymbolImpl*>(identifier)->isPrivate();
     }

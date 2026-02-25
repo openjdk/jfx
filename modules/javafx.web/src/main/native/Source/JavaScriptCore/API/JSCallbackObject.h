@@ -35,7 +35,7 @@
 namespace JSC {
 
 struct JSCallbackObjectData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(JSCallbackObjectData);
 public:
     JSCallbackObjectData(void* privateData, JSClassRef jsClass)
         : privateData(privateData)
@@ -84,7 +84,7 @@ public:
     void* privateData;
     JSClassRef jsClass;
     struct JSPrivatePropertyMap {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(JSPrivatePropertyMap);
     public:
         JSValue getPrivateProperty(const Identifier& propertyName) const
         {
@@ -118,7 +118,7 @@ public:
         }
 
     private:
-        typedef HashMap<RefPtr<UniquedStringImpl>, WriteBarrier<Unknown>, IdentifierRepHash> PrivatePropertyMap;
+        typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, WriteBarrier<Unknown>, IdentifierRepHash> PrivatePropertyMap;
         PrivatePropertyMap m_propertyMap;
         Lock m_lock;
     };
@@ -145,7 +145,7 @@ public:
     }
     static JSCallbackObject<Parent>* create(VM&, JSClassRef, Structure*);
 
-    static const bool needsDestruction;
+    static const DestructionMode needsDestruction;
     static void destroy(JSCell* cell)
     {
         static_cast<JSCallbackObject*>(cell)->JSCallbackObject::~JSCallbackObject();
@@ -192,6 +192,8 @@ public:
     static EncodedJSValue staticFunctionGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
     static EncodedJSValue callbackGetterImpl(JSGlobalObject*, EncodedJSValue, PropertyName);
 
+    DECLARE_VISIT_CHILDREN;
+
 private:
     JSCallbackObject(JSGlobalObject*, Structure*, JSClassRef, void* data);
     JSCallbackObject(VM&, JSClassRef, Structure*);
@@ -217,8 +219,6 @@ private:
 
     static CallData getConstructData(JSCell*);
     static CallData getCallData(JSCell*);
-
-    DECLARE_VISIT_CHILDREN;
 
     void init(JSGlobalObject*);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ namespace JSC {
 #if ENABLE(JIT)
 
 class SharedJITStubSet {
-    WTF_MAKE_FAST_ALLOCATED(SharedJITStubSet);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SharedJITStubSet);
 public:
     SharedJITStubSet() = default;
 
@@ -56,10 +56,10 @@ public:
             { }
 
             Key(WTF::HashTableDeletedValueType)
-                : m_wrapped(bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)))
+                : m_wrapped(std::bit_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)))
             { }
 
-            bool isHashTableDeletedValue() const { return m_wrapped == bitwise_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)); }
+            bool isHashTableDeletedValue() const { return m_wrapped == std::bit_cast<PolymorphicAccessJITStubRoutine*>(static_cast<uintptr_t>(1)); }
 
             friend bool operator==(const Key&, const Key&) = default;
 
@@ -114,7 +114,7 @@ public:
         }
 
         StructureStubInfoKey m_stubInfoKey;
-        Ref<AccessCase> m_accessCase;
+        const Ref<AccessCase> m_accessCase;
         unsigned m_hash { 0 };
     };
 
@@ -160,9 +160,9 @@ public:
     void setSlowPathHandler(AccessType, Ref<InlineCacheHandler>);
 
 private:
-    HashSet<Hash::Key, Hash, Hash::KeyTraits> m_stubs;
-    HashMap<StatelessCacheKey, Ref<PolymorphicAccessJITStubRoutine>> m_statelessStubs;
-    HashMap<DOMJITCacheKey, MacroAssemblerCodeRef<JITStubRoutinePtrTag>> m_domJITCodes;
+    UncheckedKeyHashSet<Hash::Key, Hash, Hash::KeyTraits> m_stubs;
+    UncheckedKeyHashMap<StatelessCacheKey, Ref<PolymorphicAccessJITStubRoutine>> m_statelessStubs;
+    UncheckedKeyHashMap<DOMJITCacheKey, MacroAssemblerCodeRef<JITStubRoutinePtrTag>> m_domJITCodes;
     std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_fallbackHandlers { };
     std::array<RefPtr<InlineCacheHandler>, numberOfAccessTypes> m_slowPathHandlers { };
 };

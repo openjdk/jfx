@@ -50,9 +50,13 @@
 #include "config.h"
 #endif
 
+/* FIXME: For deprecated GstCapsFeatures API usage */
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
+
 #include <string.h>
 #include "gst_private.h"
 #include "gstcapsfeatures.h"
+#include "gstidstr-private.h"
 #include <gst/gst.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_caps_features_debug);
@@ -70,7 +74,7 @@ GType _gst_caps_features_type = 0;
 static gint static_caps_features_parent_refcount = G_MAXINT;
 GstCapsFeatures *_gst_caps_features_any = NULL;
 GstCapsFeatures *_gst_caps_features_memory_system_memory = NULL;
-static GQuark _gst_caps_feature_memory_system_memory = 0;
+static GstIdStr _gst_caps_feature_memory_system_memory = GST_ID_STR_INIT;
 
 G_DEFINE_BOXED_TYPE (GstCapsFeatures, gst_caps_features,
     gst_caps_features_copy, gst_caps_features_free);
@@ -90,8 +94,6 @@ _priv_gst_caps_features_initialize (void)
       "GstCapsFeatures debug");
 
   _gst_caps_features_type = gst_caps_features_get_type ();
-  _gst_caps_feature_memory_system_memory =
-      g_quark_from_static_string (GST_CAPS_FEATURE_MEMORY_SYSTEM_MEMORY);
 
   g_value_register_transform_func (_gst_caps_features_type, G_TYPE_STRING,
       gst_caps_features_transform_to_string);
@@ -99,8 +101,11 @@ _priv_gst_caps_features_initialize (void)
   _gst_caps_features_any = gst_caps_features_new_any ();
   gst_caps_features_set_parent_refcount (_gst_caps_features_any,
       &static_caps_features_parent_refcount);
+  gst_id_str_set_static_str (&_gst_caps_feature_memory_system_memory,
+      GST_CAPS_FEATURE_MEMORY_SYSTEM_MEMORY);
   _gst_caps_features_memory_system_memory =
-      gst_caps_features_new_id (_gst_caps_feature_memory_system_memory, 0);
+      gst_caps_features_new_id_str (&_gst_caps_feature_memory_system_memory,
+      NULL);
   gst_caps_features_set_parent_refcount
       (_gst_caps_features_memory_system_memory,
       &static_caps_features_parent_refcount);
@@ -116,6 +121,7 @@ _priv_gst_caps_features_cleanup (void)
       (_gst_caps_features_memory_system_memory, NULL);
   gst_caps_features_free (_gst_caps_features_memory_system_memory);
   _gst_caps_features_memory_system_memory = NULL;
+  gst_id_str_clear (&_gst_caps_feature_memory_system_memory);
 }
 
 /**
@@ -183,7 +189,8 @@ gst_caps_features_new_empty (void)
   features = g_new (GstCapsFeatures, 1);
   features->type = _gst_caps_features_type;
   features->parent_refcount = NULL;
-  features->array = g_array_new (FALSE, FALSE, sizeof (GQuark));
+  features->array = g_array_new (FALSE, FALSE, sizeof (GstIdStr));
+  g_array_set_clear_func (features->array, (GDestroyNotify) gst_id_str_clear);
   features->is_any = FALSE;
 
   GST_TRACE ("created caps features %p", features);
@@ -231,6 +238,30 @@ gst_caps_features_new_single (const gchar * feature)
 
   features = gst_caps_features_new_empty ();
   gst_caps_features_add (features, feature);
+  return features;
+}
+
+/**
+ * gst_caps_features_new_single_static_str:
+ * @feature: The feature
+ *
+ * Creates a new #GstCapsFeatures with a single feature.
+ *
+ * @feature needs to be valid for the remaining lifetime of the process, e.g. has
+ * to be a static string.
+ *
+ * Returns: (transfer full): a new #GstCapsFeatures
+ *
+ * Since: 1.26
+ */
+GstCapsFeatures *
+gst_caps_features_new_single_static_str (const gchar * feature)
+{
+  GstCapsFeatures *features;
+  g_return_val_if_fail (feature != NULL, NULL);
+
+  features = gst_caps_features_new_empty ();
+  gst_caps_features_add_static_str (features, feature);
   return features;
 }
 
@@ -290,6 +321,68 @@ gst_caps_features_new_valist (const gchar * feature1, va_list varargs)
 }
 
 /**
+ * gst_caps_features_new_static_str:
+ * @feature1: name of first feature to set
+ * @...: additional features
+ *
+ * Creates a new #GstCapsFeatures with the given features.
+ * The last argument must be %NULL.
+ *
+ * @feature1 and all other features need to be valid for the remaining lifetime
+ * of the process, e.g. have to be a static string.
+ *
+ * Returns: (transfer full): a new, empty #GstCapsFeatures
+ *
+ * Since: 1.26
+ */
+GstCapsFeatures *
+gst_caps_features_new_static_str (const gchar * feature1, ...)
+{
+  GstCapsFeatures *features;
+  va_list varargs;
+
+  g_return_val_if_fail (feature1 != NULL, NULL);
+
+  va_start (varargs, feature1);
+  features = gst_caps_features_new_static_str_valist (feature1, varargs);
+  va_end (varargs);
+
+  return features;
+}
+
+/**
+ * gst_caps_features_new_static_str_valist:
+ * @feature1: name of first feature to set
+ * @varargs: variable argument list
+ *
+ * Creates a new #GstCapsFeatures with the given features.
+ *
+ * @feature1 and all other features need to be valid for the remaining lifetime
+ * of the process, e.g. have to be a static string.
+ *
+ * Returns: (transfer full): a new, empty #GstCapsFeatures
+ *
+ * Since: 1.26
+ */
+GstCapsFeatures *
+gst_caps_features_new_static_str_valist (const gchar * feature1,
+    va_list varargs)
+{
+  GstCapsFeatures *features;
+
+  g_return_val_if_fail (feature1 != NULL, NULL);
+
+  features = gst_caps_features_new_empty ();
+
+  while (feature1) {
+    gst_caps_features_add_static_str (features, feature1);
+    feature1 = va_arg (varargs, const gchar *);
+  }
+
+  return features;
+}
+
+/**
  * gst_caps_features_new_id:
  * @feature1: name of first feature to set
  * @...: additional features
@@ -300,6 +393,8 @@ gst_caps_features_new_valist (const gchar * feature1, va_list varargs)
  * Returns: (transfer full): a new, empty #GstCapsFeatures
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_new_id_str().
  */
 GstCapsFeatures *
 gst_caps_features_new_id (GQuark feature1, ...)
@@ -310,7 +405,9 @@ gst_caps_features_new_id (GQuark feature1, ...)
   g_return_val_if_fail (feature1 != 0, NULL);
 
   va_start (varargs, feature1);
+  G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
   features = gst_caps_features_new_id_valist (feature1, varargs);
+  G_GNUC_END_IGNORE_DEPRECATIONS;
   va_end (varargs);
 
   return features;
@@ -326,6 +423,8 @@ gst_caps_features_new_id (GQuark feature1, ...)
  * Returns: (transfer full): a new, empty #GstCapsFeatures
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_new_id_str_valist().
  */
 GstCapsFeatures *
 gst_caps_features_new_id_valist (GQuark feature1, va_list varargs)
@@ -337,8 +436,65 @@ gst_caps_features_new_id_valist (GQuark feature1, va_list varargs)
   features = gst_caps_features_new_empty ();
 
   while (feature1) {
+    G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
     gst_caps_features_add_id (features, feature1);
+    G_GNUC_END_IGNORE_DEPRECATIONS;
     feature1 = va_arg (varargs, GQuark);
+  }
+
+  return features;
+}
+
+/**
+ * gst_caps_features_new_id_str:
+ * @feature1: name of first feature to set
+ * @...: additional features
+ *
+ * Creates a new #GstCapsFeatures with the given features.
+ * The last argument must be 0.
+ *
+ * Returns: (transfer full): a new, empty #GstCapsFeatures
+ *
+ * Since: 1.26
+ */
+GstCapsFeatures *
+gst_caps_features_new_id_str (const GstIdStr * feature1, ...)
+{
+  GstCapsFeatures *features;
+  va_list varargs;
+
+  g_return_val_if_fail (feature1 != NULL, NULL);
+
+  va_start (varargs, feature1);
+  features = gst_caps_features_new_id_str_valist (feature1, varargs);
+  va_end (varargs);
+
+  return features;
+}
+
+/**
+ * gst_caps_features_new_id_str_valist:
+ * @feature1: name of first feature to set
+ * @varargs: variable argument list
+ *
+ * Creates a new #GstCapsFeatures with the given features.
+ *
+ * Returns: (transfer full): a new, empty #GstCapsFeatures
+ *
+ * Since: 1.26
+ */
+GstCapsFeatures *
+gst_caps_features_new_id_str_valist (const GstIdStr * feature1, va_list varargs)
+{
+  GstCapsFeatures *features;
+
+  g_return_val_if_fail (feature1 != NULL, NULL);
+
+  features = gst_caps_features_new_empty ();
+
+  while (feature1) {
+    gst_caps_features_add_id_str (features, feature1);
+    feature1 = va_arg (varargs, const GstIdStr *);
   }
 
   return features;
@@ -404,7 +560,8 @@ gst_caps_features_copy (const GstCapsFeatures * features)
   copy = gst_caps_features_new_empty ();
   n = gst_caps_features_get_size (features);
   for (i = 0; i < n; i++)
-    gst_caps_features_add_id (copy, gst_caps_features_get_nth_id (features, i));
+    gst_caps_features_add_id_str (copy,
+        gst_caps_features_get_nth_id_str (features, i));
   copy->is_any = features->is_any;
 
   return copy;
@@ -481,9 +638,9 @@ priv_gst_caps_features_append_to_gstring (const GstCapsFeatures * features,
 
   n = features->array->len;
   for (i = 0; i < n; i++) {
-    GQuark *quark = &g_array_index (features->array, GQuark, i);
+    const GstIdStr *feature = &g_array_index (features->array, GstIdStr, i);
 
-    g_string_append (s, g_quark_to_string (*quark));
+    g_string_append (s, gst_id_str_as_str (feature));
     if (i + 1 < n)
       g_string_append (s, ", ");
   }
@@ -611,15 +768,15 @@ const gchar *
 gst_caps_features_get_nth (const GstCapsFeatures * features, guint i)
 {
   const gchar *feature;
-  GQuark quark;
+  const GstIdStr *feature_str;
 
   g_return_val_if_fail (features != NULL, NULL);
 
-  quark = gst_caps_features_get_nth_id (features, i);
-  if (!quark)
+  feature_str = gst_caps_features_get_nth_id_str (features, i);
+  if (!feature_str)
     return NULL;
 
-  feature = g_quark_to_string (quark);
+  feature = gst_id_str_as_str (feature_str);
   return feature;
 }
 
@@ -633,18 +790,46 @@ gst_caps_features_get_nth (const GstCapsFeatures * features, guint i)
  * Returns: The @i-th feature of @features.
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_get_nth_id_str().
  */
 GQuark
 gst_caps_features_get_nth_id (const GstCapsFeatures * features, guint i)
 {
-  GQuark *quark;
+  GQuark quark;
+  const GstIdStr *feature_str;
 
   g_return_val_if_fail (features != NULL, 0);
   g_return_val_if_fail (i < features->array->len, 0);
 
-  quark = &g_array_index (features->array, GQuark, i);
+  feature_str = gst_caps_features_get_nth_id_str (features, i);
 
-  return *quark;
+  quark = g_quark_from_string (gst_id_str_as_str (feature_str));
+  return quark;
+}
+
+/**
+ * gst_caps_features_get_nth_id_str:
+ * @features: a #GstCapsFeatures.
+ * @i: index of the feature
+ *
+ * Returns the @i-th feature of @features.
+ *
+ * Returns: The @i-th feature of @features.
+ *
+ * Since: 1.26
+ */
+const GstIdStr *
+gst_caps_features_get_nth_id_str (const GstCapsFeatures * features, guint i)
+{
+  const GstIdStr *feature;
+
+  g_return_val_if_fail (features != NULL, 0);
+  g_return_val_if_fail (i < features->array->len, 0);
+
+  feature = &g_array_index (features->array, GstIdStr, i);
+
+  return feature;
 }
 
 /**
@@ -662,11 +847,18 @@ gboolean
 gst_caps_features_contains (const GstCapsFeatures * features,
     const gchar * feature)
 {
+  GstIdStr s = GST_ID_STR_INIT;
+  gboolean res;
+
   g_return_val_if_fail (features != NULL, FALSE);
   g_return_val_if_fail (feature != NULL, FALSE);
 
-  return gst_caps_features_contains_id (features,
-      g_quark_from_string (feature));
+  // Not technically correct but the string is never leaving this scope and is never copied
+  gst_id_str_set_static_str (&s, feature);
+  res = gst_caps_features_contains_id_str (features, &s);
+  gst_id_str_clear (&s);
+
+  return res;
 }
 
 /**
@@ -679,24 +871,54 @@ gst_caps_features_contains (const GstCapsFeatures * features,
  * Returns: %TRUE if @features contains @feature.
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_contains_id_str().
  */
 gboolean
 gst_caps_features_contains_id (const GstCapsFeatures * features, GQuark feature)
 {
-  guint i, n;
+  GstIdStr s = GST_ID_STR_INIT;
 
   g_return_val_if_fail (features != NULL, FALSE);
   g_return_val_if_fail (feature != 0, FALSE);
+
+  gst_id_str_set_static_str (&s, g_quark_to_string (feature));
+
+  return gst_caps_features_contains_id_str (features, &s);
+}
+
+/**
+ * gst_caps_features_contains_id_str:
+ * @features: a #GstCapsFeatures.
+ * @feature: a feature
+ *
+ * Checks if @features contains @feature.
+ *
+ * Returns: %TRUE if @features contains @feature.
+ *
+ * Since: 1.26
+ */
+gboolean
+gst_caps_features_contains_id_str (const GstCapsFeatures * features,
+    const GstIdStr * feature)
+{
+  guint i, n;
+
+  g_return_val_if_fail (features != NULL, FALSE);
+  g_return_val_if_fail (feature != NULL, FALSE);
 
   if (features->is_any)
     return TRUE;
 
   n = features->array->len;
-  if (n == 0)
-    return feature == _gst_caps_feature_memory_system_memory;
+  if (n == 0) {
+    return gst_id_str_is_equal (feature,
+        &_gst_caps_feature_memory_system_memory);
+  }
 
   for (i = 0; i < n; i++) {
-    if (gst_caps_features_get_nth_id (features, i) == feature)
+    if (gst_id_str_is_equal (gst_caps_features_get_nth_id_str (features, i),
+            feature))
       return TRUE;
   }
 
@@ -730,12 +952,12 @@ gst_caps_features_is_equal (const GstCapsFeatures * features1,
   if (features1->array->len == 0 && features2->array->len == 0)
     return TRUE;
   if (features1->array->len == 0 && features2->array->len == 1
-      && gst_caps_features_contains_id (features2,
-          _gst_caps_feature_memory_system_memory))
+      && gst_caps_features_contains_id_str (features2,
+          &_gst_caps_feature_memory_system_memory))
     return TRUE;
   if (features2->array->len == 0 && features1->array->len == 1
-      && gst_caps_features_contains_id (features1,
-          _gst_caps_feature_memory_system_memory))
+      && gst_caps_features_contains_id_str (features1,
+          &_gst_caps_feature_memory_system_memory))
     return TRUE;
 
   if (features1->array->len != features2->array->len)
@@ -743,8 +965,8 @@ gst_caps_features_is_equal (const GstCapsFeatures * features1,
 
   n = features1->array->len;
   for (i = 0; i < n; i++)
-    if (!gst_caps_features_contains_id (features2,
-            gst_caps_features_get_nth_id (features1, i)))
+    if (!gst_caps_features_contains_id_str (features2,
+            gst_caps_features_get_nth_id_str (features1, i)))
       return FALSE;
 
   return TRUE;
@@ -768,6 +990,30 @@ gst_caps_features_is_any (const GstCapsFeatures * features)
   return features->is_any;
 }
 
+// Takes ownership of feature
+static void
+gst_caps_features_add_id_str_internal (GstCapsFeatures * features,
+    GstIdStr * feature)
+{
+  if (!gst_caps_feature_name_is_valid (gst_id_str_as_str (feature))) {
+    g_warning ("Invalid caps feature name: %s", gst_id_str_as_str (feature));
+    gst_id_str_clear (feature);
+    return;
+  }
+
+  /* If features is empty it will contain sysmem, however
+   * we want to add it explicitly if it is attempted to be
+   * added as first features
+   */
+  if (features->array->len > 0
+      && gst_caps_features_contains_id_str (features, feature)) {
+    gst_id_str_clear (feature);
+    return;
+  }
+
+  g_array_append_val (features->array, *feature);
+}
+
 /**
  * gst_caps_features_add:
  * @features: a #GstCapsFeatures.
@@ -780,12 +1026,44 @@ gst_caps_features_is_any (const GstCapsFeatures * features)
 void
 gst_caps_features_add (GstCapsFeatures * features, const gchar * feature)
 {
+  GstIdStr s = GST_ID_STR_INIT;
+
   g_return_if_fail (features != NULL);
   g_return_if_fail (IS_MUTABLE (features));
   g_return_if_fail (feature != NULL);
   g_return_if_fail (!features->is_any);
 
-  gst_caps_features_add_id (features, g_quark_from_string (feature));
+  gst_id_str_set (&s, feature);
+
+  gst_caps_features_add_id_str_internal (features, &s);
+}
+
+/**
+ * gst_caps_features_add_static_str:
+ * @features: a #GstCapsFeatures.
+ * @feature: a feature.
+ *
+ * Adds @feature to @features.
+ *
+ * @feature needs to be valid for the remaining lifetime of the process, e.g. has
+ * to be a static string.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_features_add_static_str (GstCapsFeatures * features,
+    const gchar * feature)
+{
+  GstIdStr s = GST_ID_STR_INIT;
+
+  g_return_if_fail (features != NULL);
+  g_return_if_fail (IS_MUTABLE (features));
+  g_return_if_fail (feature != NULL);
+  g_return_if_fail (!features->is_any);
+
+  gst_id_str_set_static_str (&s, feature);
+
+  gst_caps_features_add_id_str_internal (features, &s);
 }
 
 /**
@@ -796,29 +1074,47 @@ gst_caps_features_add (GstCapsFeatures * features, const gchar * feature)
  * Adds @feature to @features.
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_add_id_str().
  */
 void
 gst_caps_features_add_id (GstCapsFeatures * features, GQuark feature)
 {
+  GstIdStr s = GST_ID_STR_INIT;
+
   g_return_if_fail (features != NULL);
   g_return_if_fail (IS_MUTABLE (features));
   g_return_if_fail (feature != 0);
   g_return_if_fail (!features->is_any);
 
-  if (!gst_caps_feature_name_is_valid (g_quark_to_string (feature))) {
-    g_warning ("Invalid caps feature name: %s", g_quark_to_string (feature));
-    return;
-  }
+  gst_id_str_set_static_str (&s, g_quark_to_string (feature));
 
-  /* If features is empty it will contain sysmem, however
-   * we want to add it explicitly if it is attempted to be
-   * added as first features
-   */
-  if (features->array->len > 0
-      && gst_caps_features_contains_id (features, feature))
-    return;
+  gst_caps_features_add_id_str_internal (features, &s);
+}
 
-  g_array_append_val (features->array, feature);
+/**
+ * gst_caps_features_add_id_str:
+ * @features: a #GstCapsFeatures.
+ * @feature: a feature.
+ *
+ * Adds @feature to @features.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_features_add_id_str (GstCapsFeatures * features,
+    const GstIdStr * feature)
+{
+  GstIdStr s = GST_ID_STR_INIT;
+
+  g_return_if_fail (features != NULL);
+  g_return_if_fail (IS_MUTABLE (features));
+  g_return_if_fail (feature != NULL);
+  g_return_if_fail (!features->is_any);
+
+  gst_id_str_copy_into (&s, feature);
+
+  gst_caps_features_add_id_str_internal (features, &s);
 }
 
 /**
@@ -833,11 +1129,16 @@ gst_caps_features_add_id (GstCapsFeatures * features, GQuark feature)
 void
 gst_caps_features_remove (GstCapsFeatures * features, const gchar * feature)
 {
+  GstIdStr s = GST_ID_STR_INIT;
+
   g_return_if_fail (features != NULL);
   g_return_if_fail (IS_MUTABLE (features));
   g_return_if_fail (feature != NULL);
 
-  gst_caps_features_remove_id (features, g_quark_from_string (feature));
+  // Not technically correct but the string is never leaving this scope and is never copied
+  gst_id_str_set_static_str (&s, feature);
+  gst_caps_features_remove_id_str (features, &s);
+  gst_id_str_clear (&s);
 }
 
 /**
@@ -848,21 +1149,48 @@ gst_caps_features_remove (GstCapsFeatures * features, const gchar * feature)
  * Removes @feature from @features.
  *
  * Since: 1.2
+ *
+ * Deprecated: 1.26: Use gst_caps_features_remove_id_str().
  */
 void
 gst_caps_features_remove_id (GstCapsFeatures * features, GQuark feature)
 {
-  guint i, n;
+  GstIdStr s = GST_ID_STR_INIT;
+
 
   g_return_if_fail (features != NULL);
   g_return_if_fail (IS_MUTABLE (features));
   g_return_if_fail (feature != 0);
 
+  gst_id_str_set_static_str (&s, g_quark_to_string (feature));
+
+  gst_caps_features_remove_id_str (features, &s);
+}
+
+/**
+ * gst_caps_features_remove_id_str:
+ * @features: a #GstCapsFeatures.
+ * @feature: a feature.
+ *
+ * Removes @feature from @features.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_features_remove_id_str (GstCapsFeatures * features,
+    const GstIdStr * feature)
+{
+  guint i, n;
+
+  g_return_if_fail (features != NULL);
+  g_return_if_fail (IS_MUTABLE (features));
+  g_return_if_fail (feature != NULL);
+
   n = features->array->len;
   for (i = 0; i < n; i++) {
-    GQuark quark = gst_caps_features_get_nth_id (features, i);
+    const GstIdStr *f = gst_caps_features_get_nth_id_str (features, i);
 
-    if (quark == feature) {
+    if (gst_id_str_is_equal (f, feature)) {
       g_array_remove_index_fast (features->array, i);
       return;
     }

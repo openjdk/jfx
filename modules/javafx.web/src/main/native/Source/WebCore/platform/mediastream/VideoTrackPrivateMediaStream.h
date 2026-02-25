@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,11 +29,13 @@
 
 #include "MediaStreamTrackPrivate.h"
 #include "VideoTrackPrivate.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
 class VideoTrackPrivateMediaStream final : public VideoTrackPrivate {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(VideoTrackPrivateMediaStream);
     WTF_MAKE_NONCOPYABLE(VideoTrackPrivateMediaStream)
 public:
     static Ref<VideoTrackPrivateMediaStream> create(MediaStreamTrackPrivate& streamTrack)
@@ -44,6 +46,7 @@ public:
     void setTrackIndex(int index) { m_index = index; }
 
     MediaStreamTrackPrivate& streamTrack() { return m_streamTrack.get(); }
+    Ref<MediaStreamTrackPrivate> protectedStreamTrack() { return m_streamTrack; }
 
 private:
     VideoTrackPrivateMediaStream(MediaStreamTrackPrivate& track)
@@ -57,7 +60,7 @@ private:
     AtomString language() const final { return emptyAtom(); }
     int trackIndex() const final { return m_index; }
 
-    Ref<MediaStreamTrackPrivate> m_streamTrack;
+    const Ref<MediaStreamTrackPrivate> m_streamTrack;
     int m_index { 0 };
 };
 

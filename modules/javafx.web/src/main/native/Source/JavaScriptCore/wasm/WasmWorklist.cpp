@@ -61,7 +61,7 @@ public:
 
 private:
     Thread(const AbstractLocker& locker, Worklist& work)
-        : Base(locker, work.m_lock, work.m_planEnqueued.copyRef())
+        : Base(locker, work.m_lock, work.m_planEnqueued.copyRef(), ThreadType::Compiler)
         , worklist(work)
     {
 
@@ -94,6 +94,12 @@ private:
 
     WorkResult work() final
     {
+#if USE(PROTECTED_JIT)
+        // Must be constructed before we allocate anything using
+        // SequesteredArenaMalloc
+        ArenaLifetime m_saLifetime { };
+#endif
+
         auto complete = [&] (const AbstractLocker&) {
             // We need to hold the lock to release our plan otherwise the main thread, while canceling plans
             // might use after free the plan we are looking at
@@ -105,7 +111,7 @@ private:
         ASSERT(plan);
 
         bool wasMultiThreaded = plan->multiThreaded();
-        plan->work(Plan::Partial);
+        plan->work();
 
         ASSERT(!plan->hasWork() || plan->multiThreaded());
         if (plan->hasWork() && !wasMultiThreaded && plan->multiThreaded()) {

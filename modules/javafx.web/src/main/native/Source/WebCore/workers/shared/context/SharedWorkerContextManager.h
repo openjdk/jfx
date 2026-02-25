@@ -27,7 +27,9 @@
 
 #include "SharedWorkerIdentifier.h"
 #include "TransferredMessagePort.h"
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -35,6 +37,7 @@ class ScriptExecutionContext;
 class SharedWorkerThreadProxy;
 
 class SharedWorkerContextManager {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SharedWorkerContextManager, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static SharedWorkerContextManager& singleton();
 
@@ -44,14 +47,15 @@ public:
     void resumeSharedWorker(SharedWorkerIdentifier);
     WEBCORE_EXPORT void stopAllSharedWorkers();
 
-    class Connection {
-        WTF_MAKE_FAST_ALLOCATED;
+    class Connection : public AbstractRefCounted {
+        WTF_MAKE_TZONE_ALLOCATED_EXPORT(Connection, WEBCORE_EXPORT);
     public:
         virtual ~Connection() { }
         virtual void establishConnection(CompletionHandler<void()>&&) = 0;
         virtual void postErrorToWorkerObject(SharedWorkerIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrrorEvent) = 0;
         virtual void sharedWorkerTerminated(SharedWorkerIdentifier) = 0;
         bool isClosed() const { return m_isClosed; }
+        virtual bool isWebSharedWorkerContextManagerConnection() const { return false; }
 
     protected:
         void setAsClosed() { m_isClosed = true; }
@@ -66,19 +70,20 @@ public:
         bool m_isClosed { false };
     };
 
-    WEBCORE_EXPORT void setConnection(std::unique_ptr<Connection>&&);
+    WEBCORE_EXPORT void setConnection(RefPtr<Connection>&&);
     WEBCORE_EXPORT Connection* connection() const;
+    RefPtr<Connection> protectedConnection() const { return m_connection; }
 
     WEBCORE_EXPORT void registerSharedWorkerThread(Ref<SharedWorkerThreadProxy>&&);
 
-    void forEachSharedWorker(const Function<Function<void(ScriptExecutionContext&)>()>&);
+    void forEachSharedWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>&);
 
 private:
     friend class NeverDestroyed<SharedWorkerContextManager>;
 
     SharedWorkerContextManager() = default;
 
-    std::unique_ptr<Connection> m_connection;
+    RefPtr<Connection> m_connection;
     HashMap<SharedWorkerIdentifier, Ref<SharedWorkerThreadProxy>> m_workerMap;
 };
 

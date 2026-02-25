@@ -41,7 +41,8 @@ class SQLStatementErrorCallback : public ThreadSafeRefCounted<SQLStatementErrorC
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<bool> handleEvent(SQLTransaction&, SQLError&) = 0;
+    virtual CallbackResult<bool> invoke(SQLTransaction&, SQLError&) = 0;
+    virtual CallbackResult<bool> invokeRethrowingException(SQLTransaction&, SQLError&) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

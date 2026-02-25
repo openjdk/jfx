@@ -29,18 +29,19 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/threads/BinarySemaphore.h>
 
 namespace WTF {
 
-static RunLoop* s_mainRunLoop;
+SUPPRESS_UNCOUNTED_LOCAL static RunLoop* s_mainRunLoop;
 #if USE(WEB_THREAD)
-static RunLoop* s_webRunLoop;
+SUPPRESS_UNCOUNTED_LOCAL static RunLoop* s_webRunLoop;
 #endif
 
 // Helper class for ThreadSpecificData.
 class RunLoop::Holder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RunLoop);
 public:
     Holder()
         : m_runLoop(adoptRef(*new RunLoop))
@@ -55,13 +56,13 @@ public:
     RunLoop& runLoop() { return m_runLoop; }
 
 private:
-    Ref<RunLoop> m_runLoop;
+    const Ref<RunLoop> m_runLoop;
 };
 
 void RunLoop::initializeMain()
 {
     RELEASE_ASSERT(!s_mainRunLoop);
-    s_mainRunLoop = &RunLoop::current();
+    s_mainRunLoop = &RunLoop::currentSingleton();
 }
 
 auto RunLoop::runLoopHolder() -> ThreadSpecific<Holder>&
@@ -74,7 +75,7 @@ auto RunLoop::runLoopHolder() -> ThreadSpecific<Holder>&
     return runLoopHolder;
 }
 
-RunLoop& RunLoop::current()
+RunLoop& RunLoop::currentSingleton()
 {
     return runLoopHolder()->runLoop();
 }
@@ -85,14 +86,20 @@ RunLoop& RunLoop::main()
     return *s_mainRunLoop;
 }
 
+RunLoop& RunLoop::mainSingleton()
+{
+    ASSERT(s_mainRunLoop);
+    return *s_mainRunLoop;
+}
+
 #if USE(WEB_THREAD)
 void RunLoop::initializeWeb()
 {
     RELEASE_ASSERT(!s_webRunLoop);
-    s_webRunLoop = &RunLoop::current();
+    s_webRunLoop = &RunLoop::currentSingleton();
 }
 
-RunLoop& RunLoop::web()
+RunLoop& RunLoop::webSingleton()
 {
     ASSERT(s_webRunLoop);
     return *s_webRunLoop;
@@ -106,21 +113,21 @@ RunLoop* RunLoop::webIfExists()
 
 Ref<RunLoop> RunLoop::create(ASCIILiteral threadName, ThreadType threadType, Thread::QOS qos)
 {
-    RunLoop* runLoop = nullptr;
+    RefPtr<RunLoop> runLoop;
     BinarySemaphore semaphore;
-    Thread::create(threadName, [&] {
-        runLoop = &RunLoop::current();
+    Thread::create(threadName, [&] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
+        runLoop = &RunLoop::currentSingleton();
         semaphore.signal();
         runLoop->run();
     }, threadType, qos)->detach();
     semaphore.wait();
-    return *runLoop;
+    return runLoop.releaseNonNull();
 }
 
 bool RunLoop::isCurrent() const
 {
     // Avoid constructing the RunLoop for the current thread if it has not been created yet.
-    return runLoopHolder().isSet() && this == &RunLoop::current();
+    return runLoopHolder().isSet() && this == &RunLoop::currentSingleton();
 }
 
 void RunLoop::performWork()
@@ -153,7 +160,7 @@ void RunLoop::performWork()
 
 #if PLATFORM(JAVA)
     if (m_hasSuspendedFunctions) {
-        if (this == &RunLoop::main())
+        if (this == &RunLoop::mainSingleton())
             scheduleDispatchFunctionsOnMainThread();
         else
             wakeUp();
@@ -177,7 +184,7 @@ void RunLoop::dispatch(Function<void()>&& function)
 
 #if PLATFORM(JAVA)
     if (needsWakeup) {
-        if (this == &RunLoop::main())
+        if (this == &RunLoop::mainSingleton())
             scheduleDispatchFunctionsOnMainThread();
         else
             wakeUp();
@@ -225,6 +232,40 @@ void RunLoop::threadWillExit()
 void RunLoop::dispatchFunctionsFromMainThread()
 {
     performWork();
+}
+void RunLoop::registerTimer(TimerBase& timer)
+{
+    Locker locker { m_registeredTimerLock };
+    m_registeredTimers.add(&timer);
+}
+
+void RunLoop::unregisterTimer(TimerBase& timer)
+{
+    Locker locker { m_registeredTimerLock };
+    m_registeredTimers.remove(&timer);
+}
+
+String RunLoop::listActiveTimersForLogging() const
+{
+    Vector<ASCIILiteral> timers;
+    {
+        Locker locker { m_registeredTimerLock };
+        for (auto* timer : m_registeredTimers)
+            timers.append(timer->description());
+    }
+
+    if (timers.isEmpty())
+        return "{ }"_s;
+
+    StringBuilder builder;
+    builder.append("{ "_s);
+    for (size_t i = 0; i < timers.size() - 1; ++i) {
+        builder.append(timers[i]);
+        builder.append(", "_s);
+    }
+    builder.append(timers.last());
+    builder.append(" }"_s);
+    return builder.toString();
 }
 #endif
 } // namespace WTF

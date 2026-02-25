@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFaceSet.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include <wtf/UniqueRef.h>
 
@@ -41,6 +42,9 @@ class DOMException;
 class FontFaceSet final : public RefCounted<FontFaceSet>, private FontEventClient, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FontFaceSet);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<FontFaceSet> create(ScriptExecutionContext&, const Vector<Ref<FontFace>>& initialFaces);
     static Ref<FontFaceSet> create(ScriptExecutionContext&, CSSFontFaceSet& backing);
     virtual ~FontFaceSet();
@@ -52,8 +56,8 @@ public:
     void clear();
 
     using LoadPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<FontFace>>>;
-    void load(const String& font, const String& text, LoadPromise&&);
-    ExceptionOr<bool> check(const String& font, const String& text);
+    void load(ScriptExecutionContext&, const String& font, const String& text, LoadPromise&&);
+    ExceptionOr<bool> check(ScriptExecutionContext&, const String& font, const String& text);
 
     enum class LoadStatus { Loading, Loaded };
     LoadStatus status() const;
@@ -74,10 +78,6 @@ public:
         size_t m_index { 0 }; // FIXME: There needs to be a mechanism to handle when fonts are added or removed from the middle of the FontFaceSet.
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator(*this); }
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     struct PendingPromise : RefCounted<PendingPromise> {
@@ -113,9 +113,9 @@ private:
     // Callback for ReadyPromise.
     FontFaceSet& readyPromiseResolve();
 
-    Ref<CSSFontFaceSet> m_backing;
+    const Ref<CSSFontFaceSet> m_backing;
     HashMap<RefPtr<FontFace>, Vector<Ref<PendingPromise>>> m_pendingPromises;
-    UniqueRef<ReadyPromise> m_readyPromise;
+    const UniqueRef<ReadyPromise> m_readyPromise;
 
     bool m_isDocumentLoaded { true };
 };

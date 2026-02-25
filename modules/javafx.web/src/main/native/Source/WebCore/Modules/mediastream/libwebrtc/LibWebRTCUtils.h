@@ -29,22 +29,26 @@
 #include "ExceptionCode.h"
 #include "RTCIceCandidateFields.h"
 #include <webrtc/api/media_types.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <webrtc/api/stats/rtcstats_objects.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+#include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
-namespace cricket {
-class Candidate;
-}
-
 namespace webrtc {
+
+class Candidate;
+class PriorityValue;
+class RTCError;
+
 struct RtpParameters;
 struct RtpTransceiverInit;
-
-class RTCError;
 
 enum class DtlsTransportState;
 enum class Priority;
 enum class RTCErrorType;
 enum class RtpTransceiverDirection;
+
 }
 
 namespace WebCore {
@@ -66,12 +70,13 @@ webrtc::RtpParameters fromRTCRtpSendParameters(const RTCRtpSendParameters&, cons
 
 RTCRtpTransceiverDirection toRTCRtpTransceiverDirection(webrtc::RtpTransceiverDirection);
 webrtc::RtpTransceiverDirection fromRTCRtpTransceiverDirection(RTCRtpTransceiverDirection);
-webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit&, cricket::MediaType);
+webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit&, webrtc::MediaType);
 
 ExceptionCode toExceptionCode(webrtc::RTCErrorType);
 Exception toException(const webrtc::RTCError&);
 RefPtr<RTCError> toRTCError(const webrtc::RTCError&);
 
+RTCPriorityType toRTCPriorityType(webrtc::PriorityValue);
 RTCPriorityType toRTCPriorityType(webrtc::Priority);
 webrtc::Priority fromRTCPriorityType(RTCPriorityType);
 
@@ -80,8 +85,12 @@ inline String fromStdString(const std::string& value)
     return String::fromUTF8(value);
 }
 
-RTCIceCandidateFields convertIceCandidate(const cricket::Candidate&);
+RTCIceCandidateFields convertIceCandidate(const webrtc::Candidate&);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(webrtc::RTCInboundRtpStreamStats)
+    static bool isType(const webrtc::RTCStats& rtcStats) { return rtcStats.type() == webrtc::RTCInboundRtpStreamStats::kType; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

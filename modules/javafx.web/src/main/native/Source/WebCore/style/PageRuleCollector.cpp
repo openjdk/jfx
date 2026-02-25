@@ -33,6 +33,7 @@
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include "UserAgentStyle.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -44,7 +45,7 @@ static inline bool comparePageRules(const StyleRulePage* r1, const StyleRulePage
 
 bool PageRuleCollector::isLeftPage(int pageIndex) const
 {
-    bool isFirstPageLeft = m_rootDirection == TextDirection::RTL;
+    bool isFirstPageLeft = !m_rootWritingMode.isAnyLeftToRight();
     return (pageIndex + (isFirstPageLeft ? 1 : 0)) % 2;
 }
 
@@ -83,9 +84,9 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
     if (matchedPageRules.isEmpty())
         return;
 
-    std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
+    std::ranges::stable_sort(matchedPageRules, comparePageRules);
 
-    m_result.authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
+    m_result->authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
         return MatchedProperties { pageRule->properties() };
     });
 }

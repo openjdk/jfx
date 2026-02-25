@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,14 @@
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLTableElement.h"
+#include "HTMLTemplateElement.h"
 #include "MathMLNames.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElementStack);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLElementStack::ElementRecord);
 
 using namespace ElementNames;
 
@@ -186,9 +191,10 @@ void HTMLElementStack::popAll()
     m_bodyElement = nullptr;
     m_stackDepth = 0;
     while (m_top) {
-        if (RefPtr element = dynamicDowncast<Element>(topNode()))
-            element->finishParsingChildren();
+        RefPtr element = dynamicDowncast<Element>(topNode());
         m_top = m_top->releaseNext();
+        if (element)
+            element->finishParsingChildren();
     }
 }
 
@@ -513,6 +519,9 @@ void HTMLElementStack::pushCommon(HTMLStackItem&& item)
 {
     ASSERT(m_rootNode);
 
+    if (is<HTMLTemplateElement>(item.node())) [[unlikely]]
+        ++m_templateElementCount;
+
     ++m_stackDepth;
     m_top = makeUnique<ElementRecord>(WTFMove(item), WTFMove(m_top));
 }
@@ -523,8 +532,15 @@ void HTMLElementStack::popCommon()
     ASSERT(topStackItem().elementName() != HTML::head || !m_headElement);
     ASSERT(topStackItem().elementName() != HTML::body || !m_bodyElement);
 
-    top().finishParsingChildren();
+    Ref oldTop = top();
     m_top = m_top->releaseNext();
+
+    if (is<HTMLTemplateElement>(oldTop)) [[unlikely]] {
+        ASSERT(m_templateElementCount);
+        --m_templateElementCount;
+    }
+
+    oldTop->finishParsingChildren();
 
     --m_stackDepth;
 }
@@ -536,11 +552,17 @@ void HTMLElementStack::removeNonTopCommon(Element& element)
     ASSERT(&top() != &element);
     for (auto* record = m_top.get(); record; record = record->next()) {
         if (&record->next()->element() == &element) {
+            record->setNext(record->next()->releaseNext());
+            --m_stackDepth;
+
+            if (is<HTMLTemplateElement>(element)) [[unlikely]] {
+                ASSERT(m_templateElementCount);
+                --m_templateElementCount;
+            }
+
             // FIXME: Is it OK to call finishParsingChildren()
             // when the children aren't actually finished?
             element.finishParsingChildren();
-            record->setNext(record->next()->releaseNext());
-            --m_stackDepth;
             return;
         }
     }

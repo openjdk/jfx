@@ -61,17 +61,14 @@ private:
     int caretMaxOffset() const final;
     bool canBeSelectionLeaf() const final;
 
-    LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode) const final;
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
-
     LayoutUnit marginTop() const final { return 0; }
     LayoutUnit marginBottom() const final { return 0; }
     LayoutUnit marginLeft() const final { return 0; }
     LayoutUnit marginRight() const final { return 0; }
-    LayoutUnit marginBefore(const RenderStyle*) const final { return 0; }
-    LayoutUnit marginAfter(const RenderStyle*) const final { return 0; }
-    LayoutUnit marginStart(const RenderStyle*) const final { return 0; }
-    LayoutUnit marginEnd(const RenderStyle*) const final { return 0; }
+    LayoutUnit marginBefore(const WritingMode) const final { return 0; }
+    LayoutUnit marginAfter(const WritingMode) const final { return 0; }
+    LayoutUnit marginStart(const WritingMode) const final { return 0; }
+    LayoutUnit marginEnd(const WritingMode) const final { return 0; }
     LayoutUnit offsetWidth() const final { return linesBoundingBox().width(); }
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
     LayoutRect borderBoundingBox() const final { return LayoutRect(LayoutPoint(), linesBoundingBox().size()); }
@@ -80,8 +77,6 @@ private:
 
     void updateFromStyle() final;
     bool requiresLayer() const final { return false; }
-
-    mutable std::optional<LayoutUnit> m_cachedLineHeight { };
 };
 
 } // namespace WebCore

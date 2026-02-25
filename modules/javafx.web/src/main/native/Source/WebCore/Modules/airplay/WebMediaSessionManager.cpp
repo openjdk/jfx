@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +32,9 @@
 #include "Logging.h"
 #include "MediaPlaybackTargetPickerMock.h"
 #include "WebMediaSessionManagerClient.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/Logger.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -44,7 +45,7 @@ static const Seconds taskDelayInterval { 100_ms };
 #define ALWAYS_LOG_MEDIASESSIONMANAGER logger().logAlways
 
 struct ClientState {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(ClientState);
 
     explicit ClientState(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
         : client(client)
@@ -65,6 +66,8 @@ struct ClientState {
     bool configurationRequired { true };
     bool playedToEnd { false };
 };
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(ClientState);
 
 static bool flagsAreSet(MediaProducerMediaStateFlags value, MediaProducerMediaStateFlags flags)
 {
@@ -101,7 +104,7 @@ String mediaProducerStateString(MediaProducerMediaStateFlags flags)
 
 class WebMediaSessionLogger {
     WTF_MAKE_NONCOPYABLE(WebMediaSessionLogger);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebMediaSessionLogger);
 public:
 
     static std::unique_ptr<WebMediaSessionLogger> create(WebMediaSessionManager& manager)
@@ -115,16 +118,16 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), state->contextId.toUInt64(), state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), state->contextId.loggingString(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
     inline void logAlways(const char* methodName, const Arguments&... arguments) const
     {
-        if (!m_manager.alwaysOnLoggingAllowed())
+        if (!m_manager->alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), arguments...);
     }
 
 private:
@@ -135,9 +138,11 @@ private:
     {
     }
 
-    WebMediaSessionManager& m_manager;
-    Ref<Logger> m_logger;
+    const CheckedRef<WebMediaSessionManager> m_manager;
+    const Ref<const Logger> m_logger;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebMediaSessionLogger);
 
 WebMediaSessionLogger& WebMediaSessionManager::logger()
 {
@@ -149,7 +154,7 @@ WebMediaSessionLogger& WebMediaSessionManager::logger()
 
 bool WebMediaSessionManager::alwaysOnLoggingAllowed() const
 {
-    return allOf(m_clientState, [] (auto& state) {
+    return std::ranges::all_of(m_clientState, [](auto& state) {
         return state->client.alwaysOnLoggingAllowed();
     });
 }
@@ -192,25 +197,25 @@ WebCore::MediaPlaybackTargetPicker& WebMediaSessionManager::targetPicker()
 }
 
 WebMediaSessionManager::WebMediaSessionManager()
-    : m_taskTimer(RunLoop::current(), this, &WebMediaSessionManager::taskTimerFired)
-    , m_watchdogTimer(RunLoop::current(), this, &WebMediaSessionManager::watchdogTimerFired)
+    : m_taskTimer(RunLoop::currentSingleton(), "WebMediaSessionManager::TaskTimer"_s, this, &WebMediaSessionManager::taskTimerFired)
+    , m_watchdogTimer(RunLoop::currentSingleton(), "WebMediaSessionManager::WatchdogTimer"_s, this, &WebMediaSessionManager::watchdogTimerFired)
 {
 }
 
 WebMediaSessionManager::~WebMediaSessionManager() = default;
 
-PlaybackTargetClientContextIdentifier WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
+std::optional<PlaybackTargetClientContextIdentifier> WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
 {
     size_t index = find(&client, contextId);
     ASSERT(index == notFound);
     if (index != notFound)
-        return { };
+        return std::nullopt;
 
-    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.toUInt64());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.loggingString());
     m_clientState.append(makeUnique<ClientState>(client, contextId));
 
     if (m_externalOutputDeviceAvailable || m_playbackTarget)
-        scheduleDelayedTask(InitialConfigurationTask | TargetClientsConfigurationTask);
+        scheduleDelayedTask({ ConfigurationTaskFlags::InitialConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 
     return contextId;
 }
@@ -224,8 +229,8 @@ void WebMediaSessionManager::removePlaybackTargetPickerClient(WebMediaSessionMan
 
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
-    m_clientState.remove(index);
-    scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
+    m_clientState.removeAt(index);
+    scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 }
 
 void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessionManagerClient& client)
@@ -236,10 +241,10 @@ void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessio
     for (size_t i = m_clientState.size(); i > 0; --i) {
         if (&m_clientState[i - 1]->client == &client) {
             ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[i - 1].get());
-            m_clientState.remove(i - 1);
+            m_clientState.removeAt(i - 1);
         }
     }
-    scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
+    scheduleDelayedTask({ ConfigurationTaskFlags::TargetMonitoringConfiguration, ConfigurationTaskFlags::TargetClientsConfiguration });
 }
 
 void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId, const IntRect& rect, bool, bool useDarkAppearance)
@@ -279,13 +284,13 @@ void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& 
 
     constexpr MediaProducerMediaStateFlags updateConfigurationFlags { MediaProducerMediaState::RequiresPlaybackTargetMonitoring, MediaProducerMediaState::HasPlaybackTargetAvailabilityListener, MediaProducerMediaState::HasAudioOrVideo };
     if ((oldFlags & updateConfigurationFlags) != (newFlags & updateConfigurationFlags))
-        scheduleDelayedTask(TargetMonitoringConfigurationTask);
+        scheduleDelayedTask(ConfigurationTaskFlags::TargetMonitoringConfiguration);
 
     constexpr MediaProducerMediaStateFlags playingToTargetFlags { MediaProducerMediaState::IsPlayingToExternalDevice, MediaProducerMediaState::IsPlayingVideo };
     if ((oldFlags & playingToTargetFlags) != (newFlags & playingToTargetFlags)) {
         if (flagsAreSet(oldFlags, MediaProducerMediaState::IsPlayingVideo) && !flagsAreSet(newFlags, MediaProducerMediaState::IsPlayingVideo) && flagsAreSet(newFlags, MediaProducerMediaState::DidPlayToEnd))
             changedClientState->playedToEnd = true;
-        scheduleDelayedTask(WatchdogTimerConfigurationTask);
+        scheduleDelayedTask(ConfigurationTaskFlags::WatchdogTimerConfiguration);
     }
 
     if (!m_playbackTarget || !m_playbackTarget->hasActiveRoute() || !flagsAreSet(newFlags, MediaProducerMediaState::ExternalDeviceAutoPlayCandidate))
@@ -327,7 +332,7 @@ void WebMediaSessionManager::setPlaybackTarget(Ref<MediaPlaybackTarget>&& target
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "has active route = ", target->hasActiveRoute());
     m_playbackTarget = WTFMove(target);
     m_targetChanged = true;
-    scheduleDelayedTask(TargetClientsConfigurationTask);
+    scheduleDelayedTask(ConfigurationTaskFlags::TargetClientsConfiguration);
 }
 
 void WebMediaSessionManager::externalOutputDeviceAvailableDidChange(bool available)
@@ -342,7 +347,7 @@ void WebMediaSessionManager::playbackTargetPickerWasDismissed()
 {
     ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     m_playbackTargetPickerDismissed = true;
-    scheduleDelayedTask(TargetClientsConfigurationTask);
+    scheduleDelayedTask(ConfigurationTaskFlags::TargetClientsConfiguration);
 }
 
 void WebMediaSessionManager::configureNewClients()
@@ -453,22 +458,22 @@ void WebMediaSessionManager::configurePlaybackTargetMonitoring()
 
 void WebMediaSessionManager::scheduleDelayedTask(ConfigurationTasks tasks)
 {
-    m_taskFlags |= tasks;
+    m_taskFlags.add(tasks);
     m_taskTimer.startOneShot(taskDelayInterval);
 }
 
 void WebMediaSessionManager::taskTimerFired()
 {
-    if (m_taskFlags & InitialConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::InitialConfiguration))
         configureNewClients();
-    if (m_taskFlags & TargetClientsConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::TargetClientsConfiguration))
         configurePlaybackTargetClients();
-    if (m_taskFlags & TargetMonitoringConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::TargetMonitoringConfiguration))
         configurePlaybackTargetMonitoring();
-    if (m_taskFlags & WatchdogTimerConfigurationTask)
+    if (m_taskFlags.contains(ConfigurationTaskFlags::WatchdogTimerConfiguration))
         configureWatchdogTimer();
 
-    m_taskFlags = NoTask;
+    m_taskFlags = { };
 }
 
 size_t WebMediaSessionManager::find(WebMediaSessionManagerClient* client, PlaybackTargetClientContextIdentifier contextId)

@@ -27,6 +27,8 @@
 
 #include <WebCore/IDBConnectionToClient.h>
 #include <WebCore/IDBConnectionToServer.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBIndexInfo.h>
 #include <WebCore/IDBObjectStoreIdentifier.h>
 #include <WebCore/IDBServer.h>
 #include <wtf/RefCounted.h>
@@ -54,8 +56,9 @@ class IDBServer;
 } // namespace WebCore
 
 class InProcessIDBServer final : public WebCore::IDBClient::IDBConnectionToServerDelegate, public WebCore::IDBServer::IDBConnectionToClientDelegate, public ThreadSafeRefCounted<InProcessIDBServer> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(InProcessIDBServer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InProcessIDBServer);
 public:
-
     static Ref<InProcessIDBServer> create(PAL::SessionID);
     static Ref<InProcessIDBServer> create(PAL::SessionID, const String& databaseDirectoryPath);
 
@@ -77,8 +80,8 @@ public:
     void clearObjectStore(const WebCore::IDBRequestData&, WebCore::IDBObjectStoreIdentifier) final;
     void createIndex(const WebCore::IDBRequestData&, const WebCore::IDBIndexInfo&) final;
     void deleteIndex(const WebCore::IDBRequestData&, WebCore::IDBObjectStoreIdentifier, const String& indexName) final;
-    void renameIndex(const WebCore::IDBRequestData&, WebCore::IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName) final;
-    void putOrAdd(const WebCore::IDBRequestData&, const WebCore::IDBKeyData&, const WebCore::IDBValue&, const WebCore::IndexedDB::ObjectStoreOverwriteMode) final;
+    void renameIndex(const WebCore::IDBRequestData&, WebCore::IDBObjectStoreIdentifier, WebCore::IDBIndexIdentifier, const String& newName) final;
+    void putOrAdd(const WebCore::IDBRequestData&, const WebCore::IDBKeyData&, const WebCore::IDBValue&, const WebCore::IndexIDToIndexKeyMap&, const WebCore::IndexedDB::ObjectStoreOverwriteMode) final;
     void getRecord(const WebCore::IDBRequestData&, const WebCore::IDBGetRecordData&) final;
     void getAllRecords(const WebCore::IDBRequestData&, const WebCore::IDBGetAllRecordsData&) final;
     void getCount(const WebCore::IDBRequestData&, const WebCore::IDBKeyRangeData&) final;
@@ -90,11 +93,12 @@ public:
     void databaseConnectionClosed(WebCore::IDBDatabaseConnectionIdentifier) final;
     void abortOpenAndUpgradeNeeded(WebCore::IDBDatabaseConnectionIdentifier, const std::optional<WebCore::IDBResourceIdentifier>& transactionIdentifier) final;
     void didFireVersionChangeEvent(WebCore::IDBDatabaseConnectionIdentifier, const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IndexedDB::ConnectionClosedOnBehalfOfServer) final;
+    void didGenerateIndexKeyForRecord(const WebCore::IDBResourceIdentifier& transactionIdentifier, const WebCore::IDBResourceIdentifier& requestIdentifier, const  WebCore::IDBIndexInfo&, const WebCore::IDBKeyData&, const WebCore::IndexKey&, std::optional<int64_t> recordID) final;
     void openDBRequestCancelled(const WebCore::IDBOpenRequestData&) final;
     void getAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier&, const WebCore::ClientOrigin&) final;
 
     // IDBConnectionToClient
-    WebCore::IDBConnectionIdentifier identifier() const final;
+    std::optional<WebCore::IDBConnectionIdentifier> identifier() const final;
     void didDeleteDatabase(const WebCore::IDBResultData&) final;
     void didOpenDatabase(const WebCore::IDBResultData&) final;
     void didAbortTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier, const WebCore::IDBError&) final;
@@ -114,6 +118,7 @@ public:
     void didOpenCursor(const WebCore::IDBResultData&) final;
     void didIterateCursor(const WebCore::IDBResultData&) final;
     void fireVersionChangeEvent(WebCore::IDBServer::UniqueIDBDatabaseConnection&, const WebCore::IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion) final;
+    void generateIndexKeyForRecord(const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IDBIndexInfo&, const std::optional<WebCore::IDBKeyPath>&, const WebCore::IDBKeyData&, const WebCore::IDBValue&, std::optional<int64_t> recordID) final;
     void didStartTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier, const WebCore::IDBError&) final;
     void didCloseFromServer(WebCore::IDBServer::UniqueIDBDatabaseConnection&, const WebCore::IDBError&) final;
     void notifyOpenDBRequestBlocked(const WebCore::IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion) final;
@@ -131,5 +136,5 @@ private:
     std::unique_ptr<WebCore::IDBServer::IDBServer> m_server;
     RefPtr<WebCore::IDBClient::IDBConnectionToServer> m_connectionToServer;
     RefPtr<WebCore::IDBServer::IDBConnectionToClient> m_connectionToClient;
-    Ref<WTF::WorkQueue> m_queue;
+    const Ref<WTF::WorkQueue> m_queue;
 };

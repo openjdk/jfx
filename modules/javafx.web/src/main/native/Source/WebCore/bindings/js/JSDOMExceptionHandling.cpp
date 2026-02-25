@@ -155,7 +155,7 @@ void reportCurrentException(JSGlobalObject* lexicalGlobalObject)
 JSValue createDOMException(JSGlobalObject* lexicalGlobalObject, ExceptionCode ec, const String& message)
 {
     VM& vm = lexicalGlobalObject->vm();
-    if (UNLIKELY(vm.hasPendingTerminationException()))
+    if (vm.hasPendingTerminationException()) [[unlikely]]
         return jsUndefined();
 
     switch (ec) {
@@ -295,8 +295,8 @@ JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexica
 
 String makeThisTypeErrorMessage(const char* interfaceName, const char* functionName)
 {
-    auto interfaceNameSpan = span(interfaceName);
-    return makeString("Can only call "_s, interfaceNameSpan, '.', span(functionName), " on instances of "_s, interfaceNameSpan);
+    auto interfaceNameSpan = unsafeSpan(interfaceName);
+    return makeString("Can only call "_s, interfaceNameSpan, '.', unsafeSpan(functionName), " on instances of "_s, interfaceNameSpan);
 }
 
 String makeUnsupportedIndexedSetterErrorMessage(ASCIILiteral interfaceName)

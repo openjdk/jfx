@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -225,6 +225,6 @@ public enum ModelChoice {
     // TODO add to StyledModel?
     private static void append(StyledTextModel m, String text, StyleAttributeMap style) {
         TextPos p = m.getDocumentEnd();
-        m.replace(null, p, p, StyledInput.of(text, style), false);
+        m.replace(null, p, p, StyledInput.of(text, style));
     }
 }

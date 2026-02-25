@@ -1,5 +1,7 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-2011. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -89,7 +91,7 @@ static inline void processRenderSVGInlineText(const RenderSVGInlineText& text, u
 
     // FIXME: This is not a complete whitespace collapsing implementation; it doesn't handle newlines or tabs.
     for (unsigned i = 0; i < length; ++i) {
-        UChar character = string[i];
+        char16_t character = string[i];
         if (character == ' ' && lastCharacterWasSpace)
             continue;
 
@@ -148,9 +150,9 @@ void SVGTextLayoutAttributesBuilder::buildCharacterDataMap(RenderSVGText& textRo
         m_characterDataMap.set(1, data);
     } else {
         SVGCharacterData& data = it->value;
-        if (data.x == SVGTextLayoutAttributes::emptyValue())
+        if (SVGTextLayoutAttributes::isEmptyValue(data.x))
             data.x = 0;
-        if (data.y == SVGTextLayoutAttributes::emptyValue())
+        if (SVGTextLayoutAttributes::isEmptyValue(data.y))
             data.y = 0;
     }
 
@@ -178,11 +180,12 @@ static inline void updateCharacterData(unsigned i, float& lastRotation, SVGChara
 
 void SVGTextLayoutAttributesBuilder::fillCharacterDataMap(const TextPosition& position)
 {
-    const auto& xList = position.element->x();
-    const auto& yList = position.element->y();
-    const auto& dxList = position.element->dx();
-    const auto& dyList = position.element->dy();
-    const auto& rotateList = position.element->rotate();
+    RefPtr element = position.element.get();
+    const auto& xList = element->x();
+    const auto& yList = element->y();
+    const auto& dxList = element->dx();
+    const auto& dyList = element->dy();
+    const auto& rotateList = element->rotate();
 
     unsigned xListSize = xList.size();
     unsigned yListSize = yList.size();
@@ -193,8 +196,7 @@ void SVGTextLayoutAttributesBuilder::fillCharacterDataMap(const TextPosition& po
         return;
 
     float lastRotation = SVGTextLayoutAttributes::emptyValue();
-    RefPtr positionElement = position.element;
-    SVGLengthContext lengthContext(positionElement.get());
+    SVGLengthContext lengthContext(element.get());
     for (unsigned i = 0; i < position.length; ++i) {
         const SVGLengthList* xListPtr = i < xListSize ? &xList : nullptr;
         const SVGLengthList* yListPtr = i < yListSize ? &yList : nullptr;
@@ -216,7 +218,7 @@ void SVGTextLayoutAttributesBuilder::fillCharacterDataMap(const TextPosition& po
     }
 
     // The last rotation value always spans the whole scope.
-    if (lastRotation == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(lastRotation))
         return;
 
     for (unsigned i = rotateList.items().size(); i < position.length; ++i) {

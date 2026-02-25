@@ -29,13 +29,13 @@ require "config"
 # On x86-64 (windows and non-windows)
 #
 # rax => t0,     r0
-# rdi =>     a0
+# rdi => t6, a0
 # rsi => t1, a1
 # rdx => t2, a2, r1
 # rcx => t3, a3
-#  r8 => t4
-#  r9 => t5
-# r10 => t6
+#  r8 => t4, a4
+#  r9 => t7, a5
+# r10 => t5
 # rbx =>             csr0 (callee-save, wasmInstance)
 # r12 =>             csr1 (callee-save, metadataTable)
 # r13 =>             csr2 (callee-save, PB)
@@ -44,15 +44,6 @@ require "config"
 # rsp => sp
 # rbp => cfr
 # r11 =>                  (scratch)
-
-def isX64
-    case $activeBackend
-    when "X86_64"
-        true
-    else
-        raise "bad value for $activeBackend: #{$activeBackend}"
-    end
-end
 
 def isWin
     $options.has_key?(:platform) && $options[:platform] == "Windows"
@@ -88,7 +79,6 @@ end
 class SpecialRegister < NoChildren
     def x86Operand(kind)
         raise unless @name =~ /^r/
-        raise unless isX64
         case kind
         when :half
             register(@name + "w")
@@ -119,11 +109,9 @@ def x86GPRName(name, kind)
         name16 = name[1..2]
         name8 = name16 + 'l'
     when "rax", "rbx", "rcx", "rdx"
-        raise "bad GPR name #{name} in 32-bit X86" unless isX64
         name8 = name[1] + 'l'
         name16 = name[1..2]
     when "r8", "r9", "r10", "r12", "r13", "r14", "r15"
-        raise "bad GPR name #{name} in 32-bit X86" unless isX64
         case kind
         when :byte
             return register(name + "b")
@@ -149,9 +137,9 @@ def x86GPRName(name, kind)
     when :int
         register("e" + name16)
     when :ptr
-        register((isX64 ? "r" : "e") + name16)
+        register("r" + name16)
     when :quad
-        isX64 ? register("r" + name16) : raise
+        register("r" + name16)
     else
         raise "invalid kind #{kind} for GPR #{name} in X86"
     end
@@ -176,26 +164,23 @@ class RegisterID
     end
 
     def x86GPR
-        if isX64
             case name
             when "t0", "r0", "ws0"
                 "eax"
-            when "r1"
-                "edx"
-            when "a0", "wa0"
+        when "t6", "a0", "wa0"
                 "edi"
             when "t1", "a1", "wa1"
                 "esi"
-            when "t2", "a2", "wa2"
+        when "t2", "r1", "a2", "wa2"
                 "edx"
             when "t3", "a3", "wa3"
                 "ecx"
-            when "t4", "wa4"
+        when "t4", "a4", "wa4"
                 "r8"
-            when "t5", "wa5"
-                "r9"
-            when "t6", "ws1"
+        when "t5", "ws1"
                 "r10"
+        when "t7", "a5", "wa5"
+            "r9"
             when "csr0"
                 "ebx"
             when "csr1"
@@ -217,26 +202,6 @@ class RegisterID
             else
                 raise "cannot use register #{name} on X86"
             end
-        else
-            case name
-            when "t0", "r0", "a2"
-                "eax"
-            when "t1", "r1", "a1"
-                "edx"
-            when "t2", "a0"
-                "ecx"
-            when "t3", "a3"
-                "ebx"
-            when "t4"
-                "esi"
-            when "t5"
-                "edi"
-            when "cfr"
-                "ebp"
-            when "sp"
-                "esp"
-            end
-        end
     end
 
     def x86Operand(kind)
@@ -366,11 +331,7 @@ class VecRegisterID
 end
 class Immediate
     def validX86Immediate?
-        if isX64
             value >= -0x80000000 and value <= 0x7fffffff
-        else
-            true
-        end
     end
     def x86Operand(kind)
         "#{const(value)}"
@@ -525,9 +486,9 @@ class Instruction
         when :int
             "l"
         when :ptr
-            isX64 ? "q" : "l"
+            "q"
         when :quad
-            isX64 ? "q" : raise
+            "q"
         when :float
             "ss"
         when :double
@@ -546,9 +507,9 @@ class Instruction
         when :int
             4
         when :ptr
-            isX64 ? 8 : 4
+            8
         when :quad
-            isX64 ? 8 : raise
+            8
         when :float
             4
         when :double
@@ -681,7 +642,7 @@ class Instruction
                     return
                 end
 
-                isUnordered = LocalLabel.unique("isUnordered")
+                isUnordered = LocalLabel.unique(codeOrigin, "isUnordered")
                 $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const(0), target.x86Operand(:quad))}"
                 compare.call(right, left)
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
@@ -695,7 +656,7 @@ class Instruction
                     return
                 end
 
-                isUnordered = LocalLabel.unique("isUnordered")
+                isUnordered = LocalLabel.unique(codeOrigin, "isUnordered")
                 $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const(1), target.x86Operand(:quad))}"
                 compare.call(right, left);
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
@@ -909,24 +870,16 @@ class Instruction
 
     def handleMove
         if Immediate.new(nil, 0) == operands[0] and operands[1].is_a? RegisterID
-            if isX64
                 $asm.puts "xor#{x86Suffix(:quad)} #{operands[1].x86Operand(:quad)}, #{operands[1].x86Operand(:quad)}"
-            else
-                $asm.puts "xor#{x86Suffix(:ptr)} #{operands[1].x86Operand(:ptr)}, #{operands[1].x86Operand(:ptr)}"
-            end
         elsif operands[0].x86Operand(:quad) != operands[1].x86Operand(:quad)
-            if isX64
                 $asm.puts "mov#{x86Suffix(:quad)} #{x86Operands(:quad, :quad)}"
-            else
-                $asm.puts "mov#{x86Suffix(:ptr)} #{x86Operands(:ptr, :ptr)}"
-            end
         end
     end
 
     def countLeadingZeros(kind)
         target = operands[1]
-        srcIsNonZero = LocalLabel.unique("srcIsNonZero")
-        skipNonZeroCase = LocalLabel.unique("skipNonZeroCase")
+        srcIsNonZero = LocalLabel.unique(codeOrigin, "srcIsNonZero")
+        skipNonZeroCase = LocalLabel.unique(codeOrigin, "skipNonZeroCase")
         zeroValue = Immediate.new(codeOrigin, x86Bytes(kind) * 8)
         xorValue = Immediate.new(codeOrigin, kind == :quad ? 0x3f : 0x1f)
         xor = kind == :quad ? "xorq" : "xori"
@@ -947,7 +900,7 @@ class Instruction
 
     def countTrailingZeros(kind)
         target = operands[1]
-        srcIsNonZero = LocalLabel.unique("srcIsNonZero")
+        srcIsNonZero = LocalLabel.unique(codeOrigin, "srcIsNonZero")
         zeroValue = Immediate.new(codeOrigin, x86Bytes(kind) * 8)
 
         $asm.puts "bsf#{x86Suffix(kind)} #{x86Operands(kind, kind)}"
@@ -962,8 +915,8 @@ class Instruction
     def truncateFloatingPointToQuad(kind)
         src = operands[0]
         dst = operands[1]
-        slow = LocalLabel.unique("slow")
-        done = LocalLabel.unique("done")
+        slow = LocalLabel.unique(codeOrigin, "slow")
+        done = LocalLabel.unique(codeOrigin, "done")
         gprScratch = X64_SCRATCH_REGISTER
         fprScratch = FPRegisterID.forName(codeOrigin, "wfa7")
         int64SignBit = Immediate.new(codeOrigin, 0x8000000000000000)
@@ -1005,8 +958,8 @@ class Instruction
         src = operands[0]
         scratch1 = operands[1]
         dst = operands[2]
-        slow = LocalLabel.unique("slow")
-        done = LocalLabel.unique("done")
+        slow = LocalLabel.unique(codeOrigin, "slow")
+        done = LocalLabel.unique(codeOrigin, "done")
         scratch2 = X64_SCRATCH_REGISTER
         one = Immediate.new(codeOrigin, 0x1)
 
@@ -1133,19 +1086,24 @@ class Instruction
         when "storei"
             $asm.puts "mov#{x86Suffix(:int)} #{x86Operands(:int, :int)}"
         when "loadis"
-            if isX64
                     $asm.puts "movslq #{x86LoadOperands(:int, :quad)}"
-                else
-                $asm.puts "mov#{x86Suffix(:int)} #{x86LoadOperands(:int, :int)}"
-            end
+        when "transferi"
+            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(operands[0].x86LoadOperand(:int, :int), X64_SCRATCH_REGISTER.x86Operand(:int))}"
+            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:int), operands[1].x86Operand(:int))}"
         when "loadp"
             $asm.puts "mov#{x86Suffix(:ptr)} #{x86LoadOperands(:ptr, :ptr)}"
         when "storep"
             $asm.puts "mov#{x86Suffix(:ptr)} #{x86Operands(:ptr, :ptr)}"
+        when "transferp"
+            $asm.puts "mov#{x86Suffix(:ptr)} #{orderOperands(operands[0].x86LoadOperand(:ptr, :ptr), X64_SCRATCH_REGISTER.x86Operand(:ptr))}"
+            $asm.puts "mov#{x86Suffix(:ptr)} #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:ptr), operands[1].x86Operand(:ptr))}"
         when "loadq", "atomicloadq"
             $asm.puts "mov#{x86Suffix(:quad)} #{x86LoadOperands(:quad, :quad)}"
         when "storeq"
             $asm.puts "mov#{x86Suffix(:quad)} #{x86Operands(:quad, :quad)}"
+        when "transferq"
+            $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(operands[0].x86LoadOperand(:quad, :quad), X64_SCRATCH_REGISTER.x86Operand(:quad))}"
+            $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:quad), operands[1].x86Operand(:quad))}"
         when "loadb", "atomicloadb"
                 $asm.puts "movzbl #{x86LoadOperands(:byte, :int)}"
         when "loadbsi"
@@ -1254,7 +1212,7 @@ class Instruction
                 # This is just a jump ordered, which is a jnp.
                 $asm.puts "jnp #{operands[2].asmLabel}"
             else
-                isUnordered = LocalLabel.unique("bdeq")
+                isUnordered = LocalLabel.unique(codeOrigin, "bdeq")
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
                 $asm.puts "je #{LocalLabelReference.new(codeOrigin, operands[2]).asmLabel}"
                 isUnordered.lower($activeBackend)
@@ -1277,8 +1235,8 @@ class Instruction
                 # This is just a jump unordered, which is a jp.
                 $asm.puts "jp #{operands[2].asmLabel}"
             else
-                isUnordered = LocalLabel.unique("bdnequn")
-                isEqual = LocalLabel.unique("bdnequn")
+                isUnordered = LocalLabel.unique(codeOrigin, "bdnequn")
+                isEqual = LocalLabel.unique(codeOrigin, "bdnequn")
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
                 $asm.puts "je #{LocalLabelReference.new(codeOrigin, isEqual).asmLabel}"
                 isUnordered.lower($activeBackend)
@@ -1299,7 +1257,7 @@ class Instruction
                 # This is just a jump ordered, which is a jnp.
                 $asm.puts "jnp #{operands[2].asmLabel}"
             else
-                isUnordered = LocalLabel.unique("bfeq")
+                isUnordered = LocalLabel.unique(codeOrigin, "bfeq")
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
                 $asm.puts "je #{LocalLabelReference.new(codeOrigin, operands[2]).asmLabel}"
                 isUnordered.lower($activeBackend)
@@ -1342,8 +1300,8 @@ class Instruction
         when "popv"
             operands.each {
                 | op |
-                $asm.puts "movdqu (%esp), #{op.x86Operand(:vector)}"
-                $asm.puts "add $16, %esp"
+                $asm.puts "movdqu (%rsp), #{op.x86Operand(:vector)}"
+                $asm.puts "add $16, %rsp"
             }
         when "push"
             operands.each {
@@ -1353,8 +1311,8 @@ class Instruction
         when "pushv"
             operands.each {
                 | op |
-                $asm.puts "sub $16, %esp"
-                $asm.puts "movdqu #{op.x86Operand(:vector)}, (%esp)"
+                $asm.puts "sub $16, %rsp"
+                $asm.puts "movdqu #{op.x86Operand(:vector)}, (%rsp)"
             }
         when "move"
             handleMove
@@ -1746,7 +1704,6 @@ class Instruction
             $asm.puts "movd #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:quad), operands[1].x86Operand(:double))}"
             $asm.puts "xorpd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
         when "tls_loadp"
-            raise "tls_loadp is only supported on x64" unless isX64
             if operands[0].immediate?
                 mem = "%gs:#{operands[0].value * 8}"
             else
@@ -1754,7 +1711,6 @@ class Instruction
             end
             $asm.puts "movq #{orderOperands(mem, operands[1].x86Operand(:quad))}"
         when "tls_loadp"
-            raise "tls_loadp is only supported on x64" unless isX64
             if operands[0].immediate?
                 mem = "%gs:#{operands[0].value * x86Bytes(:ptr)}"
             else
@@ -1762,7 +1718,6 @@ class Instruction
             end
             $asm.puts "mov#{x86Suffix(:ptr)} #{orderOperands(mem, operands[1].x86Operand(:quad))}"
         when "tls_storep"
-            raise "tls_loadp is only supported on x64" unless isX64
             if operands[1].immediate?
                 mem = "%gs:#{operands[1].value * x86Bytes(:ptr)}"
             else

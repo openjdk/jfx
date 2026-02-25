@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,6 @@
  */
 
 #pragma once
-
-#if ENABLE(DATALIST_ELEMENT)
 
 #include "HTMLElement.h"
 #include "TypedElementDescendantIterator.h"
@@ -64,5 +62,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

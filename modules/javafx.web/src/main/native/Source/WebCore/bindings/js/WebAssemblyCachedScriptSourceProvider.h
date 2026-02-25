@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +39,7 @@
 namespace WebCore {
 
 class WebAssemblyCachedScriptSourceProvider final : public JSC::BaseWebAssemblySourceProvider, public CachedResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebAssemblyCachedScriptSourceProvider);
 public:
     static Ref<WebAssemblyCachedScriptSourceProvider> create(CachedScript* cachedScript, Ref<CachedScriptFetcher>&& scriptFetcher)
     {
@@ -60,18 +61,18 @@ public:
             return nullptr;
 
         if (!m_buffer->isContiguous())
-            m_buffer = m_buffer->makeContiguous();
+            m_buffer = RefPtr { m_buffer }->makeContiguous();
 
-        return downcast<SharedBuffer>(*m_buffer).span().data();
+        return downcast<SharedBuffer>(m_buffer)->span().data();
     }
 
-    void lockUnderlyingBuffer() final
+    void lockUnderlyingBufferImpl() final
     {
         ASSERT(!m_buffer);
         m_buffer = m_cachedScript->resourceBuffer();
     }
 
-    void unlockUnderlyingBuffer() final
+    void unlockUnderlyingBufferImpl() final
     {
         ASSERT(m_buffer);
         m_buffer = nullptr;

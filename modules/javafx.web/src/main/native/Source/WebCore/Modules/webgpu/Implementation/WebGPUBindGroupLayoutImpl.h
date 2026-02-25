@@ -30,13 +30,14 @@
 #include "WebGPUBindGroupLayout.h"
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class BindGroupLayoutImpl final : public BindGroupLayout {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BindGroupLayoutImpl);
 public:
     static Ref<BindGroupLayoutImpl> create(WebGPUPtr<WGPUBindGroupLayout>&& bindGroupLayout, ConvertToBackingContext& convertToBackingContext)
     {
@@ -60,7 +61,7 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUBindGroupLayout> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

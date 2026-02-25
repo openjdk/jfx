@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +23,9 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
 #import <jni.h>
 
 #import "GlassHostView.h"
-#import "GlassDragSource.h"
 #import "GlassDraggingSource.h"
 #import "GlassAccessible.h"
 
@@ -83,7 +81,7 @@ typedef enum GestureMaskType {
 - (void)sendJavaMouseEvent:(NSEvent *)theEvent;
 - (void)resetMouseTracking;
 - (void)sendJavaMenuEvent:(NSEvent *)theEvent;
-- (BOOL)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown;
+- (BOOL)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown character:(unichar)textChar;
 - (void)sendJavaModifierKeyEvent:(NSEvent *)theEvent;
 - (void)sendJavaGestureEvent:(NSEvent *)theEvent type:(int)type;
 - (void)sendJavaGestureBeginEvent:(NSEvent *)theEvent;
@@ -98,6 +96,8 @@ typedef enum GestureMaskType {
 - (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items;
 
 - (BOOL)suppressMouseEnterExitOnMouseDown;
+
+- (void)performWindowDrag;
 
 - (void)enterFullscreenWithAnimate:(BOOL)animate withKeepRatio:(BOOL)keepRatio withHideCursor:(BOOL)hideCursor;
 - (void)exitFullscreenWithAnimate:(BOOL)animate;

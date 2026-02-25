@@ -40,6 +40,7 @@
 #include "RenderTheme.h"
 #include "Supplementable.h"
 #include <wtf/Language.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_AUDIO)
 #include "AudioContext.h"
@@ -64,10 +65,11 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if USE(AUDIO_SESSION)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
 #endif
-#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    , m_shouldDeactivateAudioSession(PlatformMediaSessionManager::shouldDeactivateAudioSession())
-#endif
 {
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
+    if (RefPtr page = settings.page().get())
+        m_shouldDeactivateAudioSession = page->mediaSessionManager().shouldDeactivateAudioSession();
+#endif
 }
 
 void InternalSettings::Backup::restoreTo(Settings& settings)
@@ -119,7 +121,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #endif
 
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    PlatformMediaSessionManager::setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
+    if (RefPtr page = settings.page().get())
+        page->mediaSessionManager().setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -128,7 +131,7 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 }
 
 class InternalSettingsWrapper : public Supplement<Page> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InternalSettingsWrapper);
 public:
     explicit InternalSettingsWrapper(Page* page)
         : m_internalSettings(InternalSettings::create(page)) { }
@@ -174,10 +177,10 @@ Ref<InternalSettings> InternalSettings::create(Page* page)
 void InternalSettings::resetToConsistentState()
 {
     m_page->setPageScaleFactor(1, { 0, 0 });
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
+    if (RefPtr localMainFrame = m_page->localMainFrame())
         localMainFrame->setPageAndTextZoomFactors(1, 1);
     m_page->setCanStartMedia(true);
-    m_page->effectiveAppearanceDidChange(false, false);
+    m_page->setUseColorAppearance(false, false);
 
     m_backup.restoreTo(settings());
     m_backup = Backup { settings() };
@@ -414,15 +417,6 @@ bool InternalSettings::vp9DecoderEnabled() const
 #endif
 }
 
-bool InternalSettings::mediaSourceInlinePaintingEnabled() const
-{
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    return DeprecatedGlobalSettings::mediaSourceInlinePaintingEnabled();
-#else
-    return false;
-#endif
-}
-
 ExceptionOr<void> InternalSettings::setCustomPasteboardDataEnabled(bool enabled)
 {
     if (!m_page)
@@ -510,7 +504,7 @@ ExceptionOr<void> InternalSettings::setUseDarkAppearance(bool useDarkAppearance)
 {
     if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
-    m_page->effectiveAppearanceDidChange(useDarkAppearance, m_page->useElevatedUserInterfaceLevel());
+    m_page->setUseColorAppearance(useDarkAppearance, m_page->useElevatedUserInterfaceLevel());
     return { };
 }
 
@@ -518,17 +512,24 @@ ExceptionOr<void> InternalSettings::setUseElevatedUserInterfaceLevel(bool useEle
 {
     if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
-    m_page->effectiveAppearanceDidChange(m_page->useDarkAppearance(), useElevatedUserInterfaceLevel);
+    m_page->setUseColorAppearance(m_page->useDarkAppearance(), useElevatedUserInterfaceLevel);
     return { };
 }
 
 ExceptionOr<void> InternalSettings::setAllowUnclampedScrollPosition(bool allowUnclamped)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-    if (!m_page || !localMainFrame || !localMainFrame->view())
+    if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
 
-    localMainFrame->view()->setAllowsUnclampedScrollPositionForTesting(allowUnclamped);
+    RefPtr localMainFrame = m_page->localMainFrame();
+    if (!localMainFrame)
+        return Exception { ExceptionCode::InvalidAccessError };
+
+    RefPtr view = localMainFrame->view();
+    if (!view)
+        return Exception { ExceptionCode::InvalidAccessError };
+
+    view->setAllowsUnclampedScrollPositionForTesting(allowUnclamped);
     return { };
 }
 
@@ -536,8 +537,9 @@ ExceptionOr<void>  InternalSettings::setShouldDeactivateAudioSession(bool should
 {
     if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
+
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    PlatformMediaSessionManager::setShouldDeactivateAudioSession(should);
+    m_page->mediaSessionManager().setShouldDeactivateAudioSession(should);
 #else
     UNUSED_PARAM(should);
 #endif

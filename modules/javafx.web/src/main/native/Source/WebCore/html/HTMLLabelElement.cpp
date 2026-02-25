@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2014 Google Inc. All rights reserved.
  *
@@ -44,9 +44,9 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLabelElement);
 
 using namespace HTMLNames;
 
-static HTMLElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomString& id)
+static HTMLElement* elementForAttributeIfLabelable(const HTMLLabelElement& context, const QualifiedName& attributeName)
 {
-    if (RefPtr element = treeScope.getElementById(id)) {
+    if (RefPtr element = context.elementForAttributeInternal(attributeName)) {
         if (auto* labelableElement = dynamicDowncast<HTMLElement>(*element)) {
             if (labelableElement->isLabelable())
                 return labelableElement;
@@ -73,18 +73,27 @@ Ref<HTMLLabelElement> HTMLLabelElement::create(Document& document)
 
 RefPtr<HTMLElement> HTMLLabelElement::control() const
 {
-    auto& controlId = attributeWithoutSynchronization(forAttr);
-    if (controlId.isNull()) {
-        // Search the children and descendants of the label element for a form element.
-        // per http://dev.w3.org/html5/spec/Overview.html#the-label-element
-        // the form element must be "labelable form-associated element".
-        for (const auto& labelableElement : descendantsOfType<HTMLElement>(*this)) {
-            if (labelableElement.isLabelable())
-                return const_cast<HTMLElement*>(&labelableElement);
+    if (!hasAttributeWithoutSynchronization(forAttr)) {
+        // https://html.spec.whatwg.org/multipage/forms.html#labeled-control
+        for (auto& descendant : descendantsOfType<HTMLElement>(*this)) {
+            if (document().settings().shadowRootReferenceTargetEnabled()) {
+                RefPtr referenceTarget = dynamicDowncast<HTMLElement>(descendant.resolveReferenceTarget());
+                if (referenceTarget && referenceTarget->isLabelable())
+                    return referenceTarget.get();
+                continue;
+            }
+
+            if (descendant.isLabelable())
+                return const_cast<HTMLElement*>(&descendant);
         }
         return nullptr;
     }
-    return isConnected() ? firstElementWithIdIfLabelable(treeScope(), controlId) : nullptr;
+    return isConnected() ? elementForAttributeIfLabelable(*this, forAttr) : nullptr;
+}
+
+RefPtr<HTMLElement> HTMLLabelElement::controlForBindings() const
+{
+    return dynamicDowncast<HTMLElement>(retargetReferenceTargetForBindings(control()));
 }
 
 HTMLFormElement* HTMLLabelElement::form() const
@@ -94,6 +103,12 @@ HTMLFormElement* HTMLLabelElement::form() const
             return listedElement->form();
     }
         return nullptr;
+}
+
+HTMLFormElement* HTMLLabelElement::formForBindings() const
+{
+    // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form())).get();
 }
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)
@@ -128,7 +143,7 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
     if (!node)
         return false;
 
-    if (!containsIncludingShadowDOM(node.get()))
+    if (!isShadowIncludingInclusiveAncestorOf(node.get()))
         return false;
 
     for (const auto* it = node.get(); it && it != this; it = it->parentElementInComposedTree()) {
@@ -147,7 +162,7 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
         auto* eventTarget = dynamicDowncast<Node>(event.target());
-        if (!control || (eventTarget && control->containsIncludingShadowDOM(eventTarget))) {
+        if (!control || (eventTarget && control->isShadowIncludingInclusiveAncestorOf(eventTarget))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }
@@ -165,7 +180,7 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
 
         control->dispatchSimulatedClick(&event);
 
-        document().updateLayoutIgnorePendingStylesheets();
+        protectedDocument()->updateLayoutIgnorePendingStylesheets();
         if (control->isMouseFocusable())
             control->focus({ { }, { }, { }, FocusTrigger::Click, { } });
 
@@ -183,8 +198,8 @@ bool HTMLLabelElement::willRespondToMouseClickEventsWithEditability(Editability 
 
 void HTMLLabelElement::focus(const FocusOptions& options)
 {
-    Ref<HTMLLabelElement> protectedThis(*this);
-    auto document = protectedDocument();
+    Ref protectedThis(*this);
+    Ref document = this->document();
     if (document->haveStylesheetsLoaded()) {
         document->updateLayout();
         if (isFocusable()) {

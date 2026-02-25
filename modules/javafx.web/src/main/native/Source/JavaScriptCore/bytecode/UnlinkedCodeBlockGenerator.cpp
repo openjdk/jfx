@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<JSInstructionStream> i
             m_codeBlock->m_rareData->m_constantIdentifierSets = WTFMove(m_constantIdentifierSets);
         }
 
-        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+        if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]]
             m_codeBlock->initializeLoopHintExecutionCounter();
     }
     m_vm.writeBarrier(m_codeBlock.get());
@@ -125,7 +125,7 @@ void UnlinkedCodeBlockGenerator::applyModification(BytecodeRewriter& rewriter, J
         m_opProfileControlFlowBytecodeOffsets[i] = rewriter.adjustAbsoluteOffset(m_opProfileControlFlowBytecodeOffsets[i]);
 
     if (!m_typeProfilerInfoMap.isEmpty()) {
-        HashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> adjustedTypeProfilerInfoMap;
+        UncheckedKeyHashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> adjustedTypeProfilerInfoMap;
         for (auto& entry : m_typeProfilerInfoMap)
             adjustedTypeProfilerInfoMap.set(rewriter.adjustAbsoluteOffset(entry.key), entry.value);
         m_typeProfilerInfoMap.swap(adjustedTypeProfilerInfoMap);

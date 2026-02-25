@@ -31,12 +31,12 @@
 #include "config.h"
 #include "DateComponents.h"
 
-#include "ParsingUtilities.h"
 #include <limits.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -51,7 +51,7 @@ static constexpr int maximumMonthInMaximumYear = 8; // This is September, since 
 static constexpr int maximumDayInMaximumMonth = 13;
 static constexpr int maximumWeekInMaximumYear = 37; // The week of 275760-09-13
 
-static constexpr int daysInMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+static constexpr std::array<int, 12> daysInMonth { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 // 'month' is 0-based.
 static int maxDayOfMonth(int year, int month)
@@ -748,7 +748,7 @@ String DateComponents::toStringForTime(SecondFormat format) const
     default:
         ASSERT_NOT_REACHED();
 #if !ASSERT_ENABLED
-        FALLTHROUGH; // To None.
+        [[fallthrough]]; // To None.
 #endif
     case SecondFormat::None:
         return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute));

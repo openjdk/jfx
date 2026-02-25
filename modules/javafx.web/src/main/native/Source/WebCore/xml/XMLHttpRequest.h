@@ -22,7 +22,7 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
@@ -32,8 +32,6 @@
 #include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
-#include "XMLHttpRequestProgressEventThrottle.h"
-#include <variant>
 #include <wtf/CancellableTask.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -51,13 +49,21 @@ class SecurityOrigin;
 class TextResourceDecoder;
 class ThreadableLoader;
 class URLSearchParams;
+class XMLHttpRequestProgressEventThrottle;
 class XMLHttpRequestUpload;
+enum class ExceptionCode : uint8_t;
 struct OwnedString;
+template<typename> class ExceptionOr;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(XMLHttpRequest, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(XMLHttpRequest);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
     WEBCORE_EXPORT ~XMLHttpRequest();
 
@@ -75,7 +81,7 @@ public:
     enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::XMLHttpRequest; }
     ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
 
-    using SendTypes = std::variant<RefPtr<Document>, RefPtr<Blob>, RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<DOMFormData>, String, RefPtr<URLSearchParams>>;
+    using SendTypes = Variant<RefPtr<Document>, RefPtr<Blob>, RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<DOMFormData>, String, RefPtr<URLSearchParams>>;
 
     const URL& url() const { return m_url; }
     String statusText() const;
@@ -129,14 +135,12 @@ public:
 
     const ResourceResponse& resourceResponse() const { return m_response; }
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     size_t memoryCost() const;
 
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) override;
+
+    void dispatchThrottledProgressEventIfNeeded();
 
 private:
     friend class XMLHttpRequestUpload;
@@ -165,10 +169,10 @@ private:
 
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) override;
     void didReceiveData(const SharedBuffer&) override;
-    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
+    void didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&) override;
+    void didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&) override;
     void notifyIsDone(bool) final;
 
     std::optional<ExceptionOr<void>> prepareToSend();
@@ -217,7 +221,7 @@ private:
 
     unsigned m_timeoutMilliseconds { 0 };
 
-    std::unique_ptr<XMLHttpRequestUpload> m_upload;
+    const std::unique_ptr<XMLHttpRequestUpload> m_upload;
 
     URLKeepingBlobAlive m_url;
     String m_method;
@@ -246,7 +250,7 @@ private:
     // Used for progress event tracking.
     long long m_receivedLength { 0 };
 
-    XMLHttpRequestProgressEventThrottle m_progressEventThrottle;
+    const UniqueRef<XMLHttpRequestProgressEventThrottle> m_progressEventThrottle;
 
     mutable String m_allResponseHeaders;
 

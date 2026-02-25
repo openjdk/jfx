@@ -34,6 +34,8 @@
 #include "B3ValueInlines.h"
 #include "B3ValueKeyInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 {
 
 ValueKey ValueKey::intConstant(Type type, int64_t value)
@@ -67,8 +69,10 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Abs:
     case Floor:
     case Ceil:
+    case FTrunc:
     case Sqrt:
     case Neg:
+    case PurifyNaN:
     case Depend:
     case SExt8:
     case SExt16:
@@ -86,6 +90,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:
@@ -169,6 +175,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -205,5 +213,6 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
 
 } } // namespace JSC::B3
 
-#endif // ENABLE(B3_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(B3_JIT)

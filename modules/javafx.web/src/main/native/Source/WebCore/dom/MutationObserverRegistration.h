@@ -34,6 +34,7 @@
 #include "MutationObserver.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
@@ -56,7 +57,7 @@ namespace WebCore {
 class QualifiedName;
 
 class MutationObserverRegistration : public CanMakeWeakPtr<MutationObserverRegistration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MutationObserverRegistration);
 public:
     MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     ~MutationObserverRegistration();
@@ -70,7 +71,6 @@ public:
     bool isSubtree() const { return m_options.contains(MutationObserverOptionType::Subtree); }
 
     MutationObserver& observer() { return m_observer.get(); }
-    Ref<MutationObserver> protectedObserver() { return m_observer; }
     Node& node() { return m_node; }
     MutationRecordDeliveryOptions deliveryOptions() const { return m_options & MutationObserver::AllDeliveryFlags; }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
@@ -78,7 +78,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
-    Ref<MutationObserver> m_observer;
+    const Ref<MutationObserver> m_observer;
     WeakRef<Node, WeakPtrImplWithEventTargetData> m_node;
     RefPtr<Node> m_nodeKeptAlive;
     HashSet<GCReachableRef<Node>> m_transientRegistrationNodes;

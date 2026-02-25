@@ -30,6 +30,7 @@
 #include "ParseInt.h"
 #include "Uint16WithFraction.h"
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/dragonbox/dragonbox_to_chars.h>
 #include <wtf/dtoa.h>
 #include <wtf/dtoa/double-conversion.h>
@@ -39,6 +40,8 @@ using DoubleToStringConverter = WTF::double_conversion::DoubleToStringConverter;
 
 // To avoid conflict with WTF::StringBuilder.
 typedef WTF::double_conversion::StringBuilder DoubleConversionStringBuilder;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -52,6 +55,8 @@ static JSC_DECLARE_HOST_FUNCTION(numberProtoFuncToPrecision);
 #include "NumberPrototype.lut.h"
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NumericStrings::DoubleCache);
 
 const ClassInfo NumberPrototype::s_info = { "Number"_s, &NumberObject::s_info, &numberPrototypeTable, nullptr, CREATE_METHOD_TABLE(NumberPrototype) };
 
@@ -407,7 +412,7 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToExponential, (JSGlobalObject* globalOb
 
     // Round if the argument is not undefined, always format as exponential.
     NumberToStringBuffer buffer;
-    DoubleConversionStringBuilder builder { &buffer[0], sizeof(buffer) };
+    DoubleConversionStringBuilder builder { std::span<char> { buffer } };
     builder.Reset();
     if (arg.isUndefined())
         WTF::dragonbox::ToExponential(x, &builder);
@@ -415,7 +420,7 @@ JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToExponential, (JSGlobalObject* globalOb
         const DoubleToStringConverter& converter = DoubleToStringConverter::EcmaScriptConverter();
         converter.ToExponential(x, decimalPlaces, &builder);
     }
-    return JSValue::encode(jsString(vm, String::fromLatin1(builder.Finalize())));
+    return JSValue::encode(jsString(vm, String { builder.Finalize() }));
 }
 
 // toFixed converts a number to a string, always formatting as an a decimal fraction.
@@ -507,6 +512,8 @@ JSString* NumericStrings::addJSString(VM& vm, int i)
 
 JSString* NumericStrings::addJSString(VM& vm, double value)
 {
+    if (!m_doubleCache) [[unlikely]]
+        initializeDoubleCache();
     auto& entry = lookup(value);
     if (value != entry.key || entry.value.isNull()) {
         entry.key = value;
@@ -672,4 +679,12 @@ int32_t extractToStringRadixArgument(JSGlobalObject* globalObject, JSValue radix
     return 0;
 }
 
+void NumericStrings::initializeDoubleCache()
+{
+    ASSERT(!m_doubleCache);
+    m_doubleCache = makeUnique<DoubleCache>();
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

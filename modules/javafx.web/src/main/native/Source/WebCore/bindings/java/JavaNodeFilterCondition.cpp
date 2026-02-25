@@ -25,19 +25,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "JavaNodeFilterCondition.h"
+#pragma once
 
-#include "DOMNodeFilter.h"
-#include "DOMNodeInternal.h"
-#include <WebCore/NodeFilter.h>
+#if USE(SKIA) && !OS(ANDROID) && !PLATFORM(WIN)
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/core/SkFontStyle.h>
+#include <skia/core/SkTypeface.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+#include <wtf/HashMap.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-short ObjCNodeFilterCondition::acceptNode(Node* node) const
-{
-    if (!node)
-        return NodeFilter::FILTER_REJECT;
-    return [m_filter.get() acceptNode:kit(node)];
-}
+class FEDropShadow;
+
+class FEDropShadowSkiaApplier final : public FilterEffectConcreteApplier<FEDropShadow> {
+    WTF_MAKE_TZONE_ALLOCATED(FEDropShadowSkiaApplier);
+    using Base = FilterEffectConcreteApplier<FEDropShadow>;
+
+public:
+    using Base::Base;
+
+private:
+    bool apply(const Filter&, std::span<const Ref<FilterImage>>, FilterImage&) const final;
+};
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,8 @@
 #include "NetscapePlugInStreamLoader.h"
 
 #include "DocumentLoader.h"
-#include "FrameLoader.h"
-#include "LocalFrameLoaderClient.h"
+#include "LoaderStrategy.h"
+#include "PlatformStrategies.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
 
@@ -68,6 +68,9 @@ NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader() = default;
 
 void NetscapePlugInStreamLoader::create(LocalFrame& frame, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&& completionHandler)
 {
+    if (request.isNull())
+        return completionHandler(nullptr);
+
     Ref loader = adoptRef(*new NetscapePlugInStreamLoader(frame, client));
     loader->init(WTFMove(request), [loader, completionHandler = WTFMove(completionHandler)] (bool initialized) mutable {
         if (!initialized)
@@ -112,7 +115,7 @@ void NetscapePlugInStreamLoader::willSendRequest(ResourceRequest&& request, cons
     });
 }
 
-void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& response, CompletionHandler<void()>&& policyCompletionHandler)
+void NetscapePlugInStreamLoader::didReceiveResponse(ResourceResponse&& response, CompletionHandler<void()>&& policyCompletionHandler)
 {
     Ref<NetscapePlugInStreamLoader> protectedThis(*this);
     CompletionHandlerCallingScope completionHandlerCaller(WTFMove(policyCompletionHandler));
@@ -124,7 +127,8 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
     if (!m_client)
         return;
 
-    ResourceLoader::didReceiveResponse(response, [this, protectedThis = WTFMove(protectedThis), response, completionHandlerCaller = WTFMove(completionHandlerCaller)]() mutable {
+    ResourceResponse responseForClosure = response;
+    ResourceLoader::didReceiveResponse(WTFMove(response), [this, protectedThis = WTFMove(protectedThis), response = WTFMove(responseForClosure), completionHandlerCaller = WTFMove(completionHandlerCaller)]() mutable {
         // Don't continue if the stream is cancelled
         if (!m_client)
             return;
@@ -137,7 +141,7 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
 
         // Status code can be null when serving from a Web archive.
         if (response.httpStatusCode() && (response.httpStatusCode() < 100 || response.httpStatusCode() >= 400))
-            cancel(checkedFrameLoader()->client().fileDoesNotExistError(response));
+            cancel(platformStrategies()->loaderStrategy()->fileDoesNotExistError(response));
     });
 }
 
@@ -189,7 +193,8 @@ void NetscapePlugInStreamLoader::notifyDone()
     if (!m_isInitialized)
         return;
 
-    protectedDocumentLoader()->removePlugInStreamLoader(*this);
+    if (RefPtr documentLoader = this->documentLoader())
+        documentLoader->removePlugInStreamLoader(*this);
 }
 
 

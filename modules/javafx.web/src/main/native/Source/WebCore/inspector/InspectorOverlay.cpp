@@ -35,10 +35,12 @@
 #include "CSSGridAutoRepeatValue.h"
 #include "CSSGridIntegerRepeatValue.h"
 #include "CSSGridLineNamesValue.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleDeclaration.h"
 #include "DOMCSSNamespace.h"
 #include "DOMTokenList.h"
 #include "ElementInlines.h"
+#include "EventTargetInlines.h"
 #include "FloatLine.h"
 #include "FloatPoint.h"
 #include "FloatRoundedRect.h"
@@ -47,8 +49,7 @@
 #include "FontCascadeDescription.h"
 #include "GraphicsContext.h"
 #include "GridArea.h"
-#include "GridPositionsResolver.h"
-#include "InspectorClient.h"
+#include "InspectorBackendClient.h"
 #include "InspectorController.h"
 #include "InspectorDOMAgent.h"
 #include "IntPoint.h"
@@ -69,12 +70,14 @@
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "Settings.h"
 #include "StyleGridData.h"
+#include "StyleGridTrackSizingDirection.h"
 #include "StyleResolver.h"
-#include "TextDirection.h"
+#include "WritingMode.h"
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -82,6 +85,8 @@
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorOverlay);
 
 static constexpr float rulerSize = 15;
 static constexpr float rulerLabelSize = 13;
@@ -323,7 +328,7 @@ static void drawShapeHighlight(GraphicsContext& context, Node& node, InspectorOv
 
     static constexpr auto shapeHighlightColor = SRGBA<uint8_t> { 96, 82, 127, 204 };
 
-    Shape::DisplayPaths paths;
+    LayoutShape::DisplayPaths paths;
     shapeOutsideInfo->computedShape().buildDisplayPaths(paths);
 
     if (paths.shape.isEmpty()) {
@@ -387,8 +392,8 @@ static void drawShapeHighlight(GraphicsContext& context, Node& node, InspectorOv
     context.fillPath(shapePath);
 }
 
-InspectorOverlay::InspectorOverlay(Page& page, InspectorClient* client)
-    : m_page(page)
+InspectorOverlay::InspectorOverlay(InspectorController& controller, InspectorBackendClient* client)
+    : m_controller(controller)
     , m_client(client)
     , m_paintRectUpdateTimer(*this, &InspectorOverlay::updatePaintRectsTimerFired)
 {
@@ -396,12 +401,27 @@ InspectorOverlay::InspectorOverlay(Page& page, InspectorClient* client)
 
 InspectorOverlay::~InspectorOverlay() = default;
 
+void InspectorOverlay::ref() const
+{
+    m_controller->ref();
+}
+
+void InspectorOverlay::deref() const
+{
+    m_controller->deref();
+}
+
+Page& InspectorOverlay::page() const
+{
+    return m_controller->inspectedPage();
+}
+
 void InspectorOverlay::paint(GraphicsContext& context)
 {
     if (!shouldShowOverlay())
         return;
 
-    auto viewportSize = m_page.mainFrame().virtualView()->sizeForVisibleContent();
+    auto viewportSize = page().mainFrame().virtualView()->sizeForVisibleContent();
 
     context.clearRect({ FloatPoint::zero(), viewportSize });
 
@@ -599,7 +619,7 @@ void InspectorOverlay::highlightNode(Node* node, const InspectorOverlay::Highlig
 void InspectorOverlay::highlightQuad(std::unique_ptr<FloatQuad> quad, const InspectorOverlay::Highlight::Config& highlightConfig)
 {
     if (highlightConfig.usePageCoordinates)
-        *quad -= toIntSize(m_page.mainFrame().virtualView()->scrollPosition());
+        *quad -= toIntSize(page().mainFrame().virtualView()->scrollPosition());
 
     m_quadHighlightConfig = highlightConfig;
     m_highlightQuad = WTFMove(quad);
@@ -645,7 +665,7 @@ void InspectorOverlay::update()
         return;
     }
 
-    if (!m_page.mainFrame().virtualView())
+    if (!page().mainFrame().virtualView())
         return;
 
     m_client->highlight();
@@ -669,7 +689,7 @@ void InspectorOverlay::showPaintRect(const FloatRect& rect)
     if (!m_showPaintRects)
         return;
 
-    auto rootRect = m_page.mainFrame().virtualView()->contentsToRootView(enclosingIntRect(rect));
+    auto rootRect = page().mainFrame().virtualView()->contentsToRootView(enclosingIntRect(rect));
 
     const auto removeDelay = 250_ms;
 
@@ -841,19 +861,19 @@ void InspectorOverlay::drawPaintRects(GraphicsContext& context, const Deque<Time
 
 void InspectorOverlay::drawBounds(GraphicsContext& context, const InspectorOverlay::Highlight::Bounds& bounds)
 {
-    Ref mainFrame = m_page.mainFrame();
+    Ref mainFrame = page().mainFrame();
     RefPtr pageView = mainFrame->virtualView();
     FloatSize viewportSize = pageView->sizeForVisibleContent();
-    FloatSize contentInset(0, pageView->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset));
+    auto obscuredContentInsets = pageView->obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
 
     Path path;
 
-    if (bounds.y() > contentInset.height()) {
+    if (bounds.y() > obscuredContentInsets.top()) {
         path.moveTo({ bounds.x(), bounds.y() });
-        path.addLineTo({ bounds.x(), contentInset.height() });
+        path.addLineTo({ bounds.x(), obscuredContentInsets.top() });
 
         path.moveTo({ bounds.maxX(), bounds.y() });
-        path.addLineTo({ bounds.maxX(), contentInset.height() });
+        path.addLineTo({ bounds.maxX(), obscuredContentInsets.top() });
     }
 
     if (bounds.maxY() < viewportSize.height()) {
@@ -864,12 +884,12 @@ void InspectorOverlay::drawBounds(GraphicsContext& context, const InspectorOverl
         path.addLineTo({ bounds.maxX(), bounds.maxY() });
     }
 
-    if (bounds.x() > contentInset.width()) {
+    if (bounds.x() > obscuredContentInsets.left()) {
         path.moveTo({ bounds.x(), bounds.y() });
-        path.addLineTo({ contentInset.width(), bounds.y() });
+        path.addLineTo({ obscuredContentInsets.left(), bounds.y() });
 
         path.moveTo({ bounds.x(), bounds.maxY() });
-        path.addLineTo({ contentInset.width(), bounds.maxY() });
+        path.addLineTo({ obscuredContentInsets.left(), bounds.maxY() });
     }
 
     if (bounds.maxX() < viewportSize.width()) {
@@ -897,7 +917,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     constexpr auto darkRulerColor = Color::black.colorWithAlphaByte(128);
 
     IntPoint scrollOffset;
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    RefPtr localMainFrame = page().localMainFrame();
     if (!localMainFrame)
         return;
 
@@ -906,8 +926,8 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         scrollOffset = pageView->visibleContentRect().location();
 
     FloatSize viewportSize = pageView->sizeForVisibleContent();
-    FloatSize contentInset(0, pageView->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset));
-    float pageScaleFactor = m_page.pageScaleFactor();
+    auto obscuredContentInsets = pageView->obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
+    float pageScaleFactor = page().pageScaleFactor();
     float pageZoomFactor = localMainFrame->pageZoomFactor();
 
     float pageFactor = pageZoomFactor * pageScaleFactor;
@@ -938,17 +958,17 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
 
     // Determine which side (top/bottom and left/right) to draw the rulers.
     {
-        FloatRect topEdge(contentInset.width(), contentInset.height(), zoom(width) - contentInset.width(), rulerSize);
-        FloatRect bottomEdge(contentInset.width(), zoom(height) - rulerSize, zoom(width) - contentInset.width(), rulerSize);
+        FloatRect topEdge(obscuredContentInsets.left(), obscuredContentInsets.top(), zoom(width) - obscuredContentInsets.left(), rulerSize);
+        FloatRect bottomEdge(obscuredContentInsets.left(), zoom(height) - rulerSize, zoom(width) - obscuredContentInsets.left(), rulerSize);
         drawTopEdge = !rulerExclusion.bounds.intersects(topEdge) || rulerExclusion.bounds.intersects(bottomEdge);
 
-        FloatRect rightEdge(zoom(width) - rulerSize, contentInset.height(), rulerSize, zoom(height) - contentInset.height());
-        FloatRect leftEdge(contentInset.width(), contentInset.height(), rulerSize, zoom(height) - contentInset.height());
+        FloatRect rightEdge(zoom(width) - rulerSize, obscuredContentInsets.top(), rulerSize, zoom(height) - obscuredContentInsets.top());
+        FloatRect leftEdge(obscuredContentInsets.left(), obscuredContentInsets.top(), rulerSize, zoom(height) - obscuredContentInsets.top());
         drawLeftEdge = !rulerExclusion.bounds.intersects(leftEdge) || rulerExclusion.bounds.intersects(rightEdge);
     }
 
-    float cornerX = drawLeftEdge ? contentInset.width() : zoom(width) - rulerSize;
-    float cornerY = drawTopEdge ? contentInset.height() : zoom(height) - rulerSize;
+    float cornerX = drawLeftEdge ? obscuredContentInsets.left() : zoom(width) - rulerSize;
+    float cornerY = drawTopEdge ? obscuredContentInsets.top() : zoom(height) - rulerSize;
 
     // Draw backgrounds.
     {
@@ -961,18 +981,18 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         if (drawLeftEdge)
             context.fillRect({ cornerX + rulerSize, cornerY, zoom(width) - cornerX - rulerSize, rulerSize });
         else
-            context.fillRect({ contentInset.width(), cornerY, cornerX - contentInset.width(), rulerSize });
+            context.fillRect({ obscuredContentInsets.left(), cornerY, cornerX - obscuredContentInsets.left(), rulerSize });
 
         if (drawTopEdge)
             context.fillRect({ cornerX, cornerY + rulerSize, rulerSize, zoom(height) - cornerY - rulerSize });
         else
-            context.fillRect({ cornerX, contentInset.height(), rulerSize, cornerY - contentInset.height() });
+            context.fillRect({ cornerX, obscuredContentInsets.top(), rulerSize, cornerY - obscuredContentInsets.top() });
     }
 
     // Draw lines.
     {
         FontCascadeDescription fontDescription;
-        fontDescription.setOneFamily(AtomString { m_page.settings().sansSerifFontFamily() });
+        fontDescription.setOneFamily(AtomString { page().settings().sansSerifFontFamily() });
         fontDescription.setComputedSize(10);
 
         FontCascade font(WTFMove(fontDescription));
@@ -987,7 +1007,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         {
             GraphicsContextStateSaver horizontalRulerStateSaver(context);
 
-            context.translate(contentInset.width() - scrollX + 0.5f, cornerY - scrollY);
+            context.translate(obscuredContentInsets.left() - scrollX + 0.5f, cornerY - scrollY);
 
             for (float x = multipleBelow(minX, rulerSubStepIncrement); x < maxX; x += rulerSubStepIncrement) {
                 if (!x && !scrollX)
@@ -1024,7 +1044,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         {
             GraphicsContextStateSaver veritcalRulerStateSaver(context);
 
-            context.translate(cornerX - scrollX, contentInset.height() - scrollY + 0.5f);
+            context.translate(cornerX - scrollX, obscuredContentInsets.top() - scrollY + 0.5f);
 
             for (float y = multipleBelow(minY, rulerSubStepIncrement); y < maxY; y += rulerSubStepIncrement) {
                 if (!y && !scrollY)
@@ -1062,7 +1082,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     // Draw viewport size.
     {
         FontCascadeDescription fontDescription;
-        fontDescription.setOneFamily(AtomString { m_page.settings().sansSerifFontFamily() });
+        fontDescription.setOneFamily(AtomString { page().settings().sansSerifFontFamily() });
         fontDescription.setComputedSize(12);
 
         FontCascade font(WTFMove(fontDescription));
@@ -1092,14 +1112,14 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         FloatPoint translate(translateX, translateY);
         if (rulerExclusion.titlePath.contains(viewportTextRectCenter + translate)) {
             // Try the opposite horizontal side.
-            float oppositeTranslateX = drawLeftEdge ? zoom(width) + rightTranslateX : contentInset.width() + leftTranslateX;
+            float oppositeTranslateX = drawLeftEdge ? zoom(width) + rightTranslateX : obscuredContentInsets.left() + leftTranslateX;
             translate.setX(oppositeTranslateX);
 
             if (rulerExclusion.titlePath.contains(viewportTextRectCenter + translate)) {
                 translate.setX(translateX);
 
                 // Try the opposite vertical side.
-                float oppositeTranslateY = drawTopEdge ? zoom(height) + bottomTranslateY : contentInset.height() + topTranslateY;
+                float oppositeTranslateY = drawTopEdge ? zoom(height) + bottomTranslateY : obscuredContentInsets.top() + topTranslateY;
                 translate.setY(oppositeTranslateY);
 
                 if (rulerExclusion.titlePath.contains(viewportTextRectCenter + translate)) {
@@ -1204,7 +1224,7 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
 
     String elementRole;
     if (AXObjectCache* axObjectCache = node.document().axObjectCache()) {
-        if (auto* axObject = axObjectCache->getOrCreate(node); axObject && !axObject->accessibilityIsIgnored())
+        if (auto* axObject = axObjectCache->getOrCreate(node); axObject && !axObject->isIgnored())
             elementRole = axObject->computedRoleString();
     }
 
@@ -1240,12 +1260,14 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
         }
     }
 
-    Ref mainFrame = m_page.mainFrame();
+    Ref mainFrame = page().mainFrame();
     RefPtr pageView = mainFrame->virtualView();
     FloatSize viewportSize = pageView->sizeForVisibleContent();
-    FloatSize contentInset(0, pageView->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset));
-    if (m_showRulers || m_showRulersForNodeHighlight)
-        contentInset.expand(rulerSize, rulerSize);
+    auto obscuredContentInsets = pageView->obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset);
+    if (m_showRulers || m_showRulersForNodeHighlight) {
+        obscuredContentInsets.setTop(obscuredContentInsets.top() + rulerSize);
+        obscuredContentInsets.setLeft(obscuredContentInsets.left() + rulerSize);
+    }
 
     auto expectedLabelSize = InspectorOverlayLabel::expectedSize(labelContents, InspectorOverlayLabel::Arrow::Direction::Up);
     auto boundsCenterX = bounds.center().x();
@@ -1253,11 +1275,11 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
     float labelX;
     InspectorOverlayLabel::Arrow::Alignment arrowAlignment;
     if (boundsCenterX + (expectedLabelSize.width() / 2) < viewportSize.width()
-        && boundsCenterX - (expectedLabelSize.width() / 2) > contentInset.width()) {
+        && boundsCenterX - (expectedLabelSize.width() / 2) > obscuredContentInsets.left()) {
         labelX = bounds.x() + (bounds.width() / 2);
         arrowAlignment = InspectorOverlayLabel::Arrow::Alignment::Middle;
-    } else if (bounds.x() < contentInset.width()) {
-        labelX = fmax(contentInset.width(), boundsCenterX);
+    } else if (bounds.x() < obscuredContentInsets.left()) {
+        labelX = fmax(obscuredContentInsets.left(), boundsCenterX);
         arrowAlignment = InspectorOverlayLabel::Arrow::Alignment::Leading;
     } else if (bounds.maxX() > viewportSize.width()) {
         labelX = fmin(viewportSize.width(), boundsCenterX);
@@ -1275,17 +1297,17 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
     if (anchorTop > viewportSize.height()) {
         labelY = viewportSize.height();
         arrowDirection = InspectorOverlayLabel::Arrow::Direction::Down;
-    } else if (anchorBottom < contentInset.height()) {
-        labelY = contentInset.height();
+    } else if (anchorBottom < obscuredContentInsets.top()) {
+        labelY = obscuredContentInsets.top();
         arrowDirection = InspectorOverlayLabel::Arrow::Direction::Up;
-    } else if (anchorTop - expectedLabelSize.height() > contentInset.height()) {
+    } else if (anchorTop - expectedLabelSize.height() > obscuredContentInsets.top()) {
         labelY = anchorTop;
         arrowDirection = InspectorOverlayLabel::Arrow::Direction::Down;
     } else if (anchorBottom + expectedLabelSize.height() < viewportSize.height()) {
         labelY = anchorBottom;
         arrowDirection = InspectorOverlayLabel::Arrow::Direction::Up;
     } else {
-        labelY = contentInset.height() + expectedLabelSize.height();
+        labelY = obscuredContentInsets.top() + expectedLabelSize.height();
         arrowDirection = InspectorOverlayLabel::Arrow::Direction::Down;
     }
 
@@ -1388,13 +1410,13 @@ void InspectorOverlay::drawGridOverlay(GraphicsContext& context, const Inspector
         label.draw(context);
 }
 
-static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirection direction, unsigned expectedTrackCount)
+static Vector<String> authoredGridTrackSizes(Node* node, Style::GridTrackSizingDirection direction, unsigned expectedTrackCount)
 {
     auto* element = dynamicDowncast<StyledElement>(node);
     if (!element)
         return { };
 
-    auto directionCSSPropertyID = direction == GridTrackSizingDirection::ForColumns ? CSSPropertyID::CSSPropertyGridTemplateColumns : CSSPropertyID::CSSPropertyGridTemplateRows;
+    auto directionCSSPropertyID = direction == Style::GridTrackSizingDirection::Columns ? CSSPropertyID::CSSPropertyGridTemplateColumns : CSSPropertyID::CSSPropertyGridTemplateRows;
     RefPtr<CSSValue> cssValue;
     if (auto* inlineStyle = element->inlineStyle())
         cssValue = inlineStyle->getPropertyCSSValue(directionCSSPropertyID);
@@ -1420,7 +1442,7 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
 
     auto handleValueIgnoringLineNames = [&](const CSSValue& currentValue) {
         if (!is<CSSGridLineNamesValue>(currentValue))
-            trackSizes.append(currentValue.cssText());
+            trackSizes.append(currentValue.cssText(CSS::defaultSerializationContext()));
     };
 
     for (auto& currentValue : *cssValueList) {
@@ -1437,7 +1459,7 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
         }
 
         if (auto* cssGridIntegerRepeatValue = dynamicDowncast<CSSGridIntegerRepeatValue>(currentValue)) {
-            size_t repetitions = cssGridIntegerRepeatValue->repetitions();
+            size_t repetitions = cssGridIntegerRepeatValue->repetitions().resolveAsIntegerDeprecated();
             for (size_t i = 0; i < repetitions; ++i) {
                 for (auto& integerRepeatValue : *cssGridIntegerRepeatValue)
                     handleValueIgnoringLineNames(integerRepeatValue);
@@ -1451,23 +1473,24 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
     return trackSizes;
 }
 
-static OrderedNamedGridLinesMap gridLineNames(const RenderStyle* renderStyle, GridTrackSizingDirection direction, unsigned expectedLineCount)
+static Style::GridOrderedNamedLinesMap gridLineNames(const RenderStyle* renderStyle, Style::GridTrackSizingDirection direction, unsigned expectedLineCount)
 {
     if (!renderStyle)
         return { };
 
-    OrderedNamedGridLinesMap combinedGridLineNames;
+    Style::GridOrderedNamedLinesMap combinedGridLineNames;
     auto appendLineNames = [&](unsigned index, const Vector<String>& newNames) {
         if (auto result = combinedGridLineNames.map.add(index, newNames); !result.isNewEntry)
             result.iterator->value.appendVector(newNames);
     };
 
-    auto orderedGridLineNames = direction == GridTrackSizingDirection::ForColumns ? renderStyle->orderedNamedGridColumnLines() : renderStyle->orderedNamedGridRowLines();
-    for (auto& [i, names] : orderedGridLineNames.map)
+    auto& tracks = renderStyle->gridTemplateList(direction);
+
+    for (auto& [i, names] : tracks.orderedNamedLines.map)
         appendLineNames(i, names);
 
-    auto& autoRepeatOrderedGridLineNames = (direction == GridTrackSizingDirection::ForColumns ? renderStyle->autoRepeatOrderedNamedGridColumnLines() : renderStyle->autoRepeatOrderedNamedGridRowLines()).map;
-    auto autoRepeatInsertionPoint = direction == GridTrackSizingDirection::ForColumns ? renderStyle->gridAutoRepeatColumnsInsertionPoint() : renderStyle->gridAutoRepeatRowsInsertionPoint();
+    auto& autoRepeatOrderedGridLineNames = tracks.autoRepeatOrderedNamedLines.map;
+    auto autoRepeatInsertionPoint = tracks.autoRepeatInsertionPoint;
     unsigned autoRepeatIndex = 0;
     while (autoRepeatOrderedGridLineNames.size() && autoRepeatIndex < expectedLineCount - autoRepeatInsertionPoint) {
         auto names = autoRepeatOrderedGridLineNames.get(autoRepeatIndex % autoRepeatOrderedGridLineNames.size());
@@ -1476,8 +1499,7 @@ static OrderedNamedGridLinesMap gridLineNames(const RenderStyle* renderStyle, Gr
         ++autoRepeatIndex;
     }
 
-    auto implicitGridLineNames = direction == GridTrackSizingDirection::ForColumns ? renderStyle->implicitNamedGridColumnLines() : renderStyle->implicitNamedGridRowLines();
-    for (auto& [name, indexes] : implicitGridLineNames.map) {
+    for (auto& [name, indexes] : renderStyle->gridTemplateAreas().implicitNamedGridLines(direction).map) {
         for (auto i : indexes)
             appendLineNames(i, {name});
     }
@@ -1506,7 +1528,7 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
 
     constexpr auto translucentLabelBackgroundColor = Color::white.colorWithAlphaByte(230);
 
-    RefPtr pageView = m_page.mainFrame().virtualView();
+    RefPtr pageView = page().mainFrame().virtualView();
     if (!pageView)
         return { };
     FloatRect viewportBounds = { { 0, 0 }, pageView->sizeForVisibleContent() };
@@ -1551,9 +1573,9 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
     if (!computedStyle)
         return { };
 
-    auto isHorizontalWritingMode = computedStyle->isHorizontalWritingMode();
-    auto isDirectionFlipped = !computedStyle->isLeftToRightDirection();
-    auto isWritingModeFlipped = computedStyle->isFlippedBlocksWritingMode();
+    auto isHorizontalWritingMode = computedStyle->writingMode().isHorizontal();
+    auto isDirectionFlipped = computedStyle->writingMode().isBidiRTL();
+    auto isWritingModeFlipped = computedStyle->writingMode().isBlockFlipped();
     auto contentBox = renderGrid.absoluteBoundingBoxRectIgnoringTransforms();
 
     auto columnLineAt = [&](float x) -> FloatLine {
@@ -1587,8 +1609,8 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
         };
     };
 
-    auto correctedArrowDirection = [&](InspectorOverlayLabel::Arrow::Direction direction, GridTrackSizingDirection sizingDirection) -> InspectorOverlayLabel::Arrow::Direction {
-        if ((sizingDirection == GridTrackSizingDirection::ForColumns && isWritingModeFlipped) || (sizingDirection == GridTrackSizingDirection::ForRows && isDirectionFlipped)) {
+    auto correctedArrowDirection = [&](InspectorOverlayLabel::Arrow::Direction direction, Style::GridTrackSizingDirection sizingDirection) -> InspectorOverlayLabel::Arrow::Direction {
+        if ((sizingDirection == Style::GridTrackSizingDirection::Columns && isWritingModeFlipped) || (sizingDirection == Style::GridTrackSizingDirection::Rows && isDirectionFlipped)) {
             switch (direction) {
             case InspectorOverlayLabel::Arrow::Direction::Down:
                 direction = InspectorOverlayLabel::Arrow::Direction::Up;
@@ -1629,8 +1651,8 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
         return direction;
     };
 
-    auto correctedArrowAlignment = [&](InspectorOverlayLabel::Arrow::Alignment alignment, GridTrackSizingDirection sizingDirection) -> InspectorOverlayLabel::Arrow::Alignment {
-        if ((sizingDirection == GridTrackSizingDirection::ForRows && isWritingModeFlipped) || (sizingDirection == GridTrackSizingDirection::ForColumns && isDirectionFlipped)) {
+    auto correctedArrowAlignment = [&](InspectorOverlayLabel::Arrow::Alignment alignment, Style::GridTrackSizingDirection sizingDirection) -> InspectorOverlayLabel::Arrow::Alignment {
+        if ((sizingDirection == Style::GridTrackSizingDirection::Rows && isWritingModeFlipped) || (sizingDirection == Style::GridTrackSizingDirection::Columns && isDirectionFlipped)) {
             if (alignment == InspectorOverlayLabel::Arrow::Alignment::Leading)
                 return InspectorOverlayLabel::Arrow::Alignment::Trailing;
             if (alignment == InspectorOverlayLabel::Arrow::Alignment::Trailing)
@@ -1644,9 +1666,9 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
     gridHighlightOverlay.color = gridOverlay.config.gridColor;
 
     // Draw columns and rows.
-    auto columnWidths = renderGrid.trackSizesForComputedStyle(GridTrackSizingDirection::ForColumns);
-    auto columnLineNames = gridLineNames(node->renderStyle(), GridTrackSizingDirection::ForColumns, columnPositions.size());
-    auto authoredTrackColumnSizes = authoredGridTrackSizes(node, GridTrackSizingDirection::ForColumns, columnWidths.size());
+    auto columnWidths = renderGrid.trackSizesForComputedStyle(Style::GridTrackSizingDirection::Columns);
+    auto columnLineNames = gridLineNames(node->renderStyle(), Style::GridTrackSizingDirection::Columns, columnPositions.size());
+    auto authoredTrackColumnSizes = authoredGridTrackSizes(node, Style::GridTrackSizingDirection::Columns, columnWidths.size());
     FloatLine previousColumnEndLine;
     for (unsigned i = 0; i < columnPositions.size(); ++i) {
         auto columnStartLine = columnLineAt(columnPositions[i]);
@@ -1685,7 +1707,7 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
             if (gridOverlay.config.showTrackSizes) {
                 auto authoredTrackSize = i < authoredTrackColumnSizes.size() ? authoredTrackColumnSizes[i] : "auto"_s;
                 FloatLine trackTopLine = { columnStartLine.start(), columnEndLine.start() };
-                gridHighlightOverlay.labels.append({ authoredTrackSize, trackTopLine.pointAtRelativeDistance(0.5), translucentLabelBackgroundColor, { correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Up, GridTrackSizingDirection::ForColumns), InspectorOverlayLabel::Arrow::Alignment::Middle } });
+                gridHighlightOverlay.labels.append({ authoredTrackSize, trackTopLine.pointAtRelativeDistance(0.5), translucentLabelBackgroundColor, { correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Up, Style::GridTrackSizingDirection::Columns), InspectorOverlayLabel::Arrow::Alignment::Middle } });
             }
         } else
             previousColumnEndLine = columnStartLine;
@@ -1706,21 +1728,21 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
 
         if (!lineLabel.isEmpty()) {
             auto text = lineLabel.toString();
-            auto arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Down, GridTrackSizingDirection::ForColumns);
-            auto arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Middle, GridTrackSizingDirection::ForColumns);
+            auto arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Down, Style::GridTrackSizingDirection::Columns);
+            auto arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Middle, Style::GridTrackSizingDirection::Columns);
 
             if (!i)
-                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Leading, GridTrackSizingDirection::ForColumns);
+                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Leading, Style::GridTrackSizingDirection::Columns);
             else if (i == columnPositions.size() - 1)
-                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Trailing, GridTrackSizingDirection::ForColumns);
+                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Trailing, Style::GridTrackSizingDirection::Columns);
 
             auto expectedLabelSize = InspectorOverlayLabel::expectedSize(text, arrowDirection);
             auto gapLabelPosition = gapLabelLine.start();
 
             // The area under the window's toolbar is drawable, but not meaningfully visible, so we must account for that space.
-            auto topEdgeInset = pageView->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset);
+            auto topEdgeInset = pageView->obscuredContentInsets(ScrollView::InsetType::WebCoreOrPlatformInset).top();
             if (gapLabelLine.start().y() - expectedLabelSize.height() - topEdgeInset + scrollPosition.y() - viewportBounds.y() < 0) {
-                arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Up, GridTrackSizingDirection::ForColumns);
+                arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Up, Style::GridTrackSizingDirection::Columns);
 
                 // Special case for the first column to make sure the label will be out of the way of the first row's label.
                 // The label heights will be the same, as they use the same font, so moving down by this label's size will
@@ -1733,9 +1755,9 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
         }
     }
 
-    auto rowHeights = renderGrid.trackSizesForComputedStyle(GridTrackSizingDirection::ForRows);
-    auto rowLineNames = gridLineNames(node->renderStyle(), GridTrackSizingDirection::ForRows, rowPositions.size());
-    auto authoredTrackRowSizes = authoredGridTrackSizes(node, GridTrackSizingDirection::ForRows, rowHeights.size());
+    auto rowHeights = renderGrid.trackSizesForComputedStyle(Style::GridTrackSizingDirection::Rows);
+    auto rowLineNames = gridLineNames(node->renderStyle(), Style::GridTrackSizingDirection::Rows, rowPositions.size());
+    auto authoredTrackRowSizes = authoredGridTrackSizes(node, Style::GridTrackSizingDirection::Rows, rowHeights.size());
     FloatLine previousRowEndLine;
     for (unsigned i = 0; i < rowPositions.size(); ++i) {
         auto rowStartLine = rowLineAt(rowPositions[i]);
@@ -1773,7 +1795,7 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
             if (gridOverlay.config.showTrackSizes) {
                 auto authoredTrackSize = i < authoredTrackRowSizes.size() ? authoredTrackRowSizes[i] : "auto"_s;
                 FloatLine trackLeftLine = { rowStartLine.start(), rowEndLine.start() };
-                gridHighlightOverlay.labels.append({ authoredTrackSize, trackLeftLine.pointAtRelativeDistance(0.5), translucentLabelBackgroundColor, { correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Left, GridTrackSizingDirection::ForRows), InspectorOverlayLabel::Arrow::Alignment::Middle } });
+                gridHighlightOverlay.labels.append({ authoredTrackSize, trackLeftLine.pointAtRelativeDistance(0.5), translucentLabelBackgroundColor, { correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Left, Style::GridTrackSizingDirection::Rows), InspectorOverlayLabel::Arrow::Alignment::Middle } });
             }
         } else
             previousRowEndLine = rowStartLine;
@@ -1794,27 +1816,24 @@ std::optional<InspectorOverlay::Highlight::GridHighlightOverlay> InspectorOverla
 
         if (!lineLabel.isEmpty()) {
             auto text = lineLabel.toString();
-            auto arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Right, GridTrackSizingDirection::ForRows);
-            auto arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Middle, GridTrackSizingDirection::ForRows);
+            auto arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Right, Style::GridTrackSizingDirection::Rows);
+            auto arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Middle, Style::GridTrackSizingDirection::Rows);
 
             if (!i)
-                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Leading, GridTrackSizingDirection::ForRows);
+                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Leading, Style::GridTrackSizingDirection::Rows);
             else if (i == rowPositions.size() - 1)
-                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Trailing, GridTrackSizingDirection::ForRows);
+                arrowAlignment = correctedArrowAlignment(InspectorOverlayLabel::Arrow::Alignment::Trailing, Style::GridTrackSizingDirection::Rows);
 
             auto expectedLabelSize = InspectorOverlayLabel::expectedSize(text, arrowDirection);
             if (gapLabelPosition.x() - expectedLabelSize.width() + scrollPosition.x() - viewportBounds.x() < 0)
-                arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Left, GridTrackSizingDirection::ForRows);
+                arrowDirection = correctedArrowDirection(InspectorOverlayLabel::Arrow::Direction::Left, Style::GridTrackSizingDirection::Rows);
 
             gridHighlightOverlay.labels.append({ text, gapLabelPosition, translucentLabelBackgroundColor, { arrowDirection, arrowAlignment } });
         }
     }
 
     if (gridOverlay.config.showAreaNames && !renderGrid.isMasonry()) {
-        for (auto& gridArea : node->renderStyle()->namedGridArea().map) {
-            auto& name = gridArea.key;
-            auto& area = gridArea.value;
-
+        for (auto& [name, area] : node->renderStyle()->gridTemplateAreas().map.map) {
             // Named grid areas will always be rectangular per the CSS Grid specification.
             auto columnStartLine = columnLineAt(columnPositions[area.columns.startLine()]);
             auto columnEndLine = columnLineAt(columnPositions[area.columns.endLine() - 1] + columnWidths[area.columns.endLine() - 1]);
@@ -1899,7 +1918,7 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
 
     auto& renderFlex = *downcast<RenderFlexibleBox>(renderer);
 
-    auto itemsAtStartOfLine = m_page.inspectorController().ensureDOMAgent().flexibleBoxRendererCachedItemsAtStartOfLine(renderFlex);
+    auto itemsAtStartOfLine = m_controller->ensureDOMAgent().flexibleBoxRendererCachedItemsAtStartOfLine(renderFlex);
 
     auto* containingFrame = node->document().frame();
     if (!containingFrame)
@@ -1911,12 +1930,12 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
         return { };
 
     auto wasRowDirection = !computedStyle->isColumnFlexDirection();
-    auto isFlippedBlocksWritingMode = computedStyle->isFlippedBlocksWritingMode();
-    auto isRightToLeftDirection = computedStyle->direction() == TextDirection::RTL;
+    auto isBlockFlipped = computedStyle->writingMode().isBlockFlipped();
+    auto isRightToLeftDirection = computedStyle->writingMode().isBidiRTL();
 
-    auto isRowDirection = wasRowDirection ^ !computedStyle->isHorizontalWritingMode();
-    auto isMainAxisDirectionReversed = computedStyle->isReverseFlexDirection() ^ (wasRowDirection ? isRightToLeftDirection : isFlippedBlocksWritingMode);
-    auto isCrossAxisDirectionReversed = (computedStyle->flexWrap() == FlexWrap::Reverse) ^ (wasRowDirection ? isFlippedBlocksWritingMode : isRightToLeftDirection);
+    auto isRowDirection = wasRowDirection ^ !computedStyle->writingMode().isHorizontal();
+    auto isMainAxisDirectionReversed = computedStyle->isReverseFlexDirection() ^ (wasRowDirection ? isRightToLeftDirection : isBlockFlipped);
+    auto isCrossAxisDirectionReversed = (computedStyle->flexWrap() == FlexWrap::Reverse) ^ (wasRowDirection ? isBlockFlipped : isBlockFlipped);
 
     auto localQuadToRootQuad = [&](const FloatQuad& quad) {
         return FloatQuad(
@@ -2002,7 +2021,7 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
     float previousLineCrossAxisTrailingEdge = correctedCrossAxisLeadingEdge(containerRect);
 
     Vector<RenderBox*> renderChildrenInFlexOrder;
-    Vector<RenderObject*> renderChildrenInDOMOrder;
+    Vector<RenderBox*> renderChildrenInDOMOrder;
     bool hasCustomOrder = false;
 
     auto childOrderIterator = renderFlex.orderIterator();
@@ -2014,7 +2033,7 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
 
     if (flexOverlay.config.showOrderNumbers) {
         for (auto* child = node->firstChild(); child; child = child->nextSibling()) {
-            if (auto* renderer = child->renderer()) {
+            if (auto* renderer = dynamicDowncast<RenderBox>(child->renderer())) {
                 if (!renderChildrenInFlexOrder.contains(renderer))
                     continue;
 

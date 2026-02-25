@@ -96,6 +96,7 @@ PAS_API void pas_utility_heap_config_dump_shared_page_directory_arg(
                 .heap_config_ptr = &pas_utility_heap_config, \
                 .page_config_ptr = &pas_utility_heap_config.small_segregated_config.base, \
                 .page_config_kind = pas_page_config_kind_segregated, \
+                .page_config_size_category = pas_page_config_size_category_small, \
                 .min_align_shift = PAS_INTERNAL_MIN_ALIGN_SHIFT, \
                 .page_size = PAS_SMALL_PAGE_DEFAULT_SIZE, \
                 .granule_size = PAS_SMALL_PAGE_DEFAULT_SIZE, \
@@ -110,6 +111,7 @@ PAS_API void pas_utility_heap_config_dump_shared_page_directory_arg(
             .kind = pas_segregated_page_config_kind_pas_utility_small, \
             .wasteage_handicap = 1., \
             .sharing_shift = PAS_SMALL_SHARING_SHIFT, \
+            .partial_view_padding = 0, \
             .num_alloc_bits = PAS_UTILITY_NUM_ALLOC_BITS, \
             .shared_payload_offset = 0, \
             .exclusive_payload_offset = PAS_UTILITY_HEAP_PAYLOAD_OFFSET, \

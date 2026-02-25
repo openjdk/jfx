@@ -30,7 +30,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Identified.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -45,16 +45,17 @@ class ServerOpenDBRequest;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseTransaction;
 
-class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<IDBDatabaseConnectionIdentifier>, public CanMakeWeakPtr<UniqueIDBDatabaseConnection> {
+class UniqueIDBDatabaseConnection : public RefCountedAndCanMakeWeakPtr<UniqueIDBDatabaseConnection>, public Identified<IDBDatabaseConnectionIdentifier> {
 public:
     static Ref<UniqueIDBDatabaseConnection> create(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
-    ~UniqueIDBDatabaseConnection();
+    WEBCORE_EXPORT ~UniqueIDBDatabaseConnection();
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
     UniqueIDBDatabase* database() { return m_database.get(); }
     UniqueIDBDatabaseManager* manager();
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
+    Ref<IDBConnectionToClient> protectedConnectionToClient();
 
     WEBCORE_EXPORT void connectionPendingCloseFromClient();
     WEBCORE_EXPORT void connectionClosedFromClient();
@@ -90,7 +91,7 @@ private:
 
     WeakPtr<UniqueIDBDatabase> m_database;
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
-    Ref<IDBConnectionToClient> m_connectionToClient;
+    const Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 
     bool m_closePending { false };

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -29,7 +30,6 @@
 #pragma once
 
 #include "AbortSignal.h"
-#include "ExceptionOr.h"
 #include "FetchBodyOwner.h"
 #include "FetchIdentifier.h"
 #include "FetchOptions.h"
@@ -44,11 +44,12 @@ class Blob;
 class ScriptExecutionContext;
 class URLSearchParams;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class FetchRequest final : public FetchBodyOwner {
 public:
     using Init = FetchRequestInit;
-    using Info = std::variant<RefPtr<FetchRequest>, String>;
+    using Info = Variant<RefPtr<FetchRequest>, String>;
 
     using Cache = FetchOptions::Cache;
     using Credentials = FetchOptions::Credentials;
@@ -84,10 +85,12 @@ public:
     const URL& url() const { return m_request.url(); }
 
     ResourceRequest resourceRequest() const;
-    FetchIdentifier navigationPreloadIdentifier() const { return m_navigationPreloadIdentifier; }
-    void setNavigationPreloadIdentifier(FetchIdentifier identifier) { m_navigationPreloadIdentifier = identifier; }
+    std::optional<FetchIdentifier> navigationPreloadIdentifier() const { return m_navigationPreloadIdentifier.asOptional(); }
+    void setNavigationPreloadIdentifier(std::optional<FetchIdentifier> identifier) { m_navigationPreloadIdentifier = identifier; }
 
-    RequestPriority fetchPriorityHint() const { return m_fetchPriorityHint; }
+    RequestPriority priority() const { return m_priority; }
+
+    const std::optional<IPAddressSpace>& targetAddressSpace() const { return m_targetAddressSpace; }
 
     bool shouldEnableContentExtensionsCheck() const { return m_enableContentExtensionsCheck; }
     void disableContentExtensionsCheck() { m_enableContentExtensionsCheck = false; }
@@ -103,16 +106,15 @@ private:
 
     void stop() final;
 
-    Ref<AbortSignal> protectedSignal() const { return m_signal; }
-
     ResourceRequest m_request;
     URLKeepingBlobAlive m_requestURL;
     FetchOptions m_options;
-    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority m_priority { RequestPriority::Auto };
     String m_referrer;
-    Ref<AbortSignal> m_signal;
-    FetchIdentifier m_navigationPreloadIdentifier;
+    const Ref<AbortSignal> m_signal;
+    Markable<FetchIdentifier> m_navigationPreloadIdentifier;
     bool m_enableContentExtensionsCheck { true };
+    std::optional<IPAddressSpace> m_targetAddressSpace;
 };
 
 WebCoreOpaqueRoot root(FetchRequest*);

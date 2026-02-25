@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -38,10 +38,12 @@
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_COMMA_BEGIN
 
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/api/media_stream_interface.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-ALLOW_UNUSED_PARAMETERS_END
 ALLOW_COMMA_END
+ALLOW_UNUSED_PARAMETERS_END
 
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
@@ -79,12 +81,12 @@ protected:
 
     bool isSilenced() const { return m_muted || !m_enabled; }
 
-    void sendAudioFrames(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames);
+    void sendAudioFrames(std::span<const uint8_t> audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames);
 
 #if !RELEASE_LOG_DISABLED
     // LoggerHelper API
     const Logger& logger() const final { return m_audioSource->logger(); }
-    const void* logIdentifier() const final { return m_audioSource->logIdentifier(); }
+    uint64_t logIdentifier() const final { return m_audioSource->logIdentifier(); }
     ASCIILiteral logClassName() const final { return "RealtimeOutgoingAudioSource"_s; }
     WTFLogChannel& logChannel() const final;
 #endif

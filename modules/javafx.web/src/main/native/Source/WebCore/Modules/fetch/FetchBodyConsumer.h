@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Apple Inc.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -45,7 +45,9 @@ class FetchBodySource;
 class FormData;
 class ReadableStream;
 
-class FetchBodyConsumer {
+class FetchBodyConsumer final : public CanMakeCheckedPtr<FetchBodyConsumer> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FetchBodyConsumer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FetchBodyConsumer);
 public:
     enum class Type { None, ArrayBuffer, Blob, Bytes, JSON, Text, FormData };
 
@@ -59,12 +61,14 @@ public:
     void append(const SharedBuffer&);
 
     bool hasData() const { return !!m_buffer; }
-    const FragmentedSharedBuffer* data() const { return m_buffer.get().get(); }
+    const FragmentedSharedBuffer* data() const LIFETIME_BOUND { return m_buffer.get().get(); }
     void setData(Ref<FragmentedSharedBuffer>&&);
 
     RefPtr<FragmentedSharedBuffer> takeData();
     RefPtr<JSC::ArrayBuffer> takeAsArrayBuffer();
     String takeAsText();
+
+    bool hasPendingActivity() const;
 
     void setType(Type type) { m_type = type; }
 
@@ -90,6 +94,9 @@ private:
     Ref<Blob> takeAsBlob(ScriptExecutionContext*, const String& contentType);
     void resetConsumePromise();
 
+    RefPtr<ReadableStreamToSharedBufferSink> protectedSink() { return m_sink; }
+    RefPtr<FormDataConsumer> protectedFormDataConsumer() { return m_formDataConsumer; }
+
     Type m_type;
     SharedBufferBuilder m_buffer;
     RefPtr<DeferredPromise> m_consumePromise;
@@ -97,7 +104,7 @@ private:
     RefPtr<FetchBodySource> m_source;
     bool m_isLoading { false };
     RefPtr<UserGestureToken> m_userGestureToken;
-    std::unique_ptr<FormDataConsumer> m_formDataConsumer;
+    RefPtr<FormDataConsumer> m_formDataConsumer;
 };
 
 } // namespace WebCore

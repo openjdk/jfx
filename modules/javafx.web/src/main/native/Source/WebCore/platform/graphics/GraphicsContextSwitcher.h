@@ -27,6 +27,7 @@
 
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -35,10 +36,9 @@ class FilterResults;
 class GraphicsContext;
 
 class GraphicsContextSwitcher {
-    WTF_MAKE_FAST_ALLOCATED;
-
+    WTF_MAKE_TZONE_ALLOCATED(GraphicsContextSwitcher);
 public:
-    static std::unique_ptr<GraphicsContextSwitcher> create(GraphicsContext& destinationContext, const FloatRect &sourceImageRect, const DestinationColorSpace&, RefPtr<Filter>&& = nullptr, FilterResults* = nullptr);
+    static std::unique_ptr<GraphicsContextSwitcher> create(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, const DestinationColorSpace&, RefPtr<Filter>&& = nullptr, FilterResults* = nullptr);
 
     virtual ~GraphicsContextSwitcher() = default;
 
@@ -53,7 +53,7 @@ public:
     virtual void endDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) = 0;
 
 protected:
-    GraphicsContextSwitcher(RefPtr<Filter>&&);
+    explicit GraphicsContextSwitcher(RefPtr<Filter>&&);
 
     RefPtr<Filter> m_filter;
 };

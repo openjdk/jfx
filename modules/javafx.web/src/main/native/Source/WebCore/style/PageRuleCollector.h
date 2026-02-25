@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,9 +33,10 @@ namespace Style {
 
 class PageRuleCollector {
 public:
-    PageRuleCollector(ScopeRuleSets& ruleSets, TextDirection rootDirection)
+    PageRuleCollector(ScopeRuleSets& ruleSets, WritingMode rootWritingMode)
         : m_ruleSets(ruleSets)
-        , m_rootDirection(rootDirection)
+        , m_rootWritingMode(rootWritingMode)
+        , m_result(MatchResult::create())
     { }
 
     void matchAllPageRules(int pageIndex);
@@ -51,9 +52,9 @@ private:
     void matchPageRulesForList(Vector<StyleRulePage*>& matchedRules, const Vector<StyleRulePage*>& rules, bool isLeftPage, bool isFirstPage, const String& pageName);
 
     ScopeRuleSets& m_ruleSets;
-    TextDirection m_rootDirection;
+    WritingMode m_rootWritingMode;
 
-    MatchResult m_result;
+    const Ref<MatchResult> m_result;
 };
 
 } // namespace Style

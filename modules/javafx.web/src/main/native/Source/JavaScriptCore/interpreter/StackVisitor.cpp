@@ -42,12 +42,9 @@ namespace JSC {
 
 StackVisitor::StackVisitor(CallFrame* startFrame, VM& vm, bool skipFirstFrame)
 {
-    m_frame.m_index = 0;
-    m_frame.m_isWasmFrame = false;
-    m_frame.m_wasmDistanceFromDeepestInlineFrame = 0;
-    CallFrame* topFrame;
+    CallFrame* topFrame = nullptr;
     if (startFrame) {
-        ASSERT(!vm.topCallFrame || reinterpret_cast<void*>(vm.topCallFrame) != vm.topEntryFrame);
+        ASSERT(!vm.topCallFrame || static_cast<void*>(vm.topCallFrame) != vm.topEntryFrame);
 
         m_frame.m_entryFrame = vm.topEntryFrame;
         topFrame = vm.topCallFrame;
@@ -58,12 +55,7 @@ StackVisitor::StackVisitor(CallFrame* startFrame, VM& vm, bool skipFirstFrame)
             if (startFrame == vm.topCallFrame)
                 startFrame = topFrame;
         }
-
-    } else {
-        m_frame.m_entryFrame = nullptr;
-        topFrame = nullptr;
     }
-    m_frame.m_callerIsEntryFrame = false;
     readFrame(topFrame);
 
     // Find the frame the caller wants to start unwinding from.
@@ -106,6 +98,15 @@ void StackVisitor::unwindToMachineCodeBlockFrame()
 #endif
 }
 
+inline CallFrame* StackVisitor::updatePreviousReturnPCIfNecessary(CallFrame* callFrame)
+{
+    if (m_frame.m_callFrame) {
+        if (m_frame.m_callFrame != callFrame)
+            m_previousReturnPC = m_frame.m_callFrame->rawReturnPC();
+    }
+    return callFrame;
+}
+
 void StackVisitor::readFrame(CallFrame* callFrame)
 {
     if (!callFrame) {
@@ -129,6 +130,16 @@ void StackVisitor::readFrame(CallFrame* callFrame)
         readNonInlinedFrame(callFrame);
         return;
     }
+
+#if ASSERT_ENABLED
+    if (!codeBlock->inherits<CodeBlock>()) {
+        dataLogLn("Invalid codeblock type: ", *(JSCell*)codeBlock);
+        dataLogLn("Callee: ", RawPointer(callFrame->unsafeCallee().rawPtr()));
+        ASSERT_NOT_REACHED();
+        readNonInlinedFrame(callFrame);
+        return;
+    }
+#endif
 
     // If the code block does not have any code origins, then there's no
     // inlining. Hence, we're not at an inlined frame.
@@ -158,7 +169,8 @@ void StackVisitor::readFrame(CallFrame* callFrame)
 
 void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin)
 {
-    m_frame.m_callFrame = callFrame;
+    m_frame.m_callFrame = updatePreviousReturnPCIfNecessary(callFrame);
+    m_frame.m_returnPC = m_previousReturnPC;
     m_frame.m_argumentCountIncludingThis = callFrame->argumentCountIncludingThis();
     m_frame.m_callerEntryFrame = m_frame.m_entryFrame;
     m_frame.m_callerFrame = callFrame->callerFrame(m_frame.m_callerEntryFrame);
@@ -187,8 +199,9 @@ void StackVisitor::readInlinableNativeCalleeFrame(CallFrame* callFrame)
 #if ENABLE(WEBASSEMBLY)
         auto& wasmCallee = static_cast<Wasm::Callee&>(callee);
     auto depth = m_frame.m_wasmDistanceFromDeepestInlineFrame;
+        m_frame.m_callFrame = updatePreviousReturnPCIfNecessary(callFrame);
+        m_frame.m_returnPC = m_previousReturnPC;
         m_frame.m_isWasmFrame = true;
-    m_frame.m_callFrame = callFrame;
     m_frame.m_argumentCountIncludingThis = callFrame->argumentCountIncludingThis();
     m_frame.m_callerEntryFrame = m_frame.m_entryFrame;
     m_frame.m_callerFrame = callFrame->callerFrame(m_frame.m_callerEntryFrame);
@@ -198,6 +211,7 @@ void StackVisitor::readInlinableNativeCalleeFrame(CallFrame* callFrame)
     m_frame.m_wasmDistanceFromDeepestInlineFrame = 0;
 
         m_frame.m_wasmFunctionIndexOrName = wasmCallee.indexOrName();
+        m_frame.m_wasmFunctionIndex = wasmCallee.index();
 
 #if ENABLE(WEBASSEMBLY_OMGJIT)
         bool canInline = isAnyOMG(wasmCallee.compilationMode());
@@ -206,7 +220,14 @@ void StackVisitor::readInlinableNativeCalleeFrame(CallFrame* callFrame)
 
         const auto& omgCallee = *static_cast<const Wasm::OptimizingJITCallee*>(&wasmCallee);
     bool isInlined = false;
-    auto origin = omgCallee.getOrigin(callFrame->callSiteIndex().bits(), depth, isInlined);
+
+        // Because PC is just after the call instruction, to query to the origin for the call instruction, we decrease it by 1.
+        // While it can be pointing at the broken offset (e.g. all ARM64 instructions are 4-byte aligned), it is still fine since map is controlling pc with range.
+        auto callSiteIndexFromPC = omgCallee.tryGetCallSiteIndex(std::bit_cast<void*>(std::bit_cast<uintptr_t>(removeCodePtrTag<void*>(m_frame.m_returnPC)) - 1));
+        CallSiteIndex callSiteIndex = callSiteIndexFromPC.value_or(callFrame->callSiteIndex());
+
+        auto codeOrigin = omgCallee.getCodeOrigin(callSiteIndex.bits(), depth, isInlined);
+        auto indexOrName = omgCallee.getIndexOrName(codeOrigin);
     if (!isInlined)
         return;
 
@@ -214,7 +235,8 @@ void StackVisitor::readInlinableNativeCalleeFrame(CallFrame* callFrame)
     // haven't reached the last frame yet.
     m_frame.m_callerFrame = callFrame;
     m_frame.m_wasmDistanceFromDeepestInlineFrame = depth + 1;
-    m_frame.m_wasmFunctionIndexOrName = origin;
+        m_frame.m_wasmFunctionIndexOrName = indexOrName;
+        m_frame.m_wasmFunctionIndex = codeOrigin->functionIndex;
 #else
     UNUSED_VARIABLE(depth);
 #endif
@@ -224,7 +246,8 @@ void StackVisitor::readInlinableNativeCalleeFrame(CallFrame* callFrame)
         break;
     }
     case NativeCallee::Category::InlineCache: {
-        m_frame.m_callFrame = callFrame;
+        m_frame.m_callFrame = updatePreviousReturnPCIfNecessary(callFrame);
+        m_frame.m_returnPC = m_previousReturnPC;
         m_frame.m_argumentCountIncludingThis = callFrame->argumentCountIncludingThis();
         m_frame.m_callerEntryFrame = m_frame.m_entryFrame;
         m_frame.m_callerFrame = callFrame->callerFrame(m_frame.m_callerEntryFrame);
@@ -262,7 +285,8 @@ void StackVisitor::readInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin
     if (isInlined) {
         InlineCallFrame* inlineCallFrame = codeOrigin->inlineCallFrame();
 
-        m_frame.m_callFrame = callFrame;
+        m_frame.m_callFrame = updatePreviousReturnPCIfNecessary(callFrame);
+        m_frame.m_returnPC = m_previousReturnPC;
         m_frame.m_inlineDFGCallFrame = inlineCallFrame;
         if (inlineCallFrame->argumentCountRegister.isValid())
             m_frame.m_argumentCountIncludingThis = callFrame->r(inlineCallFrame->argumentCountRegister).unboxedInt32();
@@ -535,6 +559,13 @@ bool StackVisitor::Frame::isImplementationVisibilityPrivate() const
 
     ASSERT_NOT_REACHED();
     return false;
+}
+
+size_t StackVisitor::Frame::wasmFunctionIndex() const
+{
+    ASSERT(isNativeCalleeFrame());
+    ASSERT(m_isWasmFrame);
+    return m_wasmFunctionIndex;
 }
 
 void StackVisitor::Frame::dump(PrintStream& out, Indenter indent) const

@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGDocument.h"
 
+#include "DocumentInlines.h"
 #include "DocumentSVG.h"
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
@@ -58,11 +59,6 @@ void SVGDocument::updatePan(const FloatPoint& position) const
     if (!element)
         return;
     element->setCurrentTranslate(position - m_panningOffset);
-}
-
-Ref<Document> SVGDocument::cloneDocumentWithoutChildren() const
-{
-    return create(nullptr, protectedSettings(), url());
 }
 
 }

@@ -62,6 +62,7 @@ ScrollingStateOverflowScrollingNode::ScrollingStateOverflowScrollingNode(
     ScrollbarEnabledState&& scrollbarEnabledState,
     UserInterfaceLayoutDirection scrollbarLayoutDirection,
     ScrollbarWidth scrollbarWidth,
+    bool useDarkAppearanceForScrollbars,
     RequestedKeyboardScrollData&& scrollData
 ) : ScrollingStateScrollingNode(
     ScrollingNodeType::Overflow,
@@ -93,6 +94,7 @@ ScrollingStateOverflowScrollingNode::ScrollingStateOverflowScrollingNode(
     WTFMove(scrollbarEnabledState),
     scrollbarLayoutDirection,
     scrollbarWidth,
+    useDarkAppearanceForScrollbars,
     WTFMove(scrollData)
 ) { }
 
@@ -115,7 +117,7 @@ Ref<ScrollingStateNode> ScrollingStateOverflowScrollingNode::clone(ScrollingStat
 
 void ScrollingStateOverflowScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Overflow scrolling node";
+    ts << "Overflow scrolling node"_s;
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 }

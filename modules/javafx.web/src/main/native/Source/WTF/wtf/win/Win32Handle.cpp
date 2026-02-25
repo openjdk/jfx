@@ -89,4 +89,34 @@ HANDLE Win32Handle::leak()
     return std::exchange(m_handle, INVALID_HANDLE_VALUE);
 }
 
+Win32Handle::IPCData Win32Handle::toIPCData()
+{
+    return { reinterpret_cast<uintptr_t>(leak()), GetCurrentProcessId() };
+}
+
+Win32Handle Win32Handle::createFromIPCData(IPCData&& data)
+{
+    auto isValidHandle = [] (HANDLE h) {
+        // Checking for INVALID_HANDLE_VALUE is insufficient because values like -2 also have meaning as a HANDLE.
+        constexpr int32_t minimumKnownPseudoHandleValue = -12;
+        int32_t valueAsInt = static_cast<int32_t>(reinterpret_cast<uintptr_t>(h));
+        return valueAsInt >= 0 || valueAsInt < minimumKnownPseudoHandleValue;
+    };
+
+    auto handle = reinterpret_cast<HANDLE>(data.handle);
+    if (!isValidHandle(handle))
+        return { };
+    auto sourceProcess = Win32Handle::adopt(OpenProcess(PROCESS_DUP_HANDLE, FALSE, data.processID));
+    if (!sourceProcess)
+        return { };
+    HANDLE duplicatedHandle;
+    // Copy the handle into our process and close the handle that the sending process created for us.
+    if (!DuplicateHandle(sourceProcess.get(), handle, GetCurrentProcess(), &duplicatedHandle, 0, FALSE, DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE)) {
+        // The source process may exit after the above OpenProcess calling.
+        // DuplicateHandle fails with ERROR_INVALID_HANDLE in such a case.
+        return { };
+    }
+    return Win32Handle::adopt(duplicatedHandle);
+}
+
 } // namespace WTF

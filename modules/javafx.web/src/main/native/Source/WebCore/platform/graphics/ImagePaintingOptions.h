@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "GraphicsTypes.h"
 #include "ImageOrientation.h"
 #include "ImageTypes.h"
+#include "PlatformDynamicRangeLimit.h"
 #include <initializer_list>
 #include <wtf/Forward.h>
 
@@ -46,24 +47,31 @@ struct ImagePaintingOptions {
 #if USE(SKIA)
         ||  std::is_same_v<Type, StrictImageClamping>
 #endif
-        || std::is_same_v<Type, ShowDebugBackground>;
+        || std::is_same_v<Type, ShowDebugBackground>
+        || std::is_same_v<Type, DrawsHDRContent>
+        || std::is_same_v<Type, Headroom>
+        || std::is_same_v<Type, PlatformDynamicRangeLimit>;
 
     // This is a single-argument initializer to support pattern of
     // ImageDrawResult drawImage(..., ImagePaintingOptions = { ImageOrientation::Orientation::FromImage });
     // Should be removed once the pattern is not so prevalent.
-    template<typename T, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+    template<typename T>
+        requires isOptionType<std::decay_t<T>>
     ImagePaintingOptions(std::initializer_list<T> options)
     {
         for (auto& option : options)
             setOption(option);
     }
-    template<typename T, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+
+    template<typename T>
+        requires isOptionType<std::decay_t<T>>
     explicit ImagePaintingOptions(T option)
     {
         setOption(option);
     }
 
-    template<typename T, typename U, typename... Rest, typename = std::enable_if_t<isOptionType<std::decay_t<T>>>>
+    template<typename T, typename U, typename... Rest>
+        requires isOptionType<std::decay_t<T>>
     ImagePaintingOptions(T first, U second, Rest... rest)
     {
         setOption(first);
@@ -90,10 +98,13 @@ struct ImagePaintingOptions {
     ImageOrientation orientation() const { return m_orientation; }
     InterpolationQuality interpolationQuality() const { return m_interpolationQuality; }
     AllowImageSubsampling allowImageSubsampling() const { return m_allowImageSubsampling; }
-    ShowDebugBackground showDebugBackground() const { return m_showDebugBackground; }
 #if USE(SKIA)
     StrictImageClamping strictImageClamping() const { return m_strictImageClamping; }
 #endif
+    ShowDebugBackground showDebugBackground() const { return m_showDebugBackground; }
+    DrawsHDRContent drawsHDRContent() const { return m_drawsHDRContent; }
+    Headroom headroom() const { return m_headroom; }
+    PlatformDynamicRangeLimit dynamicRangeLimit() const { return m_dynamicRangeLimit; }
 
 private:
     void setOption(CompositeOperator compositeOperator) { m_compositeOperator = compositeOperator; }
@@ -103,10 +114,13 @@ private:
     void setOption(ImageOrientation::Orientation orientation) { m_orientation = orientation; }
     void setOption(InterpolationQuality interpolationQuality) { m_interpolationQuality = interpolationQuality; }
     void setOption(AllowImageSubsampling allowImageSubsampling) { m_allowImageSubsampling = allowImageSubsampling; }
-    void setOption(ShowDebugBackground showDebugBackground) { m_showDebugBackground = showDebugBackground; }
 #if USE(SKIA)
     void setOption(StrictImageClamping strictImageClamping) { m_strictImageClamping = strictImageClamping; }
 #endif
+    void setOption(ShowDebugBackground showDebugBackground) { m_showDebugBackground = showDebugBackground; }
+    void setOption(DrawsHDRContent drawsHDRContent) { m_drawsHDRContent = drawsHDRContent; }
+    void setOption(Headroom headroom) { m_headroom = headroom; }
+    void setOption(PlatformDynamicRangeLimit dynamicRangeLimit) { m_dynamicRangeLimit = dynamicRangeLimit; }
 
     BlendMode m_blendMode : 5 { BlendMode::Normal };
     DecodingMode m_decodingMode : 3 { DecodingMode::Synchronous };
@@ -114,13 +128,15 @@ private:
     ImageOrientation::Orientation m_orientation : 4 { ImageOrientation::Orientation::None };
     InterpolationQuality m_interpolationQuality : 4 { InterpolationQuality::Default };
     AllowImageSubsampling m_allowImageSubsampling : 1 { AllowImageSubsampling::No };
-    ShowDebugBackground m_showDebugBackground : 1 { ShowDebugBackground::No };
 #if USE(SKIA)
     StrictImageClamping m_strictImageClamping: 1 { StrictImageClamping::Yes };
 #endif
+    ShowDebugBackground m_showDebugBackground : 1 { ShowDebugBackground::No };
+    DrawsHDRContent m_drawsHDRContent : 1 { DrawsHDRContent::No };
+    Headroom m_headroom { Headroom::FromImage };
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
 };
-static_assert(sizeof(ImagePaintingOptions) <= sizeof(uint64_t), "Pass by value");
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, ImagePaintingOptions);
 
-}
+} // namespace WebCore

@@ -54,7 +54,7 @@ typedef const struct __CFString * CFStringRef;
 namespace WTF {
 
 class SHA1 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SHA1);
 public:
     WTF_EXPORT_PRIVATE SHA1();
 
@@ -67,7 +67,7 @@ public:
 
     void addBytes(const CString& input)
     {
-        addBytes(input.span());
+        addBytes(std::as_bytes(input.span()));
     }
 
     WTF_EXPORT_PRIVATE void addUTF8Bytes(StringView);
@@ -101,10 +101,10 @@ private:
     void processBlock();
     void reset();
 
-    uint8_t m_buffer[64];
+    std::array<uint8_t, 64> m_buffer;
     size_t m_cursor; // Number of bytes filled in m_buffer (0-64).
     uint64_t m_totalBytes; // Number of bytes added so far.
-    uint32_t m_hash[5];
+    std::array<uint32_t, 5> m_hash;
 #endif
 };
 

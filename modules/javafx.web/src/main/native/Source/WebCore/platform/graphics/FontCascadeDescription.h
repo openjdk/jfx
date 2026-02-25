@@ -26,7 +26,6 @@
 
 #include "CSSValueKeywords.h"
 #include "FontDescription.h"
-#include <variant>
 #include <wtf/RefCountedFixedVector.h>
 
 #if PLATFORM(COCOA)
@@ -34,6 +33,10 @@
 #else
 #include "FontFamilySpecificationNull.h"
 #endif
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -43,7 +46,7 @@ typedef FontFamilySpecificationCoreText FontFamilyPlatformSpecification;
 typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 #endif
 
-typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+typedef Variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
 
 class Font;
 
@@ -126,7 +129,7 @@ public:
     static std::optional<FontSelectionValue> initialItalic() { return std::nullopt; }
     static FontStyleAxis initialFontStyleAxis() { return FontStyleAxis::slnt; }
     static FontSelectionValue initialWeight() { return normalWeightValue(); }
-    static FontSelectionValue initialStretch() { return normalStretchValue(); }
+    static FontSelectionValue initialWidth() { return normalWidthValue(); }
     static FontSmallCaps initialSmallCaps() { return FontSmallCaps::Off; }
     static Kerning initialKerning() { return Kerning::Auto; }
     static FontSmoothingMode initialFontSmoothing() { return FontSmoothingMode::AutoSmoothing; }
@@ -144,6 +147,8 @@ public:
     static FontSizeAdjust initialFontSizeAdjust() { return { FontSizeAdjust::Metric::ExHeight }; }
     static TextSpacingTrim initialTextSpacingTrim() { return { }; }
     static TextAutospace initialTextAutospace() { return { }; }
+    static FontFeatureSettings initialFeatureSettings() { return { }; }
+    static FontVariationSettings initialVariationSettings() { return { }; }
 
 private:
     Ref<RefCountedFixedVector<AtomString>> m_families;
@@ -165,7 +170,7 @@ private:
 inline bool FontCascadeDescription::operator==(const FontCascadeDescription& other) const
 {
     return static_cast<const FontDescription&>(*this) == static_cast<const FontDescription&>(other)
-        && m_families.get() == other.m_families.get()
+        && arePointingToEqualData(m_families, other.m_families)
         && m_specifiedSize == other.m_specifiedSize
         && m_isAbsoluteSize == other.m_isAbsoluteSize
         && m_kerning == other.m_kerning
@@ -173,5 +178,7 @@ inline bool FontCascadeDescription::operator==(const FontCascadeDescription& oth
         && m_fontSmoothing == other.m_fontSmoothing
         && m_isSpecifiedFont == other.m_isSpecifiedFont;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const FontCascadeDescription&);
 
 }

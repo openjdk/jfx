@@ -35,6 +35,8 @@
 #include <wtf/ProcessID.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(HeapVerifier);
@@ -145,7 +147,7 @@ void HeapVerifier::printVerificationHeader()
     RELEASE_ASSERT(m_heap->collectionScope());
     CollectionScope scope = currentCycle().scope;
     MonotonicTime gcCycleTimestamp = currentCycle().timestamp;
-    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::current(), "] vm ",
+    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::currentSingleton(), "] vm ",
         RawPointer(&m_heap->vm()), " on ", scope, " GC @ ", gcCycleTimestamp, "\n");
 }
 
@@ -175,7 +177,8 @@ bool HeapVerifier::verifyCellList(Phase phase, CellList& list)
             continue;
 
         JSCell* cell = profile.jsCell();
-        success |= validateJSCell(&vm, cell, &profile, &list, printHeaderIfNeeded, "  ");
+        if (!validateJSCell(&vm, cell, &profile, &list, printHeaderIfNeeded, "  "))
+            success = false;
     }
 
     return success;
@@ -324,7 +327,7 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
         }
 
         CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(cell);
-        if (UNLIKELY(codeBlock)) {
+        if (codeBlock) [[unlikely]] {
             bool success = true;
             codeBlock->forEachValueProfile([&](auto& valueProfile, bool) {
                 for (unsigned i = 0; i < std::remove_reference_t<decltype(valueProfile)>::totalNumberOfBuckets; ++i) {
@@ -460,3 +463,5 @@ void HeapVerifier::checkIfRecorded(uintptr_t candidateCell)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

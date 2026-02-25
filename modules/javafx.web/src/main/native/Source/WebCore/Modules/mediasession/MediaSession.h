@@ -28,14 +28,16 @@
 #if ENABLE(MEDIA_SESSION)
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "MediaPositionState.h"
+#include "MediaProducer.h"
 #include "MediaSessionAction.h"
 #include "MediaSessionActionHandler.h"
 #include "MediaSessionPlaybackState.h"
 #include "MediaSessionReadyState.h"
 #include <wtf/Logger.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -56,9 +58,11 @@ class HTMLMediaElement;
 class MediaMetadata;
 class MediaSessionCoordinator;
 class MediaSessionCoordinatorPrivate;
+class MediaSessionManagerInterface;
 class Navigator;
-template<typename> class DOMPromiseDeferred;
 struct NowPlayingInfo;
+template<typename> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class MediaSessionObserver : public CanMakeWeakPtr<MediaSessionObserver> {
 public:
@@ -74,15 +78,14 @@ public:
 #endif
 };
 
-class MediaSession : public RefCounted<MediaSession>, public ActiveDOMObject, public CanMakeWeakPtr<MediaSession> {
-    WTF_MAKE_FAST_ALLOCATED;
+class MediaSession : public RefCountedAndCanMakeWeakPtr<MediaSession>, public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(MediaSession);
 public:
-    static Ref<MediaSession> create(Navigator&);
-    ~MediaSession();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    static Ref<MediaSession> create(Navigator&);
+    ~MediaSession();
 
     MediaMetadata* metadata() const { return m_metadata.get(); };
     void setMetadata(RefPtr<MediaMetadata>&&);
@@ -105,6 +108,7 @@ public:
     void willPausePlayback();
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
     MediaSessionReadyState readyState() const { return m_readyState; };
@@ -131,31 +135,45 @@ public:
 #endif
 
     bool hasObserver(MediaSessionObserver&) const;
-    void addObserver(MediaSessionObserver&);
+    WEBCORE_EXPORT void addObserver(MediaSessionObserver&);
     void removeObserver(MediaSessionObserver&);
 
     RefPtr<HTMLMediaElement> activeMediaElement() const;
 
     void updateNowPlayingInfo(NowPlayingInfo&);
 
+#if ENABLE(MEDIA_STREAM)
+    void setMicrophoneActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Microphone); }
+    void setCameraActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Camera); }
+    void setScreenshareActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Display); }
+#endif
+
+    WEBCORE_EXPORT bool hasActionHandler(const MediaSessionAction) const;
+
 private:
     explicit MediaSession(Navigator&);
 
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
 
     void updateReportedPosition();
 
-    void forEachObserver(const Function<void(MediaSessionObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(MediaSessionObserver&)>&);
     void notifyMetadataObservers(const RefPtr<MediaMetadata>&);
     void notifyPositionStateObservers();
     void notifyPlaybackStateObservers();
     void notifyActionHandlerObservers();
     void notifyReadyStateObservers();
 
+#if ENABLE(MEDIA_STREAM)
+    void updateCaptureState(bool, DOMPromiseDeferred<void>&&, MediaProducerMediaCaptureKind);
+#endif
+
     // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
+
+    RefPtr<MediaSessionManagerInterface> sessionManager() const;
 
     WeakPtr<Navigator> m_navigator;
     RefPtr<MediaMetadata> m_metadata;
@@ -166,7 +184,7 @@ private:
     MonotonicTime m_timeAtLastPositionUpdate;
     HashMap<MediaSessionAction, RefPtr<MediaSessionActionHandler>, IntHash<MediaSessionAction>, WTF::StrongEnumHashTraits<MediaSessionAction>> m_actionHandlers WTF_GUARDED_BY_LOCK(m_actionHandlersLock);
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
 
     WeakHashSet<MediaSessionObserver> m_observers;
 

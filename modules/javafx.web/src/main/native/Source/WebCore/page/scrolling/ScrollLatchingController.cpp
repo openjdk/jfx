@@ -34,19 +34,33 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollableArea.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollLatchingController);
+
 // See also ScrollTreeLatchingController.cpp
 static const Seconds resetLatchedStateTimeout { 100_ms };
 
-ScrollLatchingController::ScrollLatchingController()
-    : m_clearLatchingStateTimer(*this, &ScrollLatchingController::clearTimerFired)
+ScrollLatchingController::ScrollLatchingController(Page& page)
+    : m_page(page)
+    , m_clearLatchingStateTimer(*this, &ScrollLatchingController::clearTimerFired)
 {
 }
 
 ScrollLatchingController::~ScrollLatchingController() = default;
+
+void ScrollLatchingController::ref() const
+{
+    m_page->ref();
+}
+
+void ScrollLatchingController::deref() const
+{
+    m_page->deref();
+}
 
 void ScrollLatchingController::clear()
 {
@@ -175,7 +189,7 @@ void ScrollLatchingController::removeLatchingStateForFrame(const LocalFrame& fra
         return;
 
     // If the frame was in the latching stack, just clear state.
-    if (auto* frameState = stateForFrame(frame))
+    if (stateForFrame(frame))
         clear();
 }
 
@@ -252,13 +266,13 @@ void ScrollLatchingController::dump(WTF::TextStream& ts) const
 
     for (const auto& state : m_frameStateStack) {
         TextStream::GroupScope groupScope(multilineStream);
-        multilineStream.dumpProperty("frame", ValueOrNull(state.frame));
-        multilineStream.dumpProperty("element", ValueOrNull(state.wheelEventElement.get()));
-        multilineStream.dumpProperty("scrollable area", ValueOrNull(state.scrollableArea.get()));
-        multilineStream.dumpProperty("is over widget", state.isOverWidget);
+        multilineStream.dumpProperty("frame"_s, ValueOrNull(state.frame));
+        multilineStream.dumpProperty("element"_s, ValueOrNull(state.wheelEventElement.get()));
+        multilineStream.dumpProperty("scrollable area"_s, ValueOrNull(state.scrollableArea.get()));
+        multilineStream.dumpProperty("is over widget"_s, state.isOverWidget);
     }
 
-    ts << "ScrollLatchingController state " << multilineStream.release();
+    ts << "ScrollLatchingController state "_s << multilineStream.release();
 }
 
 TextStream& operator<<(TextStream& ts, const ScrollLatchingController& controller)

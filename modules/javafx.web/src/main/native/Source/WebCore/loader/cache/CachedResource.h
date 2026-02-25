@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -46,6 +46,7 @@
 
 namespace WebCore {
 class CachedResource;
+class CachedResourceCallback;
 }
 
 namespace WTF {
@@ -78,7 +79,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CachedResource);
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CachedResourceResponseData);
 class CachedResource : public CanMakeWeakPtr<CachedResource> {
     WTF_MAKE_NONCOPYABLE(CachedResource);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResource);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResource, CachedResource);
     friend class MemoryCache;
 
 public:
@@ -91,6 +92,7 @@ public:
         SVGFontResource,
         MediaResource,
 #if ENABLE(MODEL_ELEMENT)
+        EnvironmentMapResource,
         ModelResource,
 #endif
         RawResource,
@@ -101,7 +103,9 @@ public:
         XSLStyleSheet,
 #endif
         LinkPrefetch,
+#if ENABLE(VIDEO)
         TextTrackResource,
+#endif
 #if ENABLE(APPLICATION_MANIFEST)
         ApplicationManifest,
 #endif
@@ -127,7 +131,7 @@ public:
     virtual void load(CachedResourceLoader&);
 
     virtual void setEncoding(const String&) { }
-    virtual String encoding() const { return String(); }
+    virtual ASCIILiteral encoding() const { return ASCIILiteral(); }
     virtual const TextResourceDecoder* textResourceDecoder() const { return nullptr; }
     virtual void updateBuffer(const FragmentedSharedBuffer&);
     virtual void updateData(const SharedBuffer&);
@@ -195,7 +199,7 @@ public:
     void setLoading(bool b) { m_loading = b; }
     virtual bool stillNeedsLoad() const { return false; }
 
-    SubresourceLoader* loader() { return m_loader.get(); }
+    SubresourceLoader* loader() const { return m_loader.get(); }
 
     bool isImage() const { return type() == Type::ImageResource; }
     // FIXME: CachedRawResource could be a main resource, an audio/video resource, or a raw XHR/icon resource.
@@ -232,11 +236,12 @@ public:
     void clearLoader();
 
     FragmentedSharedBuffer* resourceBuffer() const { return m_data.get(); }
+    RefPtr<FragmentedSharedBuffer> protectedResourceBuffer() const;
 
     virtual void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
-    virtual void responseReceived(const ResourceResponse&);
+    virtual void responseReceived(ResourceResponse&&);
     virtual bool shouldCacheResponse(const ResourceResponse&) { return true; }
-    void setResponse(const ResourceResponse&);
+    void setResponse(ResourceResponse&&);
     WEBCORE_EXPORT const ResourceResponse& response() const;
     Box<NetworkLoadMetrics> takeNetworkLoadMetrics() { return mutableResponse().takeNetworkLoadMetrics(); }
 
@@ -309,16 +314,19 @@ public:
     WEBCORE_EXPORT void tryReplaceEncodedData(SharedBuffer&);
 #endif
 
-    ResourceLoaderIdentifier identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
+    std::optional<ResourceLoaderIdentifier> identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
 
     void setOriginalRequest(std::unique_ptr<ResourceRequest>&& originalRequest) { m_originalRequest = WTFMove(originalRequest); }
     const std::unique_ptr<ResourceRequest>& originalRequest() const { return m_originalRequest; }
 
 #if USE(QUICK_LOOK)
-    virtual void previewResponseReceived(const ResourceResponse&);
+    virtual void previewResponseReceived(ResourceResponse&&);
 #endif
 
     ResourceCryptographicDigest cryptographicDigest(ResourceCryptographicDigest::Algorithm) const;
+
+    void setIsHashReportingNeeded() { m_isHashReportingNeeded = true; }
+    bool isHashReportingNeeded() const { return m_isHashReportingNeeded; }
 
 protected:
     // CachedResource constructor that may be used when the CachedResource can already be filled with response data.
@@ -335,7 +343,7 @@ protected:
     void clearCachedCryptographicDigests();
 
 private:
-    class Callback;
+    using Callback = CachedResourceCallback;
     template<typename T> friend class CachedResourceClientWalker;
 
     void deleteThis();
@@ -371,7 +379,7 @@ private:
 
     struct ResponseData {
         WTF_MAKE_NONCOPYABLE(ResponseData);
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResourceResponseData);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResponseData, CachedResourceResponseData);
 
     public:
         ResponseData(CachedResource&);
@@ -390,7 +398,7 @@ private:
     PAL::SessionID m_sessionID;
     RefPtr<const CookieJar> m_cookieJar;
     WallTime m_responseTimestamp { WallTime::now() };
-    ResourceLoaderIdentifier m_identifierForLoadWithoutResourceLoader;
+    Markable<ResourceLoaderIdentifier> m_identifierForLoadWithoutResourceLoader;
 
     SingleThreadWeakHashMap<CachedResourceClient, std::unique_ptr<Callback>> m_clientsAwaitingCallback;
 
@@ -434,6 +442,7 @@ private:
     bool m_hasUnknownEncoding : 1;
     bool m_switchingClientsToRevalidatedResource : 1 { false };
     bool m_ignoreForRequestCount : 1;
+    bool m_isHashReportingNeeded : 1 { false };
 
 #if ASSERT_ENABLED
     bool m_deleted { false };
@@ -443,18 +452,13 @@ private:
     mutable std::array<std::optional<ResourceCryptographicDigest>, ResourceCryptographicDigest::algorithmCount> m_cryptographicDigests;
 };
 
-class CachedResource::Callback {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+class CachedResourceCallback {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResourceCallback, Loader);
 public:
-    Callback(CachedResource&, CachedResourceClient&);
-
+    CachedResourceCallback(CachedResource&, CachedResourceClient&);
     void cancel();
 
 private:
-    void timerFired();
-
-    WeakRef<CachedResource> m_resource;
-    SingleThreadWeakRef<CachedResourceClient> m_client;
     Timer m_timer;
 };
 
@@ -463,6 +467,7 @@ inline bool CachedResource::isMainOrMediaOrIconOrRawResource() const
     return type() == Type::MainResource
         || type() == Type::MediaResource
 #if ENABLE(MODEL_ELEMENT)
+        || type() == Type::EnvironmentMapResource
         || type() == Type::ModelResource
 #endif
         || type() == Type::Icon

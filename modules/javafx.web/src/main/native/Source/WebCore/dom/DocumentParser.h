@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000 Peter Kelly (pmk@post.com)
- * Copyright (C) 2005, 2006 Apple Inc.
+ * Copyright (C) 2005, 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  * Copyright (C) 2010 Google, Inc.
  *
@@ -32,6 +32,7 @@ namespace WebCore {
 
 class Document;
 class DocumentWriter;
+class HTMLDocumentParser;
 class SegmentedString;
 class ScriptableDocumentParser;
 class WeakPtrImplWithEventTargetData;
@@ -41,6 +42,7 @@ public:
     virtual ~DocumentParser();
 
     virtual ScriptableDocumentParser* asScriptableDocumentParser() { return nullptr; }
+    virtual HTMLDocumentParser* asHTMLDocumentParser() { return nullptr; }
 
     // http://www.whatwg.org/specs/web-apps/current-work/#insertion-point
     virtual bool hasInsertionPoint() { return true; }

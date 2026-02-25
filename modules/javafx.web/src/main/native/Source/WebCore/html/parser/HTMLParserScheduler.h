@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,10 @@
 
 #include "NestingLevelIncrementer.h"
 #include "Timer.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
@@ -60,11 +63,14 @@ public:
     bool didSeeScript { false };
 };
 
-class HTMLParserScheduler {
-    WTF_MAKE_NONCOPYABLE(HTMLParserScheduler); WTF_MAKE_FAST_ALLOCATED;
+class HTMLParserScheduler final : public RefCounted<HTMLParserScheduler> {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLParserScheduler);
+    WTF_MAKE_NONCOPYABLE(HTMLParserScheduler);
 public:
-    explicit HTMLParserScheduler(HTMLDocumentParser&);
+    static Ref<HTMLParserScheduler> create(HTMLDocumentParser&);
     ~HTMLParserScheduler();
+
+    void detach();
 
     bool shouldYieldBeforeToken(PumpSession& session)
     {
@@ -72,10 +78,10 @@ public:
         if (WebThreadShouldYield())
             return true;
 #endif
-        if (UNLIKELY(m_documentHasActiveParserYieldTokens))
+        if (m_documentHasActiveParserYieldTokens) [[unlikely]]
             return true;
 
-        if (UNLIKELY(session.processedTokens > session.processedTokensOnLastCheck + numberOfTokensBeforeCheckingForYield || session.didSeeScript))
+        if (session.processedTokens > session.processedTokensOnLastCheck + numberOfTokensBeforeCheckingForYield || session.didSeeScript) [[unlikely]]
             return checkForYield(session);
 
         ++session.processedTokens;
@@ -105,6 +111,8 @@ public:
     }
 
 private:
+    explicit HTMLParserScheduler(HTMLDocumentParser&);
+
     static const unsigned numberOfTokensBeforeCheckingForYield = 4096; // Performance optimization
 
     void continueNextChunkTimerFired();
@@ -118,7 +126,7 @@ private:
         return elapsedTime > m_parserTimeLimit;
     }
 
-    HTMLDocumentParser& m_parser;
+    CheckedPtr<HTMLDocumentParser> m_parser;
 
     Seconds m_parserTimeLimit;
     Timer m_continueNextChunkTimer;

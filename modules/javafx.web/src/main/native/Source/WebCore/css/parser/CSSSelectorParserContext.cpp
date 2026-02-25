@@ -27,17 +27,14 @@
 #include "CSSSelectorParserContext.h"
 
 #include "CSSParserContext.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "Quirks.h"
 #include <wtf/Hasher.h>
 
 namespace WebCore {
 
 CSSSelectorParserContext::CSSSelectorParserContext(const CSSParserContext& context)
     : mode(context.mode)
-    , cssNestingEnabled(context.cssNestingEnabled)
-    , customStateSetEnabled(context.customStateSetEnabled)
-    , grammarAndSpellingPseudoElementsEnabled(context.grammarAndSpellingPseudoElementsEnabled)
-    , highlightAPIEnabled(context.highlightAPIEnabled)
 #if ENABLE(SERVICE_CONTROLS)
     , imageControlsEnabled(context.imageControlsEnabled)
 #endif
@@ -47,15 +44,12 @@ CSSSelectorParserContext::CSSSelectorParserContext(const CSSParserContext& conte
     , viewTransitionsEnabled(context.propertySettings.viewTransitionsEnabled)
     , viewTransitionClassesEnabled(viewTransitionsEnabled && context.propertySettings.viewTransitionClassesEnabled)
     , viewTransitionTypesEnabled(viewTransitionsEnabled && context.viewTransitionTypesEnabled)
+    , webkitMediaTextTrackDisplayQuirkEnabled(context.webkitMediaTextTrackDisplayQuirkEnabled)
 {
 }
 
 CSSSelectorParserContext::CSSSelectorParserContext(const Document& document)
     : mode(document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode)
-    , cssNestingEnabled(document.settings().cssNestingEnabled())
-    , customStateSetEnabled(document.settings().customStateSetEnabled())
-    , grammarAndSpellingPseudoElementsEnabled(document.settings().grammarAndSpellingPseudoElementsEnabled())
-    , highlightAPIEnabled(document.settings().highlightAPIEnabled())
 #if ENABLE(SERVICE_CONTROLS)
     , imageControlsEnabled(document.settings().imageControlsEnabled())
 #endif
@@ -65,6 +59,7 @@ CSSSelectorParserContext::CSSSelectorParserContext(const Document& document)
     , viewTransitionsEnabled(document.settings().viewTransitionsEnabled())
     , viewTransitionClassesEnabled(viewTransitionsEnabled && document.settings().viewTransitionClassesEnabled())
     , viewTransitionTypesEnabled(viewTransitionsEnabled && document.settings().viewTransitionTypesEnabled())
+    , webkitMediaTextTrackDisplayQuirkEnabled(document.quirks().needsWebKitMediaTextTrackDisplayQuirk())
 {
 }
 
@@ -72,10 +67,6 @@ void add(Hasher& hasher, const CSSSelectorParserContext& context)
 {
     add(hasher,
         context.mode,
-        context.cssNestingEnabled,
-        context.customStateSetEnabled,
-        context.grammarAndSpellingPseudoElementsEnabled,
-        context.highlightAPIEnabled,
 #if ENABLE(SERVICE_CONTROLS)
         context.imageControlsEnabled,
 #endif
@@ -84,7 +75,8 @@ void add(Hasher& hasher, const CSSSelectorParserContext& context)
         context.thumbAndTrackPseudoElementsEnabled,
         context.viewTransitionsEnabled,
         context.viewTransitionClassesEnabled,
-        context.viewTransitionTypesEnabled
+        context.viewTransitionTypesEnabled,
+        context.webkitMediaTextTrackDisplayQuirkEnabled
     );
 }
 

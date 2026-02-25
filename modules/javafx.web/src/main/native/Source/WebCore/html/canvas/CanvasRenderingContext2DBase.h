@@ -73,7 +73,7 @@ class WebCodecsVideoFrame;
 struct DOMMatrix2DInit;
 
 
-using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
+using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
     , RefPtr<SVGImageElement>
     , RefPtr<HTMLCanvasElement>
     , RefPtr<ImageBitmap>
@@ -94,7 +94,7 @@ class CanvasRenderingContext2DBase : public CanvasRenderingContext, public Canva
     friend class CanvasFilterContextSwitcher;
     friend class CanvasLayerContextSwitcher;
 protected:
-    CanvasRenderingContext2DBase(CanvasBase&, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
+    CanvasRenderingContext2DBase(CanvasBase&, CanvasRenderingContext::Type, CanvasRenderingContext2DSettings&&, bool usesCSSCompatibilityParseMode);
 
 public:
     virtual ~CanvasRenderingContext2DBase();
@@ -103,6 +103,7 @@ public:
 
     const CanvasRenderingContext2DSettings& getContextAttributes() const { return m_settings; }
     using RenderingMode = WebCore::RenderingMode;
+    std::optional<RenderingMode> renderingModeForTesting() const final;
     std::optional<RenderingMode> getEffectiveRenderingModeForTesting();
 
     double lineWidth() const { return state().lineWidth; }
@@ -149,6 +150,12 @@ public:
     String filterString() const { return state().filterString; }
     void setFilterString(const String&);
 
+    String letterSpacing() const { return state().letterSpacing; }
+    void setLetterSpacing(const String&);
+
+    String wordSpacing() const { return state().wordSpacing; }
+    void setWordSpacing(const String&);
+
     void save() { ++m_unrealizedSaveCount; }
     void restore();
 
@@ -165,11 +172,11 @@ public:
     ExceptionOr<void> setTransform(DOMMatrix2DInit&&);
     void resetTransform();
 
-    void setStrokeColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setStrokeColor(String&& color, std::optional<float> alpha = std::nullopt);
     void setStrokeColor(float grayLevel, float alpha = 1.0);
     void setStrokeColor(float r, float g, float b, float a);
 
-    void setFillColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setFillColor(String&& color, std::optional<float> alpha = std::nullopt);
     void setFillColor(float grayLevel, float alpha = 1.0f);
     void setFillColor(float r, float g, float b, float a);
 
@@ -203,10 +210,9 @@ public:
     ExceptionOr<void> drawImage(CanvasImageSource&&, float dx, float dy, float dw, float dh);
     ExceptionOr<void> drawImage(CanvasImageSource&&, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh);
 
-    void drawImageFromRect(HTMLImageElement&, float sx = 0, float sy = 0, float sw = 0, float sh = 0, float dx = 0, float dy = 0, float dw = 0, float dh = 0, const String& compositeOperation = emptyString());
     void clearCanvas();
 
-    using StyleVariant = std::variant<String, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>>;
+    using StyleVariant = Variant<String, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>>;
     StyleVariant strokeStyle() const;
     void setStrokeStyle(StyleVariant&&);
     StyleVariant fillStyle() const;
@@ -222,8 +228,6 @@ public:
     ExceptionOr<Ref<ImageData>> getImageData(int sx, int sy, int sw, int sh, std::optional<ImageDataSettings>) const;
     void putImageData(ImageData&, int dx, int dy);
     void putImageData(ImageData&, int dx, int dy, int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight);
-
-    static constexpr float webkitBackingStorePixelRatio() { return 1; }
 
     void reset();
 
@@ -265,6 +269,14 @@ public:
         bool isPopulated() const { return m_font.fonts(); }
 #endif
 
+        const FontCascade& fontCascade() const { return m_font; }
+
+        float letterSpacing() const { return m_font.letterSpacing(); }
+        void setLetterSpacing(const Length& letterSpacing) { m_font.setLetterSpacing(letterSpacing); }
+
+        float wordSpacing() const { return m_font.wordSpacing(); }
+        void setWordSpacing(const Length& wordSpacing) { m_font.setWordSpacing(wordSpacing); }
+
     private:
         void update(FontSelector&);
         void fontsNeedUpdate(FontSelector&) final;
@@ -290,7 +302,7 @@ public:
         CompositeOperator globalComposite;
         BlendMode globalBlend;
         AffineTransform transform;
-        bool hasInvertibleTransform;
+        std::optional<AffineTransform> transformInverse;
         Vector<double> lineDash;
         double lineDashOffset;
         bool imageSmoothingEnabled;
@@ -301,6 +313,9 @@ public:
 
         String filterString;
         FilterOperations filterOperations;
+
+        String letterSpacing;
+        String wordSpacing;
 
         String unparsedFont;
         FontProxy font;
@@ -325,9 +340,11 @@ protected:
     void realizeSaves();
     State& modifiableState() { ASSERT(!m_unrealizedSaveCount || m_stateStack.size() >= MaxSaveCount); return m_stateStack.last(); }
 
-    virtual GraphicsContext* drawingContext() const;
+    // These methods are de-virtualized for performance reasons.
+    GraphicsContext* drawingContext() const;
+    GraphicsContext* effectiveDrawingContext() const;
+
     virtual GraphicsContext* existingDrawingContext() const;
-    virtual GraphicsContext* effectiveDrawingContext() const;
     virtual AffineTransform baseTransform() const;
 
     enum class DidDrawOption {
@@ -359,7 +376,7 @@ protected:
     void didDraw(std::optional<FloatRect>, OptionSet<DidDrawOption> = defaultDidDrawOptions());
     void didDrawEntireCanvas(OptionSet<DidDrawOption> options = defaultDidDrawOptions());
     void didDraw(bool entireCanvas, const FloatRect&, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
-    template<typename RectProvider> void didDraw(bool entireCanvas, RectProvider, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
+    template<typename RectProvider> void didDraw(bool entireCanvas, NOESCAPE const RectProvider&, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
 
     virtual std::optional<FilterOperations> setFilterStringWithoutUpdatingStyle(const String&) { return std::nullopt; }
 
@@ -368,7 +385,6 @@ protected:
 
     static String normalizeSpaces(const String&);
 
-    void drawText(const String& text, double x, double y, bool fill, std::optional<double> maxWidth = std::nullopt);
     bool canDrawText(double x, double y, bool fill, std::optional<double> maxWidth = std::nullopt);
     void drawTextUnchecked(const TextRun&, double x, double y, bool fill, std::optional<double> maxWidth = std::nullopt);
 
@@ -377,8 +393,7 @@ protected:
 
     bool usesCSSCompatibilityParseMode() const { return m_usesCSSCompatibilityParseMode; }
 
-    OptionSet<ImageBufferOptions> adjustImageBufferOptionsForTesting(OptionSet<ImageBufferOptions>) final;
-
+    void updateStateTransform(const AffineTransform&);
 private:
     struct CachedContentsTransparent {
     };
@@ -396,7 +411,6 @@ private:
     void applyShadow();
     bool shouldDrawShadows() const;
 
-    bool is2dBase() const final { return true; }
     bool needsPreparationForDisplay() const final;
     void prepareForDisplay() final;
 
@@ -410,11 +424,8 @@ private:
 
     void unwindStateStack();
     void realizeSavesLoop();
-
-    void setStrokeStyle(CanvasStyle);
-    void setStrokeStyle(std::optional<CanvasStyle>);
-    void setFillStyle(CanvasStyle);
-    void setFillStyle(std::optional<CanvasStyle>);
+    void setStrokeColorImpl(Color&& color, String&& unparsedColor = { });
+    void setFillColorImpl(Color&& color, String&& unparsedColor = { });
 
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(CachedImage&, RenderElement*, bool repeatX, bool repeatY);
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLImageElement&, bool repeatX, bool repeatY);
@@ -467,13 +478,10 @@ private:
 
     bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const override;
 #if USE(SKIA)
-    bool delegatesDisplay() const override;
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 #endif
     bool hasDeferredOperations() const final;
     void flushDeferredOperations() final;
-
-    bool hasInvertibleTransform() const final { return state().hasInvertibleTransform; }
 
     // The relationship between FontCascade and CanvasRenderingContext2D::FontProxy must hold certain invariants.
     // Therefore, all font operations must pass through the proxy.
@@ -490,7 +498,7 @@ private:
     FloatRect m_dirtyRect;
     unsigned m_unrealizedSaveCount { 0 };
     bool m_usesCSSCompatibilityParseMode;
-    mutable std::variant<CachedContentsTransparent, CachedContentsUnknown, CachedContentsImageData> m_cachedContents;
+    mutable Variant<CachedContentsTransparent, CachedContentsUnknown, CachedContentsImageData> m_cachedContents;
     CanvasRenderingContext2DSettings m_settings;
     bool m_hasDeferredOperations { false };
 };

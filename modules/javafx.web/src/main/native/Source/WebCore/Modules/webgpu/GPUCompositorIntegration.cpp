@@ -35,14 +35,19 @@ Vector<MachSendRight> GPUCompositorIntegration::recreateRenderBuffers(int width,
 }
 #endif
 
-void GPUCompositorIntegration::prepareForDisplay(CompletionHandler<void()>&& completionHandler)
+void GPUCompositorIntegration::prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&& completionHandler)
 {
-    m_backing->prepareForDisplay(WTFMove(completionHandler));
+    m_backing->prepareForDisplay(frameIndex, WTFMove(completionHandler));
 }
 
 void GPUCompositorIntegration::paintCompositedResultsToCanvas(WebCore::ImageBuffer& imageBuffer, uint32_t bufferIndex)
 {
     m_backing->paintCompositedResultsToCanvas(imageBuffer, bufferIndex);
+}
+
+void GPUCompositorIntegration::updateContentsHeadroom(float headroom)
+{
+    m_backing->updateContentsHeadroom(headroom);
 }
 
 } // namespace WebCore

@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-inline AttributeIteratorAccessor Element::attributesIterator() const
+inline std::span<const Attribute> Element::attributes() const
 {
-    return elementData()->attributesIterator();
+    return elementData()->attributes();
 }
 
 inline unsigned Element::findAttributeIndexByName(const QualifiedName& name) const
@@ -48,29 +48,6 @@ inline unsigned Element::findAttributeIndexByName(const QualifiedName& name) con
 inline unsigned Element::findAttributeIndexByName(const AtomString& name, bool shouldIgnoreAttributeCase) const
 {
     return elementData()->findAttributeIndexByName(name, shouldIgnoreAttributeCase);
-}
-
-inline bool Node::hasAttributes() const
-{
-    auto* element = dynamicDowncast<Element>(*this);
-    return element && element->hasAttributes();
-}
-
-inline NamedNodeMap* Node::attributes() const
-{
-    if (auto* element = dynamicDowncast<Element>(*this))
-        return &element->attributes();
-    return nullptr;
-}
-
-inline Element* Node::parentElement() const
-{
-    return dynamicDowncast<Element>(parentNode());
-}
-
-inline RefPtr<Element> Node::protectedParentElement() const
-{
-    return parentElement();
 }
 
 inline const Element* Element::rootElement() const
@@ -250,7 +227,7 @@ inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* elem
 inline void Element::hideNonce()
 {
     // In the common case, Elements don't have a nonce parameter to hide.
-    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+    if (!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)) [[likely]]
         return;
     hideNonceSlow();
 }

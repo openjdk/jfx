@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,41 +20,35 @@
 
 #pragma once
 
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
+#include "StyleContentAlignmentData.h"
 
 namespace WebCore {
 
 inline const BorderValue& RenderTableCell::borderAdjoiningCellAfter(const RenderTableCell& cell)
 {
     ASSERT_UNUSED(cell, table()->cellBefore(&cell) == this);
-    // FIXME: https://webkit.org/b/79272 - Add support for mixed directionality at the cell level.
-    return style().borderEnd();
+    return style().borderEnd(tableWritingMode());
 }
 
 inline const BorderValue& RenderTableCell::borderAdjoiningCellBefore(const RenderTableCell& cell)
 {
     ASSERT_UNUSED(cell, table()->cellAfter(&cell) == this);
-    // FIXME: https://webkit.org/b/79272 - Add support for mixed directionality at the cell level.
-    return style().borderStart();
+    return style().borderStart(tableWritingMode());
 }
 
 inline const BorderValue& RenderTableCell::borderAdjoiningTableEnd() const
 {
     ASSERT(isFirstOrLastCellInRow());
-    if (isDirectionSame(section(), table()))
-        return style().borderEnd();
-
-    return style().borderStart();
+    return style().borderEnd(tableWritingMode());
 }
 
 inline const BorderValue& RenderTableCell::borderAdjoiningTableStart() const
 {
     ASSERT(isFirstOrLastCellInRow());
-    if (isDirectionSame(section(), table()))
-        return style().borderStart();
-
-    return style().borderEnd();
+    return style().borderStart(tableWritingMode());
 }
 
 inline LayoutUnit RenderTableCell::logicalHeightForRowSizing() const
@@ -62,7 +57,7 @@ inline LayoutUnit RenderTableCell::logicalHeightForRowSizing() const
     LayoutUnit adjustedLogicalHeight = logicalHeight() - (intrinsicPaddingBefore() + intrinsicPaddingAfter());
     if (!style().logicalHeight().isSpecified())
         return adjustedLogicalHeight;
-    LayoutUnit styleLogicalHeight = valueForLength(style().logicalHeight(), 0);
+    LayoutUnit styleLogicalHeight = Style::evaluate(style().logicalHeight(), 0_lu);
     // In strict mode, box-sizing: content-box do the right thing and actually add in the border and padding.
     // Call computedCSSPadding* directly to avoid including implicitPadding.
     if (!document().inQuirksMode() && style().boxSizing() != BoxSizing::BorderBox)
@@ -70,14 +65,28 @@ inline LayoutUnit RenderTableCell::logicalHeightForRowSizing() const
     return std::max(styleLogicalHeight, adjustedLogicalHeight);
 }
 
-inline Length RenderTableCell::styleOrColLogicalWidth() const
+inline Style::PreferredSize RenderTableCell::styleOrColLogicalWidth() const
 {
-    Length styleWidth = style().logicalWidth();
+    auto& styleWidth = style().logicalWidth();
     if (!styleWidth.isAuto())
         return styleWidth;
     if (RenderTableCol* firstColumn = table()->colElement(col()))
         return logicalWidthFromColumns(firstColumn, styleWidth);
     return styleWidth;
+}
+
+inline bool RenderTableCell::isBaselineAligned() const
+{
+    if (auto alignContent = style().alignContent(); !alignContent.isNormal())
+        return alignContent.position() == ContentPosition::Baseline;
+
+    auto& verticalAlign = style().verticalAlign();
+    return WTF::holdsAlternative<CSS::Keyword::Baseline>(verticalAlign)
+        || WTF::holdsAlternative<CSS::Keyword::TextBottom>(verticalAlign)
+        || WTF::holdsAlternative<CSS::Keyword::TextTop>(verticalAlign)
+        || WTF::holdsAlternative<CSS::Keyword::Super>(verticalAlign)
+        || WTF::holdsAlternative<CSS::Keyword::Sub>(verticalAlign)
+        || WTF::holdsAlternative<Style::VerticalAlign::Length>(verticalAlign);
 }
 
 } // namespace WebCore

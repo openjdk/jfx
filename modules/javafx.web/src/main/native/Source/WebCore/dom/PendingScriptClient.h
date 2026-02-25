@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple, Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +36,10 @@ public:
     virtual ~PendingScriptClient() = default;
 
     // CheckedPtr interface
-    virtual uint32_t ptrCount() const = 0;
-    virtual uint32_t ptrCountWithoutThreadCheck() const = 0;
-    virtual void incrementPtrCount() const = 0;
-    virtual void decrementPtrCount() const = 0;
+    virtual uint32_t checkedPtrCount() const = 0;
+    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
+    virtual void incrementCheckedPtrCount() const = 0;
+    virtual void decrementCheckedPtrCount() const = 0;
 
     virtual void notifyFinished(PendingScript&) = 0;
 };

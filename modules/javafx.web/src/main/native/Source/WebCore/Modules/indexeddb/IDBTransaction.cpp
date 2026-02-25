@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "EventDispatcher.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "IDBBindingUtilities.h"
 #include "IDBCursorWithValue.h"
 #include "IDBDatabase.h"
 #include "IDBError.h"
@@ -52,6 +53,8 @@
 #include "SerializedScriptValue.h"
 #include "TransactionOperation.h"
 #include "WebCoreOpaqueRootInlines.h"
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -188,7 +191,7 @@ void IDBTransaction::abortDueToFailedRequest(DOMException& error)
     if (isFinishedOrFinishing())
         return;
 
-    m_domError = &error;
+    m_domError = error;
     abortInternal();
 }
 
@@ -275,7 +278,7 @@ void IDBTransaction::abortInProgressOperations(const IDBError& error)
     m_transactionOperationsInProgressQueue.clear();
 
     for (auto& operation : inProgressAbortVector) {
-        m_transactionOperationsInProgressQueue.append(operation.get());
+        m_transactionOperationsInProgressQueue.append(operation);
         m_currentlyCompletingRequest = nullptr;
         operation->doComplete(IDBResultData::error(operation->identifier(), error));
     }
@@ -433,7 +436,7 @@ void IDBTransaction::completeNoncursorRequest(IDBRequest& request, const IDBResu
 
     request.completeRequestAndDispatchEvent(result);
 
-    m_currentlyCompletingRequest = &request;
+    m_currentlyCompletingRequest = request;
 }
 
 void IDBTransaction::completeCursorRequest(IDBRequest& request, const IDBResultData& result)
@@ -442,7 +445,7 @@ void IDBTransaction::completeCursorRequest(IDBRequest& request, const IDBResultD
 
     request.didOpenOrIterateCursor(result);
 
-    m_currentlyCompletingRequest = &request;
+    m_currentlyCompletingRequest = request;
 }
 
 void IDBTransaction::finishedDispatchEventForRequest(IDBRequest& request)
@@ -627,7 +630,7 @@ void IDBTransaction::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
 
-    EventDispatcher::dispatchEvent({ this, m_database.ptr() }, event);
+    EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_database.ptr() }), event);
 
     if (!event.isTrusted())
         return;
@@ -760,6 +763,7 @@ void IDBTransaction::createIndexOnServer(IDBClient::TransactionOperation& operat
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(isVersionChange());
 
+    operation.setNextRequestCanGoToServer(false);
     m_database->connectionProxy().createIndex(operation, info);
 }
 
@@ -796,7 +800,7 @@ void IDBTransaction::renameIndex(IDBIndex& index, const String& newName)
     index.objectStore().renameReferencedIndex(index, newName);
 
     auto objectStoreIdentifier = index.objectStore().info().identifier();
-    uint64_t indexIdentifier = index.info().identifier();
+    auto indexIdentifier = index.info().identifier();
 
     LOG(IndexedDBOperations, "IDB rename index operation: %s to %s under object store %" PRIu64, index.info().condensedLoggingString().utf8().data(), newName.utf8().data(), objectStoreIdentifier.toRawValue());
     scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, [protectedThis = Ref { *this }] (const auto& result) {
@@ -806,7 +810,7 @@ void IDBTransaction::renameIndex(IDBIndex& index, const String& newName)
     }), IsWriteOperation::Yes);
 }
 
-void IDBTransaction::renameIndexOnServer(IDBClient::TransactionOperation& operation, IDBObjectStoreIdentifier objectStoreIdentifier, const uint64_t& indexIdentifier, const String& newName)
+void IDBTransaction::renameIndexOnServer(IDBClient::TransactionOperation& operation, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier, const String& newName)
 {
     LOG(IndexedDB, "IDBTransaction::renameIndexOnServer");
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
@@ -938,7 +942,7 @@ Ref<IDBRequest> IDBTransaction::requestGetAllObjectStoreRecords(IDBObjectStore& 
     auto request = IDBRequest::create(*scriptExecutionContext(), objectStore, *this);
     addRequest(request.get());
 
-    IDBGetAllRecordsData getAllRecordsData { keyRangeData, getAllType, count, objectStore.info().identifier(), 0 };
+    IDBGetAllRecordsData getAllRecordsData { keyRangeData, getAllType, count, objectStore.info().identifier() };
 
     LOG(IndexedDBOperations, "IDB get all object store records operation: %s", getAllRecordsData.loggingString().utf8().data());
     scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, request.get(), [protectedThis = Ref { *this }, request] (const auto& result) {
@@ -1251,38 +1255,54 @@ Ref<IDBRequest> IDBTransaction::requestPutOrAdd(IDBObjectStore& objectStore, Ref
     LOG(IndexedDBOperations, "IDB putOrAdd operation: %s key: %s", objectStore.info().condensedLoggingString().utf8().data(), key ? key->loggingString().utf8().data() : "<null key>");
     scheduleOperation(IDBClient::TransactionOperationImpl::create(*this, request.get(), [protectedThis = Ref { *this }, request] (const auto& result) {
         protectedThis->didPutOrAddOnServer(request.get(), result);
-    }, [protectedThis = Ref { *this }, key, value = Ref { value }, overwriteMode] (auto& operation) {
-        protectedThis->putOrAddOnServer(operation, key.get(), value.ptr(), overwriteMode);
+    }, [protectedThis = Ref { *this }, key = WTFMove(key), value = Ref { value }, overwriteMode, objectStoreInfo = objectStore.info()] (auto& operation) mutable {
+        protectedThis->putOrAddOnServer(operation, objectStoreInfo, WTFMove(key), WTFMove(value), overwriteMode);
     }), IsWriteOperation::Yes);
 
     return request;
 }
 
-void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation, RefPtr<IDBKey> key, RefPtr<SerializedScriptValue> value, const IndexedDB::ObjectStoreOverwriteMode& overwriteMode)
+void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation, const IDBObjectStoreInfo& objectStoreInfo, RefPtr<IDBKey>&& key, Ref<SerializedScriptValue>&& value, const IndexedDB::ObjectStoreOverwriteMode& overwriteMode)
 {
     LOG(IndexedDB, "IDBTransaction::putOrAddOnServer");
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(!isReadOnly());
-    ASSERT(value);
 
-    if (!value->hasBlobURLs()) {
-        m_database->connectionProxy().putOrAdd(operation, key.get(), *value, overwriteMode);
+    RefPtr context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
+    if (!globalObject) {
+        if (context) {
+            context->postTask([protectedOperation = Ref { operation }](ScriptExecutionContext&) {
+                auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Script execution context has stopped"_s });
+                protectedOperation->doComplete(result);
+            });
+        }
         return;
     }
 
+    // Create placeholder key to be replaced by auto generated key on server side.
+    IDBKeyData keyData = key ? IDBKeyData { key.get() } : IDBKeyData::placeholder();
+    if (!value->hasBlobURLs()) {
+        auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, value.get());
+        m_database->connectionProxy().putOrAdd(operation, WTFMove(keyData), value.get(), indexKeys, overwriteMode);
+        return;
+    }
+
+    bool isEphemeral = database().connectionProxy().sessionID().isEphemeral();
     // Due to current limitations on our ability to post tasks back to a worker thread,
     // workers currently write blobs to disk synchronously.
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=157958 - Make this asynchronous after refactoring allows it.
     if (!isMainThread()) {
-        auto idbValue = value->writeBlobsToDiskForIndexedDBSynchronously();
-        if (idbValue.data().data())
-            m_database->connectionProxy().putOrAdd(operation, key.get(), idbValue, overwriteMode);
-        else {
+        auto idbValue = value->writeBlobsToDiskForIndexedDBSynchronously(isEphemeral);
+        if (idbValue.data().data()) {
+            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, idbValue);
+            m_database->connectionProxy().putOrAdd(operation, WTFMove(keyData), idbValue, indexKeys, overwriteMode);
+        } else {
             // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
             // In that case, we cannot successfully store this record, so we callback with an error.
             RefPtr<IDBClient::TransactionOperation> protectedOperation(&operation);
-            auto result = IDBResultData::error(operation.identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
-            scriptExecutionContext()->postTask([protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)](ScriptExecutionContext&) {
+            scriptExecutionContext()->postTask([protectedOperation = WTFMove(protectedOperation)](ScriptExecutionContext&) {
+                auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
                 protectedOperation->doComplete(result);
             });
         }
@@ -1293,18 +1313,22 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
     // stop future requests from going to the server ahead of it.
     operation.setNextRequestCanGoToServer(false);
 
-    value->writeBlobsToDiskForIndexedDB([protectedThis = Ref { *this }, this, protectedOperation = Ref<IDBClient::TransactionOperation>(operation), keyData = IDBKeyData(key.get()).isolatedCopy(), overwriteMode](IDBValue&& idbValue) mutable {
+    value->writeBlobsToDiskForIndexedDB(isEphemeral, [protectedThis = Ref { *this }, this, protectedOperation = Ref<IDBClient::TransactionOperation>(operation), objectStoreInfo = crossThreadCopy(objectStoreInfo), keyData = crossThreadCopy(WTFMove(keyData)), overwriteMode](IDBValue&& idbValue) mutable {
         ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
         ASSERT(isMainThread());
-        if (idbValue.data().data()) {
-            m_database->connectionProxy().putOrAdd(protectedOperation.get(), WTFMove(keyData), idbValue, overwriteMode);
+
+        RefPtr context = scriptExecutionContext();
+        auto* globalObject = context ? context->globalObject() : nullptr;
+        if (idbValue.data().data() && globalObject) {
+            auto indexKeys = generateIndexKeyMapForValueIsolatedCopy(*globalObject, objectStoreInfo, keyData, idbValue);
+            m_database->connectionProxy().putOrAdd(protectedOperation.get(), WTFMove(keyData), idbValue, indexKeys, overwriteMode);
             return;
         }
 
         // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
         // In that case, we cannot successfully store this record, so we callback with an error.
+        callOnMainThread([protectedThis = WTFMove(protectedThis), protectedOperation = WTFMove(protectedOperation)]() mutable {
         auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { ExceptionCode::UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
-        callOnMainThread([protectedThis = WTFMove(protectedThis), protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)]() mutable {
             protectedOperation->doComplete(result);
         });
     });
@@ -1526,6 +1550,15 @@ void IDBTransaction::autoCommit()
         return;
     ASSERT(!m_currentlyCompletingRequest);
 
+    RefPtr context = scriptExecutionContext();
+    RefPtr scope = context ? dynamicDowncast<WorkerOrWorkletGlobalScope>(*context) : nullptr;
+    CheckedPtr scriptController = scope ? scope->script() : nullptr;
+    if (scriptController && scriptController->isTerminatingExecution() && scriptController->isExecutionForbidden()) {
+        // In this case, transaction should be aborted when context is destroyed.
+        RELEASE_LOG(Storage, "IDBTransaction::autoCommit: Disabled as script execution is terminated");
+        return;
+    }
+
     commitInternal();
 }
 
@@ -1533,6 +1566,22 @@ uint64_t IDBTransaction::generateOperationID()
 {
     static std::atomic<uint64_t> currentOperationID(1);
     return currentOperationID += 1;
+}
+
+void IDBTransaction::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    RefPtr context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
+    if (!globalObject)
+        return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, IndexKey { }, recordID);
+
+    auto jsValue = deserializeIDBValueToJSValue(*globalObject, value);
+    if (jsValue.isUndefinedOrNull())
+        return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, IndexKey { }, recordID);
+
+    IndexKey indexKey;
+    generateIndexKeyForValue(*globalObject, indexInfo, jsValue, indexKey, keyPath, key);
+    return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, indexKey, recordID);
 }
 
 } // namespace WebCore

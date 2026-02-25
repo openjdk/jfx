@@ -33,7 +33,7 @@ namespace WebCore {
 class ContextMenu;
 
 class ContextMenuClientJava : public ContextMenuClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ContextMenuClientJava);
 public:
     ContextMenuClientJava(const JLObject &webPage);
 

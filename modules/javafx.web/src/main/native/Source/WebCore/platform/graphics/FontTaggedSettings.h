@@ -41,7 +41,11 @@ namespace WebCore {
 
 using FontTag = std::array<char, 4>;
 
-inline FontTag fontFeatureTag(const char characters[4]) { return {{ characters[0], characters[1], characters[2], characters[3] }}; }
+inline FontTag fontFeatureTag(std::span<const char, 5> nullTerminatedString)
+{
+    ASSERT(nullTerminatedString[4] == '\0');
+    return { nullTerminatedString[0], nullTerminatedString[1], nullTerminatedString[2], nullTerminatedString[3] };
+}
 
 inline void add(Hasher& hasher, std::array<char, 4> array)
 {
@@ -108,11 +112,11 @@ public:
 
     bool isEmpty() const { return !size(); }
     size_t size() const { return m_list.size(); }
-    const FontTaggedSetting<T>& operator[](int index) const { return m_list[index]; }
-    const FontTaggedSetting<T>& at(size_t index) const { return m_list.at(index); }
+    const FontTaggedSetting<T>& operator[](int index) const LIFETIME_BOUND { return m_list[index]; }
+    const FontTaggedSetting<T>& at(size_t index) const LIFETIME_BOUND { return m_list.at(index); }
 
-    typename Vector<FontTaggedSetting<T>>::const_iterator begin() const { return m_list.begin(); }
-    typename Vector<FontTaggedSetting<T>>::const_iterator end() const { return m_list.end(); }
+    auto begin() const LIFETIME_BOUND { return m_list.begin(); }
+    auto end() const LIFETIME_BOUND { return m_list.end(); }
 
     unsigned hash() const;
 
@@ -130,7 +134,7 @@ void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
         if (m_list[i].tag() < feature.tag())
             continue;
         if (m_list[i].tag() == feature.tag())
-            m_list.remove(i);
+            m_list.removeAt(i);
             break;
     }
     m_list.insert(i, WTFMove(feature));

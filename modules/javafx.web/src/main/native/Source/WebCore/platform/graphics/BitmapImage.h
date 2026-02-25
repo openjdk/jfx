@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,7 +66,8 @@ public:
     unsigned currentFrameIndex() const { return m_source->currentFrameIndex(); }
     bool currentFrameHasAlpha() const { return m_source->currentImageFrame().hasAlpha(); }
     ImageOrientation currentFrameOrientation() const { return m_source->currentImageFrame().orientation(); }
-    DecodingOptions currentFrameDecodingOptions() const { return m_source->currentImageFrame().decodingOptions(); }
+    Headroom currentFrameHeadroom(ShouldDecodeToHDR shouldDecodeToHDR) const { return m_source->currentImageFrame().headroom(shouldDecodeToHDR); }
+    DecodingOptions currentFrameDecodingOptions() const { return m_source->currentImageFrame().decodingOptions(std::nullopt); }
 
     // Primary & current NativeImage
     RefPtr<NativeImage> primaryNativeImage() { return m_source->primaryNativeImage(); }
@@ -77,6 +78,7 @@ public:
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
     FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     DestinationColorSpace colorSpace() final { return m_source->colorSpace(); }
+    bool hasHDRContent() const final { return m_source->hasHDRContent(); }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
 #if ASSERT_ENABLED
@@ -90,11 +92,12 @@ public:
     RefPtr<NativeImage> nativeImageAtIndex(unsigned index) final { return m_source->nativeImageAtIndex(index); }
 
     // Testing support.
-    const char* sourceUTF8() const { return sourceURL().string().utf8().data(); }
+    CString sourceUTF8() const { return sourceURL().string().utf8(); }
     void setAsyncDecodingEnabledForTesting(bool enabled) { m_source->setAsyncDecodingEnabledForTesting(enabled); }
     bool isAsyncDecodingEnabledForTesting() const { return m_source->isAsyncDecodingEnabledForTesting(); }
     void setMinimumDecodingDurationForTesting(Seconds duration) { m_source->setMinimumDecodingDurationForTesting(duration); }
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) { m_source->setClearDecoderAfterAsyncFrameRequestForTesting(enabled); }
+    void setHasHDRContentForTesting() { m_source->setHasHDRContentForTesting(); }
     unsigned decodeCountForTesting() const { return m_source->decodeCountForTesting(); }
     unsigned blankDrawCountForTesting() const { return m_source->blankDrawCountForTesting(); }
 
@@ -131,6 +134,8 @@ private:
     // Image methods
     bool isBitmapImage() const final { return true; }
     bool isAnimating() const final { return m_source->isAnimating(); }
+
+    bool hasHDRContentForTesting() const { return m_source->hasHDRContentForTesting(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions = { }) final;
     void drawPattern(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;

@@ -25,9 +25,10 @@
 
 #pragma once
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #include "PlatformMediaResourceLoader.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
@@ -45,7 +46,7 @@ public:
 
 class WebMResourceClient final
     : public PlatformMediaResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebMResourceClient);
 public:
     static RefPtr<WebMResourceClient> create(WebMResourceClientParent&, PlatformMediaResourceLoader&, ResourceRequest&&);
     ~WebMResourceClient() { stop(); }
@@ -66,4 +67,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

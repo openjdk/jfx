@@ -27,6 +27,7 @@
 #include "NetworkSendQueue.h"
 
 #include "BlobLoader.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ScriptExecutionContext.h"
 
 namespace WebCore {
@@ -61,7 +62,7 @@ void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byte
 
 void NetworkSendQueue::enqueue(WebCore::Blob& blob)
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -77,14 +78,12 @@ void NetworkSendQueue::enqueue(WebCore::Blob& blob)
     });
     auto* blobLoaderPtr = &blobLoader.get();
     m_queue.append(WTFMove(blobLoader));
-    blobLoaderPtr->start(blob, context, FileReaderLoader::ReadAsArrayBuffer);
+    blobLoaderPtr->start(blob, context.get(), FileReaderLoader::ReadAsArrayBuffer);
 }
 
 void NetworkSendQueue::clear()
 {
-    // Do not call m_queue.clear() here since destroying a BlobLoader will cause its completion
-    // handler to get called, which will call processMessages() to iterate over m_queue.
-    std::exchange(m_queue, { });
+    m_queue.clear();
 }
 
 void NetworkSendQueue::processMessages()

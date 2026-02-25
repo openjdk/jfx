@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SVGPropertyTraits.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace IPC {
 template<typename T, typename> struct ArgumentCoder;
@@ -31,9 +31,10 @@ namespace WebCore {
 
 class AffineTransform;
 class FloatRect;
+template<typename> class ExceptionOr;
 
 class SVGPreserveAspectRatioValue {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPreserveAspectRatioValue);
 public:
     enum SVGPreserveAspectRatioType : uint8_t {
         SVG_PRESERVEASPECTRATIO_UNKNOWN = 0,
@@ -73,7 +74,7 @@ public:
 
     bool parse(StringView);
     bool parse(StringParsingBuffer<LChar>&, bool validate);
-    bool parse(StringParsingBuffer<UChar>&, bool validate);
+    bool parse(StringParsingBuffer<char16_t>&, bool validate);
 
     String valueAsString() const;
 

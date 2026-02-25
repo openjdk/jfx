@@ -475,8 +475,8 @@ g_error_matches (const GError *error,
  * @format: printf()-style format
  * @...: args for @format
  *
- * Does nothing if @err is %NULL; if @err is non-%NULL, then *@err
- * must be %NULL. A new #GError is created and assigned to *@err.
+ * Does nothing if @err is %NULL; if @err is non-%NULL, then `*err`
+ * must be %NULL. A new #GError is created and assigned to `*err`.
  */
 void
 g_set_error (GError      **err,
@@ -512,8 +512,8 @@ g_set_error (GError      **err,
  * @code: error code
  * @message: error message
  *
- * Does nothing if @err is %NULL; if @err is non-%NULL, then *@err
- * must be %NULL. A new #GError is created and assigned to *@err.
+ * Does nothing if @err is %NULL; if @err is non-%NULL, then `*err`
+ * must be %NULL. A new #GError is created and assigned to `*err`.
  * Unlike g_set_error(), @message is not a printf()-style format string.
  * Use this function if @message contains text you don't have control over,
  * that could include printf() escape sequences.
@@ -540,7 +540,7 @@ g_set_error_literal (GError      **err,
  * @dest: (out callee-allocates) (optional) (nullable): error return location
  * @src: (transfer full): error to move into the return location
  *
- * If @dest is %NULL, free @src; otherwise, moves @src into *@dest.
+ * If @dest is %NULL, free @src; otherwise, moves @src into `*dest`.
  * The error variable @dest points to must be %NULL.
  *
  * @src must be non-%NULL.
@@ -576,8 +576,8 @@ g_propagate_error (GError **dest,
  * g_clear_error:
  * @err: a #GError return location
  *
- * If @err or *@err is %NULL, does nothing. Otherwise,
- * calls g_error_free() on *@err and sets *@err to %NULL.
+ * If @err or `*err` is %NULL, does nothing. Otherwise,
+ * calls g_error_free() on `*err` and sets `*err` to %NULL.
  */
 void
 g_clear_error (GError **err)
@@ -615,7 +615,7 @@ g_error_add_prefix (gchar       **string,
  * error message. If @err is %NULL (ie: no error variable) then do
  * nothing.
  *
- * If *@err is %NULL (ie: an error variable is present but there is no
+ * If `*err` is %NULL (ie: an error variable is present but there is no
  * error condition) then also do nothing.
  *
  * Since: 2.16
@@ -640,7 +640,7 @@ g_prefix_error (GError      **err,
  * @err: (inout) (nullable) (optional): a return location for a #GError, or %NULL
  * @prefix: string to prefix @err with
  *
- * Prefixes @prefix to an existing error message. If @err or *@err is
+ * Prefixes @prefix to an existing error message. If @err or `*err` is
  * %NULL (i.e.: no error variable) then do nothing.
  *
  * Since: 2.70
@@ -666,8 +666,8 @@ g_prefix_error_literal (GError      **err,
  * @format: printf()-style format string
  * @...: arguments to @format
  *
- * If @dest is %NULL, free @src; otherwise, moves @src into *@dest.
- * *@dest must be %NULL. After the move, add a prefix as with
+ * If @dest is %NULL, free @src; otherwise, moves @src into `*dest`.
+ * `*dest` must be %NULL. After the move, add a prefix as with
  * g_prefix_error().
  *
  * Since: 2.16

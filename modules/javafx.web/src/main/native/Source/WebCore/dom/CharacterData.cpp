@@ -45,7 +45,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CharacterData);
 
 CharacterData::~CharacterData()
 {
-    willBeDeletedFrom(RefAllowingPartiallyDestroyed<Document> { document() });
+    willBeDeletedFrom(Ref<Document> { document() });
 }
 
 static bool canUseSetDataOptimization(const CharacterData& node)
@@ -111,7 +111,7 @@ void CharacterData::parserAppendData(StringView string)
     notifyParentAfterChange(childChange);
 
     auto mutationRecipients = MutationObserverInterestGroup::createForCharacterDataMutation(*this);
-    if (UNLIKELY(mutationRecipients))
+    if (mutationRecipients) [[unlikely]]
         mutationRecipients->enqueueMutationRecord(MutationRecord::createCharacterData(*this, oldData));
 }
 
@@ -227,7 +227,7 @@ void CharacterData::dispatchModifiedEvent(const String& oldData)
     if (auto mutationRecipients = MutationObserverInterestGroup::createForCharacterDataMutation(*this))
         mutationRecipients->enqueueMutationRecord(MutationRecord::createCharacterData(*this, oldData));
 
-    if (!isInShadowTree()) {
+    if (!isInShadowTree() && !document().shouldNotFireMutationEvents()) {
         if (document().hasListenerType(Document::ListenerType::DOMCharacterDataModified))
             dispatchScopedEvent(MutationEvent::create(eventNames().DOMCharacterDataModifiedEvent, Event::CanBubble::Yes, nullptr, oldData, m_data));
         dispatchSubtreeModifiedEvent();

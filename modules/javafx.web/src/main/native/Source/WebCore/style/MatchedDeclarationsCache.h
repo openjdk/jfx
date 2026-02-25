@@ -28,6 +28,7 @@
 #include "MatchResult.h"
 #include "RenderStyle.h"
 #include "Timer.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
@@ -37,25 +38,29 @@ namespace Style {
 class Resolver;
 
 class MatchedDeclarationsCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MatchedDeclarationsCache);
 public:
     explicit MatchedDeclarationsCache(const Resolver&);
     ~MatchedDeclarationsCache();
 
     static bool isCacheable(const Element&, const RenderStyle&, const RenderStyle& parentStyle);
-    static unsigned computeHash(const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
+    static unsigned computeHash(const MatchResult&, const Style::CustomPropertyData& inheritedCustomProperties);
 
     struct Entry {
-        MatchResult matchResult;
+        RefPtr<const MatchResult> matchResult;
         std::unique_ptr<const RenderStyle> renderStyle;
         std::unique_ptr<const RenderStyle> parentRenderStyle;
-        std::unique_ptr<const RenderStyle> userAgentAppearanceStyle;
 
         bool isUsableAfterHighPriorityProperties(const RenderStyle&) const;
     };
 
-    const Entry* find(unsigned hash, const MatchResult&, const StyleCustomPropertyData& inheritedCustomProperties);
-    void add(const RenderStyle&, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult&);
+    struct Result {
+        const Entry& entry;
+        bool inheritedEqual;
+    };
+
+    std::optional<Result> find(unsigned hash, const MatchResult&, const Style::CustomPropertyData& inheritedCustomProperties, const RenderStyle&);
+    void add(const RenderStyle&, const RenderStyle& parentStyle,  unsigned hash, const MatchResult&);
     void remove(unsigned hash);
 
     // Every N additions to the matched declaration cache trigger a sweep where entries holding
@@ -67,10 +72,13 @@ public:
     void deref() const;
 
 private:
+    template<typename Callback>
+    void removeAllMatching(const Callback& matches);
+
     void sweep();
 
     SingleThreadWeakRef<const Resolver> m_owner;
-    HashMap<unsigned, Entry, AlreadyHashed> m_entries;
+    HashMap<unsigned, Vector<Entry>, AlreadyHashed> m_entries;
     Timer m_sweepTimer;
     unsigned m_additionsSinceLastSweep { 0 };
 };

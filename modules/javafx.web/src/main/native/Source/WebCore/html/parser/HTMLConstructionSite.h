@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
@@ -100,18 +101,19 @@ enum WhitespaceMode {
 };
 
 class AtomHTMLToken;
-struct CustomElementConstructionData;
+class CustomElementRegistry;
 class Document;
 class Element;
 class HTMLFormElement;
 class HTMLTemplateElement;
 class JSCustomElementInterface;
+struct CustomElementConstructionData;
 
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
 public:
     HTMLConstructionSite(Document&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth);
-    HTMLConstructionSite(DocumentFragment&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(DocumentFragment&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth, CustomElementRegistry*);
     ~HTMLConstructionSite();
 
     void executeQueuedTasks();
@@ -168,6 +170,7 @@ public:
     ElementName currentElementName() const { return m_openElements.topElementName(); }
     HTMLStackItem& currentStackItem() const { return m_openElements.topStackItem(); }
     HTMLStackItem* oneBelowTop() const { return m_openElements.oneBelowTop(); }
+    TreeScope& treeScopeForCurrentNode();
     Document& ownerDocumentForCurrentNode();
     Ref<Document> protectedOwnerDocumentForCurrentNode() { return ownerDocumentForCurrentNode(); }
     HTMLElementStack& openElements() const { return m_openElements; }
@@ -214,7 +217,7 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    RefPtr<HTMLElement> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&, JSCustomElementInterface**);
+    std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomElementRegistry>> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&);
     Ref<HTMLElement> createHTMLElement(AtomHTMLToken&);
     Ref<Element> createElement(AtomHTMLToken&, const AtomString& namespaceURI);
 
@@ -241,6 +244,7 @@ private:
     TaskQueue m_taskQueue;
 
     OptionSet<ParserContentPolicy> m_parserContentPolicy;
+    RefPtr<CustomElementRegistry> m_registry;
     bool m_isParsingFragment;
 
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#parsing-main-intable

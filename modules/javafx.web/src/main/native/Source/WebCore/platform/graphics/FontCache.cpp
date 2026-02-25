@@ -43,7 +43,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringHash.h>
 
@@ -51,7 +51,13 @@
 #include "OpenTypeVerticalData.h"
 #endif
 
+#if PLATFORM(WIN)
+#include <dwrite.h>
+#endif
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontCache);
 
 struct FontPlatformDataCacheKey {
     FontDescriptionKey descriptionKey;
@@ -119,7 +125,7 @@ using FontVerticalDataCache = HashMap<FontPlatformData, RefPtr<OpenTypeVerticalD
 #endif
 
 struct FontCache::FontDataCaches {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FontCache);
 
     FontDataCache data;
     FontPlatformDataCache platformData;
@@ -128,7 +134,7 @@ struct FontCache::FontDataCaches {
 #endif
 };
 
-FontCache& FontCache::forCurrentThread()
+CheckedRef<FontCache> FontCache::forCurrentThread()
 {
     return threadGlobalData().fontCache();
 }
@@ -151,7 +157,7 @@ FontCache::FontCache()
 
 FontCache::~FontCache() = default;
 
-std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::alternateFamilyName(const String& familyName)
 {
     if (auto platformSpecificAlternate = platformAlternateFamilyName(familyName))
         return platformSpecificAlternate;
@@ -188,7 +194,7 @@ std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyN
         break;
     }
 
-    return std::nullopt;
+    return { };
 }
 
 FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontDescription, const String& passedFamilyName, const FontCreationContext& fontCreationContext, OptionSet<FontLookupOptions> options)
@@ -207,8 +213,8 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
 #endif
 
     static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        platformInit();
+    std::call_once(onceFlag, [checkedThis = CheckedPtr { this }]() {
+        checkedThis->platformInit();
     });
 
     FontPlatformDataCacheKey key { fontDescription, { familyName }, fontCreationContext };
@@ -221,7 +227,7 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
             // We were unable to find a font. We have a small set of fonts that we alias to other names,
             // e.g., Arial/Helvetica, Courier/Courier New, etc. Try looking up the font under the aliased name.
             if (auto alternateName = alternateFamilyName(familyName)) {
-                auto* alternateData = cachedFontPlatformData(fontDescription, *alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
+                auto* alternateData = cachedFontPlatformData(fontDescription, alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
                 // Look up the key in the hash table again as the previous iterator may have
                 // been invalidated by the recursive call to cachedFontPlatformData().
                 it = m_fontDataCaches->platformData.find(key);
@@ -328,7 +334,7 @@ void FontCache::purgeInactiveFontData(unsigned purgeCount)
         return std::nullopt;
     });
 
-    LOG(Fonts, " removing %lu keys", keysToRemove.size());
+    LOG(Fonts, " removing %zu keys", keysToRemove.size());
 
     for (auto& key : keysToRemove)
         m_fontDataCaches->platformData.remove(key);
@@ -346,9 +352,9 @@ RefPtr<OpenTypeVerticalData> FontCache::verticalData(const FontPlatformData& pla
 }
 #endif
 
-void FontCache::updateFontCascade(const FontCascade& fontCascade, RefPtr<FontSelector>&& fontSelector)
+void FontCache::updateFontCascade(const FontCascade& fontCascade)
 {
-    fontCascade.updateFonts(m_fontCascadeCache.retrieveOrAddCachedFonts(fontCascade.fontDescription(), WTFMove(fontSelector)));
+    fontCascade.updateFonts(m_fontCascadeCache.retrieveOrAddCachedFonts(fontCascade.fontDescription(), fontCascade.fontSelector()));
 }
 
 size_t FontCache::fontCount()
@@ -417,11 +423,11 @@ static void dispatchToAllFontCaches(F function)
 {
     ASSERT(isMainThread());
 
-    function(FontCache::forCurrentThread());
+    function(FontCache::forCurrentThread().get());
 
     for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
         thread.runLoop().postTask([function](ScriptExecutionContext&) {
-            if (auto fontCache = FontCache::forCurrentThreadIfExists())
+            if (CheckedPtr fontCache = FontCache::forCurrentThreadIfExists())
                 function(*fontCache);
         });
     }
@@ -457,9 +463,9 @@ bool FontCache::useBackslashAsYenSignForFamily(const AtomString& family)
         return false;
 
     if (m_familiesUsingBackslashAsYenSign.isEmpty()) {
-        auto add = [&] (ASCIILiteral name, std::initializer_list<UChar> unicodeName) {
+        auto add = [&] (ASCIILiteral name, std::initializer_list<char16_t> unicodeName) {
             m_familiesUsingBackslashAsYenSign.add(AtomString { name });
-            m_familiesUsingBackslashAsYenSign.add(AtomString({ unicodeName.begin(), unicodeName.size() }));
+            m_familiesUsingBackslashAsYenSign.add(AtomString(std::span { unicodeName }));
         };
         add("MS PGothic"_s, { 0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x30B4, 0x30B7, 0x30C3, 0x30AF });
         add("MS PMincho"_s, { 0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x660E, 0x671D });

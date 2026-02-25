@@ -153,3 +153,4 @@ gst_structure_new_empty	@151	NONAME
 gst_structure_set	@152	NONAME
 gst_util_group_id_next	@153	NONAME
 gst_value_list_get_value	@154	NONAME
+gst_video_alignment_reset	@155	NONAME

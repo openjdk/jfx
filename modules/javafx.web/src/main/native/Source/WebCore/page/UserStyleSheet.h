@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,13 +28,14 @@
 #include "PageIdentifier.h"
 #include "UserContentTypes.h"
 #include "UserStyleSheetTypes.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class UserStyleSheet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(UserStyleSheet, WEBCORE_EXPORT);
 public:
     UserStyleSheet()
         : m_injectedFrames(UserContentInjectedFrames::InjectInAllFrames)
@@ -42,13 +43,14 @@ public:
     {
     }
 
-    WEBCORE_EXPORT UserStyleSheet(const String&, const URL&, Vector<String>&&, Vector<String>&&, UserContentInjectedFrames, UserStyleLevel, std::optional<PageIdentifier> = std::nullopt);
+    WEBCORE_EXPORT UserStyleSheet(const String&, const URL&, Vector<String>&& = { }, Vector<String>&& = { }, UserContentInjectedFrames = UserContentInjectedFrames::InjectInAllFrames, UserContentMatchParentFrame = UserContentMatchParentFrame::Never, UserStyleLevel = UserStyleLevel::User, std::optional<PageIdentifier> = std::nullopt);
 
     const String& source() const { return m_source; }
     const URL& url() const { return m_url; }
     const Vector<String>& allowlist() const { return m_allowlist; }
     const Vector<String>& blocklist() const { return m_blocklist; }
     UserContentInjectedFrames injectedFrames() const { return m_injectedFrames; }
+    UserContentMatchParentFrame matchParentFrame() const { return m_matchParentFrame; }
     UserStyleLevel level() const { return m_level; }
     std::optional<PageIdentifier> pageID() const { return m_pageID; }
 
@@ -57,8 +59,9 @@ private:
     URL m_url;
     Vector<String> m_allowlist;
     Vector<String> m_blocklist;
-    UserContentInjectedFrames m_injectedFrames;
-    UserStyleLevel m_level;
+    UserContentInjectedFrames m_injectedFrames { UserContentInjectedFrames::InjectInAllFrames };
+    UserContentMatchParentFrame m_matchParentFrame { UserContentMatchParentFrame::Never };
+    UserStyleLevel m_level { UserStyleLevel::User };
     std::optional<PageIdentifier> m_pageID;
 };
 

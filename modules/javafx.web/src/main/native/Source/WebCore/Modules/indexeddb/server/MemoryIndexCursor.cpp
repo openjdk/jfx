@@ -33,29 +33,37 @@
 #include "MemoryCursor.h"
 #include "MemoryIndex.h"
 #include "MemoryObjectStore.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace IDBServer {
 
-MemoryIndexCursor::MemoryIndexCursor(MemoryIndex& index, const IDBCursorInfo& info)
-    : MemoryCursor(info)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MemoryIndexCursor);
+
+Ref<MemoryIndexCursor> MemoryIndexCursor::create(MemoryIndex& index, const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
+{
+    return adoptRef(*new MemoryIndexCursor(index, info, transaction));
+}
+
+MemoryIndexCursor::MemoryIndexCursor(MemoryIndex& index, const IDBCursorInfo& cursorInfo, MemoryBackingStoreTransaction& transaction)
+    : MemoryCursor(cursorInfo, transaction)
     , m_index(index)
 {
-    LOG(IndexedDB, "MemoryIndexCursor::MemoryIndexCursor %s", info.range().loggingString().utf8().data());
+    LOG(IndexedDB, "MemoryIndexCursor::MemoryIndexCursor %s", cursorInfo.range().loggingString().utf8().data());
 
-    auto* valueStore = m_index.valueStore();
+    auto* valueStore = index.valueStore();
     if (!valueStore)
         return;
 
-    if (m_info.isDirectionForward())
-        m_currentIterator = valueStore->find(m_info.range().lowerKey, m_info.range().lowerOpen);
+    if (info().isDirectionForward())
+        m_currentIterator = valueStore->find(info().range().lowerKey, info().range().lowerOpen);
     else
-        m_currentIterator = valueStore->reverseFind(m_info.range().upperKey, m_info.duplicity(), m_info.range().upperOpen);
+        m_currentIterator = valueStore->reverseFind(info().range().upperKey, info().duplicity(), info().range().upperOpen);
 
-    if (m_currentIterator.isValid() && m_info.range().containsKey(m_currentIterator.key())) {
+    if (m_currentIterator.isValid() && info().range().containsKey(m_currentIterator.key())) {
         m_currentKey = m_currentIterator.key();
         m_currentPrimaryKey = m_currentIterator.primaryKey();
-        m_index.cursorDidBecomeClean(*this);
+        index.cursorDidBecomeClean(*this);
     } else
         m_currentIterator.invalidate();
 }
@@ -69,11 +77,11 @@ void MemoryIndexCursor::currentData(IDBGetResult& getResult)
         return;
     }
 
-    if (m_info.cursorType() == IndexedDB::CursorType::KeyOnly)
+    if (info().cursorType() == IndexedDB::CursorType::KeyOnly)
         getResult = { m_currentKey, m_currentPrimaryKey };
     else {
-        IDBValue value = { m_index.objectStore()->valueForKey(m_currentPrimaryKey), { }, { } };
-        getResult = { m_currentKey, m_currentPrimaryKey, WTFMove(value), m_index.objectStore()->info().keyPath() };
+        IDBValue value = { m_index->protectedObjectStore()->valueForKey(m_currentPrimaryKey), { }, { } };
+        getResult = { m_currentKey, m_currentPrimaryKey, WTFMove(value), m_index->protectedObjectStore()->info().keyPath() };
     }
 }
 
@@ -86,11 +94,12 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         ASSERT(key.isValid());
 #endif
 
+    Ref index = m_index.get();
     if (key.isValid()) {
         // Cannot iterate by both a count and to a key
         ASSERT(!count);
 
-        auto* valueStore = m_index.valueStore();
+        auto* valueStore = index->valueStore();
         if (!valueStore) {
             m_currentKey = { };
             m_currentPrimaryKey = { };
@@ -99,18 +108,18 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         }
 
         if (primaryKey.isValid()) {
-            if (m_info.isDirectionForward())
+            if (info().isDirectionForward())
                 m_currentIterator = valueStore->find(key, primaryKey);
             else
-                m_currentIterator = valueStore->reverseFind(key, primaryKey, m_info.duplicity());
+                m_currentIterator = valueStore->reverseFind(key, primaryKey, info().duplicity());
         } else {
-            if (m_info.isDirectionForward())
+            if (info().isDirectionForward())
                 m_currentIterator = valueStore->find(key);
             else
-                m_currentIterator = valueStore->reverseFind(key, m_info.duplicity());
+                m_currentIterator = valueStore->reverseFind(key, info().duplicity());
         }
 
-        if (m_currentIterator.isValid() && !m_info.range().containsKey(m_currentIterator.key()))
+        if (m_currentIterator.isValid() && !info().range().containsKey(m_currentIterator.key()))
             m_currentIterator.invalidate();
 
         if (!m_currentIterator.isValid()) {
@@ -120,7 +129,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
             return;
         }
 
-        m_index.cursorDidBecomeClean(*this);
+        index->cursorDidBecomeClean(*this);
 
         m_currentKey = m_currentIterator.key();
         m_currentPrimaryKey = m_currentIterator.primaryKey();
@@ -135,7 +144,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         count = 1;
 
     if (!m_currentIterator.isValid()) {
-        auto* valueStore = m_index.valueStore();
+        auto* valueStore = index->valueStore();
         if (!valueStore) {
             m_currentKey = { };
             m_currentPrimaryKey = { };
@@ -143,7 +152,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
             return;
         }
 
-        switch (m_info.cursorDirection()) {
+        switch (info().cursorDirection()) {
         case IndexedDB::CursorDirection::Next:
             m_currentIterator = valueStore->find(m_currentKey, m_currentPrimaryKey);
             break;
@@ -151,10 +160,10 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
             m_currentIterator = valueStore->find(m_currentKey, true);
             break;
         case IndexedDB::CursorDirection::Prev:
-            m_currentIterator = valueStore->reverseFind(m_currentKey, m_currentPrimaryKey, m_info.duplicity());
+            m_currentIterator = valueStore->reverseFind(m_currentKey, m_currentPrimaryKey, info().duplicity());
             break;
         case IndexedDB::CursorDirection::Prevunique:
-            m_currentIterator = valueStore->reverseFind(m_currentKey, m_info.duplicity(), true);
+            m_currentIterator = valueStore->reverseFind(m_currentKey, info().duplicity(), true);
             break;
         }
 
@@ -165,7 +174,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
             return;
         }
 
-        m_index.cursorDidBecomeClean(*this);
+        index->cursorDidBecomeClean(*this);
 
         // If we restored the current iterator and it does *not* match the current key/primaryKey,
         // then it is the next record in line and we should consider that an iteration.
@@ -176,7 +185,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
     ASSERT(m_currentIterator.isValid());
 
     while (count) {
-        if (m_info.duplicity() == CursorDuplicity::NoDuplicates)
+        if (info().duplicity() == CursorDuplicity::NoDuplicates)
             m_currentIterator.nextIndexEntry();
         else
             ++m_currentIterator;
@@ -187,7 +196,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         --count;
     }
 
-    if (m_currentIterator.isValid() && !m_info.range().containsKey(m_currentIterator.key()))
+    if (m_currentIterator.isValid() && !info().range().containsKey(m_currentIterator.key()))
         m_currentIterator.invalidate();
 
     // Not having a valid iterator after finishing any iteration means we've reached the end of the cursor.
@@ -206,7 +215,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
 void MemoryIndexCursor::indexRecordsAllChanged()
 {
     m_currentIterator.invalidate();
-    m_index.cursorDidBecomeDirty(*this);
+    m_index->cursorDidBecomeDirty(*this);
 }
 
 void MemoryIndexCursor::indexValueChanged(const IDBKeyData& key, const IDBKeyData& primaryKey)
@@ -215,7 +224,7 @@ void MemoryIndexCursor::indexValueChanged(const IDBKeyData& key, const IDBKeyDat
         return;
 
     m_currentIterator.invalidate();
-    m_index.cursorDidBecomeDirty(*this);
+    m_index->cursorDidBecomeDirty(*this);
 }
 
 } // namespace IDBServer

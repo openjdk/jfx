@@ -30,7 +30,9 @@
 #include "FocusDirection.h"
 #include "HitTestRequest.h"
 #include "ImmediateActionStage.h"
+#include "IntPointHash.h"
 #include "LayoutPoint.h"
+#include "NodeIdentifier.h"
 #include "PlatformMouseEvent.h"
 #include "RenderObject.h"
 #include "ScrollTypes.h"
@@ -45,6 +47,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 
 #if PLATFORM(COCOA)
@@ -89,6 +92,7 @@ class PlatformKeyboardEvent;
 class PlatformTouchEvent;
 class PlatformWheelEvent;
 class RemoteFrame;
+class RemoteFrameGeometryTransformer;
 class RenderBox;
 class RenderElement;
 class RenderEmbeddedObject;
@@ -103,7 +107,12 @@ class VisibleSelection;
 class WheelEvent;
 class Widget;
 
+#if ENABLE(MODEL_PROCESS)
+class HTMLModelElement;
+#endif
+
 struct DragState;
+struct FocusEventData;
 struct RemoteUserInputEventData;
 
 enum class WheelEventProcessingSteps : uint8_t;
@@ -126,7 +135,7 @@ enum AppendTrailingWhitespace { ShouldAppendTrailingWhitespace, DontAppendTraili
 enum CheckDragHysteresis { ShouldCheckDragHysteresis, DontCheckDragHysteresis };
 
 class EventHandler final : public CanMakeCheckedPtr<EventHandler> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EventHandler);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventHandler);
 public:
     explicit EventHandler(LocalFrame&);
@@ -162,6 +171,8 @@ public:
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
 
+    WEBCORE_EXPORT ScrollableArea* focusedScrollableArea() const;
+
     WEBCORE_EXPORT void setCapturingMouseEventsElement(RefPtr<Element>&&);
     void pointerCaptureElementDidChange(Element*);
 
@@ -183,6 +194,9 @@ public:
 
     void setResizingFrameSet(HTMLFrameSetElement*);
 
+    void setLastTouchedNode(Node* node) { m_lastTouchedNode = node; }
+    Node* lastTouchedNode() const { return m_lastTouchedNode.get(); }
+
     void resizeLayerDestroyed();
 
     // FIXME: Each Frame has an EventHandler, and not every event goes to all frames, so this position can be stale. It should probably be stored on Page.
@@ -201,7 +215,9 @@ public:
     WEBCORE_EXPORT bool logicalScrollRecursively(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = nullptr);
 
     bool tabsToLinks(KeyboardEvent*) const;
+    bool tabsToLinks(const FocusEventData&) const;
     bool tabsToAllFormControls(KeyboardEvent*) const;
+    bool tabsToAllFormControls(const FocusEventData&) const;
 
     WEBCORE_EXPORT HandleUserInputEventResult mouseMoved(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
@@ -215,7 +231,7 @@ public:
     WEBCORE_EXPORT HandleUserInputEventResult handleMouseReleaseEvent(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool handleMouseForceEvent(const PlatformMouseEvent&);
 
-    WEBCORE_EXPORT HandleUserInputEventResult handleWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>);
+    WEBCORE_EXPORT std::pair<HandleUserInputEventResult, OptionSet<EventHandling>> handleWheelEvent(const PlatformWheelEvent&, OptionSet<WheelEventProcessingSteps>);
     void defaultWheelEventHandler(Node*, WheelEvent&);
     void wheelEventWasProcessedByMainThread(const PlatformWheelEvent&, OptionSet<EventHandling>);
 
@@ -237,7 +253,7 @@ public:
     enum class InMotion : bool { No, Yes };
     void updateTouchLastGlobalPositionAndDelta(PointerID, const IntPoint&, InTouchEventHandling, InMotion);
     bool dispatchTouchEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetTouchArrayMap&, float, float);
-    bool dispatchSimulatedTouchEvent(IntPoint location);
+    WEBCORE_EXPORT bool dispatchSimulatedTouchEvent(IntPoint location);
     Frame* touchEventTargetSubframe() const { return m_touchEventTargetSubframe.get(); }
     const TouchArray& touches() const { return m_touches; }
 #endif
@@ -320,6 +336,8 @@ public:
 
     WEBCORE_EXPORT static NSEvent *currentNSEvent();
     static NSEvent *correspondingPressureEvent();
+
+    WEBCORE_EXPORT static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const FloatPoint& screenPoint, const FloatRect& screenRect);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -327,7 +345,7 @@ public:
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-    WEBCORE_EXPORT HandleUserInputEventResult handleTouchEvent(const PlatformTouchEvent&);
+    WEBCORE_EXPORT Expected<bool, RemoteFrameGeometryTransformer> handleTouchEvent(const PlatformTouchEvent&);
 #endif
 
     bool useHandCursor(Node*, bool isOverLink, bool shiftKey);
@@ -345,8 +363,14 @@ public:
 
     static Widget* widgetForEventTarget(Element* eventTarget);
 
+#if ENABLE(MODEL_PROCESS)
+    WEBCORE_EXPORT std::optional<NodeIdentifier> requestInteractiveModelElementAtPoint(const IntPoint& clientPosition);
+    WEBCORE_EXPORT void stageModeSessionDidUpdate(std::optional<NodeIdentifier>, const TransformationMatrix&);
+    WEBCORE_EXPORT void stageModeSessionDidEnd(std::optional<NodeIdentifier>);
+#endif
+
 #if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
-    WEBCORE_EXPORT bool tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint& globalPosition);
+    WEBCORE_EXPORT void tryToBeginDragAtPoint(const IntPoint& clientPosition, const IntPoint& globalPosition, CompletionHandler<void(Expected<bool, RemoteFrameGeometryTransformer>)>&&);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -383,16 +407,17 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
     static const Seconds TextDragDelay;
+    void setDragStateSource(Element*) const;
     SimpleRange createSimpleRangeFromDragStartSelection() const;
     std::optional<WeakSimpleRange> getWeakSimpleRangeFromSelection(const VisibleSelection&) const;
 #endif
 
     bool eventActivatedView(const PlatformMouseEvent&) const;
     bool updateSelectionForMouseDownDispatchingSelectStart(Node*, const VisibleSelection&, TextGranularity);
+    bool expandAndUpdateSelectionForMouseDownIfNeeded(Node& targetNode, const VisibleSelection&, TextGranularity);
     void selectClosestWordFromHitTestResult(const HitTestResult&, AppendTrailingWhitespace);
     VisibleSelection selectClosestWordFromHitTestResultBasedOnLookup(const HitTestResult&);
     void selectClosestContextualWordFromHitTestResult(const HitTestResult&, AppendTrailingWhitespace);
-
 
     bool handleMouseDoubleClickEvent(const PlatformMouseEvent&);
 
@@ -431,8 +456,8 @@ private:
 
     bool shouldSwapScrollDirection(const HitTestResult&, const PlatformWheelEvent&) const;
 
-    static bool isKeyboardOptionTab(KeyboardEvent&);
-    static bool eventInvertsTabsToLinksClientCallResult(KeyboardEvent&);
+    static bool isKeyboardOptionTab(const FocusEventData&);
+    static bool eventInvertsTabsToLinksClientCallResult(const FocusEventData&);
 
 #if !ENABLE(IOS_TOUCH_EVENTS)
     void fakeMouseMoveEventTimerFired();
@@ -442,13 +467,13 @@ private:
     bool isInsideScrollbar(const IntPoint&) const;
 
 #if ENABLE(TOUCH_EVENTS)
-    HandleUserInputEventResult dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent&);
+    bool dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent&);
 #endif
 
     enum class FireMouseOverOut : bool { No, Yes };
     void updateMouseEventTargetNode(const AtomString& eventType, Node*, const PlatformMouseEvent&, FireMouseOverOut);
 
-    ScrollableArea* enclosingScrollableArea(Node*);
+    ScrollableArea* enclosingScrollableArea(Node*) const;
     void notifyScrollableAreasOfMouseEvents(const AtomString& eventType, Element* lastElementUnderMouse, Element* elementUnderMouse);
 
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const PlatformMouseEvent&);
@@ -481,9 +506,9 @@ private:
 
     bool mouseMovementExceedsThreshold(const FloatPoint&, int pointsThreshold) const;
 
-    bool passMousePressEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&);
-    bool passMouseMoveEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&, HitTestResult* = nullptr);
-    bool passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&);
+    HandleUserInputEventResult passMousePressEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&);
+    HandleUserInputEventResult passMouseMoveEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&, HitTestResult* = nullptr);
+    HandleUserInputEventResult passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&);
 
     bool passSubframeEventToSubframe(MouseEventWithHitTestResults&, LocalFrame&, HitTestResult* = nullptr);
 
@@ -601,13 +626,10 @@ private:
     bool mouseDownMayStartSelect() const;
 
     std::optional<RemoteUserInputEventData> userInputEventDataForRemoteFrame(const RemoteFrame*, const IntPoint&);
+    std::optional<RemoteFrameGeometryTransformer> geometryTransformerForRemoteFrame(RemoteFrame*);
 
     bool isCapturingMouseEventsElement() const { return m_capturingMouseEventsElement || m_isCapturingRootElementForMouseEvents; }
-    void resetCapturingMouseEventsElement()
-    {
-        m_capturingMouseEventsElement = nullptr;
-        m_isCapturingRootElementForMouseEvents = false;
-    }
+    void resetCapturingMouseEventsElement();
 
     Ref<LocalFrame> protectedFrame() const;
 
@@ -617,7 +639,7 @@ private:
 #if ENABLE(IMAGE_ANALYSIS)
     DeferrableOneShotTimer m_textRecognitionHoverTimer;
 #endif
-    std::unique_ptr<AutoscrollController> m_autoscrollController;
+    const UniqueRef<AutoscrollController> m_autoscrollController;
     SingleThreadWeakPtr<RenderLayer> m_resizeLayer;
 
     double m_maxMouseMovedDuration { 0 };
@@ -649,6 +671,7 @@ private:
     SingleThreadWeakPtr<Scrollbar> m_lastScrollbarUnderMouse;
     Cursor m_currentMouseCursor;
 
+    RefPtr<Node> m_lastTouchedNode;
     RefPtr<Node> m_clickNode;
     RefPtr<HTMLFrameSetElement> m_frameSetBeingResized;
 
@@ -729,8 +752,9 @@ private:
 #if PLATFORM(IOS_FAMILY)
     bool m_shouldAllowMouseDownToStartDrag { false };
     bool m_isAutoscrolling { false };
-    IntPoint m_targetAutoscrollPositionInUnscrolledRootViewCoordinates;
-    std::optional<IntPoint> m_initialTargetAutoscrollPositionInUnscrolledRootViewCoordinates;
+    IntPoint m_targetAutoscrollPositionInRootView;
+    IntPoint m_targetAutoscrollPositionInUnscrolledRootView;
+    std::optional<IntPoint> m_initialAutoscrollPositionInUnscrolledRootView;
 #endif
 };
 

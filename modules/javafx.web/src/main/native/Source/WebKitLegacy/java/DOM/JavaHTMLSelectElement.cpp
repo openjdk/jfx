@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLOptGroupElement.h>
@@ -202,13 +203,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutoc
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->autocomplete());
 }
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString{String(env, value)});
-}
-
 
 // Functions
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_itemImpl(JNIEnv* env, jclass, jlong peer

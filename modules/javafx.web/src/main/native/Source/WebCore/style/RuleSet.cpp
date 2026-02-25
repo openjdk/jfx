@@ -31,6 +31,7 @@
 
 #include "CSSFontSelector.h"
 #include "CSSKeyframesRule.h"
+#include "CSSPositionTryRule.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "CSSViewTransitionRule.h"
@@ -38,6 +39,7 @@
 #include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
+#include "MutableCSSSelector.h"
 #include "RuleSetBuilder.h"
 #include "SVGElement.h"
 #include "ScriptExecutionContext.h"
@@ -49,6 +51,7 @@
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
 #include "UserAgentParts.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
@@ -78,16 +81,16 @@ static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomStr
 
 // FIXME: Maybe we can unify both following functions
 
-static bool hasHostPseudoClassSubjectInSelectorList(const CSSSelectorList* selectorList)
+static bool hasHostOrScopePseudoClassSubjectInSelectorList(const CSSSelectorList* selectorList)
 {
     if (!selectorList)
         return false;
 
     for (auto& selector : *selectorList) {
-        if (selector.isHostPseudoClass())
+        if (selector.isHostPseudoClass() || selector.isScopePseudoClass())
             return true;
 
-        if (hasHostPseudoClassSubjectInSelectorList(selector.selectorList()))
+        if (hasHostOrScopePseudoClassSubjectInSelectorList(selector.selectorList()))
             return true;
     }
 
@@ -147,7 +150,8 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
         if (identifier) {
             auto oldSize = container.size();
             container.grow(m_ruleCount);
-            std::fill(container.begin() + oldSize, container.end(), 0);
+            auto newlyAllocated = container.mutableSpan().subspan(oldSize);
+            std::ranges::fill(newlyAllocated, 0);
             container.last() = identifier;
     }
     };
@@ -229,7 +233,7 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             case CSSSelector::PseudoElement::ViewTransitionImagePair:
             case CSSSelector::PseudoElement::ViewTransitionOld:
             case CSSSelector::PseudoElement::ViewTransitionNew:
-                if (selector->argumentList()->first().identifier != starAtom())
+                if (selector->argumentList()->first() != starAtom())
                     namedPseudoElementSelector = selector;
                 break;
             default:
@@ -253,9 +257,12 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
             case CSSSelector::PseudoClass::Root:
                 rootElementSelector = selector;
                 break;
+            case CSSSelector::PseudoClass::Scope:
+                m_hasHostOrScopePseudoClassRulesInUniversalBucket = true;
+                break;
             default:
-                if (hasHostPseudoClassSubjectInSelectorList(selector->selectorList()))
-                    m_hasHostPseudoClassRulesInUniversalBucket = true;
+                if (hasHostOrScopePseudoClassSubjectInSelectorList(selector->selectorList()))
+                    m_hasHostOrScopePseudoClassRulesInUniversalBucket = true;
                 break;
             }
             break;
@@ -367,7 +374,7 @@ void RuleSet::addRule(RuleData&& ruleData, CascadeLayerIdentifier cascadeLayerId
     }
 
     if (namedPseudoElementSelector) {
-        addToRuleSet(namedPseudoElementSelector->argumentList()->first().identifier, m_namedPseudoElementRules, ruleData);
+        addToRuleSet(namedPseudoElementSelector->argumentList()->first(), m_namedPseudoElementRules, ruleData);
         return;
     }
 
@@ -393,7 +400,7 @@ void RuleSet::addPageRule(StyleRulePage& rule)
 
 void RuleSet::setViewTransitionRule(StyleRuleViewTransition& rule)
 {
-    m_viewTransitionRule = &rule;
+    m_viewTransitionRule = rule;
 }
 
 RefPtr<StyleRuleViewTransition> RuleSet::viewTransitionRule() const
@@ -454,7 +461,7 @@ std::optional<DynamicMediaQueryEvaluationChanges> RuleSet::evaluateDynamicMediaQ
         return ruleSet;
     }).iterator->value;
 
-    return { { DynamicMediaQueryEvaluationChanges::Type::InvalidateStyle, { ruleSet.copyRef() } } };
+    return { { DynamicMediaQueryEvaluationChanges::Type::InvalidateStyle, { { ruleSet.copyRef() } } } };
 }
 
 RuleSet::CollectedMediaQueryChanges RuleSet::evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator& evaluator, size_t startIndex)
@@ -567,6 +574,11 @@ Vector<Ref<const StyleRuleScope>> RuleSet::scopeRulesFor(const RuleData& ruleDat
     queries.reverse();
 
     return queries;
+}
+
+const RefPtr<const StyleRulePositionTry> RuleSet::positionTryRuleForName(const AtomString& name) const
+{
+    return m_positionTryRules.get(name);
 }
 
 } // namespace Style

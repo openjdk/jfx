@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 #if ENABLE(WEBGL)
 
 #include "GraphicsContextGL.h"
+#include "PlatformImage.h"
+#include <wtf/MallocSpan.h>
 
 namespace WebCore {
 
@@ -43,7 +45,7 @@ public:
     ~GraphicsContextGLImageExtractor();
 
     bool extractSucceeded() { return m_extractSucceeded; }
-    const void* imagePixelData() { return m_imagePixelData; }
+    std::span<const uint8_t> imagePixelData() { return m_imagePixelData; }
     unsigned imageWidth() { return m_imageWidth; }
     unsigned imageHeight() { return m_imageHeight; }
     DataFormat imageSourceFormat() { return m_imageSourceFormat; }
@@ -60,15 +62,15 @@ private:
     RefPtr<cairo_surface_t> m_imageSurface;
 #elif USE(CG)
     RetainPtr<CFDataRef> m_pixelData;
-    UniqueArray<uint8_t> m_formalizedRGBA8Data;
+    MallocSpan<uint8_t> m_formalizedRGBA8Data;
 #elif USE(SKIA)
     sk_sp<SkData> m_pixelData;
     sk_sp<SkImage> m_skImage;
 #endif
-    Ref<Image> m_image;
+    const Ref<Image> m_image;
     DOMSource m_imageHtmlDomSource;
     bool m_extractSucceeded;
-    const void* m_imagePixelData;
+    std::span<const uint8_t> m_imagePixelData;
     unsigned m_imageWidth;
     unsigned m_imageHeight;
     DataFormat m_imageSourceFormat;

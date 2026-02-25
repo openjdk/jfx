@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +31,16 @@
 #include "DatabaseContext.h"
 #include "DatabaseTask.h"
 #include "DatabaseTracker.h"
-#include "Document.h"
-#include "InspectorInstrumentation.h"
+#include "DocumentInlines.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
+#include "Page.h"
 #include "PlatformStrategies.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -53,7 +55,7 @@ public:
 
 private:
     DatabaseManager& m_manager;
-    Ref<SecurityOrigin> m_origin;
+    const Ref<SecurityOrigin> m_origin;
     DatabaseDetails m_details;
 };
 
@@ -211,13 +213,12 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabase(Document& document, con
 
     auto databaseContext = this->databaseContext(document);
     databaseContext->setHasOpenDatabases();
-    InspectorInstrumentation::didOpenDatabase(*database);
 
     if (database->isNew() && creationCallback.get()) {
         LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
         database->setHasPendingCreationEvent(true);
         database->m_document->eventLoop().queueTask(TaskSource::Networking, [creationCallback, database]() {
-            creationCallback->handleEvent(*database);
+            creationCallback->invoke(*database);
             database->setHasPendingCreationEvent(false);
         });
     }
@@ -245,7 +246,7 @@ String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String
     {
         Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
-            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin))
+            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(origin))
                 return String();
         }
     }
@@ -257,8 +258,8 @@ DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, Sec
     {
         Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
-            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin)) {
-                ASSERT(&proposedDatabase->details().thread() == &Thread::current() || isMainThread());
+            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(origin)) {
+                ASSERT(&proposedDatabase->details().thread() == &Thread::currentSingleton() || isMainThread());
                 return proposedDatabase->details();
             }
         }

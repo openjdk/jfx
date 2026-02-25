@@ -36,10 +36,12 @@
 #include <JavaScriptCore/Breakpoint.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/text/AtomString.h>
@@ -76,15 +78,17 @@ class RenderObject;
 class RevalidateStyleAttributeTask;
 class ShadowRoot;
 
+enum class ExceptionCode : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;
 
-class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler {
+class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorDOMAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorDOMAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorDOMAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorDOMAgent);
 public:
-    InspectorDOMAgent(PageAgentContext&, InspectorOverlay*);
+    InspectorDOMAgent(PageAgentContext&, InspectorOverlay&);
     ~InspectorDOMAgent();
 
     static String toErrorString(ExceptionCode);
@@ -104,7 +108,7 @@ public:
     static JSC::JSValue nodeAsScriptValue(JSC::JSGlobalObject&, Node*);
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // DOMBackendDispatcherHandler
@@ -112,6 +116,8 @@ public:
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> querySelectorAll(Inspector::Protocol::DOM::NodeId, const String& selector);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Node>> getDocument();
     Inspector::Protocol::ErrorStringOr<void> requestChildNodes(Inspector::Protocol::DOM::NodeId, std::optional<int>&& depth);
+    Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> requestAssignedSlot(Inspector::Protocol::DOM::NodeId);
+    Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> requestAssignedNodes(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<void> setAttributeValue(Inspector::Protocol::DOM::NodeId, const String& name, const String& value);
     Inspector::Protocol::ErrorStringOr<void> setAttributesAsText(Inspector::Protocol::DOM::NodeId, const String& text, const String& name);
     Inspector::Protocol::ErrorStringOr<void> removeAttribute(Inspector::Protocol::DOM::NodeId, const String& name);
@@ -269,17 +275,19 @@ private:
 
     void relayoutDocument();
 
+    Ref<InspectorOverlay> protectedOverlay() const;
+
     Inspector::InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::DOMBackendDispatcher> m_backendDispatcher;
-    Page& m_inspectedPage;
-    InspectorOverlay* m_overlay { nullptr };
+    const UniqueRef<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::DOMBackendDispatcher> m_backendDispatcher;
+    WeakRef<Page> m_inspectedPage;
+    WeakRef<InspectorOverlay> m_overlay;
     WeakHashMap<Node, Inspector::Protocol::DOM::NodeId, WeakPtrImplWithEventTargetData> m_nodeToId;
     HashMap<Inspector::Protocol::DOM::NodeId, WeakPtr<Node, WeakPtrImplWithEventTargetData>> m_idToNode;
     HashSet<Inspector::Protocol::DOM::NodeId> m_childrenRequested;
     Inspector::Protocol::DOM::NodeId m_lastNodeId { 1 };
     RefPtr<Document> m_document;
-    typedef HashMap<String, Vector<RefPtr<Node>>> SearchResults;
+    using SearchResults = HashMap<String, Vector<RefPtr<Node>>>;
     SearchResults m_searchResults;
     std::unique_ptr<RevalidateStyleAttributeTask> m_revalidateStyleAttrTask;
     RefPtr<Node> m_nodeToFocus;

@@ -31,7 +31,10 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -45,8 +48,8 @@ enum class AllowedImageType : uint8_t {
 // MARK: <image>
 // https://drafts.csswg.org/css-images-4/#image-values
 
-RefPtr<CSSValue> consumeImage(CSSParserTokenRange&, const CSSParserContext&, OptionSet<AllowedImageType> = { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
-RefPtr<CSSValue> consumeImageOrNone(CSSParserTokenRange&, const CSSParserContext&, OptionSet<AllowedImageType> = { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
+RefPtr<CSSValue> consumeImage(CSSParserTokenRange&, CSS::PropertyParserState&, OptionSet<AllowedImageType> = { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
+RefPtr<CSSValue> consumeImageOrNone(CSSParserTokenRange&, CSS::PropertyParserState&, OptionSet<AllowedImageType> = { AllowedImageType::URLFunction, AllowedImageType::ImageSet, AllowedImageType::GeneratedImage });
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "Document.h"
-#include "LayoutRect.h"
-#include "RenderTheme.h"
 #include "Timer.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,6 +36,8 @@ class Color;
 class Document;
 class FloatRect;
 class GraphicsContext;
+class LayoutPoint;
+class LayoutRect;
 class Node;
 class Page;
 class VisibleSelection;
@@ -72,8 +73,9 @@ public:
     virtual Node* caretNode() = 0;
 };
 
-class CaretAnimator {
-    WTF_MAKE_FAST_ALLOCATED;
+class CaretAnimator : public CanMakeCheckedPtr<CaretAnimator> {
+    WTF_MAKE_TZONE_ALLOCATED(CaretAnimator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CaretAnimator);
 public:
     struct PresentationProperties {
         enum class BlinkState : bool {
@@ -115,10 +117,10 @@ protected:
     explicit CaretAnimator(CaretAnimationClient& client)
         : m_client(client)
         , m_blinkTimer(*this, &CaretAnimator::scheduleAnimation)
-    {
 #if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
-        m_prefersNonBlinkingCursor = page() && page()->prefersNonBlinkingCursor();
+        , m_prefersNonBlinkingCursor(determinePrefersNonBlinkingCursor())
 #endif
+    {
     }
 
     virtual void updateAnimationProperties() = 0;
@@ -138,6 +140,7 @@ protected:
         m_blinkTimer.stop();
     }
 
+    // FIXME: This is layering violation. WebCore/platform should not rely on the rest of WebCore.
     Page* page() const;
 
     CaretAnimationClient& m_client;
@@ -146,6 +149,9 @@ protected:
     PresentationProperties m_presentationProperties { };
 
 private:
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+    bool determinePrefersNonBlinkingCursor() const;
+#endif
     void scheduleAnimation();
 
     bool m_isActive { false };

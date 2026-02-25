@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014-2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "InsertListCommand.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "Editing.h"
 #include "ElementTraversal.h"
@@ -34,6 +35,7 @@
 #include "HTMLLIElement.h"
 #include "HTMLNames.h"
 #include "HTMLUListElement.h"
+#include "PositionInlines.h"
 #include "Range.h"
 #include "VisibleUnits.h"
 
@@ -62,7 +64,7 @@ HTMLElement* InsertListCommand::fixOrphanedListChild(Node& node)
     if (parentNode && !parentNode->hasRichlyEditableStyle())
         return nullptr;
 
-    auto listElement = HTMLUListElement::create(document());
+    Ref listElement = HTMLUListElement::create(document());
     insertNodeBefore(listElement.copyRef(), node);
     if (!listElement->hasEditableStyle())
         return nullptr;
@@ -132,7 +134,7 @@ void InsertListCommand::doApply()
     // margin/padding, but not others.  We should make the gap painting more consistent and
     // then use a left margin/padding rule here.
     if (visibleEnd != visibleStart && isStartOfParagraph(visibleEnd, CanSkipOverEditingBoundary)) {
-        setEndingSelection(VisibleSelection(visibleStart, visibleEnd.previous(CannotCrossEditingBoundary), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(visibleStart, visibleEnd.previous(CannotCrossEditingBoundary), endingSelection().directionality()));
         if (!endingSelection().rootEditableElement())
             return;
     }
@@ -153,6 +155,7 @@ void InsertListCommand::doApply()
 
                 auto currentSelection = *endingSelection().firstRange();
                 VisiblePosition startOfCurrentParagraph = startOfSelection;
+                VisiblePosition oldPositionBeforeReplacedParagraph;
                 while (startOfCurrentParagraph.isNotNull() && !inSameParagraph(startOfCurrentParagraph, startOfLastParagraph, CanCrossEditingBoundary)) {
                     // doApply() may operate on and remove the last paragraph of the selection from the document
                     // if it's in the same list item as startOfCurrentParagraph. Return early to avoid an
@@ -190,7 +193,22 @@ void InsertListCommand::doApply()
                     if (startOfCurrentParagraph == startOfSelection)
                         startOfSelection = endingSelection().visibleStart();
 
+                    // Move to the start of the next paragraph.
+                    VisiblePosition oldStartOfCurrentParagraph = startOfCurrentParagraph;
                     startOfCurrentParagraph = startOfNextParagraph(endingSelection().visibleStart());
+                    if (!oldStartOfCurrentParagraph.isOrphan()) {
+                        // If we didn't move forward, return early to avoid an infinite loop.
+                        if (startOfCurrentParagraph <= oldStartOfCurrentParagraph)
+                            break;
+                        if (oldPositionBeforeReplacedParagraph.isNotNull())
+                            oldPositionBeforeReplacedParagraph = VisiblePosition();
+                    } else {
+                        // Handle the case when oldStartOfCurrentParagraph gets orphaned and startOfCurrentParagraph stays at startOfNextParagraph(oldPositionBeforeReplacedParagraph).
+                        if (oldPositionBeforeReplacedParagraph.isNull())
+                            oldPositionBeforeReplacedParagraph = endingSelection().visibleStart();
+                        else if (startOfCurrentParagraph <= startOfNextParagraph(oldPositionBeforeReplacedParagraph))
+                            break;
+                    }
                 }
                 setEndingSelection(endOfSelection);
                 doApplyForSingleParagraph(forceCreateList, listTag, currentSelection);
@@ -198,7 +216,7 @@ void InsertListCommand::doApply()
                 endOfSelection = endingSelection().visibleEnd();
                 if (startOfSelection.isOrphan())
                     startOfSelection = visiblePositionForIndex(startIndex, startScope.get());
-                setEndingSelection(VisibleSelection(startOfSelection, endOfSelection, endingSelection().isDirectional()));
+                setEndingSelection(VisibleSelection(startOfSelection, endOfSelection, endingSelection().directionality()));
                 return;
             }
         }
@@ -218,7 +236,7 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
     // FIXME: This will produce unexpected results for a selection that starts just before a
     // table and ends inside the first cell, selectionForParagraphIteration should probably
     // be renamed and deployed inside setEndingSelection().
-    auto selectionNode = endingSelection().start().protectedDeprecatedNode();
+    RefPtr selectionNode = endingSelection().start().deprecatedNode();
     RefPtr listChildNode = enclosingListChild(selectionNode.get());
     bool switchListType = false;
     if (listChildNode) {
@@ -273,8 +291,11 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
             if (rangeEndIsInList && newList)
                 currentSelection.end = makeBoundaryPointAfterNodeContents(*newList);
 
-            setEndingSelection(VisibleSelection(makeContainerOffsetPosition(currentSelection.start),
-                makeContainerOffsetPosition(currentSelection.end)));
+            if ((rangeStartIsInList || rangeEndIsInList) && newList) {
+                setEndingSelection(VisibleSelection(makeContainerOffsetPosition(currentSelection.start),
+                    makeContainerOffsetPosition(currentSelection.end)));
+            } else
+                setEndingSelection(VisibleSelection(firstPositionInNode(newList.get())));
 
             return;
         }

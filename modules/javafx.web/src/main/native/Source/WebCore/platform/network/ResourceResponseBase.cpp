@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include "WebCorePersistentCoders.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/persistence/PersistentEncoder.h>
@@ -45,9 +46,11 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceResponseBase);
+
 bool isScriptAllowedByNosniff(const ResourceResponse& response)
 {
-    if (parseContentTypeOptionsHeader(response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsDisposition::Nosniff)
+    if (!response.isNosniff())
         return true;
     String mimeType = extractMIMETypeFromMediaType(response.httpHeaderField(HTTPHeaderName::ContentType));
     return MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType);
@@ -57,30 +60,31 @@ ResourceResponseBase::ResourceResponseBase()
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-    : m_url(url)
-    , m_mimeType(mimeType)
+ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+    : m_url(WTFMove(url))
+    , m_mimeType(WTFMove(mimeType))
     , m_expectedContentLength(expectedLength)
-    , m_textEncodingName(textEncodingName)
+    , m_textEncodingName(WTFMove(textEncodingName))
     , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
     , m_isNull(false)
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData> data)
-    : m_url(data ? data->url : URL { })
-    , m_mimeType(data ? data->mimeType : AtomString { })
+ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData>&& data)
+    : m_url(data ? WTFMove(data->url) : URL { })
+    , m_mimeType(data ? WTFMove(data->mimeType) : AtomString { })
     , m_expectedContentLength(data ? data->expectedContentLength : 0)
-    , m_textEncodingName(data ? data->textEncodingName : String { })
-    , m_httpStatusText(data ? data->httpStatusText : String { })
-    , m_httpVersion(data ? data->httpVersion : String { })
-    , m_httpHeaderFields(data ? data->httpHeaderFields : HTTPHeaderMap { })
-    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(*data->networkLoadMetrics) : Box<NetworkLoadMetrics> { })
-    , m_certificateInfo(data ? data->certificateInfo : std::nullopt)
+    , m_textEncodingName(data ? WTFMove(data->textEncodingName) : String { })
+    , m_httpStatusText(data ? WTFMove(data->httpStatusText) : String { })
+    , m_httpVersion(data ? WTFMove(data->httpVersion) : String { })
+    , m_httpHeaderFields(data ? WTFMove(data->httpHeaderFields) : HTTPHeaderMap { })
+    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(WTFMove(*data->networkLoadMetrics)) : Box<NetworkLoadMetrics> { })
+    , m_certificateInfo(data ? WTFMove(data->certificateInfo) : std::nullopt)
     , m_httpStatusCode(data ? data->httpStatusCode : 0)
     , m_isNull(!data)
     , m_usedLegacyTLS(data ? data->usedLegacyTLS : UsedLegacyTLS::No)
     , m_wasPrivateRelayed(data ? data->wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_proxyName(data ? data->proxyName : String { })
     , m_isRedirected(data ? data->isRedirected : false)
     , m_isRangeRequested(data ? data->isRangeRequested : false)
     , m_tainting(data ? data->tainting : Tainting::Basic)
@@ -108,6 +112,7 @@ ResourceResponseData ResourceResponseData::isolatedCopy() const
     result.isRedirected = isRedirected;
     result.usedLegacyTLS = usedLegacyTLS;
     result.wasPrivateRelayed = wasPrivateRelayed;
+    result.proxyName = proxyName.isolatedCopy();
     result.isRangeRequested = isRangeRequested;
     if (certificateInfo)
         result.certificateInfo = certificateInfo->isolatedCopy();
@@ -134,6 +139,7 @@ ResourceResponseData ResourceResponseBase::crossThreadData() const
     data.isRedirected = m_isRedirected;
     data.usedLegacyTLS = m_usedLegacyTLS;
     data.wasPrivateRelayed = m_wasPrivateRelayed;
+    data.proxyName = m_proxyName.isolatedCopy();
     data.isRangeRequested = m_isRangeRequested;
     if (m_certificateInfo)
         data.certificateInfo = m_certificateInfo->isolatedCopy();
@@ -145,7 +151,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
 {
     ResourceResponse response;
 
-    response.setURL(data.url);
+    response.setURL(WTFMove(data.url));
     response.setMimeType(WTFMove(data.mimeType));
     response.setExpectedContentLength(data.expectedContentLength);
     response.setTextEncodingName(WTFMove(data.textEncodingName));
@@ -165,6 +171,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.m_isRedirected = data.isRedirected;
     response.m_usedLegacyTLS =  data.usedLegacyTLS;
     response.m_wasPrivateRelayed = data.wasPrivateRelayed;
+    response.m_proxyName = WTFMove(data.proxyName);
     response.m_isRangeRequested = data.isRangeRequested;
     response.m_certificateInfo = WTFMove(data.certificateInfo);
 
@@ -174,7 +181,7 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
 ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& fromURL, const URL& toURL)
 {
     ResourceResponse redirectResponse;
-    redirectResponse.setURL(fromURL);
+    redirectResponse.setURL(URL { fromURL });
     redirectResponse.setHTTPStatusCode(302);
     redirectResponse.setHTTPVersion("HTTP/1.1"_s);
     redirectResponse.setHTTPHeaderField(HTTPHeaderName::Location, toURL.string());
@@ -185,7 +192,7 @@ ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& from
 
 ResourceResponse ResourceResponseBase::dataURLResponse(const URL& url, const DataURLDecoder::Result& result)
 {
-    ResourceResponse dataResponse { url, result.mimeType, static_cast<long long>(result.data.size()), result.charset };
+    ResourceResponse dataResponse { URL { url }, String { result.mimeType }, static_cast<long long>(result.data.size()), String { result.charset } };
     dataResponse.setHTTPStatusCode(200);
     dataResponse.setHTTPStatusText("OK"_s);
     dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
@@ -207,7 +214,7 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, 
         ResourceResponse opaqueResponse;
         opaqueResponse.setTainting(Tainting::Opaqueredirect);
         opaqueResponse.setType(Type::Opaqueredirect);
-        opaqueResponse.setURL(response.url());
+        opaqueResponse.setURL(URL { response.url() });
         return opaqueResponse;
     }
 
@@ -254,12 +261,12 @@ const URL& ResourceResponseBase::url() const
     return m_url;
 }
 
-void ResourceResponseBase::setURL(const URL& url)
+void ResourceResponseBase::setURL(URL&& url)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
-    m_url = url;
+    m_url = WTFMove(url);
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -347,6 +354,11 @@ String ResourceResponseBase::sanitizeSuggestedFilename(const String& suggestedFi
     escapedSuggestedFilename = makeStringByReplacingAll(escapedSuggestedFilename, '"', "\\\""_s);
     response.setHTTPHeaderField(HTTPHeaderName::ContentDisposition, makeString("attachment; filename=\""_s, escapedSuggestedFilename, '"'));
     return response.suggestedFilename();
+}
+
+bool ResourceResponseBase::isNosniff() const
+{
+    return parseContentTypeOptionsHeader(httpHeaderField(HTTPHeaderName::XContentTypeOptions)) == ContentTypeOptionsDisposition::Nosniff;
 }
 
 bool ResourceResponseBase::isSuccessful() const
@@ -482,7 +494,6 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
         || name == HTTPHeaderName::Trailer
         || name == HTTPHeaderName::Vary
         || name == HTTPHeaderName::XContentTypeOptions
-        || name == HTTPHeaderName::XDNSPrefetchControl
         || name == HTTPHeaderName::XFrameOptions
         || name == HTTPHeaderName::XXSSProtection;
 }
@@ -819,7 +830,7 @@ bool ResourceResponseBase::isAttachment() const
     lazyInit(AllFields);
 
     auto value = m_httpHeaderFields.get(HTTPHeaderName::ContentDisposition);
-    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s);
+    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>), "attachment"_s);
 }
 
 bool ResourceResponseBase::isAttachmentWithFilename() const
@@ -831,7 +842,7 @@ bool ResourceResponseBase::isAttachmentWithFilename() const
         return false;
 
     StringView contentDispositionView { contentDisposition };
-    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s))
+    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>), "attachment"_s))
         return false;
 
     return !filenameFromHTTPContentDisposition(contentDispositionView).isNull();
@@ -875,7 +886,7 @@ bool ResourceResponseBase::equalForWebKitLegacyChallengeComparison(const Resourc
 bool ResourceResponseBase::containsInvalidHTTPHeaders() const
 {
     for (auto& header : httpHeaderFields()) {
-        if (!isValidHTTPHeaderValue(header.value.trim(isASCIIWhitespaceWithoutFF<UChar>)))
+        if (!isValidHTTPHeaderValue(header.value.trim(isASCIIWhitespaceWithoutFF<char16_t>)))
             return true;
     }
     return false;
@@ -903,6 +914,7 @@ std::optional<ResourceResponseData> ResourceResponseBase::getResponseData() cons
         m_isRedirected,
         m_usedLegacyTLS,
         m_wasPrivateRelayed,
+        String { m_proxyName },
         m_isRangeRequested,
         m_certificateInfo
     } };
@@ -929,6 +941,7 @@ void Coder<WebCore::ResourceResponseData>::encodeForPersistence(Encoder& encoder
     encoder << data.isRedirected;
     encoder << data.usedLegacyTLS;
     encoder << data.wasPrivateRelayed;
+    encoder << data.proxyName;
     encoder << data.isRangeRequested;
 }
 
@@ -1009,6 +1022,11 @@ std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData
     if (!wasPrivateRelayed)
         return std::nullopt;
 
+    std::optional<String> proxyName;
+    decoder >> proxyName;
+    if (!proxyName)
+        return std::nullopt;
+
     std::optional<bool> isRangeRequested;
     decoder >> isRangeRequested;
     if (!isRangeRequested)
@@ -1030,6 +1048,7 @@ std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData
         *isRedirected,
         *usedLegacyTLS,
         *wasPrivateRelayed,
+        WTFMove(*proxyName),
         *isRangeRequested,
         WTFMove(*certificateInfo)
     };

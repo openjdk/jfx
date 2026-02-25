@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDOMPromiseDeferred.h"
 
+#include "Document.h"
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
@@ -61,7 +62,7 @@ void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveM
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto handleExceptionIfNeeded = makeScopeExit([&] {
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             handleUncaughtException(scope, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject));
     });
 
@@ -175,14 +176,14 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
 
     if (exceptionObject.isEmpty()) {
         exceptionObject = createDOMException(lexicalGlobalObject, WTFMove(exception));
-    if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
     }
 
     reject(lexicalGlobalObject, exceptionObject, rejectAsHandled);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         handleUncaughtException(scope, lexicalGlobalObject);
 }
 
@@ -211,20 +212,20 @@ void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHa
     }
 
     auto error = createDOMException(&lexicalGlobalObject, ec, message);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
 
     reject(lexicalGlobalObject, error, rejectAsHandled);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         handleUncaughtException(scope, lexicalGlobalObject);
 }
 
 void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSPromise& promise, JSC::CatchScope& catchScope)
 {
     UNUSED_PARAM(lexicalGlobalObject);
-    if (LIKELY(!catchScope.exception()))
+    if (!catchScope.exception()) [[likely]]
         return;
     if (catchScope.vm().hasPendingTerminationException())
         return;
@@ -276,6 +277,7 @@ void fulfillPromiseWithJSON(Ref<DeferredPromise>&& promise, const String& data)
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, ArrayBuffer* arrayBuffer)
 {
     if (!arrayBuffer) {
+        JSLockHolder lock(promise->globalObject()->vm());
         promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()));
         return;
     }
@@ -290,6 +292,7 @@ void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&& promise, std::
 void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&& promise, Uint8Array* bytes)
 {
     if (!bytes) {
+        JSLockHolder lock(promise->globalObject()->vm());
         promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()));
         return;
     }
@@ -325,5 +328,19 @@ void DeferredPromise::handleUncaughtException(CatchScope& scope, JSDOMGlobalObje
     handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
     reportException(&lexicalGlobalObject, exception);
 };
+
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(Document& document)
+{
+    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(document.globalObject());
+    return createPromiseAndWrapper(globalObject);
+}
+
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(JSDOMGlobalObject& globalObject)
+{
+    JSC::JSLockHolder lock(globalObject.vm());
+    RefPtr deferredPromise = DeferredPromise::create(globalObject);
+    Ref domPromise = DOMPromise::create(globalObject, *JSC::jsCast<JSC::JSPromise*>(deferredPromise->promise()));
+    return { WTFMove(domPromise), deferredPromise.releaseNonNull() };
+}
 
 } // namespace WebCore

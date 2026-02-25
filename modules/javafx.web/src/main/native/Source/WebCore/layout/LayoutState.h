@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,11 @@ namespace WebCore {
 
 class Document;
 
+namespace LayoutIntegration {
+enum class LogicalWidthType : uint8_t;
+enum class LogicalHeightType : uint8_t;
+}
+
 namespace Layout {
 
 class BlockFormattingState;
@@ -55,16 +60,19 @@ class FormattingState;
 class InlineContentCache;
 class TableFormattingState;
 
-class LayoutState : public CanMakeWeakPtr<LayoutState> {
+class LayoutState : public CanMakeWeakPtr<LayoutState>, public CanMakeThreadSafeCheckedPtr<LayoutState> {
     WTF_MAKE_NONCOPYABLE(LayoutState);
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LayoutState);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LayoutState);
 public:
     // Primary layout state has a direct geometry cache in layout boxes.
     enum class Type { Primary, Secondary };
 
     using FormattingContextLayoutFunction = Function<void(const ElementBox&, std::optional<LayoutUnit>, LayoutState&)>;
+    using FormattingContextLogicalWidthFunction = Function<LayoutUnit(const ElementBox&, LayoutIntegration::LogicalWidthType)>;
+    using FormattingContextLogicalHeightFunction = Function<LayoutUnit(const ElementBox&, LayoutIntegration::LogicalHeightType)>;
 
-    LayoutState(const Document&, const ElementBox& rootContainer, Type, FormattingContextLayoutFunction&&);
+    LayoutState(const Document&, const ElementBox& rootContainer, Type, FormattingContextLayoutFunction&&, FormattingContextLogicalWidthFunction&&, FormattingContextLogicalHeightFunction&&);
     ~LayoutState();
 
     Type type() const { return m_type; }
@@ -105,7 +113,9 @@ public:
 
     const ElementBox& root() const { return m_rootContainer; }
 
-    void layoutWithFormattingContextForBox(const ElementBox&, std::optional<LayoutUnit> widthConstraint);
+    void layoutWithFormattingContextForBox(const ElementBox&, std::optional<LayoutUnit> widthConstraint) const;
+    LayoutUnit logicalWidthWithFormattingContextForBox(const ElementBox&, LayoutIntegration::LogicalWidthType) const;
+    LayoutUnit logicalHeightWithFormattingContextForBox(const ElementBox&, LayoutIntegration::LogicalHeightType) const;
 
 private:
     void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
@@ -124,15 +134,17 @@ private:
     HashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
     QuirksMode m_quirksMode { QuirksMode::No };
 
-    CheckedRef<const ElementBox> m_rootContainer;
-    Ref<SecurityOrigin> m_securityOrigin;
+    const CheckedRef<const ElementBox> m_rootContainer;
+    const Ref<SecurityOrigin> m_securityOrigin;
 
     FormattingContextLayoutFunction m_formattingContextLayoutFunction;
+    FormattingContextLogicalWidthFunction m_formattingContextLogicalWidthFunction;
+    FormattingContextLogicalHeightFunction m_formattingContextLogicalHeightFunction;
 };
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary))
+    if (m_type == Type::Primary) [[likely]]
         return !!layoutBox.m_cachedGeometryForPrimaryLayoutState;
 
     return m_layoutBoxToBoxGeometry.contains(&layoutBox);
@@ -140,7 +152,7 @@ inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 
 inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         if (auto* boxGeometry = layoutBox.m_cachedGeometryForPrimaryLayoutState.get()) {
             ASSERT(layoutBox.m_primaryLayoutState == this);
         return *boxGeometry;
@@ -151,7 +163,7 @@ inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 
 inline const BoxGeometry& LayoutState::geometryForBox(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         ASSERT(layoutBox.m_primaryLayoutState == this);
         return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
     }

@@ -53,7 +53,7 @@ class TextResourceDecoder;
 class ThreadableLoader;
 
 class FileReaderLoader final : public ThreadableLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FileReaderLoader, FileReaderLoader);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FileReaderLoader);
 public:
     enum ReadType {
@@ -74,10 +74,10 @@ public:
     WEBCORE_EXPORT void cancel();
 
     // ThreadableLoaderClient
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) override;
     void didReceiveData(const SharedBuffer&) override;
-    void didFinishLoading(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
-    void didFail(ScriptExecutionContextIdentifier, const ResourceError&) override;
+    void didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&) override;
+    void didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&) override;
 
     String stringResult();
     WEBCORE_EXPORT RefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
@@ -102,6 +102,8 @@ private:
 
     static ExceptionCode httpStatusCodeToErrorCode(int);
     static ExceptionCode toErrorCode(BlobResourceHandle::Error);
+
+    RefPtr<JSC::ArrayBuffer> protectedRawData() const { return m_rawData; }
 
     ReadType m_readType;
     WeakPtr<FileReaderLoaderClient> m_client;

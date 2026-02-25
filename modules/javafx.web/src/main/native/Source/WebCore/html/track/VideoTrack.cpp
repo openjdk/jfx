@@ -41,12 +41,15 @@
 #include "VideoTrackList.h"
 #include "VideoTrackPrivate.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_SOURCE)
 #include "SourceBuffer.h"
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoTrack);
 
 const AtomString& VideoTrack::signKeyword()
 {
@@ -139,6 +142,9 @@ void VideoTrack::selectedChanged(bool selected)
 void VideoTrack::configurationChanged(const PlatformVideoTrackConfiguration& configuration)
 {
     m_configuration->setState(configuration);
+    m_clients.forEach([this] (auto& client) {
+        client.videoTrackConfigurationChanged(*this);
+    });
 }
 
 void VideoTrack::idChanged(TrackID id)
@@ -243,7 +249,7 @@ void VideoTrack::updateConfigurationFromPrivate()
 }
 
 #if !RELEASE_LOG_DISABLED
-void VideoTrack::setLogger(const Logger& logger, const void* logIdentifier)
+void VideoTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TrackBase::setLogger(logger, logIdentifier);
     m_private->setLogger(logger, this->logIdentifier());

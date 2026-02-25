@@ -30,6 +30,7 @@
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchResult.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -45,6 +46,9 @@ struct CacheQueryOptions;
 class BackgroundFetchRegistration final : public RefCounted<BackgroundFetchRegistration>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BackgroundFetchRegistration);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<BackgroundFetchRegistration> create(ScriptExecutionContext&, BackgroundFetchInformation&&);
     ~BackgroundFetchRegistration();
 
@@ -59,17 +63,13 @@ public:
     BackgroundFetchFailureReason failureReason() const { return m_information.failureReason; }
     bool recordsAvailable() const { return m_information.recordsAvailable; }
 
-    using RequestInfo = std::variant<RefPtr<FetchRequest>, String>;
+    using RequestInfo = Variant<RefPtr<FetchRequest>, String>;
 
     void abort(ScriptExecutionContext&, DOMPromiseDeferred<IDLBoolean>&&);
     void match(ScriptExecutionContext&, RequestInfo&&, const CacheQueryOptions&, DOMPromiseDeferred<IDLInterface<BackgroundFetchRecord>>&&);
     void matchAll(ScriptExecutionContext&, std::optional<RequestInfo>&&, const CacheQueryOptions&, DOMPromiseDeferred<IDLSequence<IDLInterface<BackgroundFetchRecord>>>&&);
 
     void updateInformation(const BackgroundFetchInformation&);
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     BackgroundFetchRegistration(ScriptExecutionContext&, BackgroundFetchInformation&&);
@@ -78,7 +78,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::BackgroundFetchRegistration; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

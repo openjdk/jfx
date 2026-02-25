@@ -32,8 +32,9 @@
 #include "IntSize.h"
 #include "PlatformImage.h"
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
@@ -45,8 +46,8 @@ struct ImageDecoderFrameInfo {
     Seconds duration;
 };
 
-class ImageDecoder : public ThreadSafeRefCounted<ImageDecoder> {
-    WTF_MAKE_FAST_ALLOCATED;
+class ImageDecoder : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ImageDecoder> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageDecoder, WEBCORE_EXPORT);
 public:
     static RefPtr<ImageDecoder> create(FragmentedSharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);
     WEBCORE_EXPORT virtual ~ImageDecoder();
@@ -81,6 +82,7 @@ public:
     virtual EncodedDataStatus encodedDataStatus() const = 0;
     virtual void setEncodedDataStatusChangeCallback(Function<void(EncodedDataStatus)>&&) { }
     virtual bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
+    virtual bool hasHDRGainMap() const { return false; }
     virtual IntSize size() const = 0;
     virtual size_t frameCount() const = 0;
     virtual size_t primaryFrameIndex() const { return 0; }

@@ -29,8 +29,11 @@
 #include "IndexingHeader.h"
 #include "JSCJSValueInlines.h"
 #include "JSCell.h"
+#include "ResourceExhaustion.h"
 #include "Structure.h"
 #include "VirtualRegister.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -50,22 +53,27 @@ public:
 
     ALWAYS_INLINE static JSImmutableButterfly* tryCreate(VM& vm, Structure* structure, unsigned length)
     {
-        if (UNLIKELY(length > IndexingHeader::maximumLength))
+        if (length > IndexingHeader::maximumLength) [[unlikely]]
             return nullptr;
 
         // Because of the above maximumLength requirement, allocationSize can never overflow.
         void* buffer = tryAllocateCell<JSImmutableButterfly>(vm, allocationSize(length));
-        if (UNLIKELY(!buffer))
+        if (!buffer) [[unlikely]]
             return nullptr;
         JSImmutableButterfly* result = new (NotNull, buffer) JSImmutableButterfly(vm, structure, length);
         result->finishCreation(vm);
         return result;
     }
 
+    static JSImmutableButterfly* tryCreate(VM& vm, IndexingType indexingType, unsigned length)
+    {
+        return tryCreate(vm, vm.immutableButterflyStructure(indexingType), length);
+    }
+
     static JSImmutableButterfly* create(VM& vm, IndexingType indexingType, unsigned length)
     {
-        auto* array = tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(indexingType) - NumberOfIndexingShapes].get(), length);
-        RELEASE_ASSERT(array);
+        auto* array = tryCreate(vm, indexingType, length);
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(array, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         return array;
     }
 
@@ -82,8 +90,8 @@ public:
                 return JSImmutableButterfly::fromButterfly(array->butterfly());
         }
 
-        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), length);
-        if (UNLIKELY(!result)) {
+        JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, throwScope);
             return nullptr;
         }
@@ -140,8 +148,12 @@ public:
     unsigned vectorLength() const { return m_header.vectorLength(); }
     unsigned length() const { return m_header.publicLength(); }
 
-    Butterfly* toButterfly() const { return bitwise_cast<Butterfly*>(bitwise_cast<char*>(this) + offsetOfData()); }
-    static JSImmutableButterfly* fromButterfly(Butterfly* butterfly) { return bitwise_cast<JSImmutableButterfly*>(bitwise_cast<char*>(butterfly) - offsetOfData()); }
+    Butterfly* toButterfly() const { return std::bit_cast<Butterfly*>(std::bit_cast<char*>(this) + offsetOfData()); }
+    static JSImmutableButterfly* fromButterfly(Butterfly* butterfly) { return std::bit_cast<JSImmutableButterfly*>(std::bit_cast<char*>(butterfly) - offsetOfData()); }
+    static bool isOnlyAtomStringsStructure(VM& vm, Butterfly* butterfly)
+    {
+        return fromButterfly(butterfly)->structure() == vm.immutableButterflyOnlyAtomStringsStructure.get();
+    }
 
     JSValue get(unsigned index) const
     {
@@ -209,3 +221,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

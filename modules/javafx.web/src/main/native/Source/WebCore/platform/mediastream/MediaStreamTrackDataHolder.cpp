@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,7 @@
 
 #include "config.h"
 #include "MediaStreamTrackDataHolder.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_STREAM)
 
@@ -49,7 +50,7 @@ private:
     }
 
     class PreventSourceFromEndingObserver final : public RealtimeMediaSourceObserver {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED_INLINE(PreventSourceFromEndingObserver);
     public:
         explicit PreventSourceFromEndingObserver(Ref<RealtimeMediaSource>&& source)
             : m_source(WTFMove(source))
@@ -65,7 +66,7 @@ private:
     private:
         bool preventSourceFromEnding() final { return true; }
 
-        Ref<RealtimeMediaSource> m_source;
+        const Ref<RealtimeMediaSource> m_source;
     };
 
     std::unique_ptr<PreventSourceFromEndingObserver> m_observer;

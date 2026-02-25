@@ -102,11 +102,49 @@ enum class AllowImageSubsampling : bool {
     Yes
 };
 
+enum class DrawsHDRContent : uint8_t {
+    No,
+    Yes
+};
+
+struct Headroom {
+    constexpr explicit Headroom(float headroom)
+    {
+        this->headroom = headroom;
+    }
+
+    constexpr operator float() const { return headroom; }
+
+    friend constexpr bool operator==(const Headroom&, const Headroom&) = default;
+    friend constexpr bool operator<(const Headroom& a, const Headroom& b)
+    {
+        return a.headroom < b.headroom;
+    }
+
+    static const Headroom FromImage;
+    static const Headroom None;
+
+    float headroom;
+};
+
+constexpr const Headroom Headroom::FromImage = Headroom { 0 };
+constexpr const Headroom Headroom::None = Headroom { 1 };
+
 #if USE(SKIA)
 enum class StrictImageClamping : bool {
     No,
     Yes
 };
 #endif
+
+}
+
+namespace IPC {
+
+template<typename AsyncReplyResult> struct AsyncReplyError;
+
+template<> struct AsyncReplyError<WebCore::Headroom> {
+    static WebCore::Headroom create() { return WebCore::Headroom::None; }
+};
 
 }

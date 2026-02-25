@@ -98,12 +98,16 @@ public:
     static JSGenericTypedArrayView* create(JSGlobalObject*, Structure*, RefPtr<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> length);
     static JSGenericTypedArrayView* create(VM&, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
     static JSGenericTypedArrayView* create(Structure*, JSGlobalObject*, RefPtr<typename Adaptor::ViewType>&& impl);
+    static JSGenericTypedArrayView* tryCreate(JSGlobalObject*, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
 
     inline size_t byteLength() const;
     inline size_t byteLengthRaw() const;
 
     inline const typename Adaptor::Type* typedVector() const;
     inline typename Adaptor::Type* typedVector();
+
+    std::span<const typename Adaptor::Type> typedSpan() const { return unsafeMakeSpan(typedVector(), length()); }
+    std::span<typename Adaptor::Type> typedSpan() { return unsafeMakeSpan(typedVector(), length()); }
 
     inline bool inBounds(size_t) const;
 
@@ -158,6 +162,8 @@ public:
     inline void copyFromInt32ShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
     inline void copyFromDoubleShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     friend struct TypedArrayClassInfos;
 
@@ -175,7 +181,6 @@ protected:
     static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
     static size_t estimatedSize(JSCell*, VM&);
-    DECLARE_VISIT_CHILDREN;
 
     // Returns true if successful, and false on error; it will throw on error.
     template<typename OtherAdaptor>
@@ -223,6 +228,8 @@ public:
 
     static inline const ClassInfo* info();
     static inline Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+    static bool preventExtensions(JSObject*, JSGlobalObject*);
 };
 
 template<typename Adaptor> inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM&, JSValue);

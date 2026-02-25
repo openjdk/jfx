@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"
@@ -68,17 +70,17 @@ bool MessagePort::isMessagePortAliveForTesting(const MessagePortIdentifier& iden
 void MessagePort::notifyMessageAvailable(const MessagePortIdentifier& identifier)
 {
     ASSERT(isMainThread());
-    ScriptExecutionContextIdentifier scriptExecutionContextIdentifier;
+    std::optional<ScriptExecutionContextIdentifier> scriptExecutionContextIdentifier;
     ThreadSafeWeakPtr<MessagePort> weakPort;
     {
         Locker locker { allMessagePortsLock };
-        scriptExecutionContextIdentifier = portToContextIdentifier().get(identifier);
+        scriptExecutionContextIdentifier = portToContextIdentifier().getOptional(identifier);
         weakPort = allMessagePorts().get(identifier);
     }
     if (!scriptExecutionContextIdentifier)
         return;
 
-    ScriptExecutionContext::ensureOnContextThread(scriptExecutionContextIdentifier, [weakPort = WTFMove(weakPort)](auto&) {
+    ScriptExecutionContext::ensureOnContextThread(*scriptExecutionContextIdentifier, [weakPort = WTFMove(weakPort)](auto&) {
         if (RefPtr port = weakPort.get())
             port->messageAvailable();
     });
@@ -249,12 +251,12 @@ void MessagePort::dispatchMessages()
     if (!context || context->activeDOMObjectsAreSuspended() || !isEntangled())
         return;
 
-    auto messagesTakenHandler = [this, protectedThis = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
+    auto messagesTakenHandler = [pendingActivity = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
         auto scopeExit = makeScopeExit(WTFMove(completionCallback));
 
-        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", m_identifier.logString().utf8().data(), this, messages.size());
+        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", pendingActivity->object().m_identifier.logString().utf8().data(), &pendingActivity->object(), messages.size());
 
-        RefPtrAllowingPartiallyDestroyed<ScriptExecutionContext> context = scriptExecutionContext();
+        RefPtr context = pendingActivity->object().scriptExecutionContext();
         if (!context || !context->globalObject())
             return;
 
@@ -271,15 +273,15 @@ void MessagePort::dispatchMessages()
 
             auto ports = MessagePort::entanglePorts(*context, WTFMove(message.transferredPorts));
             auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports));
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 // Currently, we assume that the only way we can get here is if we have a termination.
                 RELEASE_ASSERT(vm->hasPendingTerminationException());
                 return;
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [this, event = WTFMove(event)] {
-                dispatchEvent(event.event);
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::PostedMessageQueue, [event = WTFMove(event)](auto& port) {
+                port.dispatchEvent(event.event);
             });
         }
     };
@@ -304,8 +306,7 @@ void MessagePort::dispatchEvent(Event& event)
 bool MessagePort::virtualHasPendingActivity() const
 {
     // If the ScriptExecutionContext has been shut down on this object close()'ed, we can GC.
-    auto* context = scriptExecutionContext();
-    if (!context || m_isDetached)
+    if (!scriptExecutionContext() || m_isDetached)
         return false;
 
     // If this MessagePort has no message event handler then there is no point in keeping it alive.

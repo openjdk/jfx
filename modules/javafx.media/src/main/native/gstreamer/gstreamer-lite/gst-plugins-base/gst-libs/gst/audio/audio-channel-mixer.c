@@ -631,6 +631,75 @@ gst_audio_channel_mixer_fill_special (gfloat ** matrix, gint in_channels,
  * Automagically generate conversion matrix.
  */
 
+typedef enum
+{
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE = 0,
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO,
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO
+} GstAudioChannelMixerVirtualInput;
+
+/* Detects specific input channels configurations introduced in the
+ * audioconvert element (since version 1.26) with the
+ * `GstAudioConvertInputChannelsReorder` configurations.
+ *
+ * If all input channels are positioned to GST_AUDIO_CHANNEL_POSITION_MONO,
+ * the automatic mixing matrix should be configured like if there was only one
+ * virtual input mono channel. This virtual mono channel is the mix of all the
+ * real mono channels.
+ *
+ * If all input channels with an even index are positioned to
+ * GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT and all input channels with an odd
+ * index are positioned to GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, then the
+ * automatic mixing matrix should be configured like if there were only one
+ * virtual input left channel and one virtual input right channel. This virtual
+ * left or right channel is the mix of all the real left or right channels.
+ */
+static gboolean
+gst_audio_channel_mixer_detect_virtual_input_channels (gint channels,
+    GstAudioChannelPosition * position,
+    GstAudioChannelMixerVirtualInput * virtual_input)
+{
+  g_return_val_if_fail (position != NULL, FALSE);
+  g_return_val_if_fail (virtual_input != NULL, FALSE);
+
+  *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE;
+
+  if (channels < 2)
+    return FALSE;
+
+  static const GstAudioChannelPosition alternate_positions[2] =
+      { GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+    GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT
+  };
+
+  gboolean is_mono = TRUE;
+  gboolean is_alternate = TRUE;
+  for (gint i = 0; i < channels; ++i) {
+    if (position[i] != GST_AUDIO_CHANNEL_POSITION_MONO)
+      is_mono = FALSE;
+
+    if (position[i] != alternate_positions[i % 2])
+      is_alternate = FALSE;
+
+    if (!is_mono && !is_alternate)
+      return FALSE;
+  }
+
+  if (is_mono) {
+    g_assert (!is_alternate);
+    *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO;
+    return TRUE;
+  }
+
+  if (is_alternate && (channels > 2)) {
+    g_assert (!is_mono);
+    *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
 static void
 gst_audio_channel_mixer_fill_matrix (gfloat ** matrix,
     GstAudioChannelMixerFlags flags, gint in_channels,
@@ -641,15 +710,71 @@ gst_audio_channel_mixer_fill_matrix (gfloat ** matrix,
           out_channels, out_position))
     return;
 
-  gst_audio_channel_mixer_fill_identical (matrix, in_channels, in_position,
+  /* If all input channels are positioned to mono, the mix matrix should be
+   * configured like if there was only one virtual input mono channel. This
+   * virtual mono channel is the mix of all the real input mono channels.
+   *
+   * If all input channels are positioned to left and right alternately, the mix
+   * matrix should be configured like if there were only two virtual input
+   * channels: one left and one right. This virtual left or right channel is the
+   * mix of all the real input left or right channels.
+   */
+  gint in_size = in_channels;
+  GstAudioChannelMixerVirtualInput virtual_input =
+      GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE;
+  if (gst_audio_channel_mixer_detect_virtual_input_channels (in_size,
+          in_position, &virtual_input)) {
+    switch (virtual_input) {
+      case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO:
+        in_size = 1;
+        break;
+      case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO:
+        in_size = 2;
+        break;
+      default:
+        break;
+    }
+  }
+
+  gst_audio_channel_mixer_fill_identical (matrix, in_size, in_position,
       out_channels, out_position, flags);
 
   if (!(flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_UNPOSITIONED_IN)) {
-    gst_audio_channel_mixer_fill_compatible (matrix, in_channels, in_position,
+    gst_audio_channel_mixer_fill_compatible (matrix, in_size, in_position,
         out_channels, out_position);
-    gst_audio_channel_mixer_fill_others (matrix, in_channels, in_position,
+    gst_audio_channel_mixer_fill_others (matrix, in_size, in_position,
         out_channels, out_position);
-    gst_audio_channel_mixer_fill_normalize (matrix, in_channels, out_channels);
+    gst_audio_channel_mixer_fill_normalize (matrix, in_size, out_channels);
+  }
+
+  switch (virtual_input) {
+    case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO:{
+      for (gint out = 0; out < out_channels; ++out)
+        matrix[0][out] /= in_channels;
+
+      for (gint in = 1; in < in_channels; ++in)
+        memcpy (matrix[in], matrix[0], out_channels * sizeof (gfloat));
+
+      break;
+    }
+
+    case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO:{
+      gint right_channels = in_channels >> 1;
+      gint left_channels = right_channels + (in_channels % 2);
+
+      for (gint out = 0; out < out_channels; ++out) {
+        matrix[0][out] /= left_channels;
+        matrix[1][out] /= right_channels;
+      }
+
+      for (gint in = 2; in < in_channels; ++in)
+        memcpy (matrix[in], matrix[in % 2], out_channels * sizeof (gfloat));
+
+      break;
+    }
+
+    default:
+      break;
   }
 }
 

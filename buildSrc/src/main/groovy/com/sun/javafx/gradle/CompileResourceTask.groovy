@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,18 @@
  */
 
 import org.gradle.api.tasks.Input
+import org.gradle.process.ExecOperations
+
+import javax.inject.Inject
 
 class CompileResourceTask extends NativeCompileTask {
     @Input List<String> rcParams = new ArrayList<String>();
     @Input String compiler;
+
+    @Inject
+    CompileResourceTask(ExecOperations execOperations) {
+        super(execOperations);
+    }
 
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
@@ -35,11 +43,11 @@ class CompileResourceTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine(compiler);
-            if (rcParams) args(rcParams);
-            args("/Fo$outputFile", "$sourceFile");
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
+        execCompile { spec ->
+            spec.commandLine(compiler);
+            if (rcParams) spec.args(rcParams);
+            spec.args("/Fo$outputFile", "$sourceFile");
+            spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+        }
     }
 }

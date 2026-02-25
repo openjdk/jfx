@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
@@ -26,6 +26,7 @@
 #include "HitTestRequest.h"
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -40,7 +41,7 @@ class Scrollbar;
 enum class HitTestProgress { Stop, Continue };
 
 class HitTestResult {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(HitTestResult, WEBCORE_EXPORT);
 public:
     using NodeSet = ListHashSet<Ref<Node>>;
 
@@ -96,6 +97,8 @@ public:
     WEBCORE_EXPORT LocalFrame* frame() const;
     WEBCORE_EXPORT LocalFrame* targetFrame() const;
     WEBCORE_EXPORT bool isSelected() const;
+    WEBCORE_EXPORT bool allowsFollowingLink() const;
+    WEBCORE_EXPORT bool allowsFollowingImageURL() const;
     WEBCORE_EXPORT String selectedText() const;
     WEBCORE_EXPORT String spellingToolTip(TextDirection&) const;
     String replacedString() const;

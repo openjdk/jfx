@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,11 @@
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PerformanceLogging);
 
 #if !RELEASE_LOG_DISABLED
 static ASCIILiteral toString(PerformanceLogging::PointOfInterest poi)
@@ -78,9 +81,9 @@ Vector<std::pair<ASCIILiteral, size_t>> PerformanceLogging::memoryUsageStatistic
     return stats;
 }
 
-HashCountedSet<const char*> PerformanceLogging::javaScriptObjectCounts()
+HashCountedSet<ASCIILiteral> PerformanceLogging::javaScriptObjectCounts()
 {
-    return WTFMove(*commonVM().heap.objectTypeCounts());
+    return commonVM().heap.objectTypeCounts();
 }
 
 PerformanceLogging::PerformanceLogging(Page& page)
@@ -100,9 +103,9 @@ void PerformanceLogging::didReachPointOfInterest(PointOfInterest poi)
         return;
     }
 
-    RELEASE_LOG(PerformanceLogging, "Memory usage info dump at %s:", toString(poi).characters());
+    RELEASE_LOG_FORWARDABLE(PerformanceLogging, PERFORMANCELOGGING_MEMORY_USAGE_INFO, toString(poi).characters());
     for (auto& [key, value] : memoryUsageStatistics(ShouldIncludeExpensiveComputations::No))
-        RELEASE_LOG(PerformanceLogging, "  %s: %zu", key.characters(), value);
+        RELEASE_LOG_FORWARDABLE(PerformanceLogging, PERFORMANCELOGGING_MEMORY_USAGE_FOR_KEY, key.characters(), static_cast<uint64_t>(value));
 #endif
 }
 

@@ -31,7 +31,7 @@
 #include <JavaScriptCore/MarkedSpace.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -54,7 +54,7 @@ private:
     WeakPtr<OpportunisticTaskScheduler> m_scheduler;
 };
 
-class OpportunisticTaskScheduler final : public RefCounted<OpportunisticTaskScheduler>, public CanMakeWeakPtr<OpportunisticTaskScheduler> {
+class OpportunisticTaskScheduler final : public RefCountedAndCanMakeWeakPtr<OpportunisticTaskScheduler> {
 public:
     static Ref<OpportunisticTaskScheduler> create(Page& page)
     {
@@ -62,8 +62,6 @@ public:
     }
 
     ~OpportunisticTaskScheduler();
-
-    void willQueueIdleCallback() { m_mayHavePendingIdleCallbacks = true; }
 
     bool isScheduled() const { return m_runLoopObserver->isScheduled(); }
     void rescheduleIfNeeded(MonotonicTime deadline);
@@ -86,7 +84,7 @@ public:
         FullGCActivityCallback(JSC::Heap&);
 
         JSC::VM& m_vm;
-        std::unique_ptr<RunLoopObserver> m_runLoopObserver;
+        const UniqueRef<RunLoopObserver> m_runLoopObserver;
         JSC::HeapVersion m_version { 0 };
         unsigned m_deferCount { 0 };
     };
@@ -106,7 +104,7 @@ public:
         EdenGCActivityCallback(JSC::Heap&);
 
         JSC::VM& m_vm;
-        std::unique_ptr<RunLoopObserver> m_runLoopObserver;
+        const UniqueRef<RunLoopObserver> m_runLoopObserver;
         JSC::HeapVersion m_version { 0 };
         unsigned m_deferCount { 0 };
     };
@@ -125,8 +123,7 @@ private:
     uint64_t m_imminentlyScheduledWorkCount { 0 };
     uint64_t m_runloopCountAfterBeingScheduled { 0 };
     MonotonicTime m_currentDeadline;
-    std::unique_ptr<RunLoopObserver> m_runLoopObserver;
-    bool m_mayHavePendingIdleCallbacks { false };
+    const UniqueRef<RunLoopObserver> m_runLoopObserver;
 };
 
 } // namespace WebCore

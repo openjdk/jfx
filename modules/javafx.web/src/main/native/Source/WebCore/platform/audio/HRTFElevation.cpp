@@ -41,9 +41,12 @@
 #include <algorithm>
 #include <math.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HRTFElevation);
 
 #if USE(CONCATENATED_IMPULSE_RESPONSES)
 // Total number of components of an HRTF database.
@@ -148,8 +151,13 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
     // (hardware) sample-rate.
     unsigned startFrame = index * ResponseFrameSize;
     unsigned stopFrame = startFrame + ResponseFrameSize;
-    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus.get(), startFrame, stopFrame);
-    auto response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
+    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(*bus, startFrame, stopFrame);
+    ASSERT(preSampleRateConvertedResponse);
+    if (!preSampleRateConvertedResponse)
+        return false;
+    auto response = AudioBus::createBySampleRateConverting(*preSampleRateConvertedResponse, false, sampleRate);
+    if (!response)
+        return false;
     AudioChannel* leftEarImpulseResponse = response->channel(AudioBus::ChannelLeft);
     AudioChannel* rightEarImpulseResponse = response->channel(AudioBus::ChannelRight);
 #else
@@ -185,7 +193,7 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
 // The range of elevations for the IRCAM impulse responses varies depending on azimuth, but the minimum elevation appears to always be -45.
 //
 // Here's how it goes:
-static const int maxElevations[] = {
+static const std::array<int, 24> maxElevations {
         //  Azimuth
         //
     90, // 0

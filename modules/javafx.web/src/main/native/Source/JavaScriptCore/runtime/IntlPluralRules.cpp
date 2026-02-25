@@ -36,12 +36,8 @@
 #undef U_HIDE_DRAFT_API
 #endif
 #include <unicode/upluralrules.h>
-#if HAVE(ICU_U_NUMBER_FORMATTER)
 #include <unicode/unumberformatter.h>
-#endif
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
 #include <unicode/unumberrangeformatter.h>
-#endif
 #define U_HIDE_DRAFT_API 1
 
 namespace JSC {
@@ -116,19 +112,21 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     m_type = intlOption<Type>(globalObject, options, vm.propertyNames->type, { { "cardinal"_s, Type::Cardinal }, { "ordinal"_s, Type::Ordinal } }, "type must be \"cardinal\" or \"ordinal\""_s, Type::Cardinal);
     RETURN_IF_EXCEPTION(scope, void());
 
-    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, IntlNotation::Standard);
+    m_notation = intlOption<IntlNotation>(globalObject, options, Identifier::fromString(vm, "notation"_s), { { "standard"_s, IntlNotation::Standard }, { "scientific"_s, IntlNotation::Scientific }, { "engineering"_s, IntlNotation::Engineering }, { "compact"_s, IntlNotation::Compact } }, "notation must be either \"standard\", \"scientific\", \"engineering\", or \"compact\""_s, IntlNotation::Standard);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, m_notation);
     RETURN_IF_EXCEPTION(scope, void());
 
     auto locale = m_locale.utf8();
     UErrorCode status = U_ZERO_ERROR;
 
-#if HAVE(ICU_U_NUMBER_FORMATTER)
     StringBuilder skeletonBuilder;
 
     appendNumberFormatDigitOptionsToSkeleton(this, skeletonBuilder);
+    appendNumberFormatNotationOptionsToSkeleton(this, skeletonBuilder);
 
-    String skeleton = skeletonBuilder.toString();
-    StringView skeletonView(skeleton);
+    StringView skeletonView { skeletonBuilder.toString() };
     auto upconverted = skeletonView.upconvertedCharacters();
 
     m_numberFormatter = std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter>(unumf_openForSkeletonAndLocale(upconverted.get(), skeletonView.length(), locale.data(), &status));
@@ -137,36 +135,11 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
         return;
     }
 
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
     m_numberRangeFormatter = std::unique_ptr<UNumberRangeFormatter, UNumberRangeFormatterDeleter>(unumrf_openForSkeletonWithCollapseAndIdentityFallback(upconverted.get(), skeletonView.length(), UNUM_RANGE_COLLAPSE_NONE, UNUM_IDENTITY_FALLBACK_RANGE, locale.data(), nullptr, &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize PluralRules"_s);
         return;
     }
-#endif
-#else
-    m_numberFormat = std::unique_ptr<UNumberFormat, UNumberFormatDeleter>(unum_open(UNUM_DECIMAL, nullptr, 0, locale.data(), nullptr, &status));
-    if (U_FAILURE(status)) {
-        throwTypeError(globalObject, scope, "failed to initialize PluralRules"_s);
-        return;
-    }
-
-    switch (m_roundingType) {
-    case IntlRoundingType::FractionDigits:
-        unum_setAttribute(m_numberFormat.get(), UNUM_MIN_INTEGER_DIGITS, m_minimumIntegerDigits);
-        unum_setAttribute(m_numberFormat.get(), UNUM_MIN_FRACTION_DIGITS, m_minimumFractionDigits);
-        unum_setAttribute(m_numberFormat.get(), UNUM_MAX_FRACTION_DIGITS, m_maximumFractionDigits);
-        break;
-    case IntlRoundingType::SignificantDigits:
-        unum_setAttribute(m_numberFormat.get(), UNUM_SIGNIFICANT_DIGITS_USED, true);
-        unum_setAttribute(m_numberFormat.get(), UNUM_MIN_SIGNIFICANT_DIGITS, m_minimumSignificantDigits);
-        unum_setAttribute(m_numberFormat.get(), UNUM_MAX_SIGNIFICANT_DIGITS, m_maximumSignificantDigits);
-        break;
-    case IntlRoundingType::MorePrecision:
-    case IntlRoundingType::LessPrecision:
-        break;
-    }
-#endif
 
     m_pluralRules = std::unique_ptr<UPluralRules, UPluralRulesDeleter>(uplrules_openForType(locale.data(), m_type == Type::Ordinal ? UPLURAL_TYPE_ORDINAL : UPLURAL_TYPE_CARDINAL, &status));
     if (U_FAILURE(status)) {
@@ -186,6 +159,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     JSObject* options = constructEmptyObject(globalObject);
     options->putDirect(vm, vm.propertyNames->locale, jsNontrivialString(vm, m_locale));
     options->putDirect(vm, vm.propertyNames->type, jsNontrivialString(vm, m_type == Type::Ordinal ? "ordinal"_s : "cardinal"_s));
+    options->putDirect(vm, Identifier::fromString(vm, "notation"_s), jsNontrivialString(vm, IntlNumberFormat::notationString(m_notation)));
     options->putDirect(vm, vm.propertyNames->minimumIntegerDigits, jsNumber(m_minimumIntegerDigits));
     switch (m_roundingType) {
     case IntlRoundingType::FractionDigits:
@@ -206,7 +180,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     }
 
     JSArray* categories = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
-    if (UNLIKELY(!categories)) {
+    if (!categories) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -217,13 +191,28 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     int32_t resultLength;
 
     // Category names are always ASCII, so use char[].
+    UncheckedKeyHashSet<String> categoriesSet;
     unsigned index = 0;
     while (const char* result = uenum_next(keywords.get(), &resultLength, &status)) {
         ASSERT(U_SUCCESS(status));
-        categories->putDirectIndex(globalObject, index++, jsNontrivialString(vm, String({ result, static_cast<size_t>(resultLength) })));
+        categoriesSet.add(String(unsafeMakeSpan(result, static_cast<size_t>(resultLength))));
+    }
+
+    // 4. Let pluralCategories be a List of Strings containing all possible results of PluralRuleSelect for the selected locale pr.[[Locale]],
+    // sorted according to the following order: "zero", "one", "two", "few", "many", "other".
+    static constexpr std::array<ASCIILiteral, 6> candidates = { {
+        "zero"_s, "one"_s, "two"_s, "few"_s, "many"_s, "other"_s
+    } };
+
+    for (auto candidate : candidates) {
+        auto iter = categoriesSet.find(candidate);
+        if (iter != categoriesSet.end()) {
+            categories->putDirectIndex(globalObject, index++, jsNontrivialString(vm, *iter));
         RETURN_IF_EXCEPTION(scope, { });
     }
-    options->putDirect(vm, Identifier::fromString(vm, "pluralCategories"_s), categories);
+    }
+
+    options->putDirect(vm, vm.propertyNames->pluralCategories, categories);
     options->putDirect(vm, vm.propertyNames->roundingIncrement, jsNumber(m_roundingIncrement));
     options->putDirect(vm, vm.propertyNames->roundingMode, jsNontrivialString(vm, IntlNumberFormat::roundingModeString(m_roundingMode)));
     options->putDirect(vm, vm.propertyNames->roundingPriority, jsNontrivialString(vm, IntlNumberFormat::roundingPriorityString(m_roundingType)));
@@ -245,29 +234,19 @@ JSValue IntlPluralRules::select(JSGlobalObject* globalObject, double value) cons
 
     UErrorCode status = U_ZERO_ERROR;
 
-#if HAVE(ICU_U_NUMBER_FORMATTER)
     auto formattedNumber = std::unique_ptr<UFormattedNumber, ICUDeleter<unumf_closeResult>>(unumf_openResult(&status));
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
     unumf_formatDouble(m_numberFormatter.get(), value, formattedNumber.get(), &status);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
-    Vector<UChar, 32> buffer;
+    Vector<char16_t, 32> buffer;
     status = callBufferProducingFunction(uplrules_selectFormatted, m_pluralRules.get(), formattedNumber.get(), buffer);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
     return jsString(vm, String(WTFMove(buffer)));
-#else
-    Vector<UChar, 8> result(8);
-    auto length = uplrules_selectWithFormat(m_pluralRules.get(), value, m_numberFormat.get(), result.data(), result.size(), &status);
-    if (U_FAILURE(status))
-        return throwTypeError(globalObject, scope, "failed to select plural value"_s);
-
-    return jsString(vm, String({ result.data(), static_cast<size_t>(length) }));
-#endif
 }
 
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
 JSValue IntlPluralRules::selectRange(JSGlobalObject* globalObject, double start, double end) const
 {
     ASSERT(m_numberRangeFormatter);
@@ -287,12 +266,11 @@ JSValue IntlPluralRules::selectRange(JSGlobalObject* globalObject, double start,
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select range of plural value"_s);
 
-    Vector<UChar, 32> buffer;
+    Vector<char16_t, 32> buffer;
     status = callBufferProducingFunction(uplrules_selectForRange, m_pluralRules.get(), range.get(), buffer);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
     return jsString(vm, String(WTFMove(buffer)));
 }
-#endif
 
 } // namespace JSC

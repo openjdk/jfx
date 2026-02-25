@@ -37,7 +37,7 @@ namespace WebCore::WebGPU {
 class ConvertToBackingContext;
 
 class XRSubImageImpl final : public XRSubImage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRSubImageImpl);
 public:
     static Ref<XRSubImageImpl> create(WebGPUPtr<WGPUXRSubImage>&& backing, ConvertToBackingContext& convertToBackingContext)
     {
@@ -55,11 +55,14 @@ private:
     XRSubImageImpl(XRSubImageImpl&&) = delete;
     XRSubImageImpl& operator=(const XRSubImageImpl&) = delete;
     XRSubImageImpl& operator=(XRSubImageImpl&&) = delete;
+    RefPtr<Texture> colorTexture() final;
+    RefPtr<Texture> depthStencilTexture() final;
+    RefPtr<Texture> motionVectorTexture() final;
 
     WGPUXRSubImage backing() const { return m_backing.get(); }
 
     WebGPUPtr<WGPUXRSubImage> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

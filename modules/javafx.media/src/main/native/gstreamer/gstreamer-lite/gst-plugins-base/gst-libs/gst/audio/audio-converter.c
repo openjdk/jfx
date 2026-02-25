@@ -311,11 +311,12 @@ get_opt_value (GstAudioConverter * convert, const gchar * opt)
     GST_AUDIO_CONVERTER_OPT_MIX_MATRIX)
 
 static gboolean
-copy_config (GQuark field_id, const GValue * value, gpointer user_data)
+copy_config (const GstIdStr * fieldname, const GValue * value,
+    gpointer user_data)
 {
   GstAudioConverter *convert = user_data;
 
-  gst_structure_id_set_value (convert->config, field_id, value);
+  gst_structure_id_str_set_value (convert->config, fieldname, value);
 
   return TRUE;
 }
@@ -366,7 +367,7 @@ gst_audio_converter_update_config (GstAudioConverter * convert,
     gst_audio_resampler_update (convert->resampler, in_rate, out_rate, config);
 
   if (config) {
-    gst_structure_foreach (config, copy_config, convert);
+    gst_structure_foreach_id_str (config, copy_config, convert);
     gst_structure_free (config);
   }
 
@@ -786,8 +787,13 @@ check_mix_matrix (guint in_channels, guint out_channels, const GValue * value)
       const GValue *itm;
 
       itm = gst_value_array_get_value (row, i);
-      if (!G_VALUE_HOLDS_FLOAT (itm)) {
-        GST_ERROR ("Invalid mix matrix element type, should be float");
+      if (!G_VALUE_HOLDS_FLOAT (itm) &&
+          !G_VALUE_HOLDS_DOUBLE (itm) &&
+          !G_VALUE_HOLDS_INT (itm) &&
+          !G_VALUE_HOLDS_INT64 (itm) &&
+          !G_VALUE_HOLDS_UINT (itm) && !G_VALUE_HOLDS_UINT64 (itm)) {
+        GST_ERROR
+            ("Invalid mix matrix element type, should be float or double or integer");
         goto fail;
       }
     }
@@ -817,7 +823,21 @@ mix_matrix_from_g_value (guint in_channels, guint out_channels,
       gfloat coefficient;
 
       itm = gst_value_array_get_value (row, i);
-      coefficient = g_value_get_float (itm);
+      if (G_VALUE_HOLDS_FLOAT (itm))
+        coefficient = g_value_get_float (itm);
+      else if (G_VALUE_HOLDS_DOUBLE (itm))
+        coefficient = g_value_get_double (itm);
+      else if (G_VALUE_HOLDS_INT (itm))
+        coefficient = g_value_get_int (itm);
+      else if (G_VALUE_HOLDS_INT64 (itm))
+        coefficient = g_value_get_int64 (itm);
+      else if (G_VALUE_HOLDS_UINT (itm))
+        coefficient = g_value_get_uint (itm);
+      else if (G_VALUE_HOLDS_UINT64 (itm))
+        coefficient = g_value_get_uint64 (itm);
+      else
+        g_assert_not_reached ();
+
       matrix[i][j] = coefficient;
     }
   }
@@ -1354,7 +1374,7 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
   convert->out = *out_info;
 
   /* default config */
-  convert->config = gst_structure_new_empty ("GstAudioConverter");
+  convert->config = gst_structure_new_static_str_empty ("GstAudioConverter");
   if (config)
     gst_audio_converter_update_config (convert, 0, 0, config);
 

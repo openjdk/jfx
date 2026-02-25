@@ -27,25 +27,26 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "PlatformLayer.h"
 #include "ScrollingConstraints.h"
+#include "ScrollingPlatformLayer.h"
 #include "ScrollingTree.h"
 #include "ScrollingTreeNode.h"
+#include "ScrollingTreeViewportConstrainedNode.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FixedPositionViewportConstraints;
 
-class ScrollingTreeFixedNode : public ScrollingTreeNode {
+class ScrollingTreeFixedNode : public ScrollingTreeViewportConstrainedNode {
+    WTF_MAKE_TZONE_ALLOCATED(ScrollingTreeFixedNode);
 public:
     virtual ~ScrollingTreeFixedNode();
 
 protected:
     ScrollingTreeFixedNode(ScrollingTree&, ScrollingNodeID);
 
-    virtual PlatformLayer* layer() const = 0;
-
-    FloatPoint computeLayerPosition() const;
+    const ViewportConstraints& constraints() const final { return m_constraints; }
 
     bool commitStateBeforeChildren(const ScrollingStateNode&) override;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;

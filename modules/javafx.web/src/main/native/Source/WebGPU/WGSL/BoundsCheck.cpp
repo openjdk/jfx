@@ -77,7 +77,7 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
                 SourceSpan::empty(),
                 AST::Identifier::make("u32"_s)
             );
-            u32Target.m_inferredType = m_shaderModule.types().bottomType();
+            u32Target.m_inferredType = m_shaderModule.types().u32Type();
 
             auto& u32Call = m_shaderModule.astBuilder().construct<AST::CallExpression>(
                 SourceSpan::empty(),
@@ -91,9 +91,9 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
 
         auto& minTarget = m_shaderModule.astBuilder().construct<AST::IdentifierExpression>(
             SourceSpan::empty(),
-            AST::Identifier::make("min"_s)
+            AST::Identifier::make("__wgslMin"_s)
         );
-        minTarget.m_inferredType = m_shaderModule.types().bottomType();
+        minTarget.m_inferredType = m_shaderModule.types().u32Type();
 
         auto& one =  m_shaderModule.astBuilder().construct<AST::Unsigned32Literal>(
             SourceSpan::empty(),
@@ -125,6 +125,7 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
         newAccess.m_inferredType = access.inferredType();
 
         m_shaderModule.replace(access, newAccess);
+        m_shaderModule.setUsesMin();
     };
 
     auto* base = access.base().inferredType();
@@ -149,7 +150,7 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
             replace(constant(size));
         },
         [&](AST::Expression* size) {
-            // FIXME: this should be a pipeline creation error, not a runtime error
+            // FIXME: <rdar://150369771> this should be a pipeline-creation error, not a runtime error
             replace(*size);
         },
         [&](std::monostate) {
@@ -157,7 +158,7 @@ void BoundsCheckVisitor::visit(AST::IndexAccessExpression& access)
                 SourceSpan::empty(),
                 AST::Identifier::make("arrayLength"_s)
             );
-            target.m_inferredType = m_shaderModule.types().bottomType();
+            target.m_inferredType = m_shaderModule.types().u32Type();
 
 
             auto* argument = &access.base();

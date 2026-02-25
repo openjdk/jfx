@@ -29,8 +29,11 @@
 #include "Clipboard.h"
 #include "Navigator.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorClipboard);
 
 NavigatorClipboard::NavigatorClipboard(Navigator& navigator)
     : m_navigator(navigator)
@@ -47,13 +50,13 @@ RefPtr<Clipboard> NavigatorClipboard::clipboard(Navigator& navigator)
 RefPtr<Clipboard> NavigatorClipboard::clipboard()
 {
     if (!m_clipboard)
-        m_clipboard = Clipboard::create(m_navigator);
+        lazyInitialize(m_clipboard, Clipboard::create(m_navigator.get()));
     return m_clipboard;
 }
 
 NavigatorClipboard* NavigatorClipboard::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorClipboard*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorClipboard>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorClipboard>(navigator);
         supplement = newSupplement.get();
@@ -62,9 +65,4 @@ NavigatorClipboard* NavigatorClipboard::from(Navigator& navigator)
     return supplement;
 }
 
-ASCIILiteral NavigatorClipboard::supplementName()
-{
-    return "NavigatorClipboard"_s;
-}
-
-}
+} // namespace WebCore

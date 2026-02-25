@@ -57,6 +57,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -292,7 +293,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as wide as it widest content width.
         double maxw = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxw = Math.max(maxw, snapSizeX(contentRegion.prefWidth(-1)));
+            double dependentHeight = contentRegion.getContentBias() == Orientation.VERTICAL
+                ? Math.max(0, contentRegion.prefHeight(-1) - topInset - bottomInset)
+                : -1;
+
+            maxw = Math.max(maxw, snapSizeX(contentRegion.prefWidth(dependentHeight)));
         }
 
         final boolean isHorizontal = isHorizontal();
@@ -310,7 +315,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as high as it highest content height.
         double maxh = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxh = Math.max(maxh, snapSizeY(contentRegion.prefHeight(-1)));
+            double dependentWidth = contentRegion.getContentBias() == Orientation.HORIZONTAL
+                ? Math.max(0, contentRegion.prefWidth(-1) - leftInset - rightInset)
+                : -1;
+
+            maxh = Math.max(maxh, snapSizeY(contentRegion.prefHeight(dependentWidth)));
         }
 
         final boolean isHorizontal = isHorizontal();

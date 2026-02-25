@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,12 @@
 #include "SharedWorkerThread.h"
 #include "SharedWorkerThreadProxy.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerContextManager);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerContextManager::Connection);
 
 SharedWorkerContextManager& SharedWorkerContextManager::singleton()
 {
@@ -56,29 +60,29 @@ void SharedWorkerContextManager::stopSharedWorker(SharedWorkerIdentifier sharedW
 
     // FIXME: We should be able to deal with the thread being unresponsive here.
 
-    auto& thread = worker->thread();
-    thread.stop([worker = WTFMove(worker)]() mutable {
+    Ref thread = worker->thread();
+    thread->stop([worker = WTFMove(worker)]() mutable {
         // Spin the runloop before releasing the shared worker thread proxy, as there would otherwise be
         // a race towards its destruction.
         callOnMainThread([worker = WTFMove(worker)] { });
     });
 
-    if (auto* connection = SharedWorkerContextManager::singleton().connection())
+    if (RefPtr connection = SharedWorkerContextManager::singleton().connection())
         connection->sharedWorkerTerminated(sharedWorkerIdentifier);
 }
 
 void SharedWorkerContextManager::suspendSharedWorker(SharedWorkerIdentifier sharedWorkerIdentifier)
 {
-    auto* worker = m_workerMap.get(sharedWorkerIdentifier);
-    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::suspendSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker);
+    RefPtr worker = m_workerMap.get(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::suspendSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker.get());
     if (worker)
         worker->thread().suspend();
 }
 
 void SharedWorkerContextManager::resumeSharedWorker(SharedWorkerIdentifier sharedWorkerIdentifier)
 {
-    auto* worker = m_workerMap.get(sharedWorkerIdentifier);
-    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::resumeSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker);
+    RefPtr worker = m_workerMap.get(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::resumeSharedWorker: sharedWorkerIdentifier=%" PRIu64 ", worker=%p", sharedWorkerIdentifier.toUInt64(), worker.get());
     if (worker)
         worker->thread().resume();
 }
@@ -89,7 +93,7 @@ void SharedWorkerContextManager::stopAllSharedWorkers()
         stopSharedWorker(m_workerMap.begin()->key);
 }
 
-void SharedWorkerContextManager::setConnection(std::unique_ptr<Connection>&& connection)
+void SharedWorkerContextManager::setConnection(RefPtr<Connection>&& connection)
 {
     ASSERT(!m_connection || m_connection->isClosed());
     m_connection = WTFMove(connection);
@@ -114,8 +118,8 @@ void SharedWorkerContextManager::registerSharedWorkerThread(Ref<SharedWorkerThre
 void SharedWorkerContextManager::Connection::postConnectEvent(SharedWorkerIdentifier sharedWorkerIdentifier, TransferredMessagePort&& transferredPort, String&& sourceOrigin, CompletionHandler<void(bool)>&& completionHandler)
 {
     ASSERT(isMainThread());
-    auto* proxy = SharedWorkerContextManager::singleton().sharedWorker(sharedWorkerIdentifier);
-    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::Connection::postConnectEvent: sharedWorkerIdentifier=%" PRIu64 ", proxy=%p", sharedWorkerIdentifier.toUInt64(), proxy);
+    RefPtr proxy = SharedWorkerContextManager::singleton().sharedWorker(sharedWorkerIdentifier);
+    RELEASE_LOG(SharedWorker, "SharedWorkerContextManager::Connection::postConnectEvent: sharedWorkerIdentifier=%" PRIu64 ", proxy=%p", sharedWorkerIdentifier.toUInt64(), proxy.get());
     if (!proxy)
         return completionHandler(false);
 
@@ -143,7 +147,7 @@ void SharedWorkerContextManager::Connection::resumeSharedWorker(SharedWorkerIden
     SharedWorkerContextManager::singleton().resumeSharedWorker(identifier);
 }
 
-void SharedWorkerContextManager::forEachSharedWorker(const Function<Function<void(ScriptExecutionContext&)>()>& createTask)
+void SharedWorkerContextManager::forEachSharedWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>& createTask)
 {
     for (auto& worker : m_workerMap.values())
         worker->thread().runLoop().postTask(createTask());

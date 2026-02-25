@@ -84,6 +84,32 @@ typedef enum /*< skip >*/
   GST_TRACER_QUARK_HOOK_PAD_CHAIN_POST,
   GST_TRACER_QUARK_HOOK_PAD_CHAIN_LIST_PRE,
   GST_TRACER_QUARK_HOOK_PAD_CHAIN_LIST_POST,
+  GST_TRACER_QUARK_HOOK_PAD_SEND_EVENT_PRE,
+  GST_TRACER_QUARK_HOOK_PAD_SEND_EVENT_POST,
+  /**
+   * GST_TRACER_QUARK_HOOK_MEMORY_INIT:
+   *
+   * Post-hook for memory initialization named "memory-init".
+   *
+   * Since: 1.26
+   */
+  GST_TRACER_QUARK_HOOK_MEMORY_INIT,
+  /**
+   * GST_TRACER_QUARK_HOOK_MEMORY_FREE_PRE:
+   *
+   * Pre-hook for memory freeing named "memory-free-pre".
+   *
+   * Since: 1.26
+   */
+  GST_TRACER_QUARK_HOOK_MEMORY_FREE_PRE,
+  /**
+   * GST_TRACER_QUARK_HOOK_MEMORY_FREE_POST:
+   *
+   * Post-hook for memory freeing named "memory-free-post".
+   *
+   * Since: 1.26
+   */
+  GST_TRACER_QUARK_HOOK_MEMORY_FREE_POST,
   GST_TRACER_QUARK_MAX
 } GstTracerQuarkId;
 
@@ -234,7 +260,12 @@ typedef void (*GstTracerHookPadPullRangePost) (GObject *self, GstClockTime ts,
  * @pad: the pad
  * @event: the event
  *
- * Pre-hook for gst_pad_push_event() named "pad-push-event-pre".
+ * Pre-hook for when an event is pushed through a pad, named
+ * "pad-push-event-pre".
+ *
+ * Called by gst_pad_push_event(). Also called by functions other than
+ * gst_pad_push_event() that call gst_pad_push_event_unchecked() directly,
+ * namely push_sticky() and check_sticky().
  */
 typedef void (*GstTracerHookPadPushEventPre) (GObject *self, GstClockTime ts,
     GstPad *pad, GstEvent *event);
@@ -250,13 +281,50 @@ typedef void (*GstTracerHookPadPushEventPre) (GObject *self, GstClockTime ts,
  * @pad: the pad
  * @res: the result of gst_pad_push_event()
  *
- * Post-hook for gst_pad_push_event() named "pad-push-event-post".
+ * Post-hook for when an event has been pushed through a pad, named
+ * "pad-push-event-post".
+ *
+ * Called by gst_pad_push_event(). Also called by functions other than
+ * gst_pad_push_event() that call gst_pad_push_event_unchecked() directly,
+ * namely push_sticky() and check_sticky().
  */
 typedef void (*GstTracerHookPadPushEventPost) (GObject *self, GstClockTime ts,
     GstPad *pad, gboolean res);
 #define GST_TRACER_PAD_PUSH_EVENT_POST(pad, res) G_STMT_START{ \
   GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_PUSH_EVENT_POST), \
     GstTracerHookPadPushEventPost, (GST_TRACER_ARGS, pad, res)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPadSendEventPre:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @event: the event
+    *
+ * Pre-hook for gst_pad_send_event_unchecked() named "pad-send-event-pre".
+ */
+typedef void (*GstTracerHookPadSendEventPre) (GObject *self, GstClockTime ts,
+    GstPad *pad, GstEvent *event);
+#define GST_TRACER_PAD_SEND_EVENT_PRE(pad, event) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_SEND_EVENT_PRE), \
+    GstTracerHookPadSendEventPre, (GST_TRACER_ARGS, pad, event)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPadSendEventPost:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @pad: the pad
+ * @res: the result of gst_pad_send_event_unchecked()
+ *
+ * Post-hook for gst_pad_send_event_unchecked() named "pad-send-event-post".
+ */
+typedef void (*GstTracerHookPadSendEventPost) (GObject *self, GstClockTime ts,
+    GstPad *pad, GstFlowReturn res);
+#define GST_TRACER_PAD_SEND_EVENT_POST(pad, res) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PAD_SEND_EVENT_POST), \
+    GstTracerHookPadSendEventPost, (GST_TRACER_ARGS, pad, res)); \
 }G_STMT_END
 
 /**
@@ -839,6 +907,79 @@ typedef void (*GstTracerHookPadChainListPost) (GObject *self, GstClockTime ts,
     GstTracerHookPadChainListPost, (GST_TRACER_ARGS, pad, res)); \
 }G_STMT_END
 
+/**
+ * GstTracerHookMemoryInit:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @mem:  The GstMemory that was initialized
+ *
+ * Hook for memory initialization named "memory-init".
+ *
+ * Since: 1.26
+ */
+typedef void (*GstTracerHookMemoryInit) (GObject *self, GstClockTime ts,
+    GstMemory *mem);
+/**
+ * GST_TRACER_MEMORY_INIT:
+ * @mem: a #GstMemory
+ *
+ * Dispatches the "memory-init" hook.
+ *
+ * Since: 1.26
+ */
+#define GST_TRACER_MEMORY_INIT(mem) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_MEMORY_INIT), \
+    GstTracerHookMemoryInit, (GST_TRACER_ARGS, mem)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookMemoryFreePre:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @mem: the memory object for which the memory will be freed.
+ *
+ * Pre-hook for memory freeing named "memory-free-pre".
+ *
+ * Since: 1.26
+ */
+typedef void (*GstTracerHookMemoryFreePre) (GObject *self, GstClockTime ts, GstMemory *mem);
+/**
+ * GST_TRACER_MEMORY_FREE_PRE:
+ * @mem: the memory object
+ *
+ * Dispatches the "memory-free-pre" hook.
+ *
+ * Since: 1.26
+ */
+#define GST_TRACER_MEMORY_FREE_PRE(mem) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_MEMORY_FREE_PRE), \
+    GstTracerHookMemoryFreePre, (GST_TRACER_ARGS, mem)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookMemoryFreePost:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @mem: pointer to the memory object that has been freed
+ *
+ * Post-hook for memory freeing named "memory-free-post".
+ *
+ * Since: 1.26
+ */
+typedef void (*GstTracerHookMemoryFreePost) (GObject *self, GstClockTime ts, GstMemory *mem);
+/**
+ * GST_TRACER_MEMORY_FREE_POST:
+ * @mem: pointer to the memory object that has been freed
+ *
+ * Dispatches the "memory-free-post" hook.
+ *
+ * Since: 1.26
+ */
+#define GST_TRACER_MEMORY_FREE_POST(mem) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_MEMORY_FREE_POST), \
+    GstTracerHookMemoryFreePost, (GST_TRACER_ARGS, mem)); \
+}G_STMT_END
+
 #else /* !GST_DISABLE_GST_TRACER_HOOKS */
 
 static inline void
@@ -892,6 +1033,12 @@ _priv_gst_tracing_deinit (void)
 #define GST_TRACER_PAD_CHAIN_POST(pad, res)
 #define GST_TRACER_PAD_CHAIN_LIST_PRE(pad, list)
 #define GST_TRACER_PAD_CHAIN_LIST_POST(pad, res)
+#define GST_TRACER_PAD_SEND_EVENT_PRE(pad, event)
+#define GST_TRACER_PAD_SEND_EVENT_POST(pad, res)
+#define GST_TRACER_MEMORY_INIT(mem)
+#define GST_TRACER_MEMORY_FREE_PRE(mem)
+#define GST_TRACER_MEMORY_FREE_POST(mem)
+
 
 #endif /* GST_DISABLE_GST_TRACER_HOOKS */
 

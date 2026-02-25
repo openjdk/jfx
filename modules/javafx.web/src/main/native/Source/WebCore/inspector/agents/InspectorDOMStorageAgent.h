@@ -32,6 +32,7 @@
 #include "InspectorWebAgentBase.h"
 #include "StorageArea.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -47,13 +48,13 @@ class Storage;
 
 class InspectorDOMStorageAgent final : public InspectorAgentBase, public Inspector::DOMStorageBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorDOMStorageAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorDOMStorageAgent);
 public:
     InspectorDOMStorageAgent(PageAgentContext&);
     ~InspectorDOMStorageAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // DOMStorageBackendDispatcherHandler
@@ -74,10 +75,10 @@ public:
 private:
     RefPtr<StorageArea> findStorageArea(Inspector::Protocol::ErrorString&, Ref<JSON::Object>&& storageId, LocalFrame*&);
 
-    std::unique_ptr<Inspector::DOMStorageFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::DOMStorageBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::DOMStorageFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::DOMStorageBackendDispatcher> m_backendDispatcher;
 
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
 };
 
 } // namespace WebCore

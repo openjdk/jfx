@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ScrollView.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -33,7 +34,7 @@ class Frame;
 enum class RenderAsTextFlag : uint16_t;
 
 class FrameView : public ScrollView {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FrameView);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FrameView);
 public:
     enum class Type : bool { Local, Remote };
@@ -44,7 +45,7 @@ public:
     WEBCORE_EXPORT int headerHeight() const final;
     WEBCORE_EXPORT int footerHeight() const final;
 
-    WEBCORE_EXPORT float topContentInset(TopContentInsetType = TopContentInsetType::WebCoreContentInset) const final;
+    WEBCORE_EXPORT FloatBoxExtent obscuredContentInsets(InsetType = InsetType::WebCoreInset) const final;
 
     float visibleContentScaleFactor() const final;
 
@@ -85,25 +86,34 @@ public:
     //
 
     // Methods to convert points and rects between the coordinate space of the renderer, and this view.
+    WEBCORE_EXPORT IntPoint convertFromRendererToContainingView(const RenderElement*, IntPoint) const;
+    WEBCORE_EXPORT FloatPoint convertFromRendererToContainingView(const RenderElement*, FloatPoint) const;
     WEBCORE_EXPORT IntRect convertFromRendererToContainingView(const RenderElement*, const IntRect&) const;
+    WEBCORE_EXPORT FloatRect convertFromRendererToContainingView(const RenderElement*, const FloatRect&) const;
+
+    WEBCORE_EXPORT IntPoint convertFromContainingViewToRenderer(const RenderElement*, IntPoint) const;
+    WEBCORE_EXPORT FloatPoint convertFromContainingViewToRenderer(const RenderElement*, FloatPoint) const;
     WEBCORE_EXPORT IntRect convertFromContainingViewToRenderer(const RenderElement*, const IntRect&) const;
     WEBCORE_EXPORT FloatRect convertFromContainingViewToRenderer(const RenderElement*, const FloatRect&) const;
-    WEBCORE_EXPORT IntPoint convertFromRendererToContainingView(const RenderElement*, const IntPoint&) const;
-    WEBCORE_EXPORT FloatPoint convertFromRendererToContainingView(const RenderElement*, const FloatPoint&) const;
-    WEBCORE_EXPORT IntPoint convertFromContainingViewToRenderer(const RenderElement*, const IntPoint&) const;
 
     // Override ScrollView methods to do point conversion via renderers, in order to take transforms into account.
+    IntPoint convertToContainingView(IntPoint) const final;
+    FloatPoint convertToContainingView(FloatPoint) const final;
     IntRect convertToContainingView(const IntRect&) const final;
+    FloatRect convertToContainingView(const FloatRect&) const final;
+
+    IntPoint convertFromContainingView(IntPoint) const final;
+    FloatPoint convertFromContainingView(FloatPoint) const final;
     IntRect convertFromContainingView(const IntRect&) const final;
     FloatRect convertFromContainingView(const FloatRect&) const final;
-    IntPoint convertToContainingView(const IntPoint&) const final;
-    FloatPoint convertToContainingView(const FloatPoint&) const final;
-    IntPoint convertFromContainingView(const IntPoint&) const final;
 
 private:
     ScrollableArea* enclosingScrollableArea() const final;
 
     bool scrollAnimatorEnabled() const final;
+#if ENABLE(FORM_CONTROL_REFRESH)
+    bool formControlRefreshEnabled() const final;
+#endif
 };
 
 }

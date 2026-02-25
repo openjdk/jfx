@@ -43,6 +43,9 @@
 #include "StackVisitor.h"
 #include "TypeError.h"
 #include "VMTrapsInlines.h"
+#if ENABLE(WEBASSEMBLY)
+#include "WebAssemblyFunction.h"
+#endif
 
 namespace JSC {
 
@@ -67,11 +70,17 @@ Structure* JSFunction::selectStructureForNewFuncExp(JSGlobalObject* globalObject
 {
     ASSERT(!executable->isHostFunction());
     bool isBuiltin = executable->isBuiltinFunction();
+    // Arrow functions will never have a prototype, so no need to check
     if (executable->isArrowFunction())
         return globalObject->arrowFunctionStructure(isBuiltin);
-    if (executable->isInStrictContext())
+    if (executable->isInStrictContext()) {
+        if (executable->hasPrototypeProperty())
         return globalObject->strictFunctionStructure(isBuiltin);
+        return globalObject->strictMethodStructure(isBuiltin);
+    }
+    if (executable->hasPrototypeProperty())
     return globalObject->sloppyFunctionStructure(isBuiltin);
+    return globalObject->sloppyMethodStructure(isBuiltin);
 }
 
 JSFunction* JSFunction::create(VM& vm, JSGlobalObject* globalObject, FunctionExecutable* executable, JSScope* scope)
@@ -98,7 +107,7 @@ JSFunction* JSFunction::create(VM& vm, JSGlobalObject* globalObject, unsigned le
 
 JSFunction::JSFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure)
     : Base(vm, globalObject, structure)
-    , m_executableOrRareData(bitwise_cast<uintptr_t>(executable))
+    , m_executableOrRareData(std::bit_cast<uintptr_t>(executable))
 {
     assertTypeInfoFlagInvariants();
     ASSERT(structure->globalObject() == globalObject);
@@ -137,8 +146,8 @@ FunctionRareData* JSFunction::allocateRareData(VM& vm)
 {
     uintptr_t executableOrRareData = m_executableOrRareData;
     ASSERT(!(executableOrRareData & rareDataTag));
-    FunctionRareData* rareData = FunctionRareData::create(vm, bitwise_cast<ExecutableBase*>(executableOrRareData));
-    executableOrRareData = bitwise_cast<uintptr_t>(rareData) | rareDataTag;
+    FunctionRareData* rareData = FunctionRareData::create(vm, std::bit_cast<ExecutableBase*>(executableOrRareData));
+    executableOrRareData = std::bit_cast<uintptr_t>(rareData) | rareDataTag;
 
     // A DFG compilation thread may be trying to read the rare data
     // We want to ensure that it sees it properly allocated
@@ -159,7 +168,7 @@ JSObject* JSFunction::prototypeForConstruction(VM& vm, JSGlobalObject* globalObj
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSValue prototype = get(globalObject, vm.propertyNames->prototype);
     scope.releaseAssertNoException();
-    if (LIKELY(prototype.isObject()))
+    if (prototype.isObject()) [[likely]]
         return asObject(prototype);
     if (isHostOrBuiltinFunction())
         return this->globalObject()->objectPrototype();
@@ -181,9 +190,9 @@ FunctionRareData* JSFunction::allocateAndInitializeRareData(JSGlobalObject* glob
     ASSERT(canUseAllocationProfiles());
     VM& vm = globalObject->vm();
     JSObject* prototype = prototypeForConstruction(vm, globalObject);
-    FunctionRareData* rareData = FunctionRareData::create(vm, bitwise_cast<ExecutableBase*>(executableOrRareData));
+    FunctionRareData* rareData = FunctionRareData::create(vm, std::bit_cast<ExecutableBase*>(executableOrRareData));
     rareData->initializeObjectAllocationProfile(vm, this->globalObject(), prototype, inlineCapacity, this);
-    executableOrRareData = bitwise_cast<uintptr_t>(rareData) | rareDataTag;
+    executableOrRareData = std::bit_cast<uintptr_t>(rareData) | rareDataTag;
 
     // A DFG compilation thread may be trying to read the rare data
     // We want to ensure that it sees it properly allocated
@@ -202,7 +211,7 @@ FunctionRareData* JSFunction::initializeRareData(JSGlobalObject* globalObject, s
     ASSERT(canUseAllocationProfiles());
     VM& vm = globalObject->vm();
     JSObject* prototype = prototypeForConstruction(vm, globalObject);
-    FunctionRareData* rareData = bitwise_cast<FunctionRareData*>(executableOrRareData & ~rareDataTag);
+    FunctionRareData* rareData = std::bit_cast<FunctionRareData*>(executableOrRareData & ~rareDataTag);
     rareData->initializeObjectAllocationProfile(vm, this->globalObject(), prototype, inlineCapacity, this);
     return rareData;
 }
@@ -223,7 +232,7 @@ String JSFunction::name(VM& vm)
 
 String JSFunction::nameWithoutGC(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     if (isHostFunction()) {
         if (this->inherits<JSBoundFunction>())
             return jsCast<JSBoundFunction*>(this)->nameStringWithoutGC(vm);
@@ -296,7 +305,7 @@ void JSFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
 
-    visitor.appendUnbarriered(bitwise_cast<JSCell*>(bitwise_cast<uintptr_t>(thisObject->m_executableOrRareData) & ~rareDataTag));
+    visitor.appendUnbarriered(std::bit_cast<JSCell*>(std::bit_cast<uintptr_t>(thisObject->m_executableOrRareData) & ~rareDataTag));
 }
 
 DEFINE_VISIT_CHILDREN(JSFunction);
@@ -311,6 +320,10 @@ CallData JSFunction::getCallData(JSCell* cell)
         callData.type = CallData::Type::Native;
         callData.native.function = thisObject->nativeFunction();
         callData.native.isBoundFunction = thisObject->inherits<JSBoundFunction>();
+        callData.native.isWasm = false;
+#if ENABLE(WEBASSEMBLY)
+        callData.native.isWasm = thisObject->inherits<WebAssemblyFunction>();
+#endif
     } else {
         callData.type = CallData::Type::JS;
         callData.js.functionExecutable = thisObject->jsExecutable();
@@ -347,7 +360,8 @@ bool JSFunction::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObje
 
     JSFunction* thisObject = jsCast<JSFunction*>(object);
 
-    if (propertyName == vm.propertyNames->prototype && thisObject->mayHaveNonReifiedPrototype()) {
+    if (propertyName == vm.propertyNames->prototype) {
+        if (thisObject->mayHaveNonReifiedPrototype()) {
         unsigned attributes;
         PropertyOffset offset = thisObject->getDirectOffset(vm, propertyName, attributes);
         if (!isValidOffset(offset)) {
@@ -360,6 +374,7 @@ bool JSFunction::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObje
         slot.setValue(thisObject, attributes, thisObject->getDirect(offset), offset);
         return true;
     }
+    }
 
     thisObject->reifyLazyPropertyIfNeeded<JSFunction::SetHasModifiedLengthOrName::No>(vm, globalObject, propertyName);
     RETURN_IF_EXCEPTION(scope, false);
@@ -371,14 +386,39 @@ void JSFunction::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* gl
 {
     JSFunction* thisObject = jsCast<JSFunction*>(object);
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     if (mode == DontEnumPropertiesMode::Include) {
-        if (!thisObject->hasReifiedLength())
+        bool hasLength = thisObject->hasOwnProperty(globalObject, vm.propertyNames->length);
+        if (scope.exception()) [[unlikely]] {
+            hasLength = false;
+            scope.clearException();
+        }
+        if (!thisObject->hasReifiedLength() || hasLength)
             propertyNames.add(vm.propertyNames->length);
-        if (!thisObject->hasReifiedName())
+        bool hasName = thisObject->hasOwnProperty(globalObject, vm.propertyNames->name);
+        if (scope.exception()) [[unlikely]] {
+            hasName = false;
+            scope.clearException();
+        }
+        if (!thisObject->hasReifiedName() || hasName)
             propertyNames.add(vm.propertyNames->name);
         if (!thisObject->isHostOrBuiltinFunction() && thisObject->jsExecutable()->hasPrototypeProperty())
             propertyNames.add(vm.propertyNames->prototype);
+    } else if (mode == DontEnumPropertiesMode::Exclude) {
+        PropertyDescriptor descriptor;
+
+        thisObject->getOwnPropertyDescriptor(globalObject, vm.propertyNames->length, descriptor);
+        if (scope.exception()) [[unlikely]]
+            scope.clearException();
+        else if (descriptor.enumerable())
+            propertyNames.add(vm.propertyNames->length);
+
+        thisObject->getOwnPropertyDescriptor(globalObject, vm.propertyNames->name, descriptor);
+        if (scope.exception()) [[unlikely]]
+            scope.clearException();
+        else if (descriptor.enumerable())
+            propertyNames.add(vm.propertyNames->name);
     }
 }
 
@@ -397,7 +437,7 @@ bool JSFunction::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName pr
         if (!isValidOffset(thisObject->getDirectOffset(vm, propertyName))) {
             // For class constructors, prototype object is initialized from bytecode via defineOwnProperty().
             ASSERT(!thisObject->jsExecutable()->isClassConstructorFunction());
-            if (UNLIKELY(slot.thisValue() != thisObject))
+                if (slot.thisValue() != thisObject) [[unlikely]]
                 RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
             thisObject->putDirect(vm, propertyName, value, prototypeAttributesForNonClass);
             return true;
@@ -419,9 +459,10 @@ bool JSFunction::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Prop
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSFunction* thisObject = jsCast<JSFunction*>(cell);
 
-    thisObject->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
+    PropertyStatus propertyType = thisObject->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
     RETURN_IF_EXCEPTION(scope, false);
-
+    if (isLazy(propertyType))
+        slot.disableCaching();
     RELEASE_AND_RETURN(scope, Base::deleteProperty(thisObject, globalObject, propertyName, slot));
 }
 
@@ -469,6 +510,7 @@ CallData JSFunction::getConstructData(JSCell* cell)
                 constructData.type = CallData::Type::Native;
                 constructData.native.function = thisObject->nativeConstructor();
                 constructData.native.isBoundFunction = true;
+                constructData.native.isWasm = false;
             }
         } else if (thisObject->nativeConstructor() != callHostFunctionAsConstructor) {
             constructData.type = CallData::Type::Native;

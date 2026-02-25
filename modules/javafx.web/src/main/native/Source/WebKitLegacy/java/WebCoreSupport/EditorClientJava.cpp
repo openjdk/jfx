@@ -624,11 +624,6 @@ void EditorClientJava::handleInputMethodKeydown(KeyboardEvent&)
     notImplemented();
 }
 
-void EditorClientJava::willSetInputMethodState()
-{
-    notImplemented();
-}
-
 bool EditorClientJava::canCopyCut(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;

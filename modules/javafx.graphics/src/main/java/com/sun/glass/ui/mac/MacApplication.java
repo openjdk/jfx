@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
+
+    private static native int _openURI(String uri);
 
     /**
      * Starts a non-daemon KeepAlive thread to ensure that the
@@ -397,7 +399,14 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
-    @Override native protected boolean _supportsSystemMenu();
+    @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
+    @Override protected boolean _supportsSystemMenu() {
+        return true;
+    }
 
     // NOTE: this will not return a valid result until the native _runloop
     // method has been executed and called the Runnable passed to that method.
@@ -527,5 +536,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }
 
         checkSystemAppearance = false;
+    }
+
+    @Override
+    protected void _showDocument(String uri) {
+        _openURI(uri);
     }
 }

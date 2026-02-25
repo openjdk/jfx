@@ -27,14 +27,15 @@
 namespace WebCore {
 
 class CSSRuleList;
-class CSSStyleDeclaration;
+class CSSStyleProperties;
 class DeclaredStylePropertyMap;
 class StylePropertyMap;
-class StyleRuleCSSStyleDeclaration;
+class StyleRuleCSSStyleProperties;
 class StyleRule;
 class StyleRuleWithNesting;
+class StyleRuleCSSStyleProperties;
 
-class CSSStyleRule final : public CSSRule, public CanMakeWeakPtr<CSSStyleRule> {
+class CSSStyleRule final : public CSSRule {
 public:
     static Ref<CSSStyleRule> create(StyleRule& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSStyleRule(rule, sheet)); }
     static Ref<CSSStyleRule> create(StyleRuleWithNesting& rule, CSSStyleSheet* sheet) { return adoptRef(* new CSSStyleRule(rule, sheet)); };
@@ -44,7 +45,7 @@ public:
     WEBCORE_EXPORT String selectorText() const;
     WEBCORE_EXPORT void setSelectorText(const String&);
 
-    WEBCORE_EXPORT CSSStyleDeclaration& style();
+    WEBCORE_EXPORT CSSStyleProperties& style();
 
     // FIXME: Not CSSOM. Remove.
     StyleRule& styleRule() const { return m_styleRule.get(); }
@@ -63,7 +64,7 @@ private:
 
     StyleRuleType styleRuleType() const final { return StyleRuleType::Style; }
     String cssText() const final;
-    String cssTextWithReplacementURLs(const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&) const final;
+    String cssText(const CSS::SerializationContext&) const final;
     String cssTextInternal(StringBuilder& declarations, StringBuilder& rules) const;
     void reattach(StyleRuleBase&) final;
     void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&) final;
@@ -71,14 +72,14 @@ private:
     String generateSelectorText() const;
     Vector<Ref<StyleRuleBase>> nestedRules() const;
     void cssTextForRules(StringBuilder& rules) const;
-    void cssTextForRulesWithReplacementURLs(StringBuilder& rules, const HashMap<String, String>&, const HashMap<RefPtr<CSSStyleSheet>, String>&) const;
+    void cssTextForRulesWithReplacementURLs(StringBuilder& rules, const CSS::SerializationContext&) const;
 
     Ref<StyleRule> m_styleRule;
-    Ref<DeclaredStylePropertyMap> m_styleMap;
-    RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
+    const Ref<DeclaredStylePropertyMap> m_styleMap;
+    RefPtr<StyleRuleCSSStyleProperties> m_propertiesCSSOMWrapper;
 
     mutable Vector<RefPtr<CSSRule>> m_childRuleCSSOMWrappers;
-    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
+    const std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
 } // namespace WebCore

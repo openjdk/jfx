@@ -28,6 +28,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editor.h"
 #include "FrameSelection.h"
@@ -44,8 +45,11 @@
 #include "RenderStyleInlines.h"
 #include "SimpleRange.h"
 #include "VisiblePosition.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageOverlayController);
 
 class FloatQuad;
 

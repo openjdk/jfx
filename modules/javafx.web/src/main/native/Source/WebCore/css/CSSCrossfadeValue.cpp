@@ -34,7 +34,7 @@
 namespace WebCore {
 
 inline CSSCrossfadeValue::CSSCrossfadeValue(Ref<CSSValue>&& fromValueOrNone, Ref<CSSValue>&& toValueOrNone, Ref<CSSPrimitiveValue>&& percentageValue, bool isPrefixed)
-    : CSSValue { CrossfadeClass }
+    : CSSValue { ClassType::Crossfade }
     , m_fromValueOrNone { WTFMove(fromValueOrNone) }
     , m_toValueOrNone { WTFMove(toValueOrNone) }
     , m_percentageValue { WTFMove(percentageValue) }
@@ -59,14 +59,19 @@ bool CSSCrossfadeValue::equalInputImages(const CSSCrossfadeValue& other) const
     return compareCSSValue(m_fromValueOrNone, other.m_fromValueOrNone) && compareCSSValue(m_toValueOrNone, other.m_toValueOrNone);
 }
 
-String CSSCrossfadeValue::customCSSText() const
+String CSSCrossfadeValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return makeString(m_isPrefixed ? "-webkit-"_s : ""_s, "cross-fade("_s, m_fromValueOrNone->cssText(), ", "_s, m_toValueOrNone->cssText(), ", "_s, m_percentageValue->cssText(), ')');
+    return makeString(m_isPrefixed ? "-webkit-"_s : ""_s, "cross-fade("_s, m_fromValueOrNone->cssText(context), ", "_s, m_toValueOrNone->cssText(context), ", "_s, m_percentageValue->cssText(context), ')');
 }
 
-RefPtr<StyleImage> CSSCrossfadeValue::createStyleImage(Style::BuilderState& state) const
+RefPtr<StyleImage> CSSCrossfadeValue::createStyleImage(const Style::BuilderState& state) const
 {
-    return StyleCrossfadeImage::create(state.createStyleImage(m_fromValueOrNone), state.createStyleImage(m_toValueOrNone), m_percentageValue->doubleValue(), m_isPrefixed);
+    return StyleCrossfadeImage::create(
+        state.createStyleImage(m_fromValueOrNone),
+        state.createStyleImage(m_toValueOrNone),
+        clampTo<double>(m_percentageValue->valueDividingBy100IfPercentage<double>(state.cssToLengthConversionData()), 0, 1),
+        m_isPrefixed
+    );
 }
 
 } // namespace WebCore

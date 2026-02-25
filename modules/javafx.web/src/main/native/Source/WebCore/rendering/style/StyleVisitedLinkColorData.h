@@ -31,7 +31,7 @@ namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleVisitedLinkColorData);
 class StyleVisitedLinkColorData : public RefCounted<StyleVisitedLinkColorData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleVisitedLinkColorData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleVisitedLinkColorData, StyleVisitedLinkColorData);
 public:
     static Ref<StyleVisitedLinkColorData> create() { return adoptRef(*new StyleVisitedLinkColorData); }
     Ref<StyleVisitedLinkColorData> copy() const;
@@ -39,13 +39,17 @@ public:
 
     bool operator==(const StyleVisitedLinkColorData&) const;
 
-    StyleColor background;
-    StyleColor borderLeft;
-    StyleColor borderRight;
-    StyleColor borderTop;
-    StyleColor borderBottom;
-    StyleColor textDecoration;
-    StyleColor outline;
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleVisitedLinkColorData&) const;
+#endif
+
+    Style::Color background;
+    Style::Color borderLeft;
+    Style::Color borderRight;
+    Style::Color borderTop;
+    Style::Color borderBottom;
+    Style::Color textDecoration;
+    Style::Color outline;
 
 private:
     StyleVisitedLinkColorData();

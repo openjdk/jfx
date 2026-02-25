@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,18 +40,25 @@ public:
     SingleThreadIntegralWrapper& operator++();
     SingleThreadIntegralWrapper& operator--();
 
-    IntegralType valueWithoutThreadCheck() const { return m_value; }
+    IntegralType valueWithoutThreadCheck() const
+    {
+        // This is called after the destructor in WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR,
+        // the compiler can see it as uninitialized.
+        IGNORE_GCC_WARNINGS_BEGIN("uninitialized")
+        return m_value;
+        IGNORE_GCC_WARNINGS_END
+    }
 
 private:
 #if ASSERT_ENABLED && !USE(WEB_THREAD)
-    void assertThread() const { ASSERT(m_thread.ptr() == &Thread::current()); }
+    void assertThread() const { ASSERT(m_thread.ptr() == &Thread::currentSingleton()); }
 #else
     constexpr void assertThread() const { }
 #endif
 
     IntegralType m_value;
 #if ASSERT_ENABLED && !USE(WEB_THREAD)
-    Ref<Thread> m_thread;
+    const Ref<Thread> m_thread;
 #endif
 };
 
@@ -59,7 +66,7 @@ template <typename IntegralType>
 inline SingleThreadIntegralWrapper<IntegralType>::SingleThreadIntegralWrapper(IntegralType value)
     : m_value { value }
 #if ASSERT_ENABLED && !USE(WEB_THREAD)
-    , m_thread { Thread::current() }
+    , m_thread { Thread::currentSingleton() }
 #endif
 { }
 

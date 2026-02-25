@@ -23,6 +23,7 @@
 #include "SVGDocumentExtensions.h"
 
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "EventListener.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
@@ -38,10 +39,14 @@
 #include "SVGUseElement.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGDocumentExtensions);
 
 static bool animationsPausedForDocument(Document& document)
 {
@@ -50,7 +55,7 @@ static bool animationsPausedForDocument(Document& document)
 
 SVGDocumentExtensions::SVGDocumentExtensions(Document& document)
     : m_document(document)
-    , m_resourcesCache(makeUnique<SVGResourcesCache>())
+    , m_resourcesCache(makeUniqueRef<SVGResourcesCache>())
     , m_areAnimationsPaused(animationsPausedForDocument(document))
 {
 }

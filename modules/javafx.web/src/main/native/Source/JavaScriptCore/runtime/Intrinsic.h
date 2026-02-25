@@ -56,10 +56,12 @@ namespace JSC {
     macro(ArrayPopIntrinsic) \
     macro(ArraySliceIntrinsic) \
     macro(ArraySpliceIntrinsic) \
+    macro(ArrayIncludesIntrinsic) \
     macro(ArrayIndexOfIntrinsic) \
     macro(ArrayValuesIntrinsic) \
     macro(ArrayKeysIntrinsic) \
     macro(ArrayEntriesIntrinsic) \
+    macro(AsyncIteratorIntrinsic) \
     macro(BooleanConstructorIntrinsic) \
     macro(CharCodeAtIntrinsic) \
     macro(CharAtIntrinsic) \
@@ -84,6 +86,7 @@ namespace JSC {
     macro(DatePrototypeGetYearIntrinsic) \
     macro(DatePrototypeSetTimeIntrinsic) \
     macro(FromCharCodeIntrinsic) \
+    macro(GlobalIsFiniteIntrinsic) \
     macro(GlobalIsNaNIntrinsic) \
     macro(PowIntrinsic) \
     macro(FloorIntrinsic) \
@@ -97,8 +100,8 @@ namespace JSC {
     macro(Log2Intrinsic) \
     macro(RegExpExecIntrinsic) \
     macro(RegExpTestIntrinsic) \
-    macro(RegExpTestFastIntrinsic) \
     macro(RegExpMatchFastIntrinsic) \
+    macro(RegExpSearchIntrinsic) \
     macro(ObjectAssignIntrinsic) \
     macro(ObjectCreateIntrinsic) \
     macro(ObjectGetOwnPropertyNamesIntrinsic) \
@@ -110,18 +113,23 @@ namespace JSC {
     macro(ReflectGetPrototypeOfIntrinsic) \
     macro(ReflectOwnKeysIntrinsic) \
     macro(StringConstructorIntrinsic) \
+    macro(StringPrototypeAtIntrinsic) \
     macro(StringPrototypeCodePointAtIntrinsic) \
     macro(StringPrototypeIndexOfIntrinsic) \
     macro(StringPrototypeLocaleCompareIntrinsic) \
     macro(StringPrototypeValueOfIntrinsic) \
     macro(StringPrototypeReplaceIntrinsic) \
+    macro(StringPrototypeReplaceAllIntrinsic) \
     macro(StringPrototypeReplaceRegExpIntrinsic) \
     macro(StringPrototypeReplaceStringIntrinsic) \
+    macro(StringPrototypeReplaceAllStringIntrinsic) \
     macro(StringPrototypeSliceIntrinsic) \
     macro(StringPrototypeSubstringIntrinsic) \
     macro(StringPrototypeToLowerCaseIntrinsic) \
     macro(NumberPrototypeToStringIntrinsic) \
+    macro(NumberIsFiniteIntrinsic) \
     macro(NumberIsNaNIntrinsic) \
+    macro(NumberIsSafeIntegerIntrinsic) \
     macro(NumberIsIntegerIntrinsic) \
     macro(NumberConstructorIntrinsic) \
     macro(IMulIntrinsic) \
@@ -137,6 +145,7 @@ namespace JSC {
     macro(IsTypedArrayViewIntrinsic) \
     macro(BoundFunctionCallIntrinsic) \
     macro(RemoteFunctionCallIntrinsic) \
+    macro(IteratorIntrinsic) \
     macro(JSMapGetIntrinsic) \
     macro(JSMapHasIntrinsic) \
     macro(JSMapSetIntrinsic) \
@@ -177,6 +186,7 @@ namespace JSC {
     macro(AtomicsLoadIntrinsic) \
     macro(AtomicsNotifyIntrinsic) \
     macro(AtomicsOrIntrinsic) \
+    macro(AtomicsPauseIntrinsic) \
     macro(AtomicsStoreIntrinsic) \
     macro(AtomicsSubIntrinsic) \
     macro(AtomicsWaitIntrinsic) \
@@ -185,10 +195,12 @@ namespace JSC {
     macro(ParseIntIntrinsic) \
     macro(FunctionToStringIntrinsic) \
     macro(FunctionBindIntrinsic) \
+    macro(IteratorHelperCreateIntrinsic) \
     \
     /* Getter intrinsics. */ \
     macro(TypedArrayLengthIntrinsic) \
     macro(TypedArrayByteLengthIntrinsic) \
+    macro(DataViewByteLengthIntrinsic) \
     macro(TypedArrayByteOffsetIntrinsic) \
     macro(UnderscoreProtoIntrinsic) \
     macro(SpeciesGetterIntrinsic) \
@@ -236,7 +248,7 @@ enum Intrinsic : uint8_t {
 #undef JSC_DEFINE_INTRINSIC
 };
 
-std::optional<IterationKind> interationKindForIntrinsic(Intrinsic);
+std::optional<IterationKind> iterationKindForIntrinsic(Intrinsic);
 
 ASCIILiteral intrinsicName(Intrinsic);
 

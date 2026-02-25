@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUBufferMapState.h"
 #include "GPUIntegralTypes.h"
 #include "GPUMapMode.h"
@@ -39,15 +38,17 @@
 #include <wtf/Range.h>
 #include <wtf/RangeSet.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class GPUDevice;
+class WeakPtrImplWithEventTargetData;
+template<typename> class ExceptionOr;
 
-class GPUBuffer : public RefCounted<GPUBuffer>, public CanMakeWeakPtr<GPUBuffer> {
+class GPUBuffer : public RefCountedAndCanMakeWeakPtr<GPUBuffer> {
 public:
     static Ref<GPUBuffer> create(Ref<WebGPU::Buffer>&& backing, size_t bufferSize, GPUBufferUsageFlags usage, bool mappedAtCreation, GPUDevice& device)
     {
@@ -77,7 +78,7 @@ private:
     GPUBuffer(Ref<WebGPU::Buffer>&&, size_t, GPUBufferUsageFlags, bool, GPUDevice&);
     void internalUnmap(ScriptExecutionContext&);
 
-    Ref<WebGPU::Buffer> m_backing;
+    const Ref<WebGPU::Buffer> m_backing;
     struct ArrayBufferWithOffset {
         RefPtr<JSC::ArrayBuffer> buffer;
         size_t offset { 0 };

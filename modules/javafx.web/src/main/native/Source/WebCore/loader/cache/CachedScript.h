@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -26,27 +26,31 @@
 #pragma once
 
 #include "CachedResource.h"
+#include <JavaScriptCore/CodeBlockHash.h>
 
 namespace WebCore {
 
 class TextResourceDecoder;
 
+enum class ScriptTrackingPrivacyProtectionsEnabled : bool { No, Yes };
+
 class CachedScript final : public CachedResource {
 public:
-    CachedScript(CachedResourceRequest&&, PAL::SessionID, const CookieJar*);
+    CachedScript(CachedResourceRequest&&, PAL::SessionID, const CookieJar*, ScriptTrackingPrivacyProtectionsEnabled);
     virtual ~CachedScript();
 
     enum class ShouldDecodeAsUTF8Only : bool { No, Yes };
     WEBCORE_EXPORT StringView script(ShouldDecodeAsUTF8Only = ShouldDecodeAsUTF8Only::No);
     WEBCORE_EXPORT unsigned scriptHash(ShouldDecodeAsUTF8Only = ShouldDecodeAsUTF8Only::No);
+    WEBCORE_EXPORT JSC::CodeBlockHash codeBlockHashConcurrently(int startOffset, int endOffset, JSC::CodeSpecializationKind, ShouldDecodeAsUTF8Only);
+
+    bool requiresPrivacyProtections() const { return m_requiresPrivacyProtections; }
 
 private:
     bool mayTryReplaceEncodedData() const final { return true; }
 
-    bool shouldIgnoreHTTPStatusCodeErrors() const final;
-
     void setEncoding(const String&) final;
-    String encoding() const final;
+    ASCIILiteral encoding() const final;
     const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
     RefPtr<TextResourceDecoder> protectedDecoder() const;
     void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
@@ -58,9 +62,12 @@ private:
     String m_script;
     unsigned m_scriptHash { 0 };
     bool m_wasForceDecodedAsUTF8 { false };
+    bool m_requiresPrivacyProtections { false };
 
-    enum DecodingState { NeverDecoded, DataAndDecodedStringHaveSameBytes, DataAndDecodedStringHaveDifferentBytes };
+    enum DecodingState : uint8_t { NeverDecoded, DataAndDecodedStringHaveSameBytes, DataAndDecodedStringHaveDifferentBytes };
     DecodingState m_decodingState { NeverDecoded };
+
+    mutable Lock m_lock;
 
     RefPtr<TextResourceDecoder> m_decoder;
 };

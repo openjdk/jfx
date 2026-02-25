@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2013 Apple, Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -159,9 +159,8 @@ EditAction EditCommand::editingAction() const
 
 static RefPtr<EditCommandComposition> compositionIfPossible(EditCommand& command)
 {
-    if (!command.isCompositeEditCommand())
-        return nullptr;
-    return static_cast<CompositeEditCommand&>(command).composition();
+    auto* compositeCommand = dynamicDowncast<CompositeEditCommand>(command);
+    return compositeCommand ? compositeCommand->composition() : nullptr;
 }
 
 bool EditCommand::isEditingTextAreaOrTextInput() const
@@ -212,8 +211,7 @@ void EditCommand::postTextStateChangeNotification(AXTextEditType type, const Str
         return;
     if (!text.length())
         return;
-    auto document = protectedDocument();
-    CheckedPtr cache = document->existingAXObjectCache();
+    CheckedPtr cache = document().existingAXObjectCache();
     if (!cache)
         return;
     RefPtr node { highestEditableRoot(position.deepEquivalent(), HasEditableAXRole) };
@@ -231,7 +229,7 @@ void SimpleEditCommand::doReapply()
 }
 
 #ifndef NDEBUG
-void SimpleEditCommand::addNodeAndDescendants(Node* startNode, HashSet<Ref<Node>>& nodes)
+void SimpleEditCommand::addNodeAndDescendants(Node* startNode, NodeSet& nodes)
 {
     for (RefPtr node = startNode; node; node = NodeTraversal::next(*node, startNode))
         nodes.add(*node);

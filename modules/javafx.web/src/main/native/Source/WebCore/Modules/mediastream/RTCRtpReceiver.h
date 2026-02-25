@@ -86,20 +86,20 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "RTCRtpReceiver"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
 
-    Ref<MediaStreamTrack> m_track;
+    const Ref<MediaStreamTrack> m_track;
     RefPtr<RTCDtlsTransport> m_transport;
     std::unique_ptr<RTCRtpReceiverBackend> m_backend;
     WeakPtr<PeerConnectionBackend> m_connection;
     std::unique_ptr<RTCRtpTransform> m_transform;
     Vector<WeakPtr<MediaStream>> m_associatedStreams;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier { nullptr };
+    const Ref<const Logger> m_logger;
+    uint64_t m_logIdentifier { 0 };
 #endif
 };
 

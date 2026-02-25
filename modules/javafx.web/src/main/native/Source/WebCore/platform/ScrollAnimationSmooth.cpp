@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2016 Igalia S.L.
  * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
- * Copyright (c) 2011, Google Inc. All rights reserved.
+ * Copyright (c) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,12 @@
 #include "ScrollExtents.h"
 #include "ScrollableArea.h"
 #include "TimingFunction.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollAnimationSmooth);
 
 static const float animationSpeed { 1000.0f };
 static const Seconds maxAnimationDuration { 200_ms };

@@ -1,6 +1,6 @@
 /**
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2021 Apple Inc.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -42,6 +42,13 @@ CSSPropertyID StylePropertyMetadata::shorthandID() const
     auto shorthands = matchingShorthandsForLonghand(static_cast<CSSPropertyID>(m_propertyID));
     ASSERT(shorthands.size() && m_indexInShorthandsVector >= 0 && m_indexInShorthandsVector < shorthands.size());
     return shorthands[m_indexInShorthandsVector].id();
+}
+
+bool CSSProperty::isSizingProperty(CSSPropertyID propertyId)
+{
+    return isSizeProperty(propertyId)
+        || isMaxSizeProperty(propertyId)
+        || isMinSizeProperty(propertyId);
 }
 
 } // namespace WebCore

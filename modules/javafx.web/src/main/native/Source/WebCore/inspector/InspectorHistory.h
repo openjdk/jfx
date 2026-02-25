@@ -30,17 +30,20 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class InspectorHistory final {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorHistory);
     WTF_MAKE_NONCOPYABLE(InspectorHistory);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     class Action {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Action);
     public:
         virtual ~Action() = default;
 
@@ -53,9 +56,6 @@ public:
         virtual ExceptionOr<void> redo() = 0;
 
         virtual bool isUndoableStateMark() { return false; }
-
-    private:
-        String m_name;
     };
 
     InspectorHistory() = default;

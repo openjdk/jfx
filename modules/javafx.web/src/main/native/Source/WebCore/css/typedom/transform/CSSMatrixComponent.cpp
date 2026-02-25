@@ -52,12 +52,12 @@ Ref<CSSTransformComponent> CSSMatrixComponent::create(Ref<DOMMatrixReadOnly>&& m
     return adoptRef(*new CSSMatrixComponent(WTFMove(matrix), is2D ? Is2D::Yes : Is2D::No));
 }
 
-ExceptionOr<Ref<CSSTransformComponent>> CSSMatrixComponent::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSTransformComponent>> CSSMatrixComponent::create(Ref<const CSSFunctionValue> cssFunctionValue, Document& document)
 {
-    auto makeMatrix = [&](const Function<Ref<CSSTransformComponent>(Vector<double>&&)>& create, size_t expectedNumberOfComponents) -> ExceptionOr<Ref<CSSTransformComponent>> {
+    auto makeMatrix = [&](NOESCAPE const Function<Ref<CSSTransformComponent>(Vector<double>&&)>& create, size_t expectedNumberOfComponents) -> ExceptionOr<Ref<CSSTransformComponent>> {
         Vector<double> components;
-        for (auto& componentCSSValue : cssFunctionValue) {
-            auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
+        for (auto& componentCSSValue : cssFunctionValue.get()) {
+            auto valueOrException = CSSStyleValueFactory::reifyValue(document, componentCSSValue, std::nullopt);
             if (valueOrException.hasException())
                 return valueOrException.releaseException();
             RefPtr unitValue = dynamicDowncast<CSSUnitValue>(valueOrException.releaseReturnValue());
@@ -72,7 +72,7 @@ ExceptionOr<Ref<CSSTransformComponent>> CSSMatrixComponent::create(CSSFunctionVa
         return create(WTFMove(components));
     };
 
-    switch (cssFunctionValue.name()) {
+    switch (cssFunctionValue->name()) {
     case CSSValueMatrix:
         return makeMatrix([](Vector<double>&& components) {
             auto domMatrix = DOMMatrixReadOnly::create({ components[0], components[1], components[2], components[3], components[4], components[5] }, DOMMatrixReadOnly::Is2D::Yes);

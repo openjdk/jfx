@@ -26,9 +26,12 @@
 #include "Matrix3DTransformOperation.h"
 #include <algorithm>
 #include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformOperations);
 
 TransformOperations::TransformOperations(Ref<TransformOperation>&& operation)
     : m_operations({ WTFMove(operation) })
@@ -44,7 +47,7 @@ bool TransformOperations::operator==(const TransformOperations& o) const
 {
     static_assert(std::ranges::sized_range<decltype(m_operations)>);
 
-    return std::ranges::equal(m_operations, o.m_operations, [](auto& a, auto& b) { return a.get() == b.get(); });
+    return std::ranges::equal(m_operations, o.m_operations, [](auto& a, auto& b) { return arePointingToEqualData(a, b); });
 }
 
 TransformOperations TransformOperations::clone() const

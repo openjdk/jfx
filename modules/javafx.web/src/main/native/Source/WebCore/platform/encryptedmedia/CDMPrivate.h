@@ -55,6 +55,11 @@ struct CDMMediaCapability;
 struct CDMRestrictions;
 class SharedBuffer;
 
+enum class CDMPrivateLocalStorageAccess : bool {
+    NotAllowed,
+    Allowed,
+};
+
 class CDMPrivateClient {
 public:
     virtual ~CDMPrivateClient() = default;
@@ -69,13 +74,10 @@ public:
     WEBCORE_EXPORT virtual ~CDMPrivate();
 
 #if !RELEASE_LOG_DISABLED
-    virtual void setLogIdentifier(const void*) { };
+    virtual void setLogIdentifier(uint64_t) { };
 #endif
 
-    enum class LocalStorageAccess : bool {
-        NotAllowed,
-        Allowed,
-    };
+    using LocalStorageAccess = CDMPrivateLocalStorageAccess;
 
     using SupportedConfigurationCallback = Function<void(std::optional<CDMKeySystemConfiguration>)>;
     WEBCORE_EXPORT virtual void getSupportedConfiguration(CDMKeySystemConfiguration&& candidateConfiguration, LocalStorageAccess, SupportedConfigurationCallback&&);

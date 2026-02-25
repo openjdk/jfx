@@ -36,7 +36,7 @@ namespace WebCore {
 namespace InlineDisplay {
 
 struct Box {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Box);
 
 #pragma pack(push, 4)
     struct Text {
@@ -148,6 +148,7 @@ struct Box {
 
     const Layout::Box& layoutBox() const { return m_layoutBox; }
     const RenderStyle& style() const { return !lineIndex() ? layoutBox().firstLineStyle() : layoutBox().style(); }
+    WritingMode writingMode() const { return style().writingMode(); }
 
     void moveToLine(unsigned lineIndex) { m_lineIndex = lineIndex; }
     size_t lineIndex() const { return m_lineIndex; }

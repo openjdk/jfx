@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2019 Carlos Eduardo Ramalho <cadubentzen@gmail.com>.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,7 +68,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "HTMLVideoElementPictureInPicture"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -85,8 +85,8 @@ private:
     RefPtr<DeferredPromise> m_exitPictureInPicturePromise;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

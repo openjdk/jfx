@@ -32,6 +32,7 @@
 #include "ActiveDOMObject.h"
 #include "Blob.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
 #include "MediaProducer.h"
@@ -48,6 +49,7 @@ namespace WebCore {
 
 class AudioSourceProvider;
 class Document;
+class MediaSessionManagerInterface;
 
 struct MediaTrackConstraints;
 
@@ -63,6 +65,9 @@ class MediaStreamTrack
 {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamTrack);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     class Observer {
     public:
         virtual ~Observer() = default;
@@ -158,15 +163,11 @@ public:
     void addObserver(Observer&);
     void removeObserver(Observer&);
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_private->logger(); }
-    const void* logIdentifier() const final { return m_private->logIdentifier(); }
+    uint64_t logIdentifier() const final { return m_private->logIdentifier(); }
 #endif
 
     void setShouldFireMuteEventImmediately(bool value) { m_shouldFireMuteEventImmediately = value; }
@@ -185,12 +186,11 @@ public:
 
     void setMediaStreamId(const String& id) { m_mediaStreamId = id; }
     const String& mediaStreamId() const { return m_mediaStreamId; }
+
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-
-    Ref<MediaStreamTrackPrivate> m_private;
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     explicit MediaStreamTrack(MediaStreamTrack&);
@@ -219,6 +219,8 @@ private:
     bool isCapturingAudio() const final;
     bool wantsToCaptureAudio() const final;
 
+    RefPtr<MediaSessionManagerInterface> mediaSessionManager() const;
+
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MediaStreamTrack"_s; }
     WTFLogChannel& logChannel() const final;
@@ -228,8 +230,8 @@ private:
 
     MediaTrackConstraints m_constraints;
 
+    const Ref<MediaStreamTrackPrivate> m_private;
     String m_mediaStreamId;
-    String m_groupId;
     State m_readyState { State::Live };
     bool m_muted { false };
     bool m_ended { false };

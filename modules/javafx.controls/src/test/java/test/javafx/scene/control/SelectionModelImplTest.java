@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 /**
@@ -111,6 +112,8 @@ public class SelectionModelImplTest {
     // ComboBox
     private ComboBox comboBox;
 
+    private StageLoader stageLoader;
+
     // --- ListView model data
 
     private static Collection<Class<? extends SelectionModel>> parameters() {
@@ -124,8 +127,12 @@ public class SelectionModelImplTest {
         );
     }
 
-    @AfterAll
-    public static void tearDownClass() throws Exception {    }
+    @AfterEach
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
@@ -451,6 +458,8 @@ public class SelectionModelImplTest {
             assertFalse(model.isSelected(3));
             assertNull(choiceBox.getValue());
         } else {
+            stageLoader = new StageLoader(currentControl);
+
             IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
             assertNotNull(cell_3);
             assertFalse(cell_3.isSelected());
@@ -508,6 +517,7 @@ public class SelectionModelImplTest {
         // model and the visuals disagree in this case).
         // TODO remove the ComboBox conditional and test for that too
         if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+            stageLoader = new StageLoader(currentControl);
             IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, 0);
             assertTrue(cell.isSelected());
         }

@@ -28,12 +28,15 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGUseElement.h"
 #include "XLinkNames.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGURIReference);
+
 SVGURIReference::SVGURIReference(SVGElement* contextElement)
-    : m_href(SVGAnimatedString::create(contextElement))
+    : m_href(SVGAnimatedString::create(contextElement, IsHrefProperty::Yes))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -79,6 +82,11 @@ AtomString SVGURIReference::fragmentIdentifierFromIRIString(const String& url, c
     return emptyAtom();
 }
 
+AtomString SVGURIReference::fragmentIdentifierFromIRIString(const Style::URL& url, const Document& document)
+{
+    return fragmentIdentifierFromIRIString(url.resolved.string(), document);
+}
+
 auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
 {
     // If there's no fragment identifier contained within the IRI string, we can't lookup an element.
@@ -99,6 +107,12 @@ auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeSc
         return { externalDocument->getElementById(id), WTFMove(id) };
     }
 
+    if (url.protocolIsData()) {
+        // FIXME: We need to load the data url in a Document to be able to get the target element.
+        if (!equalIgnoringFragmentIdentifier(url, document->url()))
+            return { nullptr, WTFMove(id) };
+    }
+
     // Exit early if the referenced url is external, and we have no externalDocument given.
     if (isExternalURIReference(iri, document))
         return { nullptr, WTFMove(id) };
@@ -110,9 +124,18 @@ auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeSc
     return { treeScope.getElementById(id), WTFMove(id) };
 }
 
+auto SVGURIReference::targetElementFromIRIString(const Style::URL& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
+{
+    return targetElementFromIRIString(iri.resolved.string(), treeScope, WTFMove(externalDocument));
+}
+
 bool SVGURIReference::haveLoadedRequiredResources() const
 {
-    if (href().isEmpty() || !isExternalURIReference(href(), contextElement().protectedDocument()))
+    if (href().isEmpty())
+        return true;
+    if (contextElement().protectedDocument()->completeURL(href()).protocolIsData())
+        return true;
+    if (!isExternalURIReference(href(), contextElement().protectedDocument()))
         return true;
     return errorOccurred() || haveFiredLoadEvent();
 }

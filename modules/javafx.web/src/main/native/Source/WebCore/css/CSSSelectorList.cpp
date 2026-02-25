@@ -29,9 +29,12 @@
 
 #include "CommonAtomStrings.h"
 #include "MutableCSSSelector.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSSelectorList);
 
 CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
 {
@@ -63,25 +66,104 @@ CSSSelectorList::CSSSelectorList(MutableCSSSelectorList&& selectorVector)
             {
                 // Move item from the parser selector vector into m_selectorArray without invoking destructor (Ugh.)
                 CSSSelector* currentSelector = current->releaseSelector().release();
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
                 memcpy(static_cast<void*>(&m_selectorArray[arrayIndex]), static_cast<void*>(currentSelector), sizeof(CSSSelector));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
                 // Free the underlying memory without invoking the destructor.
                 operator delete (currentSelector);
             }
             if (current != first)
-                m_selectorArray[arrayIndex].setNotFirstInTagHistory();
+                m_selectorArray[arrayIndex].m_isFirstInTagHistory = false;
             current = current->tagHistory();
             ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList() || (flattenedSize == arrayIndex + 1));
             if (current)
-                m_selectorArray[arrayIndex].setNotLastInTagHistory();
+                m_selectorArray[arrayIndex].m_isLastInTagHistory = false;
             ++arrayIndex;
         }
         ASSERT(m_selectorArray[arrayIndex - 1].isLastInTagHistory());
     }
     ASSERT(flattenedSize == arrayIndex);
-    m_selectorArray[arrayIndex - 1].setLastInSelectorList();
+    m_selectorArray[arrayIndex - 1].m_isLastInSelectorList = true;
 }
 
+CSSSelectorList CSSSelectorList::makeCopyingSimpleSelector(const CSSSelector& simpleSelector)
+{
+    auto selectorArray = makeUniqueArray<CSSSelector>(1);
+
+    new (NotNull, &selectorArray[0]) CSSSelector(simpleSelector);
+    selectorArray[0].m_isFirstInTagHistory = true;
+    selectorArray[0].m_isLastInTagHistory = true;
+    selectorArray[0].m_isLastInSelectorList = true;
+
+    return CSSSelectorList { WTFMove(selectorArray) };
+}
+
+CSSSelectorList CSSSelectorList::makeCopyingComplexSelector(const CSSSelector& complexSelector)
+{
+    size_t length = 0;
+    for (auto* selector = &complexSelector; selector; selector = selector->tagHistory())
+        ++length;
+
+    auto selectorArray = makeUniqueArray<CSSSelector>(length);
+
+    size_t i = 0;
+    for (auto* selector = &complexSelector; selector; selector = selector->tagHistory(), ++i)
+        new (NotNull, &selectorArray[i]) CSSSelector(*selector);
+    selectorArray[length - 1].m_isLastInSelectorList = true;
+
+    return CSSSelectorList { WTFMove(selectorArray) };
+}
+
+CSSSelectorList CSSSelectorList::makeJoining(const CSSSelectorList& a, const CSSSelectorList& b)
+{
+    if (a.isEmpty())
+        return b;
+    if (b.isEmpty())
+        return a;
+
+    auto aComponentCount = a.componentCount();
+    auto bComponentCount = b.componentCount();
+
+    auto selectorArray = makeUniqueArray<CSSSelector>(aComponentCount + bComponentCount);
+
+    for (size_t i = 0; i < aComponentCount; ++i)
+        new (NotNull, &selectorArray[i]) CSSSelector(a.m_selectorArray[i]);
+    for (size_t i = 0; i < bComponentCount; ++i)
+        new (NotNull, &selectorArray[aComponentCount + i]) CSSSelector(b.m_selectorArray[i]);
+
+    selectorArray[aComponentCount - 1].m_isLastInSelectorList = false;
+    selectorArray[aComponentCount + bComponentCount - 1].m_isLastInSelectorList = true;
+
+    return CSSSelectorList { WTFMove(selectorArray) };
+}
+
+CSSSelectorList CSSSelectorList::makeJoining(const Vector<const CSSSelectorList*>& lists)
+{
+    size_t totalComponentCount = 0;
+    for (auto list : lists)
+        totalComponentCount += list->componentCount();
+
+    if (!totalComponentCount)
+        return { };
+
+    auto selectorArray = makeUniqueArray<CSSSelector>(totalComponentCount);
+
+    size_t componentIndex = 0;
+    for (auto list : lists) {
+        auto count = list->componentCount();
+        for (size_t i = 0; i < count; ++i)
+            new (NotNull, &selectorArray[componentIndex++]) CSSSelector(list->m_selectorArray[i]);
+        selectorArray[componentIndex - 1].m_isLastInSelectorList = false;
+    }
+
+    ASSERT(componentIndex == totalComponentCount);
+    selectorArray[componentIndex - 1].m_isLastInSelectorList = true;
+
+    return CSSSelectorList { WTFMove(selectorArray) };
+}
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 unsigned CSSSelectorList::componentCount() const
 {
     if (!m_selectorArray)
@@ -105,6 +187,7 @@ unsigned CSSSelectorList::listSize() const
     }
     return size;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 String CSSSelectorList::selectorsText() const
 {

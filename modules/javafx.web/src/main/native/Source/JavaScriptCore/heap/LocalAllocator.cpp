@@ -126,19 +126,19 @@ void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDefer
 
     // Goofy corner case: the GC called a callback and now this directory has a currentBlock. This only
     // happens when running WebKit tests, which inject a callback into the GC's finalization.
-    if (UNLIKELY(m_currentBlock))
+    if (m_currentBlock) [[unlikely]]
         return allocate(heap, cellSize, deferralContext, failureMode);
 
     void* result = tryAllocateWithoutCollecting(cellSize);
 
-    if (LIKELY(result != nullptr))
+    if (result) [[likely]]
         return result;
 
     // FIXME GlobalGC: Need to synchronize here to when allocating from the BlockDirectory in the server.
 
     Subspace* subspace = m_directory->m_subspace;
     if (subspace->isIsoSubspace()) {
-        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocatePreciseOrLowerTierPrecise(cellSize))
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateLowerTierPrecise(cellSize))
             return result;
     }
 
@@ -258,7 +258,7 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
 
 void LocalAllocator::doTestCollectionsIfNeeded(JSC::Heap& heap, GCDeferralContext* deferralContext)
 {
-    if (LIKELY(!Options::slowPathAllocsBetweenGCs()))
+    if (!Options::slowPathAllocsBetweenGCs()) [[likely]]
         return;
 
     static unsigned allocationCount = 0;
@@ -272,16 +272,6 @@ void LocalAllocator::doTestCollectionsIfNeeded(JSC::Heap& heap, GCDeferralContex
     }
     if (++allocationCount >= Options::slowPathAllocsBetweenGCs())
         allocationCount = 0;
-}
-
-bool LocalAllocator::isFreeListedCell(const void* target) const
-{
-    // This abomination exists to detect when an object is in the dead-but-not-destructed state.
-    // Therefore, it's not even clear that this needs to do anything beyond returning "false", since
-    // if we know that the block owning the object is free-listed, then it's impossible for any
-    // objects to be in the dead-but-not-destructed state.
-    // FIXME: Get rid of this abomination. https://bugs.webkit.org/show_bug.cgi?id=181655
-    return m_freeList.contains(bitwise_cast<HeapCell*>(target));
 }
 
 } // namespace JSC

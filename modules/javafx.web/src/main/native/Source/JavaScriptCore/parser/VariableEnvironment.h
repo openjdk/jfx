@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,10 @@
 #pragma once
 
 #include "Identifier.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/PackedRefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -138,12 +138,12 @@ struct PrivateNameEntryHashTraits : HashTraits<PrivateNameEntry> {
     static constexpr bool needsDestruction = false;
 };
 
-typedef HashMap<PackedRefPtr<UniquedStringImpl>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> PrivateNameEnvironment;
+typedef UncheckedKeyHashMap<PackedRefPtr<UniquedStringImpl>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> PrivateNameEnvironment;
 
 class VariableEnvironment {
     WTF_MAKE_TZONE_ALLOCATED(VariableEnvironment);
 private:
-    typedef HashMap<PackedRefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
+    typedef UncheckedKeyHashMap<PackedRefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
 
 public:
 
@@ -180,18 +180,18 @@ public:
 
     ALWAYS_INLINE unsigned size() const { return m_map.size() + privateNamesSize(); }
     ALWAYS_INLINE unsigned mapSize() const { return m_map.size(); }
-    ALWAYS_INLINE bool contains(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.contains(identifier); }
-    ALWAYS_INLINE bool remove(const RefPtr<UniquedStringImpl>& identifier) { return m_map.remove(identifier); }
-    ALWAYS_INLINE Map::iterator find(const RefPtr<UniquedStringImpl>& identifier) { return m_map.find(identifier); }
-    ALWAYS_INLINE Map::const_iterator find(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.find(identifier); }
+    ALWAYS_INLINE bool contains(const UniquedStringImpl* identifier) const { return m_map.contains(identifier); }
+    ALWAYS_INLINE bool remove(const UniquedStringImpl* identifier) { return m_map.remove(identifier); }
+    ALWAYS_INLINE Map::iterator find(const UniquedStringImpl* identifier) { return m_map.find(identifier); }
+    ALWAYS_INLINE Map::const_iterator find(const UniquedStringImpl* identifier) const { return m_map.find(identifier); }
     void swap(VariableEnvironment& other);
-    void markVariableAsCapturedIfDefined(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsCaptured(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsCapturedIfDefined(const UniquedStringImpl* identifier);
+    void markVariableAsCaptured(const UniquedStringImpl* identifier);
     void markAllVariablesAsCaptured();
     bool hasCapturedVariables() const;
     bool captures(UniquedStringImpl* identifier) const;
-    void markVariableAsImported(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsImported(const UniquedStringImpl* identifier);
+    void markVariableAsExported(const UniquedStringImpl* identifier);
 
     bool isEverythingCaptured() const { return m_isEverythingCaptured; }
     bool isEmpty() const { return !m_map.size() && !privateNamesSize(); }
@@ -300,7 +300,7 @@ public:
     }
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_TZONE_ALLOCATED(RareData);
 
         RareData() { }
         RareData(RareData&& other)
@@ -331,7 +331,7 @@ private:
     std::unique_ptr<VariableEnvironment::RareData> m_rareData;
 };
 
-using TDZEnvironment = HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
+using TDZEnvironment = UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
 
 class CompactTDZEnvironment {
     WTF_MAKE_TZONE_ALLOCATED(CompactTDZEnvironment);
@@ -341,7 +341,7 @@ class CompactTDZEnvironment {
 
     using Compact = Vector<PackedRefPtr<UniquedStringImpl>>;
     using Inflated = TDZEnvironment;
-    using Variables = std::variant<Compact, Inflated>;
+    using Variables = Variant<Compact, Inflated>;
 
 public:
     CompactTDZEnvironment(const TDZEnvironment&);
@@ -483,7 +483,7 @@ private:
 
     Handle get(CompactTDZEnvironment*, bool& isNewEntry);
 
-    HashMap<CompactTDZEnvironmentKey, unsigned> m_map;
+    UncheckedKeyHashMap<CompactTDZEnvironmentKey, unsigned> m_map;
 };
 
 class TDZEnvironmentLink : public RefCounted<TDZEnvironmentLink> {

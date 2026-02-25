@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,8 +37,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakHashSet.h>
 
-
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerInspectorProxy);
+
 using namespace Inspector;
 
 static Lock proxiesPerWorkerGlobalScopeLock;
@@ -47,6 +49,7 @@ static HashMap<ScriptExecutionContextIdentifier, WeakHashSet<WorkerInspectorProx
     static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakHashSet<WorkerInspectorProxy>>> proxies;
     return proxies;
 }
+
 static HashMap<PageIdentifier, WeakHashSet<WorkerInspectorProxy>>& proxiesPerPage()
 {
     static MainThreadNeverDestroyed<HashMap<PageIdentifier, WeakHashSet<WorkerInspectorProxy>>> proxies;
@@ -57,6 +60,7 @@ void WorkerInspectorProxy::addToProxyMap()
 {
     if (!m_contextIdentifier)
         return;
+
     switchOn(*m_contextIdentifier,
         [&](PageIdentifier pageID) {
             auto& proxiesForPage = proxiesPerPage().add(pageID, WeakHashSet<WorkerInspectorProxy> { }).iterator->value;
@@ -68,10 +72,12 @@ void WorkerInspectorProxy::addToProxyMap()
         }
     );
 }
+
 void WorkerInspectorProxy::removeFromProxyMap()
 {
     if (!m_contextIdentifier)
         return;
+
     switchOn(*m_contextIdentifier,
         [&](PageIdentifier pageID) {
             auto iterator = proxiesPerPage().find(pageID);
@@ -93,13 +99,16 @@ void WorkerInspectorProxy::removeFromProxyMap()
         }
     );
 }
+
 Vector<Ref<WorkerInspectorProxy>> WorkerInspectorProxy::proxiesForPage(PageIdentifier identifier)
 {
     auto iterator = proxiesPerPage().find(identifier);
     if (iterator == proxiesPerPage().end())
         return { };
+
     return copyToVectorOf<Ref<WorkerInspectorProxy>>(iterator->value);
 }
+
 Vector<Ref<WorkerInspectorProxy>> WorkerInspectorProxy::proxiesForWorkerGlobalScope(ScriptExecutionContextIdentifier identifier)
 {
     Locker lock { proxiesPerWorkerGlobalScopeLock };
@@ -128,18 +137,20 @@ WorkerThreadStartMode WorkerInspectorProxy::workerStartMode(ScriptExecutionConte
 
 auto WorkerInspectorProxy::pageOrWorkerGlobalScopeIdentifier(ScriptExecutionContext& context) -> std::optional<PageOrWorkerGlobalScopeIdentifier>
 {
-    if (auto* document = dynamicDowncast<Document>(context)) {
-        if (auto* page = document->page(); page && page->identifier())
+    if (RefPtr document = dynamicDowncast<Document>(context)) {
+        if (RefPtr page = document->page(); page && page->identifier())
             return PageOrWorkerGlobalScopeIdentifier { *page->identifier() };
         return std::nullopt;
     }
     return context.identifier();
 }
+
 void WorkerInspectorProxy::workerStarted(ScriptExecutionContext& scriptExecutionContext, WorkerThread* thread, const URL& url, const String& name)
 {
     ASSERT(!m_workerThread);
-    m_scriptExecutionContext = &scriptExecutionContext;
+    m_scriptExecutionContext = scriptExecutionContext;
     m_contextIdentifier = pageOrWorkerGlobalScopeIdentifier(scriptExecutionContext);
+
     m_workerThread = thread;
     m_url = url;
     m_name = name;
@@ -212,7 +223,6 @@ void WorkerInspectorProxy::sendMessageToWorkerInspectorController(const String& 
 void WorkerInspectorProxy::sendMessageFromWorkerToFrontend(String&& message)
 {
     if (RefPtr pageChannel = m_pageChannel.get())
-
         pageChannel->sendMessageFromWorkerToFrontend(*this, WTFMove(message));
 }
 

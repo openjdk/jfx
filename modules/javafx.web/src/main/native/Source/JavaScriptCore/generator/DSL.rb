@@ -217,7 +217,6 @@ module DSL
 #include "BytecodeDumper.h"
 #include "Fits.h"
 #include "GetByIdMetadata.h"
-#include "GetByValHistory.h"
 #include "Instruction.h"
 #include "IterationModeMetadata.h"
 #include "JSPropertyNameEnumerator.h"
@@ -226,6 +225,8 @@ module DSL
 #include "PutByStatus.h"
 #include "PutByIdFlags.h"
 #include "ToThisStatus.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -245,8 +246,14 @@ EOF
 #if ENABLE(WEBASSEMBLY)
 #{opcodes_filter { |s| s.config[:emit_in_structs_file] && s.is_wasm? }.map(&:struct).join("\n")}
 #endif // ENABLE(WEBASSEMBLY)
+
 EOF
-            template.suffix = "} // namespace JSC"
+            template.suffix = <<-EOF
+} // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+EOF
+
         end
     end
 
@@ -256,6 +263,7 @@ EOF
 #include "config.h"
 #include "BytecodeDumper.h"
 
+#include "ButterflyInlines.h"
 #include "BytecodeStructs.h"
 
 namespace JSC {

@@ -32,7 +32,9 @@
 #include "CanvasPattern.h"
 #include "CanvasRenderingContext.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -43,7 +45,9 @@
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(OFFSCREEN_CANVAS)
 #include "OffscreenCanvas.h"
@@ -52,6 +56,8 @@
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageCanvasAgent);
 
 PageCanvasAgent::PageCanvasAgent(PageAgentContext& context)
     : InspectorCanvasAgent(context)
@@ -162,7 +168,7 @@ bool PageCanvasAgent::matchesCurrentContext(ScriptExecutionContext* scriptExecut
         return false;
 
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's WebSockets
-    return document->page() == &m_inspectedPage;
+    return document->page() == m_inspectedPage.ptr();
 }
 
 } // namespace WebCore

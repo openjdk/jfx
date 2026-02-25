@@ -26,10 +26,13 @@
 #include "config.h"
 #include "HTMLSlotElement.h"
 
+#include "AXObjectCache.h"
 #include "ElementInlines.h"
 #include "Event.h"
+#include "EventTargetInlines.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
+#include "InspectorInstrumentation.h"
 #include "MutationObserver.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
@@ -67,7 +70,7 @@ HTMLSlotElement::InsertedIntoAncestorResult HTMLSlotElement::insertedIntoAncesto
             shadowRoot->addSlotElementByName(attributeWithoutSynchronization(nameAttr), *this);
     }
 
-    return InsertedIntoAncestorResult::Done;
+    return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
 void HTMLSlotElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -101,6 +104,13 @@ void HTMLSlotElement::attributeChanged(const QualifiedName& name, const AtomStri
     }
 }
 
+void HTMLSlotElement::didFinishInsertingNode()
+{
+    HTMLElement::didFinishInsertingNode();
+    if (selfOrPrecedingNodesAffectDirAuto())
+        updateEffectiveTextDirection();
+}
+
 const Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>* HTMLSlotElement::assignedNodes() const
 {
     RefPtr shadowRoot = containingShadowRoot();
@@ -126,7 +136,7 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         return;
     }
     for (auto& weakNode : *assignedNodes) {
-        if (UNLIKELY(!weakNode)) {
+        if (!weakNode) [[unlikely]] {
             ASSERT_NOT_REACHED();
             continue;
         }
@@ -210,10 +220,12 @@ void HTMLSlotElement::removeManuallyAssignedNode(Node& node)
 void HTMLSlotElement::enqueueSlotChangeEvent()
 {
     // https://dom.spec.whatwg.org/#signal-a-slot-change
-    if (m_inSignalSlotList)
-        return;
+    if (!m_inSignalSlotList) {
     m_inSignalSlotList = true;
     MutationObserver::enqueueSlotChangeEvent(*this);
+    }
+
+    InspectorInstrumentation::didChangeAssignedNodes(*this);
 }
 
 void HTMLSlotElement::dispatchSlotChangeEvent()
@@ -225,5 +237,10 @@ void HTMLSlotElement::dispatchSlotChangeEvent()
     dispatchEvent(event);
 }
 
+void HTMLSlotElement::updateAccessibilityOnSlotChange() const
+{
+    if (CheckedPtr cache = protectedDocument()->existingAXObjectCache())
+        cache->onSlottedContentChange(*this);
 }
 
+} // namespace WebCore

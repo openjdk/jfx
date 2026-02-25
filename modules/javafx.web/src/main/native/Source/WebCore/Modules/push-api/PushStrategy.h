@@ -26,28 +26,29 @@
 #pragma once
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 
-#include "ExceptionOr.h"
 #include "PushPermissionState.h"
 #include "PushSubscriptionData.h"
 #include "PushSubscriptionIdentifier.h"
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class WEBCORE_EXPORT PushStrategy {
 public:
     virtual ~PushStrategy() = default;
 
     using SubscribeToPushServiceCallback = CompletionHandler<void(ExceptionOr<PushSubscriptionData>&&)>;
-    virtual void navigatorSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&&) = 0;
+    virtual void windowSubscribeToPushService(const URL& scope, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&&) = 0;
 
     using UnsubscribeFromPushServiceCallback = CompletionHandler<void(ExceptionOr<bool>&&)>;
-    virtual void navigatorUnsubscribeFromPushService(const URL& scope, PushSubscriptionIdentifier, UnsubscribeFromPushServiceCallback&&) = 0;
+    virtual void windowUnsubscribeFromPushService(const URL& scope, std::optional<PushSubscriptionIdentifier>, UnsubscribeFromPushServiceCallback&&) = 0;
 
     using GetPushSubscriptionCallback = CompletionHandler<void(ExceptionOr<std::optional<PushSubscriptionData>>&&)>;
-    virtual void navigatorGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&&) = 0;
+    virtual void windowGetPushSubscription(const URL& scope, GetPushSubscriptionCallback&&) = 0;
 
     using GetPushPermissionStateCallback = CompletionHandler<void(ExceptionOr<PushPermissionState>&&)>;
-    virtual void navigatorGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&&) = 0;
+    virtual void windowGetPushPermissionState(const URL& scope, GetPushPermissionStateCallback&&) = 0;
 };
 
 } // namespace WebCore

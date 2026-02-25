@@ -47,15 +47,15 @@ public:
         return adoptRef(*new CSSViewValue(WTFMove(axis), WTFMove(startInset), WTFMove(endInset)));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
-    RefPtr<CSSValue> axis() const { return m_axis; }
-    RefPtr<CSSValue> startInset() const { return m_startInset; }
-    RefPtr<CSSValue> endInset() const { return m_endInset; }
+    const RefPtr<CSSValue>& axis() const { return m_axis; }
+    const RefPtr<CSSValue>& startInset() const { return m_startInset; }
+    const RefPtr<CSSValue>& endInset() const { return m_endInset; }
 
     bool equals(const CSSViewValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (m_axis) {
             if (func(*m_axis) == IterationStatus::Done)
@@ -75,7 +75,7 @@ public:
 
 private:
     CSSViewValue(RefPtr<CSSValue>&& axis, RefPtr<CSSValue>&& startInset, RefPtr<CSSValue>&& endInset)
-        : CSSValue(ViewClass)
+        : CSSValue(ClassType::View)
         , m_axis(WTFMove(axis))
         , m_startInset(WTFMove(startInset))
         , m_endInset(WTFMove(endInset))

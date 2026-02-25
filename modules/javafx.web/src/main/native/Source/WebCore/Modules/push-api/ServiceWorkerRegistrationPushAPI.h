@@ -27,6 +27,7 @@
 
 #include "Supplementable.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class PushManager;
 class ServiceWorkerRegistration;
 
 class ServiceWorkerRegistrationPushAPI : public Supplement<ServiceWorkerRegistration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerRegistrationPushAPI);
 public:
     explicit ServiceWorkerRegistrationPushAPI(ServiceWorkerRegistration&);
     ~ServiceWorkerRegistrationPushAPI();
@@ -47,7 +48,7 @@ private:
     static ASCIILiteral supplementName();
 
     ServiceWorkerRegistration& m_serviceWorkerRegistration;
-    std::unique_ptr<PushManager> m_pushManager;
+    const std::unique_ptr<PushManager> m_pushManager;
 };
 
 }

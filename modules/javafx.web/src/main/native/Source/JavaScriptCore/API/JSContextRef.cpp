@@ -73,7 +73,7 @@ JSContextGroupRef JSContextGroupCreate()
 
 JSContextGroupRef JSContextGroupRetain(JSContextGroupRef group)
 {
-    toJS(group)->ref();
+    toJS(group)->refSuppressingSaferCPPChecking();
     return group;
 }
 
@@ -82,7 +82,7 @@ void JSContextGroupRelease(JSContextGroupRef group)
     VM& vm = *toJS(group);
 
     JSLockHolder locker(&vm);
-    vm.deref();
+    vm.derefSuppressingSaferCPPChecking();
 }
 
 static bool internalScriptTimeoutCallback(JSGlobalObject* globalObject, void* callbackPtr, void* callbackData)
@@ -97,20 +97,20 @@ void JSContextGroupSetExecutionTimeLimit(JSContextGroupRef group, double limit, 
 {
     VM& vm = *toJS(group);
     JSLockHolder locker(&vm);
-    Watchdog& watchdog = vm.ensureWatchdog();
+    Ref watchdog = vm.ensureWatchdog();
     if (callback) {
         void* callbackPtr = reinterpret_cast<void*>(callback);
-        watchdog.setTimeLimit(Seconds { limit }, internalScriptTimeoutCallback, callbackPtr, callbackData);
+        watchdog->setTimeLimit(Seconds { limit }, internalScriptTimeoutCallback, callbackPtr, callbackData);
     } else
-        watchdog.setTimeLimit(Seconds { limit });
+        watchdog->setTimeLimit(Seconds { limit });
 }
 
 void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef group)
 {
     VM& vm = *toJS(group);
     JSLockHolder locker(&vm);
-    if (vm.watchdog())
-        vm.watchdog()->setTimeLimit(Watchdog::noTimeLimit);
+    if (RefPtr watchdog = vm.watchdog())
+        watchdog->setTimeLimit(Watchdog::noTimeLimit);
 }
 
 // From the API's perspective, a global context remains alive iff it has been JSGlobalContextRetained.
@@ -122,9 +122,14 @@ JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
 #if OS(DARWIN)
     // If the application was linked before JSGlobalContextCreate was changed to use a unique VM,
     // we use a shared one for backwards compatibility.
-    if (NSVersionOfLinkTimeLibrary("JavaScriptCore") <= webkitFirstVersionWithConcurrentGlobalContexts) {
-        return JSGlobalContextCreateInGroup(toRef(&VM::sharedInstance()), globalObjectClass);
-    }
+    static VM* s_sharedVM;
+    static std::once_flag once;
+    std::call_once(once, [] {
+        if (NSVersionOfLinkTimeLibrary("JavaScriptCore") <= webkitFirstVersionWithConcurrentGlobalContexts)
+            s_sharedVM = &VM::createContextGroup().leakRef();
+    });
+    if (s_sharedVM) [[unlikely]]
+        return JSGlobalContextCreateInGroup(toRef(s_sharedVM), globalObjectClass);
 #endif // OS(DARWIN)
 
     return JSGlobalContextCreateInGroup(nullptr, globalObjectClass);
@@ -164,7 +169,7 @@ JSGlobalContextRef JSGlobalContextRetain(JSGlobalContextRef ctx)
     JSLockHolder locker(vm);
 
     gcProtect(globalObject);
-    vm.ref();
+    vm.refSuppressingSaferCPPChecking();
     return ctx;
 }
 
@@ -177,7 +182,7 @@ void JSGlobalContextRelease(JSGlobalContextRef ctx)
     bool protectCountIsZero = vm.heap.unprotect(globalObject);
     if (protectCountIsZero)
         vm.heap.reportAbandonedObjectGraph();
-    vm.deref();
+    vm.derefSuppressingSaferCPPChecking();
 }
 
 JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
@@ -450,7 +455,7 @@ void JSGlobalContextSetDebuggerRunLoop(JSGlobalContextRef ctx, CFRunLoopRef runL
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    globalObject->inspectorDebuggable().setTargetRunLoop(runLoop);
+    globalObject->protectedInspectorDebuggable()->setTargetRunLoop(runLoop);
 #else
     UNUSED_PARAM(ctx);
     UNUSED_PARAM(runLoop);
@@ -504,11 +509,11 @@ JSStringRef JSContextGroupTakeSamplesFromSamplingProfiler(JSContextGroupRef grou
 
 #if ENABLE(SAMPLING_PROFILER)
     auto json = vm.takeSamplingProfilerSamplesAsJSON();
-    if (UNLIKELY(!json))
+    if (!json) [[unlikely]]
         return nullptr;
 
     auto jsonData = json->toJSONString();
-    if (UNLIKELY(jsonData.isNull()))
+    if (jsonData.isNull()) [[unlikely]]
         return nullptr;
 
     return OpaqueJSString::tryCreate(WTFMove(jsonData)).leakRef();

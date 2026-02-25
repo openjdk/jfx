@@ -23,6 +23,7 @@
 #include "AXCoreObject.h"
 #include "AccessibilityAtspi.h"
 #include "AccessibilityAtspiEnums.h"
+#include "AccessibilityRootAtspi.h"
 #include "IntRect.h"
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
@@ -33,10 +34,10 @@ typedef struct _GVariant GVariant;
 typedef struct _GVariantBuilder GVariantBuilder;
 
 namespace WebCore {
-class AXCoreObject;
-class AccessibilityRootAtspi;
 
-using RelationMap = HashMap<Atspi::Relation, Vector<RefPtr<AccessibilityObjectAtspi>>, IntHash<Atspi::Relation>, WTF::StrongEnumHashTraits<Atspi::Relation>>;
+class AXCoreObject;
+
+using RelationMap = HashMap<Atspi::Relation, Vector<Ref<AccessibilityObjectAtspi>>, IntHash<Atspi::Relation>, WTF::StrongEnumHashTraits<Atspi::Relation>>;
 
 class AccessibilityObjectAtspi final : public RefCounted<AccessibilityObjectAtspi> {
 public:
@@ -88,7 +89,7 @@ public:
     WEBCORE_EXPORT String locale() const;
     WEBCORE_EXPORT Atspi::Role role() const;
     WEBCORE_EXPORT unsigned childCount() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> children() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> children() const;
     WEBCORE_EXPORT AccessibilityObjectAtspi* childAt(unsigned) const;
     WEBCORE_EXPORT OptionSet<Atspi::State> states() const;
     bool isDefunct() const;
@@ -146,7 +147,7 @@ public:
     void activeDescendantChanged();
 
     WEBCORE_EXPORT unsigned selectionCount() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> selectedChildren() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> selectedChildren() const;
     WEBCORE_EXPORT AccessibilityObjectAtspi* selectedChild(unsigned) const;
     WEBCORE_EXPORT bool setChildSelected(unsigned, bool) const;
     WEBCORE_EXPORT bool clearSelection() const;
@@ -155,13 +156,13 @@ public:
     WEBCORE_EXPORT AccessibilityObjectAtspi* cell(unsigned row, unsigned column) const;
     WEBCORE_EXPORT unsigned rowCount() const;
     WEBCORE_EXPORT unsigned columnCount() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> cells() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> rows() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> rowHeaders() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> columnHeaders() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> cells() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> rows() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> rowHeaders() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> columnHeaders() const;
 
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> cellRowHeaders() const;
-    WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> cellColumnHeaders() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> cellRowHeaders() const;
+    WEBCORE_EXPORT Vector<Ref<AccessibilityObjectAtspi>> cellColumnHeaders() const;
     WEBCORE_EXPORT unsigned rowSpan() const;
     WEBCORE_EXPORT unsigned columnSpan() const;
     WEBCORE_EXPORT std::pair<std::optional<unsigned>, std::optional<unsigned>> cellPosition() const;
@@ -169,7 +170,7 @@ public:
 private:
     AccessibilityObjectAtspi(AXCoreObject*, AccessibilityRootAtspi*);
 
-    Vector<RefPtr<AccessibilityObjectAtspi>> wrapperVector(const Vector<RefPtr<AXCoreObject>>&) const;
+    Vector<Ref<AccessibilityObjectAtspi>> wrapperVector(const Vector<Ref<AXCoreObject>>&) const;
     void childAdded(AccessibilityObjectAtspi&);
     void childRemoved(AccessibilityObjectAtspi&);
 
@@ -191,8 +192,8 @@ private:
     CString text(int, int) const;
     CString textAtOffset(int, TextGranularity, int&, int&) const;
     int characterAtOffset(int) const;
-    std::optional<unsigned> characterOffset(UChar, int) const;
-    std::optional<unsigned> characterIndex(UChar, unsigned) const;
+    std::optional<unsigned> characterOffset(char16_t, int) const;
+    std::optional<unsigned> characterIndex(char16_t, unsigned) const;
     IntRect textExtents(int, int, Atspi::CoordinateType) const;
     int offsetAtPoint(const IntPoint&, Atspi::CoordinateType) const;
     IntPoint boundsForSelection(const VisibleSelection&) const;
@@ -261,8 +262,8 @@ private:
             Atspi::CollectionMatchType type;
         } interfaces;
     };
-    Vector<RefPtr<AccessibilityObjectAtspi>> matches(CollectionMatchRule&, Atspi::CollectionSortOrder, uint32_t maxResultCount, bool traverse);
-    void addMatchesInCanonicalOrder(Vector<RefPtr<AccessibilityObjectAtspi>>&, CollectionMatchRule&, uint32_t maxResultCount, bool traverse);
+    Vector<Ref<AccessibilityObjectAtspi>> matches(CollectionMatchRule&, Atspi::CollectionSortOrder, uint32_t maxResultCount, bool traverse);
+    void addMatchesInCanonicalOrder(Vector<Ref<AccessibilityObjectAtspi>>&, CollectionMatchRule&, uint32_t maxResultCount, bool traverse);
 
     static OptionSet<Interface> interfacesForObject(AXCoreObject&);
 
@@ -280,9 +281,9 @@ private:
     static GDBusInterfaceVTable s_tableCellFunctions;
     static GDBusInterfaceVTable s_collectionFunctions;
 
-    AXCoreObject* m_coreObject { nullptr };
+    RefPtr<AXCoreObject> m_coreObject;
     OptionSet<Interface> m_interfaces;
-    AccessibilityRootAtspi* m_root { nullptr };
+    RefPtr<AccessibilityRootAtspi> m_root;
     std::optional<RefPtr<AccessibilityObjectAtspi>> m_parent;
     bool m_isRegistered { false };
     String m_path;

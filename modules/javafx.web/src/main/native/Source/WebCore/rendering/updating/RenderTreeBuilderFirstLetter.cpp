@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "RenderTreeBuilderFirstLetter.h"
 
 #include "FontCascade.h"
+#include "NodeInlines.h"
 #include "RenderBlock.h"
 #include "RenderButton.h"
 #include "RenderInline.h"
@@ -35,8 +36,11 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleChange.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::FirstLetter);
 
 static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& firstLetterContainer)
 {
@@ -49,7 +53,7 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
 
     // If we have an initial letter drop that is >= 1, then we need to force floating to be on.
     if (firstLetterStyle.initialLetterDrop() >= 1 && !firstLetterStyle.isFloating())
-        firstLetterStyle.setFloating(firstLetterStyle.isLeftToRightDirection() ? Float::Left : Float::Right);
+        firstLetterStyle.setFloating(firstLetterStyle.writingMode().isBidiLTR() ? Float::Left : Float::Right);
 
     // We have to compute the correct font-size for the first-letter if it has an initial letter height set.
     auto* paragraph = firstLetterContainer.isRenderBlockFlow() ? &firstLetterContainer : firstLetterContainer.containingBlock();
@@ -59,7 +63,7 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
         // For an N-line first-letter and for alphabetic baselines, the cap-height of the first letter needs to equal (N-1)*line-height of paragraph lines + cap-height of the paragraph
         // Mathematically we can't rely on font-size, since font().height() doesn't necessarily match. For reliability, the best approach is simply to
         // compare the final measured cap-heights of the two fonts in order to get to the closest possible value.
-        firstLetterStyle.setLineBoxContain({ LineBoxContain::InitialLetter });
+        firstLetterStyle.setLineBoxContain({ Style::LineBoxContain::InitialLetter });
         int lineHeight = paragraph->style().computedLineHeight();
 
         // Set the font to be one line too big and then ratchet back to get to a precise fit. We can't just set the desired font size based off font height metrics
@@ -70,7 +74,6 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
         newFontDescription.setSpecifiedSize(startingFontSize);
         newFontDescription.setComputedSize(startingFontSize);
         firstLetterStyle.setFontDescription(WTFMove(newFontDescription));
-        firstLetterStyle.fontCascade().update(firstLetterStyle.fontCascade().fontSelector());
 
         int desiredCapHeight = (firstLetterStyle.initialLetterHeight() - 1) * lineHeight + paragraph->style().metricsOfPrimaryFont().intCapHeight();
         int actualCapHeight = firstLetterStyle.metricsOfPrimaryFont().intCapHeight();
@@ -79,7 +82,6 @@ static std::optional<RenderStyle> styleForFirstLetter(const RenderElement& first
             newFontDescription.setSpecifiedSize(newFontDescription.specifiedSize() - 1);
             newFontDescription.setComputedSize(newFontDescription.computedSize() -1);
             firstLetterStyle.setFontDescription(WTFMove(newFontDescription));
-            firstLetterStyle.fontCascade().update(firstLetterStyle.fontCascade().fontSelector());
             actualCapHeight = firstLetterStyle.metricsOfPrimaryFont().intCapHeight();
         }
     }
@@ -126,15 +128,13 @@ void RenderTreeBuilder::FirstLetter::updateAfterDescendants(RenderBlock& block)
 {
     if (!block.style().hasPseudoStyle(PseudoId::FirstLetter))
         return;
+
     if (!supportsFirstLetter(block))
         return;
 
     // FIXME: This should be refactored, firstLetterContainer is not needed.
-    RenderObject* firstLetterRenderer;
-    RenderElement* firstLetterContainer;
-    block.getFirstLetter(firstLetterRenderer, firstLetterContainer);
-
-    if (!firstLetterRenderer)
+    auto [firstLetter, firstLetterContainer] = block.firstLetterAndContainer();
+    if (!firstLetter)
         return;
 
     // Other containers are handled when updating their renderers.
@@ -143,15 +143,15 @@ void RenderTreeBuilder::FirstLetter::updateAfterDescendants(RenderBlock& block)
 
     // If the child already has style, then it has already been created, so we just want
     // to update it.
-    if (firstLetterRenderer->parent()->style().pseudoElementType() == PseudoId::FirstLetter) {
-        updateStyle(block, *firstLetterRenderer);
+    if (firstLetter->parent()->style().pseudoElementType() == PseudoId::FirstLetter) {
+        updateStyle(block, *firstLetter);
         return;
     }
 
-    if (!is<RenderText>(firstLetterRenderer))
+    if (!is<RenderText>(firstLetter))
         return;
 
-    createRenderers(downcast<RenderText>(*firstLetterRenderer));
+    createRenderers(downcast<RenderText>(*firstLetter));
 }
 
 void RenderTreeBuilder::FirstLetter::cleanupOnDestroy(RenderTextFragment& textFragment)
@@ -165,20 +165,22 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
 {
     RenderElement* firstLetter = currentChild.parent();
     ASSERT(firstLetter->isFirstLetter());
+    ASSERT(firstLetter->isFloating() || firstLetter->isInline());
     if (!firstLetter || !firstLetter->parent())
         return;
 
     auto& firstLetterContainer = *firstLetter->parent();
-
     auto pseudoStyle = styleForFirstLetter(firstLetterContainer);
     if (!pseudoStyle) {
         ASSERT_NOT_REACHED();
         return;
     }
 
-    ASSERT(firstLetter->isFloating() || firstLetter->isInline());
+    if (!Style::determineChanges(firstLetter->style(), *pseudoStyle).contains(Style::Change::Renderer)) {
+        firstLetter->setStyle(WTFMove(*pseudoStyle));
+        return;
+    }
 
-    if (Style::determineChange(firstLetter->style(), *pseudoStyle) == Style::Change::Renderer) {
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderPtr<RenderBoxModelObject> newFirstLetter;
         if (pseudoStyle->display() == DisplayType::Inline)
@@ -190,25 +192,20 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
 
         // Move the first letter into the new renderer.
         while (RenderObject* child = firstLetter->firstChild()) {
-            if (is<RenderText>(*child))
-                downcast<RenderText>(*child).removeAndDestroyTextBoxes();
             auto toMove = m_builder.detach(*firstLetter, *child, WillBeDestroyed::No);
             m_builder.attach(*newFirstLetter, WTFMove(toMove));
         }
 
-        if (RenderTextFragment* remainingText = downcast<RenderBoxModelObject>(*firstLetter).firstLetterRemainingText()) {
-            ASSERT(remainingText->isAnonymous() || remainingText->textNode()->renderer() == remainingText);
+    WeakPtr remainingText = downcast<RenderBoxModelObject>(*firstLetter).firstLetterRemainingText();
+    ASSERT(!remainingText || remainingText->isAnonymous() || remainingText->textNode()->renderer() == remainingText);
+    WeakPtr nextSibling = firstLetter->nextSibling();
+    m_builder.destroy(*firstLetter);
+    if (remainingText) {
             // Replace the old renderer with the new one.
             remainingText->setFirstLetter(*newFirstLetter);
             newFirstLetter->setFirstLetterRemainingText(*remainingText);
         }
-        WeakPtr nextSibling = firstLetter->nextSibling();
-        m_builder.destroy(*firstLetter);
         m_builder.attach(firstLetterContainer, WTFMove(newFirstLetter), nextSibling.get());
-        return;
-    }
-
-    firstLetter->setStyle(WTFMove(*pseudoStyle));
 }
 
 void RenderTreeBuilder::FirstLetter::createRenderers(RenderText& currentTextChild)

@@ -35,7 +35,6 @@
 
     // the following attribute and constants are historical
     [ImplementedAs=typeForCSSOM] readonly attribute unsigned short type;
-    [ImplementedAs=Unknown] const unsigned short UNKNOWN_RULE = 0;
     [ImplementedAs=Style] const unsigned short STYLE_RULE = 1;
     [ImplementedAs=Charset] const unsigned short CHARSET_RULE = 2;
     [ImplementedAs=Import] const unsigned short IMPORT_RULE = 3;
@@ -46,7 +45,7 @@
     [ImplementedAs=Keyframe] const unsigned short KEYFRAME_RULE = 8;
     [ImplementedAs=Margin] const unsigned short MARGIN_RULE = 9;
     [ImplementedAs=Namespace] const unsigned short NAMESPACE_RULE = 10;
-    [ImplementedAs=CounterStyle, EnabledBySetting=CSSCounterStyleAtRulesEnabled] const unsigned short COUNTER_STYLE_RULE = 11;
+    [ImplementedAs=CounterStyle] const unsigned short COUNTER_STYLE_RULE = 11;
     [ImplementedAs=Supports] const unsigned short SUPPORTS_RULE = 12;
     [ImplementedAs=FontFeatureValues] const unsigned short FONT_FEATURE_VALUES_RULE = 14;
 };

@@ -35,8 +35,11 @@
 #include "WebGPURenderBundleImpl.h"
 #include "WebGPURenderPipelineImpl.h"
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderPassEncoderImpl);
 
 RenderPassEncoderImpl::RenderPassEncoderImpl(WebGPUPtr<WGPURenderPassEncoder>&& renderPassEncoder, ConvertToBackingContext& convertToBackingContext)
     : m_backing(WTFMove(renderPassEncoder))
@@ -85,22 +88,15 @@ void RenderPassEncoderImpl::drawIndexedIndirect(const Buffer& indirectBuffer, Si
     wgpuRenderPassEncoderDrawIndexedIndirect(m_backing.get(), m_convertToBackingContext->convertToBacking(indirectBuffer), indirectOffset);
 }
 
-void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
-    auto backingOffsets = valueOrDefault(dynamicOffsets);
-    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), backingOffsets.size(), backingOffsets.data());
+    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTFMove(dynamicOffsets));
 }
 
-void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
-    const uint32_t* dynamicOffsetsArrayBuffer,
-    size_t dynamicOffsetsArrayBufferLength,
-    Size64 dynamicOffsetsDataStart,
-    Size32 dynamicOffsetsDataLength)
+void RenderPassEncoderImpl::setBindGroup(Index32, const BindGroup*, std::span<const uint32_t>, Size64, Size32)
 {
-    UNUSED_PARAM(dynamicOffsetsArrayBufferLength);
-    // FIXME: Use checked algebra.
-    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer + dynamicOffsetsDataStart);
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void RenderPassEncoderImpl::pushDebugGroup(String&& groupLabel)
@@ -153,13 +149,13 @@ void RenderPassEncoderImpl::endOcclusionQuery()
     wgpuRenderPassEncoderEndOcclusionQuery(m_backing.get());
 }
 
-void RenderPassEncoderImpl::executeBundles(Vector<std::reference_wrapper<RenderBundle>>&& renderBundles)
+void RenderPassEncoderImpl::executeBundles(Vector<Ref<RenderBundle>>&& renderBundles)
 {
-    auto backingBundles = renderBundles.map([&convertToBackingContext = m_convertToBackingContext.get()](auto renderBundle) {
-        return convertToBackingContext.convertToBacking(renderBundle.get());
+    auto backingBundles = renderBundles.map([&](auto renderBundle) {
+        return m_convertToBackingContext->convertToBacking(renderBundle.get());
     });
 
-    wgpuRenderPassEncoderExecuteBundles(m_backing.get(), backingBundles.size(), backingBundles.data());
+    wgpuRenderPassEncoderExecuteBundles(m_backing.get(), backingBundles.size(), backingBundles.span().data());
 }
 
 void RenderPassEncoderImpl::end()

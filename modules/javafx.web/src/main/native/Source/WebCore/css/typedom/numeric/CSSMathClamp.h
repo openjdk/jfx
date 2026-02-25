@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ public:
     const CSSNumericValue& value() const { return m_value.get(); }
     const CSSNumericValue& upper() const { return m_upper.get(); }
 
-    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
+    std::optional<CSSCalc::Child> toCalcTreeNode() const final;
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Clamp; }
@@ -48,9 +48,9 @@ private:
 
     CSSMathClamp(CSSNumericType&&, Ref<CSSNumericValue>&&, Ref<CSSNumericValue>&&, Ref<CSSNumericValue>&&);
 
-    Ref<CSSNumericValue> m_lower;
-    Ref<CSSNumericValue> m_value;
-    Ref<CSSNumericValue> m_upper;
+    const Ref<CSSNumericValue> m_lower;
+    const Ref<CSSNumericValue> m_value;
+    const Ref<CSSNumericValue> m_upper;
 };
 
 } // namespace WebCore

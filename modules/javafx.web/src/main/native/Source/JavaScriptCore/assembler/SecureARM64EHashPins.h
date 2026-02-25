@@ -27,7 +27,10 @@
 
 #if CPU(ARM64E) && ENABLE(JIT)
 
+#include <wtf/Atomics.h>
 #include <wtf/BitSet.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -94,7 +97,7 @@ public:
 
         Page* next { nullptr };
     private:
-        Entry* entries() { return bitwise_cast<Entry*>(this + 1); }
+        Entry* entries() { return std::bit_cast<Entry*>(this + 1); }
         WTF::BitSet<numEntriesPerPage> isInUseMap;
     };
 
@@ -119,7 +122,7 @@ private:
     FindResult findFirstEntry();
 
     Metadata* metadata();
-    inline Page* firstPage() { return bitwise_cast<Page*>(m_memory); }
+    inline Page* firstPage() { return std::bit_cast<Page*>(m_memory); }
 
     template <typename Function>
     void forEachPage(Function);
@@ -131,5 +134,7 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // CPU(ARM64E) && ENABLE(JIT)

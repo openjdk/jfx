@@ -46,12 +46,13 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
                           const pas_heap_config* config,
                           pas_heap_runtime_config* runtime_config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_HEAP_INFRASTRUCTURE);
+
     pas_heap* heap;
     uintptr_t begin;
 
     if (verbose) {
-        pas_log("Creating heap for size = %lu, alignment = %lu.\n",
+        pas_log("Creating heap for size = %zu, alignment = %zu.\n",
                 config->get_type_size(heap_ref->type),
                 config->get_type_alignment(heap_ref->type));
     }
@@ -71,10 +72,12 @@ pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
     heap->type = heap_ref->type;
     pas_segregated_heap_construct(
         &heap->segregated_heap, heap, config, runtime_config);
-    pas_large_heap_construct(&heap->large_heap);
+    pas_large_heap_construct(&heap->megapage_large_heap, true);
+    pas_large_heap_construct(&heap->large_heap, false);
     heap->heap_ref = heap_ref;
     heap->heap_ref_kind = heap_ref_kind;
     heap->config_kind = config->kind;
+    heap->is_non_compact_heap = heap_ref->is_non_compact_heap;
 
     // PGM being enabled in the config does not guarantee it will be called during runtime.
     if (config->pgm_enabled)
@@ -199,11 +202,11 @@ void pas_heap_reset_heap_ref(pas_heap* heap)
         ((pas_primitive_heap_ref*)heap->heap_ref)->cached_index = UINT_MAX;
         return;
     case pas_fake_heap_ref_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 pas_segregated_size_directory*

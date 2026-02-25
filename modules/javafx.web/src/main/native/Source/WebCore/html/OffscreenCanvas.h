@@ -32,7 +32,7 @@
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
@@ -40,6 +40,7 @@
 #include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -63,7 +64,9 @@ class WebGL2RenderingContext;
 class WebGLRenderingContext;
 class WebGLRenderingContextBase;
 
-using OffscreenRenderingContext = std::variant<
+template<typename> class ExceptionOr;
+
+using OffscreenRenderingContext = Variant<
 #if ENABLE(WEBGL)
     RefPtr<WebGLRenderingContext>,
     RefPtr<WebGL2RenderingContext>,
@@ -77,8 +80,8 @@ class PlaceholderRenderingContext;
 class PlaceholderRenderingContextSource;
 
 class DetachedOffscreenCanvas {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DetachedOffscreenCanvas, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(DetachedOffscreenCanvas);
-    WTF_MAKE_FAST_ALLOCATED;
     friend class OffscreenCanvas;
 
 public:
@@ -94,9 +97,11 @@ private:
     bool m_originClean;
 };
 
-class OffscreenCanvas final : public ActiveDOMObject, public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTarget {
+class OffscreenCanvas final : public ActiveDOMObject, public CanvasBase, public RefCounted<OffscreenCanvas>, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     struct ImageEncodeOptions {
         String type = "image/png"_s;
@@ -125,7 +130,7 @@ public:
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     ExceptionOr<std::optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
@@ -143,13 +148,9 @@ public:
 
     void commitToPlaceholderCanvas();
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
     bool isDetached() const { return m_detached; };
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     OffscreenCanvas(ScriptExecutionContext&, IntSize, RefPtr<PlaceholderRenderingContextSource>&&);
@@ -163,9 +164,6 @@ private:
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }
 
-    void refCanvasBase() const final { RefCounted::ref(); }
-    void derefCanvasBase() const final { RefCounted::deref(); }
-
     void setSize(const IntSize&) final;
 
     void createImageBuffer() const final;
@@ -178,8 +176,6 @@ private:
     mutable RefPtr<Image> m_copiedImage;
     bool m_detached { false };
     bool m_hasScheduledCommit { false };
-
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 }

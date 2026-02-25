@@ -33,10 +33,9 @@
 #include "ProbeContext.h"
 #include <wtf/PrintStream.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
-
-const double MacroAssembler::twoToThe32 = (double)0x100000000ull;
 
 void MacroAssembler::jitAssert(const ScopedLambda<Jump(void)>& functor)
 {

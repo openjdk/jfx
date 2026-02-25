@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "PlatformMediaSessionManager.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/NativePromise.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
@@ -78,7 +79,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&&
 }
 
 class MediaStreamTrackPrivateSourceObserverSourceProxy final : public RealtimeMediaSourceObserver {
-        WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaStreamTrackPrivateSourceObserverSourceProxy);
 public:
     MediaStreamTrackPrivateSourceObserverSourceProxy(WeakPtr<MediaStreamTrackPrivate>&& privateTrack, Ref<RealtimeMediaSource>&& source, std::function<void(Function<void()>&&)>&& postTask)
             : m_privateTrack(WTFMove(privateTrack))
@@ -215,7 +216,7 @@ private:
         bool preventSourceFromEnding() { return m_shouldPreventSourceFromEnding; }
 
         WeakPtr<MediaStreamTrackPrivate> m_privateTrack;
-        Ref<RealtimeMediaSource> m_source;
+    const Ref<RealtimeMediaSource> m_source;
         std::function<void(Function<void()>&&)> m_postTask;
         bool m_shouldPreventSourceFromEnding { true };
         bool m_isStarted { false };
@@ -301,7 +302,7 @@ private:
             m_postTask = [] (Function<void()>&& function) { function(); };
     }
 
-    Ref<RealtimeMediaSource> m_source;
+    const Ref<RealtimeMediaSource> m_source;
     std::unique_ptr<MediaStreamTrackPrivateSourceObserverSourceProxy> m_sourceProxy;
     std::function<void(Function<void()>&&)> m_postTask;
     HashMap<uint64_t, ApplyConstraintsHandler> m_applyConstraintsCallbacks;
@@ -326,7 +327,7 @@ MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& trackLogger
     , m_settings(m_sourceObserver->source().settings())
     , m_capabilities(m_sourceObserver->source().capabilities())
 #if ASSERT_ENABLED
-    , m_creationThreadId(isMainThread() ? 0 : Thread::current().uid())
+    , m_creationThreadId(isMainThread() ? 0 : Thread::currentSingleton().uid())
 #endif
 {
     UNUSED_PARAM(trackLogger);
@@ -346,6 +347,8 @@ MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Uni
     , m_type(dataHolder->type)
     , m_deviceType(dataHolder->deviceType)
     , m_isCaptureTrack(false)
+    , m_isEnabled(dataHolder->isEnabled)
+    , m_isEnded(dataHolder->isEnded)
     , m_captureDidFail(false)
     , m_contentHint(dataHolder->contentHint)
     , m_logger(WTFMove(logger))
@@ -358,7 +361,7 @@ MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Uni
     , m_settings(WTFMove(dataHolder->settings))
     , m_capabilities(WTFMove(dataHolder->capabilities))
 #if ASSERT_ENABLED
-    , m_creationThreadId(isMainThread() ? 0 : Thread::current().uid())
+    , m_creationThreadId(isMainThread() ? 0 : Thread::currentSingleton().uid())
 #endif
 {
 }
@@ -380,11 +383,11 @@ MediaStreamTrackPrivate::~MediaStreamTrackPrivate()
 #if ASSERT_ENABLED
 bool MediaStreamTrackPrivate::isOnCreationThread()
 {
-    return m_creationThreadId ? m_creationThreadId == Thread::current().uid() : isMainThread();
+    return m_creationThreadId ? m_creationThreadId == Thread::currentSingleton().uid() : isMainThread();
 }
 #endif
 
-void MediaStreamTrackPrivate::forEachObserver(const Function<void(MediaStreamTrackPrivateObserver&)>& apply)
+void MediaStreamTrackPrivate::forEachObserver(NOESCAPE const Function<void(MediaStreamTrackPrivateObserver&)>& apply)
 {
     ASSERT(isOnCreationThread());
     ASSERT(!m_observers.hasNullReferences());
@@ -490,7 +493,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     clonedMediaStreamTrackPrivate->m_captureDidFail = this->m_captureDidFail;
     clonedMediaStreamTrackPrivate->updateReadyState();
 
-    if (m_isProducingData)
+    if (m_isProducingData && !m_isMuted && !m_isInterrupted)
         clonedMediaStreamTrackPrivate->startProducingData();
 
     return clonedMediaStreamTrackPrivate;
@@ -506,6 +509,16 @@ const RealtimeMediaSource& MediaStreamTrackPrivate::source() const
 {
     ASSERT(isMainThread());
     return m_sourceObserver->source();
+}
+
+Ref<RealtimeMediaSource> MediaStreamTrackPrivate::protectedSource()
+{
+    return source();
+}
+
+Ref<const RealtimeMediaSource> MediaStreamTrackPrivate::protectedSource() const
+{
+    return source();
 }
 
 RealtimeMediaSource& MediaStreamTrackPrivate::sourceForProcessor()

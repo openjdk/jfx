@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/RetainPtr.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -49,6 +50,7 @@ struct Cookie {
 #ifdef __OBJC__
     WEBCORE_EXPORT Cookie(NSHTTPCookie *);
     WEBCORE_EXPORT operator NSHTTPCookie *() const;
+    WEBCORE_EXPORT RetainPtr<NSHTTPCookie> toProtectedNSHTTPCookie() const;
 #elif USE(SOUP)
     explicit Cookie(SoupCookie*);
     SoupCookie* toSoupCookie() const;
@@ -60,6 +62,7 @@ struct Cookie {
             && value.isNull()
             && domain.isNull()
             && path.isNull()
+            && partitionKey.isNull()
             && !created
             && !expires
             && !httpOnly
@@ -80,6 +83,7 @@ struct Cookie {
     String value;
     String domain;
     String path;
+    String partitionKey;
     // Creation and expiration dates are expressed as milliseconds since the UNIX epoch.
     double created { 0 };
     std::optional<double> expires;
@@ -98,11 +102,12 @@ struct Cookie {
 
     SameSitePolicy sameSite { SameSitePolicy::None };
 
-    Cookie(String&& name, String&& value, String&& domain, String&& path, double created, std::optional<double> expires, bool httpOnly, bool secure, bool session, String&& comment, URL&& commentURL, Vector<uint16_t> ports, SameSitePolicy sameSite)
+    Cookie(String&& name, String&& value, String&& domain, String&& path, String&& partitionKey, double created, std::optional<double> expires, bool httpOnly, bool secure, bool session, String&& comment, URL&& commentURL, Vector<uint16_t> ports, SameSitePolicy sameSite)
         : name(WTFMove(name))
         , value(WTFMove(value))
         , domain(WTFMove(domain))
         , path(WTFMove(path))
+        , partitionKey(WTFMove(partitionKey))
         , created(created)
         , expires(expires)
         , httpOnly(httpOnly)
@@ -115,8 +120,8 @@ struct Cookie {
     {
     }
 
-    Cookie isolatedCopy() const & { return { name.isolatedCopy(), value.isolatedCopy(), domain.isolatedCopy(), path.isolatedCopy(), created, expires, httpOnly, secure, session, comment.isolatedCopy(), commentURL.isolatedCopy(), ports, sameSite }; }
-    Cookie isolatedCopy() && { return { WTFMove(name).isolatedCopy(), WTFMove(value).isolatedCopy(), WTFMove(domain).isolatedCopy(), WTFMove(path).isolatedCopy(), created, expires, httpOnly, secure, session, WTFMove(comment).isolatedCopy(), WTFMove(commentURL).isolatedCopy(), WTFMove(ports), sameSite }; }
+    Cookie isolatedCopy() const & { return { name.isolatedCopy(), value.isolatedCopy(), domain.isolatedCopy(), path.isolatedCopy(), partitionKey.isolatedCopy(), created, expires, httpOnly, secure, session, comment.isolatedCopy(), commentURL.isolatedCopy(), ports, sameSite }; }
+    Cookie isolatedCopy() && { return { WTFMove(name).isolatedCopy(), WTFMove(value).isolatedCopy(), WTFMove(domain).isolatedCopy(), WTFMove(path).isolatedCopy(), WTFMove(partitionKey).isolatedCopy(), created, expires, httpOnly, secure, session, WTFMove(comment).isolatedCopy(), WTFMove(commentURL).isolatedCopy(), WTFMove(ports), sameSite }; }
 };
 
 struct CookieHash {

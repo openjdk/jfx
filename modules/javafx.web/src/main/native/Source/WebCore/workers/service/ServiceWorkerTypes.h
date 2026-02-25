@@ -30,7 +30,8 @@
 #include "ScriptBuffer.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerIdentifier.h"
-#include <variant>
+#include <wtf/HashIterators.h>
+#include <wtf/KeyValuePair.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
@@ -65,22 +66,22 @@ enum class ServiceWorkerClientFrameType : uint8_t {
 enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
-enum class ServiceWorkerRegistrationIdentifierType { };
-using ServiceWorkerRegistrationIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
+struct ServiceWorkerRegistrationIdentifierType;
+using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
-enum class ServiceWorkerJobIdentifierType { };
-using ServiceWorkerJobIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
+struct ServiceWorkerJobIdentifierType;
+using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
 enum class SWServerToContextConnectionIdentifierType { };
-using SWServerToContextConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerToContextConnectionIdentifierType>;
+using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContextConnectionIdentifierType>;
 
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
-using SWServerConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerConnectionIdentifierType>;
+using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
 
-using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
+using ServiceWorkerOrClientData = Variant<ServiceWorkerData, ServiceWorkerClientData>;
 
 // FIXME: It should be possible to replace ServiceWorkerOrClientIdentifier with ScriptExecutionContextIdentifier entirely.
-using ServiceWorkerOrClientIdentifier = std::variant<ServiceWorkerIdentifier, ScriptExecutionContextIdentifier>;
+using ServiceWorkerOrClientIdentifier = Variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
 
 struct ServiceWorkerScripts {
     ServiceWorkerScripts isolatedCopy() const

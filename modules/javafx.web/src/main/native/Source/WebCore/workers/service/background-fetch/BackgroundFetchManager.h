@@ -28,7 +28,7 @@
 #include "BackgroundFetchRegistration.h"
 #include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerTypes.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -40,13 +40,13 @@ struct BackgroundFetchOptions;
 class FetchRequest;
 class ServiceWorkerRegistration;
 
-class BackgroundFetchManager : public RefCounted<BackgroundFetchManager>, public CanMakeWeakPtr<BackgroundFetchManager> {
+class BackgroundFetchManager : public RefCountedAndCanMakeWeakPtr<BackgroundFetchManager> {
 public:
     static Ref<BackgroundFetchManager> create(ServiceWorkerRegistration& registration) { return adoptRef(*new BackgroundFetchManager(registration)); }
     ~BackgroundFetchManager();
 
-    using RequestInfo = std::variant<RefPtr<FetchRequest>, String>;
-    using Requests = std::variant<RefPtr<FetchRequest>, String, Vector<RequestInfo>>;
+    using RequestInfo = Variant<RefPtr<FetchRequest>, String>;
+    using Requests = Variant<RefPtr<FetchRequest>, String, Vector<RequestInfo>>;
     void fetch(ScriptExecutionContext&, const String&, Requests&&, BackgroundFetchOptions&&, DOMPromiseDeferred<IDLInterface<BackgroundFetchRegistration>>&&);
     void get(ScriptExecutionContext&, const String&, DOMPromiseDeferred<IDLNullable<IDLInterface<BackgroundFetchRegistration>>>&&);
     void getIds(ScriptExecutionContext&, DOMPromiseDeferred<IDLSequence<IDLDOMString>>&&);

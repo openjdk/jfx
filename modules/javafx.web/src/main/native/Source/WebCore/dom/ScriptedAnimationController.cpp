@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,7 @@ Seconds ScriptedAnimationController::interval() const
 
 Seconds ScriptedAnimationController::preferredScriptedAnimationInterval() const
 {
-    auto* page = this->page();
+    RefPtr page = this->page();
     if (!page)
         return FullSpeedAnimationInterval;
 
@@ -90,7 +90,7 @@ OptionSet<ThrottlingReason> ScriptedAnimationController::throttlingReasons() con
 
 bool ScriptedAnimationController::isThrottledRelativeToPage() const
 {
-    if (auto* page = this->page())
+    if (RefPtr page = this->page())
         return preferredScriptedAnimationInterval() > page->preferredRenderingUpdateInterval();
     return false;
 }
@@ -165,13 +165,13 @@ void ScriptedAnimationController::serviceRequestAnimationFrameCallbacks(ReducedR
             continue;
         callback->m_firedOrCancelled = true;
 
-        if (userGestureTokenToForward && userGestureTokenToForward->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
+        if (userGestureTokenToForward && Ref { *userGestureTokenToForward }->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
             userGestureTokenToForward = nullptr;
         UserGestureIndicator gestureIndicator(userGestureTokenToForward);
 
         auto identifier = callback->m_id;
         InspectorInstrumentation::willFireAnimationFrame(document, identifier);
-        callback->handleEvent(highResNowMs);
+        Ref { callback }->invoke(highResNowMs);
         InspectorInstrumentation::didFireAnimationFrame(document, identifier);
     }
 

@@ -72,7 +72,7 @@ private:
     void recomputeCollectionMode() WTF_REQUIRES_LOCK(m_observersLock);
 
     void createThreadIfNeeded();
-    NO_RETURN void threadBody();
+    [[noreturn]] void threadBody();
 
     void platformSaveStateBeforeStarting();
     void platformCollectCPUData(JSC::VM*, ResourceUsageData&);

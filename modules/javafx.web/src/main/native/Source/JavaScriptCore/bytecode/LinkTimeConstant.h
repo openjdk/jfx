@@ -59,8 +59,6 @@ class JSGlobalObject;
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
-    v(typedArrayContentType, nullptr) \
-    v(typedArrayGetOriginalConstructor, nullptr) \
     v(toIntegerOrInfinity, nullptr) \
     v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
@@ -69,11 +67,13 @@ class JSGlobalObject;
     v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
     v(isBoundFunction, nullptr) \
+    v(isFinite, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
     v(BuiltinLog, nullptr) \
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
+    v(Iterator, nullptr) \
     v(min, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
@@ -81,12 +81,10 @@ class JSGlobalObject;
     v(repeatCharacter, nullptr) \
     v(isArray, nullptr) \
     v(isArraySlow, nullptr) \
-    v(concatMemcpy, nullptr) \
     v(appendMemcpy, nullptr) \
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
-    v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
     v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
@@ -111,7 +109,6 @@ class JSGlobalObject;
     v(regExpSplitFast, nullptr) \
     v(regExpPrototypeSymbolMatch, nullptr) \
     v(regExpPrototypeSymbolReplace, nullptr) \
-    v(regExpTestFast, nullptr) \
     v(stringIncludesInternal, nullptr) \
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
@@ -131,8 +128,8 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
-    v(arrayFromFast, nullptr) \
-    v(arraySort, nullptr) \
+    v(arrayFromFastFillWithUndefined, nullptr) \
+    v(arrayFromFastFillWithEmpty, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
     v(String, nullptr) \
@@ -148,6 +145,14 @@ class JSGlobalObject;
     v(Float64Array, nullptr) \
     v(BigInt64Array, nullptr) \
     v(BigUint64Array, nullptr) \
+    v(wrapForValidIteratorCreate, nullptr) \
+    v(asyncFromSyncIteratorCreate, nullptr) \
+    v(regExpStringIteratorCreate, nullptr) \
+    v(iteratorHelperCreate, nullptr) \
+    v(ReferenceError, nullptr) \
+    v(SuppressedError, nullptr) \
+    v(DisposableStack, nullptr) \
+    v(AsyncDisposableStack, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

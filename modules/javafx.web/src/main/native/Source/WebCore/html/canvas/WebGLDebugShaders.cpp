@@ -53,10 +53,10 @@ String WebGLDebugShaders::getTranslatedShaderSource(WebGLShader& shader)
 {
     if (isContextLost())
         return String();
-    auto& context = this->context();
-    if (!context.validateWebGLObject("getTranslatedShaderSource"_s, shader))
+    Ref context = this->context();
+    if (!context->validateWebGLObject("getTranslatedShaderSource"_s, shader))
         return emptyString();
-    return context.protectedGraphicsContextGL()->getTranslatedShaderSourceANGLE(shader.object());
+    return context->protectedGraphicsContextGL()->getTranslatedShaderSourceANGLE(shader.object());
 }
 
 } // namespace WebCore

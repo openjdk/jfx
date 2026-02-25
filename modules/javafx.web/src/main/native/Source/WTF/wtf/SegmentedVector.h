@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -36,13 +35,13 @@ namespace WTF {
     DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SegmentedVector);
 
     // An iterator for SegmentedVector. It supports only the pre ++ operator
-    template <typename T, size_t SegmentSize = 8> class SegmentedVector;
-    template <typename T, size_t SegmentSize = 8> class SegmentedVectorIterator {
-        WTF_MAKE_FAST_ALLOCATED;
+    template <typename T, size_t SegmentSize, typename Malloc> class SegmentedVector;
+    template <typename T, size_t SegmentSize = 8, typename Malloc = SegmentedVectorMalloc> class SegmentedVectorIterator {
+        WTF_MAKE_CONFIGURABLE_ALLOCATED(FastMalloc);
     private:
-        friend class SegmentedVector<T, SegmentSize>;
+        friend class SegmentedVector<T, SegmentSize, Malloc>;
     public:
-        typedef SegmentedVectorIterator<T, SegmentSize> Iterator;
+        typedef SegmentedVectorIterator<T, SegmentSize, Malloc> Iterator;
 
         using iterator_category = std::forward_iterator_tag;
         using value_type = T;
@@ -67,7 +66,7 @@ namespace WTF {
             return m_index == other.m_index && &m_vector == &other.m_vector;
         }
 
-        SegmentedVectorIterator& operator=(const SegmentedVectorIterator<T, SegmentSize>& other)
+        SegmentedVectorIterator& operator=(const SegmentedVectorIterator<T, SegmentSize, Malloc>& other)
         {
             m_vector = other.m_vector;
             m_index = other.m_index;
@@ -75,13 +74,13 @@ namespace WTF {
         }
 
     private:
-        SegmentedVectorIterator(SegmentedVector<T, SegmentSize>& vector, size_t index)
+        SegmentedVectorIterator(SegmentedVector<T, SegmentSize, Malloc>& vector, size_t index)
             : m_vector(vector)
             , m_index(index)
         {
         }
 
-        SegmentedVector<T, SegmentSize>& m_vector;
+        SegmentedVector<T, SegmentSize, Malloc>& m_vector;
         size_t m_index;
     };
 
@@ -90,14 +89,14 @@ namespace WTF {
     // pointers into a SegmentedVector. The default tuning values are
     // optimized for segmented vectors that get large; you may want to use
     // SegmentedVector<thingy, 1> if you don't expect a lot of entries.
-    template <typename T, size_t SegmentSize>
+    template <typename T, size_t SegmentSize, typename Malloc>
     class SegmentedVector final {
-        friend class SegmentedVectorIterator<T, SegmentSize>;
+        friend class SegmentedVectorIterator<T, SegmentSize, Malloc>;
         WTF_MAKE_NONCOPYABLE(SegmentedVector);
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SegmentedVectorIterator);
 
     public:
-        using Iterator = SegmentedVectorIterator<T, SegmentSize>;
+        using Iterator = SegmentedVectorIterator<T, SegmentSize, Malloc>;
 
         using value_type = T;
         using iterator = Iterator;
@@ -106,49 +105,49 @@ namespace WTF {
 
         ~SegmentedVector()
         {
-            deleteAllSegments();
+            destroyAllItems();
         }
 
         size_t size() const { return m_size; }
         bool isEmpty() const { return !size(); }
 
-        T& at(size_t index)
+        T& at(size_t index) LIFETIME_BOUND
         {
             ASSERT_WITH_SECURITY_IMPLICATION(index < m_size);
-            return segmentFor(index)->entries[subscriptFor(index)];
+            return segmentFor(index)->entries()[subscriptFor(index)];
         }
 
-        const T& at(size_t index) const
+        const T& at(size_t index) const LIFETIME_BOUND
         {
-            return const_cast<SegmentedVector<T, SegmentSize>*>(this)->at(index);
+            return const_cast<SegmentedVector<T, SegmentSize, Malloc>*>(this)->at(index);
         }
 
-        T& operator[](size_t index)
+        T& operator[](size_t index) LIFETIME_BOUND
         {
             return at(index);
         }
 
-        const T& operator[](size_t index) const
+        const T& operator[](size_t index) const LIFETIME_BOUND
         {
             return at(index);
         }
 
-        T& first()
+        T& first() LIFETIME_BOUND
         {
             ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
             return at(0);
         }
-        const T& first() const
+        const T& first() const LIFETIME_BOUND
         {
             ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
             return at(0);
         }
-        T& last()
+        T& last() LIFETIME_BOUND
         {
             ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
             return at(size() - 1);
         }
-        const T& last() const
+        const T& last() const LIFETIME_BOUND
         {
             ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
             return at(size() - 1);
@@ -196,17 +195,17 @@ namespace WTF {
 
         void clear()
         {
-            deleteAllSegments();
+            destroyAllItems();
             m_segments.clear();
             m_size = 0;
         }
 
-        Iterator begin()
+        Iterator begin() LIFETIME_BOUND
         {
             return Iterator(*this, 0);
         }
 
-        Iterator end()
+        Iterator end() LIFETIME_BOUND
         {
             return Iterator(*this, m_size);
         }
@@ -217,16 +216,20 @@ namespace WTF {
         }
 
     private:
-        struct Segment {
-            T entries[0];
+        class Segment {
+        public:
+            std::span<T, SegmentSize> entries() { return unsafeMakeSpan<T, SegmentSize>(m_entries, SegmentSize); }
+
+        private:
+            T m_entries[0];
         };
 
-        void deleteAllSegments()
+        using SegmentPtr = std::unique_ptr<Segment, NonDestructingDeleter<Segment, Malloc>>;
+
+        void destroyAllItems()
         {
             for (size_t i = 0; i < m_size; ++i)
                 at(i).~T();
-            for (size_t i = 0; i < m_segments.size(); ++i)
-                SegmentedVectorMalloc::free(m_segments[i]);
         }
 
         bool segmentExistsFor(size_t index)
@@ -234,12 +237,12 @@ namespace WTF {
             return index / SegmentSize < m_segments.size();
         }
 
-        Segment* segmentFor(size_t index)
+        Segment* segmentFor(size_t index) LIFETIME_BOUND
         {
-            return m_segments[index / SegmentSize];
+            return m_segments[index / SegmentSize].get();
         }
 
-        size_t subscriptFor(size_t index)
+        static size_t subscriptFor(size_t index)
         {
             return index % SegmentSize;
         }
@@ -262,11 +265,12 @@ namespace WTF {
 
         void allocateSegment()
         {
-            m_segments.append(static_cast<Segment*>(SegmentedVectorMalloc::malloc(sizeof(T) * SegmentSize)));
+            auto* ptr = static_cast<Segment*>(Malloc::malloc(sizeof(T) * SegmentSize));
+            m_segments.append(SegmentPtr(ptr, { }));
         }
 
         size_t m_size { 0 };
-        Vector<Segment*> m_segments;
+        Vector<SegmentPtr, 0, CrashOnOverflow, 16, Malloc> m_segments;
     };
 
 } // namespace WTF

@@ -27,8 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GlyphPage_h
-#define GlyphPage_h
+#pragma once
 
 #include "Font.h"
 #include "Glyph.h"
@@ -52,6 +51,7 @@ struct GlyphData {
     }
 
     bool isValid() const { return !!font; }
+    RefPtr<const Font> protectedFont() const { return font.get(); }
 
     Glyph glyph;
     ColorGlyphType colorGlyphType;
@@ -126,7 +126,7 @@ public:
     }
 
     // Implemented by the platform.
-    bool fill(std::span<const UChar> characterBuffer);
+    bool fill(std::span<const char16_t> characterBuffer);
 
 private:
     explicit GlyphPage(const Font& font)
@@ -136,12 +136,10 @@ private:
     }
 
     SingleThreadWeakPtr<const Font> m_font;
-    Glyph m_glyphs[size] { };
+    std::array<Glyph, size> m_glyphs { };
     WTF::BitSet<size> m_isColor;
 
     WEBCORE_EXPORT static unsigned s_count;
 };
 
 } // namespace WebCore
-
-#endif // GlyphPage_h

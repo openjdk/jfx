@@ -29,13 +29,13 @@
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "ImageBuffer.h"
 #include "IntSize.h"
 #include "PaintRenderingContext2D.h"
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -46,8 +46,8 @@ namespace DisplayList {
 class DrawingContext;
 }
 
-class CustomPaintCanvas final : public RefCounted<CustomPaintCanvas>, public CanvasBase, private ContextDestructionObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+class CustomPaintCanvas final : public CanvasBase, public RefCounted<CustomPaintCanvas>, private ContextDestructionObserver {
+    WTF_MAKE_TZONE_ALLOCATED(CustomPaintCanvas);
 public:
 
     static Ref<CustomPaintCanvas> create(ScriptExecutionContext&, unsigned width, unsigned height);
@@ -65,24 +65,21 @@ public:
 
     void replayDisplayList(GraphicsContext&);
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final { };
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final { };
     void dispatchEvent(Event&) final { }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     CustomPaintCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
-    void refCanvasBase() const final { ref(); }
-    void derefCanvasBase() const final { deref(); }
-    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final;
 
     std::unique_ptr<PaintRenderingContext2D> m_context;
     mutable RefPtr<Image> m_copiedImage;
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 }

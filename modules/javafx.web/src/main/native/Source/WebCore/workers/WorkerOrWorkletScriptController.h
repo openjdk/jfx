@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
 #include "FetchOptions.h"
 #include "WorkerThreadType.h"
 #include <JavaScriptCore/Debugger.h>
@@ -35,6 +37,7 @@
 #include <wtf/Lock.h>
 #include <wtf/MessageQueue.h>
 #include <wtf/NakedPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 class AbstractModuleRecord;
@@ -42,6 +45,7 @@ class Exception;
 class JSGlobalObject;
 class JSModuleRecord;
 class VM;
+enum class TrustedTypesEnforcement;
 }
 
 namespace WebCore {
@@ -54,8 +58,8 @@ class WorkerOrWorkletGlobalScope;
 class WorkerScriptFetcher;
 
 class WorkerOrWorkletScriptController final : public CanMakeCheckedPtr<WorkerOrWorkletScriptController> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerOrWorkletScriptController);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletScriptController);
-    WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerOrWorkletScriptController);
 public:
     WorkerOrWorkletScriptController(WorkerThreadType, Ref<JSC::VM>&&, WorkerOrWorkletGlobalScope*);
@@ -95,12 +99,12 @@ public:
 
     void disableEval(const String& errorMessage);
     void disableWebAssembly(const String& errorMessage);
-    void setRequiresTrustedTypes(bool required);
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement);
 
     void evaluate(const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     void evaluate(const ScriptSourceCode&, NakedPtr<JSC::Exception>& returnedException, String* returnedExceptionMessage = nullptr);
 
-    JSC::JSValue evaluateModule(JSC::AbstractModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
+    JSC::JSValue evaluateModule(const URL&, JSC::AbstractModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
 
     void linkAndEvaluateModule(WorkerScriptFetcher&, const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     bool loadModuleSynchronously(WorkerScriptFetcher&, const ScriptSourceCode&);
@@ -108,7 +112,8 @@ public:
     void loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials, CompletionHandler<void(std::optional<Exception>&&)>&&);
 
 protected:
-    WorkerOrWorkletGlobalScope* globalScope() const { return m_globalScope; }
+    WorkerOrWorkletGlobalScope* globalScope() const { return m_globalScope.get(); }
+    RefPtr<WorkerOrWorkletGlobalScope> protectedGlobalScope() const;
 
     void initScriptIfNeeded()
     {
@@ -122,7 +127,7 @@ private:
     void initScriptWithSubclass();
 
     RefPtr<JSC::VM> m_vm;
-    WorkerOrWorkletGlobalScope* m_globalScope;
+    WeakPtr<WorkerOrWorkletGlobalScope> m_globalScope;
     JSC::Strong<JSDOMGlobalObject> m_globalScopeWrapper;
     std::unique_ptr<WorkerConsoleClient> m_consoleClient;
     mutable Lock m_scheduledTerminationLock;

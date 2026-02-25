@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007 Rob Buis <buis@kde.org>
  *
@@ -32,6 +32,8 @@
 #include "Attr.h"
 #include "CSSStyleSheet.h"
 #include "CSSStyleSheetObservableArray.h"
+#include "ContainerNodeInlines.h"
+#include "CustomElementRegistry.h"
 #include "FocusController.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLFrameOwnerElement.h"
@@ -41,6 +43,7 @@
 #include "HitTestResult.h"
 #include "IdTargetObserverRegistry.h"
 #include "JSObservableArray.h"
+#include "LegacyRenderSVGResourceContainer.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -53,8 +56,10 @@
 #include "SVGElement.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "TreeScopeInlines.h"
 #include "TreeScopeOrderedMap.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <algorithm>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
@@ -62,27 +67,29 @@
 namespace WebCore {
 
 struct SameSizeAsTreeScope {
-    void* pointers[12];
+    void* pointers[13];
 };
 
 static_assert(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), "treescope should stay small");
 
 using namespace HTMLNames;
 
+using WeakSVGElementSet = WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>;
 struct SVGResourcesMap {
     WTF_MAKE_NONCOPYABLE(SVGResourcesMap);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SVGResourcesMap);
     SVGResourcesMap() = default;
 
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResources;
-    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> pendingResourcesForRemoval;
-    MemoryCompactRobinHoodHashMap<AtomString, LegacyRenderSVGResourceContainer*> legacyResources;
+    MemoryCompactRobinHoodHashMap<AtomString, WeakSVGElementSet> pendingResources;
+    MemoryCompactRobinHoodHashMap<AtomString, WeakSVGElementSet> pendingResourcesForRemoval;
+    MemoryCompactRobinHoodHashMap<AtomString, SingleThreadWeakPtr<LegacyRenderSVGResourceContainer>> legacyResources;
 };
 
-TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document)
+TreeScope::TreeScope(ShadowRoot& shadowRoot, Document& document, RefPtr<CustomElementRegistry>&& registry)
     : m_rootNode(shadowRoot)
     , m_documentScope(document)
     , m_parentTreeScope(&document)
+    , m_customElementRegistry(WTFMove(registry))
 {
     shadowRoot.setTreeScope(*this);
 }
@@ -138,6 +145,11 @@ void TreeScope::setParentTreeScope(TreeScope& newParentScope)
     setDocumentScope(newParentScope.documentScope());
 }
 
+void TreeScope::setCustomElementRegistry(RefPtr<CustomElementRegistry>&& registry)
+{
+    m_customElementRegistry = WTFMove(registry);
+}
+
 RefPtr<Element> TreeScope::getElementById(const AtomString& elementId) const
 {
     if (elementId.isEmpty())
@@ -169,6 +181,12 @@ RefPtr<Element> TreeScope::getElementById(StringView elementId) const
     return nullptr;
 }
 
+RefPtr<Element> TreeScope::elementByIdResolvingReferenceTarget(const AtomString& elementId) const
+{
+    RefPtr elementForId = getElementById(elementId);
+    return elementForId ? elementForId->resolveReferenceTarget() : nullptr;
+}
+
 const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScope::getAllElementsById(const AtomString& elementId) const
 {
     if (elementId.isEmpty())
@@ -184,7 +202,7 @@ void TreeScope::addElementById(const AtomString& elementId, Element& element, bo
         m_elementsById = makeUnique<TreeScopeOrderedMap>();
     m_elementsById->add(elementId, element, *this);
     if (m_idTargetObserverRegistry && notifyObservers)
-        m_idTargetObserverRegistry->notifyObservers(elementId);
+        m_idTargetObserverRegistry->notifyObservers(element, elementId);
 }
 
 void TreeScope::removeElementById(const AtomString& elementId, Element& element, bool notifyObservers)
@@ -193,7 +211,7 @@ void TreeScope::removeElementById(const AtomString& elementId, Element& element,
         return;
     m_elementsById->remove(elementId, element);
     if (m_idTargetObserverRegistry && notifyObservers)
-        m_idTargetObserverRegistry->notifyObservers(elementId);
+        m_idTargetObserverRegistry->notifyObservers(element, elementId);
 }
 
 RefPtr<Element> TreeScope::getElementByName(const AtomString& name) const
@@ -219,11 +237,10 @@ void TreeScope::removeElementByName(const AtomString& name, Element& element)
     m_elementsByName->remove(name, element);
 }
 
-
 Ref<Node> TreeScope::retargetToScope(Node& node) const
 {
     auto& scope = node.treeScope();
-    if (LIKELY(this == &scope || !node.isInShadowTree()))
+    if (this == &scope || !node.isInShadowTree()) [[likely]]
         return node;
     ASSERT(is<ShadowRoot>(scope.rootNode()));
 
@@ -391,7 +408,7 @@ static std::optional<LayoutPoint> absolutePointIfNotClipped(Document& document, 
 
 RefPtr<Node> TreeScope::nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint, HitTestSource source)
 {
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     auto absolutePoint = absolutePointIfNotClipped(document, clientPoint);
     if (!absolutePoint)
         return nullptr;
@@ -427,7 +444,7 @@ Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clie
 {
     Vector<RefPtr<Element>> elements;
 
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     if (!document->hasLivingRenderTree())
         return elements;
 
@@ -491,22 +508,28 @@ RefPtr<Element> TreeScope::findAnchor(StringView name)
         return nullptr;
     if (RefPtr element = getElementById(name))
         return element;
-    auto inQuirksMode = documentScope().inQuirksMode();
     Ref rootNode = m_rootNode.get();
     for (Ref anchor : descendantsOfType<HTMLAnchorElement>(rootNode)) {
-        if (inQuirksMode) {
+        if (isMatchingAnchor(anchor, name))
+            return anchor;
+    }
+    return nullptr;
+}
+
+bool TreeScope::isMatchingAnchor(HTMLAnchorElement& anchor, StringView name)
+{
+    if (documentScope().inQuirksMode()) {
             // Quirks mode, ASCII case-insensitive comparison of names.
             // FIXME: This behavior is not mentioned in the HTML specification.
             // We should either remove this or get this into the specification.
-            if (equalIgnoringASCIICase(anchor->name(), name))
-                return anchor;
+        if (equalIgnoringASCIICase(anchor.name(), name))
+            return true;
         } else {
             // Strict mode, names need to match exactly.
-            if (anchor->name() == name)
-                return anchor;
+        if (anchor.name() == name)
+            return true;
         }
-    }
-    return nullptr;
+    return false;
 }
 
 static Element* focusedFrameOwnerElement(Frame* focusedFrame, LocalFrame* currentFrame)
@@ -520,7 +543,7 @@ static Element* focusedFrameOwnerElement(Frame* focusedFrame, LocalFrame* curren
 
 Element* TreeScope::focusedElementInScope()
 {
-    Ref document = protectedDocumentScope();
+    Ref document = documentScope();
     RefPtr element = document->focusedElement();
 
     if (!element && document->page())
@@ -591,7 +614,7 @@ RadioButtonGroups& TreeScope::radioButtonGroups()
 
 CSSStyleSheetObservableArray& TreeScope::ensureAdoptedStyleSheets()
 {
-    if (UNLIKELY(!m_adoptedStyleSheets))
+    if (!m_adoptedStyleSheets) [[unlikely]]
         m_adoptedStyleSheets = CSSStyleSheetObservableArray::create(m_rootNode.get());
     return *m_adoptedStyleSheets;
 }
@@ -642,7 +665,10 @@ LegacyRenderSVGResourceContainer* TreeScope::lookupLegacySVGResoureById(const At
     if (id.isEmpty())
         return nullptr;
 
-    return svgResourcesMap().legacyResources.get(id);
+    if (auto resource = svgResourcesMap().legacyResources.get(id))
+        return resource.get();
+
+    return nullptr;
 }
 
 void TreeScope::addPendingSVGResource(const AtomString& id, SVGElement& element)
@@ -668,9 +694,7 @@ bool TreeScope::isElementWithPendingSVGResources(SVGElement& element) const
 {
     // This algorithm takes time proportional to the number of pending resources and need not.
     // If performance becomes an issue we can keep a counted set of elements and answer the question efficiently.
-    return WTF::anyOf(svgResourcesMap().pendingResources.values(), [&] (auto& elements) {
-        return elements.contains(element);
-    });
+    return std::ranges::any_of(svgResourcesMap().pendingResources.values(), std::bind(&WeakSVGElementSet::contains<SVGElement>, std::placeholders::_1, std::ref(element)));
 }
 
 bool TreeScope::isPendingSVGResource(SVGElement& element, const AtomString& id) const

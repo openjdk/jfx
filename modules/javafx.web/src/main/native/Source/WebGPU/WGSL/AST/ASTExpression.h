@@ -34,6 +34,7 @@ namespace WGSL {
 class BoundsCheckVisitor;
 class ConstantRewriter;
 class EntryPointRewriter;
+class PointerRewriter;
 class RewriteGlobalVariables;
 class TypeChecker;
 struct Type;
@@ -45,6 +46,7 @@ class Expression : public Node {
     friend BoundsCheckVisitor;
     friend ConstantRewriter;
     friend EntryPointRewriter;
+    friend PointerRewriter;
     friend RewriteGlobalVariables;
     friend TypeChecker;
 
@@ -80,7 +82,6 @@ static bool isType(const WGSL::AST::Node& node)
     switch (node.kind()) {
         // Expressions
     case WGSL::AST::NodeKind::BinaryExpression:
-    case WGSL::AST::NodeKind::BitcastExpression:
     case WGSL::AST::NodeKind::IndexAccessExpression:
     case WGSL::AST::NodeKind::CallExpression:
     case WGSL::AST::NodeKind::IdentifierExpression:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #import "GlassMenu.h"
 #import "GlassView.h"
+#import "GlassView3D.h"
 
 // normal Glass window delegate
 @interface GlassWindow : NSObject <NSWindowDelegate>
@@ -38,8 +39,12 @@
     // A reference to an NSWindow or NSPanel descendant - the native window
     NSWindow            *nsWindow;
 
-    NSWindow            *owner;
-    NSView<GlassView>   *view;
+    // Owner glass window and list of owned "child" glass windows
+    // (we don't create NSWindow children)
+    GlassWindow         *owner;
+    NSMutableArray<GlassWindow*> *childWindows;
+
+    GlassView3D<GlassView>   *view;
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
     NSRect              preZoomedRect;
@@ -49,7 +54,9 @@
     NSUInteger          enabledStyleMask; // valid while the window is disabled
     BOOL                isTransparent;
     BOOL                isDecorated;
+    BOOL                isExtended;
     BOOL                isResizable;
+    BOOL                isStandardButtonsVisible;
     BOOL                suppressWindowMoveEvent;
     BOOL                suppressWindowResizeEvent;
 
@@ -57,15 +64,29 @@
 
     BOOL                isClosed;
 
+    NSWindowLevel       prefLevel; // Preferred level for this window
+
     // We track whether an explicit size/location have been assigned to the window
     // in order to differentiate between an explicitly assigned zero bounds, and the
     // deafult bounds (which are also zeros - see a comment in _createWindowCommon().)
     BOOL                isSizeAssigned;
     BOOL                isLocationAssigned;
 
+    // Stores the menu of the host application when running embedded.
+    // This is used to allow JFX to install its own system menu
+    // without interfering with the hosting application.
+    NSMenu*             hostMenu;
+
 @private
     BOOL                isWindowResizable;
 }
+
+// Helper methods for owned windows
+- (void) addChildWindow:(GlassWindow*)childWindow;
+- (void) removeChildWindow:(GlassWindow*)childWindow;
+- (void) reorderChildWindows;
+- (void) minimizeChildWindows:(BOOL)minimize;
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace;
 
 // NSWindow overrides delegate methods
 - (void)close;

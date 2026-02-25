@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/HashTable.h>
 #include <wtf/WeakPtr.h>
 
@@ -34,7 +34,7 @@ namespace WTF {
 // Value will be deleted lazily upon rehash or amortized over time. For manual cleanup, call removeNullReferences().
 template<typename KeyType, typename ValueType, typename WeakPtrImpl>
 class WeakHashMap final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakHashMap);
 public:
 
     using RefType = Ref<WeakPtrImpl>;
@@ -195,7 +195,7 @@ public:
     const_iterator end() const { return WeakHashMapConstIterator(*this, m_map.end()); }
 
     template <typename Functor>
-    AddResult ensure(const KeyType& key, Functor&& functor)
+    AddResult ensure(const KeyType& key, NOESCAPE Functor&& functor)
     {
         amortizedCleanupIfNeeded();
         auto result = m_map.ensure(makeKeyImpl(key), functor);
@@ -211,10 +211,11 @@ public:
     }
 
     template<typename T, typename V>
-    void set(const T& key, V&& value)
+    AddResult set(const T& key, V&& value)
     {
         amortizedCleanupIfNeeded();
-        m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        auto addResult = m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        return AddResult { WeakHashMapIterator(*this, addResult.iterator), addResult.isNewEntry };
     }
 
     iterator find(const KeyType& key)
@@ -253,6 +254,15 @@ public:
         return m_map.take(*keyImpl);
     }
 
+    std::optional<ValueType> takeOptional(const KeyType& key)
+    {
+        amortizedCleanupIfNeeded();
+        auto* keyImpl = keyImplIfExists(key);
+        if (!keyImpl)
+            return std::nullopt;
+        return m_map.takeOptional(*keyImpl);
+    }
+
     typename ValueTraits::PeekType get(const KeyType& key) const
     {
         increaseOperationCountSinceLastCleanup();
@@ -260,6 +270,15 @@ public:
         if (!keyImpl)
             return ValueTraits::peek(ValueTraits::emptyValue());
         return m_map.get(*keyImpl);
+    }
+
+    std::optional<ValueType> getOptional(const KeyType& key) const
+    {
+        increaseOperationCountSinceLastCleanup();
+        auto* keyImpl = keyImplIfExists(key);
+        if (!keyImpl)
+            return std::nullopt;
+        return m_map.getOptional(*keyImpl);
     }
 
     bool remove(iterator it)
@@ -279,7 +298,7 @@ public:
     }
 
     template<typename Functor>
-    bool removeIf(Functor&& functor)
+    bool removeIf(NOESCAPE Functor&& functor)
     {
         bool result = m_map.removeIf([&](auto& entry) {
             auto* key = static_cast<KeyType*>(entry.key->template get<KeyType>());
@@ -307,7 +326,7 @@ public:
             return true;
 
         auto onlyContainsNullReferences = begin() == end();
-        if (UNLIKELY(onlyContainsNullReferences))
+        if (onlyContainsNullReferences) [[unlikely]]
             const_cast<WeakHashMap&>(*this).clear();
         return onlyContainsNullReferences;
     }
@@ -315,7 +334,7 @@ public:
     bool hasNullReferences() const
     {
         unsigned count = 0;
-        auto result = WTF::anyOf(m_map, [&] (auto& iterator) {
+        auto result = std::ranges::any_of(m_map, [&](auto& iterator) {
             ++count;
             return !iterator.key.get();
         });
@@ -369,13 +388,13 @@ private:
     template <typename T>
     static RefType makeKeyImpl(const T& key)
     {
-        return *key.weakPtrFactory().template createWeakPtr<T>(const_cast<T&>(key)).m_impl;
+        return WeakRef<T, WeakPtrImpl>(key).releaseImpl();
     }
 
     template <typename T>
     static WeakPtrImpl* keyImplIfExists(const T& key)
     {
-        if (auto* impl = key.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = key.weakImplIfExists(); impl && *impl)
             return impl;
             return nullptr;
     }

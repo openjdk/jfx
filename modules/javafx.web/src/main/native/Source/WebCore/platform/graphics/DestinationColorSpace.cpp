@@ -65,7 +65,7 @@ template<PlatformColorSpace::Name name> static const DestinationColorSpace& know
 const DestinationColorSpace& DestinationColorSpace::SRGB()
 {
 #if USE(CG) || USE(SKIA)
-    return knownColorSpace<sRGBColorSpaceRef>();
+    return knownColorSpace<sRGBColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::SRGB>();
 #endif
@@ -74,7 +74,7 @@ const DestinationColorSpace& DestinationColorSpace::SRGB()
 const DestinationColorSpace& DestinationColorSpace::LinearSRGB()
 {
 #if USE(CG) || USE(SKIA)
-    return knownColorSpace<linearSRGBColorSpaceRef>();
+    return knownColorSpace<linearSRGBColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::LinearSRGB>();
 #endif
@@ -84,20 +84,43 @@ const DestinationColorSpace& DestinationColorSpace::LinearSRGB()
 const DestinationColorSpace& DestinationColorSpace::DisplayP3()
 {
 #if USE(CG) || USE(SKIA)
-    return knownColorSpace<displayP3ColorSpaceRef>();
+    return knownColorSpace<displayP3ColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::DisplayP3>();
 #endif
 }
-#endif
 
-DestinationColorSpace::DestinationColorSpace(PlatformColorSpace platformColorSpace)
-    : m_platformColorSpace { WTFMove(platformColorSpace) }
+const DestinationColorSpace& DestinationColorSpace::ExtendedDisplayP3()
 {
 #if USE(CG) || USE(SKIA)
-    ASSERT(m_platformColorSpace);
+    return knownColorSpace<extendedDisplayP3ColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedDisplayP3>();
 #endif
 }
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+const DestinationColorSpace& DestinationColorSpace::ExtendedSRGB()
+{
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<extendedSRGBColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedSRGB>();
+#endif
+}
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+const DestinationColorSpace& DestinationColorSpace::ExtendedRec2020()
+{
+#if USE(CG)
+    return knownColorSpace<ITUR_2020ColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedRec2020>();
+#endif
+}
+#endif
 
 bool operator==(const DestinationColorSpace& a, const DestinationColorSpace& b)
 {
@@ -120,10 +143,8 @@ std::optional<DestinationColorSpace> DestinationColorSpace::asRGB() const
     if (CGColorSpaceGetModel(colorSpace) != kCGColorSpaceModelRGB)
         return std::nullopt;
 
-#if HAVE(CG_COLOR_SPACE_USES_EXTENDED_RANGE)
-    if (CGColorSpaceUsesExtendedRange(colorSpace))
+    if (usesExtendedRange())
         return std::nullopt;
-#endif
 
     return DestinationColorSpace(colorSpace);
 
@@ -138,6 +159,17 @@ std::optional<DestinationColorSpace> DestinationColorSpace::asRGB() const
 #endif
 }
 
+std::optional<DestinationColorSpace> DestinationColorSpace::asExtended() const
+{
+    if (usesExtendedRange())
+        return *this;
+#if USE(CG)
+    if (RetainPtr colorSpace = adoptCF(CGColorSpaceCreateExtended(platformColorSpace())))
+        return DestinationColorSpace(WTFMove(colorSpace));
+#endif
+    return std::nullopt;
+}
+
 bool DestinationColorSpace::supportsOutput() const
 {
 #if USE(CG)
@@ -148,15 +180,43 @@ bool DestinationColorSpace::supportsOutput() const
 #endif
 }
 
+bool DestinationColorSpace::usesExtendedRange() const
+{
+#if USE(CG)
+    return CGColorSpaceUsesExtendedRange(platformColorSpace());
+#else
+    notImplemented();
+    return false;
+#endif
+}
+
+bool DestinationColorSpace::usesITUR_2100TF() const
+{
+#if USE(CG)
+    return CGColorSpaceUsesITUR_2100TF(platformColorSpace());
+#else
+    notImplemented();
+    return false;
+#endif
+}
+
 TextStream& operator<<(TextStream& ts, const DestinationColorSpace& colorSpace)
 {
     if (colorSpace == DestinationColorSpace::SRGB())
-        ts << "sRGB";
+        ts << "sRGB"_s;
     else if (colorSpace == DestinationColorSpace::LinearSRGB())
-        ts << "LinearSRGB";
+        ts << "LinearSRGB"_s;
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
     else if (colorSpace == DestinationColorSpace::DisplayP3())
-        ts << "DisplayP3";
+        ts << "DisplayP3"_s;
+#endif
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+    else if (colorSpace == DestinationColorSpace::ExtendedSRGB())
+        ts << "ExtendedSRGB"_s;
+#endif
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+    else if (colorSpace == DestinationColorSpace::ExtendedRec2020())
+        ts << "ExtendedRec2020"_s;
 #endif
 #if USE(CG)
     else if (auto description = adoptCF(CGColorSpaceCopyICCProfileDescription(colorSpace.platformColorSpace())))

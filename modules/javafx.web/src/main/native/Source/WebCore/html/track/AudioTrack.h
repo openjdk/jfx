@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "AudioTrackPrivateClient.h"
 #include "TrackBase.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -39,6 +40,7 @@ class AudioTrackConfiguration;
 class AudioTrackList;
 
 class AudioTrack final : public MediaTrackBase, private AudioTrackPrivateClient {
+    WTF_MAKE_TZONE_ALLOCATED(AudioTrack);
 public:
     static Ref<AudioTrack> create(ScriptExecutionContext* context, AudioTrackPrivate& trackPrivate)
     {
@@ -66,7 +68,7 @@ public:
     AudioTrackConfiguration& configuration() const { return m_configuration; }
 
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*) final;
+    void setLogger(const Logger&, uint64_t) final;
 #endif
 
 private:
@@ -96,7 +98,7 @@ private:
     Ref<AudioTrackPrivate> m_private;
     bool m_enabled { false };
 
-    Ref<AudioTrackConfiguration> m_configuration;
+    const Ref<AudioTrackConfiguration> m_configuration;
 };
 
 } // namespace WebCore

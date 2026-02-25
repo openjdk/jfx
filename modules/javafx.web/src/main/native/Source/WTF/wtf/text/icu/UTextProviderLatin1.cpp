@@ -26,17 +26,28 @@
 #include "config.h"
 #include <wtf/text/icu/UTextProviderLatin1.h>
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringImpl.h>
 #include <wtf/text/icu/UTextProvider.h>
 
 namespace WTF {
+
+static std::span<const LChar> latin1ContextSpan(UText* uText)
+{
+    return unsafeMakeSpan(static_cast<const LChar*>(uText->context), uText->a);
+}
+
+static std::span<char16_t> chunkSpan(UText* uText)
+{
+    return unsafeMakeSpan(const_cast<char16_t*>(uText->chunkContents), uText->chunkLength);
+}
 
 // Latin1 provider
 
 static UText* uTextLatin1Clone(UText*, const UText*, UBool, UErrorCode*);
 static int64_t uTextLatin1NativeLength(UText*);
 static UBool uTextLatin1Access(UText*, int64_t, UBool);
-static int32_t uTextLatin1Extract(UText*, int64_t, int64_t, UChar*, int32_t, UErrorCode*);
+static int32_t uTextLatin1Extract(UText*, int64_t, int64_t, char16_t*, int32_t, UErrorCode*);
 static int64_t uTextLatin1MapOffsetToNative(const UText*);
 static int32_t uTextLatin1MapNativeIndexToUTF16(const UText*, int64_t);
 static void uTextLatin1Close(UText*);
@@ -67,7 +78,7 @@ static UText* uTextLatin1Clone(UText* destination, const UText* source, UBool de
     if (U_FAILURE(*status))
         return nullptr;
 
-    UText* result = utext_setup(destination, sizeof(UChar) * UTextWithBufferInlineCapacity, status);
+    UText* result = utext_setup(destination, sizeof(char16_t) * UTextWithBufferInlineCapacity, status);
     if (U_FAILURE(*status))
         return destination;
 
@@ -81,8 +92,10 @@ static UText* uTextLatin1Clone(UText* destination, const UText* source, UBool de
     result->context = source->context;
     result->a = source->a;
     result->pFuncs = &uTextLatin1Funcs;
-    result->chunkContents = static_cast<UChar*>(result->pExtra);
-    memset(const_cast<UChar*>(result->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
+    result->chunkContents = static_cast<char16_t*>(result->pExtra);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    memset(const_cast<char16_t*>(result->chunkContents), 0, sizeof(char16_t) * UTextWithBufferInlineCapacity);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return result;
 }
@@ -139,54 +152,53 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
         uText->chunkOffset = static_cast<int32_t>(index - uText->chunkNativeStart);
     }
     uText->chunkLength = static_cast<int32_t>(uText->chunkNativeLimit - uText->chunkNativeStart);
-
-    StringImpl::copyCharacters(const_cast<UChar*>(uText->chunkContents), { static_cast<const LChar*>(uText->context) + uText->chunkNativeStart, static_cast<size_t>(uText->chunkLength) });
+    StringImpl::copyCharacters(chunkSpan(uText), latin1ContextSpan(uText).subspan(uText->chunkNativeStart, uText->chunkLength));
 
     uText->nativeIndexingLimit = uText->chunkLength;
 
     return true;
 }
 
-static int32_t uTextLatin1Extract(UText* uText, int64_t start, int64_t limit, UChar* dest, int32_t destCapacity, UErrorCode* status)
+static int32_t uTextLatin1Extract(UText* uText, int64_t start, int64_t limit, char16_t* rawDest, int32_t rawDestCapacity, UErrorCode* status)
 {
-    int64_t length = uText->a;
+    int64_t rawLength = uText->a;
     if (U_FAILURE(*status))
         return 0;
 
-    if (destCapacity < 0 || (!dest && destCapacity > 0)) {
+    if (rawDestCapacity < 0 || (!rawDest && rawDestCapacity > 0)) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
         return 0;
     }
+    std::span dest = unsafeMakeSpan(rawDest, rawDestCapacity);
 
     if (start < 0 || start > limit || (limit - start) > INT32_MAX) {
         *status = U_INDEX_OUTOFBOUNDS_ERROR;
         return 0;
     }
 
-    if (start > length)
-        start = length;
-    if (limit > length)
-        limit = length;
+    if (start > rawLength)
+        start = rawLength;
+    if (limit > rawLength)
+        limit = rawLength;
 
-    length = limit - start;
+    size_t length = limit - start;
 
     if (!length)
         return 0;
 
-    if (dest) {
-        int32_t trimmedLength = static_cast<int32_t>(length);
-        if (trimmedLength > destCapacity)
-            trimmedLength = destCapacity;
-
-        StringImpl::copyCharacters(dest, { static_cast<const LChar*>(uText->context) + start, static_cast<size_t>(trimmedLength) });
+    if (dest.data()) {
+        size_t trimmedLength = length;
+        if (trimmedLength > dest.size())
+            trimmedLength = dest.size();
+        StringImpl::copyCharacters(dest, latin1ContextSpan(uText).subspan(start, trimmedLength));
     }
 
-    if (length < destCapacity) {
-        if (dest)
+    if (length < dest.size()) {
+        if (dest.data())
             dest[length] = 0;
         if (*status == U_STRING_NOT_TERMINATED_WARNING)
             *status = U_ZERO_ERROR;
-    } else if (length == destCapacity)
+    } else if (length == dest.size())
         *status = U_STRING_NOT_TERMINATED_WARNING;
     else
         *status = U_BUFFER_OVERFLOW_ERROR;
@@ -228,8 +240,10 @@ UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LC
     text->context = string.data();
     text->a = string.size();
     text->pFuncs = &uTextLatin1Funcs;
-    text->chunkContents = static_cast<UChar*>(text->pExtra);
-    memset(const_cast<UChar*>(text->chunkContents), 0, sizeof(UChar) * UTextWithBufferInlineCapacity);
+    text->chunkContents = static_cast<char16_t*>(text->pExtra);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    memset(const_cast<char16_t*>(text->chunkContents), 0, sizeof(char16_t) * UTextWithBufferInlineCapacity);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     return text;
 }
@@ -240,7 +254,7 @@ UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LC
 static UText* uTextLatin1ContextAwareClone(UText*, const UText*, UBool, UErrorCode*);
 static int64_t uTextLatin1ContextAwareNativeLength(UText*);
 static UBool uTextLatin1ContextAwareAccess(UText*, int64_t, UBool);
-static int32_t uTextLatin1ContextAwareExtract(UText*, int64_t, int64_t, UChar*, int32_t, UErrorCode*);
+static int32_t uTextLatin1ContextAwareExtract(UText*, int64_t, int64_t, char16_t*, int32_t, UErrorCode*);
 static void uTextLatin1ContextAwareClose(UText*);
 
 static const struct UTextFuncs textLatin1ContextAwareFuncs = {
@@ -276,12 +290,12 @@ static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nati
     ASSERT(nativeIndex <= nativeLength);
     if (forward) {
         text->chunkNativeStart = nativeIndex;
-        text->chunkNativeLimit = nativeIndex + text->extraSize / sizeof(UChar);
+        text->chunkNativeLimit = nativeIndex + text->extraSize / sizeof(char16_t);
         if (text->chunkNativeLimit > nativeLength)
             text->chunkNativeLimit = nativeLength;
     } else {
         text->chunkNativeLimit = nativeIndex;
-        text->chunkNativeStart = nativeIndex - text->extraSize / sizeof(UChar);
+        text->chunkNativeStart = nativeIndex - text->extraSize / sizeof(char16_t);
         if (text->chunkNativeStart < text->b)
             text->chunkNativeStart = text->b;
     }
@@ -291,13 +305,15 @@ static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nati
     text->chunkLength = length < std::numeric_limits<int32_t>::max() ? static_cast<int32_t>(length) : 0;
     text->nativeIndexingLimit = text->chunkLength;
     text->chunkOffset = forward ? 0 : text->chunkLength;
-    StringImpl::copyCharacters(const_cast<UChar*>(text->chunkContents), { static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), static_cast<size_t>(text->chunkLength) });
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    StringImpl::copyCharacters(chunkSpan(text), unsafeMakeSpan(static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static void textLatin1ContextAwareSwitchToPrimaryContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
 {
     ASSERT(!text->chunkContents || text->chunkContents == text->q);
-    text->chunkContents = static_cast<const UChar*>(text->pExtra);
+    text->chunkContents = static_cast<const char16_t*>(text->pExtra);
     textLatin1ContextAwareMoveInPrimaryContext(text, nativeIndex, nativeLength, forward);
 }
 
@@ -319,7 +335,7 @@ static void textLatin1ContextAwareMoveInPriorContext(UText* text, int64_t native
 static void textLatin1ContextAwareSwitchToPriorContext(UText* text, int64_t nativeIndex, int64_t nativeLength, UBool forward)
 {
     ASSERT(!text->chunkContents || text->chunkContents == text->pExtra);
-    text->chunkContents = static_cast<const UChar*>(text->q);
+    text->chunkContents = static_cast<const char16_t*>(text->q);
     textLatin1ContextAwareMoveInPriorContext(text, nativeIndex, nativeLength, forward);
 }
 
@@ -359,7 +375,7 @@ static UBool uTextLatin1ContextAwareAccess(UText* text, int64_t nativeIndex, UBo
     return true;
 }
 
-static int32_t uTextLatin1ContextAwareExtract(UText*, int64_t, int64_t, UChar*, int32_t, UErrorCode* errorCode)
+static int32_t uTextLatin1ContextAwareExtract(UText*, int64_t, int64_t, char16_t*, int32_t, UErrorCode* errorCode)
 {
     // In the present context, this text provider is used only with ICU functions
     // that do not perform an extract operation.
@@ -373,7 +389,7 @@ static void uTextLatin1ContextAwareClose(UText* text)
     text->context = nullptr;
 }
 
-UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, std::span<const UChar> priorContext, UErrorCode* status)
+UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, std::span<const char16_t> priorContext, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;

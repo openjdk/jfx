@@ -37,7 +37,12 @@
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/Threading.h>
 #include <wtf/text/AtomString.h>
+
+#if PLATFORM(IOS_FAMILY)
+#include "WebCoreThread.h"
+#endif
 
 namespace WebCore {
 
@@ -57,6 +62,7 @@ public:
     void clear();
     void clearEntriesForTearDown()
     {
+        releaseAssertOrSetThreadUID();
         m_entries.clear();
     }
 
@@ -68,14 +74,14 @@ public:
     Vector<AtomString> eventTypes() const;
 
     template<typename CallbackType>
-    void enumerateEventListenerTypes(CallbackType callback) const
+    void enumerateEventListenerTypes(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries)
             callback(entry.first, entry.second.size());
     }
 
     template<typename CallbackType>
-    bool containsMatchingEventListener(CallbackType callback) const
+    bool containsMatchingEventListener(NOESCAPE const CallbackType& callback) const
     {
         for (auto& entry : m_entries) {
             if (callback(entry.first, m_entries))
@@ -91,8 +97,21 @@ public:
     Lock& lock() { return m_lock; }
 
 private:
+    void releaseAssertOrSetThreadUID()
+    {
+#if PLATFORM(IOS_FAMILY)
+        if (WebThreadIsEnabled())
+            return;
+#endif
+        if (m_threadUID)
+            RELEASE_ASSERT(m_threadUID == Thread::currentSingleton().uid());
+        else
+            m_threadUID = Thread::currentSingleton().uid();
+    }
+
     Vector<std::pair<AtomString, EventListenerVector>, 0, CrashOnOverflow, 4> m_entries;
     Lock m_lock;
+    uint32_t m_threadUID { 0 };
 };
 
 template<typename Visitor>

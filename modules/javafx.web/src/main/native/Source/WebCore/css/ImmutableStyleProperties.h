@@ -30,19 +30,19 @@ namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ImmutableStyleProperties);
 class ImmutableStyleProperties final : public StyleProperties {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ImmutableStyleProperties);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ImmutableStyleProperties, ImmutableStyleProperties);
 public:
     inline void deref() const;
 
     WEBCORE_EXPORT ~ImmutableStyleProperties();
-    static Ref<ImmutableStyleProperties> create(const CSSProperty* properties, unsigned count, CSSParserMode);
-    static Ref<ImmutableStyleProperties> createDeduplicating(const CSSProperty* properties, unsigned count, CSSParserMode);
+    static Ref<ImmutableStyleProperties> create(std::span<const CSSProperty> properties, CSSParserMode);
+    static Ref<ImmutableStyleProperties> createDeduplicating(std::span<const CSSProperty> properties, CSSParserMode);
 
     unsigned propertyCount() const { return m_arraySize; }
     bool isEmpty() const { return !propertyCount(); }
     PropertyReference propertyAt(unsigned index) const;
 
-    Iterator<ImmutableStyleProperties> begin() const { return { *this }; }
+    Iterator<ImmutableStyleProperties> begin() const LIFETIME_BOUND { return { *this }; }
     static constexpr std::nullptr_t end() { return nullptr; }
     unsigned size() const { return propertyCount(); }
 
@@ -56,9 +56,9 @@ public:
     void* m_storage;
 
 private:
-    PackedPtr<const CSSValue>* valueArray() const;
-    const StylePropertyMetadata* metadataArray() const;
-    ImmutableStyleProperties(const CSSProperty*, unsigned count, CSSParserMode);
+    std::span<PackedPtr<const CSSValue>> valueSpan() const;
+    std::span<const StylePropertyMetadata> metadataSpan() const;
+    ImmutableStyleProperties(std::span<const CSSProperty>, CSSParserMode);
 };
 
 inline void ImmutableStyleProperties::deref() const
@@ -67,19 +67,21 @@ inline void ImmutableStyleProperties::deref() const
         delete this;
 }
 
-inline PackedPtr<const CSSValue>* ImmutableStyleProperties::valueArray() const
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+inline std::span<PackedPtr<const CSSValue>> ImmutableStyleProperties::valueSpan() const
 {
-    return bitwise_cast<PackedPtr<const CSSValue>*>(bitwise_cast<const uint8_t*>(metadataArray()) + (m_arraySize * sizeof(StylePropertyMetadata)));
+    return unsafeMakeSpan(std::bit_cast<PackedPtr<const CSSValue>*>(std::bit_cast<const uint8_t*>(metadataSpan().data()) + (m_arraySize * sizeof(StylePropertyMetadata))), propertyCount());
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-inline const StylePropertyMetadata* ImmutableStyleProperties::metadataArray() const
+inline std::span<const StylePropertyMetadata> ImmutableStyleProperties::metadataSpan() const
 {
-    return reinterpret_cast<const StylePropertyMetadata*>(const_cast<const void**>((&(this->m_storage))));
+    return unsafeMakeSpan(reinterpret_cast<const StylePropertyMetadata*>(const_cast<const void**>((&(this->m_storage)))), propertyCount());
 }
 
 inline ImmutableStyleProperties::PropertyReference ImmutableStyleProperties::propertyAt(unsigned index) const
 {
-    return PropertyReference(metadataArray()[index], valueArray()[index].get());
+    return PropertyReference(metadataSpan()[index], valueSpan()[index].get());
 }
 
 constexpr size_t ImmutableStyleProperties::objectSize(unsigned count)
@@ -87,7 +89,7 @@ constexpr size_t ImmutableStyleProperties::objectSize(unsigned count)
     return sizeof(ImmutableStyleProperties) - sizeof(void*) + sizeof(StylePropertyMetadata) * count + sizeof(PackedPtr<const CSSValue>) * count;
 }
 
-}
+} // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ImmutableStyleProperties)
     static bool isType(const WebCore::StyleProperties& properties) { return !properties.isMutable(); }

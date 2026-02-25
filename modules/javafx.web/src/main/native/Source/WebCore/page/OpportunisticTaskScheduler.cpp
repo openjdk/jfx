@@ -27,8 +27,11 @@
 #include "OpportunisticTaskScheduler.h"
 
 #include "CommonVM.h"
+#include "Document.h"
 #include "GCController.h"
+#include "IdleCallbackController.h"
 #include "Page.h"
+#include "Settings.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <wtf/DataLog.h>
@@ -38,7 +41,7 @@ namespace WebCore {
 
 OpportunisticTaskScheduler::OpportunisticTaskScheduler(Page& page)
     : m_page(&page)
-    , m_runLoopObserver(makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [weakThis = WeakPtr { this }] {
+    , m_runLoopObserver(makeUniqueRef<RunLoopObserver>(RunLoopObserver::WellKnownOrder::OpportunisticTask, [weakThis = WeakPtr { this }] {
         if (auto protectedThis = weakThis.get())
             protectedThis->runLoopObserverFired();
     }, RunLoopObserver::Type::OneShot))
@@ -53,7 +56,10 @@ void OpportunisticTaskScheduler::rescheduleIfNeeded(MonotonicTime deadline)
     if (page->isWaitingForLoadToFinish() || !page->isVisibleAndActive())
         return;
 
-    if (!m_mayHavePendingIdleCallbacks && !page->settings().opportunisticSweepingAndGarbageCollectionEnabled())
+    auto hasIdleCallbacks = page->findMatchingLocalDocument([](const Document& document) {
+        return document.hasPendingIdleCallback();
+    });
+    if (!hasIdleCallbacks && !page->settings().opportunisticSweepingAndGarbageCollectionEnabled())
         return;
 
     m_runloopCountAfterBeingScheduled = 0;
@@ -80,7 +86,7 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
         return;
 #endif
 
-    if (UNLIKELY(!m_page))
+    if (!m_page) [[unlikely]]
         return;
 
     RefPtr page = m_page.get();
@@ -98,23 +104,23 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
     m_runloopCountAfterBeingScheduled++;
 
     bool shouldRunTask = [&] {
-        if (!hasImminentlyScheduledWork())
+        static constexpr auto numRetriesWhileScheduledWorkIsImminent = 9;
+        if (hasImminentlyScheduledWork())
+            return m_runloopCountAfterBeingScheduled > numRetriesWhileScheduledWorkIsImminent;
+
+        static constexpr auto maxRetriesWhenScheduledWorkIsNotImminent = 4;
+        if (m_runloopCountAfterBeingScheduled > maxRetriesWhenScheduledWorkIsNotImminent)
             return true;
 
-        static constexpr auto fractionOfRenderingIntervalWhenScheduledWorkIsImminent = 0.72;
-        if (remainingTime > fractionOfRenderingIntervalWhenScheduledWorkIsImminent * page->preferredRenderingUpdateInterval())
+        static constexpr auto desiredFractionOfRenderingInterval = 0.95;
+        if (remainingTime > desiredFractionOfRenderingInterval * page->preferredRenderingUpdateInterval())
             return true;
 
-        static constexpr auto minimumRunloopCountWhenScheduledWorkIsImminent = 4;
-        if (m_runloopCountAfterBeingScheduled > minimumRunloopCountWhenScheduledWorkIsImminent)
-            return true;
-
-        dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: task does not get scheduled ", remainingTime, " ", hasImminentlyScheduledWork(), " ", page->preferredRenderingUpdateInterval(), " ", m_runloopCountAfterBeingScheduled, " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
         return false;
     }();
 
     if (!shouldRunTask) {
-        dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] RunLoopObserverInvalidate", " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
+        dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: task gets rescheduled ", remainingTime, " ", hasImminentlyScheduledWork(), " ", page->preferredRenderingUpdateInterval(), " ", m_runloopCountAfterBeingScheduled, " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
         m_runLoopObserver->invalidate();
         m_runLoopObserver->schedule();
         return;
@@ -127,14 +133,7 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
     };
 
     auto deadline = std::exchange(m_currentDeadline, MonotonicTime { });
-    if (std::exchange(m_mayHavePendingIdleCallbacks, false)) {
-        auto weakPage = m_page;
-        page->opportunisticallyRunIdleCallbacks();
-        if (UNLIKELY(!weakPage)) {
-            dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: page gets destroyed", " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
-        return;
-        }
-    }
+    page->opportunisticallyRunIdleCallbacks(deadline);
 
     if (!page->settings().opportunisticSweepingAndGarbageCollectionEnabled()) {
         dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: opportunistic sweep and GC is not enabled", " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
@@ -181,7 +180,7 @@ static bool isBusyForTimerBasedGC(JSC::VM& vm)
 OpportunisticTaskScheduler::FullGCActivityCallback::FullGCActivityCallback(JSC::Heap& heap)
     : Base(heap, JSC::Synchronousness::Sync)
     , m_vm(heap.vm())
-    , m_runLoopObserver(makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
+    , m_runLoopObserver(makeUniqueRef<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
         JSC::JSLockHolder locker(m_vm);
         m_version = 0;
         m_deferCount = 0;
@@ -227,7 +226,7 @@ void OpportunisticTaskScheduler::FullGCActivityCallback::doCollection(JSC::VM& v
 OpportunisticTaskScheduler::EdenGCActivityCallback::EdenGCActivityCallback(JSC::Heap& heap)
     : Base(heap, JSC::Synchronousness::Sync)
     , m_vm(heap.vm())
-    , m_runLoopObserver(makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
+    , m_runLoopObserver(makeUniqueRef<RunLoopObserver>(RunLoopObserver::WellKnownOrder::PostRenderingUpdate, [this] {
         JSC::JSLockHolder locker(m_vm);
         m_version = 0;
         m_deferCount = 0;

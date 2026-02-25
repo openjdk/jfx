@@ -29,8 +29,10 @@
 #include "CustomUndoStep.h"
 #include "Document.h"
 #include "Editor.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "UndoItem.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -55,7 +57,7 @@ ExceptionOr<void> UndoManager::addItem(Ref<UndoItem>&& item)
         return Exception { ExceptionCode::SecurityError, "A browsing context is required to add an UndoItem"_s };
 
     item->setUndoManager(this);
-    frame->editor().registerCustomUndoStep(CustomUndoStep::create(item));
+    frame->protectedEditor()->registerCustomUndoStep(CustomUndoStep::create(item));
     m_items.add(WTFMove(item));
     return { };
 }

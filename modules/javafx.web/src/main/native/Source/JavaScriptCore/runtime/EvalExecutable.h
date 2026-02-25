@@ -40,12 +40,12 @@ public:
 
     EvalCodeBlock* codeBlock() const
     {
-        return bitwise_cast<EvalCodeBlock*>(Base::codeBlock());
+        return std::bit_cast<EvalCodeBlock*>(Base::codeBlock());
     }
 
     UnlinkedEvalCodeBlock* unlinkedCodeBlock() const
     {
-        return bitwise_cast<UnlinkedEvalCodeBlock*>(Base::unlinkedCodeBlock());
+        return std::bit_cast<UnlinkedEvalCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
     Ref<JSC::JITCode> generatedJITCode()
@@ -63,9 +63,16 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     unsigned numVariables() { return unlinkedCodeBlock()->numVariables(); }
+    std::span<const Identifier> variables() const { return unlinkedCodeBlock()->variables(); }
+
     unsigned numFunctionHoistingCandidates() { return unlinkedCodeBlock()->numFunctionHoistingCandidates(); }
+    std::span<const Identifier> functionHoistingCandidates() const { return unlinkedCodeBlock()->functionHoistingCandidates(); }
+
     unsigned numTopLevelFunctionDecls() { return unlinkedCodeBlock()->numberOfFunctionDecls(); }
+    std::span<const WriteBarrier<UnlinkedFunctionExecutable>> topLevelFunctionDecls() const { return unlinkedCodeBlock()->functionDecls(); }
     bool allowDirectEvalCache() const { return unlinkedCodeBlock()->allowDirectEvalCache(); }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
@@ -77,8 +84,6 @@ protected:
 
     using Base::finishCreation;
     EvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
-
-    DECLARE_VISIT_CHILDREN;
 
     unsigned m_needsClassFieldInitializer : 1;
     unsigned m_privateBrandRequirement : 1;

@@ -29,8 +29,11 @@
 #include "BackgroundFetchManager.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorkerRegistrationBackgroundFetchAPI);
 
 ServiceWorkerRegistrationBackgroundFetchAPI::ServiceWorkerRegistrationBackgroundFetchAPI(ServiceWorkerRegistration& serviceWorkerRegistration)
     : m_serviceWorkerRegistration(serviceWorkerRegistration)
@@ -54,7 +57,7 @@ RefPtr<BackgroundFetchManager> ServiceWorkerRegistrationBackgroundFetchAPI::back
 BackgroundFetchManager& ServiceWorkerRegistrationBackgroundFetchAPI::backgroundFetchManager()
 {
     if (!m_backgroundFetchManager)
-        m_backgroundFetchManager = BackgroundFetchManager::create(m_serviceWorkerRegistration);
+        lazyInitialize(m_backgroundFetchManager, BackgroundFetchManager::create(m_serviceWorkerRegistration));
 
     return *m_backgroundFetchManager;
 }

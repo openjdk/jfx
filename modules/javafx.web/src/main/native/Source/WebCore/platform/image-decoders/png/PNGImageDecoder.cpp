@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  *
@@ -44,6 +44,7 @@
 #include "Color.h"
 #include <png.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueArray.h>
 
 #if USE(LCMS)
@@ -56,6 +57,8 @@
 #define JMPBUF(png_ptr) png_ptr->jmpbuf
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WebCore {
 
 // Gamma constants.
@@ -63,8 +66,15 @@ const double cMaxGamma = 21474.83;
 const double cDefaultGamma = 2.2;
 const double cInverseGamma = 0.45455;
 
-// Protect against large PNGs. See Mozilla's bug #251381 for more info.
-const unsigned long cMaxPNGSize = 1000000UL;
+// Protect against APNGs with huge amounts of frames, and PNGs with large amounts
+// of pixel data in general. See bug #302220 and Mozilla's bug #251381 for more info.
+//
+// The maximum frame count limits the memory used for array of ScalableImageDecoderFrames
+// to take at most 10MiB on 64-bit platforms, and it is large enough to cover ~70 minutes
+// of animation at 60 FPS.
+static constexpr uint32_t cMaxFrameCount = (1 << 18) - 1;
+static constexpr uint32_t cMaxPNGSize = 1000000;
+static constexpr size_t cMaxDecodedPixels = cMaxPNGSize * cMaxPNGSize;
 
 // Called if the decoding of the image fails.
 static void PNGAPI decodingFailed(png_structp png, png_const_charp)
@@ -80,7 +90,7 @@ static void PNGAPI decodingWarning(png_structp png, png_const_charp warningMsg)
     // Mozilla did this, so we will too.
     // Convert a tRNS warning to be an error (see
     // http://bugzilla.mozilla.org/show_bug.cgi?id=251381 )
-    if (!strncmp(warningMsg, "Missing PLTE before tRNS", 24))
+    if (spanHasPrefix(unsafeSpan(warningMsg), "Missing PLTE before tRNS"_span))
         png_error(png, warningMsg);
 }
 
@@ -116,7 +126,7 @@ static int PNGAPI readChunks(png_structp png, png_unknown_chunkp chunk)
 }
 
 class PNGImageReader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PNGImageReader);
 public:
     PNGImageReader(PNGImageDecoder* decoder)
         : m_png(png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, decodingFailed, decodingWarning))
@@ -204,6 +214,7 @@ PNGImageDecoder::PNGImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOp
     , m_hasInfo(false)
     , m_gamma(45455)
     , m_frameCount(1)
+    , m_decodedPixelCount(0)
     , m_playCount(0)
     , m_totalFrames(0)
     , m_sizePLTE(0)
@@ -280,10 +291,12 @@ void PNGImageDecoder::headerAvailable()
     png_uint_32 height = png_get_image_height(png, info);
 
     // Protect against large images.
-    if (width > cMaxPNGSize || height > cMaxPNGSize) {
+    const auto pixelCount = checkedSum<size_t>(checkedProduct<size_t>(width, height), m_decodedPixelCount);
+    if (pixelCount.hasOverflowed() || pixelCount > cMaxDecodedPixels) {
         longjmp(JMPBUF(png), 1);
         return;
     }
+    m_decodedPixelCount = pixelCount;
 
     // We can fill in the size now that the header is available.  Avoid memory
     // corruption issues by returning early from setFailed() during this call; if we don't
@@ -305,10 +318,10 @@ void PNGImageDecoder::headerAvailable()
 
     m_hasInfo = true;
     if (m_isAnimated) {
-        png_save_uint_32(m_dataIHDR, 13);
-        memcpy(m_dataIHDR + 4, "IHDR", 4);
-        png_save_uint_32(m_dataIHDR + 8, width);
-        png_save_uint_32(m_dataIHDR + 12, height);
+        png_save_uint_32(m_dataIHDR.data(), 13);
+        memcpySpan(std::span { m_dataIHDR }.subspan(4), "IHDR"_span);
+        png_save_uint_32(&m_dataIHDR[8], width);
+        png_save_uint_32(&m_dataIHDR[12], height);
         m_dataIHDR[16] = bitDepth;
         m_dataIHDR[17] = colorType;
         m_dataIHDR[18] = compressionType;
@@ -323,9 +336,9 @@ void PNGImageDecoder::headerAvailable()
             int paletteSize = 0;
             png_get_PLTE(png, info, &palette, &paletteSize);
             paletteSize *= 3;
-            png_save_uint_32(m_dataPLTE, paletteSize);
-            memcpy(m_dataPLTE + 4, "PLTE", 4);
-            memcpy(m_dataPLTE + 8, palette, paletteSize);
+            png_save_uint_32(m_dataPLTE.data(), paletteSize);
+            memcpySpan(std::span { m_dataPLTE }.subspan(4), "PLTE"_span);
+            memcpySpan(std::span { m_dataPLTE }.subspan(8), unsafeMakeSpan(reinterpret_cast<png_byte*>(palette), paletteSize));
             m_sizePLTE = paletteSize + 12;
         }
         png_set_expand(png);
@@ -341,18 +354,18 @@ void PNGImageDecoder::headerAvailable()
         png_get_tRNS(png, info, &trns, &trnsCount, &transValues);
         if (m_isAnimated) {
             if (colorType == PNG_COLOR_TYPE_RGB) {
-                png_save_uint_16(m_datatRNS + 8, transValues->red);
-                png_save_uint_16(m_datatRNS + 10, transValues->green);
-                png_save_uint_16(m_datatRNS + 12, transValues->blue);
+                png_save_uint_16(&m_datatRNS[8], transValues->red);
+                png_save_uint_16(&m_datatRNS[10], transValues->green);
+                png_save_uint_16(&m_datatRNS[12], transValues->blue);
                 trnsCount = 6;
             } else if (colorType == PNG_COLOR_TYPE_GRAY) {
-                png_save_uint_16(m_datatRNS + 8, transValues->gray);
+                png_save_uint_16(&m_datatRNS[8], transValues->gray);
                 trnsCount = 2;
             } else if (colorType == PNG_COLOR_TYPE_PALETTE)
-                memcpy(m_datatRNS + 8, trns, trnsCount);
+                memcpySpan(std::span { m_datatRNS }.subspan(8), unsafeMakeSpan(trns, trnsCount));
 
-            png_save_uint_32(m_datatRNS, trnsCount);
-            memcpy(m_datatRNS + 4, "tRNS", 4);
+            png_save_uint_32(m_datatRNS.data(), trnsCount);
+            memcpySpan(std::span { m_datatRNS }.subspan(4), "tRNS"_span);
             m_sizetRNS = trnsCount + 12;
         }
         png_set_expand(png);
@@ -502,26 +515,26 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     }
 
     // Write the decoded row pixels to the frame buffer.
-    auto* destRow = buffer.backingStore()->pixelAt(0, rowIndex);
-    auto* address = destRow;
+    auto destinationRow = buffer.backingStore()->pixelsStartingAt(0, rowIndex);
+    auto address = destinationRow;
     int width = size().width();
     unsigned char nonTrivialAlphaMask = 0;
 
     png_bytep pixel = row;
     if (hasAlpha) {
-        for (int x = 0; x < width; ++x, pixel += 4, ++address) {
+        for (int x = 0; x < width; ++x, pixel += 4, address = address.subspan(1)) {
             unsigned alpha = pixel[3];
-            buffer.backingStore()->setPixel(address, pixel[0], pixel[1], pixel[2], alpha);
+            buffer.backingStore()->setPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
             nonTrivialAlphaMask |= (255 - alpha);
         }
     } else {
-        for (int x = 0; x < width; ++x, pixel += 3, ++address)
-            *address = 0xFF000000 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
+        for (int x = 0; x < width; ++x, pixel += 3, address = address.subspan(1))
+            address[0] = 0xFF000000 | pixel[0] << 16 | pixel[1] << 8 | pixel[2];
     }
 
 #if USE(LCMS)
     if (m_iccTransform)
-        cmsDoTransform(m_iccTransform.get(), destRow, destRow, width);
+        cmsDoTransform(m_iccTransform.get(), destinationRow.data(), destinationRow.data(), width);
 #endif
 
     if (nonTrivialAlphaMask && !buffer.hasAlpha())
@@ -562,14 +575,14 @@ void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame, bool allDataRe
 
 void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
 {
-    if (!memcmp(chunk->name, "acTL", 4) && chunk->size == 8) {
+    if (chunk->size == 8 && spanHasPrefix(unsafeSpan(chunk->name), "acTL"_span)) {
         if (m_hasInfo || m_isAnimated)
             return;
 
         m_frameCount = png_get_uint_32(chunk->data);
         m_playCount = png_get_uint_32(chunk->data + 4);
 
-        if (!m_frameCount || m_frameCount > PNG_UINT_31_MAX || m_playCount > PNG_UINT_31_MAX) {
+        if (!m_frameCount || m_frameCount > cMaxFrameCount || m_playCount > PNG_UINT_31_MAX) {
             fallbackNotAnimated();
             return;
         }
@@ -582,7 +595,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             return;
 
         m_frameBufferCache.resize(m_frameCount);
-    } else if (!memcmp(chunk->name, "fcTL", 4) && chunk->size == 26) {
+    } else if (chunk->size == 26 && spanHasPrefix(unsafeSpan(chunk->name), "fcTL"_span)) {
         if (m_hasInfo && !m_isAnimated)
             return;
 
@@ -614,7 +627,9 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
         png_uint_32 width = png_get_image_width(png, info);
         png_uint_32 height = png_get_image_height(png, info);
 
-        if (m_width > cMaxPNGSize || m_height > cMaxPNGSize
+        // Protect against large images.
+        const auto pixelCount = checkedSum<size_t>(checkedProduct<size_t>(width, height), m_decodedPixelCount);
+        if (pixelCount.hasOverflowed() || pixelCount > cMaxDecodedPixels
             || m_xOffset > cMaxPNGSize || m_yOffset > cMaxPNGSize
             || m_xOffset + m_width > width
             || m_yOffset + m_height > height
@@ -622,6 +637,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             fallbackNotAnimated();
             return;
         }
+        m_decodedPixelCount = pixelCount;
 
         if (m_frameBufferCache.isEmpty())
             m_frameBufferCache.grow(1);
@@ -649,7 +665,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             fallbackNotAnimated();
             return;
         }
-    } else if (!memcmp(chunk->name, "fdAT", 4) && chunk->size >= 4) {
+    } else if (chunk->size >= 4 && spanHasPrefix(unsafeSpan(chunk->name), "fdAT"_span)) {
         if (!m_frameInfo || !m_isAnimated)
             return;
 
@@ -666,7 +682,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
 
         png_save_uint_32(chunk->data, chunk->size - 4);
         png_process_data(m_png, m_info, chunk->data, 4);
-        memcpy(chunk->data, "IDAT", 4);
+        memcpySpan(unsafeMakeSpan(chunk->data, chunk->size), "IDAT"_span);
         png_process_data(m_png, m_info, chunk->data, chunk->size);
         png_process_data(m_png, m_info, chunk->data, 4);
     }
@@ -816,19 +832,20 @@ void PNGImageDecoder::frameComplete()
         unsigned colorChannels = hasAlpha ? 4 : 3;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
-            auto* destRow = buffer.backingStore()->pixelAt(rect.x(), y);
-            auto* address = destRow;
+            auto destinationRow = buffer.backingStore()->pixelsStartingAt(rect.x(), y);
+            auto address = destinationRow;
             for (int x = rect.x(); x < rect.maxX(); ++x, pixel += colorChannels) {
                 unsigned alpha = hasAlpha ? pixel[3] : 255;
                 nonTrivialAlpha |= alpha < 255;
                 if (!m_blend)
-                    buffer.backingStore()->setPixel(address++, pixel[0], pixel[1], pixel[2], alpha);
+                    buffer.backingStore()->setPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
                 else
-                    buffer.backingStore()->blendPixel(address++, pixel[0], pixel[1], pixel[2], alpha);
+                    buffer.backingStore()->blendPixel(address[0], pixel[0], pixel[1], pixel[2], alpha);
+                address = address.subspan(1);
             }
 #if USE(LCMS)
             if (m_iccTransform)
-                cmsDoTransform(m_iccTransform.get(), destRow, destRow, rect.maxX());
+                cmsDoTransform(m_iccTransform.get(), destinationRow.data(), destinationRow.data(), rect.maxX());
 #endif
         }
 
@@ -871,16 +888,16 @@ int PNGImageDecoder::processingStart(png_unknown_chunkp chunk)
     png_set_progressive_read_fn(m_png, static_cast<png_voidp>(this),
         WebCore::frameHeader, WebCore::rowAvailable, 0);
 
-    memcpy(m_dataIHDR + 8, chunk->data + 4, 8);
+    memcpySpan(std::span { m_dataIHDR }.subspan(8), unsafeMakeSpan(chunk->data + 4, 8));
     png_save_uint_32(datagAMA + 8, m_gamma);
 
     png_process_data(m_png, m_info, dataPNG, 8);
-    png_process_data(m_png, m_info, m_dataIHDR, 25);
+    png_process_data(m_png, m_info, m_dataIHDR.data(), 25);
     png_process_data(m_png, m_info, datagAMA, 16);
     if (m_sizePLTE > 0)
-        png_process_data(m_png, m_info, m_dataPLTE, m_sizePLTE);
+        png_process_data(m_png, m_info, m_dataPLTE.data(), m_sizePLTE);
     if (m_sizetRNS > 0)
-        png_process_data(m_png, m_info, m_datatRNS, m_sizetRNS);
+        png_process_data(m_png, m_info, m_datatRNS.data(), m_sizetRNS);
 
     return 0;
 }
@@ -912,3 +929,5 @@ void PNGImageDecoder::fallbackNotAnimated()
 }
 
 } // namespace WebCore
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

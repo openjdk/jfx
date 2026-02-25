@@ -88,7 +88,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     if (!jsConstructor->isConstructor())
         return Exception { ExceptionCode::TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
 
-    auto prototype = jsConstructor->getPrototype(vm, globalObject);
+    auto prototype = jsConstructor->getPrototype(globalObject);
     RETURN_IF_EXCEPTION(scope, Exception { ExceptionCode::ExistingExceptionError });
 
     if (!prototype.isObject())
@@ -100,7 +100,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     Vector<AudioParamDescriptor> parameterDescriptors;
     if (!parameterDescriptorsValue.isUndefined()) {
         auto parameterDescriptorsConversionResult = convert<IDLSequence<IDLDictionary<AudioParamDescriptor>>>(*globalObject, parameterDescriptorsValue);
-        if (UNLIKELY(parameterDescriptorsConversionResult.hasException(scope)))
+        if (parameterDescriptorsConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
         parameterDescriptors = parameterDescriptorsConversionResult.releaseReturnValue();
@@ -147,6 +147,7 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     ASSERT(jsConstructor);
     if (!jsConstructor)
         return nullptr;
+
     auto* globalObject = constructor->callbackData()->globalObject();
     JSC::VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

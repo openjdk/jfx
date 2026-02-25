@@ -34,6 +34,7 @@
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -43,7 +44,7 @@ class TrackBuffer final
     : public LoggerHelper
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TrackBuffer);
 public:
     static UniqueRef<TrackBuffer> create(RefPtr<MediaDescription>&&);
     static UniqueRef<TrackBuffer> create(RefPtr<MediaDescription>&&, const MediaTime&);
@@ -52,13 +53,14 @@ public:
     void addBufferedRange(const MediaTime& start, const MediaTime& end, AddTimeRangeOption = AddTimeRangeOption::None);
     void addSample(MediaSample&);
 
-    bool updateMinimumUpcomingPresentationTime();
-
-    bool reenqueueMediaForTime(const MediaTime&, const MediaTime& timeFudgeFactor);
+    bool reenqueueMediaForTime(const MediaTime&, const MediaTime& timeFudgeFactor, bool isEnded = false);
     MediaTime findSeekTimeForTargetTime(const MediaTime& targetTime, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
     int64_t removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentTime);
     PlatformTimeRanges removeSamples(const DecodeOrderSampleMap::MapType&, ASCIILiteral);
     int64_t codedFramesIntervalSize(const MediaTime& start, const MediaTime& end);
+
+    RefPtr<MediaSample> nextSample();
+    size_t remainingSamples() const { return decodeQueue().size(); }
 
     void resetTimestampOffset();
     void reset();
@@ -78,7 +80,6 @@ public:
     const MediaTime& highestEnqueuedPresentationTime() const { return m_highestEnqueuedPresentationTime; }
     void setHighestEnqueuedPresentationTime(MediaTime timestamp) { m_highestEnqueuedPresentationTime = WTFMove(timestamp); }
     const MediaTime& minimumEnqueuedPresentationTime() const { return m_minimumEnqueuedPresentationTime; }
-    void setMinimumEnqueuedPresentationTime(MediaTime timestamp) { m_minimumEnqueuedPresentationTime = WTFMove(timestamp); }
 
     const DecodeOrderSampleMap::KeyType& lastEnqueuedDecodeKey() const { return m_lastEnqueuedDecodeKey; }
     void setLastEnqueuedDecodeKey(DecodeOrderSampleMap::KeyType key) { m_lastEnqueuedDecodeKey = WTFMove(key); }
@@ -98,21 +99,17 @@ public:
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool needsReenqueueing() const { return m_needsReenqueueing; }
     void setNeedsReenqueueing(bool flag) { m_needsReenqueueing = flag; }
-    bool needsMinimumUpcomingPresentationTimeUpdating() const { return m_needsMinimumUpcomingPresentationTimeUpdating; }
-    void setNeedsMinimumUpcomingPresentationTimeUpdating(bool flag) { m_needsMinimumUpcomingPresentationTimeUpdating = flag; }
 
     const SampleMap& samples() const { return m_samples; }
     SampleMap& samples() { return m_samples; }
-    const DecodeOrderSampleMap::MapType& decodeQueue() const { return m_decodeQueue; }
-    DecodeOrderSampleMap::MapType& decodeQueue() { return m_decodeQueue; }
     const RefPtr<MediaDescription>& description() const { return m_description; }
     const PlatformTimeRanges& buffered() const { return m_buffered; }
     PlatformTimeRanges& buffered() { return m_buffered; }
 
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*);
+    void setLogger(const Logger&, uint64_t);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "TrackBuffer"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -120,6 +117,11 @@ public:
 private:
     friend UniqueRef<TrackBuffer> WTF::makeUniqueRefWithoutFastMallocCheck<TrackBuffer>(RefPtr<WebCore::MediaDescription>&&, const WTF::MediaTime&);
     TrackBuffer(RefPtr<MediaDescription>&&, const MediaTime&);
+
+    const DecodeOrderSampleMap::MapType& decodeQueue() const { return m_decodeQueue; }
+    DecodeOrderSampleMap::MapType& decodeQueue() { return m_decodeQueue; }
+    void updateMinimumUpcomingPresentationTime();
+    void clearDecodeQueue();
 
     SampleMap m_samples;
     DecodeOrderSampleMap::MapType m_decodeQueue;
@@ -145,14 +147,14 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
 #endif
 
     uint32_t m_lastFrameTimescale { 0 };
     bool m_needRandomAccessFlag { true };
     bool m_enabled { false };
     bool m_needsReenqueueing { false };
-    bool m_needsMinimumUpcomingPresentationTimeUpdating { false };
+    bool m_hasOutOfOrderFrames { false };
 };
 
 } // namespace WebCore

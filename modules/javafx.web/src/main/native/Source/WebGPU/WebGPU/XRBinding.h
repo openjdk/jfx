@@ -29,7 +29,7 @@
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/WeakPtr.h>
 
 struct WGPUXRBindingImpl {
@@ -43,8 +43,8 @@ enum class XREye : uint8_t;
 class XRProjectionLayer;
 class XRSubImage;
 
-class XRBinding : public WGPUXRBindingImpl, public RefCounted<XRBinding>, public CanMakeWeakPtr<XRBinding> {
-    WTF_MAKE_FAST_ALLOCATED;
+class XRBinding : public RefCountedAndCanMakeWeakPtr<XRBinding>, public WGPUXRBindingImpl {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRBinding);
 public:
     static Ref<XRBinding> create(Device& device)
     {
@@ -61,14 +61,14 @@ public:
 
     bool isValid() const;
     Ref<XRProjectionLayer> createXRProjectionLayer(WGPUTextureFormat, WGPUTextureFormat*, WGPUTextureUsageFlags, double);
-    RefPtr<XRSubImage> getViewSubImage(WGPUXREye);
-    Device& device();
+    RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&);
+    Device& device() { return m_device; }
 
 private:
     XRBinding(bool, Device&);
     XRBinding(Device&);
 
-    Ref<Device> m_device;
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU

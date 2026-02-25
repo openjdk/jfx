@@ -32,6 +32,8 @@
 
 #if ENABLE(ASSEMBLER)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 namespace Probe {
 
@@ -136,7 +138,7 @@ Page* Stack::ensurePageFor(void* address)
     // before allocating a new one,
     void* baseAddress = Page::baseAddressFor(address);
     auto it = m_pages.find(baseAddress);
-    if (LIKELY(it != m_pages.end()))
+    if (it != m_pages.end()) [[likely]]
         m_lastAccessedPage = it->value.get();
     else {
         std::unique_ptr<Page> page = makeUnique<Page>(baseAddress);
@@ -161,5 +163,7 @@ void* Stack::lowWatermarkFromVisitingDirtyPages()
 
 } // namespace Probe
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

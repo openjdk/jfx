@@ -27,6 +27,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "SpeechRecognitionConnection.h"
 #include "SpeechRecognitionConnectionClient.h"
 #include "SpeechRecognitionResult.h"
@@ -39,11 +40,12 @@ class SpeechRecognitionResult;
 class SpeechRecognition final : public SpeechRecognitionConnectionClient, public ActiveDOMObject, public RefCounted<SpeechRecognition>, public EventTarget  {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechRecognition);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<SpeechRecognition> create(Document&);
 
-    using SpeechRecognitionConnectionClient::weakPtrFactory;
-    using SpeechRecognitionConnectionClient::WeakValueType;
-    using SpeechRecognitionConnectionClient::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(SpeechRecognitionConnectionClient);
 
     const String& lang() const { return m_lang; }
     void setLang(String&& lang) { m_lang = WTFMove(lang); }
@@ -60,10 +62,6 @@ public:
     ExceptionOr<void> startRecognition();
     void stopRecognition();
     void abortRecognition();
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     virtual ~SpeechRecognition();
 
@@ -109,7 +107,7 @@ private:
 
     State m_state { State::Inactive };
     Vector<Ref<SpeechRecognitionResult>> m_finalResults;
-    RefPtr<SpeechRecognitionConnection> m_connection;
+    const RefPtr<SpeechRecognitionConnection> m_connection;
 };
 
 } // namespace WebCore

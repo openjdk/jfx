@@ -28,16 +28,24 @@
 #include "ActiveDOMObject.h"
 #include "Document.h"
 #include "Element.h"
-#include "ExceptionOr.h"
+#include "EventLoop.h"
 #include "ImageBuffer.h"
-#include "JSValueInWrappedObject.h"
 #include "MutableStyleProperties.h"
 #include "Styleable.h"
-#include "ViewTransitionTypeSet.h"
 #include "ViewTransitionUpdateCallback.h"
+#include "VisibilityChangeClient.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
+
+namespace JSC {
+class JSValue;
+}
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -46,6 +54,8 @@ class DeferredPromise;
 class RenderLayerModelObject;
 class RenderViewTransitionCapture;
 class RenderLayerModelObject;
+class ViewTransitionTypeSet;
+template<typename> class ExceptionOr;
 
 enum class ViewTransitionPhase : uint8_t {
     PendingCapture,
@@ -56,18 +66,27 @@ enum class ViewTransitionPhase : uint8_t {
 };
 
 struct CapturedElement {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CapturedElement);
 public:
+    struct State {
+        LayoutRect overflowRect;
+        LayoutPoint layerToLayoutOffset;
+        LayoutSize size;
+        LayoutSize subpixelOffset;
+        RefPtr<MutableStyleProperties> properties;
+        bool intersectsViewport { false };
+        bool isRootElement { false };
+    };
+
     // std::nullopt represents an non-capturable element.
     // nullptr represents an absent snapshot on an capturable element.
     std::optional<RefPtr<ImageBuffer>> oldImage;
-    LayoutRect oldOverflowRect;
-    LayoutPoint oldLayerToLayoutOffset;
-    LayoutSize oldSize;
-    RefPtr<MutableStyleProperties> oldProperties;
-    WeakStyleable newElement;
-    Vector<AtomString> classList;
+    State oldState;
 
+    WeakStyleable newElement;
+    State newState;
+
+    Vector<AtomString> classList;
     RefPtr<MutableStyleProperties> groupStyleProperties;
 };
 
@@ -141,24 +160,25 @@ private:
 };
 
 struct ViewTransitionParams {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ViewTransitionParams);
 public:
 
     OrderedNamedElementsMap namedElements;
     FloatSize initialLargeViewportSize;
     float initialPageZoom;
+    MonotonicTime startTime;
 };
 
-class ViewTransition : public RefCounted<ViewTransition>, public CanMakeWeakPtr<ViewTransition>, public ActiveDOMObject {
+class ViewTransition : public RefCounted<ViewTransition>, public VisibilityChangeClient, public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(ViewTransition);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<ViewTransition> createSamePage(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     static RefPtr<ViewTransition> resolveInboundCrossDocumentViewTransition(Document&, std::unique_ptr<ViewTransitionParams>);
     static Ref<ViewTransition> setupCrossDocumentViewTransition(Document&);
     ~ViewTransition();
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
     void skipTransition();
     void skipViewTransition(ExceptionOr<JSC::JSValue>&&);
@@ -167,6 +187,8 @@ public:
     void handleTransitionFrame();
 
     void activateViewTransition();
+
+    LayoutRect containingBlockRect();
 
     UniqueRef<ViewTransitionParams> takeViewTransitionParams();
 
@@ -177,21 +199,25 @@ public:
     ViewTransitionPhase phase() const { return m_phase; }
     const OrderedNamedElementsMap& namedElements() const { return m_namedElements; };
 
-    Document* document() const { return downcast<Document>(scriptExecutionContext()); }
+    Document* document() const;
     RefPtr<Document> protectedDocument() const { return document(); }
 
     bool documentElementIsCaptured() const;
 
     const ViewTransitionTypeSet& types() const { return m_types; }
-    void setTypes(Ref<ViewTransitionTypeSet>&& newTypes) { m_types = WTFMove(newTypes); }
+    void setTypes(Ref<ViewTransitionTypeSet>&&);
 
     RenderViewTransitionCapture* viewTransitionNewPseudoForCapturedElement(RenderLayerModelObject&);
+
+    static constexpr Seconds defaultTimeout = 4_s;
 
 private:
     ViewTransition(Document&, RefPtr<ViewTransitionUpdateCallback>&&, Vector<AtomString>&&);
     ViewTransition(Document&, Vector<AtomString>&&);
 
-    Ref<MutableStyleProperties> copyElementBaseProperties(RenderLayerModelObject&, LayoutSize&);
+    void copyElementBaseProperties(RenderLayerModelObject&, CapturedElement::State&);
+    bool updatePropertiesForGroupPseudo(CapturedElement&, const AtomString&);
+    LayoutRect captureOverflowRect(RenderLayerModelObject& renderer);
 
     // Setup view transition sub-algorithms.
     ExceptionOr<void> captureOldState();
@@ -201,13 +227,21 @@ private:
 
     void callUpdateCallback();
 
-    ExceptionOr<void> updatePseudoElementStyles();
+    ExceptionOr<void> updatePseudoElementStylesRead();
+    void updatePseudoElementStylesWrite();
+    ExceptionOr<void> updatePseudoElementRenderers();
     ExceptionOr<void> checkForViewportSizeChange();
 
     void clearViewTransition();
 
+    // VisibilityChangeClient.
+    void visibilityStateChanged() final;
+
     // ActiveDOMObject.
     void stop() final;
+    bool virtualHasPendingActivity() const final;
+
+    bool isCrossDocument() { return m_isCrossDocument; }
 
     OrderedNamedElementsMap m_namedElements;
     ViewTransitionPhase m_phase { ViewTransitionPhase::PendingCapture };
@@ -215,7 +249,7 @@ private:
     float m_initialPageZoom;
 
     RefPtr<ViewTransitionUpdateCallback> m_updateCallback;
-    bool m_shouldCallUpdateCallback { false };
+    bool m_isCrossDocument { false };
 
     using PromiseAndWrapper = std::pair<Ref<DOMPromise>, Ref<DeferredPromise>>;
     PromiseAndWrapper m_ready;
@@ -226,4 +260,6 @@ private:
     Ref<ViewTransitionTypeSet> m_types;
 };
 
-}
+WTF::TextStream& operator<<(WTF::TextStream&, ViewTransitionPhase);
+
+} // namespace WebCore

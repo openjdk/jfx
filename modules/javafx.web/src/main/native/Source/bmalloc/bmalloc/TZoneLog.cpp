@@ -23,12 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "TZoneLog.h"
 
 #if BUSE(TZONE)
 
 #include "BAssert.h"
-#include <mutex.h>
+#include <Mutex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -40,6 +41,12 @@ TZoneLog* TZoneLog::theTZoneLog = nullptr;
 void TZoneLog::init()
 {
     auto logEnv = getenv("TZONE_LOGGING");
+
+#if BUSE(OS_LOG)
+    // Enable OS Logging by default
+    if (!logEnv)
+        logEnv = const_cast<char*>("oslog");
+#endif
 
     if (logEnv) {
         if (!strcasecmp(logEnv, "stderr"))
@@ -53,7 +60,7 @@ void TZoneLog::init()
     }
 }
 
-extern TZoneLog& TZoneLog::singleton()
+TZoneLog& TZoneLog::singleton()
 {
     if (!theTZoneLog)
         ensureSingleton();
@@ -69,15 +76,22 @@ extern void TZoneLog::log(const char* format, ...)
 
     va_list argList;
     va_start(argList, format);
+
+#if BUSE(OS_LOG)
     if (m_logDest == LogDestination::OSLog)
         osLogWithLineBuffer(format, argList);
     else if (m_logDest == LogDestination::Stderr)
         vfprintf(stderr, format, argList);
+#else
+    if (m_logDest == LogDestination::Stderr)
+        vfprintf(stderr, format, argList);
+#endif
+
     va_end(argList);
 }
 
 #if BUSE(OS_LOG)
-BATTRIBUTE_PRINTF(3, 0)
+BATTRIBUTE_PRINTF(2, 0)
 void TZoneLog::osLogWithLineBuffer(const char* format, va_list list)
 {
     if (!format)

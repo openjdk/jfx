@@ -50,13 +50,13 @@ public:
     void setAvailableLineWidthOverride(AvailableLineWidthOverride availableLineWidthOverride) { m_availableLineWidthOverride = availableLineWidthOverride; }
     const AvailableLineWidthOverride& availableLineWidthOverride() const { return m_availableLineWidthOverride; }
 
-    void setClampedLineIndex(size_t lineIndex) { m_clampedLineIndex = lineIndex; }
-    std::optional<size_t> clampedLineIndex() const { return m_clampedLineIndex; }
+    void setLegacyClampedLineIndex(size_t lineIndex) { m_legacyClampedLineIndex = lineIndex; }
+    std::optional<size_t> legacyClampedLineIndex() const { return m_legacyClampedLineIndex; }
 
-    void setHyphenationLimitLines(size_t hyphenationLimitLines) { m_hyphenationLimitLines = hyphenationLimitLines; }
+    void setHyphenationLimitLines(size_t hyphenateLimitLines) { m_hyphenateLimitLines = hyphenateLimitLines; }
     void incrementSuccessiveHyphenatedLineCount() { ++m_successiveHyphenatedLineCount; }
     void resetSuccessiveHyphenatedLineCount() { m_successiveHyphenatedLineCount = 0; }
-    bool isHyphenationDisabled() const { return m_hyphenationLimitLines && *m_hyphenationLimitLines <= m_successiveHyphenatedLineCount; }
+    bool isHyphenationDisabled() const { return m_hyphenateLimitLines && *m_hyphenateLimitLines <= m_successiveHyphenatedLineCount; }
 
     void setFirstLineStartTrimForInitialLetter(InlineLayoutUnit trimmedThisMuch) { m_firstLineStartTrimForInitialLetter = trimmedThisMuch; }
     InlineLayoutUnit firstLineStartTrimForInitialLetter() const { return m_firstLineStartTrimForInitialLetter; }
@@ -75,8 +75,8 @@ private:
     InlineLayoutUnit m_clearGapBeforeFirstLine { 0.f };
     InlineLayoutUnit m_clearGapAfterLastLine { 0.f };
     InlineLayoutUnit m_firstLineStartTrimForInitialLetter { 0.f };
-    std::optional<size_t> m_clampedLineIndex { };
-    std::optional<size_t> m_hyphenationLimitLines { };
+    std::optional<size_t> m_legacyClampedLineIndex { };
+    std::optional<size_t> m_hyphenateLimitLines { };
     size_t m_successiveHyphenatedLineCount { 0 };
     // FIXME: This is required by the integaration codepath.
     HashMap<const ElementBox*, LayoutUnit> m_nestedListMarkerOffsets;

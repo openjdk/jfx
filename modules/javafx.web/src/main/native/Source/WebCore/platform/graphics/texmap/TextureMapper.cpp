@@ -21,59 +21,31 @@
 
 #include "config.h"
 #include "TextureMapper.h"
-#if PLATFORM(JAVA)
-#include "BitmapTexturePool.h"
-#include "FilterOperations.h"
-#include "GraphicsLayer.h"
-#include "Timer.h"
 
-namespace WebCore {
-
-TextureMapper::TextureMapper() = default;
-
-TextureMapper::~TextureMapper() = default;
-
-RefPtr<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, const BitmapTexture::Flags flags)
-{
-    RefPtr<BitmapTexture> selectedTexture = m_texturePool->acquireTexture(size, flags);
-    selectedTexture->reset(size, flags);
-    return selectedTexture;
-}
-
-#if USE(GRAPHICS_LAYER_WC)
-void TextureMapper::releaseUnusedTexturesNow()
-{
-    // GraphicsLayerWC runs TextureMapper in the OpenGL thread of the
-    // GPU process that doesn't use RunLoop. RunLoop::Timer doesn't
-    // work in the thread.
-    m_texturePool->releaseUnusedTexturesTimerFired();
-}
-#endif
-
-std::unique_ptr<TextureMapper> TextureMapper::create()
-{
-    return platformCreateAccelerated();
-}
-
-} // namespace
-#else
 #if USE(TEXTURE_MAPPER)
 
 #include "BitmapTexture.h"
+#include "ClipPath.h"
 #include "FilterOperations.h"
+#include "FloatPolygon.h"
 #include "FloatQuad.h"
 #include "FloatRoundedRect.h"
+#if !PLATFORM(JAVA)
 #include "GLContext.h"
+#endif
 #include "GraphicsContext.h"
+#include "GraphicsTypesGL.h"
 #include "Image.h"
 #include "LengthFunctions.h"
 #include "TextureMapperFlags.h"
 #include "TextureMapperShaderProgram.h"
 #include <wtf/HashMap.h>
+#include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(CAIRO)
 #include "CairoUtilities.h"
@@ -84,16 +56,19 @@ std::unique_ptr<TextureMapper> TextureMapper::create()
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapper);
+
 class TextureMapperGLData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(TextureMapperGLData);
 public:
     explicit TextureMapperGLData(void*);
     ~TextureMapperGLData();
 
     void initializeStencil();
     GLuint getStaticVBO(GLenum target, GLsizeiptr, const void* data);
-    GLuint getVAO();
     Ref<TextureMapperShaderProgram> getShaderProgram(TextureMapperShaderProgram::Options);
+    Ref<TextureMapperGPUBuffer> getBufferFromPool(size_t, TextureMapperGPUBuffer::Type);
+    int32_t maxTextureSize() const;
 
     TransformationMatrix projectionMatrix;
     TextureMapper::FlipY flipY { TextureMapper::FlipY::No };
@@ -103,8 +78,8 @@ public:
     bool didModifyStencil { false };
     GLint previousScissorState { 0 };
     GLint previousDepthState { 0 };
-    GLint viewport[4] { 0, };
-    GLint previousScissor[4] { 0, };
+    std::array<GLint, 4> viewport { };
+    std::array<GLint, 4> previousScissor { };
     double zNear { 0 };
     double zFar { 0 };
     RefPtr<BitmapTexture> currentSurface;
@@ -143,14 +118,20 @@ private:
             return map;
         }
 
-        SharedGLData() = default;
+        SharedGLData()
+        {
+        #if !PLATFORM(JAVA)
+            glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m_maxTextureSize);
+        #endif
+        }
 
         HashMap<unsigned, RefPtr<TextureMapperShaderProgram>> m_programs;
+        int32_t m_maxTextureSize;
     };
 
-    Ref<SharedGLData> m_sharedGLData;
+    const Ref<SharedGLData> m_sharedGLData;
     HashMap<const void*, GLuint> m_vbos;
-    GLuint m_vao { 0 };
+    HashMap<uint64_t, Vector<Ref<TextureMapperGPUBuffer>>> m_buffers;
 };
 
 TextureMapperGLData::TextureMapperGLData(void* platformContext)
@@ -160,12 +141,18 @@ TextureMapperGLData::TextureMapperGLData(void* platformContext)
 
 TextureMapperGLData::~TextureMapperGLData()
 {
+#if !PLATFORM(JAVA)
     for (auto& entry : m_vbos)
         glDeleteBuffers(1, &entry.value);
+
+    for (auto& entry : m_buffers)
+        entry.value.clear();
+#endif
 }
 
 void TextureMapperGLData::initializeStencil()
 {
+#if !PLATFORM(JAVA)
     if (currentSurface) {
         static_cast<BitmapTexture*>(currentSurface.get())->initializeStencil();
         return;
@@ -173,14 +160,15 @@ void TextureMapperGLData::initializeStencil()
 
     if (didModifyStencil)
         return;
-
     glClearStencil(0);
     glClear(GL_STENCIL_BUFFER_BIT);
     didModifyStencil = true;
+#endif
 }
 
 GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const void* data)
 {
+#if !PLATFORM(JAVA)
     auto addResult = m_vbos.ensure(data,
         [target, size, data] {
             GLuint vbo = 0;
@@ -190,20 +178,47 @@ GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const v
             return vbo;
         });
     return addResult.iterator->value;
-}
-
-GLuint TextureMapperGLData::getVAO()
-{
-    return m_vao;
+#endif
+    return 0;
 }
 
 Ref<TextureMapperShaderProgram> TextureMapperGLData::getShaderProgram(TextureMapperShaderProgram::Options options)
 {
+#if !PLATFORM(JAVA)
     ASSERT(!options.isEmpty());
     auto addResult = m_sharedGLData->m_programs.ensure(options.toRaw(), [options] {
         return TextureMapperShaderProgram::create(options);
     });
     return *addResult.iterator->value;
+#endif
+}
+
+Ref<TextureMapperGPUBuffer> TextureMapperGLData::getBufferFromPool(size_t size, TextureMapperGPUBuffer::Type type)
+{
+    if (!size) {
+        // Use static zero buffer
+        static auto zeroBuffer = TextureMapperGPUBuffer::create(size, type, TextureMapperGPUBuffer::Usage::Dynamic);
+        return zeroBuffer;
+    }
+
+    RELEASE_ASSERT(size < std::numeric_limits<uint32_t>::max());
+    uint64_t key = (static_cast<uint64_t>(type) << 32) | static_cast<uint32_t>(size);
+    auto& buffers = m_buffers.ensure(key, [] {
+        return Vector<Ref<TextureMapperGPUBuffer>> { };
+    }).iterator->value;
+
+    for (auto& buffer : buffers) {
+        if (buffer->refCount() == 1)
+            return buffer;
+    }
+
+    buffers.append(TextureMapperGPUBuffer::create(size, type, TextureMapperGPUBuffer::Usage::Dynamic));
+    return buffers.last();
+}
+
+int32_t TextureMapperGLData::maxTextureSize() const
+{
+    return m_sharedGLData->m_maxTextureSize;
 }
 
 std::unique_ptr<TextureMapper> TextureMapper::create()
@@ -212,14 +227,23 @@ std::unique_ptr<TextureMapper> TextureMapper::create()
 }
 
 TextureMapper::TextureMapper()
+#if !PLATFORM(JAVA)
     : m_data(new TextureMapperGLData(GLContext::current()->platformContext()))
+#endif
 {
 }
 
-RefPtr<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
+Ref<BitmapTexture> TextureMapper::acquireTextureFromPool(const IntSize& size, OptionSet<BitmapTexture::Flags> flags)
 {
     return m_texturePool.acquireTexture(size, flags);
 }
+
+#if USE(GBM)
+Ref<BitmapTexture> TextureMapper::createTextureForImage(EGLImage image, OptionSet<BitmapTexture::Flags> flags)
+{
+    return m_texturePool.createTextureForImage(image, flags);
+}
+#endif
 
 #if USE(GRAPHICS_LAYER_WC)
 void TextureMapper::releaseUnusedTexturesNow()
@@ -238,22 +262,25 @@ ClipStack& TextureMapper::clipStack()
 
 void TextureMapper::beginPainting(FlipY flipY, BitmapTexture* surface)
 {
+#if !PLATFORM(JAVA)
     glGetIntegerv(GL_CURRENT_PROGRAM, &data().previousProgram);
     data().previousScissorState = glIsEnabled(GL_SCISSOR_TEST);
     data().previousDepthState = glIsEnabled(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_SCISSOR_TEST);
     data().didModifyStencil = false;
-    glGetIntegerv(GL_VIEWPORT, data().viewport);
-    glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor);
+    glGetIntegerv(GL_VIEWPORT, data().viewport.data());
+    glGetIntegerv(GL_SCISSOR_BOX, data().previousScissor.data());
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flipY == FlipY::Yes ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &data().targetFrameBuffer);
     data().flipY = flipY;
     bindSurface(surface);
+#endif
 }
 
 void TextureMapper::endPainting()
 {
+#if !PLATFORM(JAVA)
     glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
     if (data().didModifyStencil) {
         glClearStencil(1);
@@ -272,10 +299,12 @@ void TextureMapper::endPainting()
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
+#endif
 }
 
 void TextureMapper::drawBorder(const Color& color, float width, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix)
 {
+#if !PLATFORM(JAVA)
     if (clipStack().isCurrentScissorBoxEmpty())
         return;
 
@@ -287,6 +316,7 @@ void TextureMapper::drawBorder(const Color& color, float width, const FloatRect&
     glLineWidth(width);
 
     draw(targetRect, modelViewMatrix, program.get(), GL_LINE_LOOP, !color.isOpaque() ? TextureMapperFlags::ShouldBlend : OptionSet<TextureMapperFlags> { });
+#endif
 }
 
 // FIXME: drawNumber() should save a number texture-atlas and re-use whenever possible.
@@ -320,11 +350,11 @@ void TextureMapper::drawNumber(int number, const Color& color, const FloatPoint&
     IntRect sourceRect(IntPoint::zero(), size);
     IntRect targetRect(roundedIntPoint(targetPoint), size);
 
-    RefPtr<BitmapTexture> texture = m_texturePool.acquireTexture(size, { BitmapTexture::Flags::SupportsAlpha });
+    auto texture = m_texturePool.acquireTexture(size, { BitmapTexture::Flags::SupportsAlpha });
     const unsigned char* bits = cairo_image_surface_get_data(surface);
     int stride = cairo_image_surface_get_stride(surface);
-    texture->updateContents(bits, sourceRect, IntPoint::zero(), stride);
-    drawTexture(*texture, targetRect, modelViewMatrix, 1.0f, AllEdgesExposed::Yes);
+    texture->updateContents(bits, sourceRect, IntPoint::zero(), stride, PixelFormat::BGRA8);
+    drawTexture(texture.get(), targetRect, modelViewMatrix, 1.0f, AllEdgesExposed::Yes);
 
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
@@ -399,7 +429,9 @@ static int computeGaussianKernel(float radius, std::array<float, SimplifiedGauss
     unsigned kernelHalfSize = blurRadiusToKernelHalfSize(radius);
     RELEASE_ASSERT(kernelHalfSize <= GaussianKernelMaxHalfSize);
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     float fullKernel[GaussianKernelMaxHalfSize];
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     fullKernel[0] = 1; // gauss(0, radius);
     float sum = fullKernel[0];
@@ -440,6 +472,7 @@ static int computeGaussianKernel(float radius, std::array<float, SimplifiedGauss
 
 static void prepareFilterProgram(TextureMapperShaderProgram& program, const FilterOperation& operation)
 {
+#if !PLATFORM(JAVA)
     glUseProgram(program.programID());
 
     switch (operation.type()) {
@@ -460,6 +493,7 @@ static void prepareFilterProgram(TextureMapperShaderProgram& program, const Filt
     default:
         break;
     }
+#endif
 }
 
 static TransformationMatrix colorSpaceMatrixForFlags(OptionSet<TextureMapperFlags> flags)
@@ -476,25 +510,65 @@ static TransformationMatrix colorSpaceMatrixForFlags(OptionSet<TextureMapperFlag
 
 static void prepareRoundedRectClip(TextureMapperShaderProgram& program, const float* rects, const float* transforms, int nRects)
 {
+#if !PLATFORM(JAVA)
     glUseProgram(program.programID());
 
     glUniform1i(program.roundedRectNumberLocation(), nRects);
     glUniform4fv(program.roundedRectLocation(), 3 * nRects, rects);
     glUniformMatrix4fv(program.roundedRectInverseTransformMatrixLocation(), nRects, false, transforms);
+#endif
 }
 
 void TextureMapper::drawTexture(const BitmapTexture& texture, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity, AllEdgesExposed allEdgesExposed)
 {
+#if !PLATFORM(JAVA)
     if (clipStack().isCurrentScissorBoxEmpty())
         return;
 
     SetForScope filterOperation(data().filterOperation, texture.filterOperation());
 
     drawTexture(texture.id(), texture.colorConvertFlags() | (texture.isOpaque() ? OptionSet<TextureMapperFlags> { } : TextureMapperFlags::ShouldBlend), targetRect, matrix, opacity, allEdgesExposed);
+#endif
 }
+
+#if ENABLE(DAMAGE_TRACKING)
+void TextureMapper::drawTextureFragment(const BitmapTexture& sourceTexture, const FloatRect& sourceRect, const FloatRect& targetRect)
+{
+#if !PLATFORM(JAVA)
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram({ TextureMapperShaderProgram::TextureRGB });
+    const auto& textureSize = sourceTexture.size();
+
+    glUseProgram(program->programID());
+
+    auto textureFragmentMatrix = TransformationMatrix::identity;
+
+    textureFragmentMatrix.translate3d(
+        static_cast<double>(sourceRect.x()) / textureSize.width(),
+        static_cast<double>(sourceRect.y()) / textureSize.height(),
+        0
+    ).scale3d(
+        static_cast<double>(sourceRect.width()) / textureSize.width(),
+        static_cast<double>(sourceRect.height()) / textureSize.height(),
+        1
+    );
+
+    program->setMatrix(program->textureSpaceMatrixLocation(), textureFragmentMatrix);
+    program->setMatrix(program->textureColorSpaceMatrixLocation(), colorSpaceMatrixForFlags(sourceTexture.colorConvertFlags()));
+    glUniform1f(program->opacityLocation(), 1.0);
+    glUniform2f(program->texelSizeLocation(), 1.f / textureSize.width(), 1.f / textureSize.height());
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, sourceTexture.id());
+    glUniform1i(program->samplerLocation(), 0);
+
+    draw(targetRect, TransformationMatrix(), program.get(), GL_TRIANGLE_FAN, { });
+#endif
+}
+#endif
 
 void TextureMapper::drawTexture(GLuint texture, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, AllEdgesExposed allEdgesExposed)
 {
+#if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options;
@@ -535,6 +609,7 @@ void TextureMapper::drawTexture(GLuint texture, OptionSet<TextureMapperFlags> fl
         prepareRoundedRectClip(program.get(), clipStack().roundedRectComponents(), clipStack().roundedRectInverseTransformComponents(), clipStack().roundedRectCount());
 
     drawTexturedQuadWithProgram(program.get(), texture, flags, targetRect, modelViewMatrix, opacity);
+#endif
 }
 
 static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTransform, OptionSet<TextureMapperFlags> flags)
@@ -559,6 +634,7 @@ static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTr
 
 void TextureMapper::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, std::optional<GLuint> alphaPlane, AllEdgesExposed allEdgesExposed)
 {
+#if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = alphaPlane ? TextureMapperShaderProgram::TextureYUVA : TextureMapperShaderProgram::TextureYUV;
@@ -609,10 +685,12 @@ void TextureMapper::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, 
     glUseProgram(program->programID());
     glUniformMatrix4fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
     drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, targetRect, modelViewMatrix, opacity);
+#endif
 }
 
 void TextureMapper::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textures, bool uvReversed, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, AllEdgesExposed allEdgesExposed)
 {
+#if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = uvReversed ?
@@ -657,10 +735,12 @@ void TextureMapper::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textur
     glUseProgram(program->programID());
     glUniformMatrix4fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
     drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, targetRect, modelViewMatrix, opacity);
+#endif
 }
 
 void TextureMapper::drawTexturePackedYUV(GLuint texture, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, AllEdgesExposed allEdgesExposed)
 {
+#if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TexturePackedYUV;
@@ -703,10 +783,12 @@ void TextureMapper::drawTexturePackedYUV(GLuint texture, const std::array<GLfloa
     glUseProgram(program->programID());
     glUniformMatrix4fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
     drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, targetRect, modelViewMatrix, opacity);
+#endif
 }
 
 void TextureMapper::drawSolidColor(const FloatRect& rect, const TransformationMatrix& matrix, const Color& color, bool isBlendingAllowed)
 {
+#if !PLATFORM(JAVA)
     OptionSet<TextureMapperFlags> flags;
     TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::SolidColor;
     if (!matrix.mapQuad(rect).isRectilinear()) {
@@ -719,7 +801,7 @@ void TextureMapper::drawSolidColor(const FloatRect& rect, const TransformationMa
     if (clipStack().isRoundedRectClipEnabled()) {
         options.add(TextureMapperShaderProgram::RoundedRectClip);
         if (isBlendingAllowed)
-        flags.add(TextureMapperFlags::ShouldBlend);
+            flags.add(TextureMapperFlags::ShouldBlend);
     }
 
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
@@ -734,17 +816,21 @@ void TextureMapper::drawSolidColor(const FloatRect& rect, const TransformationMa
         flags.add(TextureMapperFlags::ShouldBlend);
 
     draw(rect, matrix, program.get(), GL_TRIANGLE_FAN, flags);
+#endif
 }
 
 void TextureMapper::clearColor(const Color& color)
 {
+#if !PLATFORM(JAVA)
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     glClearColor(r, g, b, a);
     glClear(GL_COLOR_BUFFER_BIT);
+#endif
 }
 
 void TextureMapper::drawEdgeTriangles(TextureMapperShaderProgram& program)
 {
+#if !PLATFORM(JAVA)
     const GLfloat left = 0;
     const GLfloat top = 0;
     const GLfloat right = 1;
@@ -771,20 +857,24 @@ void TextureMapper::drawEdgeTriangles(TextureMapperShaderProgram& program)
     glVertexAttribPointer(program.vertexLocation(), 4, GL_FLOAT, false, 0, 0);
     glDrawArrays(GL_TRIANGLES, 0, 12);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
 }
 
 void TextureMapper::drawUnitRect(TextureMapperShaderProgram& program, GLenum drawingMode)
 {
+#if !PLATFORM(JAVA)
     static const GLfloat unitRect[] = { 0, 0, 1, 0, 1, 1, 0, 1 };
     GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8, unitRect);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(program.vertexLocation(), 2, GL_FLOAT, false, 0, 0);
     glDrawArrays(drawingMode, 0, 4);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
 }
 
 void TextureMapper::draw(const FloatRect& rect, const TransformationMatrix& modelViewMatrix, TextureMapperShaderProgram& program, GLenum drawingMode, OptionSet<TextureMapperFlags> flags)
 {
+#if !PLATFORM(JAVA)
     TransformationMatrix matrix(modelViewMatrix);
     matrix.multiply(TransformationMatrix::rectToRect(FloatRect(0, 0, 1, 1), rect));
 
@@ -811,10 +901,12 @@ void TextureMapper::draw(const FloatRect& rect, const TransformationMatrix& mode
     glDisableVertexAttribArray(program.vertexLocation());
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
+#endif
 }
 
 void TextureMapper::drawTexturedQuadWithProgram(TextureMapperShaderProgram& program, const Vector<std::pair<GLuint, GLuint> >& texturesAndSamplers, OptionSet<TextureMapperFlags> flags, const FloatRect& rect, const TransformationMatrix& modelViewMatrix, float opacity)
 {
+#if !PLATFORM(JAVA)
     glUseProgram(program.programID());
 
     bool repeatWrap = m_wrapMode == WrapMode::Repeat && GLContext::current()->glExtensions().OES_texture_npot;
@@ -854,15 +946,19 @@ void TextureMapper::drawTexturedQuadWithProgram(TextureMapperShaderProgram& prog
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         }
     }
+#endif
 }
 
 void TextureMapper::drawTexturedQuadWithProgram(TextureMapperShaderProgram& program, uint32_t texture, OptionSet<TextureMapperFlags> flags, const FloatRect& rect, const TransformationMatrix& modelViewMatrix, float opacity)
 {
+#if !PLATFORM(JAVA)
     drawTexturedQuadWithProgram(program, { { texture, program.samplerLocation() } }, flags, rect, modelViewMatrix, opacity);
+#endif
 }
 
 void TextureMapper::drawTextureCopy(const BitmapTexture& sourceTexture, const FloatRect& sourceRect, const FloatRect& targetRect)
 {
+#if !PLATFORM(JAVA)
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram({ TextureMapperShaderProgram::TextureCopy });
     const auto& textureSize = sourceTexture.size();
 
@@ -889,10 +985,12 @@ void TextureMapper::drawTextureCopy(const BitmapTexture& sourceTexture, const Fl
     glUniform1i(program->samplerLocation(), 0);
 
     draw(targetRect, TransformationMatrix(), program.get(), GL_TRIANGLE_FAN, { });
+#endif
 }
 
 void TextureMapper::drawBlurred(const BitmapTexture& sourceTexture, const FloatRect& rect, float radius, Direction direction, bool alphaBlur)
 {
+#if !PLATFORM(JAVA)
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram({
         alphaBlur ? TextureMapperShaderProgram::AlphaBlur : TextureMapperShaderProgram::BlurFilter,
     });
@@ -933,6 +1031,7 @@ void TextureMapper::drawBlurred(const BitmapTexture& sourceTexture, const FloatR
     glUniform1i(program->samplerLocation(), 0);
 
     draw(rect, TransformationMatrix(), program.get(), GL_TRIANGLE_FAN, { });
+#endif
 }
 
 RefPtr<BitmapTexture> TextureMapper::applyBlurFilter(RefPtr<BitmapTexture>& sourceTexture, const BlurFilterOperation& blurFilter)
@@ -1112,7 +1211,7 @@ RefPtr<BitmapTexture> TextureMapper::applyDropShadowFilter(RefPtr<BitmapTexture>
 
         std::swap(resultTexture, sourceTexture);
     }
-
+    #if !PLATFORM(JAVA)
     { // Convert the blurred image to a shadow and draw the original content over the shadow
         bindSurface(resultTexture.get());
 
@@ -1135,6 +1234,7 @@ RefPtr<BitmapTexture> TextureMapper::applyDropShadowFilter(RefPtr<BitmapTexture>
         FloatRect targetRect(FloatPoint::zero(), textureSize);
         drawTexturedQuadWithProgram(program.get(), sourceTexture->id(), { }, targetRect, TransformationMatrix(), 1);
     }
+    #endif
 
     return resultTexture;
 }
@@ -1222,13 +1322,17 @@ TextureMapper::~TextureMapper()
 
 void TextureMapper::bindDefaultSurface()
 {
+#if !PLATFORM(JAVA)
     glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
     auto& viewport = data().viewport;
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     glDisable(GL_DEPTH_TEST);
     m_clipStack.apply();
     data().currentSurface = nullptr;
     updateProjectionMatrix();
+#endif
 }
 
 void TextureMapper::bindSurface(BitmapTexture *surface)
@@ -1297,6 +1401,7 @@ bool TextureMapper::beginRoundedRectClip(const TransformationMatrix& modelViewMa
 
 void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const FloatRoundedRect& targetRect)
 {
+#if !PLATFORM(JAVA)
     clipStack().push();
     if (beginRoundedRectClip(modelViewMatrix, targetRect))
         return;
@@ -1350,6 +1455,76 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     // Increase stencilIndex and apply stencil testing.
     clipStack().setStencilIndex(stencilIndex * 2);
     clipStack().applyIfNeeded();
+#endif
+}
+
+void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const ClipPath& clipPath)
+{
+#if !PLATFORM(JAVA)
+    clipStack().push();
+    data().initializeStencil();
+
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(TextureMapperShaderProgram::SolidColor);
+
+    glUseProgram(program->programID());
+    glEnableVertexAttribArray(program->vertexLocation());
+
+    // Compute the scissor rectangle from the clip path bounding box.
+    IntRect scissorRect = modelViewMatrix.mapQuad(clipPath.bounds()).enclosingBoundingBox();
+    IntRect viewport(data().viewport[0], data().viewport[1], data().viewport[2], data().viewport[3]);
+    scissorRect.intersect(viewport);
+
+    // Set up the scissor rectangle to limit stencil operations to the clip bounds.
+    glScissor(scissorRect.x(), (data().flipY == FlipY::Yes) ? scissorRect.y() : viewport.height() - scissorRect.maxY(),
+        scissorRect.width(), scissorRect.height());
+
+    int stencilIndex = clipStack().getStencilIndex();
+
+    glEnable(GL_STENCIL_TEST);
+
+    // Make sure we don't do any actual drawing.
+    glStencilFunc(GL_NEVER, stencilIndex, stencilIndex);
+
+    // Operate only on the stencilIndex and above.
+    glStencilMask(0xff & ~(stencilIndex - 1));
+
+    // Clear the stencil buffer at the current index.
+    static const TransformationMatrix fullProjectionMatrix = TransformationMatrix::rectToRect(FloatRect(0, 0, 1, 1), FloatRect(-1, -1, 2, 2));
+    static const GLfloat unitRect[] = { 0, 0, 1, 0, 1, 1, 0, 1 };
+    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GLfloat) * 8, unitRect);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(program->vertexLocation(), 2, GL_FLOAT, false, 0, 0);
+    program->setMatrix(program->projectionMatrixLocation(), fullProjectionMatrix);
+    program->setMatrix(program->modelViewMatrixLocation(), TransformationMatrix());
+    glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    // Now apply the current index to the new polygon.
+    glBindBuffer(GL_ARRAY_BUFFER, clipPath.bufferID());
+    glVertexAttribPointer(program->vertexLocation(), 2, GL_FLOAT, false, 0, clipPath.bufferDataOffsetAsPtr());
+    program->setMatrix(program->projectionMatrixLocation(), data().projectionMatrix);
+    program->setMatrix(program->modelViewMatrixLocation(), modelViewMatrix);
+    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, clipPath.numberOfVertices());
+
+    // Clear the state.
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glDisableVertexAttribArray(program->vertexLocation());
+    glStencilMask(0);
+
+    // Store the scissor box in the clip stack to prevent it from being reset.
+    clipStack().intersect(scissorRect);
+
+    // Increase stencilIndex and apply stencil testing.
+    clipStack().setStencilIndex(stencilIndex * 2);
+    clipStack().applyIfNeeded();
+#endif
+}
+
+void TextureMapper::beginClipWithoutApplying(const TransformationMatrix& modelViewMatrix, const FloatRect& targetRect)
+{
+    clipStack().push();
+    clipStack().intersect(enclosingIntRect(modelViewMatrix.mapRect(targetRect)));
 }
 
 void TextureMapper::endClip()
@@ -1358,9 +1533,19 @@ void TextureMapper::endClip()
     clipStack().applyIfNeeded();
 }
 
+void TextureMapper::endClipWithoutApplying()
+{
+    clipStack().pop();
+}
+
 IntRect TextureMapper::clipBounds()
 {
     return clipStack().current().scissorBox;
+}
+
+IntSize TextureMapper::maxTextureSize() const
+{
+    return IntSize(data().maxTextureSize(), data().maxTextureSize());
 }
 
 void TextureMapper::setDepthRange(double zNear, double zFar)
@@ -1374,6 +1559,7 @@ std::pair<double, double> TextureMapper::depthRange() const
 {
     return { data().zNear, data().zFar };
 }
+
 void TextureMapper::updateProjectionMatrix()
 {
     bool flipY;
@@ -1382,20 +1568,34 @@ void TextureMapper::updateProjectionMatrix()
         size = data().currentSurface->size();
         flipY = true;
     } else {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib/Win port
         size = IntSize(data().viewport[2], data().viewport[3]);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         flipY = data().flipY == FlipY::Yes;
     }
+
     data().projectionMatrix = createProjectionMatrix(size, flipY, data().zNear, data().zFar);
 }
 
 void TextureMapper::drawTextureExternalOES(GLuint texture, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
 {
+#if !PLATFORM(JAVA)
     flags.add(TextureMapperFlags::ShouldUseExternalOESTextureRect);
     Ref<TextureMapperShaderProgram> program = data().getShaderProgram(TextureMapperShaderProgram::Option::TextureExternalOES);
     drawTexturedQuadWithProgram(program.get(), { { texture, program->externalOESTextureLocation() } }, flags, targetRect, modelViewMatrix, opacity);
+#endif
+}
+
+Ref<TextureMapperGPUBuffer> TextureMapper::acquireBufferFromPool(size_t size, TextureMapperGPUBuffer::Type type)
+{
+    size_t ceil = roundUpToPowerOfTwo(size);
+    size_t floor = ceil >> 1; // half of ceil
+    size_t mid = floor + (floor >> 1); // (1.5 times floor)
+    size_t requestSize = (size <= mid) ? mid : ceil;
+
+    return data().getBufferFromPool(requestSize, type);
 }
 
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#endif

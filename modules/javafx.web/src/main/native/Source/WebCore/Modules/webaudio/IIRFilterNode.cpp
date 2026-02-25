@@ -29,8 +29,11 @@
 #include "IIRFilterNode.h"
 
 #include "BaseAudioContext.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "IIRFilter.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -127,7 +130,7 @@ ExceptionOr<void> IIRFilterNode::getFrequencyResponse(Float32Array& frequencyHz,
 
     // Nothing to do if the length is 0.
     if (expectedLength > 0)
-        iirProcessor()->getFrequencyResponse(expectedLength, frequencyHz.data(), magResponse.data(), phaseResponse.data());
+        iirProcessor()->getFrequencyResponse(expectedLength, frequencyHz.typedSpan(), magResponse.typedMutableSpan(), phaseResponse.typedMutableSpan());
 
     return { };
 }

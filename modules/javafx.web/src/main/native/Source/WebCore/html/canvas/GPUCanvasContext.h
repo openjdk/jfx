@@ -25,9 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUBasedCanvasRenderingContext.h"
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -40,28 +38,29 @@
 namespace WebCore {
 
 class CanvasBase;
+class Document;
 class GPU;
-struct GPUCanvasConfiguration;
 class GPUTexture;
 class ImageBitmap;
+struct GPUCanvasConfiguration;
+template<typename> class ExceptionOr;
 
 class GPUCanvasContext : public GPUBasedCanvasRenderingContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContext);
 public:
 #if ENABLE(OFFSCREEN_CANVAS)
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 #else
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>>;
+    using CanvasType = Variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
-    static std::unique_ptr<GPUCanvasContext> create(CanvasBase&, GPU&);
+    static std::unique_ptr<GPUCanvasContext> create(CanvasBase&, GPU&, Document*);
 
     virtual CanvasType canvas() = 0;
     virtual ExceptionOr<void> configure(GPUCanvasConfiguration&&) = 0;
     virtual void unconfigure() = 0;
+    virtual std::optional<GPUCanvasConfiguration> getConfiguration() const = 0;
     virtual ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() = 0;
-
-    bool isWebGPU() const override { return true; }
 
 protected:
     GPUCanvasContext(CanvasBase&);

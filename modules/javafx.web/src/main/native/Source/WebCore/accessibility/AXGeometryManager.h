@@ -38,7 +38,7 @@ class AXObjectCache;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AXGeometryManager);
 class AXGeometryManager final : public ThreadSafeRefCounted<AXGeometryManager> {
     WTF_MAKE_NONCOPYABLE(AXGeometryManager);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXGeometryManager);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXGeometryManager, AXGeometryManager);
 public:
     explicit AXGeometryManager(AXObjectCache&);
     AXGeometryManager();
@@ -51,7 +51,7 @@ public:
     void willUpdateObjectRegions();
     void scheduleObjectRegionsUpdate(bool /* scheduleImmediately */);
 
-    void cacheRect(AXID, IntRect&&);
+    void cacheRect(std::optional<AXID>, IntRect&&);
     // std::nullopt if there is no cached rect for the given ID (i.e. because it hasn't been cached yet via paint or otherwise, or cannot be painted / cached at all).
     std::optional<IntRect> cachedRectForID(AXID);
 
@@ -67,7 +67,7 @@ private:
     void scheduleRenderingUpdate();
 
     // The cache that owns this instance.
-    WeakPtr<AXObjectCache> m_cache;
+    const WeakPtr<AXObjectCache> m_cache;
     HashMap<AXID, IntRect> m_cachedRects;
     Timer m_updateObjectRegionsTimer;
 

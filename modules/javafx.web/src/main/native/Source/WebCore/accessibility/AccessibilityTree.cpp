@@ -33,38 +33,38 @@
 #include "AccessibilityTreeItem.h"
 #include "Element.h"
 #include "HTMLNames.h"
-
+#include "NodeInlines.h"
 #include <wtf/Deque.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTree::AccessibilityTree(RenderObject& renderer)
-    : AccessibilityRenderObject(renderer)
+AccessibilityTree::AccessibilityTree(AXID axID, RenderObject& renderer, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, renderer, cache)
 {
 }
 
-AccessibilityTree::AccessibilityTree(Node& node)
-    : AccessibilityRenderObject(node)
+AccessibilityTree::AccessibilityTree(AXID axID, Node& node, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, node, cache)
 {
 }
 
 AccessibilityTree::~AccessibilityTree() = default;
 
-Ref<AccessibilityTree> AccessibilityTree::create(RenderObject& renderer)
+Ref<AccessibilityTree> AccessibilityTree::create(AXID axID, RenderObject& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityTree(renderer));
+    return adoptRef(*new AccessibilityTree(axID, renderer, cache));
 }
 
-Ref<AccessibilityTree> AccessibilityTree::create(Node& node)
+Ref<AccessibilityTree> AccessibilityTree::create(AXID axID, Node& node, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityTree(node));
+    return adoptRef(*new AccessibilityTree(axID, node, cache));
 }
 
-bool AccessibilityTree::computeAccessibilityIsIgnored() const
+bool AccessibilityTree::computeIsIgnored() const
 {
-    return accessibilityIsIgnoredByDefault();
+    return isIgnoredByDefault();
 }
 
 AccessibilityRole AccessibilityTree::determineAccessibilityRole()
@@ -79,7 +79,7 @@ bool AccessibilityTree::isTreeValid() const
 {
     // A valid tree can only have treeitem or group of treeitems as a child.
     // https://www.w3.org/TR/wai-aria/#tree
-    Node* node = this->node();
+    RefPtr node = this->node();
     if (!node)
         return false;
 
@@ -90,11 +90,12 @@ bool AccessibilityTree::isTreeValid() const
     while (!queue.isEmpty()) {
         Ref child = queue.takeFirst();
 
-        if (!is<Element>(child.get()))
+        RefPtr childElement = dynamicDowncast<Element>(child);
+        if (!childElement)
             continue;
-        if (nodeHasRole(child.ptr(), "treeitem"_s))
+        if (hasRole(*childElement, "treeitem"_s))
             continue;
-        if (!nodeHasRole(child.ptr(), "group"_s) && !nodeHasRole(child.ptr(), "presentation"_s))
+        if (!hasAnyRole(*childElement, { "group"_s, "presentation"_s }))
             return false;
 
         for (RefPtr groupChild = child->firstChild(); groupChild; groupChild = queue.last()->nextSibling())

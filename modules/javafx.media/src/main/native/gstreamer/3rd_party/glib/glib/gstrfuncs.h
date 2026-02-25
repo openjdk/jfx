@@ -476,6 +476,10 @@ gboolean              g_ascii_string_to_unsigned   (const gchar  *str,
  * Since: 2.76
  */
 GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline gboolean g_set_str (char       **str_pointer,
+                                  const char  *new_str);
+
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
 static inline gboolean
 g_set_str (char       **str_pointer,
            const char  *new_str)

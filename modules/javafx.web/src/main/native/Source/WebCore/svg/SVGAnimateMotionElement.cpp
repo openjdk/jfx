@@ -25,6 +25,7 @@
 
 #include "AffineTransform.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "PathTraversalState.h"
@@ -289,8 +290,7 @@ std::optional<float> SVGAnimateMotionElement::calculateDistance(const String& fr
     auto to = parsePoint(toString);
     if (!to)
         return { };
-    auto diff = *to - *from;
-    return std::hypot(diff.width(), diff.height());
+    return (*to - *from).diagonalLength();
 }
 
 void SVGAnimateMotionElement::updateAnimationMode()

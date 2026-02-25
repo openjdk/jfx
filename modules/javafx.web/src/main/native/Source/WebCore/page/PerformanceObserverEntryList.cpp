@@ -27,8 +27,12 @@
 #include "PerformanceObserverEntryList.h"
 
 #include "PerformanceEntry.h"
+#include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PerformanceObserverEntryList);
 
 Ref<PerformanceObserverEntryList> PerformanceObserverEntryList::create(Vector<Ref<PerformanceEntry>>&& entries)
 {
@@ -40,7 +44,7 @@ PerformanceObserverEntryList::PerformanceObserverEntryList(Vector<Ref<Performanc
 {
     ASSERT(!m_entries.isEmpty());
 
-    std::stable_sort(m_entries.begin(), m_entries.end(), PerformanceEntry::startTimeCompareLessThan);
+    std::ranges::stable_sort(m_entries, PerformanceEntry::startTimeCompareLessThan);
 }
 
 Vector<Ref<PerformanceEntry>> PerformanceObserverEntryList::getEntriesByType(const String& entryType) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #pragma once
 
 #include "AdvancedPrivacyProtections.h"
+#include "AutoplayPolicy.h"
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "ContentFilterClient.h"
@@ -107,18 +108,13 @@ class SubresourceLoader;
 class SubstituteResource;
 class UserContentURLPattern;
 
+struct IntegrityPolicy;
+
 enum class ClearSiteDataValue : uint8_t;
 enum class LoadWillContinueInAnotherProcess : bool;
 enum class ShouldContinue;
 
-using ResourceLoaderMap = HashMap<ResourceLoaderIdentifier, RefPtr<ResourceLoader>>;
-
-enum class AutoplayPolicy : uint8_t {
-    Default, // Uses policies specified in document settings.
-    Allow,
-    AllowWithoutSound,
-    Deny,
-};
+using ResourceLoaderMap = HashSet<RefPtr<ResourceLoader>>;
 
 enum class AutoplayQuirk : uint8_t {
     SynthesizedPauseEvents = 1 << 0,
@@ -172,6 +168,18 @@ enum class ColorSchemePreference : uint8_t {
     Dark
 };
 
+enum class PushAndNotificationsEnabledPolicy: uint8_t {
+    UseGlobalPolicy,
+    No,
+    Yes,
+};
+
+enum class InlineMediaPlaybackPolicy : uint8_t {
+    Default,
+    RequiresPlaysInlineAttribute,
+    DoesNotRequirePlaysInlineAttribute
+};
+
 enum class ContentExtensionDefaultEnablement : bool { Disabled, Enabled };
 using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, HashSet<String>>;
 
@@ -189,17 +197,20 @@ class DocumentLoader
     , public ContentFilterClient
 #endif
     , public CachedRawResourceClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DocumentLoader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DocumentLoader, DocumentLoader);
     friend class ContentFilter;
 public:
-    static Ref<DocumentLoader> create(const ResourceRequest& request, const SubstituteData& data)
+#if ENABLE(CONTENT_FILTERING)
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+#endif
+
+    static Ref<DocumentLoader> create(ResourceRequest&& request, SubstituteData&& data)
     {
-        return adoptRef(*new DocumentLoader(request, data));
+        return adoptRef(*new DocumentLoader(WTFMove(request), WTFMove(data)));
     }
 
-    using CachedRawResourceClient::weakPtrFactory;
-    using CachedRawResourceClient::WeakValueType;
-    using CachedRawResourceClient::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(CachedRawResourceClient);
 
     WEBCORE_EXPORT static DocumentLoader* fromScriptExecutionContextIdentifier(ScriptExecutionContextIdentifier);
 
@@ -210,7 +221,7 @@ public:
     WEBCORE_EXPORT virtual void detachFromFrame(LoadWillContinueInAnotherProcess);
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
-    CheckedPtr<FrameLoader> checkedFrameLoader() const;
+    WEBCORE_EXPORT RefPtr<FrameLoader> protectedFrameLoader() const;
     WEBCORE_EXPORT SubresourceLoader* mainResourceLoader() const;
     WEBCORE_EXPORT RefPtr<FragmentedSharedBuffer> mainResourceData() const;
 
@@ -250,7 +261,10 @@ public:
     const ResourceResponse& response() const { return m_response; }
 
     // FIXME: This method seems to violate the encapsulation of this class.
-    void setResponse(const ResourceResponse& response) { m_response = response; }
+    void setResponse(ResourceResponse&& response) { m_response = WTFMove(response); }
+
+    bool isContentRuleListRedirect() const { return m_isContentRuleListRedirect; }
+    void setIsContentRuleListRedirect(bool isContentRuleListRedirect) { m_isContentRuleListRedirect = isContentRuleListRedirect; }
 
     bool isClientRedirect() const { return m_isClientRedirect; }
     void setIsClientRedirect(bool isClientRedirect) { m_isClientRedirect = isClientRedirect; }
@@ -283,7 +297,7 @@ public:
     WEBCORE_EXPORT void frameDestroyed() final;
 
     // Return the ArchiveResource for the URL only when loading an Archive
-    WEBCORE_EXPORT ArchiveResource* archiveResourceForURL(const URL&) const;
+    WEBCORE_EXPORT RefPtr<ArchiveResource> archiveResourceForURL(const URL&) const;
 
     WEBCORE_EXPORT RefPtr<ArchiveResource> mainResource() const;
 
@@ -318,12 +332,12 @@ public:
     // these accessors return the URL that would have been used if a history
     // item were created. This allows WebKit to link history items reflecting
     // redirects into a chain from start to finish.
-    String clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; } // null if no client redirect occurred.
+    const String& clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; } // null if no client redirect occurred.
     String clientRedirectDestinationForHistory() const { return urlForHistory().string(); }
     void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
 
     String serverRedirectSourceForHistory() const { return (urlForHistory() == url() || url() == aboutBlankURL()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
-    String serverRedirectDestinationForHistory() const { return url().string(); }
+    const String& serverRedirectDestinationForHistory() const { return url().string(); }
 
     bool didCreateGlobalHistoryEntry() const { return m_didCreateGlobalHistoryEntry; }
     void setDidCreateGlobalHistoryEntry(bool didCreateGlobalHistoryEntry) { m_didCreateGlobalHistoryEntry = didCreateGlobalHistoryEntry; }
@@ -338,8 +352,6 @@ public:
     bool isLoadingMainResource() const { return m_loadingMainResource; }
     bool isLoadingMultipartContent() const { return m_isLoadingMultipartContent; }
 
-    bool fingerprintingProtectionsEnabled() const;
-
     void stopLoadingPlugIns();
     void stopLoadingSubresources();
     WEBCORE_EXPORT void stopLoadingAfterXFrameOptionsOrContentSecurityPolicyDenied(ResourceLoaderIdentifier, const ResourceResponse&);
@@ -347,6 +359,7 @@ public:
     const ContentExtensionEnablement& contentExtensionEnablement() const { return m_contentExtensionEnablement; }
     void setContentExtensionEnablement(ContentExtensionEnablement&& enablement) { m_contentExtensionEnablement = WTFMove(enablement); }
 
+    bool hasActiveContentRuleListActions() const { return !m_activeContentRuleListActionPatterns.isEmpty(); }
     bool allowsActiveContentRuleListActionsForURL(const String& contentRuleListIdentifier, const URL&) const;
     WEBCORE_EXPORT void setActiveContentRuleListActionPatterns(const HashMap<String, Vector<String>>&);
 
@@ -361,16 +374,16 @@ public:
     AutoplayPolicy autoplayPolicy() const { return m_autoplayPolicy; }
     void setAutoplayPolicy(AutoplayPolicy policy) { m_autoplayPolicy = policy; }
 
-    void setCustomUserAgent(const String& customUserAgent) { m_customUserAgent = customUserAgent; }
+    void setCustomUserAgent(String&& customUserAgent) { m_customUserAgent = WTFMove(customUserAgent); }
     const String& customUserAgent() const { return m_customUserAgent; }
 
     void setAllowPrivacyProxy(bool allow) { m_allowPrivacyProxy = allow; }
     bool allowPrivacyProxy() const { return m_allowPrivacyProxy; }
 
-    void setCustomUserAgentAsSiteSpecificQuirks(const String& customUserAgent) { m_customUserAgentAsSiteSpecificQuirks = customUserAgent; }
+    void setCustomUserAgentAsSiteSpecificQuirks(String&& customUserAgent) { m_customUserAgentAsSiteSpecificQuirks = WTFMove(customUserAgent); }
     const String& customUserAgentAsSiteSpecificQuirks() const { return m_customUserAgentAsSiteSpecificQuirks; }
 
-    void setCustomNavigatorPlatform(const String& customNavigatorPlatform) { m_customNavigatorPlatform = customNavigatorPlatform; }
+    void setCustomNavigatorPlatform(String&& customNavigatorPlatform) { m_customNavigatorPlatform = WTFMove(customNavigatorPlatform); }
     const String& customNavigatorPlatform() const { return m_customNavigatorPlatform; }
 
     OptionSet<AutoplayQuirk> allowedAutoplayQuirks() const { return m_allowedAutoplayQuirks; }
@@ -391,7 +404,7 @@ public:
     LegacyOverflowScrollingTouchPolicy legacyOverflowScrollingTouchPolicy() const { return m_legacyOverflowScrollingTouchPolicy; }
     void setLegacyOverflowScrollingTouchPolicy(LegacyOverflowScrollingTouchPolicy policy) { m_legacyOverflowScrollingTouchPolicy = policy; }
 
-    WEBCORE_EXPORT MouseEventPolicy mouseEventPolicy() const;
+    MouseEventPolicy mouseEventPolicy() const { return m_mouseEventPolicy; }
     void setMouseEventPolicy(MouseEventPolicy policy) { m_mouseEventPolicy = policy; }
 
     ModalContainerObservationPolicy modalContainerObservationPolicy() const { return m_modalContainerObservationPolicy; }
@@ -403,6 +416,12 @@ public:
 
     HTTPSByDefaultMode httpsByDefaultMode() { return m_httpsByDefaultMode; }
     WEBCORE_EXPORT void setHTTPSByDefaultMode(HTTPSByDefaultMode);
+
+    PushAndNotificationsEnabledPolicy pushAndNotificationsEnabledPolicy() const { return m_pushAndNotificationsEnabledPolicy; }
+    void setPushAndNotificationsEnabledPolicy(PushAndNotificationsEnabledPolicy policy) { m_pushAndNotificationsEnabledPolicy = policy; }
+
+    InlineMediaPlaybackPolicy inlineMediaPlaybackPolicy() const { return m_inlineMediaPlaybackPolicy; }
+    void setInlineMediaPlaybackPolicy(InlineMediaPlaybackPolicy policy) { m_inlineMediaPlaybackPolicy = policy; }
 
     void addSubresourceLoader(SubresourceLoader&);
     void removeSubresourceLoader(LoadCompletionType, SubresourceLoader&);
@@ -452,8 +471,6 @@ public:
     void setBlockedPageURL(const URL& blockedPageURL) { m_blockedPageURL = blockedPageURL; }
     void setSubstituteDataFromContentFilter(SubstituteData&& substituteDataFromContentFilter) { m_substituteDataFromContentFilter = WTFMove(substituteDataFromContentFilter); }
     ContentFilter* contentFilter() const { return m_contentFilter.get(); }
-    void ref() const final { RefCounted<DocumentLoader>::ref(); }
-    void deref() const final { RefCounted<DocumentLoader>::deref(); }
 
     WEBCORE_EXPORT ResourceError handleContentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript);
 #endif
@@ -490,7 +507,7 @@ public:
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
 
     WEBCORE_EXPORT bool setControllingServiceWorkerRegistration(ServiceWorkerRegistrationData&&);
-    WEBCORE_EXPORT ScriptExecutionContextIdentifier resultingClientId() const;
+    std::optional<ScriptExecutionContextIdentifier> resultingClientId() const { return m_resultingClientId; }
 
     bool lastNavigationWasAppInitiated() const { return m_lastNavigationWasAppInitiated; }
     void setLastNavigationWasAppInitiated(bool lastNavigationWasAppInitiated) { m_lastNavigationWasAppInitiated = lastNavigationWasAppInitiated; }
@@ -499,11 +516,20 @@ public:
     const std::optional<CrossOriginOpenerPolicy>& crossOriginOpenerPolicy() const { return m_responseCOOP; }
     OptionSet<ClearSiteDataValue> responseClearSiteDataValues() const { return m_responseClearSiteDataValues; }
 
+    std::unique_ptr<IntegrityPolicy> integrityPolicy();
+    std::unique_ptr<IntegrityPolicy> integrityPolicyReportOnly();
+
     bool isContinuingLoadAfterProvisionalLoadStarted() const { return m_isContinuingLoadAfterProvisionalLoadStarted; }
     void setIsContinuingLoadAfterProvisionalLoadStarted(bool isContinuingLoadAfterProvisionalLoadStarted) { m_isContinuingLoadAfterProvisionalLoadStarted = isContinuingLoadAfterProvisionalLoadStarted; }
 
     bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
     void setIsRequestFromClientOrUserInput(bool isRequestFromClientOrUserInput) { m_isRequestFromClientOrUserInput = isRequestFromClientOrUserInput; }
+
+    bool loadStartedDuringSwipeAnimation() const { return m_loadStartedDuringSwipeAnimation; }
+    void setLoadStartedDuringSwipeAnimation() { m_loadStartedDuringSwipeAnimation = true; }
+
+    bool isHandledByAboutSchemeHandler() const { return m_isHandledByAboutSchemeHandler; }
+    void setIsHandledByAboutSchemeHandler(bool isHandledByAboutSchemeHandler) { m_isHandledByAboutSchemeHandler = isHandledByAboutSchemeHandler; }
 
     bool isInFinishedLoadingOfEmptyDocument() const { return m_isInFinishedLoadingOfEmptyDocument; }
 #if ENABLE(CONTENT_FILTERING)
@@ -516,10 +542,13 @@ public:
 
     bool isInitialAboutBlank() const { return m_isInitialAboutBlank; }
 
-    bool navigationCanTriggerCrossDocumentViewTransition(Document& oldDocument);
+    bool navigationCanTriggerCrossDocumentViewTransition(Document& oldDocument, bool fromBackForwardCache);
+    WEBCORE_EXPORT void whenDocumentIsCreated(Function<void(Document*)>&&);
+
+    WEBCORE_EXPORT void setNewResultingClientId(ScriptExecutionContextIdentifier);
 
 protected:
-    WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
+    WEBCORE_EXPORT DocumentLoader(ResourceRequest&&, SubstituteData&&);
 
     WEBCORE_EXPORT virtual void attachToFrame();
 
@@ -533,7 +562,7 @@ private:
 
     void loadMainResource(ResourceRequest&&);
 
-    void setRequest(const ResourceRequest&);
+    void setRequest(ResourceRequest&&);
 
     void commitIfReady();
     void setMainDocumentError(const ResourceError&);
@@ -552,21 +581,27 @@ private:
     void finishedLoading();
     void mainReceivedError(const ResourceError&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
-    WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
+    WEBCORE_EXPORT void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     WEBCORE_EXPORT void dataReceived(CachedResource&, const SharedBuffer&) override;
     WEBCORE_EXPORT void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 #if USE(QUICK_LOOK)
-    WEBCORE_EXPORT void previewResponseReceived(CachedResource&, const ResourceResponse&) override;
+    WEBCORE_EXPORT void previewResponseReceived(const CachedResource&, const ResourceResponse&) override;
 #endif
 
-    void responseReceived(const ResourceResponse&, CompletionHandler<void()>&&);
+    void responseReceived(ResourceResponse&&, CompletionHandler<void()>&&);
 
 #if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&, size_t) final;
+    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&) final;
     WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
-    WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;
+    WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&&) final;
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    WEBCORE_EXPORT bool usesWebContentRestrictions() final;
+#endif
+#if HAVE(WEBCONTENTRESTRICTIONS_PATH_SPI)
+    WEBCORE_EXPORT String webContentRestrictionsConfigurationPath() const final;
+#endif
 #endif
 
     void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
@@ -610,9 +645,9 @@ private:
     bool disallowWebArchive() const;
     bool disallowDataRequest() const;
 
-    void updateAdditionalSettingsIfNeeded();
+    bool shouldCancelLoadingAboutURL(const URL&) const;
 
-    Ref<CachedResourceLoader> m_cachedResourceLoader;
+    const Ref<CachedResourceLoader> m_cachedResourceLoader;
 
     CachedResourceHandle<CachedRawResource> m_mainResource;
     ResourceLoaderMap m_subresourceLoaders;
@@ -679,7 +714,7 @@ private:
     String m_clientRedirectSourceForHistory;
     DocumentLoadTiming m_loadTiming;
 
-    ResourceLoaderIdentifier m_identifierForLoadWithoutResourceLoader;
+    Markable<ResourceLoaderIdentifier> m_identifierForLoadWithoutResourceLoader;
 
     DataLoadToken m_dataLoadToken;
 
@@ -696,6 +731,8 @@ private:
 
     std::unique_ptr<ApplicationCacheHost> m_applicationCacheHost;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicy;
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicyReportOnly;
 
 #if ENABLE(CONTENT_FILTERING)
     std::unique_ptr<ContentFilter> m_contentFilter;
@@ -720,7 +757,7 @@ private:
 
     Vector<TargetedElementSelectors> m_visibilityAdjustmentSelectors;
 
-    ScriptExecutionContextIdentifier m_resultingClientId;
+    Markable<ScriptExecutionContextIdentifier> m_resultingClientId;
 
     std::unique_ptr<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
 
@@ -742,10 +779,15 @@ private:
     ColorSchemePreference m_colorSchemePreference { ColorSchemePreference::NoPreference };
     HTTPSByDefaultMode m_httpsByDefaultMode { HTTPSByDefaultMode::Disabled };
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
+    PushAndNotificationsEnabledPolicy m_pushAndNotificationsEnabledPolicy { PushAndNotificationsEnabledPolicy::UseGlobalPolicy };
+    InlineMediaPlaybackPolicy m_inlineMediaPlaybackPolicy { InlineMediaPlaybackPolicy::Default };
+
+    Function<void(Document*)> m_whenDocumentIsCreatedCallback;
 
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
 
     bool m_isRequestFromClientOrUserInput { false };
+    bool m_loadStartedDuringSwipeAnimation { false };
     bool m_lastNavigationWasAppInitiated { true };
     bool m_allowPrivacyProxy { true };
 
@@ -755,6 +797,7 @@ private:
     bool m_committed { false };
     bool m_isStopping { false };
     bool m_gotFirstByte { false };
+    bool m_isContentRuleListRedirect { false };
     bool m_isClientRedirect { false };
     bool m_isLoadingMultipartContent { false };
     bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
@@ -784,6 +827,8 @@ private:
 #if ASSERT_ENABLED
     bool m_hasEverBeenAttached { false };
 #endif
+
+    bool m_isHandledByAboutSchemeHandler { false };
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)

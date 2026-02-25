@@ -47,10 +47,10 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedName);
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedNameQualifiedNameImpl);
 
 class QualifiedName {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedName);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedName, QualifiedName);
 public:
     class QualifiedNameImpl : public RefCounted<QualifiedNameImpl> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedNameQualifiedNameImpl);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedNameImpl, QualifiedNameQualifiedNameImpl);
     public:
         static Ref<QualifiedNameImpl> create(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI)
         {
@@ -127,7 +127,7 @@ inline void add(Hasher& hasher, const QualifiedName::QualifiedNameImpl& impl)
 
 inline void add(Hasher& hasher, const QualifiedName& name)
 {
-    add(hasher, bitwise_cast<uintptr_t>(name.impl()));
+    add(hasher, std::bit_cast<uintptr_t>(name.impl()));
 }
 
 extern LazyNeverDestroyed<const QualifiedName> anyName;

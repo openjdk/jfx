@@ -51,6 +51,7 @@
 #include "DFGLiveCatchVariablePreservationPhase.h"
 #include "DFGLivenessAnalysisPhase.h"
 #include "DFGLoopPreHeaderCreationPhase.h"
+#include "DFGLoopUnrollingPhase.h"
 #include "DFGMovHintRemovalPhase.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSREntrypointCreationPhase.h"
@@ -100,8 +101,7 @@ void dumpAndVerifyGraph(Graph& graph, const char* text, bool forceDump = false)
 {
     GraphDumpMode modeForFinalValidate = DumpGraph;
     if (verboseCompilationEnabled(graph.m_plan.mode()) || forceDump) {
-        dataLog(text, "\n");
-        graph.dump();
+        dataLog(text, "\n", graph);
         modeForFinalValidate = DontDumpGraph;
     }
     if (validationEnabled())
@@ -137,10 +137,9 @@ Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
         , m_profiledDFGCodeBlock(profiledDFGCodeBlock)
         , m_mustHandleValues(WTFMove(mustHandleValues))
         , m_osrEntryBytecodeIndex(osrEntryBytecodeIndex)
-        , m_compilation(UNLIKELY(m_vm->m_perBytecodeProfiler) ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
+        , m_compilation(m_vm->m_perBytecodeProfiler ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
         , m_inlineCallFrames(adoptRef(new InlineCallFrameSet()))
         , m_identifiers(m_codeBlock)
-        , m_weakReferences(m_codeBlock)
         , m_transitions(m_codeBlock)
 {
     RELEASE_ASSERT(m_codeBlock->alternative()->jitCode());
@@ -192,11 +191,9 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         cleanMustHandleValuesIfNecessary();
     }
 
-    if (verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex) {
-        dataLog("\n");
-        dataLog("Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
-        dataLog("\n");
-    }
+    dataLogLnIf(verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex,
+        "\n",
+        "Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
 
     Graph dfg(*m_vm, *this);
 
@@ -235,10 +232,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (validationEnabled())
         validate(dfg);
 
-    if (Options::dumpGraphAfterParsing()) {
-        dataLog("Graph after parsing:\n");
-        dfg.dump();
-    }
+    dataLogIf(Options::dumpGraphAfterParsing(), "Graph after parsing:\n", dfg);
 
     RUN_PHASE(performCPSRethreading);
     RUN_PHASE(performUnification);
@@ -369,12 +363,16 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             m_finalizer = makeUnique<FailedFinalizer>(*this);
             return FailPath;
         }
-
         RUN_PHASE(performCleanUp); // Reduce the graph size a bit.
         RUN_PHASE(performCriticalEdgeBreaking);
         if (Options::createPreHeaders())
             RUN_PHASE(performLoopPreHeaderCreation);
         RUN_PHASE(performCPSRethreading);
+        if (Options::useLoopUnrolling()) {
+            SetForScope fixAvailabilityScope(dfg.m_shouldFixAvailability, true);
+            RUN_PHASE(performLoopUnrolling);
+            RUN_PHASE(performCriticalEdgeBreaking);
+        }
         RUN_PHASE(performSSAConversion);
         RUN_PHASE(performSSALowering);
 
@@ -398,11 +396,14 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             RUN_PHASE(performCriticalEdgeBreaking);
             RUN_PHASE(performObjectAllocationSinking);
         }
-        if (Options::useValueRepElimination())
+        if (Options::useValueRepElimination()) {
             RUN_PHASE(performValueRepReduction);
+            RUN_PHASE(performStrengthReduction);
+        }
         if (changed) {
             // State-at-tail and state-at-head will be invalid if we did strength reduction since
             // it might increase live ranges.
+            RUN_PHASE(performGlobalCSE);
             RUN_PHASE(performGraphPackingAndLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);
@@ -472,10 +473,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         FTL::State state(dfg);
         FTL::lowerDFGToB3(state);
 
-        if (UNLIKELY(computeCompileTimes()))
+        if (computeCompileTimes()) [[unlikely]]
             m_timeBeforeFTL = MonotonicTime::now();
 
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeCompile())) {
+        if (Options::b3AlwaysFailsBeforeCompile()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -484,7 +485,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (safepointResult.didGetCancelled())
             return CancelPath;
 
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeLink())) {
+        if (Options::b3AlwaysFailsBeforeLink()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -575,23 +576,23 @@ CompilationResult Plan::finalize()
     CompilationResult result = [&] {
         if (m_finalizer->isFailed()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("failed"));
-            return CompilationFailed;
+            return CompilationResult::CompilationFailed;
         }
 
         if (!isStillValidCodeBlock()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
-            return CompilationInvalidated;
+            return CompilationResult::CompilationInvalidated;
         }
 
         bool result = m_finalizer->finalize();
         if (!result) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("failed"));
-            return CompilationFailed;
+            return CompilationResult::CompilationFailed;
         }
 
         if (!reallyAdd(m_codeBlock->jitCode()->dfgCommon())) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
-            return CompilationInvalidated;
+            return CompilationResult::CompilationInvalidated;
         }
 
         {
@@ -603,10 +604,10 @@ CompilationResult Plan::finalize()
         // it is possible that the current CodeBlock is now invalidated & jettisoned.
         if (m_codeBlock->isJettisoned()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
-            return CompilationInvalidated;
+            return CompilationResult::CompilationInvalidated;
         }
 
-        if (UNLIKELY(validationEnabled())) {
+        if (validationEnabled()) [[unlikely]] {
             TrackedReferences trackedReferences;
 
             for (WriteBarrier<JSCell>& reference : m_codeBlock->jitCode()->dfgCommon()->m_weakReferences)
@@ -627,7 +628,7 @@ CompilationResult Plan::finalize()
         }
 
         CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("succeeded"));
-        return CompilationSuccessful;
+        return CompilationResult::CompilationSuccessful;
     }();
 
     // We will establish new references from the code block to things. So, we need a barrier.
@@ -638,7 +639,7 @@ CompilationResult Plan::finalize()
     return result;
 }
 
-bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!Base::iterateCodeBlocksForGC(visitor, func))
         return false;

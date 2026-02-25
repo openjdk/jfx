@@ -74,10 +74,10 @@ void AttachmentAssociatedElement::copyAttachmentAssociatedPropertiesFromElement(
     m_pendingClonedAttachmentID = !source.m_pendingClonedAttachmentID.isEmpty() ? source.m_pendingClonedAttachmentID : source.attachmentIdentifier();
 }
 
-void AttachmentAssociatedElement::cloneAttachmentAssociatedElementWithoutAttributesAndChildren(AttachmentAssociatedElement& clone, Document& targetDocument)
+void AttachmentAssociatedElement::cloneAttachmentAssociatedElementWithoutAttributesAndChildren(AttachmentAssociatedElement& clone, Document& targetDocument) const
 {
     if (auto attachment = attachmentElement()) {
-        auto attachmentClone = attachment->cloneElementWithoutChildren(targetDocument);
+        auto attachmentClone = attachment->cloneElementWithoutChildren(targetDocument, nullptr);
         clone.setAttachmentElement(downcast<HTMLAttachmentElement>(attachmentClone.get()));
     }
 }

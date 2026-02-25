@@ -145,6 +145,7 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(JSArrayIterator, JSType::JSArrayIteratorType, JSType::JSArrayIteratorType) \
     macro(JSArrayBuffer, JSType::ArrayBufferType, JSType::ArrayBufferType) \
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
+    macro(JSIterator, JSType::JSIteratorType, JSType::JSIteratorType) \
     macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
     macro(JSGlobalProxy, JSType::GlobalProxyType, JSType::GlobalProxyType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
@@ -254,7 +255,7 @@ template<typename To, typename From>
 To jsDynamicCast(From* from)
 {
     using Dispatcher = JSCastingHelpers::InheritsTraits<typename std::remove_cv<typename std::remove_pointer<To>::type>::type>;
-    if (LIKELY(Dispatcher::template inherits<>(from)))
+    if (Dispatcher::template inherits<>(from)) [[likely]]
         return static_cast<To>(from);
     return nullptr;
 }
@@ -262,7 +263,7 @@ To jsDynamicCast(From* from)
 template<typename To>
 To jsDynamicCast(JSValue from)
 {
-    if (UNLIKELY(!from.isCell()))
+    if (!from.isCell()) [[unlikely]]
         return nullptr;
     return jsDynamicCast<To>(from.asCell());
 }

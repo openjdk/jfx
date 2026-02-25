@@ -141,7 +141,7 @@ private:
 
                 // 2. Let value be ? Get(O, key).
                 JSC::JSValue subValue;
-                if (LIKELY(!slot.isTaintedByOpaqueObject()))
+                if (!slot.isTaintedByOpaqueObject()) [[likely]]
                     subValue = slot.getValue(&lexicalGlobalObject, key);
                 else
                     subValue = object->get(&lexicalGlobalObject, key);
@@ -149,7 +149,7 @@ private:
 
                 // 3. Let typedValue be value converted to an IDL value of type V.
                 auto typedValue = WebCore::convert<V>(lexicalGlobalObject, subValue, args...);
-                if (UNLIKELY(typedValue.hasException(scope)))
+                if (typedValue.hasException(scope)) [[unlikely]]
                     return Result::exception();
 
                 // 4. Set result[typedKey] to typedValue.

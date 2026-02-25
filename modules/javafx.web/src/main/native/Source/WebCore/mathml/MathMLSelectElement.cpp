@@ -28,6 +28,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -118,7 +119,7 @@ int MathMLSelectElement::getSelectedActionChildAndIndex(Element*& selectedChild)
     if (!selectedChild)
         return 1;
 
-    int selection = getIntegralAttribute(MathMLNames::selectionAttr);
+    int selection = integralAttribute(MathMLNames::selectionAttr);
     int i;
     for (i = 1; i < selection; i++) {
         auto* nextChild = selectedChild->nextElementSibling();
@@ -164,7 +165,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
     if (!child)
         return nullptr;
 
-    if (!is<MathMLElement>(*child) || !downcast<MathMLElement>(*child).isPresentationMathML()) {
+    if (auto* childElement = dynamicDowncast<MathMLElement>(*child); !childElement || !childElement->isPresentationMathML()) {
         // The first child is not a presentation MathML element. Hence we move to the second child and start searching an annotation child that could be displayed.
         child = child->nextElementSibling();
     } else if (!downcast<MathMLElement>(*child).isSemanticAnnotation()) {

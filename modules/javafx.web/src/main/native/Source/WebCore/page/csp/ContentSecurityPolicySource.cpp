@@ -30,9 +30,12 @@
 #include "ContentSecurityPolicy.h"
 #include "SecurityOriginData.h"
 #include <pal/text/TextEncoding.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContentSecurityPolicySource);
 
 ContentSecurityPolicySource::ContentSecurityPolicySource(const ContentSecurityPolicy& policy, const String& scheme, const String& host, std::optional<uint16_t> port, const String& path, bool hostHasWildcard, bool portHasWildcard, IsSelfSource isSelfSource)
     : m_policy(policy)
@@ -59,8 +62,8 @@ bool ContentSecurityPolicySource::matches(const URL& url, bool didReceiveRedirec
 bool ContentSecurityPolicySource::schemeMatches(const URL& url) const
 {
     // https://www.w3.org/TR/CSP3/#match-schemes.
-    const auto& scheme = m_scheme.isEmpty() ? m_policy.selfProtocol() : m_scheme;
-    auto urlScheme = url.protocol().convertToASCIILowercase();
+    auto& scheme = m_scheme.isEmpty() ? m_policy->selfProtocol() : m_scheme;
+    auto urlScheme = url.protocol();
 
     if (scheme == urlScheme)
         return true;

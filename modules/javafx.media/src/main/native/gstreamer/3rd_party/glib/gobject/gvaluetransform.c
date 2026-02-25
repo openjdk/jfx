@@ -51,7 +51,7 @@ static void                                                                 \
 value_transform_##func_name (const GValue *src_value,                       \
                              GValue       *dest_value)                      \
 {                                                                           \
-  ctype c_value = src_value->data[0].from_member;                           \
+  ctype c_value = (ctype) src_value->data[0].from_member;                   \
   dest_value->data[0].to_member = c_value;                                  \
 } extern void glib_dummy_decl (void)
 DEFINE_CAST (int_s8,            v_int,    gint8,   v_int);

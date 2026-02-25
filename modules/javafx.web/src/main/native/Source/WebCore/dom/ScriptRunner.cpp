@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,11 @@
 #include "Element.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptRunner);
 
 ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
@@ -62,10 +65,12 @@ void ScriptRunner::ref() const
 {
     m_document->ref();
 }
+
 void ScriptRunner::deref() const
 {
     m_document->deref();
 }
+
 void ScriptRunner::queueScriptForExecution(ScriptElement& scriptElement, LoadableScript& loadableScript, ExecutionType executionType)
 {
     ASSERT(scriptElement.element().isConnected());
@@ -135,7 +140,7 @@ void ScriptRunner::timerFired()
     for (; numInOrderScriptsToExecute < m_scriptsToExecuteInOrder.size() && m_scriptsToExecuteInOrder[numInOrderScriptsToExecute]->isLoaded(); ++numInOrderScriptsToExecute)
         scripts.append(m_scriptsToExecuteInOrder[numInOrderScriptsToExecute].ptr());
     if (numInOrderScriptsToExecute)
-        m_scriptsToExecuteInOrder.remove(0, numInOrderScriptsToExecute);
+        m_scriptsToExecuteInOrder.removeAt(0, numInOrderScriptsToExecute);
 
     for (auto& currentScript : scripts) {
         RefPtr script = WTFMove(currentScript);
@@ -144,7 +149,7 @@ void ScriptRunner::timerFired()
         if (!script)
             continue;
         ASSERT(script->needsLoading());
-        script->protectedElement()->executePendingScript(*script);
+        script->element().executePendingScript(*script);
         document->decrementLoadEventDelayCount();
     }
 }

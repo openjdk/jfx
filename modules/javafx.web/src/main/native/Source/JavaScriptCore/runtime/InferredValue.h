@@ -51,7 +51,7 @@ public:
         uintptr_t data = m_data;
         if (isFat(data))
             return fat(data)->inferredValue();
-        return bitwise_cast<JSCellType*>(data & ValueMask);
+        return std::bit_cast<JSCellType*>(data & ValueMask);
     }
 
     explicit InferredValue()
@@ -111,14 +111,14 @@ public:
 
     void notifyWrite(VM& vm, JSCell* owner, JSCellType* value, const FireDetail& detail)
     {
-        if (LIKELY(state() == IsInvalidated))
+        if (state() == IsInvalidated) [[likely]]
             return;
         notifyWriteSlow(vm, owner, value, detail);
     }
 
     void notifyWrite(VM& vm, JSCell* owner, JSCellType* value, const char* reason)
     {
-        if (LIKELY(state() == IsInvalidated))
+        if (state() == IsInvalidated) [[likely]]
             return;
         notifyWriteSlow(vm, owner, value, reason);
     }
@@ -172,7 +172,7 @@ private:
 
     static InferredValueWatchpointSet* fat(uintptr_t data)
     {
-        return bitwise_cast<InferredValueWatchpointSet*>(data);
+        return std::bit_cast<InferredValueWatchpointSet*>(data);
     }
 
     InferredValueWatchpointSet* fat()
@@ -189,7 +189,7 @@ private:
 
     InferredValueWatchpointSet* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fat();
         return inflateSlow();
     }
@@ -240,7 +240,7 @@ void InferredValue<JSCellType>::notifyWriteSlow(VM& vm, JSCell* owner, JSCellTyp
     switch (state()) {
     case ClearWatchpoint:
         ASSERT(decodeState(m_data) != IsInvalidated);
-        m_data = (bitwise_cast<uintptr_t>(value) & ValueMask) | encodeState(IsWatched);
+        m_data = (std::bit_cast<uintptr_t>(value) & ValueMask) | encodeState(IsWatched);
         vm.writeBarrier(owner, value);
         return;
 
@@ -277,9 +277,9 @@ auto InferredValue<JSCellType>::inflateSlow() -> InferredValueWatchpointSet*
     ASSERT(isThin());
     ASSERT(!isCompilationThread());
     uintptr_t data = m_data;
-    InferredValueWatchpointSet* fat = adoptRef(new InferredValueWatchpointSet(decodeState(m_data), bitwise_cast<JSCellType*>(data & ValueMask))).leakRef();
+    InferredValueWatchpointSet* fat = adoptRef(new InferredValueWatchpointSet(decodeState(m_data), std::bit_cast<JSCellType*>(data & ValueMask))).leakRef();
     WTF::storeStoreFence();
-    m_data = bitwise_cast<uintptr_t>(fat);
+    m_data = std::bit_cast<uintptr_t>(fat);
     return fat;
 }
 

@@ -105,6 +105,8 @@ JSObject* createError(JSGlobalObject* globalObject, ErrorTypeWithExtension error
         return createURIError(globalObject, message);
     case ErrorTypeWithExtension::AggregateError:
         break;
+    case ErrorTypeWithExtension::SuppressedError:
+        break;
     case ErrorTypeWithExtension::OutOfMemoryError:
         return createOutOfMemoryError(globalObject, message);
     }
@@ -291,13 +293,13 @@ JSObject* createTypeErrorCopy(JSGlobalObject* globalObject, JSValue error)
 
 String makeDOMAttributeGetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    auto interfaceNameSpan = span(interfaceName);
+    auto interfaceNameSpan = unsafeSpan(interfaceName);
     return makeString("The "_s, interfaceNameSpan, '.', attributeName, " getter can only be used on instances of "_s, interfaceNameSpan);
 }
 
 String makeDOMAttributeSetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    auto interfaceNameSpan = span(interfaceName);
+    auto interfaceNameSpan = unsafeSpan(interfaceName);
     return makeString("The "_s, interfaceNameSpan, '.', attributeName, " setter can only be used on instances of "_s, interfaceNameSpan);
 }
 

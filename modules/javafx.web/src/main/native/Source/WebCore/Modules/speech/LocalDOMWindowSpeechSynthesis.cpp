@@ -33,10 +33,16 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "Document.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LocalDOMWindowSpeechSynthesis);
 
 LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(DOMWindow* window)
     : LocalDOMWindowProperty(dynamicDowncast<LocalDOMWindow>(window))
@@ -60,7 +66,7 @@ LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(DOMWindow* wi
     if (!supplement) {
         auto newSupplement = makeUnique<LocalDOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
-        provideTo(dynamicDowncast<LocalDOMWindow>(window), supplementName(), WTFMove(newSupplement));
+        provideTo(localWindow.get(), supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
@@ -73,8 +79,10 @@ SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(DOMWindow& windo
 
 SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis()
 {
-    if (!m_speechSynthesis && frame() && frame()->document())
-        m_speechSynthesis = SpeechSynthesis::create(*frame()->document());
+    if (!m_speechSynthesis && frame()) {
+        if (RefPtr document = frame()->document())
+            m_speechSynthesis = SpeechSynthesis::create(*document);
+    }
     return m_speechSynthesis.get();
 }
 

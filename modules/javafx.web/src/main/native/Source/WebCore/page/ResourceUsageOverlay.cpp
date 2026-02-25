@@ -34,13 +34,17 @@
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceUsageOverlay);
 
 Ref<ResourceUsageOverlay> ResourceUsageOverlay::create(Page& page)
 {
     return adoptRef(*new ResourceUsageOverlay(page));
 }
+
 ResourceUsageOverlay::ResourceUsageOverlay(Page& page)
     : m_page(page)
     , m_overlay(PageOverlay::create(*this, PageOverlay::OverlayType::View))
@@ -58,9 +62,8 @@ ResourceUsageOverlay::~ResourceUsageOverlay()
 {
     ASSERT(isMainThread());
     platformDestroy();
-    // FIXME: This is a hack so we don't try to uninstall the PageOverlay during Page destruction.
     if (RefPtr page = m_page.get())
-        page->pageOverlayController().uninstallPageOverlay(*m_overlay.copyRef(), PageOverlay::FadeMode::DoNotFade);
+        page->pageOverlayController().uninstallPageOverlay(m_overlay.get(), PageOverlay::FadeMode::DoNotFade);
 }
 
 void ResourceUsageOverlay::initialize()
@@ -78,9 +81,8 @@ void ResourceUsageOverlay::initialize()
     initialRect.setY(20);
 #endif
 
-    RefPtr overlay = m_overlay;
-    overlay->setFrame(initialRect);
-    page->pageOverlayController().installPageOverlay(*overlay, PageOverlay::FadeMode::DoNotFade);
+    m_overlay->setFrame(initialRect);
+    page->pageOverlayController().installPageOverlay(m_overlay.get(), PageOverlay::FadeMode::DoNotFade);
     platformInitialize();
 }
 
@@ -89,18 +91,17 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
     if (event.button() != MouseButton::Left)
         return false;
 
-    RefPtr overlay = m_overlay;
     switch (event.type()) {
     case PlatformEvent::Type::MousePressed: {
-        overlay->setShouldIgnoreMouseEventsOutsideBounds(false);
+        m_overlay->setShouldIgnoreMouseEventsOutsideBounds(false);
         m_dragging = true;
-        IntPoint location = overlay->frame().location();
+        IntPoint location = m_overlay->frame().location();
         m_dragPoint = event.position() + IntPoint(-location.x(), -location.y());
         return true;
     }
     case PlatformEvent::Type::MouseReleased:
         if (m_dragging) {
-            overlay->setShouldIgnoreMouseEventsOutsideBounds(true);
+            m_overlay->setShouldIgnoreMouseEventsOutsideBounds(true);
             m_dragging = false;
             return true;
         }
@@ -110,25 +111,24 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
             RefPtr page = m_page.get();
             if (!page)
                 return false;
-            IntRect newFrame = overlay->frame();
+            IntRect newFrame = m_overlay->frame();
 
             // Move the new frame relative to the point where the drag was initiated.
             newFrame.setLocation(event.position());
             newFrame.moveBy(IntPoint(-m_dragPoint.x(), -m_dragPoint.y()));
 
             // Force the frame to stay inside the viewport entirely.
-            if (newFrame.x() < 0)
-                newFrame.setX(0);
-            if (newFrame.y() < page->topContentInset())
-                newFrame.setY(page->topContentInset());
+            auto obscuredContentInsets = page->obscuredContentInsets();
+            newFrame.setX(static_cast<int>(std::max<float>(obscuredContentInsets.left(), newFrame.x())));
+            newFrame.setY(static_cast<int>(std::max<float>(obscuredContentInsets.top(), newFrame.y())));
             auto& frameView = *page->mainFrame().virtualView();
             if (newFrame.maxX() > frameView.width())
                 newFrame.setX(frameView.width() - newFrame.width());
             if (newFrame.maxY() > frameView.height())
                 newFrame.setY(frameView.height() - newFrame.height());
 
-            overlay->setFrame(newFrame);
-            overlay->setNeedsDisplay();
+            m_overlay->setFrame(newFrame);
+            m_overlay->setNeedsDisplay();
             return true;
         }
         break;

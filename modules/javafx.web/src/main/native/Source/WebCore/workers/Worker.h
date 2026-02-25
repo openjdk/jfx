@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2010, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "MessagePort.h"
 #include "WorkerOptions.h"
@@ -60,16 +61,13 @@ struct WorkerOptions;
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worker);
 public:
-    using AbstractWorker::weakPtrFactory;
-    using AbstractWorker::WeakValueType;
-    using AbstractWorker::WeakPtrImplType;
-
-    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, std::variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
-    virtual ~Worker();
-
-    // ActiveDOMObject.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(AbstractWorker);
+
+    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, Variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
+    virtual ~Worker();
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
@@ -92,15 +90,15 @@ public:
 
     void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
 
-    static void forEachWorker(const Function<Function<void(ScriptExecutionContext&)>()>&);
+    static void forEachWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>&);
 
 private:
     Worker(ScriptExecutionContext&, JSC::RuntimeFlags, WorkerOptions&&);
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Worker; }
 
-    void didReceiveResponse(ScriptExecutionContextIdentifier, ResourceLoaderIdentifier, const ResourceResponse&) final;
-    void notifyFinished(ScriptExecutionContextIdentifier) final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) final;
+    void notifyFinished(std::optional<ScriptExecutionContextIdentifier>) final;
 
     // ActiveDOMObject.
     void stop() final;

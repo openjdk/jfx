@@ -32,6 +32,7 @@
 #include <optional>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -47,13 +48,22 @@ class PlatformWheelEvent;
 class VoidCallback;
 class WeakPtrImplWithEventTargetData;
 
+enum class PointerLockRequestResult : uint8_t {
+    Success,
+    Failure,
+    Unsupported
+};
+
 class PointerLockController {
     WTF_MAKE_NONCOPYABLE(PointerLockController);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PointerLockController);
 public:
     explicit PointerLockController(Page&);
     ~PointerLockController();
     void requestPointerLock(Element* target, std::optional<PointerLockOptions>&& = std::nullopt, RefPtr<DeferredPromise> = nullptr);
+
+    void ref() const;
+    void deref() const;
 
     void requestPointerUnlock();
     void requestPointerUnlockAndForceCursorVisible();

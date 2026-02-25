@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,11 @@
 #include "config.h"
 #include "LegacySchemeRegistry.h"
 
-#include "RuntimeApplicationChecks.h"
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/URLParser.h>
 
 #if ENABLE(CONTENT_FILTERING)
@@ -245,6 +245,9 @@ static MemoryCompactRobinHoodHashSet<String>& schemesHandledBySchemeHandler() WT
 
 void LegacySchemeRegistry::registerURLSchemeAsHandledBySchemeHandler(const String& scheme)
 {
+    if (scheme == "about"_s)
+        return;
+
     Locker locker { schemeRegistryLock };
     schemesHandledBySchemeHandler().add(scheme);
 }
@@ -446,6 +449,9 @@ bool LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(const String& s
 
 void LegacySchemeRegistry::registerURLSchemeAsCORSEnabled(const String& scheme)
 {
+    if (scheme == "about"_s)
+        return;
+
     ASSERT(!isInNetworkProcess());
     if (scheme.isNull())
         return;

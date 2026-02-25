@@ -90,6 +90,12 @@ AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setRemainingDiscover
     return *this;
 }
 
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMinPINLength(uint32_t minPINLength)
+{
+    m_minPINLength = minPINLength;
+    return *this;
+}
+
 AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMaxCredentialCountInList(uint32_t maxCredentialCountInList)
 {
     m_maxCredentialCountInList = maxCredentialCountInList;
@@ -110,7 +116,8 @@ Vector<uint8_t> encodeAsCBOR(const AuthenticatorGetInfoResponse& response)
 
     CBORValue::ArrayValue versionArray;
     for (const auto& version : response.versions())
-        versionArray.append(version == ProtocolVersion::kCtap ? kCtap2Version : kU2fVersion);
+        versionArray.append(toString(version));
+    deviceInfoMap.emplace(CBORValue(1), CBORValue(WTFMove(versionArray)));
     deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoVersionsKey), CBORValue(WTFMove(versionArray)));
 
     if (response.extensions())
@@ -132,6 +139,10 @@ Vector<uint8_t> encodeAsCBOR(const AuthenticatorGetInfoResponse& response)
 
     if (response.remainingDiscoverableCredentials())
         deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey), CBORValue(static_cast<int64_t>(*response.remainingDiscoverableCredentials())));
+
+    if (auto minPINLength = response.minPINLength())
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMinPINLengthKey), CBORValue(static_cast<int64_t>(*minPINLength)));
+
     if (response.maxCredentialCountInList())
         deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMaxCredentialCountInListKey), CBORValue(static_cast<int64_t>(*response.maxCredentialCountInList())));
     if (response.maxCredentialIDLength())

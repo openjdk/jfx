@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2020 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,8 @@
 #include <float.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if PLATFORM(JAVA)
@@ -70,8 +73,10 @@ namespace WebCore {
 // | m_matrix[0][2] m_matrix[1][2] m_matrix[2][2] m_matrix[3][2] |
 // | m_matrix[0][3] m_matrix[1][3] m_matrix[2][3] m_matrix[3][3] |
 
-typedef double Vector4[4];
-typedef double Vector3[3];
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformationMatrix);
+
+using Vector4 = std::array<double, 4>;
+using Vector3 = std::array<double, 3>;
 
 const TransformationMatrix TransformationMatrix::identity { };
 
@@ -159,7 +164,7 @@ static double determinant4x4(const TransformationMatrix::Matrix4& m)
 //  The matrix B = (b  ) is the adjoint of A
 //                   ij
 
-static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
+static inline void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
     // Assign to individual variable names to aid
     // selecting correct values
@@ -208,9 +213,6 @@ static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationM
 // Returns false if the matrix is not invertible
 static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
-    // Calculate the adjoint matrix
-    adjoint(matrix, result);
-
     // Calculate the 4x4 determinant
     // If the determinant is zero,
     // then the inverse matrix is not unique.
@@ -219,11 +221,130 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
         return false;
 
     // Scale the adjoint matrix to get the inverse
+    double inverseDeterminant = 1 / determinant;
+
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const double* mat = &(matrix[0][0]);
+    double* pr = &(result[0][0]);
+    asm volatile(
+        // mat: v16 - v23
+        // m11, m12, m13, m14
+        // m21, m22, m23, m24
+        // m31, m32, m33, m34
+        // m41, m42, m43, m44
+        "ld1 {v16.2d - v19.2d}, [%[mat]], 64  \n\t"
+        "ld1 {v20.2d - v23.2d}, [%[mat]]      \n\t"
+        "ins v30.d[0], %[inverseDeterminant]         \n\t"
+        // Determinant: right mat2x2
+        "trn1 v0.2d, v17.2d, v21.2d    \n\t"
+        "trn2 v1.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v2.2d, v17.2d, v21.2d    \n\t"
+        "trn1 v3.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v5.2d, v21.2d, v23.2d    \n\t"
+        "trn1 v4.2d, v17.2d, v19.2d    \n\t"
+        "trn2 v6.2d, v17.2d, v19.2d    \n\t"
+        "trn1 v7.2d, v21.2d, v23.2d    \n\t"
+        "trn2 v25.2d, v23.2d, v21.2d   \n\t"
+        "trn1 v27.2d, v23.2d, v21.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A11A12, v25: A13A14
+        // v26: A21A22, v27: A23A24
+        "fmul v3.2d, v18.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v16.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v16.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v16.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v20.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v20.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v18.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v18.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v22.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v22.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v22.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v20.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I11I12, v25: I13I14
+        // v26: I21I22, v27: I23I24
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]], 64 \n\t"
+        // Determinant: left mat2x2
+        "trn1 v0.2d, v16.2d, v20.2d    \n\t"
+        "trn2 v1.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v2.2d, v16.2d, v20.2d    \n\t"
+        "trn1 v3.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v5.2d, v20.2d, v22.2d    \n\t"
+        "trn1 v4.2d, v16.2d, v18.2d    \n\t"
+        "trn2 v6.2d, v16.2d, v18.2d    \n\t"
+        "trn1 v7.2d, v20.2d, v22.2d    \n\t"
+        "trn2 v25.2d, v22.2d, v20.2d   \n\t"
+        "trn1 v27.2d, v22.2d, v20.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A31A32, v25: A33A34
+        // v26: A41A42, v27: A43A44
+        "fmul v3.2d, v19.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v17.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v17.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v17.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v21.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v21.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v19.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v19.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v23.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v23.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v23.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v21.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I31I32, v25: I33I34
+        // v26: I41I42, v27: I43I44
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]] \n\t"
+        : [mat]"+r"(mat), [pr]"+r"(pr)
+        : [inverseDeterminant]"r"(inverseDeterminant)
+        : "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
+        "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30"
+    );
+#else
+    // Calculate the adjoint matrix
+    adjoint(matrix, result);
 
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            result[i][j] = result[i][j] / determinant;
+            result[i][j] = result[i][j] * inverseDeterminant;
 
+#endif
     return true;
 }
 
@@ -241,7 +362,7 @@ static void transposeMatrix4(const TransformationMatrix::Matrix4& a, Transformat
 }
 
 // Multiply a homogeneous point by a matrix and return the transformed point
-static void v4MulPointByMatrix(const Vector4 p, const TransformationMatrix::Matrix4& m, Vector4 result)
+static void v4MulPointByMatrix(const Vector4& p, const TransformationMatrix::Matrix4& m, Vector4& result)
 {
     result[0] = (p[0] * m[0][0]) + (p[1] * m[1][0]) +
                 (p[2] * m[2][0]) + (p[3] * m[3][0]);
@@ -262,7 +383,7 @@ static double v3Length(Vector3 a)
 #endif
 }
 
-static void v3Scale(Vector3 v, double desiredLength)
+static void v3Scale(Vector3& v, double desiredLength)
 {
     double len = v3Length(v);
     if (len != 0) {
@@ -273,14 +394,14 @@ static void v3Scale(Vector3 v, double desiredLength)
     }
 }
 
-static double v3Dot(const Vector3 a, const Vector3 b)
+static double v3Dot(const Vector3& a, const Vector3& b)
 {
     return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
 }
 
 // Make a linear combination of two vectors and return the result.
 // result = (a * ascl) + (b * bscl)
-static void v3Combine(const Vector3 a, const Vector3 b, Vector3 result, double ascl, double bscl)
+static void v3Combine(const Vector3& a, const Vector3& b, Vector3& result, double ascl, double bscl)
 {
     result[0] = (ascl * a[0]) + (bscl * b[0]);
     result[1] = (ascl * a[1]) + (bscl * b[1]);
@@ -288,7 +409,7 @@ static void v3Combine(const Vector3 a, const Vector3 b, Vector3 result, double a
 }
 
 // Return the cross product result = a cross b */
-static void v3Cross(const Vector3 a, const Vector3 b, Vector3 result)
+static void v3Cross(const Vector3& a, const Vector3& b, Vector3& result)
 {
     result[0] = (a[1] * b[2]) - (a[2] * b[1]);
     result[1] = (a[2] * b[0]) - (a[0] * b[2]);
@@ -360,7 +481,7 @@ static bool decompose2(const TransformationMatrix::Matrix4& matrix, Transformati
 static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationMatrix::Decomposed4Type& result)
 {
     TransformationMatrix::Matrix4 localMatrix;
-    memcpy(localMatrix, mat, sizeof(TransformationMatrix::Matrix4));
+    memcpySpan(std::span { localMatrix }, std::span { mat });
 
     // Normalize the matrix.
     if (localMatrix[3][3] == 0)
@@ -374,12 +495,12 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
     // perspectiveMatrix is used to solve for perspective, but it also provides
     // an easy way to test for singularity of the upper 3x3 component.
     TransformationMatrix::Matrix4 perspectiveMatrix;
-    memcpy(perspectiveMatrix, localMatrix, sizeof(TransformationMatrix::Matrix4));
+    memcpySpan(std::span { perspectiveMatrix }, std::span { localMatrix });
     for (i = 0; i < 3; i++)
         perspectiveMatrix[i][3] = 0;
     perspectiveMatrix[3][3] = 1;
 
-    if (determinant4x4(perspectiveMatrix) == 0)
+    if (!std::isnormal(determinant4x4(perspectiveMatrix)))
         return false;
 
     // First, isolate perspective. This is the messiest.
@@ -428,7 +549,8 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
     // stored on column major order and not row major. Using the variable 'row'
     // instead of 'column' in the spec pseudocode has been the source of
     // confusion, specifically in sorting out rotations.
-    Vector3 column[3], pdum3;
+    std::array<Vector3, 3> column;
+    Vector3 pdum3;
 
     // Now get scale and shear.
     for (i = 0; i < 3; i++) {
@@ -925,7 +1047,9 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
     TransformationMatrix mat;
 
     // Optimize cases where the axis is along a major axis
-    if (x == 1.0 && y == 0.0 && z == 0.0) {
+    // Since we've already normalized the vector we don't need to check that the
+    // other two dimensions are zero
+    if (x == 1.0) {
         mat.m_matrix[0][0] = 1.0;
         mat.m_matrix[0][1] = 0.0;
         mat.m_matrix[0][2] = 0.0;
@@ -938,7 +1062,7 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
         mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
         mat.m_matrix[3][3] = 1.0;
-    } else if (x == 0.0 && y == 1.0 && z == 0.0) {
+    } else if (y == 1.0) {
         mat.m_matrix[0][0] = cosTheta;
         mat.m_matrix[0][1] = 0.0;
         mat.m_matrix[0][2] = -sinTheta;
@@ -951,7 +1075,7 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
         mat.m_matrix[0][3] = mat.m_matrix[1][3] = mat.m_matrix[2][3] = 0.0;
         mat.m_matrix[3][0] = mat.m_matrix[3][1] = mat.m_matrix[3][2] = 0.0;
         mat.m_matrix[3][3] = 1.0;
-    } else if (x == 0.0 && y == 0.0 && z == 1.0) {
+    } else if (z == 1.0) {
         mat.m_matrix[0][0] = cosTheta;
         mat.m_matrix[0][1] = sinTheta;
         mat.m_matrix[0][2] = 0.0;
@@ -1171,7 +1295,7 @@ TransformationMatrix& TransformationMatrix::zoom(double zoomFactor)
 // this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
-#if CPU(ARM64) && defined(_LP64)
+#if CPU(ARM64) && CPU(ADDRESS64)
     double* leftMatrix = &(m_matrix[0][0]);
     const double* rightMatrix = &(mat.m_matrix[0][0]);
     asm volatile (
@@ -1539,7 +1663,7 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
     tmp[3][3] = (mat.m_matrix[3][0] * m_matrix[0][3] + mat.m_matrix[3][1] * m_matrix[1][3]
                + mat.m_matrix[3][2] * m_matrix[2][3] + mat.m_matrix[3][3] * m_matrix[3][3]);
 
-    memcpy(&m_matrix[0][0], &tmp[0][0], sizeof(Matrix4));
+    memcpySpan(std::span { m_matrix }, std::span { tmp });
 #endif
     return *this;
 }
@@ -1788,7 +1912,7 @@ void TransformationMatrix::blend(const TransformationMatrix& from, double progre
 bool TransformationMatrix::decompose2(Decomposed2Type& decomp) const
 {
     if (isIdentity()) {
-        memset(&decomp, 0, sizeof(decomp));
+        zeroBytes(decomp);
         decomp.scaleX = 1;
         decomp.scaleY = 1;
         decomp.m11 = 1;
@@ -1802,7 +1926,7 @@ bool TransformationMatrix::decompose2(Decomposed2Type& decomp) const
 bool TransformationMatrix::decompose4(Decomposed4Type& decomp) const
 {
     if (isIdentity()) {
-        memset(&decomp, 0, sizeof(decomp));
+        zeroBytes(decomp);
         decomp.perspectiveW = 1;
         decomp.scaleX = 1;
         decomp.scaleY = 1;
@@ -1822,7 +1946,7 @@ void TransformationMatrix::recompose2(const Decomposed2Type& decomp)
     m_matrix[1][0] = decomp.m21;
     m_matrix[1][1] = decomp.m22;
 
-    translate3d(decomp.translateX, decomp.translateY, 0);
+    translateRight(decomp.translateX, decomp.translateY);
     rotate(decomp.angle);
     scale3d(decomp.scaleX, decomp.scaleY, 1);
 }
@@ -1943,14 +2067,15 @@ TransformationMatrix TransformationMatrix::transpose() const
     transposeMatrix4(m_matrix, transpose.m_matrix);
     return transpose;
 }
+
 TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 {
     TextStream::IndentScope indentScope(ts);
-    ts << "\n";
-    ts << indent << "[" << transform.m11() << " " << transform.m12() << " " << transform.m13() << " " << transform.m14() << "]\n";
-    ts << indent << "[" << transform.m21() << " " << transform.m22() << " " << transform.m23() << " " << transform.m24() << "]\n";
-    ts << indent << "[" << transform.m31() << " " << transform.m32() << " " << transform.m33() << " " << transform.m34() << "]\n";
-    ts << indent << "[" << transform.m41() << " " << transform.m42() << " " << transform.m43() << " " << transform.m44() << "]";
+    ts << '\n';
+    ts << indent << '[' << transform.m11() << ' ' << transform.m12() << ' ' << transform.m13() << ' ' << transform.m14() << "]\n"_s;
+    ts << indent << '[' << transform.m21() << ' ' << transform.m22() << ' ' << transform.m23() << ' ' << transform.m24() << "]\n"_s;
+    ts << indent << '[' << transform.m31() << ' ' << transform.m32() << ' ' << transform.m33() << ' ' << transform.m34() << "]\n"_s;
+    ts << indent << '[' << transform.m41() << ' ' << transform.m42() << ' ' << transform.m43() << ' ' << transform.m44() << ']';
     return ts;
 }
 

@@ -23,18 +23,22 @@
 #include "StyleInheritedData.h"
 
 #include "RenderStyleInlines.h"
+#include "RenderStyleDifference.h"
+#include "StyleFontData.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInheritedData);
 
 StyleInheritedData::StyleInheritedData()
-    : horizontalBorderSpacing(RenderStyle::initialHorizontalBorderSpacing())
-    , verticalBorderSpacing(RenderStyle::initialVerticalBorderSpacing())
+    : borderHorizontalSpacing(RenderStyle::initialBorderHorizontalSpacing())
+    , borderVerticalSpacing(RenderStyle::initialBorderVerticalSpacing())
     , lineHeight(RenderStyle::initialLineHeight())
 #if ENABLE(TEXT_AUTOSIZING)
     , specifiedLineHeight(RenderStyle::initialLineHeight())
 #endif
+    , fontData(StyleFontData::create())
     , color(RenderStyle::initialColor())
     , visitedLinkColor(RenderStyle::initialColor())
 {
@@ -42,13 +46,13 @@ StyleInheritedData::StyleInheritedData()
 
 inline StyleInheritedData::StyleInheritedData(const StyleInheritedData& o)
     : RefCounted<StyleInheritedData>()
-    , horizontalBorderSpacing(o.horizontalBorderSpacing)
-    , verticalBorderSpacing(o.verticalBorderSpacing)
+    , borderHorizontalSpacing(o.borderHorizontalSpacing)
+    , borderVerticalSpacing(o.borderVerticalSpacing)
     , lineHeight(o.lineHeight)
 #if ENABLE(TEXT_AUTOSIZING)
     , specifiedLineHeight(o.specifiedLineHeight)
 #endif
-    , fontCascade(o.fontCascade)
+    , fontData(o.fontData)
     , color(o.color)
     , visitedLinkColor(o.visitedLinkColor)
 {
@@ -79,9 +83,9 @@ bool StyleInheritedData::nonFastPathInheritedEqual(const StyleInheritedData& oth
 #if ENABLE(TEXT_AUTOSIZING)
         && specifiedLineHeight == other.specifiedLineHeight
 #endif
-        && fontCascade == other.fontCascade
-        && horizontalBorderSpacing == other.horizontalBorderSpacing
-        && verticalBorderSpacing == other.verticalBorderSpacing;
+        && fontData == other.fontData
+        && borderHorizontalSpacing == other.borderHorizontalSpacing
+        && borderVerticalSpacing == other.borderVerticalSpacing;
 }
 
 void StyleInheritedData::fastPathInheritFrom(const StyleInheritedData& inheritParent)
@@ -89,5 +93,23 @@ void StyleInheritedData::fastPathInheritFrom(const StyleInheritedData& inheritPa
     color = inheritParent.color;
     visitedLinkColor = inheritParent.visitedLinkColor;
 }
+
+#if !LOG_DISABLED
+void StyleInheritedData::dumpDifferences(TextStream& ts, const StyleInheritedData& other) const
+{
+    fontData->dumpDifferences(ts, *other.fontData);
+
+    LOG_IF_DIFFERENT(borderHorizontalSpacing);
+    LOG_IF_DIFFERENT(borderVerticalSpacing);
+    LOG_IF_DIFFERENT(lineHeight);
+
+#if ENABLE(TEXT_AUTOSIZING)
+    LOG_IF_DIFFERENT(specifiedLineHeight);
+#endif
+
+    LOG_IF_DIFFERENT(color);
+    LOG_IF_DIFFERENT(visitedLinkColor);
+}
+#endif
 
 } // namespace WebCore

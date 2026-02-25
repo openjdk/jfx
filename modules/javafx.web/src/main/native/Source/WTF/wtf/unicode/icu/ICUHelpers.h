@@ -44,7 +44,7 @@ constexpr bool needsToGrowToProduceCString(UErrorCode);
 //
 // Example:
 //
-//    Vector<UChar, 32> buffer;
+//    Vector<char16_t, 32> buffer;
 //    auto status = callBufferProducingFunction(ucal_getDefaultTimeZone, buffer);
 //
 template<typename FunctionType, typename ...ArgumentTypes> UErrorCode callBufferProducingFunction(const FunctionType&, ArgumentTypes&&...);
@@ -59,6 +59,11 @@ constexpr bool needsToGrowToProduceBuffer(UErrorCode errorCode)
 constexpr bool needsToGrowToProduceCString(UErrorCode errorCode)
 {
     return needsToGrowToProduceBuffer(errorCode) || errorCode == U_STRING_NOT_TERMINATED_WARNING;
+}
+
+constexpr bool isICUMemoryAllocationError(UErrorCode errorCode)
+{
+    return errorCode == U_MEMORY_ALLOCATION_ERROR;
 }
 
 namespace CallBufferProducingFunction {
@@ -79,7 +84,7 @@ template<typename FirstArgumentType, typename ...OtherArgumentTypes> auto argume
 
 template<typename CharacterType, size_t inlineCapacity, typename ...OtherArgumentTypes> auto argumentTuple(Vector<CharacterType, inlineCapacity>& buffer, OtherArgumentTypes&&... otherArguments)
 {
-    return tuple_cat(std::make_tuple(buffer.data(), buffer.size()), argumentTuple(std::forward<OtherArgumentTypes>(otherArguments)...));
+    return tuple_cat(std::make_tuple(buffer.mutableSpan().data(), buffer.size()), argumentTuple(std::forward<OtherArgumentTypes>(otherArguments)...));
 }
 
 template<typename FirstArgumentType, typename ...OtherArgumentTypes> auto argumentTuple(FirstArgumentType&& firstArgument, OtherArgumentTypes&&... otherArguments)
@@ -96,13 +101,13 @@ template<typename FunctionType, typename ...ArgumentTypes> UErrorCode callBuffer
     auto& buffer = CallBufferProducingFunction::findVector(std::forward<ArgumentTypes>(arguments)...);
     buffer.grow(buffer.capacity());
     auto status = U_ZERO_ERROR;
-    auto resultLength = apply(function, CallBufferProducingFunction::argumentTuple(std::forward<ArgumentTypes>(arguments)..., &status));
+    auto resultLength = std::apply(function, CallBufferProducingFunction::argumentTuple(std::forward<ArgumentTypes>(arguments)..., &status));
     if (U_SUCCESS(status))
         buffer.shrink(resultLength);
     else if (needsToGrowToProduceBuffer(status)) {
         status = U_ZERO_ERROR;
         buffer.grow(resultLength);
-        apply(function, CallBufferProducingFunction::argumentTuple(std::forward<ArgumentTypes>(arguments)..., &status));
+        std::apply(function, CallBufferProducingFunction::argumentTuple(std::forward<ArgumentTypes>(arguments)..., &status));
         ASSERT(U_SUCCESS(status));
     }
     return status;
@@ -128,4 +133,5 @@ WTF_EXPORT_PRIVATE unsigned minorVersion();
 using WTF::callBufferProducingFunction;
 using WTF::needsToGrowToProduceCString;
 using WTF::needsToGrowToProduceBuffer;
+using WTF::isICUMemoryAllocationError;
 using WTF::ICUDeleter;

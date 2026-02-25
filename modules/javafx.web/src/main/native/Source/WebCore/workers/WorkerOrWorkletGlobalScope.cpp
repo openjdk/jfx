@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WorkerOrWorkletGlobalScope.h"
 
+#include "NoiseInjectionPolicy.h"
 #include "ScriptModuleLoader.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "WorkerEventLoop.h"
@@ -40,12 +41,12 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerOrWorkletGlobalScope);
 
-WorkerOrWorkletGlobalScope::WorkerOrWorkletGlobalScope(WorkerThreadType type, PAL::SessionID sessionID, Ref<JSC::VM>&& vm, ReferrerPolicy referrerPolicy, WorkerOrWorkletThread* thread, std::optional<uint64_t> noiseInjectionHashSalt, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections, ScriptExecutionContextIdentifier contextIdentifier)
+WorkerOrWorkletGlobalScope::WorkerOrWorkletGlobalScope(WorkerThreadType type, PAL::SessionID sessionID, Ref<JSC::VM>&& vm, ReferrerPolicy referrerPolicy, WorkerOrWorkletThread* thread, std::optional<uint64_t> noiseInjectionHashSalt, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
     : ScriptExecutionContext(Type::WorkerOrWorkletGlobalScope, contextIdentifier)
     , m_script(makeUnique<WorkerOrWorkletScriptController>(type, WTFMove(vm), this))
-    , m_moduleLoader(makeUnique<ScriptModuleLoader>(this, ScriptModuleLoader::OwnerType::WorkerOrWorklet))
+    , m_moduleLoader(makeUniqueRef<ScriptModuleLoader>(this, ScriptModuleLoader::OwnerType::WorkerOrWorklet))
     , m_thread(thread)
-    , m_inspectorController(makeUnique<WorkerInspectorController>(*this))
+    , m_inspectorController(makeUniqueRef<WorkerInspectorController>(*this))
     , m_sessionID(sessionID)
     , m_referrerPolicy(referrerPolicy)
     , m_noiseInjectionHashSalt(noiseInjectionHashSalt)
@@ -87,6 +88,11 @@ JSC::VM& WorkerOrWorkletGlobalScope::vm()
     return script()->vm();
 }
 
+JSC::VM* WorkerOrWorkletGlobalScope::vmIfExists() const
+{
+    return &script()->vm();
+}
+
 void WorkerOrWorkletGlobalScope::disableEval(const String& errorMessage)
 {
     m_script->disableEval(errorMessage);
@@ -97,9 +103,9 @@ void WorkerOrWorkletGlobalScope::disableWebAssembly(const String& errorMessage)
     m_script->disableWebAssembly(errorMessage);
 }
 
-void WorkerOrWorkletGlobalScope::setRequiresTrustedTypes(bool required)
+void WorkerOrWorkletGlobalScope::setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement enforcement)
 {
-    m_script->setRequiresTrustedTypes(required);
+    m_script->setTrustedTypesEnforcement(enforcement);
 }
 
 bool WorkerOrWorkletGlobalScope::isJSExecutionForbidden() const
@@ -110,9 +116,9 @@ bool WorkerOrWorkletGlobalScope::isJSExecutionForbidden() const
 EventLoopTaskGroup& WorkerOrWorkletGlobalScope::eventLoop()
 {
     ASSERT(isContextThread());
-    if (UNLIKELY(!m_defaultTaskGroup)) {
-        m_eventLoop = WorkerEventLoop::create(*this);
-        m_defaultTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
+    if (!m_defaultTaskGroup) [[unlikely]] {
+        lazyInitialize(m_eventLoop, WorkerEventLoop::create(*this));
+        lazyInitialize(m_defaultTaskGroup, makeUnique<EventLoopTaskGroup>(*m_eventLoop));
         if (activeDOMObjectsAreStopped())
             m_defaultTaskGroup->stopAndDiscardAllTasks();
     }
@@ -121,8 +127,8 @@ EventLoopTaskGroup& WorkerOrWorkletGlobalScope::eventLoop()
 
 bool WorkerOrWorkletGlobalScope::isContextThread() const
 {
-    auto* thread = workerOrWorkletThread();
-    return thread && thread->thread() ? thread->thread() == &Thread::current() : isMainThread();
+    RefPtr thread = workerOrWorkletThread();
+    return thread && thread->thread() ? thread->thread() == &Thread::currentSingleton() : isMainThread();
 }
 
 void WorkerOrWorkletGlobalScope::postTask(Task&& task)
@@ -135,6 +141,16 @@ void WorkerOrWorkletGlobalScope::postTaskForMode(Task&& task, const String& mode
 {
     ASSERT(workerOrWorkletThread());
     workerOrWorkletThread()->runLoop().postTaskForMode(WTFMove(task), mode);
+}
+
+OptionSet<NoiseInjectionPolicy> WorkerOrWorkletGlobalScope::noiseInjectionPolicies() const
+{
+    OptionSet<NoiseInjectionPolicy> policies;
+    if (m_advancedPrivacyProtections.contains(AdvancedPrivacyProtections::FingerprintingProtections))
+        policies.add(NoiseInjectionPolicy::Minimal);
+    if (m_advancedPrivacyProtections.contains(AdvancedPrivacyProtections::ScriptTrackingPrivacy))
+        policies.add(NoiseInjectionPolicy::Enhanced);
+    return policies;
 }
 
 } // namespace WebCore

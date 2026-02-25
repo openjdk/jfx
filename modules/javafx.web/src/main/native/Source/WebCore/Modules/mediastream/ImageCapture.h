@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,18 +41,21 @@ class Logger;
 
 namespace WebCore {
 
-class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject {
+class ImageBitmap;
+class ImageCaptureVideoFrameObserver;
+
+class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject, public MediaStreamTrackPrivateObserver {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageCapture);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ExceptionOr<Ref<ImageCapture>> create(Document&, Ref<MediaStreamTrack>);
 
     ~ImageCapture();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     void takePhoto(PhotoSettings&&, DOMPromiseDeferred<IDLInterface<Blob>>&&);
+    void grabFrame(DOMPromiseDeferred<IDLInterface<ImageBitmap>>&&);
     void getPhotoCapabilities(DOMPromiseDeferred<IDLDictionary<PhotoCapabilities>>&&);
     void getPhotoSettings(DOMPromiseDeferred<IDLDictionary<PhotoSettings>>&&);
 
@@ -61,17 +64,29 @@ public:
 private:
     ImageCapture(Document&, Ref<MediaStreamTrack>);
 
+    void stopGrabFrameObserver();
+
+    // ActiveDOMObject
+    void stop() final { stopGrabFrameObserver(); };
+
+    // MediaStreamTrackPrivateObserver
+    void trackEnded(MediaStreamTrackPrivate&) final;
+    void trackMutedChanged(MediaStreamTrackPrivate&) final { }
+    void trackSettingsChanged(MediaStreamTrackPrivate&) final { }
+    void trackEnabledChanged(MediaStreamTrackPrivate&) final { }
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
     ASCIILiteral logClassName() const { return "ImageCapture"_s; }
     WTFLogChannel& logChannel() const;
 #endif
 
-    Ref<MediaStreamTrack> m_track;
+    const Ref<MediaStreamTrack> m_track;
+    RefPtr<ImageCaptureVideoFrameObserver> m_grabFrameObserver;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

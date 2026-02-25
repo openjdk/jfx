@@ -87,8 +87,8 @@ public:
 
     struct EdgeHashTraits : HashTraits<Edge> {
         static constexpr bool emptyValueIsZero = true;
-        static void constructDeletedValue(Edge& slot) { slot.m_source = bitwise_cast<Node*>(static_cast<intptr_t>(-1)); }
-        static bool isDeletedValue(const Edge& edge) { return edge.m_source == bitwise_cast<Node*>(static_cast<intptr_t>(-1)); }
+        static void constructDeletedValue(Edge& slot) { slot.m_source = std::bit_cast<Node*>(static_cast<intptr_t>(-1)); }
+        static bool isDeletedValue(const Edge& edge) { return edge.m_source == std::bit_cast<Node*>(static_cast<intptr_t>(-1)); }
     };
 
     struct EdgeHash {
@@ -229,7 +229,7 @@ void GraphBuilder::visit(AST::VariableStatement& variable)
 void GraphBuilder::visit(AST::Expression& expression)
 {
     SetForScope expressionDepthScope(m_expressionDepth, m_expressionDepth + 1);
-    if (UNLIKELY(m_expressionDepth > s_maxExpressionDepth)) {
+    if (m_expressionDepth > s_maxExpressionDepth) [[unlikely]] {
         setError({ makeString("reached maximum expression depth of "_s, String::number(s_maxExpressionDepth)), expression.span() });
         return;
     }

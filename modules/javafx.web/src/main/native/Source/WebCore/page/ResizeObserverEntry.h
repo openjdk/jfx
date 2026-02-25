@@ -30,6 +30,7 @@
 #include "FloatRect.h"
 #include "ResizeObserverSize.h"
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class Element;
 class ResizeObserverSize;
 
 class ResizeObserverEntry : public RefCounted<ResizeObserverEntry> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ResizeObserverEntry);
 public:
     static Ref<ResizeObserverEntry> create(Element* target, const FloatRect& contentRect, FloatSize borderBoxSize, FloatSize contentBoxSize)
     {
@@ -59,8 +60,8 @@ private:
     {
     }
 
-    RefPtr<Element> m_target;
-    Ref<DOMRectReadOnly> m_contentRect;
+    const RefPtr<Element> m_target;
+    const Ref<DOMRectReadOnly> m_contentRect;
     // The spec is designed to allow mulitple boxes for multicol scenarios, but for now these vectors only ever contain one entry.
     Vector<Ref<ResizeObserverSize>> m_borderBoxSizes;
     Vector<Ref<ResizeObserverSize>> m_contentBoxSizes;

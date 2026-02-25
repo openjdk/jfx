@@ -39,6 +39,7 @@
 #include "LLIntData.h"
 #include "NativeCalleeRegistry.h"
 #include "Options.h"
+#include "StructureAlignedMemoryAllocator.h"
 #include "SuperSampler.h"
 #include "VMTraps.h"
 #include "WasmCapabilities.h"
@@ -48,6 +49,8 @@
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
 
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
 #if BUSE(LIBPAS)
@@ -55,8 +58,15 @@
 #endif
 #endif
 
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
 #if ENABLE(LLVM_PROFILE_GENERATION)
+#if PLATFORM(IOS_FAMILY)
+#include <wtf/LLVMProfilingUtils.h>
+extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
+#else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
+#endif
 #endif
 
 namespace JSC {
@@ -92,6 +102,7 @@ void initialize()
                 isARM64E_FPAC(); // Call this to initialize g_jscConfig.canUseFPAC.
 #endif
             }
+            StructureAlignedMemoryAllocator::initializeStructureAddressSpace();
         }
         Options::finalize();
 
@@ -110,10 +121,10 @@ void initialize()
             IPInt::initialize();
 #endif
         LLInt::initialize();
-        DisallowGC::initialize();
+        AssertNoGC::initialize();
 
         initializeSuperSampler();
-        Thread& thread = Thread::current();
+        auto& thread = Thread::currentSingleton();
         thread.setSavedLastStackTop(thread.stack().origin());
 
         NativeCalleeRegistry::initialize();
@@ -124,7 +135,7 @@ void initialize()
 #endif
 
         if (VM::isInMiniMode())
-            WTF::fastEnableMiniMode();
+            WTF::fastEnableMiniMode(Options::forceMiniVMMode());
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
             if (!Options::usePollingTraps())

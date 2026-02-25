@@ -28,18 +28,15 @@
 
 #include "CSSCursorImageValue.h"
 #include "CachedResourceLoader.h"
-#include "ContentData.h"
-#include "CursorData.h"
-#include "CursorList.h"
 #include "DocumentInlines.h"
 #include "FillLayer.h"
 #include "RenderStyleInlines.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
-#include "ShapeValue.h"
+#include "StyleCursor.h"
 #include "StyleImage.h"
 #include "StyleReflection.h"
-#include "TransformFunctions.h"
+#include "TransformOperationsBuilder.h"
 
 namespace WebCore {
 namespace Style {
@@ -59,7 +56,7 @@ static void loadPendingImage(Document& document, const StyleImage* styleImage, c
         switch (loadPolicy) {
         case LoadPolicy::Anonymous:
             options.storedCredentialsPolicy = StoredCredentialsPolicy::DoNotUse;
-            FALLTHROUGH;
+            [[fallthrough]];
         case LoadPolicy::CORS:
             options.mode = FetchOptions::Mode::Cors;
             options.credentials = FetchOptions::Credentials::SameOrigin;
@@ -78,16 +75,20 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
     for (auto* backgroundLayer = &style.backgroundLayers(); backgroundLayer; backgroundLayer = backgroundLayer->next())
         loadPendingImage(document, backgroundLayer->image(), element);
 
-    for (auto* contentData = style.contentData(); contentData; contentData = contentData->next()) {
-        if (auto* imageContentData = dynamicDowncast<ImageContentData>(*contentData)) {
-            auto& styleImage = imageContentData->image();
-            loadPendingImage(document, &styleImage, element);
+    if (auto* contentData = style.content().tryData()) {
+        for (auto& contentItem : contentData->list) {
+            WTF::switchOn(contentItem,
+                [&](const Style::Content::Image& image) {
+                    loadPendingImage(document, image.image.value.ptr(), element);
+                },
+                [](const auto&) { }
+            );
         }
     }
 
-    if (auto* cursorList = style.cursors()) {
-        for (size_t i = 0; i < cursorList->size(); ++i)
-            loadPendingImage(document, cursorList->at(i).image(), element);
+    if (auto cursorImages = style.cursor().images) {
+        for (auto& cursorImage : *cursorImages)
+            loadPendingImage(document, cursorImage.image.ptr(), element);
     }
 
     loadPendingImage(document, style.listStyleImage(), element);
@@ -99,12 +100,12 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
 
     // Masking operations may be sensitive to timing attacks that can be used to reveal the pixel data of
     // the image used as the mask. As a means to mitigate such attacks CSS mask images and shape-outside
-    // images are retreived in "Anonymous" mode, which uses a potentially CORS-enabled fetch.
+    // images are retrieved in "Anonymous" mode, which uses a potentially CORS-enabled fetch.
     for (auto* maskLayer = &style.maskLayers(); maskLayer; maskLayer = maskLayer->next())
         loadPendingImage(document, maskLayer->image(), element, LoadPolicy::CORS);
 
-    if (style.shapeOutside())
-        loadPendingImage(document, style.shapeOutside()->image(), element, LoadPolicy::Anonymous);
+    if (RefPtr shapeValueImage = style.shapeOutside().image())
+        loadPendingImage(document, shapeValueImage.get(), element, LoadPolicy::Anonymous);
 
     // Are there other pseudo-elements that need resource loading?
     if (auto* firstLineStyle = style.getCachedPseudoStyle({ PseudoId::FirstLine }))

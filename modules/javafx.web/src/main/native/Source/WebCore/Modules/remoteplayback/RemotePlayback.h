@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "WebCoreOpaqueRoot.h"
 #include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
@@ -50,6 +51,9 @@ class RemotePlayback final
 {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RemotePlayback);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<RemotePlayback> create(HTMLMediaElement&);
     ~RemotePlayback();
 
@@ -72,10 +76,6 @@ public:
 
     void invalidate();
 
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     WebCoreOpaqueRoot opaqueRootConcurrently() const;
     Node* ownerNode() const;
 
@@ -97,12 +97,12 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
     WTFLogChannel& logChannel() const;
     ASCIILiteral logClassName() const { return "RemotePlayback"_s; }
 
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier { nullptr };
+    const Ref<const Logger> m_logger;
+    uint64_t m_logIdentifier { 0 };
 #endif
 
     WeakPtr<HTMLMediaElement> m_mediaElement;

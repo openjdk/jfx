@@ -46,6 +46,10 @@
 #include <wtf/MachSendRight.h>
 #endif
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+#include <wtf/unix/UnixFileDescriptor.h>
+#endif
+
 #if OS(WINDOWS)
 // Defined in winerror.h
 #ifdef NO_ERROR
@@ -77,11 +81,23 @@ struct GraphicsContextGLExternalImageSourceIOSurfaceHandle {
 struct GraphicsContextGLExternalImageSourceMTLSharedTextureHandle {
     MachSendRight handle;
 };
-using GraphicsContextGLExternalImageSource = std::variant<
+using GraphicsContextGLExternalImageSource = Variant<
     GraphicsContextGLExternalImageSourceIOSurfaceHandle,
     GraphicsContextGLExternalImageSourceMTLSharedTextureHandle
     >;
 using GraphicsContextGLExternalSyncSource = std::tuple<MachSendRight, uint64_t>;
+
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+
+struct GraphicsContextGLExternalImageSource {
+    Vector<WTF::UnixFileDescriptor> fds;
+    Vector<uint32_t> strides;
+    Vector<uint32_t> offsets;
+    uint32_t fourcc;
+    uint64_t modifier;
+    WebCore::IntSize size;
+};
+using GraphicsContextGLExternalSyncSource = int;
 
 #else
 
@@ -936,6 +952,7 @@ public:
     static constexpr GCGLenum BGRA4_ANGLEX = 0x6ABC;
     static constexpr GCGLenum BGR5_A1_ANGLEX = 0x6ABD;
     static constexpr GCGLenum BGRA8_SRGB_ANGLEX = 0x6AC0;
+    static constexpr GCGLenum RGBX8_SRGB_ANGLEX = 0x6AFA;
 
     // GL_OES_depth32
     static constexpr GCGLenum DEPTH_COMPONENT32_OES = 0x81A7;
@@ -1548,8 +1565,11 @@ public:
     using ExternalSyncSource = GraphicsContextGLExternalSyncSource;
 #if ENABLE(WEBXR)
     virtual GCGLExternalSync createExternalSync(ExternalSyncSource&&) = 0;
-#endif
     virtual void deleteExternalSync(GCGLExternalSync) = 0;
+#if USE(OPENXR)
+    virtual WTF::UnixFileDescriptor exportExternalSync(GCGLExternalSync) { return { }; }
+#endif
+#endif
 
     // ========== Extension related entry points.
 
@@ -1658,13 +1678,8 @@ public:
     using SimulatedEventForTesting = GraphicsContextGLSimulatedEventForTesting;
     virtual void simulateEventForTesting(SimulatedEventForTesting) = 0;
 
-#if ENABLE(VIDEO) && USE(AVFOUNDATION)
-    // Returns interface for CV interaction if the functionality is present.
-    virtual GraphicsContextGLCV* asCV() = 0;
-#endif
 #if ENABLE(VIDEO)
-    virtual bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) = 0;
-    virtual bool copyTextureFromVideoFrame(VideoFrame&, PlatformGLObject /* texture */, GCGLenum /* target */, GCGLint /* level */, GCGLenum /* internalFormat */, GCGLenum /* format */, GCGLenum /* type */, bool /* premultiplyAlpha */, bool /* flipY */) { return false; }
+    virtual bool copyTextureFromVideoFrame(VideoFrame&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum  format, GCGLenum type, bool premultiplyAlpha, bool flipY) = 0;
     WEBCORE_EXPORT virtual RefPtr<Image> videoFrameToImage(VideoFrame&);
 #endif
 
@@ -1710,7 +1725,7 @@ public:
     // Packs the contents of the given Image which is passed in |pixels| into the passed Vector
     // according to the given format and type, and obeying the flipY and AlphaOp flags.
     // Returns true upon success.
-    static bool packImageData(Image*, const void* pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data);
+    static bool packImageData(Image*, std::span<const uint8_t> pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data);
 
     WEBCORE_EXPORT static RefPtr<NativeImage> createNativeImageFromPixelBuffer(const GraphicsContextGLAttributes&, Ref<PixelBuffer>&&);
     WEBCORE_EXPORT static void paintToCanvas(NativeImage&, const IntSize& canvasSize, GraphicsContext&);

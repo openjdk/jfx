@@ -43,8 +43,6 @@ public:
 
     OffscreenCanvas& canvas() const { return downcast<OffscreenCanvas>(canvasBase()); }
 
-    void commit();
-
     void setFont(const String&);
     CanvasDirection direction() const;
     void fillText(const String& text, double x, double y, std::optional<double> maxWidth = std::nullopt);
@@ -53,7 +51,7 @@ public:
 
 private:
     OffscreenCanvasRenderingContext2D(CanvasBase&, CanvasRenderingContext2DSettings&&);
-    bool isOffscreen2d() const final { return true; }
+    void drawText(const String& text, double x, double y, bool fill, std::optional<double> maxWidth = std::nullopt);
     RefPtr<ImageBuffer> transferToImageBuffer() final;
     const FontProxy* fontProxy() final;
 };

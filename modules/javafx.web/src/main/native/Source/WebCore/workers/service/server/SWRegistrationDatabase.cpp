@@ -40,11 +40,14 @@
 #include "ServiceWorkerRegistrationKey.h"
 #include "WebCorePersistentCoders.h"
 #include "WorkerType.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWRegistrationDatabase);
 
 static constexpr auto scriptVersion = "V1"_s;
 #define RECORDS_TABLE_SCHEMA_PREFIX "CREATE TABLE "
@@ -175,6 +178,8 @@ ASCIILiteral SWRegistrationDatabase::statementString(StatementType type) const
     switch (type) {
     case StatementType::GetAllRecords:
         return "SELECT * FROM Records;"_s;
+    case StatementType::CountAllRecords:
+        return "SELECT COUNT(*) FROM Records;"_s;
     case StatementType::InsertRecord:
         return "INSERT INTO Records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"_s;
     case StatementType::DeleteRecord:
@@ -247,11 +252,7 @@ bool SWRegistrationDatabase::prepareDatabase(ShouldCreateIfNotExists shouldCreat
 
     m_database = makeUnique<SQLiteDatabase>();
     FileSystem::makeAllDirectories(m_directory);
-#if PLATFORM(MAC)
     auto openResult  = m_database->open(databasePath, SQLiteDatabase::OpenMode::ReadWriteCreate, SQLiteDatabase::OpenOptions::CanSuspendWhileLocked);
-#else
-    auto openResult  = m_database->open(databasePath);
-#endif
     if (!openResult) {
         auto lastError = m_database->lastError();
         if (lastError == SQLITE_CORRUPT && lastError == SQLITE_NOTADB) {
@@ -305,11 +306,20 @@ bool SWRegistrationDatabase::ensureValidRecordsTable()
 
 std::optional<Vector<ServiceWorkerContextData>> SWRegistrationDatabase::importRegistrations()
 {
+    auto result = importRegistrationsImpl();
+    if (result && result->isEmpty() && m_database)
+        deleteAllFiles();
+
+    return result;
+}
+
+std::optional<Vector<ServiceWorkerContextData>> SWRegistrationDatabase::importRegistrationsImpl()
+{
     if (!prepareDatabase(ShouldCreateIfNotExists::No))
         return std::nullopt;
 
     if (!m_database) {
-        clearAllRegistrations();
+        deleteAllFiles();
         return Vector<ServiceWorkerContextData> { };
     }
 
@@ -428,6 +438,17 @@ std::optional<Vector<ServiceWorkerContextData>> SWRegistrationDatabase::importRe
 
 std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegistrations(const Vector<ServiceWorkerContextData>& registrationsToUpdate, const Vector<ServiceWorkerRegistrationKey>& registrationsToDelete)
 {
+    auto result = updateRegistrationsImpl(registrationsToUpdate, registrationsToDelete);
+    if (auto count = recordsCount()) {
+        if (!count.value())
+            deleteAllFiles();
+    }
+
+    return result;
+}
+
+std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegistrationsImpl(const Vector<ServiceWorkerContextData>& registrationsToUpdate, const Vector<ServiceWorkerRegistrationKey>& registrationsToDelete)
+{
     if (!prepareDatabase(ShouldCreateIfNotExists::Yes))
         return std::nullopt;
 
@@ -471,12 +492,12 @@ std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegist
             || statement->bindText(6, StringView { convertUpdateViaCacheToString(data.registration.updateViaCache) }) != SQLITE_OK
             || statement->bindText(7, data.scriptURL.string()) != SQLITE_OK
             || statement->bindText(8, StringView { convertWorkerTypeToString(data.workerType) }) != SQLITE_OK
-            || statement->bindBlob(9, std::span(cspEncoder.buffer(), cspEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(10, std::span(coepEncoder.buffer(), coepEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(9, cspEncoder.span()) != SQLITE_OK
+            || statement->bindBlob(10, coepEncoder.span()) != SQLITE_OK
             || statement->bindText(11, data.referrerPolicy) != SQLITE_OK
-            || statement->bindBlob(12, std::span(scriptResourceMapEncoder.buffer(), scriptResourceMapEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(13, std::span(certificateInfoEncoder.buffer(), certificateInfoEncoder.bufferSize())) != SQLITE_OK
-            || statement->bindBlob(14, std::span(navigationPreloadStateEncoder.buffer(), navigationPreloadStateEncoder.bufferSize())) != SQLITE_OK
+            || statement->bindBlob(12, scriptResourceMapEncoder.span()) != SQLITE_OK
+            || statement->bindBlob(13, certificateInfoEncoder.span()) != SQLITE_OK
+            || statement->bindBlob(14, navigationPreloadStateEncoder.span()) != SQLITE_OK
             || statement->step() != SQLITE_DONE) {
             RELEASE_LOG_ERROR(ServiceWorker, "SWRegistrationDatabase::updateRegistrations failed to insert record (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
             return std::nullopt;
@@ -507,7 +528,26 @@ std::optional<Vector<ServiceWorkerScripts>> SWRegistrationDatabase::updateRegist
     return result;
 }
 
-void SWRegistrationDatabase::clearAllRegistrations()
+std::optional<uint64_t> SWRegistrationDatabase::recordsCount()
+{
+    if (!m_database)
+        return std::nullopt;
+
+    auto statement = cachedStatement(StatementType::CountAllRecords);
+    if (!statement) {
+        RELEASE_LOG_ERROR(ServiceWorker, "SWRegistrationDatabase::recordsCount failed on creating statement (%d) - %s", m_database->lastError(), m_database->lastErrorMsg());
+        return std::nullopt;
+    }
+
+    if (statement->step() != SQLITE_ROW) {
+        RELEASE_LOG_ERROR(ServiceWorker, "SWRegistrationDatabase::recordsCount failed to count records (%d) - %s", m_database->lastError(), m_database->lastErrorMsg());
+        return std::nullopt;
+    }
+
+    return statement->columnInt(0);
+}
+
+void SWRegistrationDatabase::deleteAllFiles()
 {
     close();
     SQLiteFileSystem::deleteDatabaseFile(databaseFilePath(m_directory));

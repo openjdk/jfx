@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,7 @@ public class PlatformUtil {
     private static final boolean SOLARIS = os.startsWith("SunOS");
     private static final boolean IOS = os.startsWith("iOS");
     private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
+    private static final boolean HEADLESS = "headless".equals(embeddedType);
 
     /**
      * Utility method used to determine whether the version number as
@@ -165,6 +166,13 @@ public class PlatformUtil {
      */
     public static String getEmbeddedType() {
         return embeddedType;
+    }
+
+    /**
+     * Returns true if the Headless glass platform is selected
+     */
+    public static boolean isHeadless(){
+        return HEADLESS;
     }
 
     /**

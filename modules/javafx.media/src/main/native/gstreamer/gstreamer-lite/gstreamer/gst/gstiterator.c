@@ -486,6 +486,7 @@ filter_next (GstIteratorFilter * it, GValue * elem)
         break;
       case GST_ITERATOR_RESYNC:
       case GST_ITERATOR_DONE:
+      case GST_ITERATOR_ERROR:
         done = TRUE;
         break;
       default:
@@ -529,7 +530,7 @@ filter_free (GstIteratorFilter * it)
  * gst_iterator_filter:
  * @it: The #GstIterator to filter
  * @func: (scope call): the compare function to select elements
- * @user_data: (closure): user data passed to the compare function
+ * @user_data: user data passed to the compare function
  *
  * Create a new iterator from an existing iterator. The new iterator
  * will only return those elements that match the given compare function @func.
@@ -578,9 +579,9 @@ gst_iterator_filter (GstIterator * it, GCompareFunc func,
 /**
  * gst_iterator_fold:
  * @it: The #GstIterator to fold over
- * @func: (scope call): the fold function
+ * @func: (scope call) (closure user_data): the fold function
  * @ret: the seed value passed to the fold function
- * @user_data: (closure): user data passed to the fold function
+ * @user_data: user data passed to the fold function
  *
  * Folds @func over the elements of @iter. That is to say, @func will be called
  * as @func (object, @ret, @user_data) for each object in @it. The normal use
@@ -651,8 +652,8 @@ foreach_fold_func (const GValue * item, GValue * unused, ForeachFoldData * data)
 /**
  * gst_iterator_foreach:
  * @it: The #GstIterator to iterate
- * @func: (scope call): the function to call for each element.
- * @user_data: (closure): user data passed to the function
+ * @func: (scope call) (closure user_data): the function to call for each element.
+ * @user_data: user data passed to the function
  *
  * Iterate over all element of @it and call the given function @func for
  * each element.
@@ -698,9 +699,9 @@ find_custom_fold_func (const GValue * item, GValue * ret,
 /**
  * gst_iterator_find_custom:
  * @it: The #GstIterator to iterate
- * @func: (scope call): the compare function to use
+ * @func: (scope call) (closure user_data): the compare function to use
  * @elem: (out): pointer to a #GValue where to store the result
- * @user_data: (closure): user data passed to the compare function
+ * @user_data: user data passed to the compare function
  *
  * Find the first element in @it that matches the compare function @func.
  * @func should return 0 when the element is found. The first parameter

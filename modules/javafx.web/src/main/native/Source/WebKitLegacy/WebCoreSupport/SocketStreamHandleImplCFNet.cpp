@@ -382,7 +382,11 @@ static ProtectionSpace::AuthenticationScheme authenticationSchemeFromAuthenticat
     if (CFEqual(method, kCFHTTPAuthenticationSchemeNegotiate))
         return ProtectionSpace::AuthenticationScheme::Negotiate;
     ASSERT_NOT_REACHED();
+#if PLATFORM(COCOA)
+    return ProtectionSpace::AuthenticationScheme::Default;
+#else
     return ProtectionSpace::AuthenticationScheme::Unknown;
+#endif
 }
 
 static void setCONNECTProxyAuthorizationForStream(CFReadStreamRef stream, CFStringRef proxyAuthorizationString)
@@ -656,7 +660,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (CFEqual(CFErrorGetDomain(error), kCFErrorDomainOSStatus)) {
         const char* descriptionOSStatus = GetMacOSStatusCommentString(static_cast<OSStatus>(errorCode));
         if (descriptionOSStatus && descriptionOSStatus[0] != '\0')
-            description = makeString("OSStatus Error "_s, errorCode, ": "_s, span(descriptionOSStatus));
+            description = makeString("OSStatus Error "_s, errorCode, ": "_s, unsafeSpan(descriptionOSStatus));
     }
 
 ALLOW_DEPRECATED_DECLARATIONS_END

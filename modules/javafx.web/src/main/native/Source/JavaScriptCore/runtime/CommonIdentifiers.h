@@ -44,6 +44,7 @@
     macro(Function) \
     macro(Infinity) \
     macro(Intl) \
+    macro(Iterator) \
     macro(ListFormat) \
     macro(Loader) \
     macro(Locale) \
@@ -102,6 +103,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(copyWithin) \
     macro(dateStyle) \
     macro(day) \
     macro(days) \
@@ -127,6 +129,7 @@
     macro(exitKind) \
     macro(exports) \
     macro(fallback) \
+    macro(fill) \
     macro(flags) \
     macro(firstDayOfWeek) \
     macro(forEach) \
@@ -159,6 +162,7 @@
     macro(id) \
     macro(ignoreCase) \
     macro(ignorePunctuation) \
+    macro(includes) \
     macro(index) \
     macro(indices) \
     macro(inferredName) \
@@ -176,6 +180,7 @@
     macro(isArray) \
     macro(isEnabled) \
     macro(isPrototypeOf) \
+    macro(isRawJSON) \
     macro(isView) \
     macro(isWatchpoint) \
     macro(isWellFormed) \
@@ -234,13 +239,16 @@
     macro(parse) \
     macro(parseInt) \
     macro(parseFloat) \
+    macro(pluralCategories) \
     macro(profiledBytecodes) \
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(raw) \
+    macro(rawJSON) \
     macro(read) \
     macro(region) \
     macro(replace) \
+    macro(variants) \
     macro(resizable) \
     macro(resize) \
     macro(resolve) \
@@ -275,12 +283,16 @@
     macro(timeStyle) \
     macro(timeZone) \
     macro(timeZoneName) \
+    macro(toArray) \
     macro(toExponential) \
     macro(toFixed) \
     macro(toISOString) \
     macro(toJSON) \
     macro(toLocaleString) \
     macro(toPrecision) \
+    macro(toReversed) \
+    macro(toSorted) \
+    macro(toSpliced) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
@@ -299,11 +311,25 @@
     macro(weekday) \
     macro(weeks) \
     macro(weeksDisplay) \
+    macro(with) \
     macro(writable) \
     macro(written) \
     macro(year) \
     macro(years) \
-    macro(yearsDisplay)
+    macro(yearsDisplay) \
+    macro(error) \
+    macro(suppressed) \
+    macro(SuppressedError) \
+    macro(DisposableStack) \
+    macro(adopt) \
+    macro(disposed) \
+    macro(dispose) \
+    macro(use) \
+    macro(move) \
+    macro(AsyncDisposableStack) \
+    macro(disposeAsync) \
+    macro(keys) \
+    macro(flat) \
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)
@@ -318,6 +344,7 @@
     macro(continue) \
     macro(debugger) \
     macro(default) \
+    macro(defer) \
     macro(delete) \
     macro(do) \
     macro(else) \
@@ -372,6 +399,10 @@
     macro(toStringTag) \
     macro(unscopables)
 
+#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(macro) \
+    macro(dispose) \
+    macro(asyncDispose)
+
 #define JSC_PARSER_PRIVATE_NAMES(macro) \
     macro(generator) \
     macro(generatorState) \
@@ -422,6 +453,7 @@ namespace JSC {
 
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
+        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
         const Identifier intlLegacyConstructedSymbol;
 

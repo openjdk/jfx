@@ -38,7 +38,7 @@
 #undef GST_DATADIR
 
 /* Define if tracing subsystem hooks is disabled */
-#undef GST_DISABLE_GST_TRACER_HOOKS
+#define GST_DISABLE_GST_TRACER_HOOKS 1
 
 /* Define if option parsing is disabled */
 #define GST_DISABLE_OPTION_PARSING 1
@@ -475,7 +475,7 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.24.10"
+#define PACKAGE_STRING "GStreamer 1.26.5"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
@@ -484,7 +484,7 @@
 #undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.24.10"
+#define PACKAGE_VERSION "1.26.5"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -524,7 +524,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.24.10"
+#define VERSION "1.26.5"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

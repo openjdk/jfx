@@ -187,7 +187,7 @@ GPtrArray* g_ptr_array_new_from_null_terminated_array (gpointer       *data,
                                                        GDestroyNotify  element_free_func);
 GLIB_AVAILABLE_IN_ALL
 gpointer*  g_ptr_array_free               (GPtrArray        *array,
-                       gboolean          free_seg);
+                                           gboolean          free_segment);
 GLIB_AVAILABLE_IN_ALL
 GPtrArray* g_ptr_array_ref                (GPtrArray        *array);
 GLIB_AVAILABLE_IN_ALL

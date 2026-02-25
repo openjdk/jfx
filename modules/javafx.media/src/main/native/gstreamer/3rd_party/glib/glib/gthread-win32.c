@@ -464,7 +464,8 @@ g_system_thread_new (GThreadFunc proxy,
   base_thread->thread.joinable = TRUE;
   base_thread->thread.func = func;
   base_thread->thread.data = data;
-  base_thread->name = g_strdup (name);
+  if (name)
+    g_strlcpy (base_thread->name, name, 16);
 
   thread->handle = (HANDLE) _beginthreadex (NULL, stack_size, g_thread_win32_proxy, thread,
                                             CREATE_SUSPENDED, &ignore);
@@ -647,6 +648,15 @@ g_system_thread_set_name (const gchar *name)
    * in dump file */
   if (!g_thread_win32_set_thread_desc (name))
     SetThreadName ((DWORD) -1, name);
+}
+
+void
+g_system_thread_get_name (char  *buffer,
+                          gsize  length)
+{
+  /* FIXME: Not implemented yet */
+  g_assert (length >= 1);
+  buffer[0] = '\0';
 }
 
 /* {{{1 Epilogue */

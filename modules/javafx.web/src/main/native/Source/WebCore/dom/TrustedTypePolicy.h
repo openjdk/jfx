@@ -28,7 +28,6 @@
 #include "CreateHTMLCallback.h"
 #include "CreateScriptCallback.h"
 #include "CreateScriptURLCallback.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include "TrustedTypePolicyOptions.h"
 #include <JavaScriptCore/Strong.h>
@@ -40,9 +39,11 @@ namespace WebCore {
 class TrustedHTML;
 class TrustedScript;
 class TrustedScriptURL;
-enum class TrustedType : int8_t;
-struct TrustedTypePolicyOptions;
 class WebCoreOpaqueRoot;
+struct TrustedTypePolicyOptions;
+template<typename> class ExceptionOr;
+
+enum class TrustedType : int8_t;
 
 enum class IfMissing : bool { Throw, ReturnNull };
 
@@ -57,7 +58,12 @@ public:
     ExceptionOr<String> getPolicyValue(TrustedType trustedTypeName, const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&&, IfMissing = IfMissing::Throw);
     const String name() const { return m_name; }
 
-    const TrustedTypePolicyOptions& options() const { return m_options; }
+    const TrustedTypePolicyOptions& options() const
+    {
+        IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
+        return m_options;
+        IGNORE_CLANG_WARNINGS_END
+    }
     Lock& lock() WTF_RETURNS_LOCK(m_lock) { return m_lock; }
 
 private:

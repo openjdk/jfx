@@ -48,7 +48,7 @@ public:
 
     void initialize(const Vector<InlineItem, 1>& lineSpanningInlineBoxes, bool isFirstFormattedLine);
 
-    void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
+    void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
     // Reserved for TextOnlySimpleLineBuilder
     void appendTextFast(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
 
@@ -57,7 +57,7 @@ public:
     bool hasRubyContent() const { return m_hasRubyContent; }
 
     InlineLayoutUnit contentLogicalWidth() const { return m_contentLogicalWidth; }
-    InlineLayoutUnit contentLogicalRight() const { return lastRunLogicalRight() + m_clonedEndDecorationWidthForInlineBoxRuns; }
+    InlineLayoutUnit contentLogicalRight() const { return lastRunLogicalRight(); }
 
     bool contentNeedsBidiReordering() const { return m_hasNonDefaultBidiLevelRun; }
     size_t nonSpanningInlineLevelBoxCount() const { return m_nonSpanningInlineLevelBoxCount; }
@@ -137,21 +137,22 @@ public:
         TextDirection inlineDirection() const;
         InlineLayoutUnit letterSpacing() const;
         bool hasTextCombine() const;
+        InlineLayoutUnit textSpacingAdjustment() const { return m_textSpacingAdjustment; }
 
         UBiDiLevel bidiLevel() const { return m_bidiLevel; }
 
         // FIXME: Maybe add create functions intead?
         Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
-        Run(const InlineItem& lineSpanningInlineBoxItem, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
+        Run(const InlineItem& lineSpanningInlineBoxItem, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
+        Run(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
 
     private:
         friend class Line;
         friend class InlineContentAligner;
         friend class RubyFormattingContext;
 
-        Run(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
         Run(const InlineSoftLineBreakItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
-        Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth);
+        Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
 
         const RenderStyle& style() const { return m_style; }
         void expand(const InlineTextItem&, InlineLayoutUnit logicalWidth);
@@ -192,6 +193,7 @@ public:
         std::optional<TrailingWhitespace> m_trailingWhitespace { };
         std::optional<size_t> m_lastNonWhitespaceContentStart { };
         std::optional<Text> m_textContent;
+        InlineLayoutUnit m_textSpacingAdjustment { 0 };
     };
     using RunList = Vector<Run, 10>;
     const RunList& runs() const { return m_runs; }
@@ -200,7 +202,7 @@ public:
     // FIXME: This is temporary and should be removed when annotation transitions to inline box structure.
     void adjustContentRightWithRubyAlign(InlineLayoutUnit offset) { m_rubyAlignContentRightOffset = offset; }
 
-    using InlineBoxListWithClonedDecorationEnd = HashMap<const Box*, InlineLayoutUnit>;
+    using InlineBoxListWithClonedDecorationEnd = Vector<const Box*>;
     const InlineBoxListWithClonedDecorationEnd& inlineBoxListWithClonedDecorationEnd() const { return m_inlineBoxListWithClonedDecorationEnd; }
 
     struct Result {
@@ -222,14 +224,11 @@ private:
 
     void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
     void appendAtomicInlineBox(const InlineItem&, const RenderStyle&, InlineLayoutUnit marginBoxLogicalWidth);
-    void appendInlineBoxStart(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
+    void appendInlineBoxStart(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
     void appendInlineBoxEnd(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
     void appendLineBreak(const InlineItem&, const RenderStyle&);
     void appendWordBreakOpportunity(const InlineItem&, const RenderStyle&);
     void appendOpaqueBox(const InlineItem&, const RenderStyle&);
-
-    InlineLayoutUnit addBorderAndPaddingEndForInlineBoxDecorationClone(const InlineItem& inlineBoxStartItem);
-    InlineLayoutUnit removeBorderAndPaddingEndForInlineBoxDecorationClone(const InlineItem& inlineBoxEndItem);
 
     void resetTrailingContent();
 
@@ -305,7 +304,6 @@ private:
     size_t m_nonSpanningInlineLevelBoxCount { 0 };
     std::optional<InlineLayoutUnit> m_trailingSoftHyphenWidth { };
     InlineBoxListWithClonedDecorationEnd m_inlineBoxListWithClonedDecorationEnd;
-    InlineLayoutUnit m_clonedEndDecorationWidthForInlineBoxRuns { 0 };
     bool m_hasNonDefaultBidiLevelRun { false };
     bool m_isFirstFormattedLine { false };
     bool m_hasRubyContent { false };
@@ -377,7 +375,7 @@ inline void Line::Run::setNeedsHyphen(InlineLayoutUnit hyphenLogicalWidth)
 
 inline TextDirection Line::Run::inlineDirection() const
 {
-    return m_style.direction();
+    return m_style.writingMode().bidiDirection();
 }
 
 inline InlineLayoutUnit Line::Run::letterSpacing() const

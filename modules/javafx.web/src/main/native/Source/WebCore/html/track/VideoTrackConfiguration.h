@@ -29,6 +29,10 @@
 
 #include "PlatformVideoTrackConfiguration.h"
 #include "VideoColorSpace.h"
+#include <wtf/Observer.h>
+#include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -36,34 +40,40 @@ namespace WebCore {
 using VideoTrackConfigurationInit = PlatformVideoTrackConfiguration;
 
 class VideoTrackConfiguration : public RefCounted<VideoTrackConfiguration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(VideoTrackConfiguration);
 public:
     static Ref<VideoTrackConfiguration> create(VideoTrackConfigurationInit&& init) { return adoptRef(*new VideoTrackConfiguration(WTFMove(init))); }
     static Ref<VideoTrackConfiguration> create() { return adoptRef(*new VideoTrackConfiguration()); }
 
-    void setState(const VideoTrackConfigurationInit& state)
-    {
-        m_state = state;
-        m_colorSpace->setState(m_state.colorSpace);
-    }
+    void setState(const VideoTrackConfigurationInit&);
 
     String codec() const { return m_state.codec; }
-    void setCodec(String codec) { m_state.codec = codec; }
+    void setCodec(String);
 
     uint32_t width() const { return m_state.width; }
-    void setWidth(uint32_t width) { m_state.width = width; }
+    void setWidth(uint32_t);
 
     uint32_t height() const { return m_state.height; }
-    void setHeight(uint32_t height) { m_state.height = height; }
+    void setHeight(uint32_t);
 
     Ref<VideoColorSpace> colorSpace() const { return m_colorSpace; }
-    void setColorSpace(Ref<VideoColorSpace>&& colorSpace) { m_colorSpace = WTFMove(colorSpace); }
+    void setColorSpace(Ref<VideoColorSpace>&&);
 
     double framerate() const { return m_state.framerate; }
-    void setFramerate(double framerate) { m_state.framerate = framerate; }
+    void setFramerate(double);
 
     uint64_t bitrate() const { return m_state.bitrate; }
-    void setBitrate(uint64_t bitrate) { m_state.bitrate = bitrate; }
+    void setBitrate(uint64_t);
+
+    std::optional<SpatialVideoMetadata> spatialVideoMetadata() const { return m_state.spatialVideoMetadata; }
+    void setSpatialVideoMetadata(std::optional<SpatialVideoMetadata>);
+
+    std::optional<VideoProjectionMetadata> videoProjectionMetadata() const { return m_state.videoProjectionMetadata; }
+    void setVideoProjectionMetadata(std::optional<VideoProjectionMetadata>);
+
+    using ChangedStateObserver = Observer<void()>;
+    void addStateObserver(ChangedStateObserver&);
+    void removeStateObserver(const ChangedStateObserver&);
 
     Ref<JSON::Object> toJSON() const;
 
@@ -78,8 +88,12 @@ private:
     {
     }
 
+    void notifyObservers();
+
     VideoTrackConfigurationInit m_state;
     Ref<VideoColorSpace> m_colorSpace;
+
+    WeakHashSet<ChangedStateObserver> m_observers;
 };
 
 }

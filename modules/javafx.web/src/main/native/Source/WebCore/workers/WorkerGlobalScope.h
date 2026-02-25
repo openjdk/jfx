@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,12 @@
 
 #pragma once
 
-#include "Base64Utilities.h"
 #include "CacheStorageConnection.h"
 #include "ClientOrigin.h"
 #include "ImageBitmap.h"
 #include "ReportingClient.h"
 #include "ScriptExecutionContext.h"
+#include "Settings.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
 #include "WorkerOrWorkletGlobalScope.h"
@@ -53,6 +53,7 @@ class CSSValuePool;
 class CacheStorageConnection;
 class ContentSecurityPolicyResponseHeaders;
 class Crypto;
+class CryptoKey;
 class FileSystemStorageConnection;
 class FontFaceSet;
 class MessagePortChannelProvider;
@@ -80,7 +81,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
+class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
@@ -89,6 +90,7 @@ public:
     virtual Type type() const = 0;
 
     const URL& url() const final { return m_url; }
+    const URL& cookieURL() const final { return url(); }
     const URL& ownerURL() const { return m_ownerURL; }
     String origin() const;
     const String& inspectorIdentifier() const { return m_inspectorIdentifier; }
@@ -99,9 +101,8 @@ public:
     GraphicsClient* graphicsClient() final;
 
 
-    using EventTarget::weakPtrFactory;
-    using EventTarget::WeakValueType;
-    using EventTarget::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     WorkerStorageConnection& storageConnection();
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
@@ -113,6 +114,7 @@ public:
     void updateServiceWorkerClientData() final;
 
     WorkerThread& thread() const;
+    Ref<WorkerThread> protectedThread() const;
 
     using ScriptExecutionContext::hasPendingActivity;
 
@@ -120,8 +122,9 @@ public:
     WorkerLocation& location() const;
     void close();
 
-    virtual ExceptionOr<void> importScripts(const FixedVector<std::variant<RefPtr<TrustedScriptURL>, String>>& urls);
+    virtual ExceptionOr<void> importScripts(const FixedVector<Variant<RefPtr<TrustedScriptURL>, String>>& urls);
     WorkerNavigator& navigator();
+    Ref<WorkerNavigator> protectedNavigator();
 
     void setIsOnline(bool);
     bool isOnline() const { return m_isOnline; }
@@ -160,7 +163,7 @@ public:
     std::unique_ptr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource) final;
     void beginLoadingFontSoon(FontLoadRequest&) final;
 
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
     FetchOptions::Credentials credentials() const { return m_credentials; }
 
@@ -206,14 +209,15 @@ private:
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
-
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key);
-    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey);
+#if !PLATFORM(JAVA)
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final;
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) final;
+#endif
 
     // ReportingClient.
-    void notifyReportObservers(Ref<Report>&&) override;
-    String endpointURIForToken(const String&) const override;
-    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) override;
+    void notifyReportObservers(Ref<Report>&&) final;
+    String endpointURIForToken(const String&) const final;
+    void sendReportToEndpoints(const URL& baseURL, std::span<const String> endpointURIs, std::span<const String> endpointTokens, Ref<FormData>&& report, ViolationReportType) final;
     String httpUserAgent() const final { return m_userAgent; }
 
     URL m_url;
@@ -221,35 +225,35 @@ private:
     String m_inspectorIdentifier;
     String m_userAgent;
 
-    mutable RefPtr<WorkerLocation> m_location;
-    mutable RefPtr<WorkerNavigator> m_navigator;
+    const RefPtr<WorkerLocation> m_location;
+    const RefPtr<WorkerNavigator> m_navigator;
 
     bool m_isOnline;
     bool m_shouldBypassMainWorldContentSecurityPolicy;
 
-    Ref<SecurityOrigin> m_topOrigin;
+    const Ref<SecurityOrigin> m_topOrigin;
 
-    RefPtr<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const RefPtr<IDBClient::IDBConnectionProxy> m_connectionProxy;
 
-    RefPtr<SocketProvider> m_socketProvider;
+    const RefPtr<SocketProvider> m_socketProvider;
 
     RefPtr<Performance> m_performance;
-    Ref<ReportingScope> m_reportingScope;
+    const Ref<ReportingScope> m_reportingScope;
     mutable RefPtr<Crypto> m_crypto;
 
     WeakPtr<ScriptBufferSourceProvider> m_mainScriptSourceProvider;
     MemoryCompactRobinHoodHashMap<URL, WeakHashSet<ScriptBufferSourceProvider>> m_importedScriptsSourceProviders;
 
-    RefPtr<CacheStorageConnection> m_cacheStorageConnection;
-    std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
-    RefPtr<WorkerSWClientConnection> m_swClientConnection;
+    const RefPtr<CacheStorageConnection> m_cacheStorageConnection;
+    const std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
+    const RefPtr<WorkerSWClientConnection> m_swClientConnection;
     std::unique_ptr<CSSValuePool> m_cssValuePool;
     std::unique_ptr<WorkerClient> m_workerClient;
-    RefPtr<CSSFontSelector> m_cssFontSelector;
-    Settings::Values m_settingsValues;
+    const RefPtr<CSSFontSelector> m_cssFontSelector;
+    SettingsValues m_settingsValues;
     WorkerType m_workerType;
     FetchOptions::Credentials m_credentials;
-    RefPtr<WorkerStorageConnection> m_storageConnection;
+    const RefPtr<WorkerStorageConnection> m_storageConnection;
     RefPtr<WorkerFileSystemStorageConnection> m_fileSystemStorageConnection;
 };
 

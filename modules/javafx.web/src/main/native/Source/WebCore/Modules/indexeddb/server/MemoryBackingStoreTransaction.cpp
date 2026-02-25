@@ -33,13 +33,14 @@
 #include "MemoryIDBBackingStore.h"
 #include "MemoryObjectStore.h"
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace IDBServer {
 
-std::unique_ptr<MemoryBackingStoreTransaction> MemoryBackingStoreTransaction::create(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
+Ref<MemoryBackingStoreTransaction> MemoryBackingStoreTransaction::create(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
 {
-    return makeUnique<MemoryBackingStoreTransaction>(backingStore, info);
+    return adoptRef(*new MemoryBackingStoreTransaction(backingStore, info));
 }
 
 MemoryBackingStoreTransaction::MemoryBackingStoreTransaction(MemoryIDBBackingStore& backingStore, const IDBTransactionInfo& info)
@@ -48,7 +49,7 @@ MemoryBackingStoreTransaction::MemoryBackingStoreTransaction(MemoryIDBBackingSto
 {
     if (m_info.mode() == IDBTransactionMode::Versionchange) {
         IDBDatabaseInfo info;
-        auto error = m_backingStore.getOrEstablishDatabaseInfo(info);
+        auto error = m_backingStore->getOrEstablishDatabaseInfo(info);
         if (error.isNull())
             m_originalDatabaseInfo = makeUnique<IDBDatabaseInfo>(info);
     }
@@ -79,6 +80,17 @@ void MemoryBackingStoreTransaction::addNewIndex(MemoryIndex& index)
     addExistingIndex(index);
 }
 
+void MemoryBackingStoreTransaction::removeNewIndex(MemoryIndex& index)
+{
+    LOG(IndexedDB, "MemoryBackingStoreTransaction::removeNewIndex()");
+
+    ASSERT(isVersionChange());
+
+    m_originalIndexNames.remove(&index);
+    m_versionChangeAddedIndexes.remove(&index);
+    m_indexes.remove(&index);
+}
+
 void MemoryBackingStoreTransaction::addExistingIndex(MemoryIndex& index)
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::addExistingIndex");
@@ -92,9 +104,7 @@ void MemoryBackingStoreTransaction::addExistingIndex(MemoryIndex& index)
 void MemoryBackingStoreTransaction::indexDeleted(Ref<MemoryIndex>&& index)
 {
     m_indexes.remove(&index.get());
-    auto addResult = m_deletedIndexes.add(index->info().name(), nullptr);
-    if (addResult.isNewEntry)
-        addResult.iterator->value = WTFMove(index);
+    m_deletedIndexes.add(WTFMove(index));
 }
 
 void MemoryBackingStoreTransaction::addExistingObjectStore(MemoryObjectStore& objectStore)
@@ -107,8 +117,6 @@ void MemoryBackingStoreTransaction::addExistingObjectStore(MemoryObjectStore& ob
     m_objectStores.add(&objectStore);
 
     objectStore.writeTransactionStarted(*this);
-
-    m_originalKeyGenerators.add(&objectStore, objectStore.currentKeyGeneratorValue());
 }
 
 void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& objectStore)
@@ -123,8 +131,8 @@ void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& 
     // keep it for transaction abort.
     if (auto addedObjectStore = m_versionChangeAddedObjectStores.take(&objectStore.get())) {
         // We don't need to track its indexes either.
-        m_deletedIndexes.removeIf([identifier = objectStore->info().identifier()](auto& entry) {
-            return entry.value->objectStore()->info().identifier() == identifier;
+        m_deletedIndexes.removeIf([identifier = objectStore->info().identifier()](auto& index) {
+            return index->objectStore()->info().identifier() == identifier;
         });
         return;
     }
@@ -132,22 +140,6 @@ void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& 
     auto addResult = m_deletedObjectStores.add(objectStore->info().name(), nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = WTFMove(objectStore);
-}
-
-void MemoryBackingStoreTransaction::objectStoreCleared(MemoryObjectStore& objectStore, std::unique_ptr<KeyValueMap>&& keyValueMap, std::unique_ptr<IDBKeyDataSet>&& orderedKeys)
-{
-    ASSERT(m_objectStores.contains(&objectStore));
-
-    auto addResult = m_clearedKeyValueMaps.add(&objectStore, nullptr);
-
-    // If this object store has already been cleared during this transaction, we shouldn't remember this clearing.
-    if (!addResult.isNewEntry)
-        return;
-
-    addResult.iterator->value = WTFMove(keyValueMap);
-
-    ASSERT(!m_clearedOrderedKeys.contains(&objectStore));
-    m_clearedOrderedKeys.add(&objectStore, WTFMove(orderedKeys));
 }
 
 void MemoryBackingStoreTransaction::objectStoreRenamed(MemoryObjectStore& objectStore, const String& oldName)
@@ -162,7 +154,7 @@ void MemoryBackingStoreTransaction::objectStoreRenamed(MemoryObjectStore& object
 
 void MemoryBackingStoreTransaction::indexRenamed(MemoryIndex& index, const String& oldName)
 {
-    ASSERT(!index.objectStore() || m_objectStores.contains(index.objectStore().get()));
+    ASSERT(!index.objectStore() || m_objectStores.contains(index.objectStore()));
     ASSERT(m_info.mode() == IDBTransactionMode::Versionchange);
 
     // We only care about the first rename in a given transaction, because if the transaction is aborted we want
@@ -170,50 +162,14 @@ void MemoryBackingStoreTransaction::indexRenamed(MemoryIndex& index, const Strin
     m_originalIndexNames.add(&index, oldName);
 }
 
-void MemoryBackingStoreTransaction::indexCleared(MemoryIndex& index, std::unique_ptr<IndexValueStore>&& valueStore)
-{
-    auto addResult = m_clearedIndexValueStores.add(&index, nullptr);
-
-    // If this index has already been cleared during this transaction, we shouldn't remember this clearing.
-    if (!addResult.isNewEntry)
-        return;
-
-    addResult.iterator->value = WTFMove(valueStore);
-}
-
-void MemoryBackingStoreTransaction::recordValueChanged(MemoryObjectStore& objectStore, const IDBKeyData& key, ThreadSafeDataBuffer* value)
-{
-    ASSERT(m_objectStores.contains(&objectStore));
-
-    if (m_isAborting)
-        return;
-
-    // If this object store had been cleared during the transaction, no point in recording this
-    // individual key/value change as its entire key/value map will be restored upon abort.
-    if (m_clearedKeyValueMaps.contains(&objectStore))
-        return;
-
-    auto originalAddResult = m_originalValues.add(&objectStore, nullptr);
-    if (originalAddResult.isNewEntry)
-        originalAddResult.iterator->value = makeUnique<KeyValueMap>();
-
-    auto* map = originalAddResult.iterator->value.get();
-
-    auto addResult = map->add(key, ThreadSafeDataBuffer());
-    if (!addResult.isNewEntry)
-        return;
-
-    if (value)
-        addResult.iterator->value = *value;
-}
-
 void MemoryBackingStoreTransaction::abort()
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::abort()");
     SetForScope change(m_isAborting, true);
 
+    // Restore renamed indexes.
     for (const auto& iterator : m_originalIndexNames) {
-        auto* index = iterator.key;
+        RefPtr index = iterator.key;
         auto originalName = iterator.value;
         auto identifier = index->info().identifier();
 
@@ -225,10 +181,12 @@ void MemoryBackingStoreTransaction::abort()
                 break;
             }
         }
-        if (indexToDelete && indexToDelete->objectStore())
-            indexToDelete->objectStore()->deleteIndex(*this, indexToDelete->info().identifier());
+        if (indexToDelete) {
+            if (RefPtr objectStore = indexToDelete->objectStore())
+                objectStore->deleteIndex(*this, indexToDelete->info().identifier());
+        }
 
-        if (auto objectStore = index->objectStore()) {
+        if (RefPtr objectStore = index->objectStore()) {
             auto indexToReRegister = objectStore->takeIndexByIdentifier(identifier).releaseNonNull();
             objectStore->info().deleteIndex(identifier);
         index->rename(originalName);
@@ -238,60 +196,42 @@ void MemoryBackingStoreTransaction::abort()
     }
     m_originalIndexNames.clear();
 
+    // Restore renamed object stores.
     for (const auto& iterator : m_originalObjectStoreNames)
-        m_backingStore.renameObjectStoreForVersionChangeAbort(*iterator.key, iterator.value);
+        m_backingStore->renameObjectStoreForVersionChangeAbort(Ref { *iterator.key }, iterator.value);
     m_originalObjectStoreNames.clear();
 
+    // Restore added object stores.
     for (const auto& objectStore : m_versionChangeAddedObjectStores)
-        m_backingStore.removeObjectStoreForVersionChangeAbort(*objectStore);
-    m_deletedIndexes.removeIf([&](auto& entry) {
-        return m_versionChangeAddedObjectStores.contains(entry.value->objectStore().get());
+        m_backingStore->removeObjectStoreForVersionChangeAbort(*objectStore);
+    m_deletedIndexes.removeIf([&](auto& index) {
+        return m_versionChangeAddedObjectStores.contains(index->objectStore());
     });
     m_versionChangeAddedObjectStores.clear();
 
+    // Restore deleted object stores.
     for (auto& objectStore : m_deletedObjectStores.values()) {
-        m_backingStore.restoreObjectStoreForVersionChangeAbort(*objectStore);
+        m_backingStore->restoreObjectStoreForVersionChangeAbort(*objectStore);
         ASSERT(!m_objectStores.contains(objectStore.get()));
         m_objectStores.add(objectStore);
     }
     m_deletedObjectStores.clear();
 
+    // Restore database info.
     if (m_originalDatabaseInfo) {
         ASSERT(m_info.mode() == IDBTransactionMode::Versionchange);
-        m_backingStore.setDatabaseInfo(*m_originalDatabaseInfo);
+        m_backingStore->setDatabaseInfo(*m_originalDatabaseInfo);
     }
 
-    // Restore cleared index value stores before we re-insert values into object stores
-    // because inserting those values will regenerate the appropriate index values.
-    for (auto& iterator : m_clearedIndexValueStores)
-        iterator.key->replaceIndexValueStore(WTFMove(iterator.value));
-    m_clearedIndexValueStores.clear();
-
-    for (auto& objectStore : m_objectStores) {
-        ASSERT(m_originalKeyGenerators.contains(objectStore.get()));
-        objectStore->setKeyGeneratorValue(m_originalKeyGenerators.get(objectStore.get()));
-
-        auto clearedKeyValueMap = m_clearedKeyValueMaps.take(objectStore.get());
-        if (clearedKeyValueMap) {
-            ASSERT(m_clearedOrderedKeys.contains(objectStore.get()));
-            objectStore->replaceKeyValueStore(WTFMove(clearedKeyValueMap), m_clearedOrderedKeys.take(objectStore.get()));
-        }
-
-        auto keyValueMap = m_originalValues.take(objectStore.get());
-        if (!keyValueMap)
-            continue;
-
-        for (const auto& entry : *keyValueMap) {
-            objectStore->deleteRecord(entry.key);
-            objectStore->addRecord(*this, entry.key, { entry.value });
-        }
-    }
-
-    for (auto& index : m_deletedIndexes.values()) {
-        RELEASE_ASSERT(m_backingStore.hasObjectStore(index->info().objectStoreIdentifier()));
-        index->objectStore()->maybeRestoreDeletedIndex(*index);
+    for (auto& index : m_deletedIndexes) {
+        RELEASE_ASSERT(m_backingStore->hasObjectStore(index->info().objectStoreIdentifier()));
+        index->protectedObjectStore()->maybeRestoreDeletedIndex(*index);
     }
     m_deletedIndexes.clear();
+
+    // Restore object store records.
+    for (auto& objectStore : m_objectStores)
+        objectStore->transactionAborted(*this);
 
     finish();
 }
@@ -307,13 +247,29 @@ void MemoryBackingStoreTransaction::finish()
 {
     m_inProgress = false;
 
-    if (!isWriting())
+    if (!isWriting()) {
+        // Read-only transaction does not track object stores, so get it from backing store.
+        for (auto objectStoreName : m_info.objectStores()) {
+            if (RefPtr objectStore = m_backingStore->objectStoreForName(objectStoreName))
+                objectStore->transactionFinished(*this);
+        }
         return;
+    }
 
     for (auto& objectStore : m_objectStores)
-        objectStore->writeTransactionFinished(*this);
+        objectStore->transactionFinished(*this);
     for (auto& objectStore : m_deletedObjectStores.values())
-        objectStore->writeTransactionFinished(*this);
+        objectStore->transactionFinished(*this);
+}
+
+MemoryCursor* MemoryBackingStoreTransaction::cursor(const IDBResourceIdentifier& identifier) const
+{
+    return m_cursors.get(identifier).get();
+}
+
+void MemoryBackingStoreTransaction::addCursor(MemoryCursor& cursor)
+{
+    m_cursors.add(cursor.info().identifier(), &cursor);
 }
 
 } // namespace IDBServer

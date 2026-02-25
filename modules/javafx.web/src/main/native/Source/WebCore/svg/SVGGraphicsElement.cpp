@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGGraphicsElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGPath.h"
 #include "LegacyRenderSVGResource.h"
 #include "RenderAncestorIterator.h"
@@ -51,6 +52,7 @@ SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& d
     : SVGElement(tagName, document, WTFMove(propertyRegistry), typeFlags)
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
+    , m_transform(SVGAnimatedTransformList::create(this))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -67,7 +69,7 @@ Ref<SVGMatrix> SVGGraphicsElement::getCTMForBindings()
 
 AffineTransform SVGGraphicsElement::getCTM(StyleUpdateStrategy styleUpdateStrategy)
 {
-    return SVGLocatable::computeCTM(this, SVGLocatable::NearestViewportScope, styleUpdateStrategy);
+    return SVGLocatable::computeCTM(this, CTMScope::NearestViewportScope, styleUpdateStrategy);
 }
 
 Ref<SVGMatrix> SVGGraphicsElement::getScreenCTMForBindings()
@@ -77,7 +79,7 @@ Ref<SVGMatrix> SVGGraphicsElement::getScreenCTMForBindings()
 
 AffineTransform SVGGraphicsElement::getScreenCTM(StyleUpdateStrategy styleUpdateStrategy)
 {
-    return SVGLocatable::computeCTM(this, SVGLocatable::ScreenScope, styleUpdateStrategy);
+    return SVGLocatable::computeCTM(this, CTMScope::ScreenScope, styleUpdateStrategy);
 }
 
 Ref<const SVGTransformList> SVGGraphicsElement::protectedTransform() const
@@ -97,11 +99,11 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
     AffineTransform matrix;
 
     CheckedPtr renderer = this->renderer();
-    auto* style = renderer ? &renderer->style() : nullptr;
+    CheckedPtr style = renderer ? &renderer->style() : nullptr;
     bool hasSpecifiedTransform = style && style->hasTransform();
 
     // Honor any of the transform-related CSS properties if set.
-    if (hasSpecifiedTransform || (style && (style->translate() || style->scale() || style->rotate()))) {
+    if (hasSpecifiedTransform || (style && (style->hasTranslate() || style->hasScale() || style->hasRotate()))) {
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
         TransformationMatrix transform;
@@ -112,7 +114,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
     }
 
     // If we didn't have the CSS "transform" property set, we must account for the "transform" attribute.
-    if (!hasSpecifiedTransform && style) {
+    if (!hasSpecifiedTransform && style && !transform().isEmpty()) {
         auto t = style->computeTransformOrigin(renderer->transformReferenceBoxRect()).xy();
         matrix.translate(t);
         matrix *= transform().concatenate();

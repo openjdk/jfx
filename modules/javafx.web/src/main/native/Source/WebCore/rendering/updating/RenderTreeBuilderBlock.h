@@ -26,14 +26,17 @@
 #pragma once
 
 #include "RenderTreeBuilder.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class RenderBlockFlow;
 
 class RenderTreeBuilder::Block {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Block);
 public:
+    static RenderBlock* continuationBefore(RenderBlock& parent, RenderObject* beforeChild);
+
     Block(RenderTreeBuilder&);
 
     void attach(RenderBlock& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);
@@ -44,6 +47,8 @@ public:
 
     void dropAnonymousBoxChild(RenderBlock& parent, RenderBlock& child);
     void childBecameNonInline(RenderBlock& parent, RenderElement& child);
+
+    static RenderPtr<RenderBlock> createAnonymousBlockWithStyle(Document&, const RenderStyle&);
 
 private:
     void insertChildToContinuation(RenderBlock& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);

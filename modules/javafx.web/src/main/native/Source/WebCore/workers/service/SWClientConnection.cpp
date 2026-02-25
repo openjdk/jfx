@@ -28,9 +28,10 @@
 
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchRegistration.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "ExceptionData.h"
 #include "MessageEvent.h"
+#include "ResourceMonitor.h"
 #include "SWContextManager.h"
 #include "ServiceWorkerContainer.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -147,7 +148,7 @@ void SWClientConnection::postMessageToServiceWorkerClient(ScriptExecutionContext
         });
 }
 
-static void forDedicatedAndSharedWorkers(const Function<Function<void(ScriptExecutionContext&)>()>& callback)
+static void forDedicatedAndSharedWorkers(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>& callback)
 {
     Worker::forEachWorker(callback);
     SharedWorkerContextManager::singleton().forEachSharedWorker(callback);
@@ -246,7 +247,7 @@ void SWClientConnection::setRegistrationUpdateViaCache(ServiceWorkerRegistration
     });
 }
 
-static void forAllWorkers(const Function<Function<void(ScriptExecutionContext&)>()>& callback)
+static void forAllWorkers(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>& callback)
 {
     SWContextManager::singleton().forEachServiceWorker(callback);
     forDedicatedAndSharedWorkers(callback);
@@ -322,5 +323,17 @@ void SWClientConnection::registerServiceWorkerClients()
     SharedWorkerContextManager::singleton().forEachSharedWorker([] { return [] (auto& context) { context.updateServiceWorkerClientData(); }; });
     Worker::forEachWorker([] { return [] (auto& context) { context.updateServiceWorkerClientData(); }; });
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void SWClientConnection::reportNetworkUsageToWorkerClient(ScriptExecutionContextIdentifier destinationContextIdentifier, uint64_t bytesTransferredOverNetworkDelta)
+{
+    ASSERT(isMainThread());
+
+    if (RefPtr destinationDocument = Document::allDocumentsMap().get(destinationContextIdentifier)) {
+        if (RefPtr resourceMonitor = destinationDocument->resourceMonitorIfExists())
+            resourceMonitor->addNetworkUsage(bytesTransferredOverNetworkDelta);
+    }
+}
+#endif
 
 } // namespace WebCore

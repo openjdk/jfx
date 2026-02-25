@@ -93,6 +93,12 @@ struct Config {
     void* defaultCallThunk;
     void* arityFixupThunk;
 
+    void* ipint_dispatch_base;
+    void* ipint_gc_dispatch_base;
+    void* ipint_conversion_dispatch_base;
+    void* ipint_simd_dispatch_base;
+    void* ipint_atomic_dispatch_base;
+
 #if ENABLE(SEPARATED_WX_HEAP)
     JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
 #endif
@@ -121,7 +127,15 @@ constexpr size_t alignmentOfJSCConfig = std::alignment_of<JSC::Config>::value;
 static_assert(WTF::offsetOfWTFConfigExtension + sizeof(JSC::Config) <= WTF::ConfigSizeToProtect);
 static_assert(roundUpToMultipleOf<alignmentOfJSCConfig>(WTF::offsetOfWTFConfigExtension) == WTF::offsetOfWTFConfigExtension);
 
-#define g_jscConfig (*bitwise_cast<JSC::Config*>(&g_wtfConfig.spaceForExtensions))
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+// Workaround to localize bounds safety warnings to this file.
+// FIXME: Use real types to make materializing JSC::Config* bounds-safe and type-safe.
+inline Config* addressOfJSCConfig() { return std::bit_cast<Config*>(&g_wtfConfig.spaceForExtensions); }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define g_jscConfig (*JSC::addressOfJSCConfig())
 
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);

@@ -30,6 +30,7 @@
 
 #include "MediaPlaybackTargetContext.h"
 #include "MediaPlaybackTargetPicker.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -44,14 +45,15 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaPlaybac
 namespace WebCore {
 
 class MediaPlaybackTargetPickerMock final : public MediaPlaybackTargetPicker, public CanMakeWeakPtr<MediaPlaybackTargetPickerMock> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaPlaybackTargetPickerMock);
     WTF_MAKE_NONCOPYABLE(MediaPlaybackTargetPickerMock);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlaybackTargetPickerMock);
 public:
     explicit MediaPlaybackTargetPickerMock(MediaPlaybackTargetPicker::Client&);
 
     virtual ~MediaPlaybackTargetPickerMock();
 
-    void showPlaybackTargetPicker(PlatformView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance) override;
+    void showPlaybackTargetPicker(CocoaView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance) override;
     void startingMonitoringPlaybackTargets() override;
     void stopMonitoringPlaybackTargets() override;
     void invalidatePlaybackTargets() override;

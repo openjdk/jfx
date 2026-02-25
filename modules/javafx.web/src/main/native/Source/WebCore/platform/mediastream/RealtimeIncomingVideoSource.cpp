@@ -47,12 +47,10 @@ static RealtimeMediaSourceSupportedConstraints supportedRealtimeIncomingVideoSou
     return constraints;
 }
 
-RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
+RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(Ref<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
     : RealtimeMediaSource(CaptureDevice { WTFMove(videoTrackId), CaptureDevice::DeviceType::Camera, "remote video"_s })
     , m_videoTrack(WTFMove(videoTrack))
 {
-    ASSERT(m_videoTrack);
-
     m_currentSettings = RealtimeMediaSourceSettings { };
     m_currentSettings->setSupportedConstraints(supportedRealtimeIncomingVideoSourceSettingConstraints());
 
@@ -88,7 +86,7 @@ void RealtimeIncomingVideoSource::enableFrameRatedMonitoring()
 
 void RealtimeIncomingVideoSource::startProducingData()
 {
-    m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
+    m_videoTrack->AddOrUpdateSink(this, webrtc::VideoSinkWants());
 }
 
 void RealtimeIncomingVideoSource::stopProducingData()
@@ -137,8 +135,8 @@ VideoFrameTimeMetadata RealtimeIncomingVideoSource::metadataFromVideoFrame(const
     VideoFrameTimeMetadata metadata;
     if (frame.ntp_time_ms() > 0)
         metadata.captureTime = Seconds::fromMilliseconds(frame.ntp_time_ms());
-    if (isInBounds<uint32_t>(frame.timestamp()))
-        metadata.rtpTimestamp = frame.timestamp();
+    if (isInBounds<uint32_t>(frame.rtp_timestamp()))
+        metadata.rtpTimestamp = frame.rtp_timestamp();
     auto lastPacketTimestamp = std::max_element(frame.packet_infos().cbegin(), frame.packet_infos().cend(), [](const auto& a, const auto& b) {
         return a.receive_time() < b.receive_time();
     });

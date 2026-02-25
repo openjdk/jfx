@@ -37,6 +37,7 @@ namespace WebCore {
 FontCustomPlatformData::FontCustomPlatformData(const JLObject& data, FontPlatformData::CreationData&& cdata)
     :creationData(cdata)
     ,m_data(data)
+    ,m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
 {
 }
 

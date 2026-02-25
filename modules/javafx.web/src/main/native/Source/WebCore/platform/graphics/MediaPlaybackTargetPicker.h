@@ -28,7 +28,8 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "PlatformView.h"
+#include "CocoaView.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>
 
@@ -37,7 +38,9 @@ namespace WebCore {
 class FloatRect;
 class MediaPlaybackTarget;
 
-class MediaPlaybackTargetPicker {
+class MediaPlaybackTargetPicker : public CanMakeCheckedPtr<MediaPlaybackTargetPicker> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MediaPlaybackTargetPicker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlaybackTargetPicker);
 public:
     class Client {
     protected:
@@ -51,7 +54,7 @@ public:
 
     virtual ~MediaPlaybackTargetPicker();
 
-    virtual void showPlaybackTargetPicker(PlatformView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance);
+    virtual void showPlaybackTargetPicker(CocoaView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance);
     virtual void startingMonitoringPlaybackTargets();
     virtual void stopMonitoringPlaybackTargets();
     virtual void invalidatePlaybackTargets();

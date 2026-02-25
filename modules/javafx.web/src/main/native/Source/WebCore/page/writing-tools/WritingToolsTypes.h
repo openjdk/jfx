@@ -60,6 +60,7 @@ enum class SessionType : uint8_t {
 
 enum class SessionCompositionType : uint8_t {
     None,
+    Compose,
     SmartReply,
     Other,
 };
@@ -84,7 +85,7 @@ using ContextID = WTF::UUID;
 struct Context {
     using ID = ContextID;
 
-    ID identifier;
+    Markable<ID> identifier;
     AttributedString attributedText;
     CharacterRange range;
 };

@@ -294,8 +294,8 @@ public:
     void deleteExternalImage(GCGLExternalImage) final;
     void bindExternalImage(GCGLenum target, GCGLExternalImage) override;
     GCGLExternalSync createExternalSync(ExternalSyncSource&&) override;
-#endif
     void deleteExternalSync(GCGLExternalSync) final;
+#endif
     void multiDrawArraysANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei> firstsAndCounts) final;
     void multiDrawArraysInstancedANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei> firstsCountsAndInstanceCounts) final;
     void multiDrawElementsANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei> countsAndOffsets, GCGLenum type) final;
@@ -350,7 +350,7 @@ public:
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
 
-    virtual void withBufferAsNativeImage(SurfaceBuffer, Function<void(NativeImage&)>);
+    virtual RefPtr<NativeImage> bufferAsNativeImage(SurfaceBuffer);
 
     // Returns the span of valid data read on success.
     bool getBufferSubDataWithStatus(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
@@ -387,7 +387,7 @@ protected:
     void validateAttributes();
 
     bool getBufferSubDataImpl(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
-    std::optional<IntSize> readPixelsImpl(IntRect, GCGLenum format, GCGLenum type, GCGLsizei bufSize, uint8_t* data, bool readingToPixelBufferObject);
+    std::optional<IntSize> readPixelsImpl(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data);
 
     // Did the most recent drawing operation leave the GPU in an acceptable state?
     void checkGPUStatus();
@@ -415,6 +415,8 @@ protected:
     GCGLenum adjustWebGL1TextureInternalFormat(GCGLenum internalformat, GCGLenum format, GCGLenum type);
     void setPackParameters(GCGLint alignment, GCGLint rowLength, GCGLboolean reverseRowOrder);
     bool validateClearBufferv(GCGLenum buffer, size_t valuesSize);
+    void prepareForDrawingBufferWriteIfBound();
+    virtual void prepareForDrawingBufferWrite();
 
     HashSet<String> m_availableExtensions;
     HashSet<String> m_requestableExtensions;
@@ -442,6 +444,7 @@ protected:
 
     GCGLDisplay m_displayObj { nullptr };
     GCGLContext m_contextObj { nullptr };
+    GCGLContext m_angleSharingContextObj { nullptr };
     GCGLConfig m_configObj { nullptr };
 #if USE(TEXTURE_MAPPER)
     GCEGLSurface m_surfaceObj { nullptr };
@@ -453,6 +456,7 @@ protected:
     uint32_t m_nextExternalSyncName { 0 };
     HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglImages;
     HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglSyncs;
+    IntSize m_maxInternalFramebufferSize;
 };
 
 

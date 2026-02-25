@@ -38,8 +38,12 @@
 #include "StructureRareDataInlines.h"
 #include "SymbolPrototype.h"
 #include "Watchpoint.h"
+#include "WebAssemblyGCStructure.h"
+#include "WriteBarrierInlines.h"
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -69,13 +73,44 @@ inline Structure* Structure::createStructure(VM& vm)
 inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    Structure* newStructure;
-    if (previous->isBrandedStructure())
-        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
-    else
-        newStructure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous);
-    newStructure->finishCreation(vm, previous, deferred);
-    return newStructure;
+    switch (previous->variant()) {
+    case StructureVariant::Normal: {
+        auto* result = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous->variant(), previous);
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::Branded: {
+        auto* result = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::WebAssemblyGC: {
+#if ENABLE(WEBASSEMBLY)
+        auto* result = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, jsCast<WebAssemblyGCStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+#else
+        return nullptr;
+#endif
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+}
+
+template<typename CellType, SubspaceAccess>
+inline GCClient::IsoSubspace* Structure::subspaceFor(VM& vm)
+{
+    return &vm.structureSpace();
+}
+
+inline void Structure::finishCreation(VM& vm, CreatingEarlyCellTag)
+{
+    Base::finishCreation(vm, this, CreatingEarlyCell);
+    ASSERT(m_prototype);
+    ASSERT(m_prototype.isNull());
+    ASSERT(!vm.structureStructure);
 }
 
 inline bool Structure::mayInterceptIndexedAccesses() const
@@ -106,7 +141,7 @@ inline bool Structure::holesMustForwardToPrototype(JSObject* base) const
     ASSERT(base->structure() == this);
     if (typeInfo().type() == ArrayType) {
         JSGlobalObject* globalObject = this->globalObject();
-        if (LIKELY(globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()))
+        if (globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()) [[likely]]
             return false;
     }
 
@@ -193,7 +228,7 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
 
     bool didFindStructure = findStructuresAndMapForMaterialization(structures, tableStructure, table);
 
-    HashSet<UniquedStringImpl*> seenProperties;
+    UncheckedKeyHashSet<UniquedStringImpl*> seenProperties;
 
     for (auto* structure : structures) {
         if (!structure->m_transitionPropertyName || seenProperties.contains(structure->m_transitionPropertyName.get()))
@@ -372,7 +407,7 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
 
 inline void Structure::didReplaceProperty(PropertyOffset offset)
 {
-    if (LIKELY(!isWatchingReplacement()))
+    if (!isWatchingReplacement()) [[likely]]
         return;
     didReplacePropertySlow(offset);
 }
@@ -479,6 +514,8 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     checkConsistency();
     if (attributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::ReadOnly)
+        setContainsReadOnlyProperties();
     if (attributes & PropertyAttribute::DontEnum)
         setHasNonEnumerableProperties(true);
     if (attributes & PropertyAttribute::DontDelete) {
@@ -635,6 +672,8 @@ ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, Prop
     checkConsistency();
     if (newAttributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (newAttributes & PropertyAttribute::ReadOnly)
+        setContainsReadOnlyProperties();
     if (newAttributes & PropertyAttribute::DontEnum)
         setHasNonEnumerableProperties(true);
     if (newAttributes & PropertyAttribute::DontDelete) {
@@ -797,7 +836,7 @@ ALWAYS_INLINE Structure* Structure::addPropertyTransitionToExistingStructureConc
     return addPropertyTransitionToExistingStructureImpl(structure, uid, attributes, offset);
 }
 
-ALWAYS_INLINE StructureTransitionTable::Hash::Key StructureTransitionTable::Hash::createFromStructure(Structure* structure)
+ALWAYS_INLINE StructureTransitionTable::Hash::Key StructureTransitionTable::Hash::createKeyFromStructure(Structure* structure)
 {
     switch (structure->transitionKind()) {
     case TransitionKind::ChangePrototype:
@@ -811,7 +850,7 @@ inline Structure* StructureTransitionTable::trySingleTransition() const
 {
     uintptr_t pointer = m_data;
     if (pointer & UsingSingleSlotFlag)
-        return bitwise_cast<Structure*>(pointer & ~UsingSingleSlotFlag);
+        return std::bit_cast<Structure*>(pointer & ~UsingSingleSlotFlag);
     return nullptr;
 }
 
@@ -819,7 +858,11 @@ inline Structure* StructureTransitionTable::get(PointerKey rep, unsigned attribu
 {
     if (isUsingSingleSlot()) {
         auto* transition = trySingleTransition();
-        return (transition && Hash::createFromStructure(transition) == Hash::createKey(rep, attributes, transitionKind)) ? transition : nullptr;
+        if (!transition)
+            return nullptr;
+        if (Hash::createKeyFromStructure(transition) != Hash::createKey(rep, attributes, transitionKind))
+            return nullptr;
+        return transition;
     }
     return map()->get(StructureTransitionTable::Hash::createKey(rep, attributes, transitionKind));
 }
@@ -869,3 +912,5 @@ ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

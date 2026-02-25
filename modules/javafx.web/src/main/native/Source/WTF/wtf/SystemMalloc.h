@@ -35,7 +35,7 @@ namespace WTF {
 struct SystemMalloc {
     static void* malloc(size_t size)
     {
-        auto* result = ::malloc(size);
+        void* result = ::malloc(size);
         if (!result)
             CRASH();
         return result;
@@ -48,25 +48,29 @@ struct SystemMalloc {
 
     static void* zeroedMalloc(size_t size)
     {
-        auto* result = ::malloc(size);
+        void* result = ::malloc(size);
         if (!result)
             CRASH();
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(result, 0, size);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return result;
     }
 
     static void* tryZeroedMalloc(size_t size)
     {
-        auto* result = ::malloc(size);
+        void* result = ::malloc(size);
         if (!result)
             return nullptr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(result, 0, size);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return result;
     }
 
     static void* realloc(void* p, size_t size)
     {
-        auto* result = ::realloc(p, size);
+        void* result = ::realloc(p, size);
         if (!result)
             CRASH();
         return result;
@@ -80,6 +84,11 @@ struct SystemMalloc {
     static void free(void* p)
     {
         ::free(p);
+    }
+
+    static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity)
+    {
+        return capacity + capacity / 4 + 1;
     }
 };
 

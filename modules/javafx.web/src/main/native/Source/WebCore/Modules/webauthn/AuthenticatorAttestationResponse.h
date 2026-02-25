@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "AuthenticatorResponse.h"
 #include "AuthenticatorTransport.h"
+#include "RegistrationResponseJSON.h"
 
 namespace WebCore {
 
@@ -44,6 +45,7 @@ public:
     RefPtr<ArrayBuffer> getAuthenticatorData() const;
     RefPtr<ArrayBuffer> getPublicKey() const;
     int64_t getPublicKeyAlgorithm() const;
+    RegistrationResponseJSON::AuthenticatorAttestationResponseJSON toJSON();
 
 private:
     AuthenticatorAttestationResponse(Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&, AuthenticatorAttachment, Vector<AuthenticatorTransport>&&);
@@ -51,7 +53,7 @@ private:
     Type type() const final { return Type::Attestation; }
     AuthenticatorResponseData data() const final;
 
-    Ref<ArrayBuffer> m_attestationObject;
+    const Ref<ArrayBuffer> m_attestationObject;
     Vector<AuthenticatorTransport> m_transports;
 };
 

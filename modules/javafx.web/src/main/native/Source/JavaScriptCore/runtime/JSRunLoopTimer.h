@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,7 +54,7 @@ public:
         void timerDidFire();
 
     public:
-        static Manager& shared();
+        static Manager& singleton();
         void registerVM(VM&);
         void unregisterVM(VM&);
         void scheduleTimer(JSRunLoopTimer&, Seconds nextFireTime);
@@ -62,11 +62,15 @@ public:
 
         std::optional<Seconds> timeUntilFire(JSRunLoopTimer&);
 
+        // Do nothing since this is a singleton.
+        void ref() const { }
+        void deref() const { }
+
     private:
         Lock m_lock;
 
         class PerVMData {
-            WTF_MAKE_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PerVMData);
             WTF_MAKE_NONCOPYABLE(PerVMData);
         public:
             PerVMData(Manager&, WTF::RunLoop&);
@@ -77,7 +81,7 @@ public:
             Vector<std::pair<Ref<JSRunLoopTimer>, MonotonicTime>> timers;
         };
 
-        HashMap<Ref<JSLock>, std::unique_ptr<PerVMData>> m_mapping;
+        UncheckedKeyHashMap<Ref<JSLock>, std::unique_ptr<PerVMData>> m_mapping;
     };
 
     JSRunLoopTimer(VM&);
@@ -99,14 +103,14 @@ public:
 
 protected:
     static constexpr Seconds s_decade { 60 * 60 * 24 * 365 * 10 };
-    Ref<JSLock> m_apiLock;
+    const Ref<JSLock> m_apiLock;
 
 private:
     friend class Manager;
 
     void timerDidFire();
 
-    HashSet<TimerNotificationCallback> m_timerSetCallbacks;
+    UncheckedKeyHashSet<TimerNotificationCallback> m_timerSetCallbacks;
     Lock m_timerCallbacksLock;
 
     Lock m_lock;

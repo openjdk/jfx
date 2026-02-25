@@ -25,23 +25,30 @@
 #include "config.h"
 #include "ContainerQueryFeatures.h"
 
+#include "BoxSides.h"
+#include "CSSCustomPropertyValue.h"
+#include "CalculationCategory.h"
+#include "ComputedStyleDependencies.h"
 #include "ContainerQueryEvaluator.h"
-#include "CustomPropertyRegistry.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "StyleBuilder.h"
+#include "StyleCustomProperty.h"
+#include "StyleCustomPropertyRegistry.h"
 #include <wtf/NeverDestroyed.h>
 
-namespace WebCore::CQ::Features {
+namespace WebCore::CQ {
 
 using namespace MQ;
 
 struct SizeFeatureSchema : public FeatureSchema {
-    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, FixedVector<CSSValueID>&& valueIdentifiers = { })
-        : FeatureSchema(name, type, valueType, WTFMove(valueIdentifiers))
-    { }
+    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, OptionSet<MediaQueryDynamicDependency> dependencies, FixedVector<CSSValueID>&& valueIdentifiers = { })
+        : FeatureSchema(name, type, valueType, dependencies, WTFMove(valueIdentifiers))
+    {
+    }
 
-    EvaluationResult evaluate(const MQ::Feature& feature, const FeatureEvaluationContext& context) const override
+    EvaluationResult evaluate(const Feature& feature, const FeatureEvaluationContext& context) const
     {
         // "If the query container does not have a principal box, or the principal box is not a layout containment box,
         // or the query container does not support container size queries on the relevant axes, then the result of
@@ -49,124 +56,111 @@ struct SizeFeatureSchema : public FeatureSchema {
         // https://drafts.csswg.org/css-contain-3/#size-container
         CheckedPtr renderer = dynamicDowncast<RenderBox>(context.renderer.get());
         if (!renderer)
-            return MQ::EvaluationResult::Unknown;
+            return EvaluationResult::Unknown;
 
         if (!renderer->hasEligibleContainmentForSizeQuery())
-            return MQ::EvaluationResult::Unknown;
+            return EvaluationResult::Unknown;
 
         return evaluate(feature, *renderer, context.conversionData);
     }
 
-    virtual EvaluationResult evaluate(const MQ::Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;
+    virtual EvaluationResult evaluate(const Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;
 };
 
-const FeatureSchema& width()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("width"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+namespace Features {
+
+struct WidthFeatureSchema : public SizeFeatureSchema {
+    WidthFeatureSchema()
+        : SizeFeatureSchema("width"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
+
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentWidth(), conversionData);
+        return evaluateLengthFeature(feature, renderer.contentBoxWidth(), conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct HeightFeatureSchema : public SizeFeatureSchema {
+    HeightFeatureSchema()
+        : SizeFeatureSchema("height"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& height()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("height"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentHeight(), conversionData);
+        return evaluateLengthFeature(feature, renderer.contentBoxHeight(), conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct InlineSizeFeatureSchema : public SizeFeatureSchema {
+    InlineSizeFeatureSchema()
+        : SizeFeatureSchema("inline-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& inlineSize()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("inline-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentLogicalWidth(), conversionData);
+        return evaluateLengthFeature(feature, renderer.contentBoxLogicalWidth(), conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct BlockSizeFeatureSchema : public SizeFeatureSchema {
+    BlockSizeFeatureSchema()
+        : SizeFeatureSchema("block-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& blockSize()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("block-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentLogicalHeight(), conversionData);
+        return evaluateLengthFeature(feature, renderer.contentBoxLogicalHeight(), conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct AspectRatioFeatureSchema : public SizeFeatureSchema {
+    AspectRatioFeatureSchema()
+        : SizeFeatureSchema("aspect-ratio"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Ratio, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& aspectRatio()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("aspect-ratio"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Ratio)
-        { }
+    // SizeFeatureSchema conformance
 
-        EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData&) const override
-        {
-            return evaluateRatioFeature(feature, renderer.contentSize());
-        }
-    };
+    EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
+    {
+        return evaluateRatioFeature(feature, renderer.contentBoxSize(), conversionData);
+    }
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct OrientationFeatureSchema : public SizeFeatureSchema {
+    OrientationFeatureSchema()
+        : SizeFeatureSchema("orientation"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, MediaQueryDynamicDependency::Viewport, { CSSValuePortrait, CSSValueLandscape })
+    {
+    }
 
-const FeatureSchema& orientation()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("orientation"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, { CSSValuePortrait, CSSValueLandscape })
-        { }
+    // SizeFeatureSchema conformance
 
-        EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData&) const override
-        {
-            bool isPortrait = renderer.contentHeight() >= renderer.contentWidth();
-            return evaluateIdentifierFeature(feature, isPortrait ? CSSValuePortrait : CSSValueLandscape);
-        }
-    };
-
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+    EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
+    {
+        bool isPortrait = renderer.contentBoxHeight() >= renderer.contentBoxWidth();
+        return evaluateIdentifierFeature(feature, isPortrait ? CSSValuePortrait : CSSValueLandscape, conversionData);
+    }
+};
 
 struct StyleFeatureSchema : public FeatureSchema {
     StyleFeatureSchema()
-        : FeatureSchema("style"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::CustomProperty)
-    { }
+        : FeatureSchema("style"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::CustomProperty, { })
+    {
+    }
+
+    // FeatureSchema conformance
 
     EvaluationResult evaluate(const MQ::Feature& feature, const FeatureEvaluationContext& context) const override
     {
@@ -177,23 +171,24 @@ struct StyleFeatureSchema : public FeatureSchema {
 
         auto* customPropertyValue = style.customPropertyValue(feature.name);
         if (!feature.rightComparison)
-            return toEvaluationResult(customPropertyValue && !customPropertyValue->isInvalid());
+            return toEvaluationResult(customPropertyValue && !customPropertyValue->isGuaranteedInvalid());
 
-        auto resolvedFeatureValue = [&]() -> RefPtr<const CSSCustomPropertyValue> {
+        auto resolvedFeatureValue = [&]() -> RefPtr<const Style::CustomProperty> {
             auto featureValue = dynamicDowncast<CSSCustomPropertyValue>(feature.rightComparison->value);
             ASSERT(featureValue);
 
             // Resolve the queried custom property value for var() references, css-wide keywords and registered properties.
             auto builderContext = Style::BuilderContext {
                 context.document.get(),
-                *context.conversionData.parentStyle(),
+                context.conversionData.parentStyle(),
                 context.conversionData.rootStyle(),
                 context.conversionData.elementForContainerUnitResolution()
             };
 
             auto dummyStyle = RenderStyle::clone(style);
+            auto dummyMatchResult = Style::MatchResult::create();
 
-            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), { }, { } };
+            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), dummyMatchResult, { } };
             return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
         }();
 
@@ -201,18 +196,106 @@ struct StyleFeatureSchema : public FeatureSchema {
             return EvaluationResult::False;
 
         // Guaranteed-invalid values match guaranteed-invalid values.
-        if (resolvedFeatureValue->isInvalid())
-            return toEvaluationResult(!customPropertyValue || customPropertyValue->isInvalid());
+        if (resolvedFeatureValue->isGuaranteedInvalid())
+            return toEvaluationResult(!customPropertyValue || customPropertyValue->isGuaranteedInvalid());
 
         ASSERT(feature.rightComparison->op == ComparisonOperator::Equal);
         return toEvaluationResult(customPropertyValue && *customPropertyValue == *resolvedFeatureValue);
     }
 };
 
-const FeatureSchema& style()
+// MARK: - Singleton readonly instances of FeatureSchemas
+
+static const WidthFeatureSchema& widthFeatureSchema()
+{
+    static MainThreadNeverDestroyed<WidthFeatureSchema> schema;
+    return schema;
+}
+
+static const HeightFeatureSchema& heightFeatureSchema()
+{
+    static MainThreadNeverDestroyed<HeightFeatureSchema> schema;
+    return schema;
+}
+
+static const InlineSizeFeatureSchema& inlineSizeFeatureSchema()
+{
+    static MainThreadNeverDestroyed<InlineSizeFeatureSchema> schema;
+    return schema;
+}
+
+static const BlockSizeFeatureSchema& blockSizeFeatureSchema()
+{
+    static MainThreadNeverDestroyed<BlockSizeFeatureSchema> schema;
+    return schema;
+}
+
+static const AspectRatioFeatureSchema& aspectRatioFeatureSchema()
+{
+    static MainThreadNeverDestroyed<AspectRatioFeatureSchema> schema;
+    return schema;
+}
+
+static const OrientationFeatureSchema& orientationFeatureSchema()
+{
+    static MainThreadNeverDestroyed<OrientationFeatureSchema> schema;
+    return schema;
+}
+
+static const StyleFeatureSchema& styleFeatureSchema()
 {
     static MainThreadNeverDestroyed<StyleFeatureSchema> schema;
     return schema;
 }
 
+// MARK: - Type erased exposed schemas
+
+const MQ::FeatureSchema& width()
+{
+    return widthFeatureSchema();
 }
+
+const MQ::FeatureSchema& height()
+{
+    return heightFeatureSchema();
+}
+
+const MQ::FeatureSchema& inlineSize()
+{
+    return inlineSizeFeatureSchema();
+}
+
+const MQ::FeatureSchema& blockSize()
+{
+    return blockSizeFeatureSchema();
+}
+
+const MQ::FeatureSchema& aspectRatio()
+{
+    return aspectRatioFeatureSchema();
+}
+
+const MQ::FeatureSchema& orientation()
+{
+    return orientationFeatureSchema();
+}
+
+const MQ::FeatureSchema& style()
+{
+    return styleFeatureSchema();
+}
+
+Vector<const MQ::FeatureSchema*> allSchemas()
+{
+    return {
+        &Features::width(),
+        &Features::height(),
+        &Features::inlineSize(),
+        &Features::blockSize(),
+        &Features::aspectRatio(),
+        &Features::orientation(),
+    };
+}
+
+} // namespace Features
+} // namespace WebCore::CQ

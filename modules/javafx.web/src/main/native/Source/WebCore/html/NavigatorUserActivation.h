@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "Supplementable.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,19 +35,19 @@ class UserActivation;
 class Navigator;
 
 class NavigatorUserActivation final : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorUserActivation);
 public:
     explicit NavigatorUserActivation(Navigator&);
     ~NavigatorUserActivation();
 
-    static Ref<UserActivation> userActivation(Navigator&);
-    Ref<UserActivation> userActivation();
+    static UserActivation& userActivation(Navigator&);
+    UserActivation& userActivation() const { return m_userActivation; }
 
 private:
     static NavigatorUserActivation* from(Navigator&);
     static ASCIILiteral supplementName();
 
-    Ref<UserActivation> m_userActivation;
+    const Ref<UserActivation> m_userActivation;
 };
 
 }

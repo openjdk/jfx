@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #include <WebCore/Document.h>
 #include <WebCore/HTMLFormElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLObjectElement.h>
 #include <WebCore/JSExecState.h>
@@ -160,12 +161,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setHeightIm
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::heightAttr, AtomString {String(env, value)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getHspaceImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::hspaceAttr);
-}
-
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setHspaceImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
@@ -218,12 +213,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setUseMapIm
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::usemapAttr, AtomString {String(env, value)});
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getVspaceImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::vspaceAttr);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setVspaceImpl(JNIEnv*, jclass, jlong peer, jint value)

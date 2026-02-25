@@ -39,6 +39,7 @@
 #include <wtf/Int128.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -162,6 +163,8 @@ static uint64_t scaleUp(uint64_t x, int n)
 } // namespace DecimalPrivate
 
 using namespace DecimalPrivate;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Decimal);
 
 Decimal& Decimal::operator+=(const Decimal& other)
 {
@@ -373,52 +376,6 @@ Decimal Decimal::operator/(const Decimal& rhs) const
     return Decimal(resultSign, resultExponent, result);
 }
 
-bool Decimal::operator!=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return false;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero();
-}
-
-bool Decimal::operator<(const Decimal& rhs) const
-{
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero() && result.isNegative();
-}
-
-bool Decimal::operator<=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return true;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return result.isZero() || result.isNegative();
-}
-
-bool Decimal::operator>(const Decimal& rhs) const
-{
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero() && result.isPositive();
-}
-
-bool Decimal::operator>=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return true;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return result.isZero() || !result.isNegative();
-}
-
 Decimal Decimal::abs() const
 {
     Decimal result(*this);
@@ -544,8 +501,7 @@ Decimal Decimal::fromDouble(double doubleValue)
 {
     if (std::isfinite(doubleValue)) {
         NumberToStringBuffer buffer;
-        auto* result = numberToString(doubleValue, buffer);
-        return fromString(span8(result));
+        return fromString(StringView { numberToStringAndSize(doubleValue, buffer) });
     }
 
     if (std::isinf(doubleValue))

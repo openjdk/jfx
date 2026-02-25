@@ -32,6 +32,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 #if PLATFORM(COCOA)
@@ -102,6 +103,8 @@ public:
     void receivedCancellation(const AuthenticationChallenge&) override;
     void receivedRequestToPerformDefaultHandling(const AuthenticationChallenge&) override;
     void receivedChallengeRejection(const AuthenticationChallenge&) override;
+
+    virtual bool isBlobResourceHandle() const { return false; }
 
 #if PLATFORM(COCOA)
     bool tryHandlePasswordBasedAuthentication(const AuthenticationChallenge&);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "EventTargetInlines.h"
 #include "JSDOMGlobalObject.h"
 #include "JSDOMPromise.h"
 #include "Node.h"
@@ -46,10 +47,13 @@
 #include <JavaScriptCore/Weak.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
 #include <JavaScriptCore/WeakInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RejectedPromiseTracker);
 
 class UnhandledPromise {
     WTF_MAKE_NONCOPYABLE(UnhandledPromise);
@@ -73,8 +77,8 @@ public:
     }
 
 private:
-    Ref<DOMPromise> m_promise;
-    RefPtr<ScriptCallStack> m_stack;
+    const Ref<DOMPromise> m_promise;
+    const RefPtr<ScriptCallStack> m_stack;
 };
 
 
@@ -88,10 +92,8 @@ RejectedPromiseTracker::~RejectedPromiseTracker() = default;
 
 static RefPtr<ScriptCallStack> createScriptCallStackFromReason(JSGlobalObject& lexicalGlobalObject, JSValue reason)
 {
-    VM& vm = lexicalGlobalObject.vm();
-
     // Always capture a stack from the exception if this rejection was an exception.
-    if (auto* exception = vm.lastException()) {
+    if (auto* exception = lexicalGlobalObject.vm().lastException()) {
         if (exception->value() == reason)
             return createScriptCallStackFromException(&lexicalGlobalObject, exception);
     }
@@ -164,7 +166,7 @@ void RejectedPromiseTracker::reportUnhandledRejections(Vector<UnhandledPromise>&
 
         PromiseRejectionEvent::Init initializer;
         initializer.cancelable = true;
-        initializer.promise = &domPromise;
+        initializer.promise = domPromise;
         initializer.reason = promise.result(vm);
 
         Ref event = PromiseRejectionEvent::create(eventNames().unhandledrejectionEvent, initializer);

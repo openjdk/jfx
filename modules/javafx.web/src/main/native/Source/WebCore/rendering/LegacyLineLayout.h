@@ -30,6 +30,7 @@
 #include "RenderLineBoxList.h"
 #include "RenderStyleConstants.h"
 #include "TrailingObjects.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -49,17 +50,16 @@ struct WordMeasurement;
 template <class Run> class BidiRunList;
 
 class LegacyLineLayout {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LegacyLineLayout);
 public:
     LegacyLineLayout(RenderBlockFlow&);
     ~LegacyLineLayout();
 
-    RenderLineBoxList& lineBoxes() { return m_lineBoxes; }
-    const RenderLineBoxList& lineBoxes() const { return m_lineBoxes; }
-
-    LegacyRootInlineBox* legacyRootBox() const { return downcast<LegacyRootInlineBox>(m_lineBoxes.firstLegacyLineBox()); }
+    LegacyRootInlineBox* legacyRootBox() const { return m_legacyRootInlineBox.get(); }
+    void deleteLegacyRootBox(bool runCleanup = false);
 
     void layoutLineBoxes();
+    void shiftLineBy(LayoutUnit shiftX, LayoutUnit shiftY);
 
     LegacyRootInlineBox* constructLine(BidiRunList<BidiRun>&, const LineInfo&);
     void addOverflowFromInlineChildren();
@@ -67,6 +67,8 @@ public:
     size_t lineCount() const;
 
     static void appendRunsForObject(BidiRunList<BidiRun>*, int start, int end, RenderObject&, InlineBidiResolver&);
+
+    static bool shouldSkipCreatingRunsForObject(RenderObject&);
 
 private:
     std::unique_ptr<LegacyRootInlineBox> createRootInlineBox();
@@ -84,7 +86,7 @@ private:
     const LocalFrameViewLayoutContext& layoutContext() const;
 
     RenderBlockFlow& m_flow;
-    RenderLineBoxList m_lineBoxes;
+    std::unique_ptr<LegacyRootInlineBox> m_legacyRootInlineBox;
 };
 
 };

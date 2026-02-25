@@ -40,6 +40,7 @@
 #include "Timer.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <pal/HysteresisActivity.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -47,6 +48,13 @@ static constexpr unsigned maximumPendingImageAnalysisCount = 5;
 static constexpr float minimumWidthForAnalysis = 20;
 static constexpr float minimumHeightForAnalysis = 20;
 static constexpr Seconds resumeProcessingDelay = 100_ms;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageAnalysisQueue);
+
+Ref<ImageAnalysisQueue> ImageAnalysisQueue::create(Page& page)
+{
+    return adoptRef(*new ImageAnalysisQueue(page));
+}
 
 ImageAnalysisQueue::ImageAnalysisQueue(Page& page)
     : m_page(page)
@@ -58,7 +66,7 @@ ImageAnalysisQueue::~ImageAnalysisQueue() = default;
 
 void ImageAnalysisQueue::enqueueIfNeeded(HTMLImageElement& element)
 {
-    CheckedPtr renderer = downcast<RenderImage>(element.renderer());
+    CheckedPtr renderer = dynamicDowncast<RenderImage>(element.renderer());
     if (!renderer)
         return;
 

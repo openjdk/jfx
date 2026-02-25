@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,11 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "ExceptionOr.h"
 #include "FetchBody.h"
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,9 +39,10 @@ class CachedRawResource;
 class Document;
 class Navigator;
 class ResourceError;
+template<typename> class ExceptionOr;
 
 class NavigatorBeacon final : public Supplement<Navigator>, private CachedRawResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorBeacon);
 public:
     explicit NavigatorBeacon(Navigator&);
     ~NavigatorBeacon();
@@ -58,7 +60,7 @@ private:
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void logError(const ResourceError&);
 
-    Navigator& m_navigator;
+    const CheckedRef<Navigator> m_navigator;
     Vector<CachedResourceHandle<CachedRawResource>> m_inflightBeacons;
 };
 

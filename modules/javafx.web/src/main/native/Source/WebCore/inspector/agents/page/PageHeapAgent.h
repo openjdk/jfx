@@ -28,19 +28,24 @@
 #include "InspectorWebAgentBase.h"
 #include "InstrumentingAgents.h"
 #include "WebHeapAgent.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class PageHeapAgent final : public WebHeapAgent {
     WTF_MAKE_NONCOPYABLE(PageHeapAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PageHeapAgent);
 public:
     PageHeapAgent(PageAgentContext&);
     ~PageHeapAgent();
 
     // HeapBackendDispatcherHandler
-    Inspector::Protocol::ErrorStringOr<void> enable();
-    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> enable() override;
+    Inspector::Protocol::ErrorStringOr<void> disable() override;
+
+    // JSC::HeapSnapshotBuilder::Client
+    String heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuilder&, JSC::JSCell*, const String& currentClassName) override;
+    bool heapSnapshotBuilderIsElement(JSC::HeapSnapshotBuilder&, JSC::JSCell*) override;
 
     // InspectorInstrumentation
     void mainFrameNavigated();

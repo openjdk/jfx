@@ -35,6 +35,7 @@
 #include "AirLiveness.h"
 #include "AirPadInterference.h"
 #include "AirPhaseScope.h"
+#include "AirRegisterAllocatorStats.h"
 #include "AirTmpWidthInlines.h"
 #include "AirUseCounts.h"
 #include <wtf/HashSet.h>
@@ -43,6 +44,8 @@
 #include <wtf/ListDump.h>
 #include <wtf/SmallSet.h>
 #include <wtf/Vector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -130,7 +133,7 @@ protected:
         for (unsigned i = 0; i < firstNonRegIndex; ++i)
             m_degrees[i] = std::numeric_limits<IndexType>::max();
 
-        memset(m_degrees.data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(IndexType));
+        memset(m_degrees.mutableSpan().data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(IndexType));
     }
 
     void addEdgeDistinct(IndexType a, IndexType b)
@@ -454,7 +457,7 @@ protected:
     {
         out.print("graph InterferenceGraph { \n");
 
-        HashSet<Tmp> tmpsWithInterferences;
+        UncheckedKeyHashSet<Tmp> tmpsWithInterferences;
 
         m_interferenceEdges.forEach([&tmpsWithInterferences] (std::pair<IndexType, IndexType> edge) {
             tmpsWithInterferences.add(TmpMapper::tmpFromAbsoluteIndex(edge.first));
@@ -485,7 +488,7 @@ protected:
 
     using IndexTypeSet = SmallSet<IndexType, IntHash<IndexType>>;
 
-    HashMap<IndexType, IndexTypeSet, DefaultHash<IndexType>, WTF::UnsignedWithZeroKeyHashTraits<IndexType>> m_biases;
+    UncheckedKeyHashMap<IndexType, IndexTypeSet, DefaultHash<IndexType>, WTF::UnsignedWithZeroKeyHashTraits<IndexType>> m_biases;
 
     // Instead of keeping track of the move instructions, we just keep their operands around and use the index
     // in the vector as the "identifier" for the move.
@@ -1328,7 +1331,7 @@ protected:
 
     // Work lists.
     // Low-degree, Move related.
-    HashSet<IndexType> m_freezeWorklist;
+    UncheckedKeyHashSet<IndexType> m_freezeWorklist;
     // Set of "move" enabled for possible coalescing.
     OrderedMoveSet m_worklistMoves;
     // Set of "move" not yet ready for coalescing.
@@ -1786,10 +1789,16 @@ public:
     {
         padInterference(m_code);
 
+        m_stats[GP].numTmpsIn = m_code.numTmps(GP);
+        m_stats[FP].numTmpsIn = m_code.numTmps(FP);
+
         allocateOnBank<GP>();
         allocateOnBank<FP>();
 
         fixSpillsAfterTerminals(m_code);
+
+        m_stats[GP].numTmpsOut = m_code.numTmps(GP);
+        m_stats[FP].numTmpsOut = m_code.numTmps(FP);
     }
 
 private:
@@ -1942,6 +1951,7 @@ private:
             if (range.last - range.first <= 1 && range.count > range.admitStackCount) {
                 dataLogLnIf(traceDebug, "Add unspillable tmp due to range: ", AbsoluteTmpMapper<bank>::tmpFromAbsoluteIndex(i));
                 unspillableTmps.quickSet(i);
+                m_stats[bank].numUnspillableTmps++;
         }
         }
 
@@ -1949,6 +1959,7 @@ private:
             if (tmp.bank() == bank) {
                 dataLogLnIf(traceDebug, "Add unspillable tmp since it is FastTmp: ", tmp);
                 unspillableTmps.quickSet(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+                m_stats[bank].numUnspillableTmps++;
             }
         });
 
@@ -2028,7 +2039,7 @@ private:
     template<Bank bank, typename AllocatorType>
     void addSpillAndFill(const AllocatorType& allocator, BitVector& unspillableTmps)
     {
-        HashMap<Tmp, StackSlot*> stackSlots;
+        UncheckedKeyHashMap<Tmp, StackSlot*> stackSlots;
         for (Tmp tmp : allocator.spilledTmps()) {
             // All the spilled values become unspillable.
             dataLogLnIf(traceDebug, "Add unspillable tmp due to spill: ", tmp);
@@ -2039,6 +2050,7 @@ private:
                 stackSlotMinimumWidth(m_tmpWidth.requiredWidth(tmp)), StackSlotKind::Spill);
             bool isNewTmp = stackSlots.add(tmp, stackSlot).isNewEntry;
             ASSERT_UNUSED(isNewTmp, isNewTmp);
+            m_stats[bank].numSpillStackSlots++;
         }
 
         // Rewrite the program to get rid of the spilled Tmp.
@@ -2159,6 +2171,7 @@ private:
                     RELEASE_ASSERT(instBank == bank);
 
                     Tmp tmp = m_code.newTmp(bank);
+                    m_stats[bank].numSpillTmps++;
                     dataLogLnIf(traceDebug, "Add unspillable tmp (scratch) since we introduce it during spill: ", tmp);
                     unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
                     inst.args.append(tmp);
@@ -2172,6 +2185,7 @@ private:
                     // late def) doesn't change the padding situation.: the late def would have already
                     // caused it to report hasLateUseOrDef in Inst::needsPadding.
                     insertionSet.insert(instIndex, Nop, inst.origin);
+                    m_stats[bank].numMoveSpillSpillInsts++;
                     continue;
                 }
 
@@ -2210,6 +2224,7 @@ private:
 
                     auto oldTmp = tmp;
                     auto newTmp = m_code.newTmp(bank);
+                    m_stats[bank].numSpillTmps++;
                     dataLogLnIf(traceDebug, "Add unspillable tmp since we introduce it during spill (2): ", tmp, " -> ", newTmp);
                     tmp = newTmp;
                     unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
@@ -2226,10 +2241,12 @@ private:
                                     int64_t value = m_useCounts.constant<bank>(oldIndex);
                                     if (Arg::isValidImmForm(value) && isValidForm(Move, Arg::Imm, Arg::Tmp)) {
                                         insertionSet.insert(instIndex, Move, inst.origin, Arg::imm(value), tmp);
+                                        m_stats[bank].numRematerializeConst++;
                                         return true;
                                     }
                                     if (isValidForm(Move, Arg::BigImm, Arg::Tmp)) {
                                         insertionSet.insert(instIndex, Move, inst.origin, Arg::bigImm(value), tmp);
+                                        m_stats[bank].numRematerializeConst++;
                                         return true;
                                     }
                                 }
@@ -2237,13 +2254,16 @@ private:
                             return false;
                         };
 
-                        if (!tryRematerialize())
+                        if (!tryRematerialize()) {
                         insertionSet.insert(instIndex, move, inst.origin, arg, tmp);
+                            m_stats[bank].numLoadSpill++;
+                    }
                     }
 
                     if (Arg::isAnyDef(role)) {
                         // FIXME: When nobody is using admitsStack's spill result, we can also skip def.
                         insertionSet.insert(instIndex + 1, move, inst.origin, tmp, arg);
+                        m_stats[bank].numStoreSpill++;
                     }
                 });
             }
@@ -2260,6 +2280,7 @@ private:
     Code& m_code;
     TmpWidth m_tmpWidth;
     UseCounts& m_useCounts;
+    std::array<AirAllocateRegistersStats, numBanks> m_stats = { GP, FP };
 };
 
 } // anonymous namespace
@@ -2268,14 +2289,17 @@ void allocateRegistersByGraphColoring(Code& code)
 {
     PhaseScope phaseScope(code, "allocateRegistersByGraphColoring"_s);
 
-    if (traceDebug)
-        dataLog("Code before graph coloring:\n", code);
+    dataLogIf(traceDebug, "Code before graph coloring:\n", code);
 
     UseCounts useCounts(code);
     GraphColoringRegisterAllocation graphColoringRegisterAllocation(code, useCounts);
     graphColoringRegisterAllocation.run();
+
+    dataLogIf(traceDebug, "Code after graph coloring:\n", code);
 }
 
 } } } // namespace JSC::B3::Air
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

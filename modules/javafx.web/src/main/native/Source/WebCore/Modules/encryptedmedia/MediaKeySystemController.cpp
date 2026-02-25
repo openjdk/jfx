@@ -33,8 +33,11 @@
 #include "LocalFrame.h"
 #include "MediaKeySystemRequest.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaKeySystemController);
 
 ASCIILiteral MediaKeySystemController::supplementName()
 {
@@ -64,7 +67,7 @@ void provideMediaKeySystemTo(Page& page, MediaKeySystemClient& client)
 
 void MediaKeySystemController::logRequestMediaKeySystemDenial(Document& document)
 {
-    if (RefPtr window = document.domWindow())
+    if (RefPtr window = document.window())
         window->printErrorMessage("Not allowed to access MediaKeySystem."_str);
 }
 

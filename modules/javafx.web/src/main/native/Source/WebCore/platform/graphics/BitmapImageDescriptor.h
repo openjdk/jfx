@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "ImageOrientation.h"
 #include "ImageTypes.h"
 #include "IntPoint.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -47,6 +48,7 @@ public:
     void clear() { m_cachedFlags = { }; }
 
     EncodedDataStatus encodedDataStatus() const;
+    bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
     IntSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
     IntSize sourceSize(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
     std::optional<IntSize> densityCorrectedSize() const;
@@ -56,6 +58,8 @@ public:
     RepetitionCount repetitionCount() const;
     DestinationColorSpace colorSpace() const;
     std::optional<Color> singlePixelSolidColor() const;
+    bool hasHDRGainMap() const;
+    bool hasHDRColorSpace() const;
 
     String uti() const;
     String filenameExtension() const;
@@ -85,12 +89,13 @@ private:
         RepetitionCount             = 1 << 6,
         ColorSpace                  = 1 << 7,
         SinglePixelSolidColor       = 1 << 8,
+        HasHDRGainMap               = 1 << 9,
 
-        UTI                         = 1 << 9,
-        FilenameExtension           = 1 << 10,
-        AccessibilityDescription    = 1 << 11,
-        HotSpot                     = 1 << 12,
-        MaximumSubsamplingLevel     = 1 << 13,
+        UTI                         = 1 << 10,
+        FilenameExtension           = 1 << 11,
+        AccessibilityDescription    = 1 << 12,
+        HotSpot                     = 1 << 13,
+        MaximumSubsamplingLevel     = 1 << 14,
     };
 
     template<typename MetadataType>
@@ -113,6 +118,7 @@ private:
     mutable RepetitionCount m_repetitionCount { RepetitionCountNone };
     mutable DestinationColorSpace m_colorSpace { DestinationColorSpace::SRGB() };
     mutable std::optional<Color> m_singlePixelSolidColor;
+    mutable bool m_hasHDRGainMap { false };
 
     mutable String m_uti;
     mutable String m_filenameExtension;
@@ -120,7 +126,7 @@ private:
     mutable std::optional<IntPoint> m_hotSpot;
     mutable SubsamplingLevel m_maximumSubsamplingLevel { SubsamplingLevel::Default };
 
-    BitmapImageSource& m_source;
+    const CheckedRef<BitmapImageSource> m_source;
 };
 
 } // namespace WebCore

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <wtf/ListHashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -33,7 +34,7 @@ namespace WTF {
 // Value will be deleted lazily upon rehash or amortized over time. For manual cleanup, call removeNullReferences().
 template <typename T, typename WeakPtrImpl, EnableWeakPtrThreadingAssertions assertionsPolicy>
 class WeakListHashSet final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakListHashSet);
 public:
     using WeakPtrImplSet = ListHashSet<Ref<WeakPtrImpl>>;
     using AddResult = typename WeakPtrImplSet::AddResult;
@@ -172,7 +173,7 @@ public:
     iterator find(const U& value)
     {
         increaseOperationCountSinceLastCleanup();
-        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = value.weakImplIfExists(); impl && *impl)
             return WeakListHashSetIterator(*this, m_set.find(*impl));
         return end();
     }
@@ -181,7 +182,7 @@ public:
     const_iterator find(const U& value) const
     {
         increaseOperationCountSinceLastCleanup();
-        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = value.weakImplIfExists(); impl && *impl)
             return WeakListHashSetConstIterator(*this, m_set.find(*impl));
         return end();
     }
@@ -190,7 +191,7 @@ public:
     bool contains(const U& value) const
     {
         increaseOperationCountSinceLastCleanup();
-        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = value.weakImplIfExists(); impl && *impl)
             return m_set.contains(*impl);
         return false;
     }
@@ -199,50 +200,49 @@ public:
     AddResult add(const U& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.add(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+        return m_set.add(WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U>
     AddResult appendOrMoveToLast(const U& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.appendOrMoveToLast(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+        return m_set.appendOrMoveToLast(WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U>
     bool moveToLastIfPresent(const U& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.moveToLastIfPresent(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+        return m_set.moveToLastIfPresent(WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U>
     AddResult prependOrMoveToFirst(const U& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.prependOrMoveToFirst(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+        return m_set.prependOrMoveToFirst(WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U, typename V>
     AddResult insertBefore(const U& beforeValue, const V& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.insertBefore(*static_cast<const T&>(beforeValue).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(beforeValue), assertionsPolicy).m_impl,
-            *static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<V&>(value), assertionsPolicy).m_impl);
+        return m_set.insertBefore(WeakRef<T, WeakPtrImpl>(beforeValue).releaseImpl(), WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U>
     AddResult insertBefore(iterator it, const U& value)
     {
         amortizedCleanupIfNeeded();
-        return m_set.insertBefore(it.m_position, *static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
+        return m_set.insertBefore(it.m_position, WeakRef<T, WeakPtrImpl>(value).releaseImpl());
     }
 
     template <typename U>
     bool remove(const U& value)
     {
         amortizedCleanupIfNeeded();
-        if (auto* impl = value.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = value.weakImplIfExists(); impl && *impl)
             return m_set.remove(*impl);
         return false;
     }
@@ -270,7 +270,7 @@ public:
             return true;
 
         auto onlyContainsNullReferences = begin() == end();
-        if (UNLIKELY(onlyContainsNullReferences))
+        if (onlyContainsNullReferences) [[unlikely]]
             const_cast<WeakListHashSet&>(*this).clear();
         return onlyContainsNullReferences;
     }
@@ -278,7 +278,7 @@ public:
     bool hasNullReferences() const
     {
         unsigned count = 0;
-        auto result = WTF::anyOf(m_set, [&] (auto& iterator) {
+        auto result = std::ranges::any_of(m_set, [&](auto& iterator) {
             ++count;
             return !iterator.get();
         });

@@ -63,12 +63,12 @@ void NativeExecutable::finishCreation(VM& vm, Ref<JSC::JITCode>&& callThunk, Ref
     Base::finishCreation(vm);
     m_jitCodeForCall = WTFMove(callThunk);
     m_jitCodeForConstruct = WTFMove(constructThunk);
-    m_jitCodeForCallWithArityCheck = m_jitCodeForCall->addressForCall(MustCheckArity);
-    m_jitCodeForConstructWithArityCheck = m_jitCodeForConstruct->addressForCall(MustCheckArity);
+    m_jitCodeForCallWithArityCheck = m_jitCodeForCall->addressForCall(ArityCheckMode::MustCheckArity);
+    m_jitCodeForConstructWithArityCheck = m_jitCodeForConstruct->addressForCall(ArityCheckMode::MustCheckArity);
     m_name = name;
 
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCall->addressForCall(ArityCheckNotRequired).taggedPtr());
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstruct->addressForCall(ArityCheckNotRequired).taggedPtr());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCall->addressForCall(ArityCheckMode::ArityCheckNotRequired).taggedPtr());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstruct->addressForCall(ArityCheckMode::ArityCheckNotRequired).taggedPtr());
     assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCallWithArityCheck.taggedPtr());
     assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstructWithArityCheck.taggedPtr());
 }
@@ -89,16 +89,16 @@ const DOMJIT::Signature* NativeExecutable::signatureFor(CodeSpecializationKind k
 
 Intrinsic NativeExecutable::intrinsic() const
 {
-    return generatedJITCodeFor(CodeForCall)->intrinsic();
+    return generatedJITCodeFor(CodeSpecializationKind::CodeForCall)->intrinsic();
 }
 
 CodeBlockHash NativeExecutable::hashFor(CodeSpecializationKind kind) const
 {
-    if (kind == CodeForCall)
-        return CodeBlockHash(bitwise_cast<uintptr_t>(m_function));
+    if (kind == CodeSpecializationKind::CodeForCall)
+        return CodeBlockHash(std::bit_cast<uintptr_t>(m_function));
 
-    RELEASE_ASSERT(kind == CodeForConstruct);
-    return CodeBlockHash(bitwise_cast<uintptr_t>(m_constructor));
+    RELEASE_ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
+    return CodeBlockHash(std::bit_cast<uintptr_t>(m_constructor));
 }
 
 JSString* NativeExecutable::toStringSlow(JSGlobalObject *globalObject)

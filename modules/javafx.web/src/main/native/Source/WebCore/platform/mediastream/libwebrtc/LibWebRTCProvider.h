@@ -28,32 +28,32 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "LibWebRTCRefWrappers.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "WebRTCProvider.h"
+#include <wtf/Compiler.h>
+#include <wtf/TZoneMalloc.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
+IGNORE_CLANG_WARNINGS_BEGIN("nullability-completeness")
 #include <webrtc/api/peer_connection_interface.h>
+IGNORE_CLANG_WARNINGS_END
+IGNORE_CLANG_WARNINGS_END
 #include <webrtc/api/scoped_refptr.h>
 #include <webrtc/api/video_codecs/video_decoder_factory.h>
 #include <webrtc/api/video_codecs/video_encoder_factory.h>
 
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-
-namespace rtc {
-class NetworkManager;
-class PacketSocketFactory;
-class Thread;
-class RTCCertificateGenerator;
-}
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace webrtc {
 class AsyncDnsResolverFactory;
-class PeerConnectionFactoryInterface;
+class NetworkManager;
+class PacketSocketFactory;
+class RTCCertificateGenerator;
+class Thread;
 }
 
 namespace WebCore {
@@ -63,14 +63,13 @@ class RegistrableDomain;
 struct PeerConnectionFactoryAndThreads;
 
 class WEBCORE_EXPORT LibWebRTCProvider : public WebRTCProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(LibWebRTCProvider, WEBCORE_EXPORT);
 public:
     static UniqueRef<LibWebRTCProvider> create();
 
     virtual ~LibWebRTCProvider();
 
     static void registerWebKitVP9Decoder();
-    static void registerWebKitVP8Decoder();
 
     static void setRTCLogging(WTFLogLevel);
 
@@ -81,7 +80,7 @@ public:
     std::optional<RTCRtpCapabilities> senderCapabilities(const String& kind) final;
     void clearFactory() final;
 
-    virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&);
+    virtual webrtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver&, webrtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&);
 
     webrtc::PeerConnectionFactoryInterface* factory();
     LibWebRTCAudioModule* audioModule();
@@ -90,13 +89,13 @@ public:
     static void callOnWebRTCNetworkThread(Function<void()>&&);
     static void callOnWebRTCSignalingThread(Function<void()>&&);
     static bool hasWebRTCThreads();
-    static rtc::Thread& signalingThread();
+    static webrtc::Thread& signalingThread();
 
     // Used for mock testing
-    void setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&&);
+    void setPeerConnectionFactory(webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&&);
 
     // Callback is executed on a background thread.
-    void prepareCertificateGenerator(Function<void(rtc::RTCCertificateGenerator&)>&&);
+    void prepareCertificateGenerator(Function<void(webrtc::RTCCertificateGenerator&)>&&);
 
     virtual void setLoggingLevel(WTFLogLevel);
 
@@ -109,7 +108,7 @@ public:
     WEBCORE_EXPORT void enableEnumeratingVisibleNetworkInterfaces();
     bool isEnumeratingVisibleNetworkInterfacesEnabled() const { return m_enableEnumeratingVisibleNetworkInterfaces; }
 
-    class SuspendableSocketFactory : public rtc::PacketSocketFactory {
+    class SuspendableSocketFactory : public webrtc::PacketSocketFactory {
     public:
         virtual ~SuspendableSocketFactory() = default;
         virtual void suspend() { };
@@ -121,9 +120,9 @@ public:
 protected:
     LibWebRTCProvider();
 
-    rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&, std::unique_ptr<webrtc::AsyncDnsResolverFactoryInterface>&&);
+    webrtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, webrtc::NetworkManager&, webrtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&, std::unique_ptr<webrtc::AsyncDnsResolverFactoryInterface>&&);
 
-    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread);
+    Ref<webrtc::PeerConnectionFactoryInterface> createPeerConnectionFactory(webrtc::Thread* networkThread, webrtc::Thread* signalingThread);
     virtual std::unique_ptr<webrtc::VideoDecoderFactory> createDecoderFactory();
     virtual std::unique_ptr<webrtc::VideoEncoderFactory> createEncoderFactory();
 
@@ -132,7 +131,7 @@ protected:
     PeerConnectionFactoryAndThreads& getStaticFactoryAndThreads(bool useNetworkThreadWithSocketServer);
 
     RefPtr<LibWebRTCAudioModule> m_audioModule;
-    rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> m_factory;
+    RefPtr<webrtc::PeerConnectionFactoryInterface> m_factory;
     // FIXME: Remove m_useNetworkThreadWithSocketServer member variable and make it a global.
     bool m_useNetworkThreadWithSocketServer { true };
 

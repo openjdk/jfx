@@ -35,7 +35,9 @@ enum class ChannelSelectorType : uint8_t {
     CHANNEL_A = 4
 };
 
-class FEDisplacementMap : public FilterEffect {
+class FEDisplacementMap final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEDisplacementMap);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEDisplacementMap);
 public:
     WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale, DestinationColorSpace = DestinationColorSpace::SRGB());
 
@@ -59,8 +61,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const override;
-    void transformInputsColorSpace(const FilterImageVector& inputs) const override;
+    const DestinationColorSpace& resultColorSpace(std::span<const Ref<FilterImage>>) const override;
+    void transformInputsColorSpace(std::span<const Ref<FilterImage>> inputs) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 

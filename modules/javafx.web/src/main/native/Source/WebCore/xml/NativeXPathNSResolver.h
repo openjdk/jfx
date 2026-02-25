@@ -41,7 +41,7 @@ public:
 
 private:
     explicit NativeXPathNSResolver(Ref<Node>&&);
-    Ref<Node> m_node;
+    const Ref<Node> m_node;
 };
 
 } // namespace WebCore

@@ -105,7 +105,7 @@ void WebXRInputSource::update(double timestamp, const PlatformXR::FrameData::Inp
 
 bool WebXRInputSource::requiresInputSourceChange(const InputSource& source)
 {
-    return m_source.handeness != source.handeness
+    return m_source.handedness != source.handedness
         || m_source.targetRayMode != source.targetRayMode
         || m_source.profiles != source.profiles
         || static_cast<bool>(m_gripSpace) != source.gripOrigin.has_value();

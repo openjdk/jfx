@@ -28,18 +28,21 @@
 #include "PathImpl.h"
 #include "PathSegment.h"
 #include <wtf/DataRef.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class PathStream final : public PathImpl {
+    WTF_MAKE_TZONE_ALLOCATED(PathStream);
 public:
     static Ref<PathStream> create();
     static Ref<PathStream> create(PathSegment&&);
     static Ref<PathStream> create(const Vector<FloatPoint>&);
     static Ref<PathStream> create(Vector<PathSegment>&&);
 
+    bool definitelyEqual(const PathImpl&) const final;
     Ref<PathImpl> copy() const final;
 
     void add(PathMoveTo) final;
@@ -53,6 +56,7 @@ public:
     void add(PathEllipseInRect) final;
     void add(PathRect) final;
     void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
     void add(PathCloseSubpath) final;
 
     const Vector<PathSegment>& segments() const { return m_segments; }
@@ -83,17 +87,7 @@ private:
 
     bool isPathStream() const final { return true; }
 
-    template<typename DataType>
-    std::optional<DataType> singleDataType() const;
-
     std::optional<PathSegment> singleSegment() const final;
-    std::optional<PathDataLine> singleDataLine() const final;
-    std::optional<PathArc> singleArc() const final;
-    std::optional<PathClosedArc> singleClosedArc() const final;
-    std::optional<PathDataQuadCurve> singleQuadCurve() const final;
-    std::optional<PathDataBezierCurve> singleBezierCurve() const final;
-
-    bool isEmpty() const final { return m_segments.isEmpty(); }
 
     bool isClosed() const final;
     FloatPoint currentPoint() const final;
