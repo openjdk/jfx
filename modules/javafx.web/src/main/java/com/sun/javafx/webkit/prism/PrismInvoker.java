@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.ReentrantLock;
@@ -78,21 +79,46 @@ public final class PrismInvoker extends Invoker {
         PlatformImpl.runLater(r);
     }
 
+    private static boolean isOnRenderThread() {
+        return Thread.currentThread().getName().startsWith("QuantumRenderer");
+    }
+
     static void invokeOnRenderThread(final Runnable r) {
         Toolkit.getToolkit().addRenderJob(new RenderJob(r));
     }
 
     static void runOnRenderThread(final Runnable r) {
-        if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
+        if (isOnRenderThread()) {
             r.run();
         } else {
-            FutureTask<Void> f = new FutureTask<>(r, null);
+            FutureTask<Void> f = new FutureTask<Void>(r, null);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete
                 f.get();
             } catch (ExecutionException | InterruptedException ex) {
                 log.severe("RenderJob error", ex);
+            }
+        }
+    }
+
+    static <T> T callOnRenderThread(final Callable<T> c) {
+        if (isOnRenderThread()) {
+            try {
+                return c.call();
+            } catch (Exception ex) {
+                log.severe("RenderJob error", ex);
+                return null;
+            }
+        } else {
+            FutureTask<T> f = new FutureTask<T>(c);
+            Toolkit.getToolkit().addRenderJob(new RenderJob(f));
+            try {
+                // block until job is complete
+                return f.get();
+            } catch (ExecutionException | InterruptedException ex) {
+                log.severe("RenderJob error", ex);
+                return null;
             }
         }
     }

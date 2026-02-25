@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -134,13 +134,23 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int dstx1, int dsty1, int dstx2, int dsty2,
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
-        if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
+        // Because this method can be called by the Printer there is a chance
+        // these checks will run on a thread other than QuantumRenderer. To prevent
+        // any mishaps run the checks on render thread.
+        boolean canDraw = PrismInvoker.callOnRenderThread(() -> {
+            if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
+                return false;
+            }
+            if (g.getResourceFactory().isDisposed()) {
+                log.fine("RTImage::draw : skip because device has been disposed");
+                return false;
+            }
+            return true;
+        });
+        if (!canDraw) {
             return;
         }
-        if (g.getResourceFactory().isDisposed()) {
-            log.fine("RTImage::draw : skip because device has been disposed");
-            return;
-        }
+
         if (g instanceof PrinterGraphics) {
             // We're printing. Copy [txt] into a J2DTexture and draw it.
             int w = srcx2 - srcx1;
@@ -148,7 +158,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             final IntBuffer pixels = IntBuffer.allocate(w * h);
 
             PrismInvoker.runOnRenderThread(() -> {
-                getTexture().readPixels(pixels);
+                // getTexture() can return null, prevent NPE if that happens
+                RTTexture tex = getTexture();
+                if (tex != null) {
+                    tex.readPixels(pixels);
+                }
             });
             Image img = Image.fromIntArgbPreData(pixels, w, h);
             Texture t = g.getResourceFactory().createTexture(
