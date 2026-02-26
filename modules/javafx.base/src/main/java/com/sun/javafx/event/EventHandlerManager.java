@@ -25,18 +25,12 @@
 
 package com.sun.javafx.event;
 
-import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-import com.sun.javafx.binding.ExpressionHelper;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakListener;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -217,14 +211,10 @@ public class EventHandlerManager extends BasicEventDispatcher {
     }
 
     private final class EventHandlerProperty<T extends Event>
-            extends ObjectProperty<EventHandler<? super T>> {
+            extends ObjectPropertyBase<EventHandler<? super T>> {
 
         private final String name;
         private final CompositeEventHandler<T> compositeEventHandler;
-        private ObservableValue<? extends EventHandler<? super T>> observable = null;
-        private InvalidationListener listener = null;
-        private boolean valid = true;
-        private ExpressionHelper<EventHandler<? super T>> helper = null;
 
         private EventHandlerProperty(
                 final String name,
@@ -244,121 +234,8 @@ public class EventHandlerManager extends BasicEventDispatcher {
         }
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super EventHandler<? super T>> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super EventHandler<? super T>> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        private void markInvalid() {
-            if (valid) {
-                valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
-            }
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public EventHandler<? super T> get() {
-            valid = true;
-            return compositeEventHandler.getEventHandler();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void set(EventHandler<? super T> value) {
-            if (isBound()) {
-                throw new RuntimeException((getBean() != null && getName() != null ?
-                        getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
-            }
-            set0(value);
-        }
-
-        private void set0(EventHandler<? super T> value) {
-            if (value != compositeEventHandler.getEventHandler()) {
-                compositeEventHandler.setEventHandler(value);
-                markInvalid();
-            }
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isBound() {
-            return observable != null;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void bind(ObservableValue<? extends EventHandler<? super T>> newObservable) {
-            if (newObservable == null) {
-                throw new NullPointerException("Cannot bind to null");
-            }
-
-            if (!newObservable.equals(this.observable)) {
-                unbind();
-                observable = newObservable;
-                if (listener == null) {
-                    listener = new Listener<>(this);
-                }
-                observable.addListener(listener);
-                set0(observable.getValue());
-            }
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void unbind() {
-            if (observable != null) {
-                observable.removeListener(listener);
-                observable = null;
-            }
-        }
-
-        private static final class Listener<T extends Event>
-                implements InvalidationListener, WeakListener {
-            private final WeakReference<EventHandlerProperty<T>> wref;
-
-            public Listener(EventHandlerProperty<T> ref) {
-                this.wref = new WeakReference<>(ref);
-            }
-
-            @Override
-            public void invalidated(Observable observable) {
-                EventHandlerProperty<T> ref = wref.get();
-                if (ref == null) {
-                    observable.removeListener(this);
-                } else if (ref.observable != null) {
-                    ref.set0(ref.observable.getValue());
-                }
-            }
-
-            @Override
-            public boolean wasGarbageCollected() {
-                return wref.get() == null;
-            }
+        protected void invalidated() {
+            compositeEventHandler.setEventHandler(get());
         }
     }
 
