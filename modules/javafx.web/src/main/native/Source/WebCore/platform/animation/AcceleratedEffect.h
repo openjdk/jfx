@@ -83,6 +83,8 @@ public:
 
     WEBCORE_EXPORT void apply(WebAnimationTime, AcceleratedEffectValues&, const FloatRect&);
 
+    void clearProperty(AcceleratedEffectProperty);
+
     // Encoding and decoding support
     AnimationEffectTiming timing() const { return m_timing; }
     const Vector<Keyframe>& keyframes() const { return m_keyframes; }

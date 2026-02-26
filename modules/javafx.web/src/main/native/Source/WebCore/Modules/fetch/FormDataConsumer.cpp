@@ -96,7 +96,7 @@ void FormDataConsumer::consumeFile(const String& filename)
 
 void FormDataConsumer::consumeBlob(const URL& blobURL)
 {
-    m_blobLoader = makeUnique<BlobLoader>([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
+    m_blobLoader = BlobLoader::create([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -113,10 +113,17 @@ void FormDataConsumer::consumeBlob(const URL& blobURL)
         if (auto data = loader->arrayBufferResult())
             protectedThis->consume(data->span());
     });
-
+#if PLATFORM(JAVA)
+    if (RefPtr blobLoader = m_blobLoader.get()) {
+        blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
+        if (blobLoader->isLoading())
+            return;
+    }
+#else
     m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
 
-    if (!m_blobLoader || !m_blobLoader->isLoading())
+    if (RefPtr blobLoader = m_blobLoader.get())
+#endif
         didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data blob"_s });
 }
 
