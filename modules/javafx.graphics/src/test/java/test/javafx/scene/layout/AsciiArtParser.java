@@ -91,8 +91,6 @@ public class AsciiArtParser {
     this.areas = findAllAreas();
     this.namedBounds = new HashMap<>();
 
-    resolveEmptyAreaSizes();
-
     Map<Area, Extent> leftAreaExtents = new HashMap<>();
     Map<Area, Extent> topAreaExtents = new HashMap<>();
 
@@ -521,13 +519,5 @@ public class AsciiArtParser {
     areaExtents.put(area, extent);
 
     return extent;
-  }
-
-  private void resolveEmptyAreaSizes() {
-    for(Area area : areas) {
-      if(area.name.contains("empty")) {
-
-      }
-    }
   }
 }
