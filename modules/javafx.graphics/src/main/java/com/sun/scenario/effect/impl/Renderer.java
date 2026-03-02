@@ -96,7 +96,7 @@ public abstract class Renderer {
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof PeerCacheKey other
+            return o instanceof PeerCacheKey other // 'o' is never 'this'
                 && unrollCount == other.unrollCount
                 && name.equals(other.name);
         }
