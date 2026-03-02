@@ -34,7 +34,6 @@ import java.util.function.Supplier;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.layout.Region;
-import com.sun.jfx.incubator.scene.control.richtext.Params;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -266,6 +265,22 @@ public class RichTextModel extends StyledTextModel {
             PROP_VERSION, VERSION_1,
             PROP_TABS, Double.toString(getDefaultTabStops())
         );
+    }
+
+    @Override
+    protected void handleDocumentProperties(Map<String, String> p, boolean completeReplacement) {
+        if (completeReplacement) {
+            // update default tab stops only when replacing the content completely
+            // (on load, paste to new, etc.)
+            String s = p.get(PROP_TABS);
+            if (s != null) {
+                try {
+                    double v = Double.parseDouble(s);
+                    setDefaultTabStops(v);
+                } catch (NumberFormatException ignore) {
+                }
+            }
+        }
     }
 
     /**

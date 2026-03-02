@@ -25,8 +25,11 @@
 
 package test.jfx.incubator.scene.control.richtext.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
@@ -34,8 +37,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
 import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
@@ -277,5 +282,36 @@ public class TestRichTextFormatHandler {
             }
         }
         return a;
+    }
+
+    @Test
+    public void save() throws IOException {
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(155);
+
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        h.save(m, null, TextPos.ZERO, m.getDocumentEnd(), out);
+        byte[] b = out.toByteArray();
+        String s = new String(b, StandardCharsets.UTF_8);
+        assertEquals("{#tabs|155.0|version|v1}{}{!}", s);
+    }
+
+    @Test
+    public void load() {
+        String input =
+            """
+            {#tabs|156.0|version|v1}{ff}{tc}1{!}
+            {0}2{!}
+            {0}3{!}
+            {!}
+            """;
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        StyledInput in = h.createStyledInput(input, null);
+        RichTextModel m = new RichTextModel();
+        m.replace(null, TextPos.ZERO, m.getDocumentEnd(), in);
+
+        assertEquals(5, m.size());
+        assertEquals(156.0, m.getDefaultTabStops());
     }
 }

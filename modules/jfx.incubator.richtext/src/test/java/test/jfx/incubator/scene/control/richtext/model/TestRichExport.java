@@ -228,6 +228,13 @@ public class TestRichExport {
     }
 
     private void verify(String expected) {
+        verify(expected, true);
+    }
+
+    private void verify(String expected, boolean addDocProps) {
+        if (addDocProps) {
+            expected = TestRichTextModel.DOC_PROPS + expected;
+        }
         Object v;
         try {
             v = RichTextFormatHandler.getInstance().copy(model, null, TextPos.ZERO, model.getDocumentEnd());

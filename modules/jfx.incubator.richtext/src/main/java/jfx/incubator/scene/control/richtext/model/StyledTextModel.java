@@ -541,13 +541,24 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * This method is invoked by {@link #export(TextPos, TextPos, StyledOutput) to allow for exporting
-     * document properties, if any.
+     * This method is called by {@link #export(TextPos, TextPos, StyledOutput)}
+     * to ensure that the document properties, if any, are exported.
+     *
      * @return the document properties, or null
      * @since 27
      */
     protected Map<String,String> documentProperties() {
         return null;
+    }
+
+    /**
+     * This method is called by any of the {@code replace()} methods when encountering
+     * a {@link StyledSegment.Type#DOCUMENT_PROPERTIES} segment.
+     * @param props the document properties
+     * @param completeReplacement indicates whether replacing the model's content completely
+     * @since 27
+     */
+    protected void handleDocumentProperties(Map<String, String> props, boolean completeReplacement) {
     }
 
     /**
@@ -712,6 +723,8 @@ public abstract class StyledTextModel {
             end = p;
         }
 
+        boolean completeReplacement = TextPos.ZERO.equals(start) && end.equals(getDocumentEnd());
+
         UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end, isEdit) : null;
 
         if (cmp != 0) {
@@ -757,6 +770,9 @@ public abstract class StyledTextModel {
                 }
                 offset += len;
                 btm += len;
+                break;
+            case DOCUMENT_PROPERTIES:
+                handleDocumentProperties(seg.getDocumentProperties(), completeReplacement);
                 break;
             }
         }

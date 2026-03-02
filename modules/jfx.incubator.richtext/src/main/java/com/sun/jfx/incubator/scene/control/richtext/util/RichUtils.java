@@ -32,7 +32,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import javax.imageio.ImageIO;
@@ -68,7 +67,6 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
-import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
@@ -78,8 +76,6 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 public final class RichUtils {
 
     private static final DecimalFormat format = new DecimalFormat("#0.##");
-    private static Comparator<String> stringComparator;
-    private static Comparator<StyleAttribute<?>> styleAttributesComparator;
 
     private RichUtils() {
     }
@@ -761,31 +757,5 @@ public final class RichUtils {
             node = node.getParent();
         }
         return null;
-    }
-
-    public static Comparator<? super StyleAttribute<?>> styleAttributesComparator() {
-        if (styleAttributesComparator != null) {
-            styleAttributesComparator = new Comparator<StyleAttribute<?>>() {
-                @Override
-                public int compare(StyleAttribute<?> a, StyleAttribute<?> b) {
-                    String sa = a.getName();
-                    String sb = b.getName();
-                    return sa.compareTo(sb);
-                }
-            };
-        }
-        return styleAttributesComparator;
-    }
-
-    public static Comparator<String> stringComparator() {
-        if (stringComparator != null) {
-            stringComparator = new Comparator<String>() {
-                @Override
-                public int compare(String a, String b) {
-                    return a.compareTo(b);
-                }
-            };
-        }
-        return stringComparator;
     }
 }

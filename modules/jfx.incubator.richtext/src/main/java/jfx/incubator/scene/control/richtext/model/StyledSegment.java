@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -210,6 +210,7 @@ public abstract class StyledSegment {
      * Creates a StyledSegment that contains the document properties.
      * @param props the document properties
      * @return the StyledSegment instance
+     * @since 27
      */
     public static StyledSegment ofDocumentProperties(Map<String,String> props) {
         return new StyledSegment() {
@@ -226,6 +227,11 @@ public abstract class StyledSegment {
             @Override
             public StyledSegment subSegment(int start, int end) {
                 return this;
+            }
+
+            @Override
+            public String toString() {
+                return "StyledSegment{doc.props=" + props + "}";
             }
         };
     }
