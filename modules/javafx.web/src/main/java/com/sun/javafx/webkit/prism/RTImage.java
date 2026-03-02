@@ -137,7 +137,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         // Because this method can be called by the Printer there is a chance
         // these checks will run on a thread other than QuantumRenderer. To prevent
         // any mishaps run the checks on render thread.
-        boolean canDraw = PrismInvoker.callOnRenderThread(() -> {
+        final boolean canDraw = PrismInvoker.callOnRenderThread(() -> {
             if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
                 return false;
             }
