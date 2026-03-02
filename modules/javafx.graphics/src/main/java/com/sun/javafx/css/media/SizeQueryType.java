@@ -27,6 +27,7 @@ package com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.expression.RangeExpression;
 import com.sun.javafx.css.parser.CssLexer;
+import com.sun.javafx.css.parser.CssNumberParser;
 import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.css.parser.Token;
 import javafx.css.Size;
@@ -61,7 +62,8 @@ public enum SizeQueryType {
                 throw invalidValue(queryType.getFeatureName(), featureValue.getText());
             }
 
-            return rangeExpressionSupplier.getNumberExpression(queryType, Double.parseDouble(featureValue.getText()));
+            return rangeExpressionSupplier.getNumberExpression(
+                queryType, CssNumberParser.parseDouble(featureValue.getText()));
         } catch (NumberFormatException ignored) {
             throw invalidValue(queryType.getFeatureName(), featureValue.getText());
         }

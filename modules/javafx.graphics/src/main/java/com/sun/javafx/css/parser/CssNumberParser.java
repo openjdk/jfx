@@ -38,6 +38,17 @@ public final class CssNumberParser {
     /**
      * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
      * and fractional parts, and it supports E notation (exponential).
+     *
+     * @throws NumberFormatException if the string does not consist entirely of a valid number representation
+     * @see <a href="https://www.w3.org/TR/css-syntax-3/#consume-number">Consume a number</a>
+     */
+    public static double parseDouble(String s) {
+        return parseDouble(s, 0, s.length());
+    }
+
+    /**
+     * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
+     * and fractional parts, and it supports E notation (exponential).
      * <p>
      * This method operates on the substring {@code [start, end)} of {@code s}, which is expected to
      * contain the string representation of a number without leading or trailing whitespace.
