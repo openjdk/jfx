@@ -28,6 +28,7 @@ package javafx.css;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.parser.CssColorParser;
 import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
@@ -520,34 +521,8 @@ final public class CssParser {
 
     // Assumes string is not a lookup!
     private ParsedValueImpl<Color,Color> colorValueOfString(String str) {
-
-        if(str.startsWith("#") || str.startsWith("0x")) {
-
-            double a = 1.0f;
-            String c = str;
-            final int prefixLength = (str.startsWith("#")) ? 1 : 2;
-
-            final int len = c.length();
-            // rgba or rrggbbaa - trim off the alpha
-            if ( (len-prefixLength) == 4) {
-                a = Integer.parseInt(c.substring(len-1), 16) / 15.0f;
-                c = c.substring(0,len-1);
-            } else if ((len-prefixLength) == 8) {
-                a = Integer.parseInt(c.substring(len-2), 16) / 255.0f;
-                c = c.substring(0,len-2);
-            }
-            // else color was rgb or rrggbb (no alpha)
-            return new ParsedValueImpl<>(Color.web(c,a), null);
-        }
-
-        try {
-            return new ParsedValueImpl<>(Color.web(str), null);
-        } catch (final IllegalArgumentException e) {
-        } catch (final NullPointerException e) {
-        }
-
-        // not a color
-        return null;
+        Color color = CssColorParser.tryParseColor(str);
+        return color != null ? new ParsedValueImpl<>(color, null) : null;
     }
 
     private String stripQuotes(String string) {
