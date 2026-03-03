@@ -236,7 +236,7 @@ public:
     void registrationStoreDatabaseFailedToOpen();
     void storeRegistrationForWorker(SWServerWorker&);
 
-    WEBCORE_EXPORT void getOriginsWithRegistrations(Function<void(const HashSet<SecurityOriginData>&)>&&);
+    WEBCORE_EXPORT void getOriginsWithRegistrations(CompletionHandler<void(const HashSet<SecurityOriginData>&)>&&);
 
     PAL::SessionID sessionID() const { return m_sessionID; }
     WEBCORE_EXPORT bool needsContextConnectionForRegistrableDomain(const RegistrableDomain&) const;
@@ -387,7 +387,7 @@ private:
     bool m_importCompleted { false };
     bool m_isProcessTerminationDelayEnabled { true };
     Vector<CompletionHandler<void()>> m_clearCompletionCallbacks;
-    Vector<Function<void(const HashSet<SecurityOriginData>&)>> m_getOriginsWithRegistrationsCallbacks;
+    Vector<CompletionHandler<void(const HashSet<SecurityOriginData>&)>> m_getOriginsWithRegistrationsCallbacks;
     HashMap<RegistrableDomain, WeakRef<SWServerToContextConnection>> m_contextConnections;
 
     HashSet<RegistrableDomain> m_pendingConnectionDomains;

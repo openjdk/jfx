@@ -45,7 +45,7 @@ class ServiceWorkerGlobalScope;
 class SharedBuffer;
 
 namespace ServiceWorkerFetch {
-class Client : public ThreadSafeRefCounted<Client, WTF::DestructionThread::Main> {
+class Client : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Client, WTF::DestructionThread::Main> {
 public:
     virtual ~Client() = default;
 

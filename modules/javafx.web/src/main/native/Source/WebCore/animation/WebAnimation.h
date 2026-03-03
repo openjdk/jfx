@@ -161,6 +161,7 @@ public:
     void willChangeRenderer();
 
     bool isRelevant() const { return m_isRelevant; }
+    bool hasPendingFinishNotification() const { return m_finishNotificationStepsMicrotaskPending; }
     void updateRelevance();
     void effectTimingDidChange();
     void suspendEffectInvalidation();

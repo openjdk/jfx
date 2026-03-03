@@ -108,6 +108,7 @@ public:
         TextureYUVA      = 1L << 25,
         TextureCopy      = 1L << 26,
         AlphaToShadow    = 1L << 27,
+        ToneMapPQ        = 1L << 28,
     };
 
     enum class VariableID {
