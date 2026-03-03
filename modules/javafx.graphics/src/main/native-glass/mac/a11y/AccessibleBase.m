@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:22];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:23];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -52,6 +52,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
     [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
+    [rolesMap setObject:@"JFXLinkAccessibility" forKey:@"HYPERLINK"];
     [rolesMap setObject:@"JFXStepperAccessibility" forKey:@"SPINNER"];
     [rolesMap setObject:@"JFXSliderAccessibility" forKey:@"SLIDER"];
     [rolesMap setObject:@"JFXProgressIndicatorAccessibility" forKey:@"PROGRESS_INDICATOR"];
