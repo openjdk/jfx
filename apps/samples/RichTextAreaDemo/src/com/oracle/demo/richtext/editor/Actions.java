@@ -711,15 +711,29 @@ public class Actions {
 
     private StyleAttributeMap getInsertStyles() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        b.
-            setBold(bold.isSelected()).
-            setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem()).
-            setItalic(italic.isSelected()).
-            setStrikeThrough(strikeThrough.isSelected()).
-            setTextColor(toolbar.textColor.getValue()).
-            setUnderline(underline.isSelected());
-        if (toolbar.fontSize.getSelectionModel().getSelectedItem() != null) {
-            b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+        if (bold.isSelected()) {
+            b.setBold(true);
+        }
+        String s = toolbar.fontFamily.getSelectionModel().getSelectedItem();
+        if (s != null) {
+            b.setFontFamily(s);
+        }
+        if (italic.isSelected()) {
+            b.setItalic(true);
+        }
+        if (strikeThrough.isSelected()) {
+            b.setStrikeThrough(true);
+        }
+        Color c = toolbar.textColor.getValue();
+        if (c != null) {
+            b.setTextColor(c);
+        }
+        if (underline.isSelected()) {
+            b.setUnderline(true);
+        }
+        Double v = toolbar.fontSize.getSelectionModel().getSelectedItem();
+        if (v != null) {
+            b.setFontSize(v);
         }
         return b.build();
     }
