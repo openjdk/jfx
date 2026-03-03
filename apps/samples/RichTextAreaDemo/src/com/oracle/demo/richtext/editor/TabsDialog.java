@@ -111,6 +111,13 @@ public class TabsDialog extends Stage {
     }
 
     private void commit() {
+        try {
+            defaultInterval.commitValue();
+        } catch (Exception e) {
+            defaultInterval.requestFocus();
+            return;
+        }
+
         Double v = defaultInterval.getValue();
         model().setDefaultTabStops(v == null ? 0.0 : v);
 

@@ -385,7 +385,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 if (h.isAllowed(v)) {
                                     String id = h.getId();
                                     String ss = h.write(v);
-                                    if(ss != null) {
+                                    if (ss != null) {
                                         ss = encode(ss);
                                     }
 
