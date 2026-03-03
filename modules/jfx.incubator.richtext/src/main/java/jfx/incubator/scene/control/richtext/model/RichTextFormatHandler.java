@@ -376,7 +376,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     // sort by name to make serialized output stable
                     // the overhead is very low since this is done once per style
                     Collections.sort(as, styleAttributeComparator);
- 
+
                     for (StyleAttribute<?> a : as) {
                         Handler h = handlers.get(a);
                         try {
