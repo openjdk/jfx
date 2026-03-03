@@ -294,14 +294,14 @@ public class TestRichTextFormatHandler {
         h.save(m, null, TextPos.ZERO, m.getDocumentEnd(), out);
         byte[] b = out.toByteArray();
         String s = new String(b, StandardCharsets.UTF_8);
-        assertEquals("{#tabs|155.0|version|v1}{}{!}", s);
+        assertEquals("{#tabs|155.0|version|v2}{}{!}", s);
     }
 
     @Test
     public void load() {
         String input =
             """
-            {#tabs|156.0|version|v1}{ff}{tc}1{!}
+            {#tabs|156.0|version|v2}{ff}{tc}1{!}
             {0}2{!}
             {0}3{!}
             {!}

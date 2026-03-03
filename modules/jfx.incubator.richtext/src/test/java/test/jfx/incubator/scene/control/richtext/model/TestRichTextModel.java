@@ -51,7 +51,7 @@ import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 public class TestRichTextModel {
 
     /** standard document properties for in version v1 */
-    public static final String DOC_PROPS = "{#tabs|0.0|version|v1}";
+    public static final String DOC_PROPS = "{#tabs|0.0|version|v2}";
 
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap BULLET = StyleAttributeMap.builder().setBullet("x").build();
