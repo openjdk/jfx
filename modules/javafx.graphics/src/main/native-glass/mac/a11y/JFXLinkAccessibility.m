@@ -42,9 +42,9 @@
     return [super accessibilityFrame];
 }
 
-- (NSString *)accessibilityValue
+- (id)accessibilityAttributeValue:(NSString *)attribute
 {
-    return [super accessibilityValue];
+    return [self requestNodeAttribute:attribute];
 }
 
 @end

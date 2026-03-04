@@ -26,10 +26,9 @@
 #import "AccessibleBase.h"
 #import <AppKit/NSAccessibility.h>
 
-@interface JFXLinkAccessibility : AccessibleBase<NSAccessibilityStaticText> {
+@interface JFXLinkAccessibility : AccessibleBase {
 
 };
 - (NSAccessibilityRole)accessibilityRole;
-- (NSString *)accessibilityValue;
 @end
 
