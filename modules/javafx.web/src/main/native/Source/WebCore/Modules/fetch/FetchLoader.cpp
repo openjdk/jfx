@@ -61,7 +61,8 @@ void FetchLoader::startLoadingBlobURL(ScriptExecutionContext& context, const URL
     m_urlForReading = { BlobURL::createPublicURL(securityOrigin.get()), context.topOrigin().data() };
 
     if (m_urlForReading.isEmpty()) {
-        m_client->didFail({ errorDomainWebKitInternal, 0, URL(), "Could not create URL for Blob"_s });
+        if (RefPtr client = m_client.get())
+            client->didFail({ errorDomainWebKitInternal, 0, URL(), "Could not create URL for Blob"_s });
         return;
     }
 
@@ -108,8 +109,9 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
         contentSecurityPolicy->upgradeInsecureRequestIfNeeded(fetchRequest, ContentSecurityPolicy::InsecureRequestType::Load);
 
         if (!context.shouldBypassMainWorldContentSecurityPolicy() && !contentSecurityPolicy->allowConnectToSource(fetchRequest.url())) {
-            m_client->didFail({ errorDomainWebKitInternal, 0, fetchRequest.url(), "Not allowed by ContentSecurityPolicy"_s, ResourceError::Type::AccessControl });
-        return;
+            if (RefPtr client = m_client.get())
+                client->didFail({ errorDomainWebKitInternal, 0, fetchRequest.url(), "Not allowed by ContentSecurityPolicy"_s, ResourceError::Type::AccessControl });
+            return;
         }
     }
 
@@ -126,6 +128,11 @@ void FetchLoader::start(ScriptExecutionContext& context, const FetchRequest& req
     m_isStarted = m_loader;
 }
 
+Ref<FetchLoader> FetchLoader::create(FetchLoaderClient& client, FetchBodyConsumer* consumer)
+{
+    return adoptRef(*new FetchLoader(client, consumer));
+}
+
 FetchLoader::FetchLoader(FetchLoaderClient& client, FetchBodyConsumer* consumer)
     : m_client(client)
     , m_consumer(consumer)
@@ -136,7 +143,7 @@ FetchLoader::~FetchLoader() = default;
 
 void FetchLoader::stop()
 {
-    if (CheckedPtr consumer = m_consumer)
+    if (CheckedPtr consumer = m_consumer.get())
         consumer->clean();
     if (RefPtr loader = m_loader)
         loader->cancel();
@@ -152,14 +159,16 @@ RefPtr<FragmentedSharedBuffer> FetchLoader::startStreaming()
 
 void FetchLoader::didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse& response)
 {
-    m_client->didReceiveResponse(response);
+    if (RefPtr client = m_client.get())
+        client->didReceiveResponse(response);
 }
 
 void FetchLoader::didReceiveData(const SharedBuffer& buffer)
 {
-    CheckedPtr consumer = m_consumer;
+    CheckedPtr consumer = m_consumer.get();
     if (!consumer) {
-        m_client->didReceiveData(buffer);
+        if (RefPtr client = m_client.get())
+            client->didReceiveData(buffer);
         return;
     }
     consumer->append(buffer);
@@ -167,12 +176,14 @@ void FetchLoader::didReceiveData(const SharedBuffer& buffer)
 
 void FetchLoader::didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics& metrics)
 {
-    m_client->didSucceed(metrics);
+    if (RefPtr client = m_client.get())
+        client->didSucceed(metrics);
 }
 
 void FetchLoader::didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError& error)
 {
-    m_client->didFail(error);
+    if (RefPtr client = m_client.get())
+        client->didFail(error);
 }
 
 } // namespace WebCore

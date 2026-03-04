@@ -70,6 +70,7 @@
 #include "XMLDocumentParserScope.h"
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
+#include <limits>
 #include <wtf/MallocSpan.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -1410,8 +1411,11 @@ xmlDocPtr xmlDocPtrForString(CachedResourceLoader& cachedResourceLoader, const S
     size_t sizeInBytes = source.length() * (is8Bit ? sizeof(LChar) : sizeof(char16_t));
     const char* encoding = is8Bit ? "iso-8859-1" : nativeEndianUTF16Encoding();
 
+    if (sizeInBytes > std::numeric_limits<int>::max())
+        return nullptr;
+
     XMLDocumentParserScope scope(&cachedResourceLoader, errorFunc);
-    return xmlReadMemory(characters.data(), sizeInBytes, url.latin1().data(), encoding, XSLT_PARSE_OPTIONS);
+    return xmlReadMemory(characters.data(), static_cast<int>(sizeInBytes), url.latin1().data(), encoding, XSLT_PARSE_OPTIONS);
 }
 #endif
 

@@ -64,11 +64,6 @@
 #include "OffscreenCanvas.h"
 #endif
 
-#if USE(SKIA)
-#include "GLFence.h"
-#include "GraphicsContextSkia.h"
-#endif
-
 namespace WebCore {
 
 
@@ -193,19 +188,6 @@ void ImageBitmap::close()
 {
     takeImageBuffer();
 }
-
-#if USE(SKIA)
-void ImageBitmap::prepareForCrossThreadTransfer()
-{
-    m_bitmap = ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(WTFMove(m_bitmap));
-    m_fence = m_bitmap->renderingMode() == RenderingMode::Accelerated ? GraphicsContextSkia::createAcceleratedRenderingFenceIfNeeded(m_bitmap->surface()) : nullptr;
-}
-
-void ImageBitmap::finalizeCrossThreadTransfer()
-{
-    m_bitmap = ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(WTFMove(m_bitmap), WTFMove(m_fence));
-}
-#endif
 
 void ImageBitmap::createPromise(ScriptExecutionContext& scriptExecutionContext, ImageBitmap::Source&& source, ImageBitmapOptions&& options, int sx, int sy, int sw, int sh, ImageBitmap::Promise&& promise)
 {
