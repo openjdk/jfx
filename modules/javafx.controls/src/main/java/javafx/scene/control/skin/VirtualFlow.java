@@ -299,6 +299,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean sizeChanged = false;
     private final BitSet dirtyCells = new BitSet();
 
+    // Tracks index that needs to be made fully visible after layout
+    private int pendingScrollToIndex = -1;
+
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
     KeyFrame sbTouchKF2;
@@ -1361,6 +1364,22 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         lastPosition = getPosition();
         recalculateEstimatedSize();
         cleanPile();
+
+        // Ensure pending scroll target is fully visible after layout.
+        // Only adjust if the cell is cut off at the bottom of the viewport.
+        if (pendingScrollToIndex >= 0) {
+            T cell = getVisibleCell(pendingScrollToIndex);
+            if (cell != null) {
+                double cellPosition = getCellPosition(cell);
+                double cellLength = getCellLength(pendingScrollToIndex);
+                double viewportLength = getViewportLength();
+                // Only adjust if cell extends beyond viewport and is smaller than viewport
+                if (cellPosition + cellLength > viewportLength && cellLength <= viewportLength) {
+                    scrollTo(cell);
+                }
+            }
+            pendingScrollToIndex = -1;
+        }
     }
 
     /**
@@ -1623,6 +1642,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (! posSet) {
             adjustPositionToIndex(index);
         }
+
+        // Mark this index to be checked for full visibility after layout
+        pendingScrollToIndex = index;
 
         requestLayout();
     }
