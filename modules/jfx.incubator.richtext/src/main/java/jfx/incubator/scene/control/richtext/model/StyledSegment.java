@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package jfx.incubator.scene.control.richtext.model;
 
+import java.util.Map;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
@@ -49,6 +50,8 @@ import jfx.incubator.scene.control.richtext.StyleResolver;
 public abstract class StyledSegment {
     /** StyledSegment type */
     public enum Type {
+        /** Identifies a segment which contains the document properties */
+        DOCUMENT_PROPERTIES,
         /** Identifies a segment which contains an inline node. */
         INLINE_NODE,
         /** Identifies a line break segment. */
@@ -113,6 +116,13 @@ public abstract class StyledSegment {
      * @return the StyledSegment
      */
     public abstract StyledSegment subSegment(int start, int end);
+
+    /**
+     * Returns the document properties or {@code null} if the segment type
+     * is not {@link Type#DOCUMENT_PROPERTIES}.
+     * @return the properties or null
+     */
+    public Map<String,String> getDocumentProperties() { return null; }
 
     private StyledSegment() {
     }
@@ -192,6 +202,36 @@ public abstract class StyledSegment {
             @Override
             public String toString() {
                 return "StyledSegment{text=" + getText() + ", attrs=" + attrs + "}";
+            }
+        };
+    }
+
+    /**
+     * Creates a StyledSegment that contains the document properties.
+     * @param props the document properties
+     * @return the StyledSegment instance
+     * @since 27
+     */
+    public static StyledSegment ofDocumentProperties(Map<String,String> props) {
+        return new StyledSegment() {
+            @Override
+            public Type getType() {
+                return Type.DOCUMENT_PROPERTIES;
+            }
+
+            @Override
+            public Map<String,String> getDocumentProperties() {
+                return props;
+            }
+
+            @Override
+            public StyledSegment subSegment(int start, int end) {
+                return this;
+            }
+
+            @Override
+            public String toString() {
+                return "StyledSegment{doc.props=" + props + "}";
             }
         };
     }

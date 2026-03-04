@@ -28,8 +28,11 @@ package jfx.incubator.scene.control.richtext.model;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.layout.Region;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -43,8 +46,13 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * @since 24
  */
 public class RichTextModel extends StyledTextModel {
+
+    private static final String VERSION_2 = "v2";
+    private static final String PROP_TABS = "tabs";
+    private static final String PROP_VERSION = "version";
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttributeMap,StyleAttributeMap> styleCache = new HashMap<>();
+    private DoubleProperty defaultTabStops;
 
     /**
      * Constructs the empty model.
@@ -56,6 +64,40 @@ public class RichTextModel extends StyledTextModel {
         registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, true, 0);
         // always has at least one paragraph
         paragraphs.add(new RParagraph());
+    }
+
+    /**
+     * Specifies the default tab stop interval for tabs beyond the last stop provided
+     * by the paragraph's
+     * {@link jfx.incubator.scene.control.richtext.model.StyleAttributeMap#TAB_STOPS StyleAttributeMap.TAB_STOPS}
+     * attribute, if any.
+     * This is a fixed repeating distance (in pixels) to the
+     * next tab stop computed at regular intervals relative to the document content leading edge.
+     * <p>
+     * A value of equal or less than 0 disables the default interval.
+     *
+     * @return the default tab stop interval property
+     * @defaultValue 0
+     * @since 27
+     */
+    public final DoubleProperty defaultTabStopsProperty() {
+        if (defaultTabStops == null) {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", 0.0) {
+                @Override
+                protected void invalidated() {
+                    fireStyleChangeEvent(TextPos.ZERO, getDocumentEnd());
+                }
+            };
+        }
+        return defaultTabStops;
+    }
+
+    public final void setDefaultTabStops(double value) {
+        defaultTabStopsProperty().set(value);
+    }
+
+    public final double getDefaultTabStops() {
+        return defaultTabStops == null ? 0.0 : defaultTabStops.get();
     }
 
     @Override
@@ -215,6 +257,30 @@ public class RichTextModel extends StyledTextModel {
             out.println("    {text=\"" + s.text() + "\", attr=" + s.getStyleAttributeMap() + "},");
         }
         out.println("  ]}");
+    }
+
+    @Override
+    protected Map<String,String> documentProperties() {
+        return Map.of(
+            PROP_VERSION, VERSION_2,
+            PROP_TABS, Double.toString(getDefaultTabStops())
+        );
+    }
+
+    @Override
+    protected void handleDocumentProperties(Map<String, String> p, boolean completeReplacement) {
+        if (completeReplacement) {
+            // update default tab stops only when replacing the content completely
+            // (on load, paste to new, etc.)
+            String s = p.get(PROP_TABS);
+            if (s != null) {
+                try {
+                    double v = Double.parseDouble(s);
+                    setDefaultTabStops(v);
+                } catch (NumberFormatException ignore) {
+                }
+            }
+        }
     }
 
     /**

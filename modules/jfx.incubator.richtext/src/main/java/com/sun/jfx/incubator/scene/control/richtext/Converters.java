@@ -26,6 +26,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
@@ -74,6 +75,20 @@ public class Converters {
             @Override
             public ParagraphDirection fromString(String s) {
                 return toParagraphDirection(s);
+            }
+        };
+    }
+
+    public static StringConverter<TabStop[]> tabStopsConverter() {
+        return new StringConverter<>() {
+            @Override
+            public String toString(TabStop[] v) {
+                return fromTabStops(v);
+            }
+
+            @Override
+            public TabStop[] fromString(String s) {
+                return toTabStops(s);
             }
         };
     }
@@ -165,6 +180,32 @@ public class Converters {
             return c;
         }
         throw new IllegalArgumentException("not a hex char:" + ch);
+    }
+
+    private static String fromTabStops(TabStop[] ts) {
+        StringBuilder sb = new StringBuilder();
+        boolean sep = false;
+        for (TabStop t : ts) {
+            if (sep) {
+                sb.append(",");
+            } else {
+                sep = true;
+            }
+            sb.append(t.getPosition());
+        }
+        return sb.toString();
+    }
+
+    private static TabStop[] toTabStops(String text) {
+        String[] ss = text.split(",");
+        int sz = ss.length;
+        TabStop[] ts = new TabStop[sz];
+        for (int i = 0; i < sz; i++) {
+            String s = ss[i];
+            double v = Double.parseDouble(s);
+            ts[i] = new TabStop(v);
+        }
+        return ts;
     }
 
     private static String fromTextAlignment(TextAlignment a) {

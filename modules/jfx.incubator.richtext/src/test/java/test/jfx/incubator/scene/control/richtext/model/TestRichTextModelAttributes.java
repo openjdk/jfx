@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,7 +131,7 @@ public class TestRichTextModelAttributes {
                 StyledOutput out = RichTextFormatHandlerHelper.createStyledOutput(h, null, wr);
                 m.export(TextPos.ZERO, end, out);
                 String s = wr.toString();
-                Assertions.assertEquals(initial, s, "problem setting initial text");
+                Assertions.assertEquals(TestRichTextModel.DOC_PROPS + initial, s, "problem setting initial text");
             }
 
             op.accept(m);
@@ -143,7 +143,7 @@ public class TestRichTextModelAttributes {
                 TextPos end = m.getDocumentEnd();
                 m.export(TextPos.ZERO, end, out);
                 String s = wr.toString();
-                Assertions.assertEquals(expected, s, "operation failed");
+                Assertions.assertEquals(TestRichTextModel.DOC_PROPS + expected, s, "operation failed");
             }
         } catch(IOException e) {
             Assertions.fail(e);
