@@ -91,7 +91,7 @@ public final class PrismInvoker extends Invoker {
         if (isOnRenderThread()) {
             r.run();
         } else {
-            FutureTask<Void> f = new FutureTask<Void>(r, null);
+            FutureTask<Void> f = new FutureTask<>(r, null);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete
@@ -111,7 +111,7 @@ public final class PrismInvoker extends Invoker {
                 return null;
             }
         } else {
-            FutureTask<T> f = new FutureTask<T>(c);
+            FutureTask<T> f = new FutureTask<>(c);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete
