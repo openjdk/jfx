@@ -236,7 +236,7 @@ void FetchResponse::addAbortSteps(Ref<AbortSignal>&& signal)
 
         protectedThis->setLoadingError(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
-        if (CheckedPtr loader = protectedThis->m_loader.get()) {
+        if (RefPtr loader = protectedThis->m_loader.get()) {
             if (auto callback = loader->takeNotificationCallback())
                 callback(Exception { ExceptionCode::AbortError, "Fetch is aborted"_s });
 
@@ -268,7 +268,7 @@ Ref<FetchResponse> FetchResponse::createFetchResponse(ScriptExecutionContext& co
 
     response->addAbortSteps(request.signal());
 
-    response->m_loader = makeUnique<Loader>(response.get(), WTFMove(responseCallback));
+    response->m_loader = Loader::create(response.get(), WTFMove(responseCallback));
     return response;
 }
 
@@ -301,9 +301,9 @@ void FetchResponse::startLoader(ScriptExecutionContext& context, FetchRequest& r
 {
     InspectorInstrumentation::willFetch(context, request.url().string());
 
-    if (CheckedPtr loader = m_loader.get(); loader && loader->start(context, request, initiator))
+    if (RefPtr loader = m_loader.get(); loader && loader->start(context, request, initiator))
         return;
-        m_loader = nullptr;
+    m_loader = nullptr;
 }
 
 const String& FetchResponse::url() const
@@ -327,7 +327,10 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(FetchResponse::Loader);
 
 void FetchResponse::Loader::didSucceed(const NetworkLoadMetrics& metrics)
 {
-    Ref response = m_response.get();
+    RefPtr response = m_response.get();
+    if (!response)
+        return;
+
     ASSERT(response->hasPendingActivity());
 
     response->didSucceed(metrics);
@@ -338,7 +341,10 @@ void FetchResponse::Loader::didSucceed(const NetworkLoadMetrics& metrics)
 
 void FetchResponse::Loader::didFail(const ResourceError& error)
 {
-    Ref response = m_response.get();
+    RefPtr response = m_response.get();
+    if (!response)
+        return;
+
     ASSERT(response->hasPendingActivity());
 
     response->setLoadingError(ResourceError { error });
@@ -368,6 +374,11 @@ void FetchResponse::setReceivedInternalResponse(const ResourceResponse& resource
     m_headers->filterAndFill(m_filteredResponse->httpHeaderFields(), FetchHeaders::Guard::Response);
 }
 
+Ref<FetchResponse::Loader> FetchResponse::Loader::create(FetchResponse& response, NotificationCallback&& responseCallback)
+{
+    return adoptRef(*new Loader(response, WTFMove(responseCallback)));
+}
+
 FetchResponse::Loader::Loader(FetchResponse& response, NotificationCallback&& responseCallback)
     : m_response(response)
     , m_responseCallback(WTFMove(responseCallback))
@@ -379,16 +390,22 @@ FetchResponse::Loader::~Loader() = default;
 
 void FetchResponse::Loader::didReceiveResponse(const ResourceResponse& resourceResponse)
 {
-    Ref response = m_response.get();
+    RefPtr response = m_response.get();
+    if (!response)
+        return;
+
     response->setReceivedInternalResponse(resourceResponse, m_credentials);
 
     if (auto responseCallback = WTFMove(m_responseCallback))
-        responseCallback(WTFMove(response));
+        responseCallback(response.releaseNonNull());
 }
 
 void FetchResponse::Loader::didReceiveData(const SharedBuffer& buffer)
 {
-    Ref response = m_response.get();
+    RefPtr response = m_response.get();
+    if (!response)
+        return;
+
     ASSERT(response->m_readableStreamSource || m_consumeDataCallback);
 
     if (m_consumeDataCallback) {
@@ -419,8 +436,8 @@ void FetchResponse::Loader::didReceiveData(const SharedBuffer& buffer)
 bool FetchResponse::Loader::start(ScriptExecutionContext& context, const FetchRequest& request, const String& initiator)
 {
     m_credentials = request.fetchOptions().credentials;
-    m_loader = makeUnique<FetchLoader>(*this, &m_response->m_body->consumer());
-    CheckedRef loader = *m_loader;
+    Ref loader = FetchLoader::create(*this, m_response->m_body->checkedConsumer().ptr());
+    m_loader = loader.copyRef();
     loader->start(context, request, initiator);
 
     if (!loader->isStarted())
@@ -486,7 +503,7 @@ void FetchResponse::consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&& call
     }
 
     ASSERT(isLoading());
-    checkedLoader()->consumeDataByChunk(WTFMove(callback));
+    protectedLoader()->consumeDataByChunk(WTFMove(callback));
 }
 
 void FetchResponse::setBodyData(ResponseData&& data, uint64_t bodySizeWithPadding)
@@ -522,7 +539,7 @@ void FetchResponse::consumeBodyAsStream()
     }
 
     ASSERT(m_loader);
-    auto data = checkedLoader()->startStreaming();
+    auto data = protectedLoader()->startStreaming();
     if (data) {
         Ref readableStreamSource = *m_readableStreamSource;
         if (!readableStreamSource->enqueue(data->tryCreateArrayBuffer())) {
@@ -576,8 +593,8 @@ RefPtr<FragmentedSharedBuffer> FetchResponse::Loader::startStreaming()
     if (CheckedPtr loader = m_loader.get())
         return loader->startStreaming();
 
-        m_shouldStartStreaming = true;
-        return nullptr;
+    m_shouldStartStreaming = true;
+    return nullptr;
 }
 
 void FetchResponse::cancel()
@@ -626,7 +643,7 @@ void FetchResponse::receivedError(ResourceError&& error)
 
 void FetchResponse::processReceivedError()
 {
-    if (CheckedPtr loader = m_loader.get()) {
+    if (RefPtr loader = m_loader.get()) {
         if (auto callback = loader->takeNotificationCallback())
             callback(*loadingException());
         else if (auto callback = loader->takeConsumeDataCallback())
@@ -647,7 +664,7 @@ void FetchResponse::didSucceed(const NetworkLoadMetrics& metrics)
 {
     setNetworkLoadMetrics(metrics);
 
-    if (CheckedPtr loader = m_loader.get()) {
+    if (RefPtr loader = m_loader.get()) {
         if (auto consumeDataCallback = loader->takeConsumeDataCallback())
             consumeDataCallback(nullptr);
     }

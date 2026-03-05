@@ -231,7 +231,7 @@ Blob::~Blob()
 {
     ThreadableBlobRegistry::unregisterBlobURL(m_internalURL, std::nullopt);
     while (!m_blobLoaders.isEmpty())
-        (*m_blobLoaders.begin())->cancel();
+        RefPtr { (*m_blobLoaders.begin()).get() }->cancel();
 }
 
 Ref<Blob> Blob::slice(long long start, long long end, const String& contentType) const
@@ -281,7 +281,7 @@ String Blob::normalizedContentType(const String& contentType)
 
 void Blob::loadBlob(FileReaderLoader::ReadType readType, Function<void(BlobLoader&)>&& completionHandler)
 {
-    auto blobLoader = makeUnique<BlobLoader>([pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+    Ref blobLoader = BlobLoader::create([pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
         pendingActivity->object().m_blobLoaders.take(&blobLoader);
     });
