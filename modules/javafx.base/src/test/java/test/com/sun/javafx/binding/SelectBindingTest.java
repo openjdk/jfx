@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+
+import com.sun.javafx.binding.SelectBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
@@ -43,8 +45,10 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.LongBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -219,10 +223,8 @@ public class SelectBindingTest {
         assertEquals(true, binding2.get());
         person.setData(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -261,10 +263,8 @@ public class SelectBindingTest {
         assertEquals(Math.PI, binding2.get(), EPSILON_DOUBLE);
         person.setData(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -303,10 +303,8 @@ public class SelectBindingTest {
         assertEquals((float) Math.PI, binding2.get(), EPSILON_FLOAT);
         person.setData(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -346,10 +344,8 @@ public class SelectBindingTest {
         assertEquals(-18, binding2.get());
         person.setData(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -386,10 +382,8 @@ public class SelectBindingTest {
         assertEquals(-987654321234567890L, binding2.get());
         person.setData(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -407,8 +401,23 @@ public class SelectBindingTest {
         assertEquals("b", select.get());
         a.setName(null);
         assertNull(select.get());
-        ErrorLoggingUtility.checkWarning(NullPointerException.class);
-        OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
+    }
+
+    @Test
+    public void createWrongTypeBinding() {
+        Person person1 = new Person();
+        c.setNext(person1);
+        // Interpret person binding as string type binding
+        final ObjectBinding<String> objectBinding = Bindings.select(a.nextProperty(), "next", "next");
+
+        // This does not throw an exception on get() due to generic type erasure
+        Object returnedPerson = objectBinding.get();
+        Assertions.assertEquals(person1, returnedPerson);
+
+        // It throws an exception on assigment, but outside the get() method
+        assertThrows(ClassCastException.class, () -> {
+            String ignored = objectBinding.get();
+        });
     }
 
     @Test
@@ -423,6 +432,7 @@ public class SelectBindingTest {
         select = Bindings.selectString(a.nextProperty(), "dummy", "name");
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NoSuchMethodException.class);
+        OutputRedirect.checkAndRestoreStderr(NoSuchMethodException.class);
     }
 
     @Test
