@@ -346,7 +346,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinView__1getX
 
         RECT rect1, rect2;
 
-        ::GetWindowRect(hWnd, &rect1);
+        ::GetExtendedFrameBounds(hWnd, &rect1);
         ::GetClientRect(hWnd, &rect2);
         ::MapWindowPoints(hWnd, (HWND)NULL, (LPPOINT)&rect2, (sizeof(RECT)/sizeof(POINT)));
 
@@ -376,7 +376,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinView__1getY
         RECT rect1, rect2;
         POINT p = {0, 0};
 
-        ::GetWindowRect(hWnd, &rect1);
+        ::GetExtendedFrameBounds(hWnd, &rect1);
         ::GetClientRect(hWnd, &rect2);
         ::MapWindowPoints(hWnd, (HWND)NULL, (LPPOINT)&rect2, (sizeof(RECT)/sizeof(POINT)));
 
@@ -453,7 +453,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1uploadPixels
         } else { // IsTransparent() == TRUE
             // http://msdn.microsoft.com/en-us/library/ms997507.aspx
             RECT rect;
-            ::GetWindowRect(hWnd, &rect);
+            ::GetWindowRect(hWnd, &rect); // no point in calling GetExtendedFrameBounds() for a transparent window
             SIZE size = { rect.right - rect.left, rect.bottom - rect.top };
 
             if (size.cx != pixels.GetWidth() || size.cy != pixels.GetHeight()) {
