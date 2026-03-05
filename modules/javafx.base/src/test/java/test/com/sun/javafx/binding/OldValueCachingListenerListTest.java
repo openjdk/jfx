@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,23 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.Logging;
-import org.junit.jupiter.api.Test;
-import test.util.memory.JMemoryBuddy;
+import com.sun.javafx.binding.OldValueCachingListenerList;
 
-public class TestLogging {
+import javafx.beans.value.ObservableValue;
 
-    @Test
-    public void testExceptionCollectableAfterLogging() {
+public class OldValueCachingListenerListTest extends ListenerListTestBase<OldValueCachingListenerList<?>> {
 
-        JMemoryBuddy.memoryTest(checker -> {
-            Throwable e = new Exception();
+    @Override
+    protected OldValueCachingListenerList<?> create(Object listener1, Object listener2) {
+        return new OldValueCachingListenerList<>(listener1, listener2);
+    }
 
-            // This is the value that is used in the application
-            // other test might set it to true
-            Logging.setKeepLastLogRecord(false);
+    @Override
+    protected <T> void notifyListeners(OldValueCachingListenerList<?> list, ObservableValue<? extends T> property, T oldValue) {
+        @SuppressWarnings("unchecked")
+        OldValueCachingListenerList<T> oldValueCachingListenerList = (OldValueCachingListenerList<T>) list;
 
-            Logging.getLogger().warning("test", e);
-
-            checker.assertCollectable(e);
-        });
+        oldValueCachingListenerList.putLatestValue(oldValue);
+        oldValueCachingListenerList.notifyListeners(property);
     }
 }
