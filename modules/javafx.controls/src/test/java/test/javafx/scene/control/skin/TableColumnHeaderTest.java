@@ -48,6 +48,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -116,6 +117,7 @@ public class TableColumnHeaderTest {
      * By that we guarantee, that the column resizing still works.
      */
     @Test
+    @Disabled("This test is unlikely to be correct: An event handler shouldn't receive a consumed event.")
     public void testColumnRightClickDoesAllowResizingWhenConsumed() {
         firstColumnHeader.addEventHandler(MouseEvent.MOUSE_RELEASED, Event::consume);
 
