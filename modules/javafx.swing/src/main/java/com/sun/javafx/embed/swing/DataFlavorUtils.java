@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,11 +80,7 @@ final class DataFlavorUtils {
 
     static DataFormat getDataFormat(final DataFlavor flavor) {
         String mimeType = getFxMimeType(flavor);
-        DataFormat dataFormat = DataFormat.lookupMimeType(mimeType);
-        if (dataFormat == null) {
-            dataFormat = new DataFormat(mimeType); // are we ready for this yet?
-        }
-        return dataFormat;
+        return DataFormat.of(mimeType);
     }
 
     /**
