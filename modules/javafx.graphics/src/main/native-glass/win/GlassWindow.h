@@ -106,6 +106,14 @@ public:
     void HandleWindowPosChangedEvent();
     void ShowSystemMenu(int x, int y);
 
+    bool IsStartupClearPending() const {
+        return m_startupClearPending;
+    }
+
+    void SetStartupBrush(HBRUSH brush) {
+        m_startupBrush = brush;
+    }
+
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -160,6 +168,15 @@ private:
     //NOTE: this is not a rectangle. The left, top, right, and bottom
     //components contain corresponding insets values.
     RECT m_insets;
+
+    // Used to avoid the initial "white flash" before JavaFX renders its first frame.
+    // While m_startupClearPending is true, WM_ERASEBKGND fills the client area with m_startupBrush.
+    // After the first rendered frame we stop erasing the background to prevent resize flicker.
+    // We deliberately do not set GCLP_HBRBACKGROUND (class background brush) because it enables automatic
+    // background erasing by DefWindowProc on every WM_ERASEBKGND message, causing the client area to be
+    // repeatedly cleared to a solid color between frames and producing visible flicker during live resize.
+    HBRUSH m_startupBrush = NULL;
+    bool m_startupClearPending = true;
 
     struct {
         bool entered = false;
