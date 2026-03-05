@@ -178,6 +178,14 @@ public abstract class Window {
      */
     @Native public static final int DARK_FRAME = 1 << 11;
 
+    /**
+     * The backdrop styles take up two bits. 0 is no backdrop.
+     */
+    @Native public static final int BACKDROP_MASK      = 3 << 12;
+    @Native public static final int WINDOW_BACKDROP    = 1 << 12;
+    @Native public static final int TABBED_BACKDROP    = 2 << 12;
+    @Native public static final int TRANSIENT_BACKDROP = 3 << 12;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -279,6 +287,11 @@ public abstract class Window {
         if (((styleMask & TRANSPARENT) != 0)
                 && !Application.GetApplication().supportsTransparentWindows()) {
             styleMask &= ~TRANSPARENT;
+        }
+
+        if (((styleMask & BACKDROP_MASK) != 0)
+            && !Application.GetApplication().supportsWindowBackdrops()) {
+            styleMask &= ~BACKDROP_MASK;
         }
 
         this.owner = owner;
@@ -748,6 +761,11 @@ public abstract class Window {
     public boolean isFocused() {
         Application.checkEventThread();
         return this.isFocused;
+    }
+
+    public boolean hasBackdrop() {
+        // The backdrop flags are only set if backdrops are supported.
+        return (this.styleMask & Window.BACKDROP_MASK) != 0;
     }
 
     protected abstract boolean _requestFocus(long ptr, int event);

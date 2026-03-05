@@ -26,11 +26,12 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-// host view to which our views attach, so we can move our view in/out
 @interface GlassHostView : NSView
 {
-@public
-        NSView *view;
+@private
+    NSView *jfxView;
+    NSView *backdropView;
 }
-
+-(void)setJFXView:(NSView*)view;
+-(void)setBackdrop:(NSVisualEffectMaterial)material;
 @end
