@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -287,11 +287,56 @@
     GlassViewDelegate* delegate = (GlassViewDelegate*)[self->view delegate];
     [delegate setResizableForFullscreen:self->isWindowResizable];
 
+    // Recalculate the style mask to restore miniaturizable and resizable states
+    NSUInteger currentMask = [self->nsWindow styleMask];
+    NSUInteger managedBits = (NSUInteger)(NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable);
+    NSUInteger newMask = (currentMask & ~managedBits);
+
+    // Restore miniaturizable from saved state
+    if (self->enabledStyleMask & NSWindowStyleMaskMiniaturizable) {
+        newMask |= NSWindowStyleMaskMiniaturizable;
+    }
+    // And set resizable based on current isResizable flag
+    if (self->isResizable) {
+        newMask |= NSWindowStyleMaskResizable;
+    }
+    [self->nsWindow setStyleMask: newMask];
+
+    // Apply collection behavior changes that were deferred from _setResizable
+    BOOL isPopupOrUtility = (newMask & NSWindowStyleMaskUtilityWindow) != 0 || (newMask & NSWindowStyleMaskNonactivatingPanel) != 0;
+    if (!self->owner && !isPopupOrUtility) {
+        NSWindowCollectionBehavior behavior = [self->nsWindow collectionBehavior];
+        if (self->isResizable) {
+            behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+        } else {
+            behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
+        }
+        [self->nsWindow setCollectionBehavior: behavior];
+    }
+
+    // Update button states based on current window state after style mask is applied
+    BOOL isWindowEnabled = self->isEnabled;
+    BOOL isMiniaturizable = ([self->nsWindow styleMask] & NSWindowStyleMaskMiniaturizable) != 0;
+    [[self->nsWindow standardWindowButton:NSWindowCloseButton] setEnabled: isWindowEnabled];
+    [[self->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setEnabled: isWindowEnabled && isMiniaturizable];
+    [[self->nsWindow standardWindowButton:NSWindowZoomButton] setEnabled: isWindowEnabled && self->isResizable];
+
     [delegate sendJavaFullScreenEvent:NO withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
 
     // Fix up window stacking order
     [self reorderChildWindows];
+}
+
+- (void)windowDidFailToExitFullScreen:(NSNotification *)notification
+{
+    //NSLog(@"windowDidFailToExitFullScreen");
+
+    // Fullscreen exit failed - window remains in fullscreen mode, restore buttons
+    BOOL isWindowEnabled = self->isEnabled;
+    [[self->nsWindow standardWindowButton:NSWindowCloseButton] setEnabled:isWindowEnabled];
+    [[self->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setEnabled: NO];
+    [[self->nsWindow standardWindowButton:NSWindowZoomButton] setEnabled: isWindowEnabled && self->isResizable];
 }
 
 - (BOOL)windowShouldClose:(NSNotification *)notification
