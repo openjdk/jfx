@@ -38,7 +38,7 @@ namespace CSS {
 
 // <basic-shape> = <circle()> | <ellipse() | <inset()> | <path()> | <polygon()> | <rect()> | <shape()> | <xywh()>
 // https://drafts.csswg.org/css-shapes/#typedef-basic-shape
-using BasicShape = std::variant<
+using BasicShape = Variant<
     CircleFunction,
     EllipseFunction,
     InsetFunction,

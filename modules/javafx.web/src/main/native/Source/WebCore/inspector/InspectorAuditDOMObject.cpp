@@ -28,6 +28,8 @@
 #include "InspectorAuditDOMObject.h"
 
 #include "Document.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Node.h"
 #include "UserGestureEmulationScope.h"
 #include "VoidCallback.h"
@@ -74,7 +76,7 @@ ExceptionOr<void> InspectorAuditDOMObject::simulateUserInteraction(Document& doc
     ERROR_IF_NO_ACTIVE_AUDIT();
 
     UserGestureEmulationScope userGestureScope(m_auditAgent.inspectedPage(), true, &document);
-    callback->handleEvent();
+    callback->invoke();
 
     return { };
 }

@@ -88,6 +88,9 @@ public:
     bool isUsable() const { return object() && !isDeleted(); }
     bool isInitialized() const { return m_hasEverBeenBound; }
 
+    enum class ArrayObjectType : uint8_t { Object, ObjectOES };
+    virtual ArrayObjectType arrayObjectType() const = 0;
+
 protected:
     WebGLVertexArrayObjectBase(WebGLRenderingContextBase&, PlatformGLObject, Type);
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override = 0;

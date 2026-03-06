@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2016-2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "Reverb.h"
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -89,19 +91,18 @@ ConvolverNode::~ConvolverNode()
 
 void ConvolverNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    AudioBus& outputBus = output(0)->bus();
 
     // Synchronize with possible dynamic changes to the impulse response.
     if (!m_processLock.tryLock()) {
         // Too bad - tryLock() failed. We must be in the middle of setting a new impulse response.
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
     Locker locker { AdoptLock, m_processLock };
 
     if (!isInitialized() || !m_reverb.get())
-        outputBus->zero();
+        outputBus.zero();
     else {
         // Process using the convolution engine.
         // Note that we can handle the case where nothing is connected to the input, in which case we'll just feed silence into the convolver.
@@ -141,7 +142,7 @@ ExceptionOr<void> ConvolverNode::setBufferForBindings(RefPtr<AudioBuffer>&& buff
 
     // Create the reverb with the given impulse response.
     bool useBackgroundThreads = !context().isOfflineContext();
-    auto reverb = makeUnique<Reverb>(bufferBus.get(), AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
+    auto reverb = makeUnique<Reverb>(bufferBus, AudioUtilities::renderQuantumSize, MaxFFTSize, useBackgroundThreads, m_normalize);
 
     {
         // The context must be locked since changing the buffer can re-configure the number of channels that are output.

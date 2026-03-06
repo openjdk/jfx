@@ -43,6 +43,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Page.h"
+#include "RenderObjectInlines.h"
 #include "RenderWidget.h"
 #include "Settings.h"
 #include "StorageMap.h"
@@ -195,7 +196,7 @@ void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -328,8 +329,16 @@ void SettingsBase::setNeedsRelayoutAllFrames()
             continue;
         if (!localFrame->ownerRenderer())
             continue;
-        localFrame->ownerRenderer()->setNeedsLayoutAndPrefWidthsRecalc();
+        localFrame->ownerRenderer()->setNeedsLayoutAndPreferredWidthsUpdate();
     }
+}
+
+void SettingsBase::updateDisplayEDRHeadroom()
+{
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (m_page)
+        m_page->updateDisplayEDRHeadroom();
+#endif
 }
 
 void SettingsBase::mediaTypeOverrideChanged()
@@ -365,7 +374,7 @@ void SettingsBase::imageLoadingSettingsTimerFired()
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -430,7 +439,7 @@ void SettingsBase::layerBasedSVGEngineEnabledChanged()
     if (!m_page)
         return;
 
-    for (RefPtr frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -528,6 +537,16 @@ void SettingsBase::useSystemAppearanceChanged()
 {
     if (m_page)
         m_page->useSystemAppearanceChanged();
+}
+
+RefPtr<Page> SettingsBase::protectedPage() const
+{
+    return m_page.get();
+}
+
+void SettingsBase::fontFallbackPrefersPictographsChanged()
+{
+    invalidateAfterGenericFamilyChange(protectedPage().get());
 }
 
 } // namespace WebCore

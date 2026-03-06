@@ -23,11 +23,14 @@
 #include "config.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
+#include "ContainerNodeInlines.h"
 #include "FilterEffect.h"
 #include "LegacyRenderSVGResourceFilterPrimitive.h"
 #include "NodeName.h"
 #include "RenderSVGResourceFilterPrimitive.h"
 #include "SVGElementInlines.h"
+#include "SVGParsingError.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -50,7 +53,7 @@ SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const
 
 void SVGFilterPrimitiveStandardAttributes::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:

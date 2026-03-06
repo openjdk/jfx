@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=SpeechRecognitionEnabled,
+    SecureContext,
     Exposed=Window
 ] interface SpeechRecognitionAlternative {
     readonly attribute DOMString transcript;

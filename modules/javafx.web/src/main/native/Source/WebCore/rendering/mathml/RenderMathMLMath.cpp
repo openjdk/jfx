@@ -104,7 +104,7 @@ void RenderMathMLMath::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit
     setLogicalHeight(ascent + descent + borderAndPaddingLogicalHeight() + horizontalScrollbarHeight());
     updateLogicalHeight();
 
-    layoutPositionedObjects(relayoutChildren);
+    layoutOutOfFlowBoxes(relayoutChildren);
 
     updateScrollInfoAfterLayout();
 

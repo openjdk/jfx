@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2010-2023 Google Inc. All rights reserved.
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,10 +41,9 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
-#include "ScrollbarColor.h"
-#include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
+#include "StyleScrollbarGutter.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -62,7 +61,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollableArea);
 
 struct SameSizeAsScrollableArea final : public CanMakeWeakPtr<SameSizeAsScrollableArea> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SameSizeAsScrollableArea);
 
     ~SameSizeAsScrollableArea() { }
     SameSizeAsScrollableArea() { }
@@ -266,6 +265,7 @@ void ScrollableArea::scrollPositionChanged(const ScrollPosition& position)
         scrollbarsController().notifyContentAreaScrolled(scrollPosition() - oldPosition);
         invalidateScrollAnchoringElement();
         updateScrollAnchoringElement();
+        updateAnchorPositionedAfterScroll();
     }
 }
 
@@ -397,12 +397,12 @@ void ScrollableArea::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation 
     setScrollbarOverlayStyle(scrollbarOverlayStyle());
 }
 
-void ScrollableArea::willRemoveScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orientation)
+void ScrollableArea::willRemoveScrollbar(Scrollbar& scrollbar, ScrollbarOrientation orientation)
 {
     if (orientation == ScrollbarOrientation::Vertical)
-        scrollbarsController().willRemoveVerticalScrollbar(scrollbar);
+        scrollbarsController().willRemoveVerticalScrollbar(&scrollbar);
     else
-        scrollbarsController().willRemoveHorizontalScrollbar(scrollbar);
+        scrollbarsController().willRemoveHorizontalScrollbar(&scrollbar);
 }
 
 void ScrollableArea::contentsResized()
@@ -459,7 +459,7 @@ void ScrollableArea::invalidateScrollbars()
 bool ScrollableArea::useDarkAppearanceForScrollbars() const
 {
     // If dark appearance is used or the overlay style is light (because of a dark page background), set the dark appearance.
-    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyleLight;
+    return useDarkAppearance() || scrollbarOverlayStyle() == WebCore::ScrollbarOverlayStyle::Light;
 }
 
 void ScrollableArea::invalidateScrollbar(Scrollbar& scrollbar, const IntRect& rect)
@@ -551,9 +551,9 @@ Color ScrollableArea::scrollbarTrackColorStyle() const
     return { };
 }
 
-ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
+Style::ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
 {
-    return { };
+    return CSS::Keyword::Auto { };
 }
 
 const LayoutScrollSnapOffsetsInfo* ScrollableArea::snapOffsetsInfo() const

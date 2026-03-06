@@ -50,6 +50,7 @@ public:
 
     String toString() const;
     const FragmentedSharedBuffer* buffer() const { return m_buffer.get().get(); }
+    RefPtr<const FragmentedSharedBuffer> protectedBuffer() const { return m_buffer.get(); }
 
     ScriptBuffer isolatedCopy() const { return ScriptBuffer(m_buffer ? RefPtr<FragmentedSharedBuffer>(m_buffer.copy()) : nullptr); }
     explicit operator bool() const { return !!m_buffer; }
@@ -60,7 +61,7 @@ public:
     void append(const FragmentedSharedBuffer&);
 
 #if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
-    using IPCData = std::variant<ShareableResourceHandle, RefPtr<FragmentedSharedBuffer>>;
+    using IPCData = Variant<ShareableResourceHandle, RefPtr<FragmentedSharedBuffer>>;
 #else
     using IPCData = RefPtr<FragmentedSharedBuffer>;
 #endif

@@ -116,7 +116,7 @@ Vector<float> FEColorMatrix::normalizedFloats(const Vector<float>& values)
     return normalizedValues;
 }
 
-bool FEColorMatrix::resultIsAlphaImage(const FilterImageVector&) const
+bool FEColorMatrix::resultIsAlphaImage(std::span<const Ref<FilterImage>>) const
 {
     return m_type == ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA;
 }
@@ -132,7 +132,9 @@ OptionSet<FilterRenderingMode> FEColorMatrix::supportedFilterRenderingModes() co
     modes.add(FilterRenderingMode::Accelerated);
 #endif
 #if HAVE(CGSTYLE_COLORMATRIX_BLUR)
-    if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX)
+    if (m_type == ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX
+        || m_type == ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE
+        || m_type == ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
     return modes;
@@ -160,28 +162,44 @@ std::unique_ptr<FilterEffectApplier> FEColorMatrix::createSoftwareApplier() cons
 
 std::optional<GraphicsStyle> FEColorMatrix::createGraphicsStyle(GraphicsContext&, const Filter&) const
 {
-    std::array<float, 20> values;
-    std::copy_n(m_values.begin(), std::min<size_t>(m_values.size(), 20), values.begin());
-    return GraphicsColorMatrix { values };
+    switch (m_type) {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX: {
+        RELEASE_ASSERT(m_values.size() == 20);
+        GraphicsColorMatrix result;
+        std::copy_n(m_values.begin(), std::min<size_t>(m_values.size(), 20), result.values.begin());
+        return result;
+    }
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
+        return GraphicsColorMatrix { ColorMatrix<5, 4>(saturationColorMatrix(m_values[0])).data() };
+
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
+        return GraphicsColorMatrix { ColorMatrix<5, 4>(hueRotateColorMatrix(m_values[0])).data() };
+
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    return { };
 }
 
 static TextStream& operator<<(TextStream& ts, const ColorMatrixType& type)
 {
     switch (type) {
     case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:
-        ts << "UNKNOWN";
+        ts << "UNKNOWN"_s;
         break;
     case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:
-        ts << "MATRIX";
+        ts << "MATRIX"_s;
         break;
     case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
-        ts << "SATURATE";
+        ts << "SATURATE"_s;
         break;
     case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
-        ts << "HUEROTATE";
+        ts << "HUEROTATE"_s;
         break;
     case ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
-        ts << "LUMINANCETOALPHA";
+        ts << "LUMINANCETOALPHA"_s;
         break;
     }
     return ts;
@@ -189,24 +207,24 @@ static TextStream& operator<<(TextStream& ts, const ColorMatrixType& type)
 
 TextStream& FEColorMatrix::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feColorMatrix";
+    ts << indent << "[feColorMatrix"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " type=\"" << m_type << "\"";
+    ts << " type=\"" << m_type << '"';
     if (!m_values.isEmpty()) {
-        ts << " values=\"";
+        ts << " values=\""_s;
         bool isFirst = true;
         for (auto value : m_values) {
             if (isFirst)
                 isFirst = false;
             else
-                ts << " "_s;
+                ts << ' ';
             ts << value;
         }
-        ts << "\"";
+        ts << '"';
     }
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

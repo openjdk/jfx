@@ -184,6 +184,7 @@ private:
     void animatedScrollDidEndForNode(ScrollingNodeID);
     void wheelEventScrollWillStartForNode(ScrollingNodeID);
     void wheelEventScrollDidEndForNode(ScrollingNodeID);
+    void notifyScrollableAreasForScrollEnd(ScrollingNodeID);
 
     WEBCORE_EXPORT void setMouseIsOverScrollbar(Scrollbar*, bool isOverScrollbar) override;
     WEBCORE_EXPORT void setScrollbarEnabled(Scrollbar&) override;

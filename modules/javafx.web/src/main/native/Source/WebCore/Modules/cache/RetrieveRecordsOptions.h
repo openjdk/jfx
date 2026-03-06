@@ -38,7 +38,7 @@ struct RetrieveRecordsOptions {
 
     ResourceRequest request;
     CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
-    Ref<SecurityOrigin> sourceOrigin;
+    const Ref<SecurityOrigin> sourceOrigin;
     bool ignoreSearch { false };
     bool ignoreMethod { false };
     bool ignoreVary { false };

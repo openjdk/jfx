@@ -31,12 +31,13 @@
 #include "AbstractModuleRecord.h"
 #include "JSCInlines.h"
 #include "JSModuleNamespaceObject.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyCompileError.h"
 #include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyLinkError.h"
 #include "JSWebAssemblyMemory.h"
 #include "JSWebAssemblyModule.h"
+#include "JSWebAssemblyStruct.h"
 #include "Register.h"
 #include "WasmConstExprGenerator.h"
 #include "WasmModuleInformation.h"
@@ -61,7 +62,7 @@ Structure* JSWebAssemblyInstance::createStructure(VM& vm, JSGlobalObject* global
     return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyInstanceType, StructureFlags), info());
 }
 
-JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, JSWebAssemblyModule* module, WebAssemblyModuleRecord* moduleRecord)
+JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, JSWebAssemblyModule* module, WebAssemblyModuleRecord* moduleRecord, RefPtr<SourceProvider>&& sourceProvider)
     : Base(vm, structure)
     , m_vm(&vm)
     , m_jsModule(module, WriteBarrierEarlyInit)
@@ -69,6 +70,7 @@ JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, JSWeb
     , m_tables(module->module().moduleInformation().tableCount())
     , m_softStackLimit(vm.softStackLimit())
     , m_module(module->module())
+    , m_sourceProvider(sourceProvider)
     , m_globalsToMark(m_module.get().moduleInformation().globalCount())
     , m_globalsToBinding(m_module.get().moduleInformation().globalCount())
     , m_numImportFunctions(m_module->moduleInformation().importFunctionCount())
@@ -80,10 +82,11 @@ JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, JSWeb
     for (unsigned i = 0; i < m_numImportFunctions; ++i)
         new (importFunctionInfo(i)) WasmOrJSImportableFunctionCallLinkInfo();
 
-    m_globals = std::bit_cast<Global::Value*>(std::bit_cast<char*>(this) + offsetOfGlobalPtr(m_numImportFunctions, m_module->moduleInformation().tableCount(), 0));
-    memset(std::bit_cast<char*>(m_globals), 0, m_module->moduleInformation().globalCount() * sizeof(Global::Value));
-    for (unsigned i = 0; i < m_module->moduleInformation().globals.size(); ++i) {
-        const GlobalInformation& global = m_module.get().moduleInformation().globals[i];
+    auto& moduleInformation = m_module->moduleInformation();
+    m_globals = std::bit_cast<Global::Value*>(std::bit_cast<char*>(this) + offsetOfGlobalPtr(m_numImportFunctions, moduleInformation.tableCount(), 0));
+    memset(std::bit_cast<char*>(m_globals), 0, moduleInformation.globalCount() * sizeof(Global::Value));
+    for (unsigned i = 0; i < moduleInformation.globals.size(); ++i) {
+        const GlobalInformation& global = moduleInformation.globals[i];
         if (global.bindingMode == GlobalInformation::BindingMode::Portable) {
             // This is kept alive by JSWebAssemblyInstance -> JSWebAssemblyGlobal -> binding.
             m_globalsToBinding.set(i);
@@ -92,17 +95,27 @@ JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, JSWeb
             m_globalsToMark.set(i);
         }
     }
-    memset(std::bit_cast<char*>(this) + offsetOfTablePtr(m_numImportFunctions, 0), 0, m_module->moduleInformation().tableCount() * sizeof(Table*));
-    for (unsigned elementIndex = 0; elementIndex < m_module->moduleInformation().elementCount(); ++elementIndex) {
-        const auto& element = m_module->moduleInformation().elements[elementIndex];
+    memset(std::bit_cast<char*>(this) + offsetOfTablePtr(m_numImportFunctions, 0), 0, moduleInformation.tableCount() * sizeof(Table*));
+    for (unsigned elementIndex = 0; elementIndex < moduleInformation.elementCount(); ++elementIndex) {
+        const auto& element = moduleInformation.elements[elementIndex];
         if (element.isPassive())
             m_passiveElements.quickSet(elementIndex);
     }
 
-    for (unsigned dataSegmentIndex = 0; dataSegmentIndex < m_module->moduleInformation().dataSegmentsCount(); ++dataSegmentIndex) {
-        const auto& dataSegment = m_module->moduleInformation().data[dataSegmentIndex];
+    for (unsigned dataSegmentIndex = 0; dataSegmentIndex < moduleInformation.dataSegmentsCount(); ++dataSegmentIndex) {
+        const auto& dataSegment = moduleInformation.data[dataSegmentIndex];
         if (dataSegment->isPassive())
             m_passiveDataSegments.quickSet(dataSegmentIndex);
+    }
+
+    if (moduleInformation.hasGCObjectTypes()) {
+        memset(reinterpret_cast<char*>(&gcObjectStructure(0)), 0, moduleInformation.typeCount() * sizeof(std::decay_t<decltype(gcObjectStructure(0))>));
+
+        CompleteSubspace* subspace = JSWebAssemblyArray::subspaceFor<JSWebAssemblyArray, SubspaceAccess::OnMainThread>(vm);
+        CompleteSubspace* structSubspace = JSWebAssemblyStruct::subspaceFor<JSWebAssemblyStruct, SubspaceAccess::OnMainThread>(vm);
+        RELEASE_ASSERT(subspace == structSubspace);
+        subspace->prepareAllAllocators();
+        memcpySpan(unsafeMakeSpan(&allocatorForGCObject(0), MarkedSpace::numSizeClasses), subspace->allocatorsForSizeSteps());
     }
 }
 
@@ -110,7 +123,22 @@ void JSWebAssemblyInstance::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    vm.heap.reportExtraMemoryAllocated(this, extraMemoryAllocated());
+
+    // FIXME: We should only generate these structures if the module uses GC objects.
+    // FIXME: Maybe we should cache these structures. It's unclear how profitable this would be though since there's typically only one instance per module per VM.
+    // Since we don't have a global GC it's somewhat unlikely we'd end up de-duplicating much. It's also a bit unclear how much of a perf win it would be at least
+    // until folks start doing dynamic code loading.
+    auto& moduleInformation = m_module->moduleInformation();
+    JSGlobalObject* globalObject = this->globalObject();
+    for (unsigned i = 0; i < moduleInformation.typeCount(); ++i) {
+        RefPtr rtt = moduleInformation.rtts[i];
+        if (rtt->kind() == RTTKind::Array)
+            gcObjectStructure(i).setWithoutWriteBarrier(JSWebAssemblyArray::createStructure(vm, globalObject, moduleInformation.typeSignatures[i], rtt.releaseNonNull()));
+        else if (rtt->kind() == RTTKind::Struct)
+            gcObjectStructure(i).setWithoutWriteBarrier(JSWebAssemblyStruct::createStructure(vm, globalObject, moduleInformation.typeSignatures[i], rtt.releaseNonNull()));
+    }
+    if (moduleInformation.typeCount())
+        vm.writeBarrier(this);
 }
 
 JSWebAssemblyInstance::~JSWebAssemblyInstance()
@@ -141,9 +169,8 @@ void JSWebAssemblyInstance::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitor.append(thisObject->m_memory);
     for (auto& table : thisObject->m_tables)
         visitor.append(table);
-    visitor.reportExtraMemoryVisited(thisObject->extraMemoryAllocated());
     for (unsigned i = 0; i < thisObject->numImportFunctions(); ++i)
-        visitor.append(thisObject->importFunction(i)); // This also keeps the functions' JSWebAssemblyInstance alive.
+        visitor.append(thisObject->importFunction(i));
 
     for (size_t i : thisObject->globalsToBinding()) {
         Global* binding = thisObject->getGlobalBinding(i);
@@ -152,6 +179,12 @@ void JSWebAssemblyInstance::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     }
     for (size_t i : thisObject->globalsToMark())
         visitor.appendUnbarriered(JSValue::decode(thisObject->loadI64Global(i)));
+
+    const auto& moduleInformation = thisObject->moduleInformation();
+    if (moduleInformation.hasGCObjectTypes()) {
+        for (unsigned i = 0; i < moduleInformation.typeCount(); ++i)
+            visitor.append(thisObject->gcObjectStructure(thisObject->numImportFunctions(), moduleInformation.tableCount(), moduleInformation.globalCount(), i));
+    }
 
     Locker locker { cell->cellLock() };
     for (auto& wrapper : thisObject->functionWrappers())
@@ -198,7 +231,7 @@ void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObjec
         if (!info->targetInstance) {
             info->importFunctionStub = module().importFunctionStub(functionSpaceIndex);
             importCallees.append(adoptRef(*new WasmToJSCallee(functionSpaceIndex, { nullptr, nullptr })));
-            ASSERT(!*info->boxedWasmCalleeLoadLocation);
+            ASSERT(*info->boxedWasmCalleeLoadLocation == CalleeBits::nullCallee());
             info->boxedCallee = CalleeBits::encodeNativeCallee(importCallees.last().ptr());
             info->boxedWasmCalleeLoadLocation = &info->boxedCallee;
 
@@ -228,7 +261,23 @@ Identifier JSWebAssemblyInstance::createPrivateModuleKey()
     return Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyInstance"_s));
 }
 
-JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, Structure* instanceStructure, JSGlobalObject* globalObject, const Identifier& moduleKey, JSWebAssemblyModule* jsModule, JSObject* importObject, CreationMode creationMode)
+size_t JSWebAssemblyInstance::allocationSize(const Wasm::ModuleInformation& info)
+{
+    Checked<size_t> size = offsetOfTail();
+    size += sizeof(WasmOrJSImportableFunctionCallLinkInfo) * info.importFunctionCount();
+    size += sizeof(Wasm::Table*) * info.tableCount();
+    size = roundUpToMultipleOf<sizeof(Wasm::Global::Value)>(size);
+    size += sizeof(Wasm::Global::Value) * info.globalCount();
+    if (info.hasGCObjectTypes()) {
+        size += sizeof(WriteBarrier<Structure>) * info.typeCount();
+        size += sizeof(Allocator) * MarkedSpace::numSizeClasses;
+    }
+
+    return size;
+}
+
+
+JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, Structure* instanceStructure, JSGlobalObject* globalObject, const Identifier& moduleKey, JSWebAssemblyModule* jsModule, JSObject* importObject, CreationMode creationMode, RefPtr<SourceProvider>&& provider)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
@@ -247,13 +296,13 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, Structure* insta
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
     // FIXME: These objects could be pretty big we should try to throw OOM here.
-    void* cell = tryAllocateCell<JSWebAssemblyInstance>(vm, allocationSize(moduleInformation.importFunctionCount(), moduleInformation.tableCount(), moduleInformation.globalCount()));
+    void* cell = tryAllocateCell<JSWebAssemblyInstance>(vm, allocationSize(moduleInformation));
     if (!cell) {
         throwOutOfMemoryError(globalObject, throwScope);
         return nullptr;
     }
 
-    auto* jsInstance = new (NotNull, cell) JSWebAssemblyInstance(vm, instanceStructure, jsModule, moduleRecord);
+    auto* jsInstance = new (NotNull, cell) JSWebAssemblyInstance(vm, instanceStructure, jsModule, moduleRecord, WTFMove(provider));
     jsInstance->finishCreation(vm);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
@@ -326,11 +375,6 @@ void JSWebAssemblyInstance::finalizeUnconditionally(VM& vm, CollectionScope)
         if (auto* callLinkInfo = info->callLinkInfo.get())
             callLinkInfo->visitWeak(vm);
     }
-}
-
-size_t JSWebAssemblyInstance::extraMemoryAllocated() const
-{
-    return allocationSize(m_numImportFunctions, m_module->moduleInformation().tableCount(), m_module->moduleInformation().globalCount());
 }
 
 void JSWebAssemblyInstance::setGlobal(unsigned i, JSValue value)
@@ -526,17 +570,18 @@ void JSWebAssemblyInstance::initElementSegment(uint32_t tableIndex, const Elemen
             initValue = JSValue::decode(result);
         }
 
-        if (jsTable->table()->isExternrefTable())
-            jsTable->set(dstIndex, initValue);
-        else {
+#if ASSERT_ENABLED
+        if (jsTable->table()->isFuncrefTable()) {
             // Validation should guarantee that the table is for funcs, and the value is a func as well.
-            ASSERT(jsTable->table()->isFuncrefTable());
-            ASSERT(initValue.getObject());
-            WebAssemblyFunctionBase* func = jsDynamicCast<WebAssemblyFunctionBase*>(initValue.getObject());
-            ASSERT(func);
-            jsTable->set(dstIndex, func);
+            if (initValue.isObject())
+                ASSERT(jsDynamicCast<WebAssemblyFunctionBase*>(asObject(initValue)));
+            else
+                ASSERT(initValue.isNull());
+        } else
+            ASSERT(jsTable->table()->isExternrefTable());
+#endif
+        jsTable->set(dstIndex, initValue);
         }
-    }
 }
 
 bool JSWebAssemblyInstance::copyDataSegment(JSWebAssemblyArray* array, uint32_t segmentIndex, uint32_t offset, uint32_t lengthInBytes, uint8_t* values)
@@ -623,7 +668,7 @@ bool JSWebAssemblyInstance::evaluateConstantExpression(uint64_t index, Type expe
 {
     const auto& constantExpression = m_module->moduleInformation().constantExpressions[index];
     auto evalResult = evaluateExtendedConstExpr(constantExpression, this, m_module->moduleInformation(), expectedType);
-    if (UNLIKELY(!evalResult.has_value()))
+    if (!evalResult.has_value()) [[unlikely]]
         return false;
 
     result = evalResult.value();

@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/MonotonicTime.h>
 
+#include <wtf/ContinuousTime.h>
 #include <wtf/PrintStream.h>
 #include <wtf/WallTime.h>
 
@@ -36,6 +37,13 @@ WallTime MonotonicTime::approximateWallTime() const
     if (isInfinity())
         return WallTime::fromRawSeconds(m_value);
     return *this - now() + WallTime::now();
+}
+
+ContinuousTime MonotonicTime::approximateContinuousTime() const
+{
+    if (isInfinity())
+        return ContinuousTime::fromRawSeconds(m_value);
+    return *this - now() + ContinuousTime::now();
 }
 
 void MonotonicTime::dump(PrintStream& out) const

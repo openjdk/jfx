@@ -113,14 +113,14 @@ static Ref<JSON::Object> toJSONObject(const MediaCapabilitiesInfo& info)
 static Ref<JSON::Object> toJSONObject(const MediaCapabilitiesDecodingInfo& info)
 {
     auto object = toJSONObject(static_cast<const MediaCapabilitiesInfo&>(info));
-    object->setValue("supportedConfiguration"_s, toJSONObject(info.supportedConfiguration));
+    object->setValue("configuration"_s, toJSONObject(info.configuration));
     return object;
 }
 
 static Ref<JSON::Object> toJSONObject(const MediaCapabilitiesEncodingInfo& info)
 {
     auto object = toJSONObject(static_cast<const MediaCapabilitiesInfo&>(info));
-    object->setValue("supportedConfiguration"_s, toJSONObject(info.supportedConfiguration));
+    object->setValue("configuration"_s, toJSONObject(info.configuration));
     return object;
 }
 

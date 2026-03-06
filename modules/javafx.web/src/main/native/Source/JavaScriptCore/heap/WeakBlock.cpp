@@ -120,7 +120,7 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
 
         ASCIILiteral reason = ""_s;
         ASCIILiteral* reasonPtr = nullptr;
-        if (UNLIKELY(heapAnalyzer))
+        if (heapAnalyzer) [[unlikely]]
             reasonPtr = &reason;
 
         typename Visitor::ReferrerContext context(visitor, Visitor::OpaqueRoot);
@@ -130,7 +130,7 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
 
         visitor.appendUnbarriered(jsValue);
 
-        if (UNLIKELY(heapAnalyzer)) {
+        if (heapAnalyzer) [[unlikely]] {
             if (jsValue.isCell())
                 heapAnalyzer->setOpaqueRootReachabilityReasonForCell(jsValue.asCell(), *reasonPtr);
         }

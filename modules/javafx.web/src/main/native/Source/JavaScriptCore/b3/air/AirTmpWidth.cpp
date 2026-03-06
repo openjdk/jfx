@@ -76,7 +76,7 @@ void TmpWidth::recompute(Code& code)
         });
 
     if (beCareful) {
-        code.forAllTmps(assumeTheWorst);
+        code.forEachTmp(assumeTheWorst);
 
         // We fall through because the fixpoint that follows can only make things even more
         // conservative. This mode isn't meant to be fast, just safe.

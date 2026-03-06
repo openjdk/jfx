@@ -45,7 +45,7 @@ static inline const char* pas_range_locked_mode_get_string(pas_range_locked_mode
     case pas_range_is_locked:
         return "range_is_locked";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

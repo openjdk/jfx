@@ -58,7 +58,7 @@ void ThreadedScrollingCoordinator::pageDestroyed()
 
 void ThreadedScrollingCoordinator::commitTreeStateIfNeeded()
 {
-    scrollingStateTrees().forEach([&] (auto& key, auto& value) {
+    scrollingStateTrees().forEach([&](auto& key, auto& value) {
         willCommitTree(key);
 
         LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::commitTreeState, has changes " << value->hasChangedProperties());

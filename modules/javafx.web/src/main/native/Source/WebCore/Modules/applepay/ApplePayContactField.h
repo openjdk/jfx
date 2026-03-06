@@ -27,11 +27,10 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ExceptionOr.h"
-
 namespace WebCore {
 
 struct ApplePaySessionPaymentRequestContactFields;
+template<typename> class ExceptionOr;
 
 enum class ApplePayContactField : uint8_t {
     Email,

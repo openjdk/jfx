@@ -37,6 +37,7 @@ class ArchiveResource : public SubstituteResource {
 public:
     static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&, const ResourceResponse&);
     WEBCORE_EXPORT static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse& = ResourceResponse(), const String& fileName = { });
+    WEBCORE_EXPORT static Ref<ArchiveResource> createWithData(Ref<FragmentedSharedBuffer>&&, const URL&, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse& = ResourceResponse(), const String& fileName = { });
 
     const String& mimeType() const { return m_mimeType; }
     const String& textEncoding() const { return m_textEncoding; }

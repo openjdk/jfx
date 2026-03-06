@@ -71,12 +71,12 @@ inline void CSSFontFaceSource::setStatus(Status newStatus)
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName)
     : m_fontFaceName(WTFMove(fontFaceName))
-    , m_face(owner)
+    , m_owningCSSFontFace(owner)
 {
 }
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, CSSFontSelector& fontSelector, UniqueRef<FontLoadRequest> request)
-    : m_face(owner)
+    : m_owningCSSFontFace(owner)
     , m_fontSelector(fontSelector)
     , m_fontRequest(request.moveToUniquePtr())
 {
@@ -96,14 +96,14 @@ CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, CSSFontSelector& fontSe
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, AtomString fontFaceName, SVGFontFaceElement& fontFace)
     : m_fontFaceName(WTFMove(fontFaceName))
-    , m_face(owner)
+    , m_owningCSSFontFace(owner)
     , m_svgFontFaceElement(fontFace)
     , m_hasSVGFontFaceElement(true)
 {
 }
 
 CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, Ref<JSC::ArrayBufferView>&& arrayBufferView)
-    : m_face(owner)
+    : m_owningCSSFontFace(owner)
     , m_immediateSource(WTFMove(arrayBufferView))
 {
 }
@@ -116,13 +116,13 @@ CSSFontFaceSource::~CSSFontFaceSource()
 
 bool CSSFontFaceSource::shouldIgnoreFontLoadCompletions() const
 {
-    return m_face.shouldIgnoreFontLoadCompletions();
+    return protectedCSSFontFace()->shouldIgnoreFontLoadCompletions();
 }
 
-void CSSFontFaceSource::opportunisticallyStartFontDataURLLoading()
+void CSSFontFaceSource::opportunisticallyStartFontDataURLLoading(DownloadableBinaryFontTrustedTypes trustedType)
 {
     if (status() == Status::Pending && m_fontRequest && m_fontRequest->url().protocolIsData() && m_fontRequest->url().string().length() < MB)
-        load();
+        load(trustedType);
 }
 
 void CSSFontFaceSource::fontLoaded(FontLoadRequest& fontRequest)
@@ -131,8 +131,6 @@ void CSSFontFaceSource::fontLoaded(FontLoadRequest& fontRequest)
 
     if (shouldIgnoreFontLoadCompletions())
         return;
-
-    Ref<CSSFontFace> protectedFace(m_face);
 
     // If the font is in the cache, this will be synchronously called from FontLoadRequest::addClient().
     if (m_status == Status::Pending)
@@ -148,10 +146,17 @@ void CSSFontFaceSource::fontLoaded(FontLoadRequest& fontRequest)
     else
         setStatus(Status::Success);
 
-    m_face.fontLoaded(*this);
+    protectedCSSFontFace()->fontLoaded(*this);
 }
 
-void CSSFontFaceSource::load(Document* document)
+RefPtr<FontCustomPlatformData> CSSFontFaceSource::loadCustomFont(SharedBuffer& buffer, DownloadableBinaryFontTrustedTypes trustedTypes)
+{
+    // FIXME: We should refactor this so that the unused wrapping parameter is not required.
+    bool wrapping = false;
+    return CachedFont::createCustomFontData(buffer, String(), wrapping, trustedTypes);
+}
+
+void CSSFontFaceSource::load(DownloadableBinaryFontTrustedTypes trustedTypes, Document* document)
 {
     setStatus(Status::Loading);
 
@@ -163,21 +168,20 @@ void CSSFontFaceSource::load(Document* document)
         bool success = false;
         if (m_hasSVGFontFaceElement) {
             if (m_svgFontFaceElement) {
-                if (auto* fontElement = dynamicDowncast<SVGFontElement>(m_svgFontFaceElement->parentNode())) {
+                if (RefPtr fontElement = dynamicDowncast<SVGFontElement>(m_svgFontFaceElement->parentNode())) {
                 ASSERT(!m_inDocumentCustomPlatformData);
                     if (auto otfFont = convertSVGToOTFFont(*fontElement))
                     m_generatedOTFBuffer = SharedBuffer::create(WTFMove(otfFont.value()));
                 if (m_generatedOTFBuffer) {
-                        m_inDocumentCustomPlatformData = FontCustomPlatformData::create(*m_generatedOTFBuffer, String());
+                        m_inDocumentCustomPlatformData = loadCustomFont(Ref { *m_generatedOTFBuffer }, trustedTypes);
                     success = static_cast<bool>(m_inDocumentCustomPlatformData);
                 }
             }
             }
         } else if (m_immediateSource) {
             ASSERT(!m_immediateFontCustomPlatformData);
-            bool wrapping;
-            auto buffer = SharedBuffer::create(m_immediateSource->span());
-            m_immediateFontCustomPlatformData = CachedFont::createCustomFontData(buffer.get(), String(), wrapping);
+            auto buffer = SharedBuffer::create(Ref { *m_immediateSource }->span());
+            m_immediateFontCustomPlatformData = loadCustomFont(buffer.get(), trustedTypes);
             success = static_cast<bool>(m_immediateFontCustomPlatformData);
         } else {
             // We are only interested in whether or not fontForFamily() returns null or not. Luckily, none of
@@ -186,8 +190,8 @@ void CSSFontFaceSource::load(Document* document)
             FontCascadeDescription fontDescription;
             fontDescription.setOneFamily(m_fontFaceName);
             fontDescription.setComputedSize(1);
-            fontDescription.setShouldAllowUserInstalledFonts(m_face.allowUserInstalledFonts());
-            success = FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, { }, FontLookupOptions::ExactFamilyNameMatch);
+            fontDescription.setShouldAllowUserInstalledFonts(protectedCSSFontFace()->allowUserInstalledFonts());
+            success = FontCache::forCurrentThread()->fontForFamily(fontDescription, m_fontFaceName, { }, FontLookupOptions::ExactFamilyNameMatch);
             if (document && document->settings().webAPIStatisticsEnabled())
                 ResourceLoadObserver::shared().logFontLoad(*document, m_fontFaceName.string(), success);
         }
@@ -205,7 +209,7 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
         if (m_immediateSource) {
             if (!m_immediateFontCustomPlatformData)
                 return nullptr;
-            return Font::create(CachedFont::platformDataFromCustomData(*m_immediateFontCustomPlatformData, fontDescription, syntheticBold, syntheticItalic, fontCreationContext), Font::Origin::Remote);
+            return Font::create(CachedFont::platformDataFromCustomData(Ref { *m_immediateFontCustomPlatformData }, fontDescription, syntheticBold, syntheticItalic, fontCreationContext), Font::Origin::Remote);
         }
 
         // We're local. Just return a Font from the normal cache.
@@ -215,7 +219,7 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
             options.add(FontLookupOptions::DisallowBoldSynthesis);
         if (!syntheticItalic)
             options.add(FontLookupOptions::DisallowObliqueSynthesis);
-        return FontCache::forCurrentThread().fontForFamily(fontDescription, m_fontFaceName, fontCreationContext, options);
+        return FontCache::forCurrentThread()->fontForFamily(fontDescription, m_fontFaceName, fontCreationContext, options);
     }
 
     if (m_fontRequest) {
@@ -235,7 +239,7 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
         return nullptr;
     if (!m_inDocumentCustomPlatformData)
         return nullptr;
-    return Font::create(m_inDocumentCustomPlatformData->fontPlatformData(fontDescription, syntheticBold, syntheticItalic, fontCreationContext), Font::Origin::Remote);
+    return Font::create(Ref { *m_inDocumentCustomPlatformData }->fontPlatformData(fontDescription, syntheticBold, syntheticItalic, fontCreationContext), Font::Origin::Remote);
 }
 
 bool CSSFontFaceSource::isSVGFontFaceSource() const
@@ -244,6 +248,11 @@ bool CSSFontFaceSource::isSVGFontFaceSource() const
         return true;
     auto* fontRequest = dynamicDowncast<CachedFontLoadRequest>(m_fontRequest.get());
     return fontRequest && is<CachedSVGFont>(fontRequest->cachedFont());
+}
+
+Ref<CSSFontFace> CSSFontFaceSource::protectedCSSFontFace() const
+{
+    return m_owningCSSFontFace.get();
 }
 
 }

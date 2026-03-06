@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,24 @@ package com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
+import com.sun.javafx.css.media.expression.EqualExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.GreaterExpression;
+import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
+import com.sun.javafx.css.media.expression.LessExpression;
+import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
+import com.sun.javafx.css.media.expression.RangeExpression;
+import com.sun.javafx.css.parser.CssLexer;
+import com.sun.javafx.css.parser.Token;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.function.BiFunction;
 
 /**
  * Serializes and deserializes a {@link MediaQuery} expression into and from a binary representation.
@@ -47,7 +58,12 @@ public final class MediaQuerySerializer {
         FUNCTION(2),
         CONJUNCTION(3),
         DISJUNCTION(4),
-        NEGATION(5);
+        NEGATION(5),
+        EQUAL(6),
+        GREATER(7),
+        GREATER_OR_EQUAL(8),
+        LESS(9),
+        LESS_OR_EQUAL(10);
 
         static QueryType of(MediaQuery expression) {
             return switch (expression) {
@@ -56,6 +72,11 @@ public final class MediaQuerySerializer {
                 case ConjunctionExpression _ -> CONJUNCTION;
                 case DisjunctionExpression _ -> DISJUNCTION;
                 case NegationExpression _ -> NEGATION;
+                case EqualExpression _ -> EQUAL;
+                case GreaterExpression _ -> GREATER;
+                case GreaterOrEqualExpression _ -> GREATER_OR_EQUAL;
+                case LessExpression _ -> LESS;
+                case LessOrEqualExpression _ -> LESS_OR_EQUAL;
             };
         }
 
@@ -88,26 +109,36 @@ public final class MediaQuerySerializer {
                 os.writeBoolean(expr.value());
 
             case FunctionExpression<?> expr -> {
-                os.writeInt(stringStore.addString(expr.featureName()));
+                os.writeInt(stringStore.addString(expr.getFeatureName()));
 
-                if (expr.featureValue() != null) {
-                    os.writeInt(stringStore.addString(expr.featureValue()));
+                if (expr.getFeatureValue() != null) {
+                    os.writeInt(stringStore.addString(expr.getFeatureValue()));
                 } else {
                     os.writeInt(-1);
                 }
             }
 
             case NegationExpression expr ->
-                writeBinary(expr.expression(), os, stringStore);
+                writeBinary(expr.getExpression(), os, stringStore);
 
             case ConjunctionExpression expr -> {
-                writeBinary(expr.left(), os, stringStore);
-                writeBinary(expr.right(), os, stringStore);
+                writeBinary(expr.getLeft(), os, stringStore);
+                writeBinary(expr.getRight(), os, stringStore);
             }
 
             case DisjunctionExpression expr -> {
-                writeBinary(expr.left(), os, stringStore);
-                writeBinary(expr.right(), os, stringStore);
+                writeBinary(expr.getLeft(), os, stringStore);
+                writeBinary(expr.getRight(), os, stringStore);
+            }
+
+            case RangeExpression expr -> {
+                os.writeInt(stringStore.addString(expr.getFeatureName()));
+                os.writeDouble(expr.getFeatureValue());
+                if (expr.getUnit() != null) {
+                    os.writeByte(expr.getUnit().ordinal());
+                } else {
+                    os.writeByte(-1);
+                }
             }
         }
     }
@@ -118,12 +149,35 @@ public final class MediaQuerySerializer {
                 String featureName = strings[is.readInt()];
                 int featureValueIdx = is.readInt();
                 String featureValue = featureValueIdx >= 0 ? strings[featureValueIdx] : null;
-                yield MediaFeatures.featureQueryExpression(featureName, featureValue);
+                yield MediaFeatures.discreteQueryExpression(featureName, new Token(CssLexer.IDENT, featureValue));
             }
-            case CONSTANT -> new ConstantExpression(is.readBoolean());
-            case NEGATION -> new NegationExpression(readBinary(is, strings));
-            case CONJUNCTION -> new ConjunctionExpression(readBinary(is, strings), readBinary(is, strings));
-            case DISJUNCTION -> new DisjunctionExpression(readBinary(is, strings), readBinary(is, strings));
+            case CONSTANT -> ConstantExpression.of(is.readBoolean());
+            case NEGATION -> NegationExpression.of(readBinary(is, strings));
+            case CONJUNCTION -> ConjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
+            case DISJUNCTION -> DisjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
+            case EQUAL -> readRangeExpression(is, strings, EqualExpression::ofSize, EqualExpression::ofNumber);
+            case GREATER -> readRangeExpression(is, strings, GreaterExpression::ofSize, GreaterExpression::ofNumber);
+            case GREATER_OR_EQUAL -> readRangeExpression(is, strings, GreaterOrEqualExpression::ofSize, GreaterOrEqualExpression::ofNumber);
+            case LESS -> readRangeExpression(is, strings, LessExpression::ofSize, LessExpression::ofNumber);
+            case LESS_OR_EQUAL -> readRangeExpression(is, strings, LessOrEqualExpression::ofSize, LessOrEqualExpression::ofNumber);
         };
     }
+
+    private static MediaQuery readRangeExpression(DataInputStream is, String[] strings,
+                                                  BiFunction<SizeQueryType, Size, MediaQuery> sizeFactory,
+                                                  BiFunction<SizeQueryType, Double, MediaQuery> numberFactory) throws IOException {
+        var sizeQueryType = SizeQueryType.of(strings[is.readInt()]);
+        double value = is.readDouble();
+        SizeUnits unit = readUnit(is);
+        return unit != null
+            ? sizeFactory.apply(sizeQueryType, new Size(value, unit))
+            : numberFactory.apply(sizeQueryType, value);
+    }
+
+    private static SizeUnits readUnit(DataInputStream is) throws IOException {
+        byte unit = is.readByte();
+        return unit < 0 ? null : SIZE_UNITS[unit];
+    }
+
+    private static final SizeUnits[] SIZE_UNITS = SizeUnits.values();
 }

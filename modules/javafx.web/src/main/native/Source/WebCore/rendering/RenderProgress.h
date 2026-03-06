@@ -46,10 +46,12 @@ private:
     ASCIILiteral renderName() const override { return "RenderProgress"_s; }
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
+    void willBeDestroyed() final;
+
     void animationTimerFired();
     void updateAnimationState();
 
-    double m_position;
+    double m_position { 0 };
     MonotonicTime m_animationStartTime;
     bool m_animating { false };
     Timer m_animationTimer;

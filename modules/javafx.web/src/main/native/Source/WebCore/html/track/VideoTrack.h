@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -100,7 +100,7 @@ private:
     WeakPtr<VideoTrackList> m_videoTrackList;
     WeakHashSet<VideoTrackClient> m_clients;
     Ref<VideoTrackPrivate> m_private;
-    Ref<VideoTrackConfiguration> m_configuration;
+    const Ref<VideoTrackConfiguration> m_configuration;
     bool m_selected { false };
 };
 

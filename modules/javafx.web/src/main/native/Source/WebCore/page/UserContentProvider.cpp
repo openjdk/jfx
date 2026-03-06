@@ -115,9 +115,9 @@ static ContentExtensions::ContentExtensionsBackend::RuleListFilter ruleListFilte
         };
     }
 
-    auto policySourceLoader = mainLoader;
+    RefPtr policySourceLoader = mainLoader;
     if (!mainLoader->request().url().hasSpecialScheme() && documentLoader.request().url().protocolIsInHTTPFamily())
-        policySourceLoader = &documentLoader;
+        policySourceLoader = documentLoader;
 
     auto& exceptions = policySourceLoader->contentExtensionEnablement().second;
     switch (policySourceLoader->contentExtensionEnablement().first) {
@@ -151,7 +151,7 @@ ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page&
 {
     auto results = userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom, ruleListFilter(initiatingDocumentLoader));
 
-    if (resourceType.contains(ContentExtensions::ResourceType::Document))
+    if (resourceType.containsAny({ ContentExtensions::ResourceType::TopDocument, ContentExtensions::ResourceType::ChildDocument }))
         applyLinkDecorationFilteringIfNeeded(results, page, url, initiatingDocumentLoader);
 
     return results;

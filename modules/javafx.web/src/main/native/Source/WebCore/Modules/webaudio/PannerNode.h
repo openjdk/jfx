@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -128,14 +128,14 @@ private:
     void invalidateCachedPropertiesIfNecessary() WTF_REQUIRES_LOCK(m_processLock);
 
     const AzimuthElevation& azimuthElevation() WTF_REQUIRES_LOCK(m_processLock);
-    void processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+    void processSampleAccurateValues(AudioBus& destination, const AudioBus& source, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
     bool hasSampleAccurateValues() const WTF_REQUIRES_LOCK(m_processLock);
     bool shouldUseARate() const WTF_REQUIRES_LOCK(m_processLock);
 
     FloatPoint3D position() const WTF_REQUIRES_LOCK(m_processLock);
     FloatPoint3D orientation() const WTF_REQUIRES_LOCK(m_processLock);
 
-    Ref<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
+    const Ref<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
     PanningModelType m_panningModel WTF_GUARDED_BY_LOCK(m_processLock);
     std::unique_ptr<Panner> m_panner WTF_GUARDED_BY_LOCK(m_processLock);
 
@@ -143,13 +143,13 @@ private:
     DistanceEffect m_distanceEffect WTF_GUARDED_BY_LOCK(m_processLock);
     ConeEffect m_coneEffect WTF_GUARDED_BY_LOCK(m_processLock);
 
-    Ref<AudioParam> m_positionX WTF_GUARDED_BY_LOCK(m_processLock);
-    Ref<AudioParam> m_positionY WTF_GUARDED_BY_LOCK(m_processLock);
-    Ref<AudioParam> m_positionZ WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_positionX WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_positionY WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_positionZ WTF_GUARDED_BY_LOCK(m_processLock);
 
-    Ref<AudioParam> m_orientationX WTF_GUARDED_BY_LOCK(m_processLock);
-    Ref<AudioParam> m_orientationY WTF_GUARDED_BY_LOCK(m_processLock);
-    Ref<AudioParam> m_orientationZ WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_orientationX WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_orientationY WTF_GUARDED_BY_LOCK(m_processLock);
+    const Ref<AudioParam> m_orientationZ WTF_GUARDED_BY_LOCK(m_processLock);
 
     mutable std::optional<AzimuthElevation> m_cachedAzimuthElevation WTF_GUARDED_BY_LOCK(m_processLock);
     mutable std::optional<float> m_cachedConeGain WTF_GUARDED_BY_LOCK(m_processLock);

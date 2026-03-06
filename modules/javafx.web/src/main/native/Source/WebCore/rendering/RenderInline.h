@@ -54,7 +54,7 @@ public:
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;
 
     LayoutRect borderBoundingBox() const final
     {
@@ -128,7 +128,7 @@ protected:
     RepaintRects computeVisibleRectsUsingPaintOffset(const RepaintRects&) const;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
 private:
     VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
@@ -138,9 +138,6 @@ private:
     virtual std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
     void dirtyLineFromChangedChild() final { m_legacyLineBoxes.dirtyLineFromChangedChild(*this); }
-
-    LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
 
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) const final;
 

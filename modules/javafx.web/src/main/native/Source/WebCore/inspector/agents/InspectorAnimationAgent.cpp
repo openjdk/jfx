@@ -35,10 +35,12 @@
 #include "CSSSerializationContext.h"
 #include "CSSTransition.h"
 #include "CSSValue.h"
-#include "ComputedStyleExtractor.h"
+#include "CSSValuePool.h"
+#include "DocumentInlines.h"
 #include "Element.h"
 #include "Event.h"
 #include "FillMode.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
@@ -50,6 +52,7 @@
 #include "Page.h"
 #include "PlaybackDirection.h"
 #include "RenderElement.h"
+#include "StyleExtractor.h"
 #include "StyleOriginatedAnimation.h"
 #include "Styleable.h"
 #include "TimingFunction.h"
@@ -131,7 +134,7 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
         // Synthesize CSS style declarations for each keyframe so the frontend can display them.
 
         auto pseudoElementIdentifier = target->pseudoId() == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { target->pseudoId() });
-        ComputedStyleExtractor computedStyleExtractor(target, false, pseudoElementIdentifier);
+        Style::Extractor computedStyleExtractor(target, false, pseudoElementIdentifier);
 
         for (size_t i = 0; i < blendingKeyframes.size(); ++i) {
             auto& blendingKeyframe = blendingKeyframes[i];
@@ -159,15 +162,19 @@ static Ref<JSON::ArrayOf<Inspector::Protocol::Animation::Keyframe>> buildObjectF
             for (auto property : properties) {
                 --count;
                 WTF::switchOn(property,
-                    [&] (CSSPropertyID cssPropertyId) {
-                        stylePayloadBuilder.append(nameString(cssPropertyId), ": "_s);
-                if (auto value = computedStyleExtractor.valueForPropertyInStyle(style, cssPropertyId, renderer))
-                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
+                    [&](CSSPropertyID cssPropertyId) {
+                        stylePayloadBuilder.append(
+                            nameString(cssPropertyId),
+                            ": "_s,
+                            computedStyleExtractor.propertyValueSerializationInStyle(style, cssPropertyId, CSS::defaultSerializationContext(), CSSValuePool::singleton(), renderer)
+                        );
                     },
-                    [&] (const AtomString& customProperty) {
-                        stylePayloadBuilder.append(customProperty, ": "_s);
-                        if (auto value = computedStyleExtractor.customPropertyValue(customProperty))
-                            stylePayloadBuilder.append(value->cssText(CSS::defaultSerializationContext()));
+                    [&](const AtomString& customProperty) {
+                        stylePayloadBuilder.append(
+                            customProperty,
+                            ": "_s,
+                            computedStyleExtractor.customPropertyValueSerialization(customProperty, CSS::defaultSerializationContext())
+                        );
                     }
                 );
                 stylePayloadBuilder.append(';');
@@ -243,7 +250,7 @@ static Ref<Inspector::Protocol::Animation::Effect> buildObjectForEffect(Animatio
 
 InspectorAnimationAgent::InspectorAnimationAgent(PageAgentContext& context)
     : InspectorAgentBase("Animation"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::AnimationFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::AnimationFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::AnimationBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
     , m_inspectedPage(context.inspectedPage)
@@ -254,7 +261,7 @@ InspectorAnimationAgent::InspectorAnimationAgent(PageAgentContext& context)
 
 InspectorAnimationAgent::~InspectorAnimationAgent() = default;
 
-void InspectorAnimationAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorAnimationAgent::didCreateFrontendAndBackend()
 {
     ASSERT(m_instrumentingAgents.persistentAnimationAgent() != this);
     m_instrumentingAgents.setPersistentAnimationAgent(this);
@@ -305,7 +312,7 @@ Inspector::Protocol::ErrorStringOr<RefPtr<Inspector::Protocol::Animation::Effect
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
 
@@ -322,7 +329,7 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> Ins
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
 
@@ -347,9 +354,13 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObjec
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
+
+    RefPtr scriptExecutionContext = animation->scriptExecutionContext();
+    if (!scriptExecutionContext)
+        return makeUnexpected("Animation is detached from context"_s);
 
     auto* state = animation->scriptExecutionContext()->globalObject();
     auto injectedScript = m_injectedScriptManager.injectedScriptFor(state);
@@ -360,7 +371,7 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObjec
         JSC::JSLockHolder lock(state);
 
         auto* globalObject = deprecatedGlobalObjectForPrototype(state);
-        value = toJS(state, globalObject, animation);
+        value = toJS(state, globalObject, animation.get());
     }
 
     if (!value) {
@@ -575,7 +586,7 @@ void InspectorAnimationAgent::frameNavigated(LocalFrame& frame)
 String InspectorAnimationAgent::findAnimationId(WebAnimation& animation)
 {
     for (auto& [animationId, existingAnimation] : m_animationIdMap) {
-        if (existingAnimation == &animation)
+        if (existingAnimation.ptr() == &animation)
             return animationId;
     }
     return nullString();
@@ -592,7 +603,7 @@ WebAnimation* InspectorAnimationAgent::assertAnimation(Inspector::Protocol::Erro
 void InspectorAnimationAgent::bindAnimation(WebAnimation& animation, RefPtr<Inspector::Protocol::Console::StackTrace> backtrace)
 {
     auto animationId = makeString("animation:"_s, IdentifiersFactory::createIdentifier());
-    m_animationIdMap.set(animationId, &animation);
+    m_animationIdMap.set(animationId, animation);
 
     auto animationPayload = Inspector::Protocol::Animation::Animation::create()
         .setAnimationId(animationId)

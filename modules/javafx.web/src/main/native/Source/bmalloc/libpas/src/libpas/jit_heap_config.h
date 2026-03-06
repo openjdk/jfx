@@ -182,6 +182,7 @@ PAS_HEAP_CONFIG_SPECIALIZATION_DECLARATIONS(jit_heap_config);
             .kind = pas_segregated_page_config_kind_jit_small_segregated, \
             .wasteage_handicap = 1., \
             .sharing_shift = PAS_SMALL_SHARING_SHIFT, \
+            .partial_view_padding = 0, \
             .num_alloc_bits = PAS_BASIC_SEGREGATED_NUM_ALLOC_BITS(JIT_SMALL_SEGREGATED_MIN_ALIGN_SHIFT, \
                                                                   JIT_SMALL_PAGE_SIZE), \
             .shared_payload_offset = 0, \

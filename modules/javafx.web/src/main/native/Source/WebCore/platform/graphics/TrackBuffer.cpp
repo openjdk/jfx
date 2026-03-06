@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "Logging.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -36,8 +37,14 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TrackBuffer);
 
+// The maximum queue depth possible for out of order frames with either H264 or HEVC is 16, limit looking ahead of 16 frames.
+static constexpr size_t MaximumSlidingWindowLength = 16;
+
 static inline MediaTime roundTowardsTimeScaleWithRoundingMargin(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)
 {
+    ASSERT(timeScale);
+    if (!timeScale)
+        return time;
     while (true) {
         MediaTime roundedTime = time.toTimeScale(timeScale);
         if (abs(roundedTime - time) < roundingMargin || timeScale >= MediaTime::MaximumTimeScale)
@@ -78,35 +85,119 @@ void TrackBuffer::addBufferedRange(const MediaTime& start, const MediaTime& end,
 void TrackBuffer::addSample(MediaSample& sample)
 {
     m_samples.addSample(sample);
+
+    // Note: The terminology here is confusing: "enqueuing" means providing a frame to the inner media framework.
+    // First, frames are inserted in the decode queue; later, at the end of the append some of the frames in the
+    // decode may be "enqueued" (sent to the inner media framework) in `provideMediaData()`.
+    //
+    // In order to check whether a frame should be added to the decode queue we check that it does not precede any
+    // frame already enqueued.
+    //
+    // Note that adding a frame to the decode queue is no guarantee that it will be actually enqueued at that point.
+    // If the frame is after the discontinuity boundary, the enqueueing algorithm will hold it there until samples
+    // with earlier timestamps are enqueued. The decode queue is not FIFO, but rather an ordered map.
+    DecodeOrderSampleMap::KeyType decodeKey(sample.decodeTime(), sample.presentationTime());
+    if (lastEnqueuedDecodeKey().first.isInvalid() || decodeKey > lastEnqueuedDecodeKey()) {
+        auto result = decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
+        auto it = result.first;
+        if (it == decodeQueue().begin())
+            m_minimumEnqueuedPresentationTime = sample.presentationTime();
+        else {
+            m_minimumEnqueuedPresentationTime = std::min(m_minimumEnqueuedPresentationTime, sample.presentationTime());
+            Ref previousSample = (--it)->second;
+            if (sample.presentationTime() < previousSample->presentationTime())
+                m_hasOutOfOrderFrames = true;
+        }
+    }
+
+    // NOTE: the spec considers the need to check the last frame duration but doesn't specify if that last frame
+    // is the one prior in presentation or decode order.
+    // So instead, as a workaround we use the largest frame duration seen in the current coded frame group (as defined in https://www.w3.org/TR/media-source/#coded-frame-group.
+    if (lastDecodeTimestamp().isValid()) {
+        MediaTime lastDecodeDuration = sample.decodeTime() - lastDecodeTimestamp();
+        if (!greatestFrameDuration().isValid())
+            setGreatestFrameDuration(std::max(lastDecodeDuration, sample.duration()));
+        else
+            setGreatestFrameDuration(std::max({ greatestFrameDuration(), sample.duration(), lastDecodeDuration }));
+    }
+
+    // 1.17 Set last decode timestamp for track buffer to decode timestamp.
+    setLastDecodeTimestamp(sample.decodeTime());
+
+    // 1.18 Set last frame duration for track buffer to frame duration.
+    setLastFrameDuration(sample.duration());
+
+    // 1.19 If highest presentation timestamp for track buffer is unset or frame end timestamp is greater
+    // than highest presentation timestamp, then set highest presentation timestamp for track buffer
+    // to frame end timestamp.
+    if (highestPresentationTimestamp().isInvalid() || sample.presentationEndTime() > highestPresentationTimestamp())
+        setHighestPresentationTimestamp(sample.presentationEndTime());
+
+    addBufferedRange(sample.presentationTime(), sample.presentationEndTime(), AddTimeRangeOption::EliminateSmallGaps);
 }
 
-bool TrackBuffer::updateMinimumUpcomingPresentationTime()
+RefPtr<MediaSample> TrackBuffer::nextSample()
+{
+    if (m_decodeQueue.empty())
+        return { };
+
+    Ref sample = decodeQueue().begin()->second;
+
+    if (sample->decodeTime() > enqueueDiscontinuityBoundary()) {
+        DEBUG_LOG(LOGIDENTIFIER, "bailing early because of unbuffered gap, new sample: ", sample->decodeTime(), " >= the current discontinuity boundary: ", enqueueDiscontinuityBoundary());
+        return { };
+    }
+
+    // Remove the sample from the decode queue now.
+    decodeQueue().erase(decodeQueue().begin());
+
+    MediaTime samplePresentationEnd = sample->presentationEndTime();
+    if (highestEnqueuedPresentationTime().isInvalid() || samplePresentationEnd > highestEnqueuedPresentationTime())
+        setHighestEnqueuedPresentationTime(WTFMove(samplePresentationEnd));
+
+    setLastEnqueuedDecodeKey({ sample->decodeTime(), sample->presentationTime() });
+    setEnqueueDiscontinuityBoundary(sample->decodeTime() + sample->duration() + m_discontinuityTolerance);
+
+        m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
+    if (m_hasOutOfOrderFrames)
+        updateMinimumUpcomingPresentationTime();
+    else {
+        // Next upcoming time is the next displayed sample.
+        for (auto it = m_decodeQueue.begin(); it != m_decodeQueue.end(); ++it) {
+            Ref sample = it->second;
+            if (sample->isNonDisplaying())
+                continue;
+            m_minimumEnqueuedPresentationTime = sample->presentationTime();
+            break;
+    }
+    }
+
+    return sample;
+}
+
+void TrackBuffer::updateMinimumUpcomingPresentationTime()
 {
     if (m_decodeQueue.empty()) {
         m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
-        return false;
+        return;
     }
-
-    auto minPts = std::min_element(m_decodeQueue.begin(), m_decodeQueue.end(), [](auto& left, auto& right) -> bool {
-        return left.second->presentationTime() < right.second->presentationTime();
-    });
-
-    if (minPts == m_decodeQueue.end()) {
+    size_t forwardIndex = 0;
+    m_minimumEnqueuedPresentationTime = MediaTime::positiveInfiniteTime();
+    for (auto it = m_decodeQueue.begin(); it != m_decodeQueue.end() && forwardIndex < MaximumSlidingWindowLength; ++forwardIndex, ++it) {
+        Ref sample = it->second;
+        if (!sample->isNonDisplaying())
+            m_minimumEnqueuedPresentationTime = std::min(m_minimumEnqueuedPresentationTime, sample->presentationTime());
+    }
+    if (m_minimumEnqueuedPresentationTime.isPositiveInfinite())
         m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
-        return false;
-    }
-
-    m_minimumEnqueuedPresentationTime = Ref { minPts->second }->presentationTime();
-    return true;
 }
 
 bool TrackBuffer::reenqueueMediaForTime(const MediaTime& time, const MediaTime& timeFudgeFactor, bool isEnded)
 {
-    m_decodeQueue.clear();
-
-    m_highestEnqueuedPresentationTime = MediaTime::invalidTime();
-    m_lastEnqueuedDecodeKey = { MediaTime::invalidTime(), MediaTime::invalidTime() };
+    clearDecodeQueue();
     m_enqueueDiscontinuityBoundary = time + m_discontinuityTolerance;
+
+    m_needsReenqueueing = false;
 
     if (m_samples.empty())
         return false;
@@ -144,16 +235,33 @@ bool TrackBuffer::reenqueueMediaForTime(const MediaTime& time, const MediaTime& 
 
     // Fill the decode queue with the non-displaying samples.
     for (auto iter = reverseLastSyncSampleIter; iter != reverseCurrentSampleIter; --iter) {
-        auto copy = Ref { iter->second }->createNonDisplayingCopy();
+        Ref copy = Ref { iter->second }->createNonDisplayingCopy();
         DecodeOrderSampleMap::KeyType decodeKey(copy->decodeTime(), copy->presentationTime());
         m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
     }
 
-    // Fill the decode queue with the remaining samples.
-    for (auto iter = currentSampleDTSIterator; iter != m_samples.decodeOrder().end(); ++iter)
-        m_decodeQueue.insert(*iter);
+    MediaTime previousSampleTime;
 
-    m_needsReenqueueing = false;
+    // Fill the decode queue with the remaining samples.
+    if (currentSampleDTSIterator != m_samples.decodeOrder().end()) {
+        m_decodeQueue.insert(*currentSampleDTSIterator);
+        m_minimumEnqueuedPresentationTime = Ref { currentSampleDTSIterator->second }->presentationTime();
+        previousSampleTime = m_minimumEnqueuedPresentationTime;
+    }
+    for (auto iter = ++currentSampleDTSIterator; iter != m_samples.decodeOrder().end(); ++iter) {
+        Ref sample = iter->second;
+        if (sample->presentationTime() < time) {
+            Ref copy = sample->createNonDisplayingCopy();
+            DecodeOrderSampleMap::KeyType decodeKey(copy->decodeTime(), copy->presentationTime());
+            m_decodeQueue.insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, WTFMove(copy)));
+        } else {
+        m_decodeQueue.insert(*iter);
+            if (sample->presentationTime() < m_minimumEnqueuedPresentationTime)
+                m_minimumEnqueuedPresentationTime = sample->presentationTime();
+            if (std::exchange(previousSampleTime, sample->presentationTime()) > sample->presentationTime())
+                m_hasOutOfOrderFrames = true;
+        }
+    }
 
     return true;
 }
@@ -261,6 +369,8 @@ PlatformTimeRanges TrackBuffer::removeSamples(const DecodeOrderSampleMap::MapTyp
     if (bytesRemoved)
         DEBUG_LOG_IF(m_logger, logId, "removed ", bytesRemoved, ", start = ", earliestSample, ", end = ", latestSample);
 #endif
+
+    updateMinimumUpcomingPresentationTime();
 
     return erasedRanges;
 }
@@ -402,8 +512,17 @@ void TrackBuffer::reset()
 void TrackBuffer::clearSamples()
 {
     m_samples.clear();
-    m_decodeQueue.clear();
+    clearDecodeQueue();
     m_buffered = PlatformTimeRanges();
+}
+
+void TrackBuffer::clearDecodeQueue()
+{
+    m_decodeQueue.clear();
+    m_hasOutOfOrderFrames = false;
+    m_minimumEnqueuedPresentationTime = MediaTime::invalidTime();
+    m_highestEnqueuedPresentationTime = MediaTime::invalidTime();
+    m_lastEnqueuedDecodeKey = { MediaTime::invalidTime(), MediaTime::invalidTime() };
 }
 
 void TrackBuffer::setRoundedTimestampOffset(const MediaTime& time, uint32_t timeScale, const MediaTime& roundingMargin)
@@ -414,7 +533,7 @@ void TrackBuffer::setRoundedTimestampOffset(const MediaTime& time, uint32_t time
 #if !RELEASE_LOG_DISABLED
 void TrackBuffer::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = childLogIdentifier(newLogIdentifier, cryptographicallyRandomNumber<uint32_t>());
     ALWAYS_LOG(LOGIDENTIFIER);
 }

@@ -56,4 +56,10 @@ Ref<WorkerGlobalScope> DedicatedWorkerThread::createWorkerGlobalScope(const Work
     return scope;
 }
 
+void DedicatedWorkerThread::clearProxies()
+{
+    m_workerObjectProxy = nullptr;
+    WorkerThread::clearProxies();
+}
+
 } // namespace WebCore

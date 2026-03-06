@@ -29,6 +29,7 @@
 #include "CryptoAlgorithmAesGcmParams.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include <algorithm>
 #include <ranges>

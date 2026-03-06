@@ -34,6 +34,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
+#include "RenderWidgetInlines.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -55,12 +56,6 @@ RenderIFrame::~RenderIFrame() = default;
 HTMLIFrameElement& RenderIFrame::iframeElement() const
 {
     return downcast<HTMLIFrameElement>(RenderFrameBase::frameOwnerElement());
-}
-
-bool RenderIFrame::isNonReplacedAtomicInline() const
-{
-    // FIXME: iFrames should not override this function.
-    return isInline();
 }
 
 bool RenderIFrame::requiresLayer() const

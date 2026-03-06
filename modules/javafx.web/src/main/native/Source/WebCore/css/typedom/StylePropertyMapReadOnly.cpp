@@ -41,45 +41,30 @@
 #include "CSSUnparsedValue.h"
 #include "CSSValueList.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 
 namespace WebCore {
 
-RefPtr<CSSStyleValue> StylePropertyMapReadOnly::reifyValue(RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID, Document& document)
+RefPtr<CSSStyleValue> StylePropertyMapReadOnly::reifyValue(Document& document, RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID)
 {
     if (!value)
         return nullptr;
-    auto result = CSSStyleValueFactory::reifyValue(value.releaseNonNull(), propertyID, &document);
+    auto result = CSSStyleValueFactory::reifyValue(document, value.releaseNonNull(), propertyID);
     return (result.hasException() ? nullptr : RefPtr<CSSStyleValue> { result.releaseReturnValue() });
 }
 
-Vector<RefPtr<CSSStyleValue>> StylePropertyMapReadOnly::reifyValueToVector(RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID, Document& document)
+Vector<RefPtr<CSSStyleValue>> StylePropertyMapReadOnly::reifyValueToVector(Document& document, RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID)
 {
     if (!value)
         return { };
 
-    if (auto* customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(*value)) {
-        if (std::holds_alternative<CSSCustomPropertyValue::SyntaxValueList>(customPropertyValue->value())) {
-            auto& list = std::get<CSSCustomPropertyValue::SyntaxValueList>(customPropertyValue->value());
-
-            Vector<RefPtr<CSSStyleValue>> result;
-            result.reserveInitialCapacity(list.values.size());
-            for (auto& listValue : list.values) {
-                auto styleValue = CSSStyleValueFactory::constructStyleValueForCustomPropertySyntaxValue(listValue);
-                if (!styleValue)
-        return { };
-                result.append(WTFMove(styleValue));
-            }
-            return result;
-        }
+    if (RefPtr valueList = dynamicDowncast<CSSValueList>(*value); valueList && (propertyID && CSSProperty::isListValuedProperty(*propertyID))) {
+    return WTF::map(*valueList, [&](auto& item) {
+            return StylePropertyMapReadOnly::reifyValue(document, Ref { const_cast<CSSValue&>(item) }, propertyID);
+    });
     }
 
-    auto* valueList = dynamicDowncast<CSSValueList>(*value);
-    if (!valueList || (propertyID && !CSSProperty::isListValuedProperty(*propertyID)))
-        return { StylePropertyMapReadOnly::reifyValue(WTFMove(value), propertyID, document) };
-
-    return WTF::map(*valueList, [&](auto& item) {
-        return StylePropertyMapReadOnly::reifyValue(Ref { const_cast<CSSValue&>(item) }, propertyID, document);
-    });
+    return { StylePropertyMapReadOnly::reifyValue(document, WTFMove(value), propertyID) };
 }
 
 StylePropertyMapReadOnly::Iterator::Iterator(StylePropertyMapReadOnly& map, ScriptExecutionContext* context)

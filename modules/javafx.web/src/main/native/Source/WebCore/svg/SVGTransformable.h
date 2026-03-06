@@ -26,19 +26,23 @@
 namespace WebCore {
 
 class AffineTransform;
+class SVGTransform;
 
 class SVGTransformable : public SVGLocatable {
 public:
     virtual ~SVGTransformable();
 
-    static std::optional<SVGTransformValue> parseTransformValue(SVGTransformValue::SVGTransformType, StringParsingBuffer<LChar>&);
-    static std::optional<SVGTransformValue> parseTransformValue(SVGTransformValue::SVGTransformType, StringParsingBuffer<UChar>&);
+    template<typename CharacterType>
+    static bool parseAndReplaceTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<CharacterType>&, SVGTransform&); // Defined in SVGTransformableInlines.h
+
+    template<typename CharacterType>
+    static RefPtr<SVGTransform> parseTransform(SVGTransformValue::SVGTransformType, StringParsingBuffer<CharacterType>&); // Defined in SVGTransformableInlines.h
 
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringView);
     static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<LChar>&);
-    static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<UChar>&);
+    static std::optional<SVGTransformValue::SVGTransformType> parseTransformType(StringParsingBuffer<char16_t>&);
 
-    AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const override { return animatedLocalTransform(); }
+    AffineTransform localCoordinateSpaceTransform(CTMScope) const override { return animatedLocalTransform(); }
     virtual AffineTransform animatedLocalTransform() const = 0;
 };
 

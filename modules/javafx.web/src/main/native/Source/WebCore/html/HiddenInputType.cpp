@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,13 +57,14 @@ FormControlState HiddenInputType::saveFormControlState() const
     // valueAttributeWasUpdatedAfterParsing() never be true for form controls create by createElement() or cloneNode().
     // It's OK for now because we restore values only to form controls created by parsing.
     ASSERT(element());
-    return element()->valueAttributeWasUpdatedAfterParsing() ? FormControlState { { AtomString { element()->value() } } } : FormControlState { };
+    Ref element = *this->element();
+    return element->valueAttributeWasUpdatedAfterParsing() ? FormControlState { { AtomString { element->value() } } } : FormControlState { };
 }
 
 void HiddenInputType::restoreFormControlState(const FormControlState& state)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { state[0] });
+    protectedElement()->setAttributeWithoutSynchronization(valueAttr, AtomString { state[0] });
 }
 
 RenderPtr<RenderElement> HiddenInputType::createInputRenderer(RenderStyle&&)
@@ -90,21 +91,22 @@ bool HiddenInputType::storesValueSeparateFromAttribute()
 void HiddenInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+    protectedElement()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
 }
 
 bool HiddenInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
-    auto name = element()->name();
+    Ref element = *this->element();
+    auto name = element->name();
 
     if (equalIgnoringASCIICase(name, "_charset_"_s)) {
         formData.append(name, String::fromLatin1(formData.encoding().name()));
         return true;
     }
     InputType::appendFormData(formData);
-    if (auto& dirname = element()->attributeWithoutSynchronization(dirnameAttr); !dirname.isNull())
-        formData.append(dirname, element()->directionForFormData());
+    if (auto& dirname = element->attributeWithoutSynchronization(dirnameAttr); !dirname.isNull())
+        formData.append(dirname, element->directionForFormData());
     return true;
 }
 

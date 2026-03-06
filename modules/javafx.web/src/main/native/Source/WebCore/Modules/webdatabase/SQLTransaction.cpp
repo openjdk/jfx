@@ -35,6 +35,7 @@
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "OriginLock.h"
 #include "SQLError.h"
@@ -137,7 +138,7 @@ void SQLTransaction::callErrorCallbackDueToInterruption()
         return;
 
     m_database->document().eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback)]() mutable {
-        errorCallback->handleEvent(SQLError::create(SQLError::DATABASE_ERR, "the database was closed"_s));
+        errorCallback->invoke(SQLError::create(SQLError::DATABASE_ERR, "the database was closed"_s));
     });
 }
 
@@ -201,7 +202,7 @@ void SQLTransaction::checkAndHandleClosedDatabase()
     m_errorCallbackWrapper.clear();
 
     // The next steps should be executed only if we're on the DB thread.
-    if (m_database->databaseThread().getThread() != &Thread::current())
+    if (m_database->databaseThread().getThread() != &Thread::currentSingleton())
         return;
 
     // The current SQLite transaction should be stopped, as well
@@ -211,7 +212,7 @@ void SQLTransaction::checkAndHandleClosedDatabase()
     }
 
     if (m_lockAcquired)
-        m_database->transactionCoordinator()->releaseLock(*this);
+        m_database->transactionCoordinator().releaseLock(*this);
 }
 
 void SQLTransaction::scheduleCallback(void (SQLTransaction::*step)())
@@ -224,7 +225,7 @@ void SQLTransaction::scheduleCallback(void (SQLTransaction::*step)())
 
 void SQLTransaction::acquireLock()
 {
-    m_database->transactionCoordinator()->acquireLock(*this);
+    m_database->transactionCoordinator().acquireLock(*this);
 }
 
 void SQLTransaction::openTransactionAndPreflight()
@@ -387,7 +388,7 @@ void SQLTransaction::deliverTransactionCallback()
     if (callback) {
         m_executeSqlAllowed = true;
 
-        auto result = callback->handleEvent(*this);
+        auto result = callback->invoke(*this);
         shouldDeliverErrorCallback = result.type() == CallbackResultType::ExceptionThrown;
 
         m_executeSqlAllowed = false;
@@ -411,7 +412,7 @@ void SQLTransaction::deliverTransactionErrorCallback()
     RefPtr<SQLTransactionErrorCallback> errorCallback = m_errorCallbackWrapper.unwrap();
     if (errorCallback) {
         m_database->document().eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), transactionError = m_transactionError]() mutable {
-            errorCallback->handleEvent(*transactionError);
+            errorCallback->invoke(*transactionError);
         });
     }
 
@@ -462,7 +463,7 @@ void SQLTransaction::deliverSuccessCallback()
     RefPtr<VoidCallback> successCallback = m_successCallbackWrapper.unwrap();
     if (successCallback) {
         m_database->document().eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback)]() mutable {
-            successCallback->handleEvent();
+            successCallback->invoke();
         });
     }
 

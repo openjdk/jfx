@@ -26,9 +26,6 @@
 #include "config.h"
 #include "ContentsFormat.h"
 
-#if USE(CG)
-#include "ColorSpaceCG.h"
-#endif
 #include "DestinationColorSpace.h"
 #include <wtf/text/TextStream.h>
 
@@ -39,13 +36,21 @@ std::optional<DestinationColorSpace> contentsFormatExtendedColorSpace(ContentsFo
     switch (contentsFormat) {
     case ContentsFormat::RGBA8:
         return std::nullopt;
-#if ENABLE(PIXEL_FORMAT_RGB10) && ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ContentsFormat::RGBA10:
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
         return DestinationColorSpace::ExtendedSRGB();
 #endif
-#if ENABLE(PIXEL_FORMAT_RGBA16F) && ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+        break;
+#endif
+
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ContentsFormat::RGBA16F:
-        return DestinationColorSpace::ExtendedRec2020();
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+        return DestinationColorSpace::ExtendedSRGB();
+#endif
+        break;
 #endif
     }
 
@@ -57,16 +62,16 @@ TextStream& operator<<(TextStream& ts, ContentsFormat contentsFormat)
 {
     switch (contentsFormat) {
     case ContentsFormat::RGBA8:
-        ts << "RGBA8";
+        ts << "RGBA8"_s;
         break;
 #if ENABLE(PIXEL_FORMAT_RGB10)
     case ContentsFormat::RGBA10:
-        ts << "RGBA10";
+        ts << "RGBA10"_s;
         break;
 #endif
 #if ENABLE(PIXEL_FORMAT_RGBA16F)
     case ContentsFormat::RGBA16F:
-        ts << "RGBA16F";
+        ts << "RGBA16F"_s;
         break;
 #endif
     }

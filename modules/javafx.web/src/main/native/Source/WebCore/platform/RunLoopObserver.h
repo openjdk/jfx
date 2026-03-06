@@ -54,6 +54,7 @@ public:
         InspectorFrameBegin,
         InspectorFrameEnd,
         PostRenderingUpdate,
+        OpportunisticTask,
         DisplayRefreshMonitor,
     };
 

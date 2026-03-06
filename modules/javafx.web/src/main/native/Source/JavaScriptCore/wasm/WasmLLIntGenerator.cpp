@@ -38,7 +38,6 @@
 #include "WasmFunctionCodeBlockGenerator.h"
 #include "WasmFunctionParser.h"
 #include "WasmGeneratorTraits.h"
-#include <variant>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/MakeString.h>
@@ -104,8 +103,8 @@ public:
         unsigned m_tryDepth;
     };
 
-    struct ControlType : public std::variant<ControlLoop, ControlTopLevel, ControlBlock, ControlIf, ControlTry, ControlCatch, ControlTryTable> {
-        using Base = std::variant<ControlLoop, ControlTopLevel, ControlBlock, ControlIf, ControlTry, ControlCatch, ControlTryTable>;
+    struct ControlType : public Variant<ControlLoop, ControlTopLevel, ControlBlock, ControlIf, ControlTry, ControlCatch, ControlTryTable> {
+        using Base = Variant<ControlLoop, ControlTopLevel, ControlBlock, ControlIf, ControlTry, ControlCatch, ControlTryTable>;
 
         ControlType()
             : Base(ControlBlock { })
@@ -461,10 +460,10 @@ private:
 
     ExpressionType jsNullConstant()
     {
-        if (UNLIKELY(!m_jsNullConstant.isValid())) {
+        if (!m_jsNullConstant.isValid()) [[unlikely]] {
             m_jsNullConstant = VirtualRegister(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
             m_codeBlock->m_constants.append(JSValue::encode(jsNull()));
-            if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+            if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
                 m_codeBlock->m_constantTypes.append(Types::Externref);
         }
         return m_jsNullConstant;
@@ -472,10 +471,10 @@ private:
 
     ExpressionType zeroConstant()
     {
-        if (UNLIKELY(!m_zeroConstant.isValid())) {
+        if (!m_zeroConstant.isValid()) [[unlikely]] {
             m_zeroConstant = VirtualRegister(FirstConstantRegisterIndex + m_codeBlock->m_constants.size());
             m_codeBlock->m_constants.append(0);
-            if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+            if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
                 m_codeBlock->m_constantTypes.append(Types::I32);
         }
         return m_zeroConstant;
@@ -657,7 +656,6 @@ LLIntGenerator::LLIntGenerator(ModuleInformation& info, FunctionCodeIndex functi
     , m_info(info)
     , m_functionIndex(functionIndex)
 {
-    m_codeBlock->m_callees = FixedBitVector(m_info.internalFunctionCount());
     {
         auto& threadSpecific = threadSpecificBuffer();
         Buffer buffer = WTFMove(*threadSpecific);
@@ -1028,7 +1026,7 @@ auto LLIntGenerator::addConstantWithoutPush(Type type, int64_t value) -> Express
         if (!result.isNewEntry)
             return result.iterator->value;
         m_codeBlock->m_constants.append(value);
-        if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+    if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
             m_codeBlock->m_constantTypes.append(type);
         return source;
 }
@@ -1664,8 +1662,6 @@ auto LLIntGenerator::addCall(FunctionSpaceIndex functionIndex, const TypeDefinit
     ASSERT(callType == CallType::Call || isTailCall);
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
     LLIntCallInformation wasmCalleeInfo = callInformationForCaller(*signature.as<FunctionSignature>());
-    if (!m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex))
-        m_codeBlock->m_callees.testAndSet(functionIndex - m_info.importFunctionCount());
 
     unifyValuesWithBlock(wasmCalleeInfo.arguments, args);
 

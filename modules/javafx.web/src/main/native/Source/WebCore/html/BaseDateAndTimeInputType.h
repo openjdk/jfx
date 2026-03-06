@@ -88,7 +88,7 @@ private:
         DateTimeFormatValidator() { }
 
         void visitField(DateTimeFormat::FieldType, int);
-        void visitLiteral(String&&) { }
+        void visitLiteral(const String&) { }
 
         bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
 
@@ -104,7 +104,7 @@ private:
 
     // InputType functions:
     String visibleValue() const final;
-    String sanitizeValue(const String&) const override;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const override;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     WallTime valueAsDate() const override;
     ExceptionOr<void> setValueAsDate(WallTime) const override;
@@ -115,7 +115,7 @@ private:
     String localizeValue(const String&) const final;
     bool supportsReadOnly() const final;
     bool shouldRespectListAttribute() final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
 
     void handleDOMActivateEvent(Event&) override;
@@ -149,6 +149,8 @@ private:
     void closeDateTimeChooser();
 
     void showPicker() override;
+
+    RefPtr<DateTimeEditElement> protectedDateTimeEditElement() const { return m_dateTimeEditElement; };
 
     RefPtr<DateTimeChooser> m_dateTimeChooser;
     RefPtr<DateTimeEditElement> m_dateTimeEditElement;

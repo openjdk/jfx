@@ -69,4 +69,10 @@ void DataListButtonElement::defaultEventHandler(Event& event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
+bool DataListButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
+}
+
 } // namespace WebCore

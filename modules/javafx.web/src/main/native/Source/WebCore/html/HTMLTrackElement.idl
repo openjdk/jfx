@@ -28,8 +28,8 @@
     Conditional=VIDEO,
     Exposed=Window
 ] interface HTMLTrackElement : HTMLElement {
-    [CEReactions=NotNeeded] attribute [AtomString] DOMString kind;
-    [CEReactions=NotNeeded, Reflect, URL] attribute USVString src;
+    [CEReactions=NotNeeded, ReflectSetter] attribute [AtomString] DOMString kind;
+    [CEReactions=NotNeeded, ReflectURL] attribute USVString src;
     [CEReactions=NotNeeded, Reflect] attribute DOMString srclang;
     [CEReactions=NotNeeded, Reflect] attribute DOMString label;
     [CEReactions=NotNeeded, Reflect] attribute boolean default;

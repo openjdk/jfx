@@ -12,7 +12,7 @@ SUNWprivate_1.0 {
                _ZN3WTF6StringC1ESt4spanIKDsLm18446744073709551615EE;
                _ZN3WTF6StringC1ESt4spanIKDsLm18446744073709551615EE;
                _ZN3WTF6StringC1EPKDsj;
-               _ZN3WTF7RunLoop4mainEv;
+               _ZN3WTF7RunLoop13mainSingletonEv;
                _ZN3WTF6Config25disableFreezingForTestingEv;
                _ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE;
                _ZN3WTF8fastFreeEPv;

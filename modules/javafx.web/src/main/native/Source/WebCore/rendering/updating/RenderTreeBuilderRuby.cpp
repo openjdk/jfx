@@ -28,6 +28,7 @@
 
 #include "RenderBlock.h"
 #include "RenderInline.h"
+#include "RenderObjectInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
 #include "RenderTreeBuilderInline.h"
@@ -82,8 +83,11 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild
                 ASSERT(first->style().display() == DisplayType::Ruby);
                 break;
             }
-            if (first->style().display() == DisplayType::Ruby)
+            if (first->style().display() == DisplayType::Ruby) {
+                if (beforeChild && !beforeChild->isDescendantOf(first.get()))
+                    beforeChild = nullptr;
                 return downcast<RenderElement>(*first);
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013, 2015, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,6 @@ namespace Inspector {
 class RemoteAutomationTarget;
 class RemoteControllableTarget;
 class RemoteInspectionTarget;
-class RemoteInspectorClient;
 
 class RemoteInspector final
 #if PLATFORM(COCOA)
@@ -105,6 +104,8 @@ public:
 #if PLATFORM(COCOA)
             std::optional<bool> allowInsecureMediaCapture;
             std::optional<bool> suppressICECandidateFiltering;
+            std::optional<bool> alwaysAllowAutoplay;
+            std::optional<bool> siteIsolationEnabled;
 #endif
         };
 
@@ -115,7 +116,7 @@ public:
         virtual String browserVersion() const { return { }; }
         virtual void requestAutomationSession(const String& sessionIdentifier, const SessionCapabilities&) = 0;
         virtual void requestedDebuggablesToWakeUp() { };
-#if USE(INSPECTOR_SOCKET_SERVER)
+#if USE(INSPECTOR_SOCKET_SERVER) || USE(GLIB)
         virtual void closeAutomationSession() = 0;
 #endif
     };
@@ -145,7 +146,6 @@ public:
 
     void setupFailed(TargetID);
     void setupCompleted(TargetID);
-    bool waitingForAutomaticInspection(TargetID);
     void updateAutomaticInspectionCandidate(RemoteInspectionTarget*);
 
     bool enabled() const { return m_enabled; }
@@ -171,6 +171,7 @@ public:
 
 #if USE(GLIB)
     void requestAutomationSession(const char* sessionID, const Client::SessionCapabilities&);
+    void automationConnectionDidClose();
 #endif
 #if USE(GLIB) || USE(INSPECTOR_SOCKET_SERVER)
     void setup(TargetID);
@@ -290,7 +291,6 @@ private:
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
-    // Connection from RemoteInspectorClient or WebDriver.
     std::optional<ConnectionID> m_clientConnection;
     bool m_readyToPushListings { false };
 
@@ -318,7 +318,7 @@ private:
 #endif
     bool m_shouldSendParentProcessInformation { false };
     bool m_automaticInspectionEnabled WTF_GUARDED_BY_LOCK(m_mutex) { false };
-    UncheckedKeyHashSet<TargetID, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_pausedAutomaticInspectionCandidates WTF_GUARDED_BY_LOCK(m_mutex);
+    UncheckedKeyHashSet<TargetID, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_automaticInspectionCandidates WTF_GUARDED_BY_LOCK(m_mutex);
 };
 
 } // namespace Inspector

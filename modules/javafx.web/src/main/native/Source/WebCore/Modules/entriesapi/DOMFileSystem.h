@@ -72,9 +72,9 @@ private:
     Ref<FileSystemEntry> fileAsEntry(ScriptExecutionContext&);
 
     String m_name;
-    Ref<File> m_file;
+    const Ref<File> m_file;
     String m_rootPath;
-    Ref<WorkQueue> m_workQueue;
+    const Ref<WorkQueue> m_workQueue;
 };
 
 } // namespace WebCore

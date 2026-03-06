@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -195,5 +195,27 @@
  * that button.  If an application wishes to have the effect, clip, or transform
  * factored into the layout of a node, it should wrap that node in a Group.
  * </p>
+ *
+ * <h2>Layout Orientation</h2>
+ *
+ * The layout orientation for a branch of the scene graph is controlled by the
+ * {@link javafx.scene.Scene#nodeOrientationProperty() Scene.nodeOrientation} and
+ * {@link javafx.scene.Node#nodeOrientationProperty() Node.nodeOrientation} properties.
+ * A value set on a {@code Scene} applies to its root, and a value set on any {@code Node} applies to that
+ * node and its descendants. It is typically left-to-right by default, but can be right-to-left depending
+ * on the locale of the operating system.
+ * <p>
+ * For layout containers, the effective orientation determines how children are ordered and how horizontal
+ * positions are interpreted. In a left-to-right orientation, the first child usually appears at the left edge
+ * and subsequent children flow to the right. Similarly, in a right-to-left orientation, the first child
+ * usually appears at the right edge and subsequent children flow to the left. When a container exposes
+ * named regions, the {@code left} region refers to the leading edge of the container, and the {@code right}
+ * region refers to the trailing edge of the container. In right-to-left mode, the {@code left} region will
+ * therefore be laid out on the right side, and the {@code right} region will be laid out on the left side.
+ * <p>
+ * Authors typically do not need to account for layout orientation when laying out nodes. In right-to-left
+ * mode, a mirroring transform is automatically applied to nodes, flipping the visual flow in the horizontal
+ * direction. If this behavior is not desired, nodes can override {@link javafx.scene.Node#usesMirroring()}
+ * and return {@code false}.
  */
 package javafx.scene.layout;

@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGTests.h"
+#include "SVGTransformList.h"
 #include "SVGTransformable.h"
 #include <wtf/TZoneMalloc.h>
 
@@ -48,7 +50,7 @@ public:
     SVGElement* nearestViewportElement() const override;
     SVGElement* farthestViewportElement() const override;
 
-    AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const override { return SVGTransformable::localCoordinateSpaceTransform(mode); }
+    AffineTransform localCoordinateSpaceTransform(CTMScope mode) const override { return SVGTransformable::localCoordinateSpaceTransform(mode); }
     AffineTransform animatedLocalTransform() const override;
     AffineTransform* ensureSupplementalTransform() override;
     AffineTransform* supplementalTransform() const override { return m_supplementalTransform.get(); }
@@ -89,9 +91,9 @@ private:
     std::unique_ptr<AffineTransform> m_supplementalTransform;
 
     // Used to isolate blend operations caused by masking.
-    bool m_shouldIsolateBlending;
+    bool m_shouldIsolateBlending { false };
 
-    Ref<SVGAnimatedTransformList> m_transform { SVGAnimatedTransformList::create(this) };
+    Ref<SVGAnimatedTransformList> m_transform;
 };
 
 } // namespace WebCore

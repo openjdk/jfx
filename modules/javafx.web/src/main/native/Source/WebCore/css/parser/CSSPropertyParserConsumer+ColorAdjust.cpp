@@ -31,6 +31,7 @@
 #include "CSSParserContext.h"
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 
 namespace WebCore {
@@ -38,7 +39,7 @@ namespace CSSPropertyParserHelpers {
 
 #if ENABLE(DARK_MODE_CSS)
 
-std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange& range, const CSSParserContext&)
+std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'color-scheme'> = normal | [ light | dark | <custom-ident> ]+ && only?
     // https://drafts.csswg.org/css-color-adjust/#propdef-color-scheme
@@ -107,13 +108,14 @@ std::optional<CSS::ColorScheme> consumeUnresolvedColorScheme(CSSParserTokenRange
 
 std::optional<CSS::ColorScheme> parseUnresolvedColorScheme(const String& string, const CSSParserContext& context)
 {
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
+    auto tokenizer = CSSTokenizer(string);
+    auto range = tokenizer.tokenRange();
 
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto result = consumeUnresolvedColorScheme(range, context);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedColorScheme(range, state);
 
     // Handle trailing whitespace.
     range.consumeWhitespace();
@@ -124,9 +126,9 @@ std::optional<CSS::ColorScheme> parseUnresolvedColorScheme(const String& string,
     return result;
 }
 
-RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeColorScheme(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    auto colorScheme = consumeUnresolvedColorScheme(range, context);
+    auto colorScheme = consumeUnresolvedColorScheme(range, state);
     if (!colorScheme)
         return { };
     return CSSColorSchemeValue::create(WTFMove(*colorScheme));

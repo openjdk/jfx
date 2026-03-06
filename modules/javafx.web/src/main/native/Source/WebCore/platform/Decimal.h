@@ -108,13 +108,6 @@ public:
 
     Decimal operator-() const;
 
-    bool operator==(const Decimal&) const;
-    bool operator!=(const Decimal&) const;
-    bool operator<(const Decimal&) const;
-    bool operator<=(const Decimal&) const;
-    bool operator>(const Decimal&) const;
-    bool operator>=(const Decimal&) const;
-
     Decimal operator+(const Decimal&) const;
     Decimal operator-(const Decimal&) const;
     Decimal operator*(const Decimal&) const;
@@ -166,6 +159,10 @@ public:
     }
 
     const EncodedData& value() const { return m_data; }
+
+    friend bool operator==(const Decimal&, const Decimal&);
+    friend bool operator!=(const Decimal&, const Decimal&);
+    friend std::partial_ordering operator<=>(const Decimal&, const Decimal&);
 
 private:
     struct AlignedOperands {
@@ -232,9 +229,29 @@ inline constexpr Decimal::Decimal(Sign sign, int exponent, uint64_t coefficient)
 {
 }
 
-inline bool Decimal::operator==(const Decimal& rhs) const
+inline bool operator==(const Decimal& a, const Decimal& b)
 {
-    return m_data == rhs.m_data || compareTo(rhs).isZero();
+    return a.m_data == b.m_data || a.compareTo(b).isZero();
+}
+
+inline bool operator!=(const Decimal& a, const Decimal& b)
+{
+    if (a.m_data == b.m_data)
+        return false;
+    auto result = a.compareTo(b);
+    return !result.isNaN() && !result.isZero();
+}
+
+inline std::partial_ordering operator<=>(const Decimal& a, const Decimal& b)
+{
+    if (a.m_data == b.m_data)
+        return std::partial_ordering::equivalent;
+    auto result = a.compareTo(b);
+    if (result.isZero())
+        return std::partial_ordering::equivalent;
+    if (result.isNaN())
+        return std::partial_ordering::unordered;
+    return result.isNegative() ? std::partial_ordering::less : std::partial_ordering::greater;
 }
 
 inline constexpr Decimal Decimal::infinity(Sign sign)

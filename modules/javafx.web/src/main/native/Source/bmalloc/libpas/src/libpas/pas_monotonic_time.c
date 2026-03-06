@@ -34,6 +34,14 @@
 #include <time.h>
 #endif
 
+#if PAS_OS(WINDOWS)
+#include <windows.h>
+#endif
+
+#if PAS_OS(LINUX) || PAS_PLATFORM(PLAYSTATION)
+#include <time.h>
+#endif
+
 #if PAS_OS(DARWIN)
 static mach_timebase_info_data_t timebase_info;
 static mach_timebase_info_data_t* timebase_info_ptr;
@@ -89,6 +97,21 @@ uint64_t pas_get_current_monotonic_time_nanoseconds(void)
     struct timespec ts;
     clock_gettime_np(CLOCK_MONOTONIC_FAST, &ts);
     return ts.tv_sec * 1000u * 1000u * 1000u + ts.tv_nsec;
+}
+
+#elif PAS_OS(WINDOWS)
+
+uint64_t pas_get_current_monotonic_time_nanoseconds(void)
+{
+    LARGE_INTEGER frequency, counter;
+    if (!QueryPerformanceFrequency(&frequency) || !QueryPerformanceCounter(&counter))
+        return -1;
+
+    /* Convert to seconds and nanoseconds */
+    long sec = counter.QuadPart / frequency.QuadPart;
+    long nsec = (long)((counter.QuadPart % frequency.QuadPart) * 1000000000LL / frequency.QuadPart);
+
+    return sec * 1.0e9 + nsec;
 }
 
 #endif

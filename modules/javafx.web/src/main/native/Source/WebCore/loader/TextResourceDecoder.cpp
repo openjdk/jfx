@@ -41,8 +41,8 @@ namespace WebCore {
 using namespace HTMLNames;
 
 // You might think we should put these find functions elsewhere, perhaps with the
-// similar functions that operate on UChar, but arguably only the decoder has
-// a reason to process strings of char rather than UChar.
+// similar functions that operate on char16_t, but arguably only the decoder has
+// a reason to process strings of char rather than char16_t.
 
 static size_t find(std::span<const uint8_t> subject, std::span<const uint8_t> target)
 {
@@ -284,16 +284,22 @@ const PAL::TextEncoding& TextResourceDecoder::defaultEncoding(ContentType conten
     return specifiedDefaultEncoding;
 }
 
-inline TextResourceDecoder::TextResourceDecoder(const String& mimeType, const PAL::TextEncoding& specifiedDefaultEncoding, bool usesEncodingDetector)
-    : m_contentType(determineContentType(mimeType))
-    , m_encoding(defaultEncoding(m_contentType, specifiedDefaultEncoding))
+inline TextResourceDecoder::TextResourceDecoder(ContentType contentType, const PAL::TextEncoding& encoding, bool usesEncodingDetector)
+    : m_contentType(contentType)
+    , m_encoding(encoding)
     , m_usesEncodingDetector(usesEncodingDetector)
 {
 }
 
-Ref<TextResourceDecoder> TextResourceDecoder::create(const String& mimeType, const PAL::TextEncoding& defaultEncoding, bool usesEncodingDetector)
+Ref<TextResourceDecoder> TextResourceDecoder::create(const String& mimeType, const PAL::TextEncoding& encoding, bool usesEncodingDetector)
 {
-    return adoptRef(*new TextResourceDecoder(mimeType, defaultEncoding, usesEncodingDetector));
+    auto contentType = determineContentType(mimeType);
+    return adoptRef(*new TextResourceDecoder(contentType, defaultEncoding(contentType, encoding), usesEncodingDetector));
+}
+
+Ref<TextResourceDecoder> TextResourceDecoder::create(ContentType contentType, const PAL::TextEncoding& encoding, bool usesEncodingDetector)
+{
+    return adoptRef(*new TextResourceDecoder(contentType, encoding, usesEncodingDetector));
 }
 
 TextResourceDecoder::~TextResourceDecoder() = default;

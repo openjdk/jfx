@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,20 @@
 package test.com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.MediaQuerySerializer;
+import com.sun.javafx.css.media.SizeQueryType;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
+import com.sun.javafx.css.media.expression.EqualExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.GreaterExpression;
+import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
+import com.sun.javafx.css.media.expression.LessExpression;
+import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
 import com.sun.javafx.css.media.MediaQuery;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,59 +62,114 @@ public class MediaQuerySerializerTest {
 
     @Test
     void serializeConstantExpression() throws IOException {
-        var expected = new ConstantExpression(true);
+        var expected = ConstantExpression.of(true);
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
 
-        expected = new ConstantExpression(false);
+        expected = ConstantExpression.of(false);
         actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeFunctionExpression() throws IOException {
-        var expected = new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true);
+        var expected = FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true);
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
 
-        expected = new FunctionExpression<>("prefers-reduced-motion", null, _ -> null, true);
+        expected = FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true);
         actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeNotExpression() throws IOException {
-        var expected = new NegationExpression(new ConstantExpression(true));
+        var expected = NegationExpression.of(ConstantExpression.of(true));
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeConjunctionExpression() throws IOException {
-        var expected = new ConjunctionExpression(new ConstantExpression(true), new ConstantExpression(false));
+        var expected = ConjunctionExpression.of(ConstantExpression.of(true), ConstantExpression.of(false));
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeDisjunctionExpression() throws IOException {
-        var expected = new DisjunctionExpression(new ConstantExpression(true), new ConstantExpression(false));
+        var expected = DisjunctionExpression.of(ConstantExpression.of(true), ConstantExpression.of(false));
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
+    void serializeGreaterOrEqualExpression() throws IOException {
+        var expected = GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = GreaterOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void serializeGreaterExpression() throws IOException {
+        var expected = GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = GreaterExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void serializeLessOrEqualExpression() throws IOException {
+        var expected = LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = LessOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void serializeLessExpression() throws IOException {
+        var expected = LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = LessExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void serializeEqualExpression() throws IOException {
+        var expected = EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = EqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+    }
+
+    @Test
     void serializeComplexExpression() throws IOException {
-        var expected = new ConjunctionExpression(
-            new DisjunctionExpression(
-                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true),
-                new FunctionExpression<>("prefers-reduced-transparency", "no-preference", _ -> null, false)
+        var expected = ConjunctionExpression.of(
+            DisjunctionExpression.of(
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false)
             ),
-            new ConjunctionExpression(
-                new NegationExpression(
-                    new FunctionExpression<>("prefers-reduced-motion", null, _ -> null, true)
+            ConjunctionExpression.of(
+                NegationExpression.of(
+                    FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true)
                 ),
-                new ConstantExpression(true)
+                ConstantExpression.of(true)
             )
         );
 

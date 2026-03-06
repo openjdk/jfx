@@ -25,7 +25,7 @@
 #include "HTMLMetaElement.h"
 
 #include "Attribute.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -80,7 +80,7 @@ bool HTMLMetaElement::mediaAttributeMatches()
 
     if (!m_mediaQueryList) {
         auto mediaText = attributeWithoutSynchronization(mediaAttr).convertToASCIILowercase();
-        m_mediaQueryList = MQ::MediaQueryParser::parse(mediaText, { document });
+        m_mediaQueryList = MQ::MediaQueryParser::parse(mediaText, document->cssParserContext());
     }
 
     std::optional<RenderStyle> documentStyle;
@@ -100,7 +100,7 @@ bool HTMLMetaElement::mediaAttributeMatches()
 const Color& HTMLMetaElement::contentColor()
 {
     if (!m_contentColor)
-        m_contentColor = CSSParser::parseColorWithoutContext(content());
+        m_contentColor = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(content());
     return *m_contentColor;
 }
 

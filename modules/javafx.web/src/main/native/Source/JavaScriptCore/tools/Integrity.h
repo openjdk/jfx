@@ -186,7 +186,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
     } while (false)
 
 #define IA_ASSERT_WITH_ACTION(assertion, action, ...) do { \
-        if (UNLIKELY(!(assertion))) { \
+        if (!(assertion)) [[unlikely]] { \
             IA_LOG(assertion, __VA_ARGS__); \
             WTFReportBacktraceWithPrefixAndPrintStream(Integrity::logFile(), "    "); \
             action; \
@@ -206,7 +206,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
     } while (false)
 
 #define IA_ASSERT_WITH_ACTION(assertion, action, ...) do { \
-        if (UNLIKELY(!(assertion))) { \
+        if (!(assertion)) [[unlikely]] { \
             IA_LOG(assertion, __VA_ARGS__); \
             WTFReportBacktraceWithPrefixAndPrintStream(Integrity::logFile(), "    "); \
             action; \

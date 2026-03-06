@@ -26,13 +26,21 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
+
+namespace WTF {
+
+class String;
+
+} // namespace WTF
 
 namespace WebCore {
 
 class Node;
 class XPathNSResolver;
 class XPathResult;
+template<typename> class ExceptionOr;
 
 namespace XPath {
 class Expression;

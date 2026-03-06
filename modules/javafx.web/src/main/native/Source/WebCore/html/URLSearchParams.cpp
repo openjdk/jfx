@@ -26,6 +26,7 @@
 #include "URLSearchParams.h"
 
 #include "DOMURL.h"
+#include <ranges>
 #include <wtf/URLParser.h>
 
 namespace WebCore {
@@ -43,7 +44,7 @@ URLSearchParams::URLSearchParams(const Vector<KeyValuePair<String, String>>& pai
 
 URLSearchParams::~URLSearchParams() = default;
 
-ExceptionOr<Ref<URLSearchParams>> URLSearchParams::create(std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&& variant)
+ExceptionOr<Ref<URLSearchParams>> URLSearchParams::create(Variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&& variant)
 {
     auto visitor = WTF::makeVisitor([&](const Vector<Vector<String>>& vector) -> ExceptionOr<Ref<URLSearchParams>> {
         Vector<KeyValuePair<String, String>> pairs;
@@ -58,7 +59,7 @@ ExceptionOr<Ref<URLSearchParams>> URLSearchParams::create(std::variant<Vector<Ve
     }, [&](const String& string) -> ExceptionOr<Ref<URLSearchParams>> {
         return adoptRef(*new URLSearchParams(string, nullptr));
     });
-    return std::visit(visitor, variant);
+    return WTF::visit(visitor, variant);
 }
 
 String URLSearchParams::get(const String& name) const
@@ -81,9 +82,7 @@ bool URLSearchParams::has(const String& name, const String& value) const
 
 void URLSearchParams::sort()
 {
-    std::stable_sort(m_pairs.begin(), m_pairs.end(), [] (const auto& a, const auto& b) {
-        return WTF::codePointCompareLessThan(a.key, b.key);
-    });
+    std::ranges::stable_sort(m_pairs, WTF::codePointCompareLessThan, &PairType::key);
     updateURL();
 }
 

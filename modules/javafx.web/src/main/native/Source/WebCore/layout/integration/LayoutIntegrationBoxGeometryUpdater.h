@@ -55,7 +55,7 @@ public:
 
     Layout::ConstraintsForInlineContent formattingContextConstraints(LayoutUnit availableWidth);
 
-    UncheckedKeyHashMap<const Layout::ElementBox*, LayoutUnit> takeNestedListMarkerOffsets() { return WTFMove(m_nestedListMarkerOffsets); }
+    HashMap<const Layout::ElementBox*, LayoutUnit> takeNestedListMarkerOffsets() { return WTFMove(m_nestedListMarkerOffsets); }
 
 private:
     void updateBoxGeometry(const RenderElement&, std::optional<LayoutUnit> availableWidth, std::optional<Layout::IntrinsicWidthMode>);
@@ -79,7 +79,7 @@ private:
 private:
     WeakPtr<Layout::LayoutState> m_layoutState;
     CheckedPtr<const Layout::ElementBox> m_rootLayoutBox;
-    UncheckedKeyHashMap<const Layout::ElementBox*, LayoutUnit> m_nestedListMarkerOffsets;
+    HashMap<const Layout::ElementBox*, LayoutUnit> m_nestedListMarkerOffsets;
 };
 
 }

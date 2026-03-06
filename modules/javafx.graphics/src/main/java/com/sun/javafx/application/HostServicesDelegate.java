@@ -25,10 +25,9 @@
 
 package com.sun.javafx.application;
 
-import com.sun.javafx.PlatformUtil;
-
 import java.io.File;
 import java.net.URI;
+import java.net.URISyntaxException;
 import javafx.application.Application;
 
 public abstract class HostServicesDelegate {
@@ -123,46 +122,26 @@ public abstract class HostServicesDelegate {
             return toURIString(System.getProperty("user.dir"));
         }
 
-        static final String[] browsers = {
-                "xdg-open",
-                "google-chrome",
-                "firefox",
-                "opera",
-                "konqueror",
-                "mozilla"
-        };
-
         @Override
         public void showDocument(final String uri) {
+            URI link = null;
+            // Normalize link
             try {
-                if (PlatformUtil.isMac()) {
-                    Runtime.getRuntime().exec(new String[] {
-                        "open",
-                        uri
-                    });
-                } else if (PlatformUtil.isWindows()) {
-                    Runtime.getRuntime().exec(new String[] {
-                        "rundll32",
-                        "url.dll,FileProtocolHandler",
-                        uri
-                    });
-                } else { //assume Unix or Linux
-                    String browser = null;
-                    for (String b : browsers) {
-                        if (browser == null && Runtime.getRuntime().exec(
-                                new String[]{"which", b}).getInputStream().read() != -1) {
-                            Runtime.getRuntime().exec(new String[]{browser = b, uri});
-                        }
-                    }
-                    if (browser == null) {
-                        throw new Exception("No web browser found");
-                    }
+                link = new URI(uri);
+            } catch (URISyntaxException ignore) {}
+
+            if (link == null || link.getScheme() == null) {
+                // Try to create URI from file
+                File file = new File(uri);
+                if (file.exists()) {
+                    link = file.toURI();
+                } else {
+                    System.err.println("ERROR: unable to open: " + uri);
+                    return;
                 }
-            } catch (Exception e) {
-                // should not happen
-                // dump stack for debug purpose
-                e.printStackTrace();
             }
+
+            com.sun.glass.ui.Application.GetApplication().showDocument(link.toString());
         }
     }
 }

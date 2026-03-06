@@ -54,9 +54,9 @@
 
 namespace WebCore {
 
-static HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
+static HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>& allSharedWorkerThreadProxies()
 {
-    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WeakRef<SharedWorkerThreadProxy>>> map;
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<SharedWorkerThreadProxy>>> map;
     return map;
 }
 
@@ -87,9 +87,9 @@ static WorkerParameters generateWorkerParameters(const WorkerFetchResult& worker
     };
 }
 
-SharedWorkerThreadProxy* SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
+RefPtr<SharedWorkerThreadProxy> SharedWorkerThreadProxy::byIdentifier(ScriptExecutionContextIdentifier identifier)
 {
-    return allSharedWorkerThreadProxies().get(identifier);
+    return allSharedWorkerThreadProxies().get(identifier).get();
 }
 
 bool SharedWorkerThreadProxy::hasInstances()
@@ -173,7 +173,7 @@ RefPtr<CacheStorageConnection> SharedWorkerThreadProxy::createCacheStorageConnec
 {
     ASSERT(isMainThread());
     if (!m_cacheStorageConnection)
-        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection();
+        m_cacheStorageConnection = Ref { m_cacheStorageProvider.get() }->createCacheStorageConnection();
     return m_cacheStorageConnection;
 }
 
@@ -216,8 +216,10 @@ void SharedWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool)
 
 void SharedWorkerThreadProxy::networkStateChanged(bool isOnLine)
 {
-    for (auto& proxy : allSharedWorkerThreadProxies().values())
+    for (auto& weakProxy : allSharedWorkerThreadProxies().values()) {
+        if (RefPtr proxy = weakProxy.get())
         proxy->notifyNetworkStateChange(isOnLine);
+    }
 }
 
 void SharedWorkerThreadProxy::workerGlobalScopeClosed()

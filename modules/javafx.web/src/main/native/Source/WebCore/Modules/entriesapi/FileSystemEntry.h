@@ -58,7 +58,7 @@ protected:
     Document* document() const;
 
 private:
-    Ref<DOMFileSystem> m_filesystem;
+    const Ref<DOMFileSystem> m_filesystem;
     String m_name;
     String m_virtualPath;
 };

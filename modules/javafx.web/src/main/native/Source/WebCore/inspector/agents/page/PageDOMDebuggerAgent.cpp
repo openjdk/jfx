@@ -27,10 +27,10 @@
 #include "PageDOMDebuggerAgent.h"
 
 #include "Element.h"
+#include "EventTargetInlines.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "LocalFrame.h"
-#include "Node.h"
 
 namespace WebCore {
 

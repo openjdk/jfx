@@ -47,27 +47,27 @@ JSValue JSElementInternals::setFormValue(JSGlobalObject& lexicalGlobalObject, Ca
 
     auto& vm = lexicalGlobalObject.vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(callFrame.argumentCount() < 1)) {
+    if (callFrame.argumentCount() < 1) [[unlikely]] {
         throwException(&lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(&lexicalGlobalObject));
         return { };
     }
 
     EnsureStillAliveScope argument0 = callFrame.uncheckedArgument(0);
     auto value = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument0.value());
-    if (UNLIKELY(value.hasException(throwScope)))
+    if (value.hasException(throwScope)) [[unlikely]]
         return { };
 
     std::optional<CustomElementFormValue> state;
     if (callFrame.argumentCount() > 1) {
         EnsureStillAliveScope argument1 = callFrame.argument(1);
         auto stateConversionResult = convert<JSCustomElementFormValue>(lexicalGlobalObject, argument1.value());
-        if (UNLIKELY(stateConversionResult.hasException(throwScope)))
+        if (stateConversionResult.hasException(throwScope)) [[unlikely]]
             return { };
         state = stateConversionResult.releaseReturnValue();
     }
 
     auto result = wrapped().setFormValue(value.releaseReturnValue(), WTFMove(state));
-    if (UNLIKELY(result.hasException())) {
+    if (result.hasException()) [[unlikely]] {
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
         return { };
     }

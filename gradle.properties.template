@@ -233,6 +233,13 @@
 
 #NUM_COMPILE_THREADS = 12
 
+# Define the maximum number of threads to use when compiling. This allows
+# a script to set the upper limit on the number of threads that will be used
+# without having to know the precise number of available threads on each
+# machine.
+
+#MAX_COMPILE_THREADS = 8
+
 # When you are working from behind a proxy and attempting to access public libraries, you need
 # to set the proxy host and port.
 

@@ -23,6 +23,7 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "SVGBoundingBoxComputation.h"
 #include "SVGTextChunk.h"

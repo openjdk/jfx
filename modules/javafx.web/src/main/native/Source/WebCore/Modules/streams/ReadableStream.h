@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ public:
     static ExceptionOr<Ref<ReadableStream>> create(JSDOMGlobalObject&, Ref<ReadableStreamSource>&&);
     static Ref<ReadableStream> create(Ref<InternalReadableStream>&&);
 
-    ~ReadableStream() = default;
+    virtual ~ReadableStream() = default;
 
     void lock() { m_internalReadableStream->lock(); }
     bool isLocked() const { return m_internalReadableStream->isLocked(); }
@@ -58,7 +58,7 @@ protected:
     explicit ReadableStream(Ref<InternalReadableStream>&&);
 
 private:
-    Ref<InternalReadableStream> m_internalReadableStream;
+    const Ref<InternalReadableStream> m_internalReadableStream;
 };
 
 } // namespace WebCore

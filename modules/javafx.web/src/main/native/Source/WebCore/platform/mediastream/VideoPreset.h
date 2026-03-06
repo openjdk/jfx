@@ -29,6 +29,7 @@
 
 #include "ImageBuffer.h"
 #include "RealtimeMediaSource.h"
+#include <ranges>
 #include <wtf/Lock.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/RunLoop.h>
@@ -118,10 +119,7 @@ inline double VideoPreset::maxFrameRate() const
 
 inline void VideoPreset::sortFrameRateRanges()
 {
-    std::sort(m_data.frameRateRanges.begin(), m_data.frameRateRanges.end(),
-        [&] (const auto& a, const auto& b) -> bool {
-            return a.minimum < b.minimum;
-    });
+    std::ranges::sort(m_data.frameRateRanges, { }, &FrameRateRange::minimum);
 }
 
 } // namespace WebCore

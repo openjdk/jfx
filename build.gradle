@@ -598,6 +598,11 @@ ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
+// Define the maximum number of threads to use when compiling.
+// If MAX_COMPILE_THREADS is > 0, the number of threads used will be the
+// smaller of MAX_COMPILE_THREADS and NUM_COMPILE_THREADS
+defineProperty("MAX_COMPILE_THREADS", "0")
+
 //
 // The next three sections of properties are used to generate the
 // VersionInfo class, and the Windows DLL manifest.
@@ -1404,12 +1409,20 @@ if (CONF != "Release" && CONF != "Debug" && CONF != "DebugNative") {
     logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
 }
 
-// If the number of compile threads is less than 1 then we have a problem!
-if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
+// Compute numCompileThreads as follows:
+// if NUM_COMPILE_THREADS < 1 warn and set numCompileThreads to 1
+// if MAX_COMPILE_THREADS > 0 set to min(numCompileThreads, MAX_COMPILE_THREADS)
+def numCompileThreads = Integer.parseInt(NUM_COMPILE_THREADS.toString())
+if (numCompileThreads < 1) {
     logger.warn("NUM_COMPILE_THREADS was specified as '$NUM_COMPILE_THREADS' which is less than the minimum value of 1. " +
             "Building with a value of 1 instead.")
-    NUM_COMPILE_THREADS = 1
+    numCompileThreads = 1
 }
+def maxCompileThreads = Integer.parseInt(MAX_COMPILE_THREADS.toString())
+if (maxCompileThreads > 0) {
+    numCompileThreads = Math.min(numCompileThreads, maxCompileThreads)
+}
+NUM_COMPILE_THREADS = numCompileThreads;
 
 // Check gradle version
 if (gradle.gradleVersion != jfxGradleVersion) {
@@ -1683,7 +1696,9 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
     def generateShaders = project.task("generate${name}Shaders",
             dependsOn: compileCompilers) {
         doFirst {
-            mkdir "$project.buildDir/gensrc/mtl-headers"
+            if (IS_MAC) {
+                mkdir "$project.buildDir/gensrc/mtl-headers"
+            }
         }
         description = "Generate $name shaders from JSL"
         def sourceDir = project.file("src/main/jsl-$lowerName")
@@ -2477,7 +2492,16 @@ project(":graphics") {
                 jvmArgs += "--module-path=$modulePath"
                 jvmArgs += "--add-modules=javafx.graphics"
                 jvmArgs += decoraAddExports
-                args += ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
+                args += ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect"]
+                if (IS_WINDOWS) {
+                    args += [ "-d3d" ]
+                } else if (IS_MAC) {
+                    args += [ "-mtl" ]
+                }
+                if (IS_LINUX | IS_INCLUDE_ES2) {
+                    args += [ "-es2" ]
+                }
+                args += ["$settings.outputs", "$settings.fileName"]
             }
         }
     }
@@ -2568,100 +2592,45 @@ project(":graphics") {
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
-                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-mtl", "-name", "$file"]
+                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism"]
+                if (IS_WINDOWS) {
+                    args += [ "-d3d" ]
+                } else if (IS_MAC) {
+                    args += [ "-mtl" ]
+                }
+                if (IS_LINUX | IS_INCLUDE_ES2) {
+                    args += [ "-es2" ]
+                }
+                args += ["-name", "$file"]
             }
         }
     }
 
     if (IS_MAC) {
-        task compileMSLPassThroughVS(group: "Build") {
-            def PASSTHROUGH_VS_SRC = file("src/main/native-prism-mtl/msl/PassThroughVS.metal")
+        task compileMetalShaders(group: "Build") {
+            description = "Compiles all .metal files in src/main/native-prism-mtl/msl"
             doLast {
                 mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PASSTHROUGH_VS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PassThroughVS.air" ]
+                def shaderFiles = fileTree(dir: "src/main/native-prism-mtl/msl", include: "**/*.metal")
+                shaderFiles.files.each { file ->
+                    def outputFile = new File("$buildDir/msl", file.name.replace(".metal", ".air"))
+                    execOps.exec { spec ->
+                        commandLine("${metalCompiler}")
+                        args += [ "-std=${mslVersion}" ]
+                        args += [ "-c" ]
+                        args += [ "$file.absolutePath" ]
+                        args += [ "-o" ]
+                        args += [ "$outputFile.absolutePath" ]
+                    }
                 }
             }
         }
-        nativePrism.dependsOn compileMSLPassThroughVS;
-
-        task compileMSLClearRttShaders(group: "Build") {
-            def CLEAR_RTT_VFS_SRC = file("src/main/native-prism-mtl/msl/ClearRttShaders.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$CLEAR_RTT_VFS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/ClearRttShaders.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLClearRttShaders;
-
-        task compileMSLComputeKernels(group: "Build") {
-            def COMPUTE_KERNELS_SRC = file("src/main/native-prism-mtl/msl/ComputeKernels.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$COMPUTE_KERNELS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/ComputeKernels.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLComputeKernels;
-
-        task compileMSLPhongVS(group: "Build") {
-            def PHONG_VS_SRC = file("src/main/native-prism-mtl/msl/PhongVS.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PHONG_VS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PhongVS.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLPhongVS;
-
-        task compileMSLPhongPS(group: "Build") {
-            def PHONG_PS_SRC = file("src/main/native-prism-mtl/msl/PhongPS.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PHONG_PS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PhongPS.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLPhongPS;
+        nativePrism.dependsOn compileMetalShaders;
 
         task linkMSLShader(group: "Build") {
             dependsOn(compileDecoraMSLShaders,
                       compilePrismMSLShaders,
-                      compileMSLPassThroughVS,
-                      compileMSLClearRttShaders,
-                      compileMSLComputeKernels,
-                      compileMSLPhongVS,
-                      compileMSLPhongPS)
+                      compileMetalShaders)
             doLast {
                 mkdir "$buildDir/msl/com/sun/prism/mtl/msl"
                 def shaderFiles = fileTree(dir: "$buildDir/msl", include: "**/*.air")
@@ -2687,7 +2656,7 @@ project(":graphics") {
 
     task initShaderDirs() {
         doLast {
-            // Create empty hlsl dirs on all platforms for IDE support
+            // Create empty hlsl dirs on all platforms for IDE (Eclipse) support
             file("$project.buildDir/hlsl/Decora").mkdirs()
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
@@ -3942,6 +3911,8 @@ project(":web") {
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
                         // pass the MSVC bin dir for icu Third party lib
                         cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+                        // Pass in the rt/build dir and WebKit output dir
+                        cmakeArgs = "$cmakeArgs -DRT_BUILD_ROOT='${rootProject.buildDir}' -DWEBKIT_OUTPUTDIR=${webkitOutputDir}"
 
 
                     } else if (t.name == "mac") {
@@ -4448,6 +4419,9 @@ allprojects {
             doLast {
                 setFileTimestamps(archiveFile, buildInstant)
             }
+        } else {
+            preserveFileTimestamps = true
+            reproducibleFileOrder = false
         }
     }
 
@@ -5276,6 +5250,12 @@ compileTargets { t ->
             from srcLegalDir
             into dstLegalDir
 
+            // Include gcc.md only on Linux
+            // FIXME: implement a more general solution; see JDK-8247948
+            if (!IS_LINUX) {
+                exclude("gcc.md")
+            }
+
             // Exclude ANGLE since we (currently) do not use it
             exclude("angle.md")
         }
@@ -5349,6 +5329,12 @@ compileTargets { t ->
             from srcLegalDir
 
             into dstLegalDir
+
+            // Include gcc.md only on Linux
+            // FIXME: implement a more general solution; see JDK-8247948
+            if (!IS_LINUX) {
+                exclude("gcc.md")
+            }
 
             // Exclude ANGLE since we (currently) do not use it
             exclude("angle.md")

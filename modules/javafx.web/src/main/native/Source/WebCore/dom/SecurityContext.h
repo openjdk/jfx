@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,9 @@
 
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
-#include "SandboxFlags.h"
+#include "ReferrerPolicy.h"
 #include <memory>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
@@ -41,6 +42,7 @@ class SecurityOrigin;
 class SecurityOriginPolicy;
 class ContentSecurityPolicy;
 struct CrossOriginOpenerPolicy;
+struct IntegrityPolicy;
 struct PolicyContainer;
 enum class ReferrerPolicy : uint8_t;
 
@@ -82,6 +84,12 @@ public:
 
     virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const { return m_crossOriginOpenerPolicy; }
     void setCrossOriginOpenerPolicy(const CrossOriginOpenerPolicy& crossOriginOpenerPolicy) { m_crossOriginOpenerPolicy = crossOriginOpenerPolicy; }
+
+    const IntegrityPolicy* integrityPolicy() const;
+    void setIntegrityPolicy(std::unique_ptr<IntegrityPolicy>&&);
+
+    const IntegrityPolicy* integrityPolicyReportOnly() const;
+    void setIntegrityPolicyReportOnly(std::unique_ptr<IntegrityPolicy>&&);
 
     virtual ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
     void setReferrerPolicy(ReferrerPolicy);
@@ -139,6 +147,8 @@ private:
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
     CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
     CrossOriginOpenerPolicy m_crossOriginOpenerPolicy;
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicy;
+    std::unique_ptr<IntegrityPolicy> m_integrityPolicyReportOnly;
     SandboxFlags m_creationSandboxFlags;
     SandboxFlags m_sandboxFlags;
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::Default };

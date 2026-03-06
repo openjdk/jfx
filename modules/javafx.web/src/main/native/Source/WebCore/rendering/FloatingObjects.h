@@ -53,6 +53,9 @@ public:
 
     Type type() const { return static_cast<Type>(m_type); }
     RenderBox& renderer() const { ASSERT(m_renderer); return *m_renderer; }
+#if ENABLE(TREE_DEBUGGING)
+    bool hasRenderer() const { return !!m_renderer; }
+#endif
 
     bool isPlaced() const { return m_isPlaced; }
     void setIsPlaced(bool placed = true) { m_isPlaced = placed; }

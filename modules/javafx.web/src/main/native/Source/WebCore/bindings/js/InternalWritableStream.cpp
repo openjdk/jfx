@@ -61,7 +61,7 @@ ExceptionOr<JSC::JSValue> InternalWritableStream::writeChunkForBingings(JSC::JSG
     ASSERT(!arguments.hasOverflowed());
     auto& writerPrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().acquireWritableStreamDefaultWriterPrivateName();
     auto writerResult = invokeWritableStreamFunction(globalObject, writerPrivateName, arguments);
-    if (UNLIKELY(writerResult.hasException()))
+    if (writerResult.hasException()) [[unlikely]]
         return writerResult.releaseException();
 
     arguments.clear();
@@ -70,7 +70,7 @@ ExceptionOr<JSC::JSValue> InternalWritableStream::writeChunkForBingings(JSC::JSG
     ASSERT(!arguments.hasOverflowed());
     auto& writePrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamDefaultWriterWritePrivateName();
     auto writeResult = invokeWritableStreamFunction(globalObject, writePrivateName, arguments);
-    if (UNLIKELY(writeResult.hasException()))
+    if (writeResult.hasException()) [[unlikely]]
         return writeResult.releaseException();
 
     arguments.clear();
@@ -78,7 +78,7 @@ ExceptionOr<JSC::JSValue> InternalWritableStream::writeChunkForBingings(JSC::JSG
     ASSERT(!arguments.hasOverflowed());
     auto& releasePrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamDefaultWriterReleasePrivateName();
     auto releaseResult = invokeWritableStreamFunction(globalObject, releasePrivateName, arguments);
-    if (UNLIKELY(releaseResult.hasException()))
+    if (releaseResult.hasException()) [[unlikely]]
         return releaseResult.releaseException();
 
     return writeResult;
@@ -95,7 +95,7 @@ ExceptionOr<Ref<InternalWritableStream>> InternalWritableStream::createFromUnder
     ASSERT(!arguments.hasOverflowed());
 
     auto result = invokeWritableStreamFunction(globalObject, privateName, arguments);
-    if (UNLIKELY(result.hasException()))
+    if (result.hasException()) [[unlikely]]
         return result.releaseException();
 
     ASSERT(result.returnValue().isObject());
@@ -145,7 +145,7 @@ void InternalWritableStream::lock()
     ASSERT(!arguments.hasOverflowed());
 
     invokeWritableStreamFunction(*globalObject, privateName, arguments);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 
@@ -198,7 +198,7 @@ void InternalWritableStream::closeIfPossible()
     ASSERT(!arguments.hasOverflowed());
 
     invokeWritableStreamFunction(*globalObject, privateName, arguments);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 
@@ -223,7 +223,7 @@ void InternalWritableStream::errorIfPossible(Exception&& exception)
     ASSERT(!arguments.hasOverflowed());
 
     invokeWritableStreamFunction(*globalObject, privateName, arguments);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 

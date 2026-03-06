@@ -33,7 +33,7 @@ namespace Calculation {
 
 static auto copy(double) -> double;
 static auto copy(const std::optional<Child>& root) -> std::optional<Child>;
-static auto copy(const Random::CachingOptions&) -> Random::CachingOptions;
+static auto copy(const Random::Fixed&) -> Random::Fixed;
 static auto copy(const None&) -> None;
 static auto copy(const ChildOrNone&) -> ChildOrNone;
 static auto copy(const Children&) -> Children;
@@ -62,9 +62,9 @@ std::optional<Child> copy(const std::optional<Child>& root)
     return std::nullopt;
 }
 
-Random::CachingOptions copy(const Random::CachingOptions& options)
+Random::Fixed copy(const Random::Fixed& root)
 {
-    return options;
+    return root;
 }
 
 None copy(const None& none)

@@ -50,6 +50,7 @@ static bool isVisibleToReportingObservers(const String& type)
         String { "coep"_s },
         String { "deprecation"_s },
         String { "test"_s },
+        String { "integrity-violation"_s },
     });
     return visibleTypes->contains(type);
 }
@@ -135,17 +136,17 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
     ASSERT(m_reportingScope && scriptExecutionContext() == m_reportingScope->scriptExecutionContext());
 
     // Step 4.3.4: Queue a task to § 4.4
-    queueTaskKeepingObjectAlive(*this, TaskSource::Reporting, [protectedThis = Ref { *this }, protectedCallback = Ref { m_callback }] {
-        RefPtr context = protectedThis->scriptExecutionContext();
+    queueTaskKeepingObjectAlive(*this, TaskSource::Reporting, [protectedCallback = Ref { m_callback }](auto& observer) {
+        RefPtr context = observer.scriptExecutionContext();
         ASSERT(context);
     if (!context)
         return;
 
         // Step 4.4: Invoke reporting observers with notify list with a copy of global’s registered reporting observer list.
-        auto reports = protectedThis->takeRecords();
+        auto reports = observer.takeRecords();
 
         InspectorInstrumentation::willFireObserverCallback(*context, "ReportingObserver"_s);
-        protectedCallback->handleEvent(reports, protectedThis);
+        protectedCallback->invoke(reports, observer);
         InspectorInstrumentation::didFireObserverCallback(*context);
     });
 }

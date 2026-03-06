@@ -38,85 +38,12 @@ int intValueForLength(const Length& length, LayoutUnit maximumValue)
 
 LayoutUnit valueForLength(const Length& length, LayoutUnit maximumValue)
 {
-    switch (length.type()) {
-    case LengthType::Fixed:
-    case LengthType::Percent:
-    case LengthType::Calculated:
-        return minimumValueForLength(length, maximumValue);
-    case LengthType::FillAvailable:
-    case LengthType::Auto:
-    case LengthType::Normal:
-        return maximumValue;
-    case LengthType::Relative:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::Content:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::FitContent:
-    case LengthType::Undefined:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-// FIXME: when subpixel layout is supported this copy of floatValueForLength() can be removed. See bug 71143.
-float floatValueForLength(const Length& length, LayoutUnit maximumValue)
-{
-    switch (length.type()) {
-    case LengthType::Fixed:
-        return length.value();
-    case LengthType::Percent:
-        return static_cast<float>(maximumValue * length.percent() / 100.0f);
-    case LengthType::FillAvailable:
-    case LengthType::Auto:
-    case LengthType::Normal:
-        return static_cast<float>(maximumValue);
-    case LengthType::Calculated:
-        return length.nonNanCalculatedValue(maximumValue);
-    case LengthType::Relative:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::Content:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::FitContent:
-    case LengthType::Undefined:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
+    return valueForLengthWithLazyMaximum<LayoutUnit, LayoutUnit>(length, [&] ALWAYS_INLINE_LAMBDA { return maximumValue; });
 }
 
 float floatValueForLength(const Length& length, float maximumValue)
 {
-    switch (length.type()) {
-    case LengthType::Fixed:
-        return length.value();
-    case LengthType::Percent:
-        return static_cast<float>(maximumValue * length.percent() / 100.0f);
-    case LengthType::FillAvailable:
-    case LengthType::Auto:
-    case LengthType::Normal:
-        return static_cast<float>(maximumValue);
-    case LengthType::Calculated:
-        return length.nonNanCalculatedValue(maximumValue);
-    case LengthType::Relative:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::Content:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::FitContent:
-    case LengthType::Undefined:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
+    return valueForLengthWithLazyMaximum<float, float>(length, [&] ALWAYS_INLINE_LAMBDA { return maximumValue; });
 }
 
 LayoutSize sizeForLengthSize(const LengthSize& length, const LayoutSize& maximumValue)

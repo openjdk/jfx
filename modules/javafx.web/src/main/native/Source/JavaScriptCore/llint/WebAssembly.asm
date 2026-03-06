@@ -799,10 +799,8 @@ end
 if JSVALUE64
     transferp WebAssemblyFunction::m_boxedWasmCallee[ws1], constexpr (CallFrameSlot::callee - CallerFrameAndPC::sizeInRegisters) * 8[sp]
 else
-    break
-    # FIXME: Implement these instructions for armv7.
-    # transferp Wasm::JSEntrypointCallee::m_wasmCallee + PayloadOffset[ws1], constexpr (CallFrameSlot::callee - CallerFrameAndPC::sizeInRegisters) * 8 + PayloadOffset[sp]
-    # transferp Wasm::JSEntrypointCallee::m_wasmCallee + TagOffset[ws1], constexpr (CallFrameSlot::callee - CallerFrameAndPC::sizeInRegisters) * 8 + TagOffset[sp]
+    transferp WebAssemblyFunction::m_boxedWasmCallee + PayloadOffset[ws1], constexpr (CallFrameSlot::callee - CallerFrameAndPC::sizeInRegisters) * 8 + PayloadOffset[sp]
+    transferp WebAssemblyFunction::m_boxedWasmCallee + TagOffset[ws1], constexpr (CallFrameSlot::callee - CallerFrameAndPC::sizeInRegisters) * 8 + TagOffset[sp]
 end
 
     call ws0, WasmEntryPtrTag
@@ -900,9 +898,9 @@ end
     cCall2(_operationJSToWasmEntryWrapperBuildReturnFrame)
 
 if ARMv7
-    branchIfWasmException(_wasm_throw_from_slow_path_trampoline)
+    branchIfWasmException(.unwind)
 else
-    btpnz r1, _wasm_throw_from_slow_path_trampoline
+    btpnz r1, .unwind
 end
 
     # Clean up and return
@@ -920,7 +918,19 @@ end
 
 .buildEntryFrameThrew:
     getWebAssemblyFunctionAndSetNativeCalleeAndInstance(ws1, ws0)
-    jmp _wasm_throw_from_slow_path_trampoline
+
+.unwind:
+    loadp JSWebAssemblyInstance::m_vm[wasmInstance], a0
+    copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(a0, a1)
+
+# Should be (not USE_BUILTIN_FRAME_ADDRESS) but need to keep down the size of LLIntAssembly.h
+if ASSERT_ENABLED or ARMv7
+    storep cfr, JSWebAssemblyInstance::m_temporaryCallFrame[wasmInstance]
+end
+
+    move wasmInstance, a0
+    call _operationWasmUnwind
+    jumpToException()
 end)
 
 # This is the interpreted analogue to WasmBinding.cpp:wasmToWasm
@@ -1008,7 +1018,7 @@ op(wasm_to_js_wrapper_entry, macro()
     # are still in the caller frame.
     # Load this before we create the stack frame, since we lose old cfr, which we wrote Callee to
 
-    # We repurpose this slot temporarily for a WasmCallableFunction* from doWasmCall and friends.
+    # We repurpose this slot temporarily for a WasmCallableFunction* from resolveWasmCall and friends.
     tagReturnAddress sp
     preserveCallerPCAndCFR()
 
@@ -1042,6 +1052,10 @@ else
     forEachArgumentFPR(macro (offset, fpr)
         stored fpr, offset[sp]
     end)
+end
+
+if ASSERT_ENABLED or ARMv7
+    storep cfr, JSWebAssemblyInstance::m_temporaryCallFrame[wasmInstance]
 end
 
     move wasmInstance, a0
@@ -1099,6 +1113,9 @@ end
 
 .postcall:
     storep r0, [sp]
+if not JSVALUE64
+    storep r1, TagOffset[sp]
+end
 
     loadp WasmToJSCallableFunctionSlot[cfr], a0
     call _operationWasmToJSExitNeedToUnpack
@@ -1176,11 +1193,11 @@ end
     ret
 
 .handleException:
-    loadp (constexpr (JSWebAssemblyInstance::offsetOfVM()))[wasmInstance], a0
+    loadp JSWebAssemblyInstance::m_vm[wasmInstance], a0
     copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(a0, a1)
 
-if ASSERT_ENABLED
-    storep cfr, (constexpr (JSWebAssemblyInstance::offsetOfTemporaryCallFrame()))[wasmInstance]
+if ASSERT_ENABLED or ARMv7
+    storep cfr, JSWebAssemblyInstance::m_temporaryCallFrame[wasmInstance]
 end
 
     move wasmInstance, a0

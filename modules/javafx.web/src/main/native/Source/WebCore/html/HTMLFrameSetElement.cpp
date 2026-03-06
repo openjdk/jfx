@@ -24,6 +24,7 @@
 #include "config.h"
 #include "HTMLFrameSetElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
@@ -41,6 +42,7 @@
 #include "MouseEvent.h"
 #include "NodeName.h"
 #include "RenderFrameSet.h"
+#include "RenderObjectInlines.h"
 #include "Text.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -87,7 +89,7 @@ void HTMLFrameSetElement::collectPresentationalHintsForAttribute(const Qualified
 void HTMLFrameSetElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (auto& eventName = HTMLBodyElement::eventNameForWindowEventHandlerAttribute(name); !eventName.isNull())
-        document().setWindowAttributeEventListener(eventName, name, newValue, mainThreadNormalWorldSingleton());
+        protectedDocument()->setWindowAttributeEventListener(eventName, name, newValue, mainThreadNormalWorldSingleton());
     else
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
@@ -191,7 +193,7 @@ void HTMLFrameSetElement::defaultEventHandler(Event& event)
     HTMLElement::defaultEventHandler(event);
 }
 
-void HTMLFrameSetElement::willRecalcStyle(Style::Change)
+void HTMLFrameSetElement::willRecalcStyle(OptionSet<Style::Change>)
 {
     if (needsStyleRecalc() && renderer())
         renderer()->setNeedsLayout();

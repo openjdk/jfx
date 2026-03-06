@@ -25,8 +25,12 @@
 
 #include "config.h"
 #include "PageHeapAgent.h"
-#include <wtf/TZoneMallocInlines.h>
 
+#include "CustomElementRegistry.h"
+#include "JSCustomElementInterface.h"
+#include "JSElement.h"
+#include "JSNode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -56,6 +60,35 @@ Inspector::Protocol::ErrorStringOr<void> PageHeapAgent::disable()
     m_instrumentingAgents.setEnabledPageHeapAgent(nullptr);
 
     return WebHeapAgent::disable();
+}
+
+String PageHeapAgent::heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuilder& builder, JSC::JSCell* cell, const String& currentClassName)
+{
+    if (currentClassName == "HTMLElement") {
+        if (auto* jsElement = jsDynamicCast<JSElement*>(cell)) {
+            Ref element = jsElement->wrapped();
+            if (element->isDefinedCustomElement()) {
+                if (RefPtr customElementRegistry = element->customElementRegistry()) {
+                    if (RefPtr customElementInterface = customElementRegistry->findInterface(element)) {
+                        if (JSC::JSObject* customElementConstructorObject = customElementInterface->constructor()) {
+                            if (JSC::JSFunction* customElementConstructorFunction = jsDynamicCast<JSC::JSFunction*>(customElementConstructorObject)) {
+                                String customElementClassName = customElementConstructorFunction->calculatedDisplayName(customElementConstructorFunction->vm());
+                                if (!customElementClassName.isNull())
+                                    return customElementClassName;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return JSC::HeapSnapshotBuilder::Client::heapSnapshotBuilderOverrideClassName(builder, cell, currentClassName);
+}
+
+bool PageHeapAgent::heapSnapshotBuilderIsElement(JSC::HeapSnapshotBuilder&, JSC::JSCell* cell)
+{
+    return jsDynamicCast<JSNode*>(cell);
 }
 
 void PageHeapAgent::mainFrameNavigated()

@@ -48,7 +48,7 @@ static inline const char* pas_tri_state_get_string(pas_tri_state tri_state)
     case pas_tri_state_yes:
         return "yes";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -62,7 +62,7 @@ static inline bool pas_tri_state_equals_boolean(pas_tri_state tri_state, bool bo
     case pas_tri_state_yes:
         return boolean;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

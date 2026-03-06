@@ -34,11 +34,10 @@ namespace WebCore {
 
 class MockContentFilter final : public PlatformContentFilter {
     WTF_MAKE_TZONE_ALLOCATED(MockContentFilter);
-    friend UniqueRef<MockContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<MockContentFilter>();
 
 public:
     static void ensureInstalled();
-    static UniqueRef<MockContentFilter> create();
+    static Ref<MockContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override;
     void responseReceived(const ResourceResponse&) override;

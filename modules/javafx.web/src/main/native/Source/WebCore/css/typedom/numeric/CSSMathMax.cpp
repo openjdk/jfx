@@ -29,7 +29,6 @@
 #include "CSSCalcTree.h"
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>

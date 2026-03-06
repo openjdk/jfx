@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -127,7 +127,7 @@ private:
     ReplacementFragment* ensureReplacementFragment();
     bool performTrivialReplace(const ReplacementFragment&);
 
-    void updateDirectionForStartOfInsertedContentIfNeeded();
+    void updateDirectionForStartOfInsertedContentIfNeeded(const InsertedNodes&);
 
     RefPtr<DocumentFragment> protectedDocumentFragment() const { return m_documentFragment; }
 
@@ -138,7 +138,7 @@ private:
     bool m_selectReplacement;
     bool m_smartReplace;
     bool m_matchStyle;
-    RefPtr<DocumentFragment> m_documentFragment;
+    const RefPtr<DocumentFragment> m_documentFragment;
     std::unique_ptr<ReplacementFragment> m_replacementFragment;
     String m_documentFragmentHTMLMarkup;
     String m_documentFragmentPlainText;

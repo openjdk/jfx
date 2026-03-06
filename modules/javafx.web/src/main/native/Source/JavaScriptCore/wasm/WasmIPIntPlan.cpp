@@ -103,7 +103,7 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileMetadata(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::IPIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
@@ -130,25 +130,26 @@ void IPIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     if (!m_callees) {
         auto callee = IPIntCallee::create(*m_wasmInternalFunctions[functionIndex], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
         ASSERT(!callee->entrypoint());
-
-#if ENABLE(JIT)
-        if (Options::useWasmJIT() && Options::useBBQJIT()) {
-            if (m_moduleInformation->usesSIMD(functionIndex))
-                callee->setEntrypoint(LLInt::inPlaceInterpreterSIMDEntryThunk().retaggedCode<WasmEntryPtrTag>());
-            else
-                callee->setEntrypoint(LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>());
-        }
-#else
-        if (false);
-#endif
-        else {
-            if (m_moduleInformation->usesSIMD(functionIndex)) {
+        bool usesSIMD = m_moduleInformation->usesSIMD(functionIndex);
+        if (usesSIMD && !Options::useBBQJIT()) {
                 Locker locker { m_lock };
                 Base::fail(makeString("JIT is disabled, but the entrypoint for "_s, functionIndex.rawIndex(), " requires JIT"_s));
                 return;
             }
-            callee->setEntrypoint(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline));
+
+        CodePtr<WasmEntryPtrTag> entrypoint { };
+#if ENABLE(JIT)
+        if (Options::useJIT()) {
+            if (usesSIMD)
+                entrypoint = LLInt::inPlaceInterpreterSIMDEntryThunk().retaggedCode<WasmEntryPtrTag>();
+            else
+                entrypoint = LLInt::inPlaceInterpreterEntryThunk().retaggedCode<WasmEntryPtrTag>();
         }
+#endif
+        if (!entrypoint)
+            entrypoint = LLInt::getCodeFunctionPtr<CFunctionPtrTag>(ipint_trampoline);
+
+        callee->setEntrypoint(entrypoint);
         ipintCallee = callee.ptr();
         m_calleesVector[functionIndex] = WTFMove(callee);
     } else
@@ -182,7 +183,7 @@ void IPIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }

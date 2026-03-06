@@ -30,15 +30,15 @@
 
 namespace WebCore {
 
-float PlatformDynamicRangeLimit::normalizedAverage(float standardPercent, float constrainedHighPercent, float noLimitPercent)
+PlatformDynamicRangeLimit::ValueType PlatformDynamicRangeLimit::normalizedAverage(float standardPercent, float constrainedPercent, float noLimitPercent)
 {
-    if (!std::isfinite(standardPercent) || standardPercent < 0 || standardPercent > 100 || !std::isfinite(constrainedHighPercent) || constrainedHighPercent < 0 || constrainedHighPercent > 100 || !std::isfinite(noLimitPercent) || noLimitPercent < 0 || noLimitPercent > 100) {
+    if (!std::isfinite(standardPercent) || standardPercent < 0 || standardPercent > 100 || !std::isfinite(constrainedPercent) || constrainedPercent < 0 || constrainedPercent > 100 || !std::isfinite(noLimitPercent) || noLimitPercent < 0 || noLimitPercent > 100) {
         ASSERT(std::isfinite(standardPercent));
         ASSERT(standardPercent >= 0);
         ASSERT(standardPercent <= 100);
-        ASSERT(std::isfinite(constrainedHighPercent));
-        ASSERT(constrainedHighPercent >= 0);
-        ASSERT(constrainedHighPercent <= 100);
+        ASSERT(std::isfinite(constrainedPercent));
+        ASSERT(constrainedPercent >= 0);
+        ASSERT(constrainedPercent <= 100);
         ASSERT(std::isfinite(noLimitPercent));
         ASSERT(noLimitPercent >= 0);
         ASSERT(noLimitPercent <= 100);
@@ -46,13 +46,13 @@ float PlatformDynamicRangeLimit::normalizedAverage(float standardPercent, float 
         return standardValue;
     }
 
-    float sum = standardPercent + constrainedHighPercent + noLimitPercent;
+    float sum = standardPercent + constrainedPercent + noLimitPercent;
     if (!sum) {
         ASSERT(sum);
         return standardValue;
     }
 
-    float weightedSum = standardPercent * standardValue + constrainedHighPercent * constrainedHighValue + noLimitPercent * noLimitValue;
+    float weightedSum = standardPercent * standardValue + constrainedPercent * constrainedValue + noLimitPercent * noLimitValue;
     float weightedAverage = WTF::safeFPDivision(weightedSum, sum);
     return std::clamp(weightedAverage, 0.0f, 1.0f);
 }

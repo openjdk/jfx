@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 
 #include "CommonVM.h"
 #include "DOMWrapperWorld.h"
+#include "FrameInlines.h"
 #include "GCController.h"
 #include "JSDOMWindowBase.h"
 #include "JSWindowProxy.h"
@@ -59,14 +60,18 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(WindowProxy);
 
 WindowProxy::WindowProxy(Frame& frame)
     : m_frame(frame)
-    , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
+}
+
+Ref<WindowProxy> WindowProxy::create(Frame& frame)
+{
+    return adoptRef(*new WindowProxy(frame));
 }
 
 WindowProxy::~WindowProxy()
 {
     ASSERT(!m_frame);
-    ASSERT(m_jsWindowProxies->isEmpty());
+    ASSERT(m_jsWindowProxies.isEmpty());
 }
 
 Frame* WindowProxy::frame() const
@@ -80,13 +85,13 @@ void WindowProxy::detachFromFrame()
 
     m_frame = nullptr;
 
-    // It's likely that destroying windowProxies will create a lot of garbage.
-    if (!m_jsWindowProxies->isEmpty()) {
-        while (!m_jsWindowProxies->isEmpty()) {
-            auto it = m_jsWindowProxies->begin();
+    // It's likely that destroying proxies will create a lot of garbage.
+    if (!m_jsWindowProxies.isEmpty()) {
+        do {
+            auto it = m_jsWindowProxies.begin();
             it->value->window()->setConsoleClient(nullptr);
             destroyJSWindowProxy(*it->key);
-        }
+        } while (!m_jsWindowProxies.isEmpty());
         collectGarbageAfterWindowProxyDestruction();
     }
 }
@@ -94,15 +99,14 @@ void WindowProxy::detachFromFrame()
 void WindowProxy::replaceFrame(Frame& frame)
 {
     ASSERT(m_frame);
-    ASSERT(is<LocalFrame>(m_frame) != is<LocalFrame>(frame));
     m_frame = frame;
-    setDOMWindow(frame.window());
+    setDOMWindow(frame.protectedWindow().get());
 }
 
 void WindowProxy::destroyJSWindowProxy(DOMWrapperWorld& world)
 {
-    ASSERT(m_jsWindowProxies->contains(&world));
-    m_jsWindowProxies->remove(&world);
+    ASSERT(m_jsWindowProxies.contains(&world));
+    m_jsWindowProxies.remove(&world);
     world.didDestroyWindowProxy(this);
 }
 
@@ -110,20 +114,20 @@ JSWindowProxy& WindowProxy::createJSWindowProxy(DOMWrapperWorld& world)
 {
     ASSERT(m_frame);
 
-    ASSERT(!m_jsWindowProxies->contains(&world));
+    ASSERT(!m_jsWindowProxies.contains(&world));
     ASSERT(m_frame->window());
 
     VM& vm = world.vm();
 
-    Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->window(), world));
-    m_jsWindowProxies->add(&world, jsWindowProxy);
+    Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->protectedWindow().get(), world));
+    m_jsWindowProxies.add(&world, jsWindowProxy);
     world.didCreateWindowProxy(this);
     return *jsWindowProxy.get();
 }
 
 Vector<JSC::Strong<JSWindowProxy>> WindowProxy::jsWindowProxiesAsVector() const
 {
-    return copyToVector(m_jsWindowProxies->values());
+    return copyToVector(m_jsWindowProxies.values());
 }
 
 JSDOMGlobalObject* WindowProxy::globalObject(DOMWrapperWorld& world)
@@ -139,14 +143,14 @@ JSWindowProxy& WindowProxy::createJSWindowProxyWithInitializedScript(DOMWrapperW
 
     JSLockHolder lock(world.vm());
     auto& windowProxy = createJSWindowProxy(world);
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(*m_frame))
-        localFrame->script().initScriptForWindowProxy(windowProxy);
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*m_frame))
+        localFrame->checkedScript()->initScriptForWindowProxy(windowProxy);
     return windowProxy;
 }
 
 void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(DOMWindow* newDOMWindow, bool goingIntoBackForwardCache)
 {
-    if (m_jsWindowProxies->isEmpty())
+    if (m_jsWindowProxies.isEmpty())
         return;
 
     JSLockHolder lock(commonVM());
@@ -172,7 +176,7 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
 {
     ASSERT(newDOMWindow);
 
-    if (m_jsWindowProxies->isEmpty())
+    if (m_jsWindowProxies.isEmpty())
         return;
 
     ASSERT(m_frame);
@@ -186,13 +190,13 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
         windowProxy->setWindow(*newDOMWindow);
 
         ScriptController* scriptController = nullptr;
-        Page* page = m_frame->page();
+        RefPtr page = m_frame->page();
         if (auto* localFrame = dynamicDowncast<LocalFrame>(*m_frame))
             scriptController = &localFrame->script();
 
         // ScriptController's m_cacheableBindingRootObject persists between page navigations
         // so needs to know about the new JSDOMWindow.
-        if (auto* cacheableBindingRootObject = scriptController ? scriptController->existingCacheableBindingRootObject() : nullptr)
+        if (RefPtr cacheableBindingRootObject = scriptController ? scriptController->existingCacheableBindingRootObject() : nullptr)
             cacheableBindingRootObject->updateGlobalObject(windowProxy->window());
 
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
@@ -205,23 +209,30 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
 
 void WindowProxy::attachDebugger(JSC::Debugger* debugger)
 {
-    for (auto& windowProxy : m_jsWindowProxies->values())
+    for (auto& windowProxy : m_jsWindowProxies.values())
         windowProxy->attachDebugger(debugger);
 }
 
 DOMWindow* WindowProxy::window() const
 {
-    return m_frame ? m_frame->window() : nullptr;
+    RefPtr frame = m_frame.get();
+    return frame ? frame->window() : nullptr;
 }
 
-WindowProxy::ProxyMap WindowProxy::releaseJSWindowProxies()
+JSWindowProxy* WindowProxy::existingJSWindowProxy(DOMWrapperWorld& world) const
 {
-    return std::exchange(m_jsWindowProxies, makeUniqueRef<ProxyMap>());
+    return m_jsWindowProxies.get(&world).get();
 }
 
-void WindowProxy::setJSWindowProxies(ProxyMap&& windowProxies)
+JSWindowProxy* WindowProxy::jsWindowProxy(DOMWrapperWorld& world)
 {
-    m_jsWindowProxies = makeUniqueRef<ProxyMap>(WTFMove(windowProxies));
+    if (!m_frame)
+        return nullptr;
+
+    if (auto* existingProxy = existingJSWindowProxy(world))
+        return existingProxy;
+
+    return &createJSWindowProxyWithInitializedScript(world);
 }
 
 

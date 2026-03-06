@@ -65,7 +65,7 @@ JLString String::toJavaString(JNIEnv *env) const
             for (unsigned i = 0; i < len; i++) {
                 jchars[i] = characterAt(i);
             }
-            return env->NewString(jchars.data(), len);
+            return env->NewString(jchars.span().data(), len);
         } else {
               //return env->NewString((jchar*)characters16(), len);
               std::span<const UChar> span = span16();

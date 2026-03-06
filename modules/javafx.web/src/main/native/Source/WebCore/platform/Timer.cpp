@@ -149,8 +149,8 @@ inline void TimerHeapReference::swap(TimerHeapReference& other)
 inline void TimerHeapReference::updateHeapIndex()
 {
     auto& heap = m_reference->timerHeap();
-    if (&m_reference >= heap.data() && &m_reference < heap.end())
-        m_reference->setHeapIndex(&m_reference - heap.data());
+    if (&m_reference >= heap.begin() && &m_reference < heap.end())
+        m_reference->setHeapIndex(&m_reference - heap.begin());
 }
 
 inline void swap(TimerHeapReference a, TimerHeapReference b)
@@ -192,18 +192,14 @@ private:
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void checkConsistency(ptrdiff_t offset = 0) const
     {
-        ASSERT(m_pointer >= threadGlobalTimerHeap().data());
-        ASSERT(m_pointer <= threadGlobalTimerHeap().data() + threadGlobalTimerHeap().size());
-        ASSERT_UNUSED(offset, m_pointer + offset >= threadGlobalTimerHeap().data());
-        ASSERT_UNUSED(offset, m_pointer + offset <= threadGlobalTimerHeap().data() + threadGlobalTimerHeap().size());
+        ASSERT(m_pointer >= threadGlobalTimerHeap().begin());
+        ASSERT(m_pointer <= threadGlobalTimerHeap().begin() + threadGlobalTimerHeap().size());
+        ASSERT_UNUSED(offset, m_pointer + offset >= threadGlobalTimerHeap().begin());
+        ASSERT_UNUSED(offset, m_pointer + offset <= threadGlobalTimerHeap().begin() + threadGlobalTimerHeap().size());
     }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-    friend bool operator==(TimerHeapIterator, TimerHeapIterator) = default;
-    friend bool operator<(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator<=(TimerHeapIterator, TimerHeapIterator);
-    friend bool operator>=(TimerHeapIterator, TimerHeapIterator);
+    friend auto operator<=>(TimerHeapIterator, TimerHeapIterator) = default;
 
     friend TimerHeapIterator operator+(TimerHeapIterator, size_t);
     friend TimerHeapIterator operator+(size_t, TimerHeapIterator);
@@ -213,11 +209,6 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     RefPtr<ThreadTimerHeapItem>* m_pointer;
 };
-
-inline bool operator<(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer < b.m_pointer; }
-inline bool operator>(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer > b.m_pointer; }
-inline bool operator<=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer <= b.m_pointer; }
-inline bool operator>=(TimerHeapIterator a, TimerHeapIterator b) { return a.m_pointer >= b.m_pointer; }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline TimerHeapIterator operator+(TimerHeapIterator a, size_t b) { return TimerHeapIterator(a.m_pointer + b); }
@@ -375,7 +366,7 @@ void TimerBase::heapDecreaseKey()
     RefPtr item = m_heapItemWithBitfields.pointer();
     ASSERT(item);
     checkHeapIndex();
-    auto* heapData = item->timerHeap().data();
+    auto* heapData = item->timerHeap().mutableSpan().data();
     std::push_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + item->heapIndex() + 1), TimerHeapLessThanFunction());
     checkHeapIndex();
 }
@@ -439,7 +430,7 @@ void TimerBase::heapPopMin()
     ASSERT(item == item->timerHeap().first());
     checkHeapIndex();
     auto& heap = item->timerHeap();
-    auto* heapData = heap.data();
+    auto* heapData = heap.mutableSpan().data();
     std::pop_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + heap.size()), TimerHeapLessThanFunction());
     checkHeapIndex();
     ASSERT(item == item->timerHeap().last());
@@ -449,7 +440,7 @@ void TimerBase::heapDeleteNullMin(ThreadTimerHeap& heap)
 {
     RELEASE_ASSERT(!heap.first()->hasTimer());
     heap.first()->time = -MonotonicTime::infinity();
-    auto* heapData = heap.data();
+    auto* heapData = heap.mutableSpan().data();
     std::pop_heap(TimerHeapIterator(heapData), TimerHeapIterator(heapData + heap.size()), TimerHeapLessThanFunction());
     heap.removeLast();
 }

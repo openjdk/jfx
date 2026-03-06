@@ -37,11 +37,11 @@ class HTMLInputElement;
 
 class AccessibilitySlider final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilitySlider> create(AXID, RenderObject&);
+    static Ref<AccessibilitySlider> create(AXID, RenderObject&, AXObjectCache&);
     virtual ~AccessibilitySlider() = default;
 
 private:
-    explicit AccessibilitySlider(AXID, RenderObject&);
+    explicit AccessibilitySlider(AXID, RenderObject&, AXObjectCache&);
 
     HTMLInputElement* inputElement() const;
     AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const final;
@@ -56,19 +56,19 @@ private:
     float valueForRange() const final;
     float maxValueForRange() const final;
     float minValueForRange() const final;
-    AccessibilityOrientation orientation() const final;
+    std::optional<AccessibilityOrientation> explicitOrientation() const final;
 };
 
 class AccessibilitySliderThumb final : public AccessibilityMockObject {
 public:
-    static Ref<AccessibilitySliderThumb> create(AXID);
+    static Ref<AccessibilitySliderThumb> create(AXID, AXObjectCache&);
     virtual ~AccessibilitySliderThumb() = default;
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::SliderThumb; }
     LayoutRect elementRect() const final;
 
 private:
-    explicit AccessibilitySliderThumb(AXID);
+    explicit AccessibilitySliderThumb(AXID, AXObjectCache&);
 
     bool isSliderThumb() const final { return true; }
     bool computeIsIgnored() const final;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "AnimationTimelinesController.h"
 #include "CSSProperty.h"
 #include "CSSTransition.h"
+#include "ContainerNodeInlines.h"
 #include "CustomAnimationOptions.h"
 #include "CustomEffect.h"
 #include "CustomEffectCallback.h"
@@ -45,6 +46,7 @@
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "StyleOriginatedAnimation.h"
 #include "WebAnimationTypes.h"
 
@@ -76,8 +78,8 @@ DocumentTimeline::~DocumentTimeline() = default;
 
 AnimationTimelinesController* DocumentTimeline::controller() const
 {
-    if (m_document)
-        return &m_document->ensureTimelinesController();
+    if (RefPtr document = m_document.get())
+        return &document->ensureTimelinesController();
     return nullptr;
 }
 
@@ -125,10 +127,10 @@ unsigned DocumentTimeline::numberOfActiveAnimationsForTesting() const
     return count;
 }
 
-std::optional<WebAnimationTime> DocumentTimeline::currentTime()
+std::optional<WebAnimationTime> DocumentTimeline::currentTime(UseCachedCurrentTime useCachedCurrentTime)
 {
     if (auto* controller = this->controller()) {
-        if (auto currentTime = controller->currentTime())
+        if (auto currentTime = controller->currentTime(useCachedCurrentTime))
             return *currentTime - m_originTime;
         return std::nullopt;
     }
@@ -208,6 +210,11 @@ void DocumentTimeline::styleOriginatedAnimationsWereCreated()
     scheduleAnimationResolution();
 }
 
+void DocumentTimeline::pendingStartTimeWasSetOnAnimation()
+{
+    scheduleAnimationResolution();
+}
+
 bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
 {
     // https://drafts.csswg.org/web-animations/#removing-replaced-animations
@@ -223,7 +230,7 @@ bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
         return false;
 
     // - has an associated animation effect whose target element is a descendant of doc, and
-    auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect());
+    RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect());
     if (!keyframeEffect)
         return false;
 
@@ -235,7 +242,7 @@ IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
     auto& style = [&]() -> const RenderStyle& {
         if (auto* renderer = target->renderer())
             return renderer->style();
-        return RenderStyle::defaultStyle();
+        return RenderStyle::defaultStyleSingleton();
     }();
 IGNORE_GCC_WARNINGS_END
 
@@ -245,7 +252,7 @@ IGNORE_GCC_WARNINGS_END
         return property;
     };
 
-    UncheckedKeyHashSet<AnimatableCSSProperty> propertiesToMatch;
+    HashSet<AnimatableCSSProperty> propertiesToMatch;
     for (auto property : keyframeEffect->animatedProperties())
         propertiesToMatch.add(resolvedProperty(property));
 
@@ -263,7 +270,7 @@ IGNORE_GCC_WARNINGS_END
             break;
 
         if (animationWithHigherCompositeOrder && animationWithHigherCompositeOrder->isReplaceable()) {
-            if (auto* keyframeEffectWithHigherCompositeOrder = dynamicDowncast<KeyframeEffect>(animationWithHigherCompositeOrder->effect())) {
+            if (RefPtr keyframeEffectWithHigherCompositeOrder = dynamicDowncast<KeyframeEffect>(animationWithHigherCompositeOrder->effect())) {
                 for (auto property : keyframeEffectWithHigherCompositeOrder->animatedProperties()) {
                     if (propertiesToMatch.remove(resolvedProperty(property)) && propertiesToMatch.isEmpty())
                         break;
@@ -297,13 +304,10 @@ void DocumentTimeline::removeReplacedAnimations()
             //    event queue along with its target, animation. For the scheduled event time, use the result of applying the procedure
             //    to convert timeline time to origin-relative time to the current time of the timeline with which animation is associated.
             //    Otherwise, queue a task to dispatch removeEvent at animation. The task source for this task is the DOM manipulation task source.
-        if (animation->hasEventListeners(eventNames.removeEvent)) {
             auto scheduledTime = [&]() -> std::optional<Seconds> {
-                if (auto* documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
-                    if (auto currentTime = documentTimeline->currentTime()) {
-                        ASSERT(currentTime->time());
-                        return documentTimeline->convertTimelineTimeToOriginRelativeTime(*currentTime->time());
-                }
+            if (RefPtr documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
+                auto currentTime = MonotonicTime::now().secondsSinceEpoch();
+                return documentTimeline->convertTimelineTimeToOriginRelativeTime(currentTime);
                 }
                 return std::nullopt;
             }();
@@ -313,13 +317,12 @@ void DocumentTimeline::removeReplacedAnimations()
                 return std::nullopt;
             }();
             animation->enqueueAnimationPlaybackEvent(eventNames.removeEvent, animationCurrentTime, scheduledTime);
-        }
 
             animationsToRemove.append(animation.get());
         }
 
     for (auto& animation : animationsToRemove) {
-        if (auto* timeline = animation->timeline())
+        if (RefPtr timeline = animation->timeline())
             timeline->removeAnimation(animation);
     }
 }
@@ -327,7 +330,7 @@ void DocumentTimeline::removeReplacedAnimations()
 void DocumentTimeline::transitionDidComplete(Ref<CSSTransition>&& transition)
 {
     removeAnimation(transition.get());
-    if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(transition->effect())) {
+    if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(transition->effect())) {
         if (auto styleable = keyframeEffect->targetStyleable()) {
             auto property = transition->property();
             if (styleable->hasRunningTransitionForProperty(property))
@@ -422,11 +425,11 @@ void DocumentTimeline::applyPendingAcceleratedAnimations()
 
     auto acceleratedAnimationsPendingRunningStateChange = std::exchange(m_acceleratedAnimationsPendingRunningStateChange, { });
 
-    UncheckedKeyHashSet<KeyframeEffectStack*> keyframeEffectStacksToUpdate;
+    HashSet<KeyframeEffectStack*> keyframeEffectStacksToUpdate;
 
     bool hasForcedLayout = false;
     for (auto& animation : acceleratedAnimationsPendingRunningStateChange) {
-        if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+        if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
         if (!hasForcedLayout)
                 hasForcedLayout |= keyframeEffect->forceLayoutIfNeeded();
 
@@ -476,7 +479,7 @@ Vector<std::pair<String, double>> DocumentTimeline::acceleratedAnimationsForElem
     auto* renderer = element.renderer();
     if (renderer && renderer->isComposited()) {
         auto* compositedRenderer = downcast<RenderBoxModelObject>(renderer);
-        if (auto* graphicsLayer = compositedRenderer->layer()->backing()->graphicsLayer())
+        if (RefPtr graphicsLayer = compositedRenderer->layer()->backing()->graphicsLayer())
             return graphicsLayer->acceleratedAnimationsForTesting(m_document->settings());
     }
     return { };
@@ -487,17 +490,17 @@ unsigned DocumentTimeline::numberOfAnimationTimelineInvalidationsForTesting() co
     return m_numberOfAnimationTimelineInvalidationsForTesting;
 }
 
-ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<std::variant<double, CustomAnimationOptions>>&& options)
+ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<Variant<double, CustomAnimationOptions>>&& options)
 {
     if (!m_document)
         return Exception { ExceptionCode::InvalidStateError };
 
     String id = emptyString();
-    std::variant<FramesPerSecond, AnimationFrameRatePreset> frameRate = AnimationFrameRatePreset::Auto;
-    std::optional<std::variant<double, EffectTiming>> customEffectOptions;
+    Variant<FramesPerSecond, AnimationFrameRatePreset> frameRate = AnimationFrameRatePreset::Auto;
+    std::optional<Variant<double, EffectTiming>> customEffectOptions;
 
     if (options) {
-        std::variant<double, EffectTiming> customEffectOptionsVariant;
+        Variant<double, EffectTiming> customEffectOptionsVariant;
         if (std::holds_alternative<double>(*options))
             customEffectOptionsVariant = std::get<double>(*options);
         else {

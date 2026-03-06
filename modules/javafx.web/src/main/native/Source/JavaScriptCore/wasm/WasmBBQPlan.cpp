@@ -74,7 +74,7 @@ FunctionAllowlist& BBQPlan::ensureGlobalBBQAllowlist()
 
 bool BBQPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, FunctionCodeIndex functionIndex, const TypeDefinition& signature, FunctionSpaceIndex functionIndexSpace)
 {
-    if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::BBQMode))) {
+    if (shouldDumpDisassemblyFor(CompilationMode::BBQMode)) [[unlikely]] {
         dataLogF("Generated BBQ code for WebAssembly BBQ function[%zu] %s name %s\n", functionIndex.rawIndex(), signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
             if (context.bbqDisassembler)
                 context.bbqDisassembler->dump(linkBuffer);
@@ -99,7 +99,7 @@ void BBQPlan::work()
     std::unique_ptr<InternalFunction> function = compileFunction(m_functionIndex, callee.get(), context, unlinkedWasmToWasmCalls);
 
     LinkBuffer linkBuffer(*context.wasmEntrypointJIT, callee.ptr(), LinkBuffer::Profile::WasmBBQ, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate())) {
+    if (linkBuffer.didFailToAllocate()) [[unlikely]] {
         Locker locker { m_lock };
         Base::fail(makeString("Out of executable memory while tiering up function at index "_s, m_functionIndex.rawIndex()), Plan::Error::OutOfMemory);
         return;
@@ -189,7 +189,7 @@ std::unique_ptr<InternalFunction> BBQPlan::compileFunction(FunctionCodeIndex fun
     parseAndCompileResult = parseAndCompileBBQ(context, callee, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, functionIndex, m_hasExceptionHandlers, UINT32_MAX);
     endCompilerSignpost(callee);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.

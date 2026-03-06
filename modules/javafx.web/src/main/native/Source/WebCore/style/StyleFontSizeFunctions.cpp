@@ -31,6 +31,7 @@
 
 #include "CSSValueKeywords.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "FontMetrics.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
@@ -41,7 +42,7 @@ namespace WebCore {
 
 namespace Style {
 
-float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, float zoomFactor, MinimumFontSizeRule minimumSizeRule, const Settings::Values& settings)
+float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize, float zoomFactor, MinimumFontSizeRule minimumSizeRule, const SettingsValues& settings)
 {
     // Text with a 0px font size should not be visible and therefore needs to be
     // exempt from minimum font size rules. Acid3 relies on this for pixel-perfect
@@ -138,7 +139,7 @@ static constexpr std::array strictFontSizeTable {
 // factors for each keyword value.
 static constexpr std::array fontSizeFactors { 0.60f, 0.75f, 0.89f, 1.0f, 1.2f, 1.5f, 2.0f, 3.0f };
 
-float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const Settings::Values& settings, bool inQuirksMode)
+float fontSizeForKeyword(unsigned keywordID, bool shouldUseFixedDefaultSize, const SettingsValues& settings, bool inQuirksMode)
 {
     int mediumSize = shouldUseFixedDefaultSize ? settings.defaultFixedFontSize : settings.defaultFontSize;
     if (mediumSize >= fontSizeTableMin && mediumSize <= fontSizeTableMax) {
@@ -183,6 +184,7 @@ int legacyFontSizeForPixelSize(int pixelFontSize, bool shouldUseFixedDefaultSize
 
 static float adjustedFontSize(float size, float sizeAdjust, float metricValue)
 {
+    ASSERT(sizeAdjust > 0);
     if (!size)
         return 0;
 

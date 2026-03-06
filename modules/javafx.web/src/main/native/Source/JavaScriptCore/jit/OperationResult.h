@@ -258,7 +258,7 @@ ALWAYS_INLINE T makeOperationResult(Scope& scope, T result)
 
 #endif // USE(JSVALUE64)
 
-#define OPERATION_RETURN(scope__, ...) return makeOperationResult(scope__, ## __VA_ARGS__);
+#define OPERATION_RETURN(scope__, ...) return makeOperationResult(scope__, ## __VA_ARGS__)
 #define OPERATION_RETURN_IF_EXCEPTION(scope__, ...) RETURN_IF_EXCEPTION(scope__, makeOperationResult(scope__, ## __VA_ARGS__))
 
 #if COMPILER(CLANG)

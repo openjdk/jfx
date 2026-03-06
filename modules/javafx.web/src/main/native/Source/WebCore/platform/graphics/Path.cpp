@@ -61,11 +61,6 @@ Path::Path(Ref<PathImpl>&& impl)
 {
 }
 
-Path::Path(const Path& other)
-{
-    *this = other;
-}
-
 bool Path::definitelyEqual(const Path& other) const
 {
     if (&other == this)
@@ -80,9 +75,6 @@ bool Path::definitelyEqual(const Path& other) const
             return otherSegment && segment == otherSegment.value();
         },
         [&](const DataRef<PathImpl>& impl) {
-            if (impl->isEmpty())
-                return other.isEmpty();
-
             if (auto singleSegment = impl->singleSegment()) {
                 auto otherSegment = other.singleSegment();
                 return otherSegment && singleSegment == otherSegment.value();
@@ -90,11 +82,6 @@ bool Path::definitelyEqual(const Path& other) const
 
             return impl.ptr() && other.asImpl() && impl->definitelyEqual(*other.asImpl());
         });
-}
-
-Path::Path(PathSegment&& segment)
-{
-    m_data = WTFMove(segment);
 }
 
 PathImpl& Path::setImpl(Ref<PathImpl>&& impl)
@@ -106,15 +93,15 @@ PathImpl& Path::setImpl(Ref<PathImpl>&& impl)
 
 PlatformPathImpl& Path::ensurePlatformPathImpl()
 {
-    if (auto segment = asSingle())
-        return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(WTFMove(*segment))));
+    if (auto* segment = asSingle())
+        return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(singleElementSpan(*segment))));
 
-    if (auto impl = asImpl()) {
-        if (auto* stream = dynamicDowncast<PathStream>(*impl))
-            return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(*stream)));
+    if (RefPtr impl = asImpl()) {
+        if (const auto* stream = dynamicDowncast<PathStream>(*impl))
+            return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create(stream->segments())));
         return downcast<PlatformPathImpl>(*impl);
     }
-
+    // Generally platform path is never empty. This should only be called during Path::add() on an empty path.
     return downcast<PlatformPathImpl>(setImpl(PlatformPathImpl::create()));
 }
 
@@ -125,127 +112,34 @@ PathImpl& Path::ensureImpl()
 
     if (auto impl = asImpl())
         return *impl;
-
+    ASSERT_NOT_REACHED(); // Impl is never empty.
     return setImpl(PathStream::create());
+}
+
+Ref<PathImpl> Path::ensureProtectedImpl()
+{
+    return ensureImpl();
 }
 
 void Path::ensureImplForTesting()
 {
+    if (isEmpty())
+        return;
     ensureImpl();
 }
 
-PathImpl* Path::asImpl()
+RefPtr<PathImpl> Path::asImpl()
 {
     if (auto ref = std::get_if<DataRef<PathImpl>>(&m_data))
         return &ref->access();
     return nullptr;
 }
 
-const PathImpl* Path::asImpl() const
+RefPtr<const PathImpl> Path::asImpl() const
 {
     if (auto ref = std::get_if<DataRef<PathImpl>>(&m_data))
         return ref->ptr();
     return nullptr;
-}
-
-void Path::moveTo(const FloatPoint& point)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathMoveTo { point });
-    else
-        ensureImpl().add(PathMoveTo { point });
-}
-
-const PathMoveTo* Path::asSingleMoveTo() const
-{
-    if (auto segment = asSingle())
-        return std::get_if<PathMoveTo>(&segment->data());
-    return nullptr;
-}
-
-const PathArc* Path::asSingleArc() const
-{
-    if (auto segment = asSingle())
-        return std::get_if<PathArc>(&segment->data());
-    return nullptr;
-}
-
-void Path::addLineTo(const FloatPoint& point)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathDataLine { { }, point });
-    else if (auto moveTo = asSingleMoveTo())
-        m_data = PathSegment(PathDataLine { moveTo->point, point });
-    else
-        ensureImpl().add(PathLineTo { point });
-}
-
-void Path::addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathDataQuadCurve { { }, controlPoint, endPoint });
-    else if (auto moveTo = asSingleMoveTo())
-        m_data = PathSegment(PathDataQuadCurve { moveTo->point, controlPoint, endPoint });
-    else
-        ensureImpl().add(PathQuadCurveTo { controlPoint, endPoint });
-}
-
-void Path::addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathDataBezierCurve { { }, controlPoint1, controlPoint2, endPoint });
-    else if (auto moveTo = asSingleMoveTo())
-        m_data = PathSegment(PathDataBezierCurve { moveTo->point, controlPoint1, controlPoint2, endPoint });
-    else
-        ensureImpl().add(PathBezierCurveTo { controlPoint1, controlPoint2, endPoint });
-}
-
-void Path::addArcTo(const FloatPoint& point1, const FloatPoint& point2, float radius)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathDataArc { { }, point1, point2, radius });
-    else if (auto moveTo = asSingleMoveTo())
-        m_data = PathSegment(PathDataArc { moveTo->point, point1, point2, radius });
-    else
-        ensureImpl().add(PathArcTo { point1, point2, radius });
-}
-
-void Path::addArc(const FloatPoint& point, float radius, float startAngle, float endAngle, RotationDirection direction)
-{
-    // Workaround for <rdar://problem/5189233> CGPathAddArc hangs or crashes when passed inf as start or end angle,
-    // as well as http://bugs.webkit.org/show_bug.cgi?id=16449, since cairo_arc() functions hang or crash when
-    // passed inf as radius or start/end angle.
-    if (!std::isfinite(radius) || !std::isfinite(startAngle) || !std::isfinite(endAngle))
-        return;
-
-    if (isEmpty())
-        m_data = PathSegment(PathArc { point, radius, startAngle, endAngle, direction });
-    else
-        ensureImpl().add(PathArc { point, radius, startAngle, endAngle, direction });
-}
-
-void Path::addEllipse(const FloatPoint& point, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection direction)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathEllipse { point, radiusX, radiusY, rotation, startAngle, endAngle, direction });
-    else
-        ensureImpl().add(PathEllipse { point, radiusX, radiusY, rotation, startAngle, endAngle, direction });
-}
-
-void Path::addEllipseInRect(const FloatRect& rect)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathEllipseInRect { rect });
-    else
-        ensureImpl().add(PathEllipseInRect { rect });
-}
-
-void Path::addRect(const FloatRect& rect)
-{
-    if (isEmpty())
-        m_data = PathSegment(PathRect { rect });
-    else
-        ensureImpl().add(PathRect { rect });
 }
 
 static FloatRoundedRect calculateEvenRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii)
@@ -287,7 +181,7 @@ void Path::addRoundedRect(const FloatRoundedRect& roundedRect, PathRoundedRect::
     if (isEmpty())
         m_data = PathSegment(PathRoundedRect { roundedRect, strategy });
     else
-        ensureImpl().add(PathRoundedRect { roundedRect, strategy });
+        ensureProtectedImpl()->add(PathRoundedRect { roundedRect, strategy });
 }
 
 void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii, PathRoundedRect::Strategy strategy)
@@ -298,12 +192,24 @@ void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii,
     if (isEmpty())
         m_data = PathSegment(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
     else
-        ensureImpl().add(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
+        ensureProtectedImpl()->add(PathRoundedRect { calculateEvenRoundedRect(rect, roundingRadii), strategy });
 }
 
-void Path::addRoundedRect(const RoundedRect& rect)
+void Path::addRoundedRect(const LayoutRoundedRect& rect)
 {
     addRoundedRect(FloatRoundedRect(rect));
+}
+
+void Path::addContinuousRoundedRect(const FloatRect& rect, const float cornerRadius)
+{
+    if (rect.isEmpty())
+        return;
+
+    PathContinuousRoundedRect continuousRoundedRect { rect, cornerRadius, cornerRadius };
+    if (isEmpty())
+        m_data = PathSegment(continuousRoundedRect);
+    else
+        ensureProtectedImpl()->add(continuousRoundedRect);
 }
 
 void Path::addContinuousRoundedRect(const FloatRect& rect, const float cornerWidth, const float cornerHeight)
@@ -311,21 +217,11 @@ void Path::addContinuousRoundedRect(const FloatRect& rect, const float cornerWid
     if (rect.isEmpty())
         return;
 
+    PathContinuousRoundedRect continuousRoundedRect { rect, cornerWidth, cornerHeight };
     if (isEmpty())
-        m_data = PathSegment(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
+        m_data = PathSegment(continuousRoundedRect);
     else
-        ensureImpl().add(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
-}
-
-void Path::closeSubpath()
-{
-    if (isEmpty() || isClosed())
-        return;
-
-    if (auto arc = asSingleArc())
-        m_data = PathSegment(PathClosedArc { *arc });
-    else
-        ensureImpl().add(PathCloseSubpath { });
+        ensureProtectedImpl()->add(continuousRoundedRect);
 }
 
 void Path::addPath(const Path& path, const AffineTransform& transform)
@@ -333,6 +229,7 @@ void Path::addPath(const Path& path, const AffineTransform& transform)
     if (path.isEmpty() || !transform.isInvertible())
         return;
 
+    // FIXME: This should inspect the incoming path and add just the segments if possible.
     ensurePlatformPathImpl().addPath(const_cast<Path&>(path).ensurePlatformPathImpl(), transform);
 }
 
@@ -399,117 +296,11 @@ std::optional<PathSegment> Path::singleSegment() const
 
 std::optional<PathDataLine> Path::singleDataLine() const
 {
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataLine>(&segment->data()))
-            return *data;
+    if (auto segment = singleSegment()) {
+        if (auto* line = std::get_if<PathDataLine>(&segment->data()))
+            return *line;
     }
-
-    if (auto impl = asImpl())
-        return impl->singleDataLine();
-
     return std::nullopt;
-}
-
-std::optional<PathRect> Path::singleRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathRoundedRect> Path::singleRoundedRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathRoundedRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleRoundedRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathContinuousRoundedRect> Path::singleContinuousRoundedRect() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathContinuousRoundedRect>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleContinuousRoundedRect();
-
-    return std::nullopt;
-}
-
-std::optional<PathArc> Path::singleArc() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathArc>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleArc();
-
-    return std::nullopt;
-}
-
-std::optional<PathClosedArc> Path::singleClosedArc() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathClosedArc>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleClosedArc();
-
-    return std::nullopt;
-}
-
-std::optional<PathDataQuadCurve> Path::singleQuadCurve() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataQuadCurve>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleQuadCurve();
-
-    return std::nullopt;
-}
-
-std::optional<PathDataBezierCurve> Path::singleBezierCurve() const
-{
-    if (auto segment = asSingle()) {
-        if (auto data = std::get_if<PathDataBezierCurve>(&segment->data()))
-            return *data;
-    }
-
-    if (auto impl = asImpl())
-        return impl->singleBezierCurve();
-
-    return std::nullopt;
-}
-
-bool Path::isEmpty() const
-{
-    if (std::holds_alternative<std::monostate>(m_data))
-        return true;
-
-    if (auto impl = asImpl())
-        return impl->isEmpty();
-
-    return false;
 }
 
 bool Path::definitelySingleLine() const
@@ -525,7 +316,7 @@ PlatformPathPtr Path::platformPath() const
 const Vector<PathSegment>* Path::segmentsIfExists() const
 {
     if (auto impl = asImpl()) {
-        if (auto* stream = dynamicDowncast<PathStream>(*impl))
+        if (auto* stream = dynamicDowncast<PathStream>((*impl)))
             return &stream->segments();
     }
 
@@ -567,19 +358,6 @@ bool Path::isClosed() const
     return false;
 }
 
-FloatPoint Path::currentPoint() const
-{
-    if (auto segment = asSingle()) {
-        FloatPoint lastMoveToPoint;
-        return segment->calculateEndPoint({ }, lastMoveToPoint);
-    }
-
-    if (auto impl = asImpl())
-        return impl->currentPoint();
-
-    return { };
-}
-
 PathTraversalState Path::traversalStateAtLength(float length) const
 {
     PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength, length);
@@ -619,7 +397,7 @@ bool Path::hasSubpaths() const
     if (auto* segment = asSingle())
         return PathStream::computeHasSubpaths(singleElementSpan(*segment));
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->hasSubpaths();
 
     return false;
@@ -628,9 +406,9 @@ bool Path::hasSubpaths() const
 FloatRect Path::fastBoundingRect() const
 {
     if (auto* segment = asSingle())
-        return PathStream::computeFastBoundingRect(singleElementSpan(*segment));
+        return segment->fastBoundingRect();
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->fastBoundingRect();
 
     return { };
@@ -641,7 +419,7 @@ FloatRect Path::boundingRect() const
     if (auto* segment = asSingle())
         return PathStream::computeBoundingRect(singleElementSpan(*segment));
 
-    if (auto* impl = asImpl())
+    if (auto impl = asImpl())
         return impl->boundingRect();
 
     return { };
@@ -657,7 +435,7 @@ TextStream& operator<<(TextStream& ts, const Path& path)
     bool isFirst = true;
     path.applySegments([&ts, &isFirst](const PathSegment& segment) {
         if (!isFirst)
-            ts << ", ";
+            ts << ", "_s;
         else
             isFirst = false;
         ts << segment;

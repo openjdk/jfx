@@ -142,6 +142,9 @@ void VideoTrack::selectedChanged(bool selected)
 void VideoTrack::configurationChanged(const PlatformVideoTrackConfiguration& configuration)
 {
     m_configuration->setState(configuration);
+    m_clients.forEach([this] (auto& client) {
+        client.videoTrackConfigurationChanged(*this);
+    });
 }
 
 void VideoTrack::idChanged(TrackID id)

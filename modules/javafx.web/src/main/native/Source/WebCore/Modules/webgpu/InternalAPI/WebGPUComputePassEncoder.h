@@ -59,10 +59,10 @@ public:
 
     virtual void end() = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&&) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) = 0;

@@ -26,10 +26,13 @@
 #include "config.h"
 #include "ImageQualityController.h"
 
+#include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "RenderBoxModelObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -115,6 +118,18 @@ std::optional<InterpolationQuality> ImageQualityController::interpolationQuality
         break;
     }
     return std::nullopt;
+}
+
+InterpolationQuality ImageQualityController::chooseInterpolationQualityForSVG(GraphicsContext& context, const RenderElement& renderElement, Image& image)
+{
+    // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
+    if (!(image.isBitmapImage() || image.isPDFDocumentImage()) || context.paintingDisabled())
+        return InterpolationQuality::Default;
+
+    if (auto styleInterpolation = interpolationQualityFromStyle(renderElement.style()))
+        return *styleInterpolation;
+
+    return InterpolationQuality::Default;
 }
 
 InterpolationQuality ImageQualityController::chooseInterpolationQuality(GraphicsContext& context, RenderBoxModelObject* object, Image& image, const void* layer, const LayoutSize& size)

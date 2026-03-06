@@ -97,7 +97,7 @@ void JITOperationList::populatePointersInJavaScriptCore()
         if (Options::useJIT())
             jitOperationList->addPointers(&startOfJITOperationsInJSC, &endOfJITOperationsInJSC);
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-        if (UNLIKELY(Options::needDisassemblySupport()))
+        if (Options::needDisassemblySupport()) [[unlikely]]
             populateDisassemblyLabelsInJavaScriptCore();
 #endif
     });
@@ -130,6 +130,12 @@ LLINT_DECLARE_ROUTINE_VALIDATE(ipint_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(ipint_entry);
 LLINT_DECLARE_ROUTINE_VALIDATE(ipint_function_prologue_simd_trampoline);
 LLINT_DECLARE_ROUTINE_VALIDATE(ipint_function_prologue_simd);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_catch_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_catch_all_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_table_catch_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_table_catch_ref_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_table_catch_all_entry);
+LLINT_DECLARE_ROUTINE_VALIDATE(ipint_table_catch_allref_entry);
 
 #if ENABLE(JIT_OPERATION_VALIDATION)
 #define LLINT_OP_EXTRAS(validateLabel) reinterpret_cast<void*>(validateLabel)
@@ -193,6 +199,12 @@ static LLIntOperations llintOperations()
             LLINT_ROUTINE(ipint_entry)
             LLINT_ROUTINE(ipint_function_prologue_simd_trampoline)
             LLINT_ROUTINE(ipint_function_prologue_simd)
+            LLINT_ROUTINE(ipint_catch_entry)
+            LLINT_ROUTINE(ipint_catch_all_entry)
+            LLINT_ROUTINE(ipint_table_catch_entry)
+            LLINT_ROUTINE(ipint_table_catch_ref_entry)
+            LLINT_ROUTINE(ipint_table_catch_all_entry)
+            LLINT_ROUTINE(ipint_table_catch_allref_entry)
 
             LLINT_OP(op_catch)
             LLINT_OP(wasm_catch)
@@ -230,7 +242,7 @@ void JITOperationList::populatePointersInJavaScriptCoreForLLInt()
             jitOperationList->addPointers(list.operations, list.operations + list.numberOfOperations);
         }
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-        if (UNLIKELY(Options::needDisassemblySupport()))
+        if (Options::needDisassemblySupport()) [[unlikely]]
             JITOperationList::populateDisassemblyLabelsInJavaScriptCoreForLLInt();
 #endif
     });
@@ -285,7 +297,7 @@ void JITOperationList::populateDisassemblyLabelsInJavaScriptCoreForLLInt()
 
 void JITOperationList::populateDisassemblyLabelsInEmbedder(const JITOperationAnnotation* beginOperations, const JITOperationAnnotation* endOperations)
 {
-    if (LIKELY(!Options::needDisassemblySupport()))
+    if (!Options::needDisassemblySupport()) [[likely]]
         return;
     if (Options::useJIT())
         addDisassemblyLabels(beginOperations, endOperations);

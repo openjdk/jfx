@@ -24,22 +24,20 @@
 
 #pragma once
 
-#include "CSSValueTypes.h"
-#include <wtf/text/WTFString.h>
+#include "CSSURL.h"
 
 namespace WebCore {
 namespace CSS {
 
 // https://drafts.fxtf.org/filter-effects/#typedef-filter-url
 struct FilterReference {
-    String url;
+    URL url;
 
     bool operator==(const FilterReference&) const = default;
 };
-
-template<> struct Serialize<FilterReference> { void operator()(StringBuilder&, const SerializationContext&, const FilterReference&); };
-template<> struct ComputedStyleDependenciesCollector<FilterReference> { constexpr void operator()(ComputedStyleDependencies&, const FilterReference&) { } };
-template<> struct CSSValueChildrenVisitor<FilterReference> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const FilterReference&) { return IterationStatus::Continue; } };
+DEFINE_TYPE_WRAPPER_GET(FilterReference, url);
 
 } // namespace CSS
 } // namespace WebCore
+
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::FilterReference, 1)

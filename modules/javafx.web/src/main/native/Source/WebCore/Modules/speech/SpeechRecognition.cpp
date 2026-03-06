@@ -28,7 +28,9 @@
 
 #include "ClientOrigin.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "Page.h"
 #include "PermissionsPolicy.h"
@@ -53,8 +55,8 @@ Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 SpeechRecognition::SpeechRecognition(Document& document)
     : ActiveDOMObject(document)
 {
-    if (auto* page = document.page()) {
-        m_connection = &page->speechRecognitionConnection();
+    if (RefPtr page = document.page()) {
+        lazyInitialize(m_connection, Ref { page->speechRecognitionConnection() });
         m_connection->registerClient(*this);
     }
 }
@@ -114,8 +116,8 @@ void SpeechRecognition::stop()
         return;
     m_connection->unregisterClient(*this);
 
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 }
 
 void SpeechRecognition::didStart()
@@ -128,8 +130,8 @@ void SpeechRecognition::didStart()
 
 void SpeechRecognition::didStartCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(this);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(this);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audiostartEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -156,8 +158,8 @@ void SpeechRecognition::didStopCapturingSound()
 
 void SpeechRecognition::didStopCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audioendEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }

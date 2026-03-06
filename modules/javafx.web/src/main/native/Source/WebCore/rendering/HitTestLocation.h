@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
 #pragma once
 
 #include "FloatQuad.h"
-#include "RoundedRect.h"
+#include "LayoutRoundedRect.h"
 
 namespace WebCore {
 
@@ -48,14 +48,9 @@ public:
     bool isRectilinear() const { return m_isRectilinear; }
     LayoutRect boundingBox() const { return m_boundingBox; }
 
-    int topPadding() const { return roundedPoint().y() - m_boundingBox.y(); }
-    int rightPadding() const { return m_boundingBox.maxX() - roundedPoint().x() - 1; }
-    int bottomPadding() const { return m_boundingBox.maxY() - roundedPoint().y() - 1; }
-    int leftPadding() const { return roundedPoint().x() - m_boundingBox.x(); }
-
     WEBCORE_EXPORT bool intersects(const LayoutRect&) const;
     bool intersects(const FloatRect&) const;
-    bool intersects(const RoundedRect&) const;
+    bool intersects(const LayoutRoundedRect&) const;
 
     const FloatPoint& transformedPoint() const { return m_transformedPoint; }
     const FloatQuad& transformedRect() const { return m_transformedRect; }

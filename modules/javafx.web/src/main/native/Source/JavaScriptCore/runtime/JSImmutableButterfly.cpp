@@ -77,7 +77,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromClonedArguments(JSGlobalOb
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -125,7 +125,7 @@ static ALWAYS_INLINE JSImmutableButterfly* createFromNonClonedArguments(JSGlobal
     unsigned length = arguments->internalLength();
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -169,7 +169,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     unsigned length = holder->length();
     if (holder->is8Bit()) {
         JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), length);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }
@@ -182,15 +182,15 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
         return result;
     }
 
-    auto forEachCodePointViaStringIteratorProtocol = [](std::span<const UChar> characters, auto func) {
+    auto forEachCodePointViaStringIteratorProtocol = [](std::span<const char16_t> characters, auto func) {
         for (size_t i = 0; i < characters.size(); ++i) {
-            UChar character = characters[i];
+            char16_t character = characters[i];
             if (!U16_IS_LEAD(character) || (i + 1) == characters.size()) {
                 if (func(i, 1) == IterationStatus::Done)
                     return;
                 continue;
             }
-            UChar second = characters[i + 1];
+            char16_t second = characters[i + 1];
             if (!U16_IS_TRAIL(second)) {
                 if (func(i, 1) == IterationStatus::Done)
                     return;
@@ -212,7 +212,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
     });
 
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), codePointLength);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -224,7 +224,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
             value = jsSingleCharacterString(vm, characters[index]);
         else {
             ASSERT(size == 2);
-            const UChar string[2] = {
+            const char16_t string[2] = {
                 characters[index],
                 characters[index + 1],
             };
@@ -241,7 +241,7 @@ JSImmutableButterfly* JSImmutableButterfly::createFromString(JSGlobalObject* glo
 JSImmutableButterfly* JSImmutableButterfly::tryCreateFromArgList(VM& vm, ArgList argList)
 {
     JSImmutableButterfly* result = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), argList.size());
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     gcSafeMemcpy(std::bit_cast<EncodedJSValue*>(result->toButterfly()->contiguous().data()), argList.data(), argList.size() * sizeof(EncodedJSValue));
     vm.writeBarrier(result);

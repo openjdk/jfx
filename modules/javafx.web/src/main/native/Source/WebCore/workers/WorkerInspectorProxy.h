@@ -27,7 +27,6 @@
 
 #include "PageIdentifier.h"
 #include "ScriptExecutionContextIdentifier.h"
-#include <variant>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/FastMalloc.h>
@@ -93,7 +92,7 @@ public:
 private:
     explicit WorkerInspectorProxy(const String& identifier);
 
-    using PageOrWorkerGlobalScopeIdentifier = std::variant<PageIdentifier, ScriptExecutionContextIdentifier>;
+    using PageOrWorkerGlobalScopeIdentifier = Variant<PageIdentifier, ScriptExecutionContextIdentifier>;
     static std::optional<PageOrWorkerGlobalScopeIdentifier> pageOrWorkerGlobalScopeIdentifier(ScriptExecutionContext&);
 
     void addToProxyMap();

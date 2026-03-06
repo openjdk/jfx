@@ -37,6 +37,7 @@
 #include "RenderIterator.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGText.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderTreeBuilder.h"
@@ -101,17 +102,15 @@ FloatSize RenderSVGRoot::calculateIntrinsicSize() const
     return FloatSize(floatValueForLength(svgSVGElement().intrinsicWidth(), 0), floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
 }
 
-void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
+std::pair<FloatSize, FloatSize> RenderSVGRoot::computeIntrinsicSizeAndPreferredAspectRatio() const
 {
     ASSERT(!shouldApplySizeContainment());
 
     // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
-    intrinsicSize = calculateIntrinsicSize();
+    auto intrinsicSize = calculateIntrinsicSize();
 
-    if (style().aspectRatioType() == AspectRatioType::Ratio) {
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
-        return;
-    }
+    if (style().aspectRatio().isRatio())
+        return { intrinsicSize,  FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value) };
 
     std::optional<LayoutSize> intrinsicRatioValue;
     if (!intrinsicSize.isEmpty())
@@ -125,9 +124,10 @@ void RenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, F
     }
 
     if (intrinsicRatioValue)
-        intrinsicRatio = *intrinsicRatioValue;
-    else if (style().aspectRatioType() == AspectRatioType::AutoAndRatio)
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
+        return { intrinsicSize, *intrinsicRatioValue };
+    else if (style().aspectRatio().isAutoAndRatio())
+        return { intrinsicSize, FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value) };
+    return { intrinsicSize, { } };
 }
 
 bool RenderSVGRoot::isEmbeddedThroughSVGImage() const
@@ -298,7 +298,7 @@ void RenderSVGRoot::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     // sit above the background/border.
     if ((paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground) && hasNonVisibleOverflow() && layer() && layer()->scrollableArea()
         && style().usedVisibility() == Visibility::Visible && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
-        layer()->scrollableArea()->paintOverflowControls(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
+        layer()->scrollableArea()->paintOverflowControls(paintInfo.context(), paintInfo.paintBehavior, roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
 }
 
 void RenderSVGRoot::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)

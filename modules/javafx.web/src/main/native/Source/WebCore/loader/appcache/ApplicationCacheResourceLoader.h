@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,10 +55,12 @@ private:
     explicit ApplicationCacheResourceLoader(unsigned, CachedResourceHandle<CachedRawResource>&&, CompletionHandler<void(ResourceOrError&&)>&&);
 
     // CachedRawResourceClient
-    void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) final;
+    void responseReceived(const CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) final;
     void dataReceived(CachedResource&, const SharedBuffer&) final;
     void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) final;
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
+
+    RefPtr<ApplicationCacheResource> protectedApplicationCacheResource() { return m_applicationCacheResource; }
 
     unsigned m_type;
     CachedResourceHandle<CachedRawResource> m_resource;

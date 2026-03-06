@@ -28,12 +28,7 @@
 
 #pragma once
 
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/parser.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringBuilder.h>

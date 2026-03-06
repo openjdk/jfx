@@ -261,7 +261,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
 
     m_constructionStack.removeLast();
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         element.clearReactionQueueFromFailedCustomElement();
         reportException(lexicalGlobalObject, scope.exception());
         return;

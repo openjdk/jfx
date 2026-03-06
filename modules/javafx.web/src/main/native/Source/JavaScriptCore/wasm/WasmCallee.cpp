@@ -35,6 +35,7 @@
 #include "LLIntExceptions.h"
 #include "LLIntThunks.h"
 #include "NativeCalleeRegistry.h"
+#include "PCToCodeOriginMap.h"
 #include "VMInspector.h"
 #include "WasmCallingConvention.h"
 #include "WasmModuleInformation.h"
@@ -235,11 +236,11 @@ IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, FunctionSpac
     , m_bytecode(generator.m_bytecode.data() + generator.m_bytecodeOffset)
     , m_bytecodeEnd(m_bytecode + (generator.m_bytecode.size() - generator.m_bytecodeOffset - 1))
     , m_metadataVector(WTFMove(generator.m_metadata))
-    , m_metadata(m_metadataVector.data())
+    , m_metadata(m_metadataVector.span().data())
     , m_argumINTBytecode(WTFMove(generator.m_argumINTBytecode))
-    , m_argumINTBytecodePointer(m_argumINTBytecode.data())
+    , m_argumINTBytecodePointer(m_argumINTBytecode.span().data())
     , m_uINTBytecode(WTFMove(generator.m_uINTBytecode))
-    , m_uINTBytecodePointer(m_uINTBytecode.data())
+    , m_uINTBytecodePointer(m_uINTBytecode.span().data())
     , m_highestReturnStackOffset(generator.m_highestReturnStackOffset)
     , m_localSizeToAlloc(roundUpToMultipleOf<2>(generator.m_numLocals))
     , m_numRethrowSlotsToAlloc(generator.m_numAlignedRethrowSlots)
@@ -253,41 +254,29 @@ IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, FunctionSpac
         for (size_t i = 0; i < count; i++) {
             const UnlinkedHandlerInfo& unlinkedHandler = generator.m_exceptionHandlers[i];
             HandlerInfo& handler = m_exceptionHandlers[i];
-            void* ptr = nullptr;
+            CodeLocationLabel<ExceptionHandlerPtrTag> target;
             switch (unlinkedHandler.m_type) {
             case HandlerType::Catch:
-                ptr = reinterpret_cast<void*>(ipint_catch_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterCatchEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             case HandlerType::CatchAll:
             case HandlerType::Delegate:
-                ptr = reinterpret_cast<void*>(ipint_catch_all_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterCatchAllEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             case HandlerType::TryTableCatch:
-                ptr = reinterpret_cast<void*>(ipint_table_catch_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterTableCatchEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             case HandlerType::TryTableCatchRef:
-                ptr = reinterpret_cast<void*>(ipint_table_catch_ref_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterTableCatchRefEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             case HandlerType::TryTableCatchAll:
-                ptr = reinterpret_cast<void*>(ipint_table_catch_all_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterTableCatchAllEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             case HandlerType::TryTableCatchAllRef:
-                ptr = reinterpret_cast<void*>(ipint_table_catch_allref_entry);
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::inPlaceInterpreterTableCatchAllrefEntryThunk().retaggedCode<ExceptionHandlerPtrTag>());
                 break;
             }
-            void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
-            void* retagged = nullptr;
-#if ENABLE(JIT_CAGE)
-            if (Options::useJITCage())
-#else
-            if (false)
-#endif
-                retagged = tagCodePtr<ExceptionHandlerPtrTag>(untagged);
-            else
-                retagged = WTF::tagNativeCodePtrImpl<ExceptionHandlerPtrTag>(untagged);
-            assertIsTaggedWith<ExceptionHandlerPtrTag>(retagged);
 
-            CodeLocationLabel<ExceptionHandlerPtrTag> target(retagged);
             handler.initialize(unlinkedHandler, target);
         }
     }
@@ -436,7 +425,7 @@ void OptimizingJITCallee::addCodeOrigin(unsigned firstInlineCSI, unsigned lastIn
     codeOrigins.append({ firstInlineCSI, lastInlineCSI, functionIndex, 0 });
 }
 
-IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& isInlined) const
+const WasmCodeOrigin* OptimizingJITCallee::getCodeOrigin(unsigned csi, unsigned depth, bool& isInlined) const
 {
     isInlined = false;
     auto iter = std::lower_bound(codeOrigins.begin(), codeOrigins.end(), WasmCodeOrigin { 0, csi, 0, 0 }, [&](const auto& a, const auto& b) {
@@ -447,11 +436,25 @@ IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& i
     while (iter != codeOrigins.end()) {
         if (iter->firstInlineCSI <= csi && iter->lastInlineCSI >= csi && !(depth--)) {
             isInlined = true;
-            return IndexOrName(iter->functionIndex, nameSections[iter->moduleIndex]->get(iter->functionIndex));
+            return iter;
         }
         ++iter;
     }
 
+    return nullptr;
+}
+
+IndexOrName OptimizingJITCallee::getIndexOrName(const WasmCodeOrigin* codeOrigin) const
+{
+    if (!codeOrigin)
+    return indexOrName();
+    return IndexOrName(codeOrigin->functionIndex, nameSections[codeOrigin->moduleIndex]->get(codeOrigin->functionIndex));
+}
+
+IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& isInlined) const
+{
+    if (auto* codeOrigin = getCodeOrigin(csi, depth, isInlined))
+        return getIndexOrName(codeOrigin);
     return indexOrName();
 }
 
@@ -489,8 +492,7 @@ Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOri
     PCToCodeOriginMapBuilder builder(shouldBuildMapping);
     for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
         B3::Origin b3Origin = originRange.origin;
-        auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
-        if (origin) {
+        if (auto* origin = b3Origin.maybeOMGOrigin()) {
             // We stash the location into a BytecodeIndex.
             builder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_callSiteIndex.bits())));
         } else
@@ -504,8 +506,7 @@ Box<PCToCodeOriginMap> OptimizingJITCallee::materializePCToOriginMap(B3::PCToOri
         PCToCodeOriginMapBuilder samplingProfilerBuilder(shouldBuildMapping);
         for (const B3::PCToOriginMap::OriginRange& originRange : originMap.ranges()) {
             B3::Origin b3Origin = originRange.origin;
-            auto* origin = std::bit_cast<const OMGOrigin*>(b3Origin.data());
-            if (origin) {
+            if (auto* origin = b3Origin.maybeOMGOrigin()) {
                 // We stash the location into a BytecodeIndex.
                 samplingProfilerBuilder.appendItem(originRange.label, CodeOrigin(BytecodeIndex(origin->m_opcodeOrigin.location())));
             } else
@@ -536,7 +537,7 @@ JSEntrypointCallee::JSEntrypointCallee(TypeIndex typeIndex, bool)
 CodePtr<WasmEntryPtrTag> JSEntrypointCallee::entrypointImpl() const
 {
 #if ENABLE(JIT)
-    if (Options::useWasmJIT())
+    if (Options::useJIT())
         return createJSToWasmJITShared().retaggedCode<WasmEntryPtrTag>();
 #endif
     return LLInt::getCodeFunctionPtr<CFunctionPtrTag>(js_to_wasm_wrapper_entry);

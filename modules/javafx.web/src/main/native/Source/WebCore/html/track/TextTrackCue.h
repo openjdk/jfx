@@ -35,6 +35,7 @@
 
 #include "ActiveDOMObject.h"
 #include "DocumentFragment.h"
+#include "EventTargetInterfaces.h"
 #include "HTMLElement.h"
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
@@ -141,6 +142,7 @@ protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
 
     virtual void toJSON(JSON::Object&) const;
 

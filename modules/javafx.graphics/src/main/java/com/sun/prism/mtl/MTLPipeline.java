@@ -40,6 +40,8 @@ public class MTLPipeline extends GraphicsPipeline {
     private static MTLPipeline theInstance;
     private static MTLResourceFactory mtlResourceFactory;
 
+    private static native boolean nSupportsMTL();
+
     static {
         String libName = "prism_mtl";
 
@@ -61,7 +63,11 @@ public class MTLPipeline extends GraphicsPipeline {
 
     @Override
     public boolean init() {
+        if (!MTLPipeline.nSupportsMTL()) {
+            return false;
+        }
         Map<String, Long> devDetails = new HashMap<>();
+        devDetails.put("isVsyncEnabled", PrismSettings.isVsyncEnabled ? 1L : 0L);
         setDeviceDetails(devDetails);
         return true;
     }

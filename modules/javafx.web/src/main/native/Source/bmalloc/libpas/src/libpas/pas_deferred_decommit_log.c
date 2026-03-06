@@ -173,7 +173,7 @@ bool pas_deferred_decommit_log_add_maybe_locked(pas_deferred_decommit_log* log,
     case pas_range_is_not_locked:
         return pas_deferred_decommit_log_add(log, range, heap_lock_hold_mode);
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

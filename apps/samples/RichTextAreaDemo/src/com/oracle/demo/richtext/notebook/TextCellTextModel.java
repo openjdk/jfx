@@ -70,7 +70,7 @@ public class TextCellTextModel extends RichTextModel {
 
     public String getPlainText() {
         try {
-            StyledOutput out = StyledOutput.forPlainText();
+            StyledOutput out = StyledOutput.forPlainText(getLineEnding());
             TextPos end = getDocumentEnd();
             export(TextPos.ZERO, end, out);
             return out.toString();

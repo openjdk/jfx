@@ -67,7 +67,7 @@ namespace WGSL {
         return pass(__VA_ARGS__); \
     }();
 
-std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration& configuration)
+Variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration& configuration)
 {
     PhaseTimes phaseTimes;
     auto shaderModule = makeUniqueRef<ShaderModule>(wgsl, configuration);
@@ -82,7 +82,7 @@ std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const
     RUN_PASS(mangleNames, shaderModule);
 
     Vector<Warning> warnings { };
-    return std::variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
+    return Variant<SuccessfulCheck, FailedCheck>(WTF::InPlaceType<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
 }
 
 SuccessfulCheck::SuccessfulCheck(SuccessfulCheck&&) = default;
@@ -95,12 +95,12 @@ SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<ShaderMod
 
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, const HashMap<String, PipelineLayout*>& pipelineLayouts)
+inline Variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
     CompilationScope compilationScope(shaderModule);
 
     PhaseTimes phaseTimes;
-    auto result = [&]() -> std::variant<PrepareResult, Error> {
+    auto result = [&]() -> Variant<PrepareResult, Error> {
         PhaseTimer phaseTimer("prepare total", phaseTimes);
 
         HashMap<String, Reflection::EntryPointInformation> entryPoints;
@@ -120,7 +120,7 @@ inline std::variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule
     return result;
 }
 
-std::variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMap<String, ConstantValue>& constantValues)
+Variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepareResult, HashMap<String, ConstantValue>& constantValues, DeviceState&& deviceState)
 {
     PhaseTimes phaseTimes;
     String result;
@@ -128,18 +128,18 @@ std::variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& 
         return { *maybeError };
     {
             PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
-        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues);
+        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues, WTFMove(deviceState));
         }
     logPhaseTimes(phaseTimes);
     return { result };
 }
 
-std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const HashMap<String, PipelineLayout*>& pipelineLayouts)
+Variant<PrepareResult, Error> prepare(ShaderModule& ast, const HashMap<String, PipelineLayout*>& pipelineLayouts)
 {
     return prepareImpl(ast, pipelineLayouts);
 }
 
-std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPointName, PipelineLayout* pipelineLayout)
+Variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entryPointName, PipelineLayout* pipelineLayout)
 {
     HashMap<String, PipelineLayout*> pipelineLayouts;
     pipelineLayouts.add(entryPointName, pipelineLayout);
@@ -148,14 +148,15 @@ std::variant<PrepareResult, Error> prepare(ShaderModule& ast, const String& entr
 
 std::optional<ConstantValue> evaluate(const AST::Expression& expression, const HashMap<String, ConstantValue>& constants)
 {
+    std::optional<ConstantValue> result;
     if (auto constantValue = expression.constantValue())
-        return *constantValue;
+        result = *constantValue;
     auto* maybeIdentifierExpression = dynamicDowncast<const AST::IdentifierExpression>(expression);
     if (!maybeIdentifierExpression)
-        return std::nullopt;
+        return result;
     auto it = constants.find(maybeIdentifierExpression->identifier());
     if (it == constants.end())
-        return std::nullopt;
+        return result;
     const_cast<AST::Expression&>(expression).setConstantValue(it->value);
     return it->value;
 }

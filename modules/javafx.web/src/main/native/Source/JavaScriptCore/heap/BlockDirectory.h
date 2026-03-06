@@ -32,6 +32,7 @@
 #include "LocalAllocator.h"
 #include "MarkedBlock.h"
 #include <wtf/DataLog.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/FastBitVector.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/SharedTask.h>
@@ -53,7 +54,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BlockDirectory);
 
 class BlockDirectory {
     WTF_MAKE_NONCOPYABLE(BlockDirectory);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BlockDirectory);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BlockDirectory, BlockDirectory);
 
     friend class LLIntOffsetsExtractor;
 

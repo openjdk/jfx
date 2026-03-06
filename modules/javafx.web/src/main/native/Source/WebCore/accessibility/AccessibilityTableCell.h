@@ -37,19 +37,19 @@ class AccessibilityTableRow;
 
 class AccessibilityTableCell : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityTableCell> create(AXID, RenderObject&);
-    static Ref<AccessibilityTableCell> create(AXID, Node&);
+    static Ref<AccessibilityTableCell> create(AXID, RenderObject&, AXObjectCache&, bool isARIAGridCell = false);
+    static Ref<AccessibilityTableCell> create(AXID, Node&, AXObjectCache&, bool isARIAGridCell = false);
     virtual ~AccessibilityTableCell();
     bool isTableCell() const final { return true; }
+    bool isARIAGridCell() const { return m_isARIAGridCell; }
 
     bool isExposedTableCell() const final;
     bool isTableHeaderCell() const;
     bool isColumnHeader() const final;
     bool isRowHeader() const final;
 
-    std::optional<AXID> rowGroupAncestorID() const final;
-
-    virtual AccessibilityTable* parentTable() const;
+    AccessibilityTable* parentTable() const;
+    String readOnlyValue() const;
 
     // Returns the start location and row span of the cell.
     std::pair<unsigned, unsigned> rowIndexRange() const final;
@@ -58,8 +58,10 @@ public:
 
     AccessibilityChildrenVector rowHeaders() final;
 
-    int axColumnIndex() const final;
-    int axRowIndex() const final;
+    std::optional<unsigned> axColumnIndex() const final;
+    std::optional<unsigned> axRowIndex() const final;
+    String axColumnIndexText() const final;
+    String axRowIndexText() const final;
     unsigned colSpan() const;
     unsigned rowSpan() const;
     void incrementEffectiveRowSpan() { ++m_effectiveRowSpan; }
@@ -75,8 +77,8 @@ public:
 #endif
 
 protected:
-    explicit AccessibilityTableCell(AXID, RenderObject&);
-    explicit AccessibilityTableCell(AXID, Node&);
+    explicit AccessibilityTableCell(AXID, RenderObject&, AXObjectCache&, bool isARIAGridCell = false);
+    explicit AccessibilityTableCell(AXID, Node&, AXObjectCache&, bool isARIAGridCell = false);
 
     AccessibilityTableRow* parentRow() const;
     AccessibilityRole determineAccessibilityRole() final;
