@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,14 @@
  */
 import com.sun.javafx.gradle.CompileTarget
 
+boolean isAllTaskRequested() {
+    return gradle.startParameter.taskNames.any { String taskName ->
+        taskName == "all"
+    }
+}
+
 defineProperty("MAVEN_PUBLISH", "false")
-ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
+ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH) || isAllTaskRequested()
 defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (ext.IS_MILESTONE_FCS ? project.ext.RELEASE_VERSION_SHORT : project.ext.RELEASE_VERSION_LONG) : "")
 ext.MAVEN_GROUP_ID = "org.openjfx"
 
@@ -75,7 +81,6 @@ ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task 
     def targetProperties = project.ext[t.upper]
     def platformPrefix = targetProperties.platformPrefix
 
-    // Maven Publications
     def publicationDirName = "${platformPrefix}publications"
     def publicationDir = "${rootProject.layout.buildDirectory.get()}/${publicationDirName}"
 
@@ -101,13 +106,18 @@ ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task 
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
-        project.tasks.register("modularPublicationJar${t.capital}", Jar) {
+        def modularPublicationJarTask = project.tasks.register("modularPublicationJar${t.capital}", Jar) {
             dependsOn modularEmptyPublicationJarTask
 
             destinationDirectory = file("${dstModularJarDir}")
             archiveFileName = modularPublicationJarName
             from srcLibsDir
             from srcClassesDir
+        }
+
+        // 'all' task should always build the publication.
+        rootProject.tasks.named("all").configure {
+            dependsOn modularPublicationJarTask
         }
     }
 }
