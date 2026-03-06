@@ -334,7 +334,7 @@
 
     // Fullscreen exit failed - window remains in fullscreen mode, restore buttons
     BOOL isWindowEnabled = self->isEnabled;
-    [[self->nsWindow standardWindowButton:NSWindowZoomButton] setEnabled:isWindowEnabled];
+    [[self->nsWindow standardWindowButton:NSWindowCloseButton] setEnabled:isWindowEnabled];
     [[self->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setEnabled: NO];
     [[self->nsWindow standardWindowButton:NSWindowZoomButton] setEnabled: isWindowEnabled && self->isResizable];
 }

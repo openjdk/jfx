@@ -127,7 +127,6 @@ static inline GlassView3D<GlassView> *getMacView(JNIEnv *env, jobject jview)
                                                                                         \
     [self setDelegate:delegate];                                                        \
     [self setAcceptsMouseMovedEvents:NO];                                               \
-    [self setShowsResizeIndicator:NO];                                                  \
     [self setAllowsConcurrentViewDrawing:YES];                                          \
                                                                                         \
     [self setReleasedWhenClosed:YES];                                                   \
