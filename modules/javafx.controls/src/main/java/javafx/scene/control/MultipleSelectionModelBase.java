@@ -837,7 +837,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             int[] removed = indices.stream()
                             .filter(Objects::nonNull)
                             .mapToInt(Integer::intValue)
-                            .filter(bitset::get)
+                            .filter(this::isSelected)
                             .distinct()
                             .sorted()
                             .toArray();
@@ -849,12 +849,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             _beginChange();
             for(int target : removed) {
-                while(i >= 0 && i != target) {
+                while(i != -1 && i != target) {
                     i = bitset.nextSetBit(i + 1);
                     count++;
                 }
-
-                if(i < 0) break;
 
                 bitset.clear(target);
                 _nextRemove(count, target);
