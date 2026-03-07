@@ -176,8 +176,8 @@ class ControlUtils {
                     .filter(removeRowFilter)
                     .forEach(row -> {
                         removed.add(row);
-                        sm.selectedIndices.clear(row);
                     });
+            sm.selectedIndices.clear(removed);
 
             final int[] addedSize = new int[1];
             c.getAddedSubList().stream()
