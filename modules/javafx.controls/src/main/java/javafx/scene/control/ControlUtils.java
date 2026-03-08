@@ -37,7 +37,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.IntPredicate;
+import java.util.stream.Collectors;
 
 class ControlUtils {
     private ControlUtils() { }
@@ -163,30 +165,41 @@ class ControlUtils {
         };
     }
 
+    static private void processContiguousRanges(List<Integer> indices, BiConsumer<Integer, Integer> action) {
+        int size = indices.size();
+        for (int i = 0; i < size; i++) {
+            int begin = indices.get(i);
+            while (i + 1 < size && indices.get(i + 1) == indices.get(i) + 1) {
+                i++;
+            }
+            action.accept(begin, indices.get(i) + 1);
+        }
+    }
+
     public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
             sm.startAtomic();
 
-            final List<Integer> removed = new ArrayList<>(c.getRemovedSize());
-            c.getRemoved().stream()
+            final List<Integer> removed = c.getRemoved().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
                     .filter(removeRowFilter)
-                    .forEach(row -> {
-                        removed.add(row);
-                        sm.selectedIndices.clear(row);
-                    });
+                    .sorted()
+                    .boxed()
+                    .collect(Collectors.toList());
 
-            final int[] addedSize = new int[1];
-            c.getAddedSubList().stream()
+            processContiguousRanges(removed, (begin, end) -> sm.selectedIndices.set(begin, end, false));
+
+            final List<Integer> added = c.getAddedSubList().stream()
                     .mapToInt(TablePositionBase::getRow)
                     .distinct()
-                    .forEach(row -> {
-                        addedSize[0]++;
-                        sm.selectedIndices.set(row);
-                    });
+                    .sorted()
+                    .boxed()
+                    .collect(Collectors.toList());
+
+            processContiguousRanges(added, (begin, end) -> sm.selectedIndices.set(begin, end, true));
 
             sm.stopAtomic();
 
@@ -197,7 +210,7 @@ class ControlUtils {
                 int tpRow = c.getList().get(from).getRow();
                 from = sm.selectedIndices.indexOf(tpRow);
             }
-            final int to = from + addedSize[0];
+            final int to = from + added.size();
 
             if (c.wasReplaced()) {
                 sm.selectedIndices._nextReplace(from, to, removed);
