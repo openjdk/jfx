@@ -739,16 +739,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void set(int index, int end, boolean isSet) {
             _beginChange();
             size = -1;
+            bitset.set(index, end, isSet);
+            if (index <= lastGetValue) reset();
+            int indicesIndex = indexOf(index);
+            int span = end - index;
             if (isSet) {
-                bitset.set(index, end, isSet);
-                if (index <= lastGetValue) reset();
-                int indicesIndex = indexOf(index);
-                int span = end - index;
                 _nextAdd(indicesIndex, indicesIndex + span);
             } else {
-                // TODO handle remove
-                bitset.set(index, end, isSet);
-                if (index <= lastGetValue) reset();
+                _nextRemove(indicesIndex, indicesIndex + span);
             }
             _endChange();
         }
