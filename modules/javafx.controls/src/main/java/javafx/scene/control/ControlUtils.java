@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 
@@ -165,14 +164,15 @@ class ControlUtils {
         };
     }
 
-    static private void processContiguousRanges(List<Integer> indices, BiConsumer<Integer, Integer> action) {
+    private static <S> void processContiguousRanges(MultipleSelectionModelBase<S> sm, List<Integer> indices, boolean isSet) {
         int size = indices.size();
         for (int i = 0; i < size; i++) {
             int begin = indices.get(i);
             while (i + 1 < size && indices.get(i + 1) == indices.get(i) + 1) {
                 i++;
             }
-            action.accept(begin, indices.get(i) + 1);
+            int end = indices.get(i) + 1;
+            sm.selectedIndices.set(begin, end, isSet);
         }
     }
 
@@ -190,7 +190,7 @@ class ControlUtils {
                     .boxed()
                     .collect(Collectors.toList());
 
-            processContiguousRanges(removed, (begin, end) -> sm.selectedIndices.set(begin, end, false));
+            processContiguousRanges(sm, removed, false);
 
             final List<Integer> added = c.getAddedSubList().stream()
                     .mapToInt(TablePositionBase::getRow)
@@ -199,7 +199,7 @@ class ControlUtils {
                     .boxed()
                     .collect(Collectors.toList());
 
-            processContiguousRanges(added, (begin, end) -> sm.selectedIndices.set(begin, end, true));
+            processContiguousRanges(sm, added, true);
 
             sm.stopAtomic();
 
