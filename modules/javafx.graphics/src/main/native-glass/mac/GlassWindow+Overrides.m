@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@
 #import "GlassViewDelegate.h"
 #import "GlassApplication.h"
 #import "GlassScreen.h"
+#import "GlassMenu.h"
 
 #import <AppKit/NSGraphics.h> // NSBeep();
 
@@ -123,6 +124,14 @@
 - (void)windowWillClose:(NSNotification *)notification
 {
     //NSLog(@"windowWillClose");
+
+    NSWindow *window = notification.object;
+    BOOL isPopup = ([window styleMask] & NSWindowStyleMaskNonactivatingPanel) != 0;
+    if (isPopup) {
+        // If this window is a popup, remove the menu observer
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:GlassMenuBarWillOpenNotification object:nil];
+    }
+
     // Remove self from list of owner's child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
@@ -306,6 +315,21 @@
 
     // it's up to app to decide if the window should be closed
     return FALSE;
+}
+
+- (void)menuWillOpenHandler:(NSNotification *)notification {
+    // This handler is only called for popup windows as the observer
+    // is only registered for popups in _createWindowCommonDo
+
+    // When there is a mouse click over the system menu bar, and a popup window is showing,
+    // we consume the event by immediately closing the popup without allowing the menu to appear.
+    NSMenu *menu = notification.object;
+    if (menu != nil) {
+        [menu cancelTrackingWithoutAnimation];
+    }
+
+    // Close the popup window
+    [self->nsWindow close];
 }
 
 #pragma mark --- Title Icon
