@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -233,10 +233,10 @@ public class CommonDialogs {
                 try {
                     return folder.getCanonicalPath();
                 } catch (IOException e) {
-                    throw new IllegalArgumentException("Unable to get a canonical path for folder", e);
+                    throw new IllegalArgumentException("Unable to get a canonical path for the initial directory", e);
                 }
             } else {
-                throw new IllegalArgumentException("Folder parameter must be a valid folder");
+                throw new IllegalArgumentException("The initial directory does not exist, is invalid or is not accessible");
             }
         }
 
