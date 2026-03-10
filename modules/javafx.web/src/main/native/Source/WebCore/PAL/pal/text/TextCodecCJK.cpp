@@ -1141,8 +1141,11 @@ String TextCodecCJK::big5Decode(std::span<const uint8_t> bytes, bool flush, bool
                 else {
                     if (auto codePoint = findFirstInSortedPairs(big5(), pointer))
                         result.append(*codePoint);
-                    else
+                    else {
+                        if (isASCII(byte))
+                            m_prependedByte = byte;
                         return SawError::Yes;
+                    }
                 }
                 return SawError::No;
             }
