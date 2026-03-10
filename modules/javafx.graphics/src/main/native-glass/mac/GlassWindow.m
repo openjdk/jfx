@@ -568,7 +568,12 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             {
                 // Only resizable ownerless windows should have the Full Screen Toggle control
                 // This behavior is applied later in _setResizable:YES when the window becomes resizable.
-                // Non-resizable ownerless windows keep the default behavior, which doesn't allow full screen access
+
+                // Non-resizable ownerless windows keep the default behavior, which doesn't allow full screen access,
+                // except if they are undecorated/borderless windows:
+                if (!isTitled) {
+                    behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+                }
             }
             else
             {

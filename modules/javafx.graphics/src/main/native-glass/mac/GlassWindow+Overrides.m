@@ -304,9 +304,10 @@
 
     // Apply collection behavior changes that were deferred from _setResizable
     BOOL isPopupOrUtility = (newMask & NSWindowStyleMaskUtilityWindow) != 0 || (newMask & NSWindowStyleMaskNonactivatingPanel) != 0;
+    BOOL isTitled = (newMask & NSWindowStyleMaskTitled) != 0;
     if (!self->owner && !isPopupOrUtility) {
         NSWindowCollectionBehavior behavior = [self->nsWindow collectionBehavior];
-        if (self->isResizable) {
+        if (self->isResizable || !isTitled) {
             behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
         } else {
             behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;

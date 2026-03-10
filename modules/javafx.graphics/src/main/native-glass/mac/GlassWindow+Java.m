@@ -251,8 +251,10 @@ extern NSSize maxScreenDimensions;
         mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
         [self->nsWindow setStyleMask: mask];
 
-        // When window becomes non-resizable, remove behavior to prevent access to fullscreen/Mission Control
-        if (!self->owner && !isPopupOrUtility) {
+        // When window becomes non-resizable, remove behavior to prevent access to fullscreen/Mission Control, unless
+        // is is a borderless window
+        BOOL isTitled = (mask & NSWindowStyleMaskTitled) != 0;
+        if (!self->owner && !isPopupOrUtility && isTitled) {
             NSWindowCollectionBehavior behavior = [self->nsWindow collectionBehavior];
             behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
             [self->nsWindow setCollectionBehavior: behavior];
