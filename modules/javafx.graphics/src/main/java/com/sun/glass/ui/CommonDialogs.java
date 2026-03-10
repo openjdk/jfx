@@ -236,7 +236,7 @@ public class CommonDialogs {
                     throw new IllegalArgumentException("Unable to get a canonical path for the initial directory", e);
                 }
             } else {
-                throw new IllegalArgumentException("The initial directory does not exist, is invalid or is not accessible");
+                throw new IllegalArgumentException("The initial directory does not exist or is not a directory or is not accessible");
             }
         }
 
