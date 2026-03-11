@@ -3603,11 +3603,9 @@ public class TreeTableView<S> extends Control {
             setFocusedCell(pos);
 
             showRootListener = obs -> {
-                if (getFocusedIndex() >= 0) {
-                    final int newIndex = treeTableView.isShowRoot()
-                            ? getFocusedIndex() + 1
-                            : Math.max(0, getFocusedIndex() - 1);
-                    focus(newIndex);
+                if (isFocused(0)) {
+                    focus(-1);
+                    focus(0);
                 }
             };
             treeTableView.showRootProperty().addListener(new WeakInvalidationListener(showRootListener));
@@ -3666,6 +3664,13 @@ public class TreeTableView<S> extends Control {
                         // get the TreeItem the event occurred on - we only need to
                         // shift if the tree item is expanded
                         TreeItem<S> eventTreeItem = e.getTreeItem();
+                        if (!treeTableView.isShowRoot()
+                                && eventTreeItem == treeTableView.getRoot()
+                                && getFocusedIndex() == 0
+                                && getFocusedItem() == treeTableView.getRoot()) {
+                            focus(-1);
+                            return;
+                        }
                         if (ControlUtils.isTreeItemIncludingAncestorsExpanded(eventTreeItem)) {
                             for (int i = 0; i < e.getAddedChildren().size(); i++) {
                                 // get the added item and determine the row it is in
