@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -246,6 +246,8 @@ class GlassSystemMenu implements TKSystemMenu {
                 parent.insert(MenuItem.Separator, pos);
             }
         } else {
+            final MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), null);
+
             MenuItem.Callback callback = new MenuItem.Callback() {
                 @Override public void action() {
                     // toggle state of check or radio items (from ContextMenuContent.java)
@@ -265,9 +267,14 @@ class GlassSystemMenu implements TKSystemMenu {
                     }
                     menuitem.fire();
                 }
+
                 @Override public void validate() {
                     Menu.EventHandler     meh  = parent.getEventHandler();
                     GlassMenuEventHandler gmeh = (GlassMenuEventHandler)meh;
+
+                    // This is called from GlassMenu::validateMenuItem:, which returns the enabled state of native
+                    // NSMenuItem, and for that it needs to be in sync with the Java MenuItem.
+                    glassSubMenuItem.setEnabled(!menuitem.isDisable());
 
                     if (gmeh.isMenuOpen()) {
                         return;
@@ -275,8 +282,7 @@ class GlassSystemMenu implements TKSystemMenu {
                     menuitem.fireValidation();
                 }
             };
-
-            final MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), callback);
+            glassSubMenuItem.setCallback(callback);
 
             menuitem.textProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
 
