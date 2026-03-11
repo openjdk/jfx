@@ -59,7 +59,7 @@ import test.util.Util;
 public class SystemMenuBarEnableTest {
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
-    private static volatile TestApp testApp;
+    private static Menu menu;
 
     private static final int DELAY = 100;
 
@@ -90,37 +90,33 @@ public class SystemMenuBarEnableTest {
         Assumptions.assumeTrue(PlatformUtil.isMac(), "System menu bar tests only apply to macOS");
 
         // open and close the menu first, first item is enabled, second is disabled
-        robotMenu(true, false, false);
-        robotMenu(false, false, false);
+        robotMenu(false, false);
 
         // Disable the parent menu
-        Util.runAndWait(() -> testApp.menu.setDisable(true));
+        Util.runAndWait(() -> menu.setDisable(true));
 
         // open and close the menu again, all items should be disabled
-        robotMenu(true, false, false);
-        robotMenu(false, false, false);
+        robotMenu(false, false);
 
         // Re-enable the parent menu
-        Util.runAndWait(() -> testApp.menu.setDisable(false));
+        Util.runAndWait(() -> menu.setDisable(false));
 
         // Open the menu and select the first item, as it should be enabled again
-        robotMenu(true, true, false);
-        robotMenu(false, false, false);
+        robotMenu(true, false);
 
         Assertions.assertTrue(enabledItemFired.get(),
                 "Menu item action should fire after parent menu is re-enabled");
 
         // Open the menu and try to select the second item, it should still be disabled and not fire
-        robotMenu(true, false, true);
-        robotMenu(false, false, false);
+        robotMenu(false, true);
         Assertions.assertFalse(disabledItemFired.get(),
                 "Menu item action should fire after parent menu is re-enabled");
     }
 
-    private void robotMenu(boolean open, boolean selectFirstItem, boolean selectSecondItem) {
-        // Click on the system menu bar, in order to show the menu or hide it
+    private void robotMenu(boolean selectFirstItem, boolean selectSecondItem) {
+        // Click on the system menu bar, in order to show the menu
         Util.runAndWait(() -> {
-            robot.mouseMove(open ? MENU_BAR_X : MENU_BAR_X * 3, MENU_BAR_Y);
+            robot.mouseMove(MENU_BAR_X, MENU_BAR_Y);
             robot.mouseClick(MouseButton.PRIMARY);
         });
         Util.sleep(DELAY);
@@ -131,7 +127,7 @@ public class SystemMenuBarEnableTest {
                 robot.keyType(KeyCode.DOWN);
                 robot.keyType(KeyCode.ENTER);
             });
-            Util.sleep(2 * DELAY);
+            Util.sleep(DELAY);
         } else if (selectSecondItem) {
             // Select the second item via keyboard
             Util.runAndWait(() -> {
@@ -139,17 +135,18 @@ public class SystemMenuBarEnableTest {
                 robot.keyType(KeyCode.DOWN);
                 robot.keyType(KeyCode.ENTER);
             });
-            Util.sleep(2 * DELAY);
+            Util.sleep(DELAY);
         }
+
+        // hide menu
+        Util.runAndWait(() -> robot.keyType(KeyCode.ESCAPE));
+        Util.sleep(DELAY);
     }
 
     public static class TestApp extends Application {
 
-        private Menu menu;
-
         @Override
         public void start(Stage stage) {
-            testApp = this;
             robot = new Robot();
 
             MenuItem enabledItem = new MenuItem("Enabled Item");
