@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.Collections;
 
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
+import com.sun.javafx.util.Utils;
 
 public final class Menu {
 
@@ -183,13 +184,13 @@ public final class Menu {
     // *****************************************************
     protected void notifyMenuOpening() {
         if (this.eventHandler != null) {
-            eventHandler.handleMenuOpening(this, System.nanoTime());
+            Utils.runOnFxThread(() -> eventHandler.handleMenuOpening(this, System.nanoTime()));
         }
     }
 
     protected void notifyMenuClosed() {
         if (this.eventHandler != null) {
-            eventHandler.handleMenuClosed(this, System.nanoTime());
+            Utils.runOnFxThread(() -> eventHandler.handleMenuClosed(this, System.nanoTime()));
         }
     }
 }
