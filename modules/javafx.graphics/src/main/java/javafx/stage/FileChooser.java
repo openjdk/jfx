@@ -206,7 +206,7 @@ public final class FileChooser {
     /**
      * The initial directory for the displayed file dialog.
      * <p>
-     * If this directory is not set, does not exist, is not a directory or is not accessible,
+     * If this directory is not set, does not exist, is not a directory, or is not accessible,
      * the dialog will fall back to the platform-default location. The default folder may vary
      * across operating systems.
      * </p>
