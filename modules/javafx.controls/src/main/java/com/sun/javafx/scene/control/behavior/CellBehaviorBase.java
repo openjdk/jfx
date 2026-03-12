@@ -291,8 +291,9 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         doHandleClick(e, button, clickCount, isAlreadySelected);
     }
 
-    protected void doHandleClick(MouseEvent e, MouseButton button, int clickCount, boolean isAlreadySelected) {
+    protected final void doHandleClick(MouseEvent e, MouseButton button, int clickCount, boolean isAlreadySelected) {
         // If not focused yet, we want to shift focus first to the container.
+        // This allows other cells to commit their value before we handle the click.
         if (!getCellContainer().isFocused()) {
             getCellContainer().requestFocus();
         }
