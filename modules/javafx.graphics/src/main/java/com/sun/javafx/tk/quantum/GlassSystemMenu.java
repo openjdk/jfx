@@ -246,7 +246,7 @@ class GlassSystemMenu implements TKSystemMenu {
                 parent.insert(MenuItem.Separator, pos);
             }
         } else {
-            final MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), null);
+            MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), null);
 
             MenuItem.Callback callback = new MenuItem.Callback() {
                 @Override public void action() {
