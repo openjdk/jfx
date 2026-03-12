@@ -2408,21 +2408,6 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Returns true if this scene is quiescent, i.e. it has no activity
-     * pending on it such as CSS processing or layout requests.
-     *
-     * Intended to be used for tests only
-     *
-     * @return boolean indicating whether the scene is quiescent
-     */
-    boolean isQuiescent() {
-        final Parent r = getRoot();
-        return !isFocusDirty()
-               && (r == null || (r.cssFlag == CssFlags.CLEAN &&
-                r.layoutFlag == LayoutFlags.CLEAN));
-    }
-
-    /**
      * A listener for pulses, used for testing. If non-null, this is called at
      * the very end of ScenePulseListener.pulse().
      *

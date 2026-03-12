@@ -140,7 +140,7 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
             }
             super.mousePressed(e);
         } else {
-            if (!control.isFocused() && control.isFocusTraversable()) {
+            if (!control.isFocused()) {
                 control.requestFocus();
             }
             if (control.isShowing()) {

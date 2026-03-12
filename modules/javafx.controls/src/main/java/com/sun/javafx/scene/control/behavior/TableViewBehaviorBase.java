@@ -445,7 +445,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 //        ObservableList<? extends TablePositionBase> cells = getSelectedCells();
 //        setAnchor(cells.isEmpty() ? null : cells.get(0));
 
-        if (!getNode().isFocused() && getNode().isFocusTraversable()) {
+        if (!getNode().isFocused()) {
             getNode().requestFocus();
         }
     }

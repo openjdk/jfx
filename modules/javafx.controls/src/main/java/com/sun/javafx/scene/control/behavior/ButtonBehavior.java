@@ -178,9 +178,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * potentially arming the Button, this will transfer focus to the button
      */
     protected void mousePressed(MouseEvent e) {
-        if (getNode().isFocusTraversable()) {
-            getNode().requestFocus();
-        }
+        getNode().requestFocus();
 
         // arm the button if it is a valid mouse event
         // Note there appears to be a bug where if I press and hold and release
@@ -191,7 +189,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
                 ! (e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
                         e.isShiftDown() || e.isControlDown() || e.isAltDown() || e.isMetaDown()));
 
-        if (! getNode().isArmed() && valid) {
+        if (!getNode().isArmed() && valid) {
             getNode().arm();
         }
     }

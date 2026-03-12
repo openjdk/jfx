@@ -147,7 +147,9 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         // determine the percentage of the way between min and max
         // represented by this mouse event
         final ScrollBar bar = getNode();
-        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
+        if (!bar.isFocused()) {
+            bar.requestFocus();
+        }
         final double pos = position;
         final boolean incrementing = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
         timeline = new Timeline();
@@ -185,7 +187,9 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     public void decButtonPressed() {
         final ScrollBar bar = getNode();
-        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
+        if (!bar.isFocused()) {
+            bar.requestFocus();
+        }
         stopTimeline();
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -219,7 +223,9 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      */
     public void incButtonPressed() {
         final ScrollBar bar = getNode();
-        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
+        if (!bar.isFocused()) {
+            bar.requestFocus();
+        }
         stopTimeline();
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -262,7 +268,9 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         // Stop the timeline for continuous increments as drags take precedence
         stopTimeline();
 
-        if (!scrollbar.isFocused() && scrollbar.isFocusTraversable()) scrollbar.requestFocus();
+        if (!scrollbar.isFocused()) {
+            scrollbar.requestFocus();
+        }
         double newValue = (position * (scrollbar.getMax() - scrollbar.getMin())) + scrollbar.getMin();
         if (!Double.isNaN(newValue)) {
             scrollbar.setValue(Utils.clamp(scrollbar.getMin(), newValue, scrollbar.getMax()));

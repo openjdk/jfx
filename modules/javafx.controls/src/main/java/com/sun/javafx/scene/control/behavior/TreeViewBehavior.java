@@ -295,7 +295,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             setAnchor(index);
         }
 
-        if (! getNode().isFocused() && getNode().isFocusTraversable()) {
+        if (!getNode().isFocused()) {
             getNode().requestFocus();
         }
     }

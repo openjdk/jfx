@@ -8550,7 +8550,6 @@ public abstract sealed class Node
                         if (get()) {
                             _scene.initializeInternalEventDispatcher();
                         }
-                        focusSetDirty(_scene);
                     }
                 }
 
@@ -8584,9 +8583,8 @@ public abstract sealed class Node
      * determination.
      */
     private void focusSetDirty(Scene s) {
-        if (s != null &&
-            (this == s.getFocusOwner() || isFocusTraversable())) {
-                s.setFocusDirty(true);
+        if (s != null && this == s.getFocusOwner()) {
+            s.setFocusDirty(true);
         }
     }
 

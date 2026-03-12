@@ -114,7 +114,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      */
     public void mousePressed(MouseEvent e) {
         ChoiceBox<T> choiceButton = getNode();
-        if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
+        choiceButton.requestFocus();
     }
 
     /**
