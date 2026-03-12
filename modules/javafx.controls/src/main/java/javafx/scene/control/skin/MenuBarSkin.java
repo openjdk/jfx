@@ -511,7 +511,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         } else if (stage != null && !stage.isFocused()) {
             // The stage lost focus, but we don't need to remove its menubar now.
             // If an owned dialog is shown, the owner stage should keep it as it was.
-             return;
+            return;
         }
 
         if (stage != currentMenuBarStage) {

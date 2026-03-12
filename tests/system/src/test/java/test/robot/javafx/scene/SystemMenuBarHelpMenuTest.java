@@ -94,7 +94,7 @@ public class SystemMenuBarHelpMenuTest {
     }
 
     /**
-     * Verifies that after opening the Help menu includes the Spotlight search field, which is 
+     * Verifies that after opening, the Help menu includes the Spotlight search field, which is
      * included seamlessly by the system.
      */
     @Test
@@ -168,7 +168,7 @@ public class SystemMenuBarHelpMenuTest {
         Util.waitForLatch(dialogShownLatch, 5, "Dialog should be shown");
 
         // Verify the menu remains opened. The Spotlight search field is also visible
-        // (thought this can only be verified visually)
+        // (though this can only be verified visually)
         Assertions.assertTrue(menu.isShowing(), "Menu should remain opened");
 
         // Step 3: close the menu
