@@ -121,6 +121,7 @@ public abstract class StyledSegment {
      * Returns the document properties or {@code null} if the segment type
      * is not {@link Type#DOCUMENT_PROPERTIES}.
      * @return the properties or null
+     * @since 27
      */
     public Map<String,String> getDocumentProperties() { return null; }
 

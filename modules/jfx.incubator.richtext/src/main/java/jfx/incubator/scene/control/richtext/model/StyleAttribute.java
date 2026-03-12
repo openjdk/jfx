@@ -34,7 +34,7 @@ import java.util.Objects;
  * @see StyleAttributeMap
  * @since 24
  */
-public abstract class StyleAttribute<T> {
+public sealed abstract class StyleAttribute<T> {
     private final String name;
     private final Class<T> type;
 
@@ -60,12 +60,7 @@ public abstract class StyleAttribute<T> {
      * @since 27
      */
     public static <P> StyleAttribute<P> character(String name, Class<P> type) {
-        return new StyleAttribute<P>(name, type) {
-            @Override
-            public boolean isCharacterAttribute() {
-                return true;
-            }
-        };
+        return new CharacterStyleAttribute<P>(name, type);
     }
 
     /**
@@ -77,12 +72,7 @@ public abstract class StyleAttribute<T> {
      * @since 27
      */
     public static <P> StyleAttribute<P> document(String name, Class<P> type) {
-        return new StyleAttribute<P>(name, type) {
-            @Override
-            public boolean isDocumentAttribute() {
-                return true;
-            }
-        };
+        return new DocumentStyleAttribute<P>(name, type);
     }
 
     /**
@@ -94,12 +84,7 @@ public abstract class StyleAttribute<T> {
      * @since 27
      */
     public static <P> StyleAttribute<P> paragraph(String name, Class<P> type) {
-        return new StyleAttribute<P>(name, type) {
-            @Override
-            public boolean isParagraphAttribute() {
-                return true;
-            }
-        };
+        return new ParagraphStyleAttribute<P>(name, type);
     }
 
     /**
@@ -172,5 +157,41 @@ public abstract class StyleAttribute<T> {
         h = 31 * h + name.hashCode();
         h = 31 * h + type.hashCode();
         return h;
+    }
+
+    /// character style attribute
+    private static final class CharacterStyleAttribute<X> extends StyleAttribute<X> {
+        CharacterStyleAttribute(String name, Class<X> type) {
+            super(name, type);
+        }
+
+        @Override
+        public boolean isCharacterAttribute() {
+            return true;
+        }
+    }
+
+    /// document style attribute
+    private static final class DocumentStyleAttribute<X> extends StyleAttribute<X> {
+        DocumentStyleAttribute(String name, Class<X> type) {
+            super(name, type);
+        }
+
+        @Override
+        public boolean isDocumentAttribute() {
+            return true;
+        }
+    }
+
+    /// paragraph style attribute
+    private static final class ParagraphStyleAttribute<X> extends StyleAttribute<X> {
+        ParagraphStyleAttribute(String name, Class<X> type) {
+            super(name, type);
+        }
+
+        @Override
+        public boolean isParagraphAttribute() {
+            return true;
+        }
     }
 }

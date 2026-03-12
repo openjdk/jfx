@@ -74,7 +74,7 @@ public class RichTextModel extends StyledTextModel {
      * This is a fixed repeating distance (in pixels) to the
      * next tab stop computed at regular intervals relative to the document content leading edge.
      * <p>
-     * A value of equal or less than 0 disables the default interval.
+     * A value of equal or less than 0 disables the default interval, rendering tab character as a single space.
      *
      * @return the default tab stop interval property
      * @defaultValue 0
