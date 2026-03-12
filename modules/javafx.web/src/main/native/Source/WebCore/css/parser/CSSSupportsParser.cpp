@@ -30,8 +30,9 @@
 #include "config.h"
 #include "CSSSupportsParser.h"
 
-#include "CSSParserImpl.h"
+#include "CSSParser.h"
 #include "CSSPropertyParserConsumer+Font.h"
+#include "CSSPropertyParserState.h"
 #include "CSSSelectorParser.h"
 #include "CSSTokenizer.h"
 #include "FontCustomPlatformData.h"
@@ -39,7 +40,7 @@
 
 namespace WebCore {
 
-CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParserImpl& parser, ParsingMode mode)
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParser& parser, ParsingMode mode)
 {
     // FIXME: The spec allows leading whitespace in @supports but not CSS.supports,
     // but major browser vendors allow it in CSS.supports also.
@@ -54,6 +55,14 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParser
     // parenthesis. The only productions that wouldn't have parsed above are the
     // declaration condition or the general enclosed productions.
     return supportsParser.consumeSupportsFeatureOrGeneralEnclosed(range);
+}
+
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(const String& condition, const CSSParserContext& context, ParsingMode mode)
+{
+    CSSParser parser(context, condition);
+    if (!parser.tokenizer())
+        return SupportsResult::Invalid;
+    return supportsCondition(parser.tokenizer()->tokenRange(), parser, mode);
 }
 
 enum class ClauseType { Unresolved, Conjunction, Disjunction };
@@ -171,7 +180,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsSelectorFunc
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontFormat);
-    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, m_parser.context(), true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, state, true);
     if (format.isNull())
         return Unsupported;
     return FontCustomPlatformData::supportsFormat(format) ? Supported : Unsupported;
@@ -181,7 +192,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFu
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontTechFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontTech);
-    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, m_parser.context(), true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, state, true);
     if (technologies.isEmpty())
         return Unsupported;
     ASSERT(technologies.size() == 1);

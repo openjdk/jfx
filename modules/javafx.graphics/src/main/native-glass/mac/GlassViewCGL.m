@@ -174,6 +174,7 @@
                                     andClientContext:(NSObject*)clientCGL
                                          mtlQueuePtr:0l
                                       withHiDPIAware:isHiDPIAware
+                                      isVsyncEnabled:NO // Unused in es2, the flag is added for metal.
                                         withIsSwPipe:isSwPipe
                                          useMTLForSW:mtlForSW];
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:

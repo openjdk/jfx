@@ -43,8 +43,8 @@ enum class JSDOMIteratorType { Set, Map };
 //     using ValueType = [IDLType];
 // };
 
-template<typename T, typename U = void> using EnableIfMap = typename std::enable_if<T::type == JSDOMIteratorType::Map, U>::type;
-template<typename T, typename U = void> using EnableIfSet = typename std::enable_if<T::type == JSDOMIteratorType::Set, U>::type;
+template<typename T, typename U = void> using EnableIfMap = typename std::enable_if_t<T::type == JSDOMIteratorType::Map, U>;
+template<typename T, typename U = void> using EnableIfSet = typename std::enable_if_t<T::type == JSDOMIteratorType::Set, U>;
 
 template<typename JSWrapper, typename IteratorTraits> class JSDOMIteratorPrototype final : public JSC::JSNonFinalObject {
 public:
@@ -217,12 +217,12 @@ template<typename JSIterator> JSC::JSValue iteratorForEach(JSC::JSGlobalObject& 
         JSC::MarkedArgumentBuffer arguments;
         appendForEachArguments<JSIterator>(lexicalGlobalObject, *thisObject.globalObject(), arguments, value);
         arguments.append(&thisObject);
-        if (UNLIKELY(arguments.hasOverflowed())) {
+        if (arguments.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
         }
         JSC::call(&lexicalGlobalObject, callback, callData, thisValue, arguments);
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             break;
     }
     return JSC::jsUndefined();

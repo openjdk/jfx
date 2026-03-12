@@ -1685,17 +1685,6 @@ static JSValueRef setTextDirectionCallback(JSContextRef context, JSObjectRef fun
 
 }
 
-static JSValueRef setHasCustomFullScreenBehaviorCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount == 1) {
-        bool hasCustomBehavior = JSValueToBoolean(context, arguments[0]);
-        TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-        controller->setHasCustomFullScreenBehavior(hasCustomBehavior);
-    }
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setStorageDatabaseIdleIntervalCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount != 1)
@@ -2100,7 +2089,6 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "focusWebView", focusWebViewCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setBackingScaleFactor", setBackingScaleFactorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "preciseTime", preciseTimeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setHasCustomFullScreenBehavior", setHasCustomFullScreenBehaviorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setStorageDatabaseIdleInterval", setStorageDatabaseIdleIntervalCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "closeIdleLocalStorageDatabases", closeIdleLocalStorageDatabasesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "grantWebNotificationPermission", grantWebNotificationPermissionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2302,7 +2290,7 @@ void TestRunner::callUIScriptCallback(unsigned callbackID, JSStringRef result)
 {
     JSRetainPtr<JSStringRef> protectedResult(result);
 #if !PLATFORM(IOS_FAMILY)
-    RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }, callbackID, protectedResult]() mutable {
+    RunLoop::mainSingleton().dispatch([protectedThis = Ref { *this }, callbackID, protectedResult]() mutable {
         JSContextRef context = protectedThis->mainFrameJSContext();
         JSValueRef resultValue = JSValueMakeString(context, protectedResult.get());
         protectedThis->callTestRunnerCallback(callbackID, 1, &resultValue);

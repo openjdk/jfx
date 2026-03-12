@@ -66,7 +66,7 @@ ExceptionOr<Ref<InternalReadableStream>> InternalReadableStream::createFromUnder
     ASSERT(!arguments.hasOverflowed());
 
     auto result = invokeReadableStreamFunction(globalObject, privateName, arguments);
-    if (UNLIKELY(result.hasException()))
+    if (result.hasException()) [[unlikely]]
         return result.releaseException();
 
     ASSERT(result.returnValue().isObject());
@@ -131,7 +131,7 @@ void InternalReadableStream::cancel(Exception&& exception)
     auto scope = DECLARE_CATCH_SCOPE(globalObject->vm());
     JSC::JSLockHolder lock(globalObject->vm());
     cancel(*globalObject, toJSNewlyCreated(globalObject, JSC::jsCast<JSDOMGlobalObject*>(globalObject), DOMException::create(WTFMove(exception))), Use::Private);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 
@@ -151,7 +151,7 @@ void InternalReadableStream::lock()
     ASSERT(!arguments.hasOverflowed());
 
     invokeReadableStreamFunction(*globalObject, privateName, arguments);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 
@@ -173,7 +173,7 @@ void InternalReadableStream::pipeTo(ReadableStreamSink& sink)
     ASSERT(!arguments.hasOverflowed());
 
     invokeReadableStreamFunction(*globalObject, privateName, arguments);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
 }
 
@@ -185,11 +185,11 @@ ExceptionOr<std::pair<Ref<InternalReadableStream>, Ref<InternalReadableStream>>>
 
     auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
     auto result = tee(*globalObject, shouldClone);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     auto resultsConversionResult = convert<IDLSequence<IDLObject>>(*globalObject, result);
-    if (UNLIKELY(resultsConversionResult.hasException(scope)))
+    if (resultsConversionResult.hasException(scope)) [[unlikely]]
         return Exception { ExceptionCode::ExistingExceptionError };
 
     auto results = resultsConversionResult.releaseReturnValue();

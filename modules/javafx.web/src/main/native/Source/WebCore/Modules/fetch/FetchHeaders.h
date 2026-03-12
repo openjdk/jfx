@@ -28,21 +28,20 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FetchHeadersGuard.h"
 #include "HTTPHeaderMap.h"
-#include <variant>
 #include <wtf/HashTraits.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FetchHeaders : public RefCounted<FetchHeaders> {
 public:
     using Guard = FetchHeadersGuard;
-    using Init = std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
+    using Init = Variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
     static ExceptionOr<Ref<FetchHeaders>> create(std::optional<Init>&&);
 
     static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }, Vector<String>&& setCookieValues = { }) { return adoptRef(*new FetchHeaders { guard, WTFMove(headers), WTFMove(setCookieValues) }); }
@@ -69,7 +68,7 @@ public:
         std::optional<KeyValuePair<String, String>> next();
 
     private:
-        Ref<FetchHeaders> m_headers;
+        const Ref<FetchHeaders> m_headers;
         size_t m_currentIndex { 0 };
         size_t m_setCookieIndex { 0 };
         Vector<String> m_keys;

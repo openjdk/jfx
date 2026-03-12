@@ -30,7 +30,7 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct FlexValidator {
-    static constexpr std::optional<CSS::FlexUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::FlexUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
         return CSS::UnitTraits<CSS::FlexUnit>::validate(unitType);
     }

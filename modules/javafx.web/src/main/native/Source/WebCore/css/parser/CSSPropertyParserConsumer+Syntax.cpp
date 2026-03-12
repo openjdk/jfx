@@ -28,17 +28,18 @@
 
 #include "CSSCustomPropertyValue.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserState.h"
 #include "CSSVariableParser.h"
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeDeclarationValue(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeDeclarationValue(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
 
-    return CSSVariableParser::parseDeclarationValue(nullAtom(), range.consumeAll(), context);
+    return CSSVariableParser::parseDeclarationValue(nullAtom(), range.consumeAll(), state.context);
 }
 
 } // namespace CSSPropertyParserHelpers

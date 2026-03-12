@@ -53,7 +53,7 @@ pas_segregated_view_get_size_directory_slow(pas_segregated_view view)
         return pas_compact_segregated_size_directory_ptr_load_non_null(
             &pas_segregated_view_get_partial(view)->directory);
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -77,7 +77,7 @@ pas_segregated_page_config_kind pas_segregated_view_get_page_config_kind(pas_seg
     case pas_segregated_size_directory_view_kind:
         return pas_segregated_view_get_size_directory(view)->base.page_config_kind;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_segregated_page_config_kind_null;
     }
 }
@@ -102,7 +102,7 @@ size_t pas_segregated_view_get_index(pas_segregated_view view)
     case pas_segregated_partial_view_kind:
         return ((pas_segregated_partial_view*)pas_segregated_view_get_ptr(view))->index;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return 0;
     }
 }
@@ -133,7 +133,7 @@ void* pas_segregated_view_get_page_boundary(pas_segregated_view view)
                     &partial_view->directory)->base.page_config_kind));
     }
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -160,7 +160,7 @@ pas_lock* pas_segregated_view_get_commit_lock(pas_segregated_view view)
         return &pas_compact_segregated_shared_view_ptr_load_non_null(
             &pas_segregated_view_get_partial(view)->shared_view)->commit_lock;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -180,7 +180,7 @@ pas_lock* pas_segregated_view_get_ownership_lock(pas_segregated_view view)
         return &pas_compact_segregated_shared_view_ptr_load_non_null(
             &pas_segregated_view_get_partial(view)->shared_view)->ownership_lock;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -203,7 +203,7 @@ bool pas_segregated_view_is_owned(pas_segregated_view view)
         return pas_compact_segregated_shared_view_ptr_load_non_null(
             &pas_segregated_view_get_partial(view)->shared_view)->is_owned;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -279,7 +279,7 @@ void pas_segregated_view_note_emptiness(
             pas_segregated_view_get_shared_handle(view));
         return;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     }
 }
@@ -575,7 +575,7 @@ pas_segregated_view pas_segregated_view_for_object(
                 pas_segregated_view_get_ptr(owning_view), begin, *page_config));
 
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -596,7 +596,7 @@ pas_heap_summary pas_segregated_view_compute_summary(pas_segregated_view view,
         return pas_segregated_partial_view_compute_summary(pas_segregated_view_get_partial(view));
 
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_heap_summary_create_empty();
     }
 }
@@ -612,7 +612,7 @@ bool pas_segregated_view_is_eligible(pas_segregated_view view)
         return pas_segregated_partial_view_is_eligible(pas_segregated_view_get_partial(view));
 
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     }
 }
@@ -652,7 +652,7 @@ bool pas_segregated_view_is_empty(pas_segregated_view view)
         return false;
 
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     }
 }

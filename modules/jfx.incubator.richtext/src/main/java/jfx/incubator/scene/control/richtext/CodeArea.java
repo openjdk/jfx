@@ -425,8 +425,7 @@ public class CodeArea extends RichTextArea {
             return "";
         }
         TextPos end = m.getDocumentEnd();
-        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput()) {
-            out.setLineSeparator("\n");
+        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput(m.getLineEnding())) {
             m.export(TextPos.ZERO, end, out);
             return out.toString();
         } catch (IOException e) {

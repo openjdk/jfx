@@ -34,7 +34,7 @@ namespace WGSL {
 struct ValueVariable {
     unsigned id;
 };
-using AbstractValue = std::variant<ValueVariable, unsigned>;
+using AbstractValue = Variant<ValueVariable, unsigned>;
 
 struct TypeVariable {
     unsigned id;
@@ -51,7 +51,7 @@ struct AbstractPointer;
 struct AbstractArray;
 struct AbstractAtomic;
 
-using AbstractTypeImpl = std::variant<
+using AbstractTypeImpl = Variant<
     AbstractVector,
     AbstractMatrix,
     AbstractTexture,

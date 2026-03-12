@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,14 +48,21 @@ RefPtr<ArchiveResource> ArchiveResource::create(RefPtr<FragmentedSharedBuffer>&&
 {
     if (!data)
         return nullptr;
+
+    return ArchiveResource::createWithData(data.releaseNonNull(), url, mimeType, textEncoding, frameName, response, relativeFilePath);
+}
+
+Ref<ArchiveResource> ArchiveResource::createWithData(Ref<FragmentedSharedBuffer>&& data, const URL& url, const String& mimeType, const String& textEncoding, const String& frameName, const ResourceResponse& response, const String& relativeFilePath)
+{
     if (response.isNull()) {
-        ResourceResponse syntheticResponse(url, mimeType, data->size(), textEncoding);
+        ResourceResponse syntheticResponse(URL { url }, String { mimeType }, data->size(), String { textEncoding });
         // Provide a valid HTTP status code for http URLs since we have logic in WebCore that validates it.
         if (url.protocolIsInHTTPFamily())
             syntheticResponse.setHTTPStatusCode(200);
-        return adoptRef(*new ArchiveResource(data.releaseNonNull(), url, mimeType, textEncoding, frameName, WTFMove(syntheticResponse), relativeFilePath));
+        return adoptRef(*new ArchiveResource(WTFMove(data), url, mimeType, textEncoding, frameName, WTFMove(syntheticResponse), relativeFilePath));
     }
-    return adoptRef(*new ArchiveResource(data.releaseNonNull(), url, mimeType, textEncoding, frameName, response, relativeFilePath));
+
+    return adoptRef(*new ArchiveResource(WTFMove(data), url, mimeType, textEncoding, frameName, response, relativeFilePath));
 }
 
 RefPtr<ArchiveResource> ArchiveResource::create(RefPtr<FragmentedSharedBuffer>&& data, const URL& url, const ResourceResponse& response)
@@ -72,13 +79,13 @@ Expected<String, ArchiveError> ArchiveResource::saveToDisk(const String& directo
 
     auto filePath = FileSystem::pathByAppendingComponent(directory, m_relativeFilePath);
     FileSystem::makeAllDirectories(FileSystem::parentPath(filePath));
-    auto fileData = data().extractData();
-    int bytesWritten = FileSystem::overwriteEntireFile(filePath, fileData.span());
+    auto fileData = protectedData()->extractData();
+    auto bytesWritten = FileSystem::overwriteEntireFile(filePath, fileData.span());
 
-    if (bytesWritten < 0)
+    if (!bytesWritten)
         return makeUnexpected(ArchiveError::FileSystemError);
 
-    if ((size_t)bytesWritten != fileData.size()) {
+    if (*bytesWritten != fileData.size()) {
         FileSystem::deleteFile(filePath);
         return makeUnexpected(ArchiveError::FileSystemError);
     }

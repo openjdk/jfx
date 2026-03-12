@@ -35,17 +35,18 @@
 #include "CSSCalcTree+Parser.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
 #include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
-#include "CSSPropertyParserConsumer+Number.h"
-#include "CSSPropertyParserConsumer+Percentage.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
+#include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSQuadValue.h"
 #include "CSSReflectValue.h"
@@ -70,22 +71,17 @@ template<typename ElementType> static void complete4Sides(std::array<ElementType
 
 enum class SupportWebKitBorderRadiusQuirk : bool { No, Yes };
 
-template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::BorderRadius> consumeBorderRadius(CSSParserTokenRange& range, const CSSParserContext& context)
+template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::BorderRadius> consumeBorderRadius(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'border-radius'> = <length-percentage [0,∞]>{1,4} [ / <length-percentage [0,∞]>{1,4} ]?
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-radius
 
     using OptionalRadiiForAxis = std::array<std::optional<CSS::LengthPercentage<CSS::Nonnegative>>, 4>;
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-
     OptionalRadiiForAxis horizontalRadii;
     unsigned i = 0;
     for (; i < 4 && !range.atEnd() && range.peek().type() != DelimiterToken; ++i) {
-        horizontalRadii[i] = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, context, { }, options);
+        horizontalRadii[i] = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, state);
         if (!horizontalRadii[i])
             return { };
     }
@@ -121,7 +117,7 @@ template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::
 
     OptionalRadiiForAxis verticalRadii;
     for (unsigned i = 0; i < 4 && !range.atEnd(); ++i) {
-        verticalRadii[i] = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, context, { }, options);
+        verticalRadii[i] = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, state);
         if (!verticalRadii[i])
             return { };
     }
@@ -134,59 +130,26 @@ template<SupportWebKitBorderRadiusQuirk supportQuirk> static std::optional<CSS::
     };
 }
 
-std::optional<CSS::BorderRadius> consumeUnresolvedBorderRadius(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::BorderRadius> consumeUnresolvedBorderRadius(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'border-radius'> = <length-percentage [0,∞]>{1,4} [ / <length-percentage [0,∞]>{1,4} ]?
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-radius
 
-    return consumeBorderRadius<SupportWebKitBorderRadiusQuirk::No>(range, context);
+    return consumeBorderRadius<SupportWebKitBorderRadiusQuirk::No>(range, state);
 }
 
-std::optional<CSS::BorderRadius> consumeUnresolvedWebKitBorderRadius(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::BorderRadius> consumeUnresolvedWebKitBorderRadius(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'border-radius'> = <length-percentage [0,∞]>{1,4} [ / <length-percentage [0,∞]>{1,4} ]?
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-radius
 
     // Includes the legacy syntax quirk where `-webkit-border-radius: l1 l2` is equivalent to border-radius: `l1 / l2`.
-    return consumeBorderRadius<SupportWebKitBorderRadiusQuirk::Yes>(range, context);
-}
-
-RefPtr<CSSValue> consumeBorderRadiusCorner(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'border-[top|bottom]-[left|right]-radius,'> = <length-percentage [0,∞]>{1,2}
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-top-left-radius
-
-    auto parsedValue1 = consumeLengthPercentage(range, context, ValueRange::NonNegative);
-    if (!parsedValue1)
-        return nullptr;
-    auto parsedValue2 = consumeLengthPercentage(range, context, ValueRange::NonNegative);
-    if (!parsedValue2)
-        parsedValue2 = parsedValue1;
-    return CSSValuePair::create(parsedValue1.releaseNonNull(), parsedValue2.releaseNonNull());
+    return consumeBorderRadius<SupportWebKitBorderRadiusQuirk::Yes>(range, state);
 }
 
 // MARK: - Border Image
 
-static RefPtr<CSSPrimitiveValue> consumeBorderImageRepeatKeyword(CSSParserTokenRange& range)
-{
-    return consumeIdent<CSSValueStretch, CSSValueRepeat, CSSValueSpace, CSSValueRound>(range);
-}
-
-RefPtr<CSSValue> consumeBorderImageRepeat(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    // <'border-image-repeat'> = [ stretch | repeat | round | space ]{1,2}
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-repeat
-
-    auto horizontal = consumeBorderImageRepeatKeyword(range);
-    if (!horizontal)
-        return nullptr;
-    auto vertical = consumeBorderImageRepeatKeyword(range);
-    if (!vertical)
-        vertical = horizontal;
-    return CSSValuePair::create(horizontal.releaseNonNull(), vertical.releaseNonNull());
-}
-
-RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID property)
+RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, CSS::PropertyParserState& state, BorderImageSliceFillDefault defaultFill)
 {
     // <'border-image-slice'> = [<number [0,∞]> | <percentage [0,∞]>]{1,4} && fill?
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-slice
@@ -195,9 +158,9 @@ RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, const CSSPa
     std::array<RefPtr<CSSPrimitiveValue>, 4> slices;
 
     for (auto& value : slices) {
-        value = consumePercentage(range, context, ValueRange::NonNegative);
+        value = CSSPrimitiveValueResolver<CSS::Percentage<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (!value)
-            value = consumeNumber(range, context, ValueRange::NonNegative);
+            value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (!value)
             break;
     }
@@ -210,35 +173,14 @@ RefPtr<CSSValue> consumeBorderImageSlice(CSSParserTokenRange& range, const CSSPa
     }
     complete4Sides(slices);
 
-    // FIXME: For backwards compatibility, -webkit-border-image, -webkit-mask-box-image and -webkit-box-reflect do fill by default.
-    if (property == CSSPropertyWebkitBorderImage || property == CSSPropertyWebkitMaskBoxImage || property == CSSPropertyWebkitBoxReflect)
+    // NOTE: For backwards compatibility, -webkit-border-image, -webkit-mask-box-image and -webkit-box-reflect set fill unconditionally.
+    if (defaultFill == BorderImageSliceFillDefault::Yes)
         fill = true;
 
     return CSSBorderImageSliceValue::create({ slices[0].releaseNonNull(), slices[1].releaseNonNull(), slices[2].releaseNonNull(), slices[3].releaseNonNull() }, fill);
 }
 
-RefPtr<CSSValue> consumeBorderImageOutset(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'border-image-outset'> = [ <length [0,∞]> | <number [0,∞]> ]{1,4}
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-outset
-
-    std::array<RefPtr<CSSPrimitiveValue>, 4> outsets;
-
-    for (auto& value : outsets) {
-        value = consumeNumber(range, context, ValueRange::NonNegative);
-        if (!value)
-            value = consumeLength(range, context, HTMLStandardMode, ValueRange::NonNegative);
-        if (!value)
-            break;
-    }
-    if (!outsets[0])
-        return nullptr;
-    complete4Sides(outsets);
-
-    return CSSQuadValue::create({ outsets[0].releaseNonNull(), outsets[1].releaseNonNull(), outsets[2].releaseNonNull(), outsets[3].releaseNonNull() });
-}
-
-RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
+RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, CSS::PropertyParserState& state, BorderImageWidthOverridesWidthForLength overridesWidth)
 {
     // <'border-image-width'> = [ <length-percentage [0,∞]> | <number [0,∞]> | auto ]{1,4}
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-image-width
@@ -247,10 +189,13 @@ RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, const CSSPa
 
     bool hasLength = false;
     for (auto& value : widths) {
-        value = consumeNumber(range, context, ValueRange::NonNegative);
+        value = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (value)
             continue;
-        if (auto numericValue = consumeLengthPercentage(range, context, HTMLStandardMode, ValueRange::NonNegative)) {
+
+        // FIXME: Figure out and document why overrideParserMode is explicitly set to HTMLStandardMode here or remove the special case.
+        // FIXME: As this falls into the "<length> ambiguous with <number>" case, this should probably be `.unitlessZeroLength = UnitlessZeroQuirk::Forbid` in case the order of checks ever changes.
+        if (auto numericValue = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, state, { .overrideParserMode = HTMLStandardMode })) {
             if (numericValue->isLength())
                 hasLength = true;
             value = numericValue;
@@ -264,124 +209,62 @@ RefPtr<CSSValue> consumeBorderImageWidth(CSSParserTokenRange& range, const CSSPa
         return nullptr;
     complete4Sides(widths);
 
-    // -webkit-border-image has a legacy behavior that makes fixed border slices also set the border widths.
-    bool overridesBorderWidths = currentShorthand == CSSPropertyWebkitBorderImage && hasLength;
-
-    return CSSBorderImageWidthValue::create({ widths[0].releaseNonNull(), widths[1].releaseNonNull(), widths[2].releaseNonNull(), widths[3].releaseNonNull() }, overridesBorderWidths);
+    return CSSBorderImageWidthValue::create(
+        {
+            widths[0].releaseNonNull(),
+            widths[1].releaseNonNull(),
+            widths[2].releaseNonNull(),
+            widths[3].releaseNonNull()
+        },
+        overridesWidth == BorderImageWidthOverridesWidthForLength::Yes && hasLength
+    );
 }
 
-bool consumeBorderImageComponents(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID property, RefPtr<CSSValue>& source,
-    RefPtr<CSSValue>& slice, RefPtr<CSSValue>& width, RefPtr<CSSValue>& outset, RefPtr<CSSValue>& repeat)
+std::optional<CSS::BorderImageComponents> consumeBorderImageComponents(CSSParserTokenRange& range, CSS::PropertyParserState& state, BorderImageSliceFillDefault defaultFill, BorderImageWidthOverridesWidthForLength overridesWidth)
 {
     // <'border-image'> = <'border-image-source'>
     //                 || <'border-image-slice'> [ / <'border-image-width'> | / <'border-image-width'>? / <'border-image-outset'> ]?
     //                 || <'border-image-repeat'>
     // https://drafts.csswg.org/css-backgrounds/#propdef-border-image
 
+    CSS::BorderImageComponents components;
+
     do {
-        if (!source) {
-            source = consumeImageOrNone(range, context);
-            if (source)
+        if (!components.source) {
+            components.source = consumeImageOrNone(range, state);
+            if (components.source)
                 continue;
         }
-        if (!repeat) {
-            repeat = consumeBorderImageRepeat(range, context);
-            if (repeat)
+        if (!components.repeat) {
+            components.repeat = CSSPropertyParsing::consumeBorderImageRepeat(range);
+            if (components.repeat)
                 continue;
         }
-        if (!slice) {
-            slice = consumeBorderImageSlice(range, context, property);
-            if (slice) {
-                ASSERT(!width && !outset);
+        if (!components.slice) {
+            components.slice = consumeBorderImageSlice(range, state, defaultFill);
+            if (components.slice) {
+                ASSERT(!components.width && !components.outset);
                 if (consumeSlashIncludingWhitespace(range)) {
-                    width = consumeBorderImageWidth(range, context, property);
+                    components.width = consumeBorderImageWidth(range, state, overridesWidth);
                     if (consumeSlashIncludingWhitespace(range)) {
-                        outset = consumeBorderImageOutset(range, context);
-                        if (!outset)
-                            return false;
-                    } else if (!width)
-                        return false;
+                        components.outset = CSSPropertyParsing::consumeBorderImageOutset(range, state);
+                        if (!components.outset)
+                            return { };
+                    } else if (!components.width)
+                        return { };
                 }
             } else
-                return false;
+                return { };
         } else
-            return false;
+            return { };
     } while (!range.atEnd());
 
-    // If we're setting from the legacy shorthand, make sure to set the `mask-border-slice` fill to true.
-    if (property == CSSPropertyWebkitMaskBoxImage && !slice)
-        slice = CSSBorderImageSliceValue::create({ CSSPrimitiveValue::create(0), CSSPrimitiveValue::create(0), CSSPrimitiveValue::create(0), CSSPrimitiveValue::create(0) }, true);
-
-    return true;
-}
-
-// MARK: - Border Style
-
-RefPtr<CSSValue> consumeBorderWidth(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
-{
-    // <'border-*-width'> = <line-width>
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-top-width
-
-    // <line-width> = <length [0,∞]> | thin | medium | thick
-
-    CSSValueID id = range.peek().id();
-    if (id == CSSValueThin || id == CSSValueMedium || id == CSSValueThick)
-        return consumeIdent(range);
-
-    bool allowQuirkyLengths = (context.mode == HTMLQuirksMode) && (currentShorthand == CSSPropertyInvalid || currentShorthand == CSSPropertyBorderWidth);
-    UnitlessQuirk unitless = allowQuirkyLengths ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
-    return consumeLength(range, context, ValueRange::NonNegative, unitless);
-}
-
-RefPtr<CSSValue> consumeBorderColor(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
-{
-    // <'border-*-color'> = <color>
-    // https://drafts.csswg.org/css-backgrounds/#propdef-border-top-color
-
-    bool acceptQuirkyColors = (context.mode == HTMLQuirksMode) && (currentShorthand == CSSPropertyInvalid || currentShorthand == CSSPropertyBorderColor);
-    return consumeColor(range, context, { .acceptQuirkyColors = acceptQuirkyColors });
-}
-
-// MARK: - Background Clip
-
-RefPtr<CSSValue> consumeSingleBackgroundClip(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <single-background-clip> = <visual-box>
-    // https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-
-    switch (auto keyword = range.peek().id(); keyword) {
-    case CSSValueID::CSSValueBorderBox:
-    case CSSValueID::CSSValuePaddingBox:
-    case CSSValueID::CSSValueContentBox:
-    case CSSValueID::CSSValueText:
-    case CSSValueID::CSSValueWebkitText:
-        range.consumeIncludingWhitespace();
-        return CSSPrimitiveValue::create(keyword);
-    case CSSValueID::CSSValueBorderArea:
-        if (!context.cssBackgroundClipBorderAreaEnabled)
-            return nullptr;
-        range.consumeIncludingWhitespace();
-        return CSSPrimitiveValue::create(keyword);
-
-    default:
-        return nullptr;
-    }
-}
-
-RefPtr<CSSValue> consumeBackgroundClip(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'background-clip'> = <visual-box>#
-    // https://drafts.csswg.org/css-backgrounds/#propdef-background-clip
-
-    auto lambda = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
-        return consumeSingleBackgroundClip(range, context);
-    };
-    return consumeCommaSeparatedListWithSingleValueOptimization(range, lambda);
+    return components;
 }
 
 // MARK: - Background Size
 
-template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(CSSParserTokenRange& range, const CSSParserContext& context)
+template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <bg-size> = [ <length-percentage [0,∞]> | auto ]{1,2} | cover | contain
     // https://drafts.csswg.org/css-backgrounds/#propdef-background-size
@@ -392,7 +275,7 @@ template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(C
     bool shouldCoalesce = true;
     RefPtr<CSSPrimitiveValue> horizontal = consumeIdent<CSSValueAuto>(range);
     if (!horizontal) {
-        horizontal = consumeLengthPercentage(range, context, ValueRange::NonNegative, UnitlessQuirk::Forbid);
+        horizontal = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (!horizontal)
             return nullptr;
         shouldCoalesce = false;
@@ -402,7 +285,7 @@ template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(C
     if (!range.atEnd()) {
         vertical = consumeIdent<CSSValueAuto>(range);
         if (!vertical)
-            vertical = consumeLengthPercentage(range, context, ValueRange::NonNegative, UnitlessQuirk::Forbid);
+            vertical = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, state);
     }
     if (!vertical) {
         if constexpr (property == CSSPropertyWebkitBackgroundSize) {
@@ -420,31 +303,31 @@ template<CSSPropertyID property> static RefPtr<CSSValue> consumeBackgroundSize(C
     return CSSValuePair::createNoncoalescing(horizontal.releaseNonNull(), vertical.releaseNonNull());
 }
 
-RefPtr<CSSValue> consumeSingleBackgroundSize(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeSingleBackgroundSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <single-background-size> = <bg-size>
     // https://drafts.csswg.org/css-backgrounds/#background-size
 
-    return consumeBackgroundSize<CSSPropertyBackgroundSize>(range, context);
+    return consumeBackgroundSize<CSSPropertyBackgroundSize>(range, state);
 }
 
-RefPtr<CSSValue> consumeSingleWebkitBackgroundSize(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeSingleWebkitBackgroundSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // Non-standard.
-    return consumeBackgroundSize<CSSPropertyWebkitBackgroundSize>(range, context);
+    return consumeBackgroundSize<CSSPropertyWebkitBackgroundSize>(range, state);
 }
 
-RefPtr<CSSValue> consumeSingleMaskSize(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeSingleMaskSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <single-mask-size> = <bg-size>
     // https://drafts.fxtf.org/css-masking/#the-mask-size
 
-    return consumeBackgroundSize<CSSPropertyMaskSize>(range, context);
+    return consumeBackgroundSize<CSSPropertyMaskSize>(range, state);
 }
 
 // MARK: - Background Repeat
 
-RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <repeat-style> = repeat-x | repeat-y | [repeat | space | round | no-repeat]{1,2}
     // https://drafts.csswg.org/css-backgrounds/#typedef-repeat-style
@@ -464,15 +347,10 @@ RefPtr<CSSValue> consumeRepeatStyle(CSSParserTokenRange& range, const CSSParserC
 
 // MARK: - Box Shadows
 
-static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserTokenRange& range, const CSSParserContext& context, bool isWebkitBoxShadow)
+static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state, bool isWebkitBoxShadow)
 {
     // <box-shadow> = <color>? && [<length>{2} <length [0,∞]>? <length>?] && inset?
     // https://drafts.csswg.org/css-backgrounds/#propdef-box-shadow
-
-    const auto lengthOptions = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
 
     auto rangeCopy = range;
 
@@ -501,7 +379,7 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
             continue;
         }
 
-        auto maybeColor = consumeUnresolvedColor(rangeCopy, context);
+        auto maybeColor = consumeUnresolvedColor(rangeCopy, state);
         if (maybeColor) {
             // If we just parsed a color but already had one, the given token range is
             // not a valid <shadow>.
@@ -519,10 +397,10 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
             return { };
         }
 
-        x = MetaConsumer<CSS::Length<>>::consume(rangeCopy, context, { }, lengthOptions);
+        x = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
         if (!x)
             return { };
-        y = MetaConsumer<CSS::Length<>>::consume(rangeCopy, context, { }, lengthOptions);
+        y = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
         if (!y)
             return { };
 
@@ -530,14 +408,14 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
 
         // The explicit check for calc() is unfortunate. This is ensuring that we only fail
         // parsing if there is a length, but it fails the range check.
-        if (token.type() == DimensionToken || token.type() == NumberToken || (token.type() == FunctionToken && CSSCalc::isCalcFunction(token.functionId(), context))) {
-            blur = MetaConsumer<CSS::Length<CSS::Nonnegative>>::consume(rangeCopy, context, { }, lengthOptions);
+        if (token.type() == DimensionToken || token.type() == NumberToken || (token.type() == FunctionToken && CSSCalc::isCalcFunction(token.functionId()))) {
+            blur = MetaConsumer<CSS::Length<CSS::Nonnegative>>::consume(rangeCopy, state);
             if (!blur)
                 return { };
         }
 
         if (blur)
-            spread = MetaConsumer<CSS::Length<>>::consume(rangeCopy, context, { }, lengthOptions);
+            spread = MetaConsumer<CSS::Length<>>::consume(rangeCopy, state);
     }
 
     if (!y)
@@ -555,14 +433,14 @@ static std::optional<CSS::BoxShadow> consumeSingleUnresolvedBoxShadow(CSSParserT
     };
 }
 
-static std::optional<CSS::BoxShadowProperty::List> consumeUnresolvedBoxShadowList(CSSParserTokenRange& range, const CSSParserContext& context, bool isWebkitBoxShadow)
+static std::optional<CSS::BoxShadowProperty::List> consumeUnresolvedBoxShadowList(CSSParserTokenRange& range, CSS::PropertyParserState& state, bool isWebkitBoxShadow)
 {
     auto rangeCopy = range;
 
     CSS::BoxShadowProperty::List list;
 
     do {
-        auto shadow = consumeSingleUnresolvedBoxShadow(rangeCopy, context, isWebkitBoxShadow);
+        auto shadow = consumeSingleUnresolvedBoxShadow(rangeCopy, state, isWebkitBoxShadow);
         if (!shadow)
             return { };
         list.value.append(WTFMove(*shadow));
@@ -573,37 +451,37 @@ static std::optional<CSS::BoxShadowProperty::List> consumeUnresolvedBoxShadowLis
     return list;
 }
 
-static std::optional<CSS::BoxShadowProperty> consumeUnresolvedBoxShadow(CSSParserTokenRange& range, const CSSParserContext& context, bool isWebkitBoxShadow)
+static std::optional<CSS::BoxShadowProperty> consumeUnresolvedBoxShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state, bool isWebkitBoxShadow)
 {
     if (range.peek().id() == CSSValueNone) {
         range.consumeIncludingWhitespace();
         return CSS::BoxShadowProperty { CSS::Keyword::None { } };
     }
-    if (auto boxShadowList = consumeUnresolvedBoxShadowList(range, context, isWebkitBoxShadow))
+    if (auto boxShadowList = consumeUnresolvedBoxShadowList(range, state, isWebkitBoxShadow))
         return CSS::BoxShadowProperty { WTFMove(*boxShadowList) };
     return { };
 }
 
-RefPtr<CSSValue> consumeBoxShadow(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeBoxShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'box-shadow'> = none | <shadow>#
     // https://drafts.csswg.org/css-backgrounds/#propdef-box-shadow
 
-    if (auto property = consumeUnresolvedBoxShadow(range, context, false))
+    if (auto property = consumeUnresolvedBoxShadow(range, state, false))
         return CSSBoxShadowPropertyValue::create({ WTFMove(*property) });
     return nullptr;
 }
 
-RefPtr<CSSValue> consumeWebkitBoxShadow(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeWebkitBoxShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    if (auto property = consumeUnresolvedBoxShadow(range, context, true))
+    if (auto property = consumeUnresolvedBoxShadow(range, state, true))
         return CSSBoxShadowPropertyValue::create({ WTFMove(*property) });
     return nullptr;
 }
 
 // MARK: - Reflect (non-standard)
 
-RefPtr<CSSValue> consumeReflect(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeWebkitBoxReflect(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().id() == CSSValueNone)
         return consumeIdent(range);
@@ -617,21 +495,17 @@ RefPtr<CSSValue> consumeReflect(CSSParserTokenRange& range, const CSSParserConte
     if (range.atEnd())
         offset = CSSPrimitiveValue::create(0, CSSUnitType::CSS_PX);
     else {
-        offset = consumeLengthPercentage(range, context);
+        offset = CSSPrimitiveValueResolver<CSS::LengthPercentage<>>::consumeAndResolve(range, state);
         if (!offset)
             return nullptr;
     }
 
     RefPtr<CSSValue> mask;
     if (!range.atEnd()) {
-        RefPtr<CSSValue> source;
-        RefPtr<CSSValue> slice;
-        RefPtr<CSSValue> width;
-        RefPtr<CSSValue> outset;
-        RefPtr<CSSValue> repeat;
-        if (!consumeBorderImageComponents(range, context, CSSPropertyWebkitBoxReflect, source, slice, width, outset, repeat))
+        auto components = consumeBorderImageComponents(range, state, BorderImageSliceFillDefault::Yes);
+        if (!components)
             return nullptr;
-        mask = createBorderImageValue(WTFMove(source), WTFMove(slice), WTFMove(width), WTFMove(outset), WTFMove(repeat));
+        mask = createBorderImageValue(WTFMove(*components));
     }
     return CSSReflectValue::create(*direction, offset.releaseNonNull(), WTFMove(mask));
 }

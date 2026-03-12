@@ -26,6 +26,7 @@
 #include "config.h"
 #include "URLPattern.h"
 
+#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include "URLPatternCanonical.h"
 #include "URLPatternConstructorStringParser.h"
@@ -81,10 +82,8 @@ static ExceptionOr<URLPatternInit> processInit(URLPatternInit&& init, BaseURLStr
     if  (!init.baseURL.isNull()) {
         baseURL = URL(init.baseURL);
 
-        if (!baseURL.isValid()) {
-            // FIXME: Check if empty string should be allowed.
+        if (!baseURL.isValid())
             return Exception { ExceptionCode::TypeError, "Invalid baseURL."_s };
-        }
 
         if (init.protocol.isNull())
             result.protocol = processBaseURLString(baseURL.protocol(), type);
@@ -166,7 +165,7 @@ static ExceptionOr<URLPatternInit> processInit(URLPatternInit&& init, BaseURLStr
     }
 
     if (!init.port.isNull()) {
-        auto portResult = canonicalizePort(init.port, init.protocol, type);
+        auto portResult = canonicalizePort(init.port, result.protocol, type);
 
         if (portResult.hasException())
             return portResult.releaseException();
@@ -393,7 +392,7 @@ static inline void matchHelperAssignInputsFromInit(const URLPatternInit& input, 
 }
 
 // https://urlpattern.spec.whatwg.org/#url-pattern-match
-ExceptionOr<std::optional<URLPatternResult>> URLPattern::match(ScriptExecutionContext& context, std::variant<URL, URLPatternInput>&& input, String&& baseURLString) const
+ExceptionOr<std::optional<URLPatternResult>> URLPattern::match(ScriptExecutionContext& context, Variant<URL, URLPatternInput>&& input, String&& baseURLString) const
 {
     URLPatternResult result;
     String protocol, username, password, hostname, port, pathname, search, hash;

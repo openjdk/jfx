@@ -31,13 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <'will-change'> consuming
 // https://drafts.csswg.org/css-will-change/#propdef-will-change
-RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

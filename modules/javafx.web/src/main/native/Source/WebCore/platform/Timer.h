@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "ThreadTimers.h"
 #include <functional>
 #include <wtf/CheckedRef.h>
+#include <wtf/CompactRefPtrTuple.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
@@ -135,7 +136,7 @@ private:
     Seconds m_repeatInterval; // 0 if not repeating
 
     CompactRefPtrTuple<ThreadTimerHeapItem, uint8_t> m_heapItemWithBitfields;
-    Ref<Thread> m_thread { Thread::current() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 
     friend class ThreadTimers;
     friend class TimerHeapLessThanFunction;
@@ -158,7 +159,7 @@ public:
     template<typename TimerFiredClass, typename TimerFiredBaseClass>
     requires (WTF::HasRefPtrMemberFunctions<TimerFiredClass>::value)
     Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
-        : m_function([objectPtr = &object, function] {
+        : m_function([objectPtr = &object, function] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
             Ref protectedObject { *objectPtr };
             (objectPtr->*function)();
         })
@@ -211,9 +212,9 @@ inline bool TimerBase::isActive() const
 {
     // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS_FAMILY).
 #if !PLATFORM(IOS_FAMILY)
-    ASSERT(m_thread.ptr() == &Thread::current());
+    ASSERT(m_thread.ptr() == &Thread::currentSingleton());
 #else
-    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::current());
+    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::currentSingleton());
 #endif // PLATFORM(IOS_FAMILY)
     return static_cast<bool>(nextFireTime());
 }

@@ -578,7 +578,7 @@ bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
     return result;
 }
 
-bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, LocalFrame&)
+bool ChromeClientJava::runBeforeUnloadConfirmPanel(String&& message, LocalFrame&)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+// https://html.spec.whatwg.org/multipage/iframe-embed-object.html#htmlobjectelement
+
 [
     Plugin,
     Exposed=Window
@@ -27,9 +29,9 @@
     [CEReactions=NotNeeded, Reflect] attribute DOMString align;
     [CEReactions=NotNeeded, Reflect] attribute DOMString archive;
     [CEReactions=NotNeeded, Reflect] attribute [LegacyNullToEmptyString] DOMString border;
-    [CEReactions=NotNeeded, Reflect, URL] attribute USVString codeBase;
+    [CEReactions=NotNeeded, ReflectURL] attribute USVString codeBase;
     [CEReactions=NotNeeded, Reflect] attribute DOMString codeType;
-    [CEReactions=NotNeeded, Reflect, URL] attribute USVString data;
+    [CEReactions=NotNeeded, ReflectURL] attribute USVString data;
     [CEReactions=NotNeeded, Reflect] attribute boolean declare;
     [CEReactions=NotNeeded, Reflect] attribute DOMString height;
     [CEReactions=NotNeeded, Reflect] attribute unsigned long hspace;
@@ -49,5 +51,5 @@
     [CheckSecurityForNode] readonly attribute Document contentDocument;
     readonly attribute WindowProxy contentWindow;
 
-    [CheckSecurityForNode] Document getSVGDocument();
+    [CheckSecurityForNode] Document? getSVGDocument();
 };

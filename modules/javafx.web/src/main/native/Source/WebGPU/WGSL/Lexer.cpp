@@ -37,7 +37,7 @@
 
 namespace WGSL {
 
-static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierStart(char16_t character, std::span<const char16_t> code)
 {
     if (character == '_')
         return 1;
@@ -50,7 +50,7 @@ static unsigned isIdentifierStart(UChar character, std::span<const UChar> code)
     return 0;
 }
 
-static unsigned isIdentifierContinue(UChar character, std::span<const UChar> code)
+static unsigned isIdentifierContinue(char16_t character, std::span<const char16_t> code)
 {
     if (auto length = isIdentifierStart(character, code))
         return length;
@@ -84,9 +84,10 @@ Vector<Token> Lexer<T>::lex()
         switch (token.type) {
         case TokenType::GtGtEq:
             tokens.append(makeToken(TokenType::Placeholder));
-            FALLTHROUGH;
+            [[fallthrough]];
         case TokenType::GtGt:
         case TokenType::GtEq:
+        case TokenType::MinusMinus:
             tokens.append(makeToken(TokenType::Placeholder));
             break;
         default:
@@ -220,7 +221,6 @@ Token Lexer<T>::nextToken()
             shift();
             return makeToken(TokenType::StarEq);
         default:
-        // FIXME: Report unbalanced block comments, such as "this is an unbalanced comment. */"
         return makeToken(TokenType::Star);
         }
     case '/':
@@ -298,7 +298,6 @@ Token Lexer<T>::nextToken()
                 shift(consumed);
             }
 
-            // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             String view(StringImpl::createWithoutCopying(startOfToken.subspan(0, currentTokenLength())));
 
             static constexpr std::pair<ComparableASCIILiteral, TokenType> keywordMappings[] {
@@ -466,11 +465,11 @@ FOREACH_KEYWORD(MAPPING_ENTRY)
             if (tokenType != TokenType::Invalid)
                 return makeToken(tokenType);
 
-            if (UNLIKELY(reservedWordSet.contains(view)))
+            if (reservedWordSet.contains(view)) [[unlikely]]
                 return makeToken(TokenType::ReservedWord);
 
 
-            if (UNLIKELY(length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_'))
+            if (length >= 2 && startOfToken[0] == '_' && startOfToken[1] == '_') [[unlikely]]
                 return makeToken(TokenType::Invalid);
 
 
@@ -492,7 +491,7 @@ T Lexer<T>::shift(unsigned i)
     m_code.advanceBy(i);
     m_currentPosition.offset += i;
     m_currentPosition.lineOffset += i;
-    if (LIKELY(m_code.hasCharactersRemaining()))
+    if (m_code.hasCharactersRemaining()) [[likely]]
         m_current = m_code[0];
     return last;
 }
@@ -500,7 +499,7 @@ T Lexer<T>::shift(unsigned i)
 template <typename T>
 T Lexer<T>::peek(unsigned i)
 {
-    if (UNLIKELY(i >= m_code.lengthRemaining()))
+    if (i >= m_code.lengthRemaining()) [[unlikely]]
         return 0;
     return m_code[i];
 }
@@ -538,7 +537,6 @@ bool Lexer<T>::skipBlockComments()
             newLine();
     }
 
-    // FIXME: Report unbalanced block comments, such as "/* this is an unbalanced comment."
     return false;
 }
 
@@ -705,6 +703,7 @@ Token Lexer<T>::lexNumber()
     char suffix = '\0';
     char exponentSign = '\0';
     bool isHex = false;
+    auto start = m_code.span();
     auto integral = m_code.span();
     const T* fract = nullptr;
     const T* exponent = nullptr;
@@ -1023,12 +1022,21 @@ Token Lexer<T>::lexNumber()
         return convert(result);
     }
 
+    auto length = static_cast<size_t>(m_code.position() - start.data());
+    if (suffix)
+        length--;
+    Vector<char, 256> buffer(length + 1);
+    for (unsigned i = 0; i < length; ++i)
+        buffer[i] = start[i];
+    buffer[length] = '\0';
     size_t parsedLength;
-    double result = WTF::parseHexDouble(integral, parsedLength);
-    return convert(result);
+    auto maybeResult = stringToDouble(buffer.span(), parsedLength);
+    if (!maybeResult || parsedLength != length)
+        return makeToken(TokenType::Invalid);
+    return convert(*maybeResult);
 }
 
 template class Lexer<LChar>;
-template class Lexer<UChar>;
+template class Lexer<char16_t>;
 
 }

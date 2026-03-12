@@ -31,6 +31,7 @@
 #include "DOMTimer.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMException.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreOpaqueRoot.h"
@@ -210,11 +211,11 @@ void AbortSignal::eventListenersDidChange()
 uint32_t AbortSignal::addAbortAlgorithmToSignal(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
 {
     if (signal.aborted()) {
-        algorithm->handleEvent(signal.m_reason.getValue());
+        algorithm->invoke(signal.m_reason.getValue());
         return 0;
     }
     return signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue value) mutable {
-        algorithm->handleEvent(value);
+        algorithm->invoke(value);
     });
 }
 

@@ -80,7 +80,7 @@ inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t pr
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
     void* base = vm.auxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!base))
+    if (!base) [[unlikely]]
         return nullptr;
 
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
@@ -285,6 +285,30 @@ inline Butterfly* Butterfly::shift(Structure* structure, size_t numberOfSlots)
         propertyStorage() - propertyCapacity,
         sizeof(EncodedJSValue) * propertyCapacity + sizeof(IndexingHeader) + ArrayStorage::sizeFor(0));
     return IndexingHeader::fromEndOf(propertyStorage() + numberOfSlots)->butterfly();
+}
+
+ALWAYS_INLINE void Butterfly::clearOptimalVectorLengthGap(IndexingType indexingType, Butterfly* butterfly, unsigned optimalVectorLength, unsigned vectorLength)
+{
+    ASSERT(optimalVectorLength >= vectorLength);
+
+    if (size_t remaining = optimalVectorLength - vectorLength; remaining) {
+        if (hasDouble(indexingType)) {
+#if OS(DARWIN)
+            constexpr double pattern = PNaN;
+            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + vectorLength), &pattern, sizeof(double) * remaining);
+#else
+            for (unsigned i = vectorLength; i < optimalVectorLength; ++i)
+                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+        } else {
+#if USE(JSVALUE64)
+            memset(static_cast<void*>(butterfly->contiguous().data() + vectorLength), 0, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = vectorLength; i < optimalVectorLength; ++i)
+                butterfly->contiguous().atUnsafe(i).clear();
+#endif
+        }
+    }
 }
 
 } // namespace JSC

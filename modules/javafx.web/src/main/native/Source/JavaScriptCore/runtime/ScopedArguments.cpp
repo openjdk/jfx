@@ -147,7 +147,7 @@ void ScopedArguments::unmapArgument(JSGlobalObject* globalObject, uint32_t i)
     unsigned namedLength = m_table->length();
     if (i < namedLength) {
         auto* maybeCloned = m_table->trySet(vm, i, ScopeOffset());
-        if (UNLIKELY(!maybeCloned)) {
+        if (!maybeCloned) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
@@ -169,10 +169,10 @@ bool ScopedArguments::isIteratorProtocolFastAndNonObservable()
     if (!globalObject->isArgumentsPrototypeIteratorProtocolFastAndNonObservable())
         return false;
 
-    if (UNLIKELY(m_overrodeThings))
+    if (m_overrodeThings) [[unlikely]]
         return false;
 
-    if (UNLIKELY(m_hasUnmappedArgument))
+    if (m_hasUnmappedArgument) [[unlikely]]
         return false;
 
     if (structure->didTransition())

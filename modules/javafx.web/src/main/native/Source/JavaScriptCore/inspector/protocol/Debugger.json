@@ -349,8 +349,8 @@
             "parameters": [
                 { "name": "url", "type": "string" },
                 { "name": "shouldBlackbox", "type": "boolean" },
-                { "name": "caseSensitive", "type": "boolean", "optional": true, "description": "If <code>true</code>, <code>url</code> is case sensitive." },
-                { "name": "isRegex", "type": "boolean", "optional": true, "description": "If <code>true</code>, treat <code>url</code> as regular expression." },
+                { "name": "caseSensitive", "type": "boolean", "optional": true, "description": "If <code>true</code>, <code>url</code> is case sensitive. Defaults to true." },
+                { "name": "isRegex", "type": "boolean", "optional": true, "description": "If <code>true</code>, treat <code>url</code> as regular expression. Defaults to false." },
                 { "name": "sourceRanges", "type": "array", "items": { "type": "integer" }, "optional": true, "description": "If provided, limits where in the script the debugger will skip pauses. Expected structure is a repeated <code>[startLine, startColumn, endLine, endColumn]</code>. Ignored if <code>shouldBlackbox</code> is <code>false</code>." }
             ]
         },

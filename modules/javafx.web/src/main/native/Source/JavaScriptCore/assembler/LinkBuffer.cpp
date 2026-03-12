@@ -30,6 +30,7 @@
 
 #include "CodeBlock.h"
 #include "Disassembler.h"
+#include "GdbJIT.h"
 #include "JITCode.h"
 #include "Options.h"
 #include "PerfLog.h"
@@ -66,15 +67,18 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassembly
     ASSERT(m_didAllocate);
     CodeRef<LinkBufferPtrTag> codeRef(m_executableMemory ? CodeRef<LinkBufferPtrTag>(*m_executableMemory) : CodeRef<LinkBufferPtrTag>::createSelfManagedCodeRef(m_code));
 
-    if (UNLIKELY(Options::logJITCodeForPerf()))
-        logJITCodeForPerf(codeRef, simpleName);
+    logJITCodeForJITDump(codeRef, simpleName);
 
     return codeRef;
 }
 
-void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
+void LinkBuffer::logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILiteral simpleName)
 {
-#if OS(LINUX) || OS(DARWIN)
+    if (!Options::useJITDump() && !Options::useGdbJITInfo()) [[likely]]
+        return;
+    if (m_isRewriting)
+        return;
+
     auto dumpSimpleName = [&](StringPrintStream& out, ASCIILiteral simpleName) {
         if (simpleName.isNull())
             out.print("unspecified");
@@ -83,7 +87,7 @@ void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILite
     };
 
         StringPrintStream out;
-    out.print(profileName(m_profile), ": ");
+    out.print("JSC-", profileName(m_profile), ": ");
     switch (m_profile) {
     case Profile::Baseline:
     case Profile::DFG:
@@ -117,12 +121,13 @@ void LinkBuffer::logJITCodeForPerf(CodeRef<LinkBufferPtrTag>& codeRef, ASCIILite
         dumpSimpleName(out, simpleName);
         break;
     }
-    if (!m_isRewriting)
-        PerfLog::log(out.toCString(), codeRef.code().untaggedPtr<const uint8_t*>(), codeRef.size());
-#else
-    UNUSED_PARAM(codeRef);
-    UNUSED_PARAM(simpleName);
-#endif
+    auto finalName = out.toCString();
+
+    if (Options::useGdbJITInfo()) [[unlikely]]
+        GdbJIT::log(finalName, codeRef);
+
+    if (Options::useJITDump()) [[unlikely]]
+        PerfLog::log(finalName, codeRef);
 }
 
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImpl(bool dumpDisassembly, ASCIILiteral simpleName, const char* format, ...)
@@ -432,7 +437,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 #if ENABLE(JIT)
     if (g_jscConfig.useFastJITPermissions) {
         ASSERT(codeOutData == outData);
-        if (UNLIKELY(Options::dumpJITMemoryPath()))
+        if (Options::dumpJITMemoryPath()) [[unlikely]]
             dumpJITMemory(outData, outData, m_size);
     } else {
         ASSERT(codeOutData != outData);
@@ -462,7 +467,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     // Ensure that the end of the last invalidation point does not extend beyond the end of the buffer.
-    macroAssembler.padBeforePatch();
+    macroAssembler.label();
 
 #if ENABLE(JIT)
 #if !ENABLE(BRANCH_COMPACTION)
@@ -526,7 +531,9 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort e
 
 void LinkBuffer::linkComments(MacroAssembler& assembler)
 {
-    if (LIKELY(!Options::needDisassemblySupport()) || !m_executableMemory)
+    if (!Options::needDisassemblySupport()) [[likely]]
+        return;
+    if (!m_executableMemory)
         return;
     AssemblyCommentRegistry::CommentMap map;
     for (auto& comment : assembler.m_comments) {

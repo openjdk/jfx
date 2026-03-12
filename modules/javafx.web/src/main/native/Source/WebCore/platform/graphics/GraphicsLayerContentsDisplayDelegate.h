@@ -65,7 +65,7 @@ class GraphicsLayerAsyncContentsDisplayDelegate : public GraphicsLayerContentsDi
 public:
     virtual ~GraphicsLayerAsyncContentsDisplayDelegate() = default;
 
-    virtual bool WEBCORE_EXPORT tryCopyToLayer(ImageBuffer&) = 0;
+    virtual bool WEBCORE_EXPORT tryCopyToLayer(ImageBuffer&, bool opaque) = 0;
 
     virtual bool isGraphicsLayerAsyncContentsDisplayDelegateCocoa() const { return false; }
     virtual bool isGraphicsLayerCARemoteAsyncContentsDisplayDelegate() const { return false; }

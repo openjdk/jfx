@@ -28,6 +28,8 @@
 
 #pragma once
 
+#if ENABLE(WEB_AUDIO)
+
 #include "AudioContext.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/Lock.h>
@@ -63,6 +65,7 @@ public:
 
     bool hasValues(size_t startFrame, double sampleRate) const;
 
+    WEBCORE_EXPORT static float exponentialRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2);
 private:
     class ParamEvent {
         WTF_MAKE_TZONE_ALLOCATED(ParamEvent);
@@ -195,7 +198,6 @@ private:
     ExceptionOr<void> insertEvent(ParamEvent&&) WTF_REQUIRES_LOCK(m_eventsLock);
     float valuesForFrameRangeImpl(size_t startFrame, size_t endFrame, float defaultValue, std::span<float> values, double sampleRate, double controlRate) WTF_REQUIRES_LOCK(m_eventsLock);
     float linearRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2);
-    float exponentialRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2);
     float valueCurveAtTime(Seconds t, Seconds time1, Seconds duration, std::span<const float> curveData, size_t curveLength);
     void handleCancelValues(ParamEvent&, ParamEvent* nextEvent, float& value2, Seconds& time2, ParamEvent::Type& nextEventType);
     bool isEventCurrent(const ParamEvent&, const ParamEvent* nextEvent, size_t currentFrame, double sampleRate) const;
@@ -213,3 +215,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_AUDIO)

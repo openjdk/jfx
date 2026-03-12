@@ -376,52 +376,6 @@ Decimal Decimal::operator/(const Decimal& rhs) const
     return Decimal(resultSign, resultExponent, result);
 }
 
-bool Decimal::operator!=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return false;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero();
-}
-
-bool Decimal::operator<(const Decimal& rhs) const
-{
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero() && result.isNegative();
-}
-
-bool Decimal::operator<=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return true;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return result.isZero() || result.isNegative();
-}
-
-bool Decimal::operator>(const Decimal& rhs) const
-{
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return !result.isZero() && result.isPositive();
-}
-
-bool Decimal::operator>=(const Decimal& rhs) const
-{
-    if (m_data == rhs.m_data)
-        return true;
-    const Decimal result = compareTo(rhs);
-    if (result.isNaN())
-        return false;
-    return result.isZero() || !result.isNegative();
-}
-
 Decimal Decimal::abs() const
 {
     Decimal result(*this);

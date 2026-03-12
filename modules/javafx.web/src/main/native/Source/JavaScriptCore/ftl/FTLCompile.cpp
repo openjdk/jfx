@@ -60,7 +60,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     VM& vm = graph.m_vm;
 
     if (shouldDumpDisassembly() || vm.m_perBytecodeProfiler)
-        state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
+        state.proc->code().setDisassembler(makeUniqueWithoutFastMallocCheck<B3::Air::Disassembler>());
 
     if (!shouldDumpDisassembly() && !verboseCompilationEnabled() && !Options::verboseValidationFailure() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
         graph.freeDFGIRAfterLowering();
@@ -224,7 +224,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
         state.dumpDisassembly(WTF::dataFile(), *state.b3CodeLinkBuffer);
 
     Profiler::Compilation* compilation = graph.compilation();
-    if (UNLIKELY(compilation)) {
+    if (compilation) [[unlikely]] {
         compilation->addDescription(
             Profiler::OriginStack(),
             toCString("Generated FTL DFG IR for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));

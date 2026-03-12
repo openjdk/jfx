@@ -303,7 +303,7 @@ static std::optional<FloatRect> trailingEllipsisVisualRectAfterTruncation(LineEn
     ASSERT(displayBoxes[0].isRootInlineBox());
     auto& rootInlineBox = displayBoxes[0];
     auto& rootStyle = rootInlineBox.style();
-    auto ellipsisWidth = std::max(0.f, rootStyle.fontCascade().width(TextRun { ellipsisText }));
+    auto ellipsisWidth = std::max(0.f, rootStyle.fontCascade().width(ellipsisText));
 
     auto contentNeedsTruncation = [&] {
         switch (lineEndingTruncationPolicy) {
@@ -479,12 +479,17 @@ void InlineDisplayLineBuilder::applyEllipsisIfNeeded(LineEndingTruncationPolicy 
             // Legacy line clamp always uses ...
             return TextUtil::ellipsisTextInInlineDirection(displayLine.isHorizontal());
         }
-        auto& blockEllipsis = displayBoxes[0].layoutBox().style().blockEllipsis();
-        if (blockEllipsis.type == BlockEllipsis::Type::None)
+        return WTF::switchOn(displayBoxes[0].layoutBox().style().blockEllipsis(),
+            [&](const CSS::Keyword::None&) -> AtomString {
             return nullAtom();
-        if (blockEllipsis.type == BlockEllipsis::Type::Auto)
+            },
+            [&](const CSS::Keyword::Auto&) -> AtomString {
             return TextUtil::ellipsisTextInInlineDirection(displayLine.isHorizontal());
-        return blockEllipsis.string;
+            },
+            [&](const AtomString& string) -> AtomString {
+                return string;
+            }
+        );
     }();
 
     if (ellipsisText.isNull())

@@ -39,6 +39,7 @@ public:
     static NavigatorGeolocation* from(Navigator&);
 
     static Geolocation* geolocation(Navigator&);
+    static Geolocation* optionalGeolocation(Navigator&);
     Geolocation* geolocation() const;
 
 #if PLATFORM(IOS_FAMILY)
@@ -48,8 +49,8 @@ public:
 private:
     static ASCIILiteral supplementName();
 
-    mutable RefPtr<Geolocation> m_geolocation;
-    CheckedRef<Navigator> m_navigator;
+    const RefPtr<Geolocation> m_geolocation;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore

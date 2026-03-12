@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
@@ -33,15 +34,11 @@ namespace WebCore {
 class DeviceClient;
 }
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DeviceClient> : std::true_type { };
-}
-
 namespace WebCore {
 
-class DeviceClient : public CanMakeWeakPtr<DeviceClient> {
+class DeviceClient : public CanMakeWeakPtr<DeviceClient>, public CanMakeCheckedPtr<DeviceClient> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(DeviceClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceClient);
 public:
     virtual ~DeviceClient() = default;
 

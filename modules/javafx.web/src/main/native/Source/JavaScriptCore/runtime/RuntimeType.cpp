@@ -34,7 +34,7 @@ namespace JSC {
 
 RuntimeType runtimeTypeForValue(JSValue value)
 {
-    if (UNLIKELY(!value))
+    if (!value) [[unlikely]]
         return TypeNothing;
 
     if (value.isUndefined())

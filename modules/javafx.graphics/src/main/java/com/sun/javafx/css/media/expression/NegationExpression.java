@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,44 @@
 package com.sun.javafx.css.media.expression;
 
 import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
 
 /**
  * Logical negation of the specified expression.
  */
-public record NegationExpression(MediaQuery expression) implements MediaQuery {
+public final class NegationExpression implements MediaQuery {
 
-    public NegationExpression {
-        Objects.requireNonNull(expression, "expression cannot be null");
+    private final MediaQuery expression;
+    private final int contextAwareness;
+
+    private NegationExpression(MediaQuery expression) {
+        this.expression = Objects.requireNonNull(expression, "expression cannot be null");
+        this.contextAwareness = expression.getContextAwareness();
+    }
+
+    public static NegationExpression of(MediaQuery expression) {
+        return MediaQueryCache.getCachedMediaQuery(new NegationExpression(expression));
+    }
+
+    public MediaQuery getExpression() {
+        return expression;
+    }
+
+    @Override
+    public int getContextAwareness() {
+        return contextAwareness;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof NegationExpression other && expression.equals(other.expression) ;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(NegationExpression.class, expression);
     }
 
     @Override

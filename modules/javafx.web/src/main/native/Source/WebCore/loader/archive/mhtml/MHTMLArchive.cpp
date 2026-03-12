@@ -37,6 +37,7 @@
 #include "Document.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MHTMLParser.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"

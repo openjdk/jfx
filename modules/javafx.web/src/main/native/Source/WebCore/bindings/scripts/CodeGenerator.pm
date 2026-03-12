@@ -404,6 +404,13 @@ sub ProcessInterfaceSupplementalDependencies
         foreach my $interface (@{$document->interfaces}) {
             next unless $object->IsValidSupplementalInterface($interface, $targetInterface, \%includesMap);
 
+            # Ensure the root IDLDocument has access to all relevant enums (e.g., such as those defined in a mixin interface).
+            foreach my $enumeration (@{$document->enumerations}) {
+                my $enumName = $enumeration->type->name;
+                next if grep { $_->type->name eq $enumName } @{$targetDocument->enumerations};
+                push @{$targetDocument->enumerations}, $enumeration;
+            }
+
             if ($interface->isMixin && !$interface->isPartial) {
                 # Recursively process any supplemental dependencies for each valid mixin. This
                 # allows partial partial interface mixins to be merged into the mixin.
@@ -1072,11 +1079,30 @@ sub LinkOverloadedOperations
     }
 }
 
+sub OperationName
+{
+    my ($generator, $operation) = @_;
+
+    my $operationName = $operation->name;
+    $operationName =~ s/\-(.)/uc($1)/ge;
+    $operationName =~ s/\-//g;
+    $operationName = $generator->WK_lcfirst($operationName);
+
+    if ($operation->extendedAttributes->{"ImplementedAs"}) {
+        $operationName = $operation->extendedAttributes->{"ImplementedAs"};
+    }
+
+    return $operationName;
+}
+
 sub AttributeNameForGetterAndSetter
 {
     my ($generator, $attribute) = @_;
 
     my $attributeName = $attribute->name;
+    $attributeName =~ s/\-(.)/uc($1)/ge;
+    $attributeName =~ s/\-//g;
+
     if ($attribute->extendedAttributes->{"ImplementedAs"}) {
         $attributeName = $attribute->extendedAttributes->{"ImplementedAs"};
     }
@@ -1091,12 +1117,21 @@ sub AttributeNameForGetterAndSetter
 
 sub ContentAttributeName
 {
-    my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
+    my ($generator, $implIncludes, $interfaceName, $attribute, $getterOrSetter) = @_;
 
-    my $contentAttributeName = $attribute->extendedAttributes->{"Reflect"};
+    my $reflect = $attribute->extendedAttributes->{Reflect};
+    my $reflectURL = $attribute->extendedAttributes->{ReflectURL};
+    my $reflectSetter = $attribute->extendedAttributes->{ReflectSetter};
+    die "Do not use both [ReflectURL] and [Reflect] on the same attribute" if $reflectURL && $reflect;
+    die "Do not use both [ReflectURL] and [ReflectSetter] on the same attribute" if $reflectURL && $reflectSetter;
+    die "Do not use both [Reflect] and [ReflectSetter] on the same attribute" if $reflect && $reflectSetter;
+
+    my $contentAttributeName = UnquoteStringLiteral($getterOrSetter eq "setter" ? $reflect || $reflectURL || $reflectSetter : $reflect || $reflectURL);
     return undef if !$contentAttributeName;
 
-    $contentAttributeName = lc $generator->AttributeNameForGetterAndSetter($attribute) if $contentAttributeName eq "VALUE_IS_MISSING";
+    $contentAttributeName =~ s/-/_/g;
+
+    $contentAttributeName = lc $attribute->name if $contentAttributeName eq "VALUE_IS_MISSING";
 
     my $namespace = $generator->NamespaceForAttributeName($interfaceName, $contentAttributeName);
 
@@ -1104,11 +1139,23 @@ sub ContentAttributeName
     return "WebCore::${namespace}::${contentAttributeName}Attr";
 }
 
+sub UnquoteStringLiteral
+{
+    my ($s) = @_;
+    return $s if !$s;
+    return $s if length($s) < 2;
+    if (substr($s, 0, 1) ne '"' && substr($s, 0, 1) ne "'") {
+        die "Identifier '$s' should be a string literal" if $s ne "VALUE_IS_MISSING";
+        return $s;
+    }
+    return substr($s, 1, -1);
+}
+
 sub GetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
 
-    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute);
+    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute, "getter");
 
     if (!$contentAttributeName) {
         return ($generator->WK_lcfirst($generator->AttributeNameForGetterAndSetter($attribute)));
@@ -1117,16 +1164,18 @@ sub GetterExpression
     my $attributeType = $attribute->type;
 
     my $functionName;
-    if ($attribute->extendedAttributes->{"URL"}) {
+    if ($attribute->extendedAttributes->{ReflectURL}) {
         $implIncludes->{"ElementInlines.h"} = 1;
         $functionName = "getURLAttributeForBindings";
     } elsif ($attributeType->name eq "boolean") {
         $implIncludes->{"ElementInlines.h"} = 1;
         $functionName = "hasAttributeWithoutSynchronization";
+    } elsif ($attributeType->name eq "double") {
+        $functionName = "numericAttribute";
     } elsif ($attributeType->name eq "long") {
-        $functionName = "getIntegralAttribute";
+        $functionName = "integralAttribute";
     } elsif ($attributeType->name eq "unsigned long") {
-        $functionName = "getUnsignedIntegralAttribute";
+        $functionName = "unsignedIntegralAttribute";
     } elsif ($attributeType->name eq "Element") {
         $functionName = "getElementAttributeForBindings";
     } elsif ($attributeType->name eq "FrozenArray" && scalar @{$attributeType->subtypes} == 1 && @{$attributeType->subtypes}[0]->name eq "Element") {
@@ -1154,7 +1203,7 @@ sub SetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
 
-    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute);
+    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute, "setter");
 
     if (!$contentAttributeName) {
         return ("set" . $generator->WK_ucfirst($generator->AttributeNameForGetterAndSetter($attribute)));
@@ -1165,6 +1214,8 @@ sub SetterExpression
     my $functionName;
     if ($attributeType->name eq "boolean") {
         $functionName = "setBooleanAttribute";
+    } elsif ($attributeType->name eq "double") {
+        $functionName = "setNumericAttribute";
     } elsif ($attributeType->name eq "long") {
         $functionName = "setIntegralAttribute";
     } elsif ($attributeType->name eq "unsigned long") {

@@ -47,7 +47,7 @@ static void computeStyleForPseudoElementStyle(StyledMarkedText::Style& style, co
 
     auto color = TextDecorationPainter::decorationColor(*pseudoElementStyle, paintInfo.paintBehavior);
     auto decorationStyle = pseudoElementStyle->textDecorationStyle();
-    auto decorations = pseudoElementStyle->textDecorationsInEffect();
+    auto decorations = pseudoElementStyle->textDecorationLineInEffect();
 
             if (decorations.contains(TextDecorationLine::Underline)) {
                 style.textDecorationStyles.underline.color = color;
@@ -143,9 +143,9 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
 StyledMarkedText::Style StyledMarkedText::computeStyleForUnmarkedMarkedText(const RenderText& renderer, const RenderStyle& lineStyle, bool isFirstLine, const PaintInfo& paintInfo)
 {
     StyledMarkedText::Style style;
-    style.textDecorationStyles = TextDecorationPainter::stylesForRenderer(renderer, lineStyle.textDecorationsInEffect(), isFirstLine, paintInfo.paintBehavior);
+    style.textDecorationStyles = TextDecorationPainter::stylesForRenderer(renderer, lineStyle.textDecorationLineInEffect(), isFirstLine, paintInfo.paintBehavior);
     style.textStyles = computeTextPaintStyle(renderer, lineStyle, paintInfo);
-    style.textShadow = ShadowData::clone(paintInfo.forceTextColor() ? nullptr : lineStyle.textShadow());
+    style.textShadow = paintInfo.forceTextColor() ? WebCore::Style::TextShadows { CSS::Keyword::None { } } : lineStyle.textShadow();
     return style;
 }
 
@@ -218,7 +218,7 @@ static void orderHighlights(const ListHashSet<AtomString>& markedTextsNames, Vec
     if (markedTexts.isEmpty())
         return;
 
-    UncheckedKeyHashMap<AtomString, int> markedTextsNamesPriority;
+    HashMap<AtomString, int> markedTextsNamesPriority;
     int index = 0;
     for (auto& highlightName : markedTextsNames) {
         markedTextsNamesPriority.add(highlightName, index);
@@ -262,7 +262,7 @@ Vector<StyledMarkedText> StyledMarkedText::subdivideAndResolve(const Vector<Mark
 
     auto markedTexts = MarkedText::subdivide(textsToSubdivide, OverlapStrategy::None);
     ASSERT(!markedTexts.isEmpty());
-    if (UNLIKELY(markedTexts.isEmpty()))
+    if (markedTexts.isEmpty()) [[unlikely]]
         return { };
 
     if (!markedTexts.isEmpty()) {

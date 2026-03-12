@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/KeyValuePair.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -45,6 +44,7 @@ class Navigator;
 class PasteboardCustomData;
 class ScriptExecutionContext;
 struct PasteboardItemInfo;
+template<typename> class ExceptionOr;
 
 class ClipboardItem : public RefCountedAndCanMakeWeakPtr<ClipboardItem> {
 public:
@@ -76,7 +76,7 @@ private:
 
     WeakPtr<Clipboard, WeakPtrImplWithEventTargetData> m_clipboard;
     WeakPtr<Navigator> m_navigator;
-    std::unique_ptr<ClipboardItemDataSource> m_dataSource;
+    const UniqueRef<ClipboardItemDataSource> m_dataSource;
     PresentationStyle m_presentationStyle { PresentationStyle::Unspecified };
 };
 

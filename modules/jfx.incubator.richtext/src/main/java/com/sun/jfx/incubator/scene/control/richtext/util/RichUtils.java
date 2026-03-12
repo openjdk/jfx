@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -180,21 +180,24 @@ public final class RichUtils {
         return len;
     }
 
-    // TODO javadoc
-    // translates path elements from src frame of reference to target, with additional shift by dx, dy
-    // only MoveTo, LineTo are supported
-    // may return null
-    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements, double deltax, double deltay) {
-        //System.out.println("translatePath from=" + dump(elements) + " dx=" + deltax + " dy=" + deltay); // FIX
+    /**
+     * Translates path (which must contain only LineTo and MoveTo elements) from src frame of reference
+     * to the target frame of reference.
+     * @param tgt the target Region
+     * @param src the source Region
+     * @param elements the path elements
+     * @return translated path array, or null
+     * @throws RuntimeException if path elements contain something other than LineTo or MoveTo
+     */
+    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements) {
         Point2D ps = src.localToScreen(0.0, 0.0);
         if (ps == null) {
             return null;
         }
 
         Point2D pt = tgt.localToScreen(tgt.snappedLeftInset(), tgt.snappedTopInset());
-        double dx = ps.getX() - pt.getX() + deltax;
-        double dy = ps.getY() - pt.getY() + deltay;
-        //System.out.println("dx=" + dx + " dy=" + dy); // FIX
+        double dx = ps.getX() - pt.getX();
+        double dy = ps.getY() - pt.getY();
 
         for (int i = 0; i < elements.length; i++) {
             PathElement em = elements[i];
@@ -208,7 +211,6 @@ public final class RichUtils {
 
             elements[i] = em;
         }
-        //System.out.println("translatePath to=" + dump(elements)); // FIX
         return elements;
     }
 
@@ -740,5 +742,20 @@ public final class RichUtils {
         } else {
             return ev.getCommitted();
         }
+    }
+
+    // borrowed from
+    // https://github.com/andy-goryachev/AppFramework/blob/1e9f2197ce510a77ec5f719a2cb7112b0b6cf7be/src/goryachev/fx/FX.java#L1081
+    // with the author's permission
+    /** returns a parent of the specified type, or null.  if node is an instance of the specified class, returns node */
+    public static <T extends Node> T getParentOfClass(Class<T> c, Node node) {
+        while (node != null) {
+            if (c.isInstance(node)) {
+                return (T)node;
+            }
+
+            node = node.getParent();
+        }
+        return null;
     }
 }

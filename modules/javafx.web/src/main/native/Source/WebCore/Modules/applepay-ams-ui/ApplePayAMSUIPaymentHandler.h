@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 
 #include "ApplePayAMSUIRequest.h"
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 #include "PaymentHandler.h"
 #include "PaymentRequest.h"
 #include <wtf/Function.h>
@@ -49,6 +48,8 @@ class Page;
 
 struct AddressErrors;
 struct PayerErrorFields;
+
+template<typename> class ExceptionOr;
 
 enum class PaymentComplete;
 
@@ -79,7 +80,7 @@ private:
     ExceptionOr<void> retry(PaymentValidationErrors&&) final;
 
     PaymentRequest::MethodIdentifier m_identifier;
-    Ref<PaymentRequest> m_paymentRequest;
+    const Ref<PaymentRequest> m_paymentRequest;
     std::optional<ApplePayAMSUIRequest> m_applePayAMSUIRequest;
 };
 

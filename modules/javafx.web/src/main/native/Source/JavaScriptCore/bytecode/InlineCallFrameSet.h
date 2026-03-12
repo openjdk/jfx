@@ -43,8 +43,8 @@ public:
 
     using FrameBag = Bag<InlineCallFrame, RawPtrTraits<InlineCallFrame>, InlineCallFrameMalloc>;
     typedef FrameBag::iterator iterator;
-    iterator begin() { return m_frames.begin(); }
-    iterator end() { return m_frames.end(); }
+    iterator begin() LIFETIME_BOUND { return m_frames.begin(); }
+    iterator end() LIFETIME_BOUND { return m_frames.end(); }
 
 private:
     FrameBag m_frames;

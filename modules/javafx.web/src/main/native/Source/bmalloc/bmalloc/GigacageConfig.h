@@ -33,7 +33,7 @@
 namespace WebConfig {
 
 using Slot = uint64_t;
-extern "C" Slot g_config[];
+extern "C" BEXPORT Slot g_config[];
 
 } // namespace WebConfig
 

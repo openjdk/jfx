@@ -28,13 +28,11 @@
 #include "AXTextStateChangeIntent.h"
 #include "CaretAnimator.h"
 #include "Color.h"
-#include "EditingStyle.h"
-#include "Element.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
-#include "Range.h"
 #include "ScrollAlignment.h"
 #include "ScrollBehavior.h"
+#include "ScrollTypes.h"
 #include "VisibleSelection.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
@@ -43,10 +41,13 @@
 namespace WebCore {
 
 class CharacterData;
+class Element;
 class GraphicsContext;
+class EditingStyle;
 class HTMLFormElement;
 class LocalFrame;
 class MutableStyleProperties;
+class Range;
 class RenderBlock;
 class RenderObject;
 class RenderView;
@@ -126,7 +127,7 @@ public:
     enum class ShouldUpdateAppearance : bool { No, Yes };
     enum class Alteration : bool { Move, Extend };
     enum class CursorAlignOnScroll : bool { IfNeeded, Always };
-    enum class SetSelectionOption : uint16_t {
+    enum class SetSelectionOption : uint32_t {
         FireSelectEvent = 1 << 0,
         CloseTyping = 1 << 1,
         ClearTypingStyle = 1 << 2,
@@ -143,6 +144,7 @@ public:
         ForBindings = 1 << 13,
         DoNotNotifyEditorClients = 1 << 14,
         MaintainLiveRange = 1 << 15,
+        OnlyAllowForwardScrolling = 1 << 16
     };
     static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(UserTriggered = UserTriggered::No);
 
@@ -240,7 +242,7 @@ public:
     WEBCORE_EXPORT void expandSelectionToWordContainingCaretSelection();
     WEBCORE_EXPORT std::optional<SimpleRange> wordRangeContainingCaretSelection();
     WEBCORE_EXPORT void expandSelectionToStartOfWordContainingCaretSelection();
-    WEBCORE_EXPORT UChar characterInRelationToCaretSelection(int amount) const;
+    WEBCORE_EXPORT char16_t characterInRelationToCaretSelection(int amount) const;
     WEBCORE_EXPORT bool selectionAtSentenceStart() const;
     WEBCORE_EXPORT bool selectionAtWordStart() const;
     WEBCORE_EXPORT std::optional<SimpleRange> rangeByMovingCurrentSelection(int amount) const;
@@ -262,8 +264,8 @@ public:
 
     EditingStyle* typingStyle() const;
     WEBCORE_EXPORT RefPtr<MutableStyleProperties> copyTypingStyle() const;
-    void setTypingStyle(RefPtr<EditingStyle>&& style) { m_typingStyle = WTFMove(style); }
-    void clearTypingStyle();
+    WEBCORE_EXPORT void setTypingStyle(RefPtr<EditingStyle>&&);
+    WEBCORE_EXPORT void clearTypingStyle();
 
     enum class ClipToVisibleContent : bool { No, Yes };
     WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes);
@@ -273,7 +275,7 @@ public:
 
     WEBCORE_EXPORT RefPtr<HTMLFormElement> currentForm() const;
 
-    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = RevealExtentOption::DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant);
+    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = RevealExtentOption::DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant, OnlyAllowForwardScrolling =  OnlyAllowForwardScrolling::No);
     WEBCORE_EXPORT void setSelectionFromNone();
 
     bool shouldShowBlockCursor() const { return m_shouldShowBlockCursor; }
@@ -296,7 +298,7 @@ public:
 #endif
 private:
     void updateSelectionAppearanceNow();
-    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent, ForceCenterScroll = ForceCenterScroll::No);
+    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent, ForceCenterScroll = ForceCenterScroll::No, OnlyAllowForwardScrolling = OnlyAllowForwardScrolling::No);
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
@@ -343,7 +345,7 @@ private:
     void caretAnimationDidUpdate(CaretAnimator&) final;
 
     Document* document() final;
-    RefPtr<Document> protectedDocument() const { return m_document.get(); }
+    inline RefPtr<Document> protectedDocument() const; // Defined in DocumentInlines.h
 
     Node* caretNode() final;
 
@@ -402,11 +404,6 @@ constexpr auto FrameSelection::defaultSetSelectionOptions(UserTriggered userTrig
 inline EditingStyle* FrameSelection::typingStyle() const
 {
     return m_typingStyle.get();
-}
-
-inline void FrameSelection::clearTypingStyle()
-{
-    m_typingStyle = nullptr;
 }
 
 #if !(PLATFORM(COCOA) || USE(ATSPI))

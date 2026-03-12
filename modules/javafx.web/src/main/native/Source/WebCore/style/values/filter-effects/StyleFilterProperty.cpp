@@ -27,11 +27,14 @@
 
 #include "CSSFilterProperty.h"
 #include "Document.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "FilterOperations.h"
+#include "ReferenceFilterOperation.h"
 #include "StyleBlurFunction.h"
 #include "StyleBrightnessFunction.h"
 #include "StyleContrastFunction.h"
 #include "StyleDropShadowFunction.h"
+#include "StyleFilterReference.h"
 #include "StyleGrayscaleFunction.h"
 #include "StyleHueRotateFunction.h"
 #include "StyleInvertFunction.h"
@@ -53,7 +56,7 @@ CSS::FilterProperty toCSSFilterProperty(const FilterOperations& filterOperations
     for (auto& op : filterOperations) {
         switch (op->type()) {
         case FilterOperation::Type::Reference:
-            list.value.append(CSS::FilterReference { downcast<ReferenceFilterOperation>(op)->url() });
+            list.value.append(CSS::FilterReference { toCSSFilterReference(downcast<ReferenceFilterOperation>(op), style) });
             break;
         case FilterOperation::Type::Grayscale:
             list.value.append(CSS::GrayscaleFunction { toCSSGrayscale(downcast<BasicColorMatrixFilterOperation>(op), style) });
@@ -82,8 +85,8 @@ CSS::FilterProperty toCSSFilterProperty(const FilterOperations& filterOperations
         case FilterOperation::Type::Blur:
             list.value.append(CSS::BlurFunction { toCSSBlur(downcast<BlurFilterOperation>(op), style) });
             break;
-        case FilterOperation::Type::DropShadow:
-            list.value.append(CSS::DropShadowFunction { toCSSDropShadow(downcast<DropShadowFilterOperation>(op), style) });
+        case FilterOperation::Type::DropShadowWithStyleColor:
+            list.value.append(CSS::DropShadowFunction { toCSSDropShadow(downcast<DropShadowFilterOperationWithStyleColor>(op), style) });
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -94,18 +97,9 @@ CSS::FilterProperty toCSSFilterProperty(const FilterOperations& filterOperations
     return CSS::FilterProperty { WTFMove(list) };
 }
 
-static Ref<FilterOperation> createFilterFunctionReference(const String& filterURL, const Document& document)
-{
-    auto fragment = document.completeURL(filterURL).fragmentIdentifier().toAtomString();
-    return ReferenceFilterOperation::create(filterURL, WTFMove(fragment));
-}
-
 template<typename T> static Ref<FilterOperation> createFilterPropertyOperation(const T& value, const Document& document, RenderStyle& style, const CSSToLengthConversionData& conversionData)
 {
     return WTF::switchOn(value,
-        [&](const CSS::FilterReference& reference) {
-            return createFilterFunctionReference(reference.url, document);
-        },
         [&](const auto& function) {
             return createFilterOperation(function, document, style, conversionData);
         }

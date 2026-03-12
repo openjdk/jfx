@@ -39,6 +39,11 @@
 #include "pas_scavenger.h"
 #include "pas_utility_heap_config.h"
 
+/* Limit the amount of VA space that is madvised before the scavanger thread gives up the commit locks
+   to give other threads a chance to acquire the locks, while still providing for opportunities to
+   amortize madvise syscalls. */
+static const size_t scavenge_log_bytes_limit = 1024 * 1024ull;
+
 pas_page_sharing_pool pas_physical_page_sharing_pool = {
     .first_delta = PAS_VERSIONED_FIELD_INITIALIZER,
     .delta = PAS_SEGMENTED_VECTOR_INITIALIZER,
@@ -682,7 +687,7 @@ void pas_physical_page_sharing_pool_take(
         balance = pas_physical_page_sharing_pool_balance;
 
         if (verbose)
-            pas_log("Balance = %ld\n", balance);
+            pas_log("Balance = %zd\n", balance);
 
         if (balance < 0) {
             size_remaining = bytes - (size_t)balance;
@@ -733,7 +738,7 @@ void pas_physical_page_sharing_pool_take(
     pas_deferred_decommit_log_destruct(&decommit_log, heap_lock_hold_mode);
 
     if (verbose) {
-        pas_log("Balance addend: %ld.\n",
+        pas_log("Balance addend: %zd.\n",
                 balance_addend);
     }
 
@@ -748,6 +753,7 @@ pas_physical_page_sharing_pool_scavenge(uint64_t max_epoch)
     pas_page_sharing_pool_take_result take_result;
     pas_physical_memory_transaction transaction;
     size_t total_bytes;
+    bool try_again;
 
     if (verbose)
         pas_log("Doing scavenge up to %llu\n", (unsigned long long)max_epoch);
@@ -756,6 +762,7 @@ pas_physical_page_sharing_pool_scavenge(uint64_t max_epoch)
 
     pas_physical_memory_transaction_construct(&transaction);
     do {
+        try_again = false;
         pas_deferred_decommit_log decommit_log;
 
         if (verbose)
@@ -774,6 +781,10 @@ pas_physical_page_sharing_pool_scavenge(uint64_t max_epoch)
             if (verbose) {
                 pas_log("Take result = %s\n",
                         pas_page_sharing_pool_take_result_get_string(take_result));
+            }
+            if (take_result == pas_page_sharing_pool_take_success && decommit_log.total >= scavenge_log_bytes_limit) {
+                try_again = true;
+                break;
             }
         } while (take_result == pas_page_sharing_pool_take_success);
 
@@ -803,7 +814,7 @@ pas_physical_page_sharing_pool_scavenge(uint64_t max_epoch)
 
         pas_deferred_decommit_log_decommit_all(&decommit_log);
         pas_deferred_decommit_log_destruct(&decommit_log, pas_lock_is_not_held);
-    } while (!pas_physical_memory_transaction_end(&transaction));
+    } while (!pas_physical_memory_transaction_end(&transaction) || try_again);
 
     PAS_ASSERT(take_result != pas_page_sharing_pool_take_locks_unavailable);
     PAS_ASSERT(take_result != pas_page_sharing_pool_take_success);

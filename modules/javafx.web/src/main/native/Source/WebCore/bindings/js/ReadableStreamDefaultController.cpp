@@ -79,7 +79,7 @@ void ReadableStreamDefaultController::error(const Exception& exception)
     auto scope = DECLARE_CATCH_SCOPE(vm);
     auto value = createDOMException(&lexicalGlobalObject, exception.code(), exception.message());
 
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         ASSERT(vm.hasPendingTerminationException());
         return;
     }

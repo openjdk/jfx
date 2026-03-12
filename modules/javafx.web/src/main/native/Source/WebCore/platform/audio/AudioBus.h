@@ -67,7 +67,7 @@ public:
     // allocate indicates whether or not to initially have the AudioChannels created with managed storage.
     // Normal usage is to pass true here, in which case the AudioChannels will memory-manage their own storage.
     // If allocate is false then setChannelMemory() has to be called later on for each channel before the AudioBus is useable...
-    WEBCORE_EXPORT static RefPtr<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
+    WEBCORE_EXPORT static Ref<AudioBus> create(unsigned numberOfChannels, size_t length, bool allocate = true);
 
     // Tells the given channel to use an externally allocated buffer.
     WEBCORE_EXPORT void setChannelMemory(unsigned channelIndex, std::span<float> storage);
@@ -100,21 +100,22 @@ public:
     bool isSilent() const;
 
     // Returns true if the channel count and frame-size match.
-    bool topologyMatches(const AudioBus &sourceBus) const;
+    bool topologyMatches(const AudioBus& sourceBus) const;
+
+    static Ref<AudioBus> createCopy(const AudioBus& sourceBus);
 
     // Creates a new buffer from a range in the source buffer.
     // 0 may be returned if the range does not fit in the sourceBuffer
-    static RefPtr<AudioBus> createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame);
-
+    static RefPtr<AudioBus> createBufferFromRange(const AudioBus& sourceBuffer, unsigned startFrame, unsigned endFrame);
 
     // Creates a new AudioBus by sample-rate converting sourceBus to the newSampleRate.
     // setSampleRate() must have been previously called on sourceBus.
     // Note: sample-rate conversion is already handled in the file-reading code for the mac port, so we don't need this.
-    static RefPtr<AudioBus> createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate);
+    static RefPtr<AudioBus> createBySampleRateConverting(const AudioBus& sourceBus, bool mixToMono, double newSampleRate);
 
     // Creates a new AudioBus by mixing all the channels down to mono.
     // If sourceBus is already mono, then the returned AudioBus will simply be a copy.
-    static RefPtr<AudioBus> createByMixingToMono(const AudioBus* sourceBus);
+    static Ref<AudioBus> createByMixingToMono(const AudioBus& sourceBus);
 
     // Scales all samples by the same amount.
     void scale(float scale);

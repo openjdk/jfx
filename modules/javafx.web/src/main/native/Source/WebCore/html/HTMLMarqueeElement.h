@@ -56,6 +56,8 @@ public:
     WEBCORE_EXPORT int loop() const;
     WEBCORE_EXPORT ExceptionOr<void> setLoop(int);
 
+    bool hasRenderMarquee() const { return renderMarquee(); }
+
 private:
     HTMLMarqueeElement(const QualifiedName&, Document&);
 

@@ -83,6 +83,13 @@ inline TypeIndex TypeInformation::get(const TypeDefinition& type)
     return type.index();
 }
 
+inline RefPtr<const TypeDefinition> TypeInformation::getRef(TypeIndex typeIndex)
+{
+    if (typeIndexIsType(typeIndex) || typeIndex == TypeDefinition::invalidIndex)
+        return nullptr;
+    return TypeInformation::get(typeIndex);
+}
+
 } } // namespace JSC::Wasm
 
 #endif // ENABLE(WEBASSEMBLY)

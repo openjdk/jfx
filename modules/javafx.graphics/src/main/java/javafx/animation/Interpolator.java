@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package javafx.animation;
 
+import javafx.geometry.Point2D;
 import javafx.util.Duration;
 import com.sun.javafx.animation.InterpolatorHelper;
+import com.sun.scenario.animation.LinearInterpolator;
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
 import com.sun.scenario.animation.StepInterpolator;
@@ -78,9 +80,7 @@ public abstract class Interpolator {
     };
 
     /**
-     * Built-in interpolator that provides linear time interpolation. The return
-     * value of {@code interpolate()} is {@code startValue} + ({@code endValue}
-     * - {@code startValue}) * {@code fraction}.
+     * Built-in interpolator instance that is equivalent to {@code ofLinear([0, 0], [1, 1])}.
      */
     public static final Interpolator LINEAR = new Interpolator() {
         @Override
@@ -93,6 +93,33 @@ public abstract class Interpolator {
             return "Interpolator.LINEAR";
         }
     };
+
+    /**
+     * Returns an interpolator that interpolates linearly between its specified control points.
+     * <p>
+     * Each control point associates an input progress value (X) with an output progress value (Y).
+     * The input progress value is the normalized progress of the animation, while the output progress
+     * value is the normalized progress of the value change. This means that when the time has reached
+     * X of the animation, the animation should be at Y of its value change. Both values are specified
+     * in normalized coordinates, but are not required to fall within the {@code [0..1]} interval.
+     * <p>
+     * If the input progress value (X) of a control point is unspecified ({@link Double#NaN}), it is
+     * distributed evenly between its neighboring control points. If the input progress value of
+     * the first or last control point is unspecified, it is set to 0 or 1, respectively.
+     * <p>
+     * The control point list is canonicalized so that input progress values (X) are non-decreasing in
+     * the order provided. In particular, if a control point specifies an X value that is lower than
+     * any preceding control point's X value, it is adjusted to match the greatest preceding X value.
+     *
+     * @param controlPoints the control points
+     * @throws NullPointerException if {@code controlPoints} is {@code null}
+     * @throws IllegalArgumentException if {@code controlPoints} contains less than two items
+     * @return a linear interpolator
+     * @since 26
+     */
+    public static Interpolator ofLinear(Point2D... controlPoints) {
+        return new LinearInterpolator(controlPoints);
+    }
 
     /*
      * Easing is calculated with the following algorithm (taken from SMIL 3.0
@@ -189,28 +216,59 @@ public abstract class Interpolator {
     };
 
     /**
-     * Creates an {@code Interpolator}, which {@link #curve(double) curve()} is
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSpline(double, double, double, double)} instead.
+     *
+     * @param x1 x coordinate of the first control point
+     * @param y1 y coordinate of the first control point
+     * @param x2 x coordinate of the second control point
+     * @param y2 y coordinate of the second control point
+     * @throws IllegalArgumentException if {@code x1} or {@code x2} is outside of {@code [0, 1]}
+     * @return a spline interpolator
+     * @deprecated use {@link #ofSpline(double, double, double, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator SPLINE(double x1, double y1, double x2, double y2) {
+        return ofSpline(x1, y1, x2, y2);
+    }
+
+    /**
+     * Returns an {@code Interpolator} whose {@link #curve(double) curve()} is
      * shaped using the spline control points defined by ({@code x1}, {@code y1}
      * ) and ({@code x2}, {@code y2}). The anchor points of the spline are
      * implicitly defined as ({@code 0.0}, {@code 0.0}) and ({@code 1.0},
      * {@code 1.0}).
      *
-     * @param x1
-     *            x coordinate of the first control point
-     * @param y1
-     *            y coordinate of the first control point
-     * @param x2
-     *            x coordinate of the second control point
-     * @param y2
-     *            y coordinate of the second control point
-     * @return A spline interpolator
+     * @param x1 x coordinate of the first control point
+     * @param y1 y coordinate of the first control point
+     * @param x2 x coordinate of the second control point
+     * @param y2 y coordinate of the second control point
+     * @throws IllegalArgumentException if {@code x1} or {@code x2} is outside of {@code [0, 1]}
+     * @return a spline interpolator
+     * @since 26
      */
-    public static Interpolator SPLINE(double x1, double y1, double x2, double y2) {
+    public static Interpolator ofSpline(double x1, double y1, double x2, double y2) {
         return new SplineInterpolator(x1, y1, x2, y2);
     }
 
     /**
-     * Create a tangent interpolator. A tangent interpolator allows to define
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double, Duration, double)} instead.
+     *
+     * @param t1 the delta time of the in-tangent, relative to the KeyFrame
+     * @param v1 the value of the in-tangent
+     * @param t2 the delta time of the out-tangent, relative to the KeyFrame
+     * @param v2 the value of the out-tangent
+     * @return a tangent interpolator
+     * @deprecated use {@link #ofTangent(Duration, double, Duration, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator TANGENT(Duration t1, double v1, Duration t2, double v2) {
+        return ofTangent(t1, v1, t2, v2);
+    }
+
+    /**
+     * Returns a tangent interpolator. A tangent interpolator allows to define
      * the behavior of an animation curve very precisely by defining the
      * tangents close to a key frame.
      *
@@ -233,36 +291,45 @@ public abstract class Interpolator {
      * The interpolation then follows a bezier curve, with 2 control points defined by the specified tangent and
      * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame. See the picture above.
      *
-     * @param t1
-     *            The delta time of the in-tangent, relative to the KeyFrame
-     * @param v1
-     *            The value of the in-tangent
-     * @param t2
-     *            The delta time of the out-tangent, relative to the KeyFrame
-     * @param v2
-     *            The value of the out-tangent
-     * @return the new tangent interpolator
+     * @param t1 the delta time of the in-tangent, relative to the KeyFrame
+     * @param v1 the value of the in-tangent
+     * @param t2 the delta time of the out-tangent, relative to the KeyFrame
+     * @param v2 the value of the out-tangent
+     * @return a tangent interpolator
+     * @since 26
      */
-    public static Interpolator TANGENT(Duration t1, double v1, Duration t2,
-            double v2) {
+    public static Interpolator ofTangent(Duration t1, double v1, Duration t2, double v2) {
         return new NumberTangentInterpolator(t1, v1, t2, v2);
     }
 
     /**
-     * Creates a tangent interpolator, for which in-tangent and out-tangent are
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double)} instead.
+     *
+     * @param t the delta time of the tangent
+     * @param v the value of the tangent
+     * @return a tangent interpolator
+     * @deprecated use {@link #ofTangent(Duration, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator TANGENT(Duration t, double v) {
+        return ofTangent(t, v);
+    }
+
+    /**
+     * Returns a tangent interpolator, for which in-tangent and out-tangent are
      * identical. This is especially useful for the first and the last key frame
      * of a {@link Timeline}, because for these key frames only one tangent is
      * used.
      *
-     * @see #TANGENT(Duration, double, Duration, double)
+     * @see #ofTangent(Duration, double, Duration, double)
      *
-     * @param t
-     *            The delta time of the tangent
-     * @param v
-     *            The value of the tangent
-     * @return the new Tangent interpolator
+     * @param t the delta time of the tangent
+     * @param v the value of the tangent
+     * @return a tangent interpolator
+     * @since 26
      */
-    public static Interpolator TANGENT(Duration t, double v) {
+    public static Interpolator ofTangent(Duration t, double v) {
         return new NumberTangentInterpolator(t, v);
     }
 
@@ -306,21 +373,39 @@ public abstract class Interpolator {
     }
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.START)}.
      *
      * @since 23
      */
-    public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
+    public static final Interpolator STEP_START = ofSteps(1, StepPosition.START);
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.END)}.
      *
      * @since 23
      */
-    public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
+    public static final Interpolator STEP_END = ofSteps(1, StepPosition.END);
 
     /**
-     * Creates a step interpolator that divides the input time into a series of intervals, each
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSteps(int, StepPosition)} instead.
+     *
+     * @param intervalCount the number of intervals in the step interpolator
+     * @param position the {@code StepPosition} of the step interpolator
+     * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
+     *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
+     * @throws NullPointerException if {@code position} is {@code null}
+     * @return a new step interpolator
+     * @deprecated use {@link #ofSteps(int, StepPosition)} instead
+     * @since 23
+     */
+    @Deprecated(since = "26")
+    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+        return ofSteps(intervalCount, position);
+    }
+
+    /**
+     * Returns a step interpolator that divides the input time into a series of intervals, each
      * interval being equal in length, where each interval maps to a constant output time value.
      * The output time value is determined by the {@link StepPosition}.
      *
@@ -329,11 +414,10 @@ public abstract class Interpolator {
      * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
      *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
      * @throws NullPointerException if {@code position} is {@code null}
-     * @return a new step interpolator
-     *
-     * @since 23
+     * @return a step interpolator
+     * @since 26
      */
-    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+    public static Interpolator ofSteps(int intervalCount, StepPosition position) {
         return new StepInterpolator(intervalCount, position);
     }
 

@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=SpeechRecognitionEnabled,
+    SecureContext,
     Exposed=Window
 ] interface SpeechRecognitionResult {
     readonly attribute unsigned long length;

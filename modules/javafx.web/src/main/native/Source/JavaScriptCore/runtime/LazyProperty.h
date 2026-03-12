@@ -92,7 +92,7 @@ public:
 
     ElementType* getInitializedOnMainThread(const OwnerType* owner) const
     {
-        if (UNLIKELY(m_pointer & lazyTag)) {
+        if (m_pointer & lazyTag) [[unlikely]] {
             ASSERT(!isCompilationThread());
             FuncType func = *std::bit_cast<FuncType*>(m_pointer & ~(lazyTag | initializingTag));
             return func(Initializer(const_cast<OwnerType*>(owner), *const_cast<LazyProperty*>(this)));

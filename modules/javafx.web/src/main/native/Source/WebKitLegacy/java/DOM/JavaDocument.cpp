@@ -35,12 +35,12 @@
 #include <WebCore/DOMImplementation.h>
 #include <WebCore/DOMWindow.h>
 #include <WebCore/Document.h>
+#include "DocumentInlines.h"
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/DocumentType.h>
 #include <WebCore/Element.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>
-#include <WebCore/FullscreenManager.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/HTMLHeadElement.h>
@@ -329,30 +329,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCompatModeImpl
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->compatMode());
-}
-
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitIsFullScreenImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->fullscreenManagerIfExists()->isFullscreen();
-}
-
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullScreenKeyboardInputAllowedImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->fullscreenManagerIfExists()->isFullscreenKeyboardInputAllowed();
-}
-
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenEnabledImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->fullscreenManagerIfExists()->isFullscreenEnabled();
-}
-
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenElementImpl(JNIEnv* env, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->fullscreenManagerIfExists()->fullscreenElement()));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStateImpl(JNIEnv* env, jclass, jlong peer)
@@ -1517,7 +1493,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_caretRangeFromPoint
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createCSSStyleDeclarationImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->createCSSStyleDeclaration()));
+    return 0;
 }
 
 

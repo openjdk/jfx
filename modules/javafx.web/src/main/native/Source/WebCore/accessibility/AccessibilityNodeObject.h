@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,18 +41,16 @@ class Node;
 
 class AccessibilityNodeObject : public AccessibilityObject {
 public:
-    static Ref<AccessibilityNodeObject> create(AXID, Node&);
+    static Ref<AccessibilityNodeObject> create(AXID, Node&, AXObjectCache&);
     virtual ~AccessibilityNodeObject();
 
     void init() override;
 
-    bool canvasHasFallbackContent() const final;
+    bool hasElementDescendant() const final;
 
     bool isBusy() const final;
     bool isDetached() const override { return !m_node; }
-    bool isRadioInput() const final;
     bool isFieldset() const final;
-    bool isInputImage() const final;
     bool isMultiSelectable() const override;
     bool isNativeImage() const;
     bool isNativeTextControl() const final;
@@ -80,7 +78,6 @@ public:
     void setFocused(bool) override;
     bool isFocused() const final;
     bool canSetFocusAttribute() const override;
-    unsigned headingLevel() const final;
 
     bool canSetValueAttribute() const override;
 
@@ -90,12 +87,12 @@ public:
     float minValueForRange() const override;
     float stepValueForRange() const override;
 
-    AccessibilityOrientation orientation() const override;
+    std::optional<AccessibilityOrientation> orientationFromARIA() const;
+    std::optional<AccessibilityOrientation> explicitOrientation() const override { return orientationFromARIA(); }
 
     AccessibilityButtonState checkboxOrRadioValue() const final;
 
     URL url() const override;
-    unsigned hierarchicalLevel() const final;
     String textUnderElement(TextUnderElementMode = TextUnderElementMode()) const override;
     String accessibilityDescriptionForChildren() const;
     String description() const override;
@@ -116,6 +113,8 @@ public:
     Element* actionElement() const override;
     Element* anchorElement() const override;
     RefPtr<Element> popoverTargetElement() const final;
+    RefPtr<Element> commandForElement() const final;
+    CommandType commandType() const final;
     AccessibilityObject* internalLinkElement() const final;
     AccessibilityChildrenVector radioButtonGroup() const final;
 
@@ -136,14 +135,20 @@ public:
     LayoutRect elementRect() const override;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
-    TextEmissionBehavior emitTextAfterBehavior() const final;
+    TextEmissionBehavior textEmissionBehavior() const final;
 #endif
 
 protected:
-    explicit AccessibilityNodeObject(AXID, Node*);
+    explicit AccessibilityNodeObject(AXID, Node*, AXObjectCache&);
     void detachRemoteParts(AccessibilityDetachmentType) override;
 
     AccessibilityRole m_ariaRole { AccessibilityRole::Unknown };
+
+    // FIXME: These `is_` member variables should be replaced with an enum or be computed on demand.
+    // Only used by AccessibilityTableCell, but placed here to use space that would otherwise be taken by padding.
+    bool m_isARIAGridCell { false };
+    // Only used by AccessibilitySVGObject, but placed here to use space that would otherwise be taken by padding.
+    bool m_isSVGRoot { false };
 #ifndef NDEBUG
     bool m_initialized { false };
 #endif
@@ -180,8 +185,8 @@ protected:
 
     bool elementAttributeValue(const QualifiedName&) const;
 
-    const String liveRegionStatus() const final;
-    const String liveRegionRelevant() const final;
+    const String explicitLiveRegionStatus() const final { return getAttribute(HTMLNames::aria_liveAttr); }
+    const String explicitLiveRegionRelevant() const final { return getAttribute(HTMLNames::aria_relevantAttr); }
     bool liveRegionAtomic() const final;
 
     String accessKey() const final;
@@ -195,6 +200,7 @@ protected:
     Vector<Ref<Element>> ariaLabeledByElements() const;
     String descriptionForElements(const Vector<Ref<Element>>&) const;
     LayoutRect boundingBoxRect() const override;
+    LayoutRect nonEmptyAncestorBoundingBox() const;
     String ariaDescribedByAttribute() const final;
 
     AccessibilityObject* captionForFigure() const;
@@ -205,7 +211,7 @@ private:
     void visibleText(Vector<AccessibilityText>&) const;
     String alternativeTextForWebArea() const;
     void ariaLabeledByText(Vector<AccessibilityText>&) const;
-    bool usesAltTagForTextComputation() const;
+    bool usesAltForTextComputation() const;
     bool roleIgnoresTitle() const;
     bool postKeyboardKeysForValueChange(StepAction);
     void setNodeValue(StepAction, float);

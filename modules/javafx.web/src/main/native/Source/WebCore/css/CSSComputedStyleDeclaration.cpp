@@ -26,18 +26,17 @@
 #include "CSSComputedStyleDeclaration.h"
 
 #include "CSSProperty.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSPropertyParser.h"
-#include "CSSSelector.h"
 #include "CSSSelectorParser.h"
 #include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "ComposedTreeAncestorIterator.h"
-#include "ComputedStyleExtractor.h"
 #include "DeprecatedCSSOMValue.h"
+#include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderStyleInlines.h"
+#include "Settings.h"
 #include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
@@ -83,6 +82,11 @@ Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::createEmpty(Elemen
     return adoptRef(*new CSSComputedStyleDeclaration(element, IsEmpty::Yes));
 }
 
+Style::Extractor CSSComputedStyleDeclaration::extractor() const
+{
+    return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier);
+}
+
 String CSSComputedStyleDeclaration::cssText() const
 {
     return emptyString();
@@ -93,25 +97,11 @@ ExceptionOr<void> CSSComputedStyleDeclaration::setCssText(const String&)
     return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
-// In CSS 2.1 the returned object should actually contain the "used values"
-// rather then the "computed values" (despite the name saying otherwise).
-//
-// See;
-// http://www.w3.org/TR/CSS21/cascade.html#used-value
-// http://www.w3.org/TR/DOM-Level-2-Style/css.html#CSS-CSSStyleDeclaration
-// https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle#Notes
-RefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropertyID propertyID, ComputedStyleExtractor::UpdateLayout updateLayout) const
-{
-    if (!isExposed(propertyID, settings()) || m_isEmpty)
-        return nullptr;
-    return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).propertyValue(propertyID, updateLayout);
-}
-
 Ref<MutableStyleProperties> CSSComputedStyleDeclaration::copyProperties() const
 {
     if (m_isEmpty)
         return MutableStyleProperties::create();
-    return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).copyProperties();
+    return extractor().copyProperties();
 }
 
 const Settings* CSSComputedStyleDeclaration::settings() const
@@ -121,7 +111,7 @@ const Settings* CSSComputedStyleDeclaration::settings() const
 
 const FixedVector<CSSPropertyID>& CSSComputedStyleDeclaration::exposedComputedCSSPropertyIDs() const
 {
-    return m_element->document().exposedComputedCSSPropertyIDs();
+    return protectedElement()->protectedDocument()->exposedComputedCSSPropertyIDs();
 }
 
 String CSSComputedStyleDeclaration::getPropertyValue(CSSPropertyID propertyID) const
@@ -129,25 +119,7 @@ String CSSComputedStyleDeclaration::getPropertyValue(CSSPropertyID propertyID) c
     if (m_isEmpty)
         return emptyString(); // FIXME: Should this be null instead, as it is in StyleProperties::getPropertyValue?
 
-    auto canUseShorthandSerializerForPropertyValue = [&]() {
-        switch (propertyID) {
-        case CSSPropertyGap:
-        case CSSPropertyGridArea:
-        case CSSPropertyGridColumn:
-        case CSSPropertyGridRow:
-        case CSSPropertyGridTemplate:
-            return true;
-        default:
-            return false;
-        }
-    };
-    if (isShorthand(propertyID) && canUseShorthandSerializerForPropertyValue())
-        return serializeShorthandValue(CSS::defaultSerializationContext(), { m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier }, propertyID);
-
-    auto value = getPropertyCSSValue(propertyID);
-    if (!value)
-        return emptyString(); // FIXME: Should this be null instead, as it is in StyleProperties::getPropertyValue?
-    return value->cssText(CSS::defaultSerializationContext());
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 unsigned CSSComputedStyleDeclaration::length() const
@@ -155,9 +127,9 @@ unsigned CSSComputedStyleDeclaration::length() const
     if (m_isEmpty)
         return 0;
 
-    ComputedStyleExtractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
+    Style::Extractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
 
-    auto* style = m_element->computedStyle(m_pseudoElementIdentifier);
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return 0;
 
@@ -175,21 +147,21 @@ String CSSComputedStyleDeclaration::item(unsigned i) const
     if (i < exposedComputedCSSPropertyIDs().size())
         return nameString(exposedComputedCSSPropertyIDs().at(i));
 
-    auto* style = m_element->computedStyle(m_pseudoElementIdentifier);
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return String();
 
-    const auto& inheritedCustomProperties = style->inheritedCustomProperties();
+    Ref inheritedCustomProperties = style->inheritedCustomProperties();
 
     // FIXME: findKeyAtIndex does a linear search for the property name, so if
     // we are called in a loop over all item indexes, we'll spend quadratic time
     // searching for keys.
 
-    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties.size())
-        return inheritedCustomProperties.findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
+    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties->size())
+        return inheritedCustomProperties->findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
 
-    const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
-    return nonInheritedCustomProperties.findKeyAtIndex(i - inheritedCustomProperties.size() - exposedComputedCSSPropertyIDs().size());
+    Ref nonInheritedCustomProperties = style->nonInheritedCustomProperties();
+    return nonInheritedCustomProperties->findKeyAtIndex(i - inheritedCustomProperties->size() - exposedComputedCSSPropertyIDs().size());
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const
@@ -208,33 +180,35 @@ RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(co
         return nullptr;
 
     if (isCustomPropertyName(propertyName)) {
-        auto value = ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).customPropertyValue(AtomString { propertyName });
+        auto value = extractor().customPropertyValue(AtomString { propertyName });
         if (!value)
             return nullptr;
         return value->createDeprecatedCSSOMWrapper(*this);
     }
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return nullptr;
-    auto value = getPropertyCSSValue(propertyID);
+
+    auto value = extractor().propertyValue(propertyID);
     if (!value)
         return nullptr;
     return value->createDeprecatedCSSOMWrapper(*this);
 }
 
-String CSSComputedStyleDeclaration::getPropertyValue(const String &propertyName)
+String CSSComputedStyleDeclaration::getPropertyValue(const String& propertyName)
 {
     if (m_isEmpty)
         return String();
 
     if (isCustomPropertyName(propertyName))
-        return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier).customPropertyText(AtomString { propertyName });
+        return extractor().customPropertyValueSerialization(AtomString { propertyName }, CSS::defaultSerializationContext());
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return String();
-    return getPropertyValue(propertyID);
+
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 String CSSComputedStyleDeclaration::getPropertyPriority(const String&)

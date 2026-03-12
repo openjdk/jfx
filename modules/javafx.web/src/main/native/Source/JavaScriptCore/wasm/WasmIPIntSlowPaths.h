@@ -28,6 +28,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CommonSlowPaths.h"
+#include "JSCJSValue.h"
 #include "WasmExceptionType.h"
 #include "WasmIPIntGenerator.h"
 #include "WasmTypeDefinition.h"
@@ -38,6 +39,12 @@ namespace JSC {
 class JSWebAssemblyInstance;
 
 namespace IPInt {
+
+#if USE(JSVALUE64)
+static constexpr uintptr_t SlowPathExceptionTag = 1;
+#elif USE(JSVALUE32_64)
+static constexpr uintptr_t SlowPathExceptionTag = JSValue::InvalidTag;
+#endif
 
 #define WASM_IPINT_EXTERN_CPP_DECL(name, ...) \
     extern "C" UGPRPair SYSV_ABI ipint_extern_##name(JSWebAssemblyInstance* instance, __VA_ARGS__)

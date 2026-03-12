@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CustomStateSet.h"
 
-#include "CSSParser.h"
+#include "CSSSelector.h"
 #include "Element.h"
 #include "PseudoClassChangeInvalidation.h"
 #include <wtf/TZoneMallocInlines.h>

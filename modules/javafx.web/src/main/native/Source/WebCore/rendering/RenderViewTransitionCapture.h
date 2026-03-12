@@ -34,7 +34,7 @@ class RenderViewTransitionCapture final : public RenderReplaced {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderViewTransitionCapture);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderViewTransitionCapture);
 public:
-    RenderViewTransitionCapture(Type, Document&, RenderStyle&&);
+    RenderViewTransitionCapture(Type, Document&, RenderStyle&&, bool isRootElement);
     virtual ~RenderViewTransitionCapture();
 
     void setImage(RefPtr<ImageBuffer>);
@@ -42,6 +42,8 @@ public:
 
     void paintReplaced(PaintInfo&, const LayoutPoint& paintOffset) override;
     void intrinsicSizeChanged() override;
+
+    void styleDidChange(StyleDifference, const RenderStyle*) override;
 
     void layout() override;
 
@@ -58,6 +60,8 @@ public:
     bool canUseExistingLayers() const { return !hasNonVisibleOverflow(); }
 
     bool paintsContent() const final;
+
+    bool isRootElementCapture() const { return m_isRootElementCapture; }
 
     RefPtr<ImageBuffer> image() { return m_oldImage; }
 
@@ -83,6 +87,7 @@ private:
     LayoutSize m_imageIntrinsicSize;
     // Scale factor between the intrinsic size and the replaced content rect size.
     FloatSize m_scale;
+    bool m_isRootElementCapture;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,7 +83,7 @@ namespace OptionsHelper {
 struct Metadata {
     // This struct does not need to be TZONE_ALLOCATED because it is only used for transient memory
     // during Options initialization, and will not be re-allocated thereafter. See comment above.
-    WTF_MAKE_FAST_ALLOCATED(Metadata);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Metadata);
 public:
     OptionsStorage defaults;
 };
@@ -227,7 +227,7 @@ std::optional<OptionsStorage::Unsigned> parse(const char* string)
     return std::nullopt;
 }
 
-#if CPU(ADDRESS64) || OS(DARWIN)
+#if CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 template<>
 std::optional<OptionsStorage::Size> parse(const char* string)
 {
@@ -236,7 +236,7 @@ std::optional<OptionsStorage::Size> parse(const char* string)
         return value;
     return std::nullopt;
 }
-#endif // CPU(ADDRESS64) || OS(DARWIN)
+#endif // CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 
 template<>
 std::optional<OptionsStorage::Double> parse(const char* string)
@@ -374,10 +374,6 @@ bool Options::isAvailable(Options::ID id, Options::Availability availability)
     UNUSED_PARAM(id);
 #if !defined(NDEBUG)
     if (id == maxSingleAllocationSizeID)
-        return true;
-#endif
-#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
-    if (id == logJITCodeForPerfID)
         return true;
 #endif
     if (id == traceLLIntExecutionID)
@@ -588,8 +584,17 @@ static void overrideDefaults()
 
 #if OS(DARWIN) && CPU(ARM64)
     Options::numberOfGCMarkers() = std::min<unsigned>(4, kernTCSMAwareNumberOfProcessorCores());
+
+    Options::minNumberOfWorklistThreads() = 1;
+    Options::maxNumberOfWorklistThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfBaselineCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfDFGCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
     Options::numberOfFTLCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::worklistLoadFactor() = 20;
+    Options::worklistBaselineLoadWeight() = 2;
+    Options::worklistDFGLoadWeight() = 5;
+    // Set the FTL load weight equal to the load-factor so that a new thread is started for each FTL plan
+    Options::worklistFTLLoadWeight() = 20;
 #endif
 
 #if OS(LINUX) && CPU(ARM)
@@ -623,6 +628,12 @@ static void overrideDefaults()
 #if ASAN_ENABLED
     Options::reservedZoneSize() = 3 * Options::reservedZoneSize();
 #endif
+
+#if PLATFORM(IOS_FAMILY)
+    // This is used to mitigate performance regression rdar://150522186.
+    if (Options::usePartialLoopUnrolling())
+        Options::maxPartialLoopUnrollingBodyNodeSize() = 50;
+#endif
 }
 bool Options::setAllJITCodeValidations(const char* valueStr)
 {
@@ -636,6 +647,7 @@ void Options::setAllJITCodeValidations(bool value)
 {
     Options::validateDFGClobberize() = value;
     Options::validateDFGExceptionHandling() = value;
+    Options::validateDFGMayExit() = value;
     Options::validateDoesGC() = value;
     Options::useJITAsserts() = value;
 }
@@ -643,7 +655,6 @@ void Options::setAllJITCodeValidations(bool value)
 static inline void disableAllWasmJITOptions()
 {
     Options::useLLInt() = true;
-    Options::useWasmJIT() = false;
     Options::useBBQJIT() = false;
     Options::useOMGJIT() = false;
 
@@ -676,7 +687,6 @@ static inline void disableAllJITOptions()
 {
     Options::useLLInt() = true;
     Options::useJIT() = false;
-    Options::useWasmJIT() = false;
     disableAllWasmJITOptions();
 
     Options::useBaselineJIT() = false;
@@ -710,7 +720,7 @@ static void disableAllSignalHandlerBasedOptions()
 
 void Options::executeDumpOptions()
 {
-    if (LIKELY(!Options::dumpOptions()))
+    if (!Options::dumpOptions()) [[likely]]
         return;
 
     DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
@@ -748,9 +758,13 @@ void Options::notifyOptionsChanged()
     if (thresholdForGlobalLexicalBindingEpoch == 0 || thresholdForGlobalLexicalBindingEpoch == 1)
         Options::thresholdForGlobalLexicalBindingEpoch() = UINT_MAX;
 
+#if !ENABLE(OFFLINE_ASM_ALT_ENTRY)
+    if (Options::useGdbJITInfo())
+        dataLogLn("useGdbJITInfo should be used with OFFLINE_ASM_ALT_ENTRY");
+#endif
+
 #if !ENABLE(JIT)
     Options::useJIT() = false;
-    Options::useWasmJIT() = false;
 #endif
 #if !ENABLE(CONCURRENT_JS)
     Options::useConcurrentJIT() = false;
@@ -778,6 +792,7 @@ void Options::notifyOptionsChanged()
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
     Options::useWasmSIMD() = false;
+    Options::useWasmIPInt() = false;
 #if !CPU(ARM_THUMB2)
     Options::useBBQJIT() = false;
 #endif
@@ -797,8 +812,6 @@ void Options::notifyOptionsChanged()
         disableAllWasmOptions();
 
     if (!Options::useJIT())
-        Options::useWasmJIT() = false;
-    if (!Options::useWasmJIT())
         disableAllWasmJITOptions();
 
     if (!Options::useWasmLLInt() && !Options::useWasmIPInt())
@@ -833,31 +846,6 @@ void Options::notifyOptionsChanged()
         || Options::dumpBBQDisassembly()
         || Options::dumpOMGDisassembly())
         Options::needDisassemblySupport() = true;
-
-    if (Options::logJIT()
-        || Options::needDisassemblySupport()
-        || Options::dumpBytecodeAtDFGTime()
-        || Options::dumpGraphAtEachPhase()
-        || Options::dumpDFGGraphAtEachPhase()
-        || Options::dumpDFGFTLGraphAtEachPhase()
-        || Options::dumpB3GraphAtEachPhase()
-        || Options::dumpAirGraphAtEachPhase()
-        || Options::verboseCompilation()
-        || Options::verboseFTLCompilation()
-        || Options::logCompilationChanges()
-        || Options::validateGraph()
-        || Options::validateGraphAtEachPhase()
-        || Options::verboseOSR()
-        || Options::verboseCompilationQueue()
-        || Options::reportCompileTimes()
-        || Options::reportBaselineCompileTimes()
-        || Options::reportDFGCompileTimes()
-        || Options::reportFTLCompileTimes()
-        || Options::logPhaseTimes()
-        || Options::verboseCFA()
-        || Options::verboseDFGFailure()
-            || Options::verboseFTLFailure())
-        Options::alwaysComputeHash() = true;
 
         if (OptionsHelper::wasOverridden(jitPolicyScaleID))
         scaleJITPolicy();
@@ -898,9 +886,6 @@ void Options::notifyOptionsChanged()
             Options::forceAllFunctionsToUseSIMD() = true;
         }
     }
-
-    if (Options::dumpFuzzerAgentPredictions())
-        Options::alwaysComputeHash() = true;
 
     if (!Options::useConcurrentGC())
         Options::collectContinuously() = false;
@@ -978,6 +963,12 @@ void Options::notifyOptionsChanged()
 
     if (!Options::useWasmFaultSignalHandler())
         Options::useWasmFastMemory() = false;
+
+    if (Options::dumpOptimizationTracing()) {
+        Options::printEachDFGFTLInlineCall() = true;
+        Options::printEachUnrolledLoop() = true;
+        // FIXME: Should support for OSR exit as well.
+    }
 
 #if CPU(ADDRESS32) || PLATFORM(PLAYSTATION)
     Options::useWasmFastMemory() = false;
@@ -1101,7 +1092,7 @@ void Options::finalize()
     ASSERT(!g_jscConfig.options.allowUnfinalizedAccess);
     g_jscConfig.options.isFinalized = true;
     assertOptionsAreCoherent();
-    if (UNLIKELY(Options::dumpOptions()))
+    if (Options::dumpOptions()) [[unlikely]]
         executeDumpOptions();
 
 #if USE(LIBPAS)
@@ -1364,9 +1355,9 @@ void Options::assertOptionsAreCoherent()
         coherent = false;
         dataLog("INCOHERENT OPTIONS: at least one of useLLInt or useJIT must be true\n");
     }
-    if (useWasm() && !(useWasmLLInt() || useBBQJIT())) {
+    if (useWasm() && !(useWasmIPInt() || useWasmLLInt() || useBBQJIT())) {
         coherent = false;
-        dataLog("INCOHERENT OPTIONS: at least one of useWasmLLInt or useBBQJIT must be true\n");
+        dataLog("INCOHERENT OPTIONS: at least one of useWasmIPInt, useWasmLLInt, or useBBQJIT must be true\n");
     }
     if (useProfiler() && useConcurrentJIT()) {
         coherent = false;

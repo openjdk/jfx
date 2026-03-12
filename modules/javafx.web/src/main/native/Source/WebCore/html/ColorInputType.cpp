@@ -33,11 +33,12 @@
 #include "ColorInputType.h"
 
 #include "AXObjectCache.h"
-#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+ColorInlines.h"
 #include "Chrome.h"
 #include "Color.h"
 #include "ColorSerialization.h"
 #include "ColorTypes.h"
+#include "ContainerNodeInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
@@ -61,12 +62,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(ColorInputType);
 
 using namespace HTMLNames;
 
-using LazySlowPathColorParsingParameters = std::tuple<
-    CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSS::PlatformColorResolutionState,
-    std::optional<CSS::PlatformColorResolutionDelegate>
->;
-
 // https://html.spec.whatwg.org/multipage/infrastructure.html#valid-simple-colour
 static bool isValidSimpleColor(StringView string)
 {
@@ -89,34 +84,28 @@ static std::optional<SRGBA<uint8_t>> parseSimpleColorValue(StringView string)
     return { { toASCIIHexValue(string[1], string[2]), toASCIIHexValue(string[3], string[4]), toASCIIHexValue(string[5], string[6]) } };
 }
 
-static LazySlowPathColorParsingParameters colorParsingParameters()
-{
-    return {
-        CSSPropertyParserHelpers::CSSColorParsingOptions {
-            .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System }
-        },
-        CSS::PlatformColorResolutionState {
-            .resolvedCurrentColor = Color::black
-        },
-        std::nullopt
-    };
-}
-
 static std::optional<Color> parseColorValue(StringView string, HTMLInputElement& context)
 {
     if (context.colorSpace().isNull())
         return parseSimpleColorValue(string);
-
-    auto parserContext = context.document().cssParserContext();
+    using namespace CSSPropertyParserHelpers;
+    Ref document = context.document();
+    auto parserContext = document->cssParserContext();
     parserContext.mode = HTMLStandardMode;
-    auto color = CSSPropertyParserHelpers::parseColorRaw(string.toString(), parserContext, [] {
-        return colorParsingParameters();
-    });
+    auto colorString = string.toString();
+    auto color = parseColorRawSimple(colorString, parserContext);
+    if (color.isValid())
+        return color;
 
-    if (!color.isValid())
-        return { };
-
+    CSSColorParsingOptions options;
+    CSS::PlatformColorResolutionState state {
+        .resolvedCurrentColor = Color::black
+    };
+    color = parseColorRawGeneral(colorString, parserContext, document, options, state);
+    if (color.isValid())
     return color;
+
+    return { };
 }
 
 static String serializeColorValue(Color input, HTMLInputElement& context)
@@ -150,10 +139,10 @@ ColorInputType::~ColorInputType()
 bool ColorInputType::isMouseFocusable() const
 {
     ASSERT(element());
-    return element()->isTextFormControlFocusable();
+    return protectedElement()->isTextFormControlFocusable();
 }
 
-bool ColorInputType::isKeyboardFocusable(KeyboardEvent*) const
+bool ColorInputType::isKeyboardFocusable(const FocusEventData&) const
 {
     ASSERT(element());
 #if PLATFORM(IOS_FAMILY)
@@ -178,27 +167,29 @@ bool ColorInputType::supportsRequired() const
     return false;
 }
 
-String ColorInputType::fallbackValue() const
+ValueOrReference<String> ColorInputType::fallbackValue() const
 {
     ASSERT(element());
-    return serializeColorValue(Color::black, *element());
+    return serializeColorValue(Color::black, *protectedElement());
 }
 
-String ColorInputType::sanitizeValue(const String& proposedValue) const
+ValueOrReference<String> ColorInputType::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
     ASSERT(element());
-    auto color = parseColorValue(proposedValue, *element());
+    Ref input = *element();
+    auto color = parseColorValue(proposedValue, input);
 
     if (!color)
         return fallbackValue();
 
-    return serializeColorValue(*color, *element());
+    return serializeColorValue(*color, input);
 }
 
 Color ColorInputType::valueAsColor() const
 {
     ASSERT(element());
-    auto color = parseColorValue(element()->value(), *element());
+    Ref input = *element();
+    auto color = parseColorValue(input->value().get(), input);
     ASSERT(!!color);
     // FIXME: This is a speculative fix for rdar://144872437.
     if (!color)
@@ -216,7 +207,7 @@ void ColorInputType::createShadowSubtree()
     Ref wrapperElement = HTMLDivElement::create(document);
     Ref colorSwatch = HTMLDivElement::create(document);
 
-    Ref shadowRoot = *element()->userAgentShadowRoot();
+    Ref shadowRoot = *protectedElement()->userAgentShadowRoot();
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { shadowRoot };
     shadowRoot->appendChild(ContainerNode::ChildChange::Source::Parser, wrapperElement);
 
@@ -246,8 +237,9 @@ void ColorInputType::attributeChanged(const QualifiedName& name)
     if (name == valueAttr) {
         updateColorSwatch();
 
-        if (CheckedPtr cache = element()->document().existingAXObjectCache())
-            cache->valueChanged(*element());
+        Ref input = *element();
+        if (CheckedPtr cache = input->protectedDocument()->existingAXObjectCache())
+            cache->valueChanged(input);
     }
 
     InputType::attributeChanged(name);
@@ -305,27 +297,28 @@ void ColorInputType::didChooseColor(const Color& color)
 {
     ASSERT(element());
 
-    if (element()->isDisabledFormControl())
+    Ref input = *element();
+    if (input->isDisabledFormControl())
         return;
 
-    auto serializedColor = serializeColorValue(color, *element());
-    if (serializedColor == element()->value())
+    auto serializedColor = serializeColorValue(color, input);
+    if (serializedColor == input->value())
         return;
 
     EventQueueScope scope;
-    element()->setValueFromRenderer(serializedColor);
+    input->setValueFromRenderer(serializedColor);
     updateColorSwatch();
-    element()->dispatchFormControlChangeEvent();
+    input->dispatchFormControlChangeEvent();
 
-    if (CheckedPtr cache = element()->document().existingAXObjectCache())
-        cache->valueChanged(*element());
+    if (CheckedPtr cache = input->protectedDocument()->existingAXObjectCache())
+        cache->valueChanged(input);
 }
 
 void ColorInputType::didEndChooser()
 {
     m_chooser = nullptr;
-    if (element()->renderer())
-        element()->renderer()->repaint();
+    if (CheckedPtr renderer = protectedElement()->renderer())
+        renderer->repaint();
 }
 
 void ColorInputType::endColorChooser()
@@ -346,7 +339,7 @@ void ColorInputType::updateColorSwatch()
 HTMLElement* ColorInputType::shadowColorSwatch() const
 {
     ASSERT(element());
-    RefPtr shadow = element()->userAgentShadowRoot();
+    RefPtr shadow = protectedElement()->userAgentShadowRoot();
     if (!shadow)
         return nullptr;
 
@@ -357,24 +350,27 @@ HTMLElement* ColorInputType::shadowColorSwatch() const
 IntRect ColorInputType::elementRectRelativeToRootView() const
 {
     ASSERT(element());
-    if (!element()->renderer())
+    Ref element = *this->element();
+    CheckedPtr renderer = element->renderer();
+    if (!renderer)
         return IntRect();
-    return element()->document().view()->contentsToRootView(element()->renderer()->absoluteBoundingBoxRect());
+    return element->protectedDocument()->protectedView()->contentsToRootView(renderer->absoluteBoundingBoxRect());
 }
 
 bool ColorInputType::supportsAlpha() const
 {
     ASSERT(element());
-    return element()->alpha();
+    return protectedElement()->alpha();
 }
 
 Vector<Color> ColorInputType::suggestedColors() const
 {
     Vector<Color> suggestions;
     ASSERT(element());
-    if (auto dataList = element()->dataList()) {
-        for (auto& option : dataList->suggestions()) {
-            if (auto color = parseColorValue(option.value(), *element()))
+    Ref input = *element();
+    if (auto dataList = input->dataList()) {
+        for (Ref option : dataList->suggestions()) {
+            if (auto color = parseColorValue(option->value(), input))
                 suggestions.append(*color);
         }
     }
@@ -384,7 +380,7 @@ Vector<Color> ColorInputType::suggestedColors() const
 void ColorInputType::selectColor(StringView string)
 {
     ASSERT(element());
-    if (auto color = parseColorValue(string, *element()))
+    if (auto color = parseColorValue(string, *protectedElement()))
         didChooseColor(*color);
 }
 

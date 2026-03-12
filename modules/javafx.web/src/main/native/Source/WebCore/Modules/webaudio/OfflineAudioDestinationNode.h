@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ private:
     RefPtr<AudioBuffer> m_renderTarget;
 
     // Temporary AudioBus for each render quantum.
-    RefPtr<AudioBus> m_renderBus;
+    const Ref<AudioBus> m_renderBus;
 
     // Rendering thread.
     RefPtr<Thread> m_renderThread;

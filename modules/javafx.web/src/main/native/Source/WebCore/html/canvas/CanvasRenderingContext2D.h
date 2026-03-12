@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +41,7 @@ public:
     virtual ~CanvasRenderingContext2D();
 
     HTMLCanvasElement& canvas() const { return downcast<HTMLCanvasElement>(canvasBase()); }
+    Ref<HTMLCanvasElement> protectedCanvas() const { return canvas(); }
 
     void drawFocusIfNeeded(Element&);
     void drawFocusIfNeeded(Path2D&, Element&);

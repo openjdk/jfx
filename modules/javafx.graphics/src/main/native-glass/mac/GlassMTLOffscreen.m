@@ -113,6 +113,14 @@ static NSArray *allModes = nil;
                    andHeight:height];
 }
 
+- (bool)tryLockTexture {
+    return [self->_fbo tryLockTexture];
+}
+
+- (void)unlockTexture {
+    return [self->_fbo unlockTexture];
+}
+
 - (void)flush:(GlassOffscreen*)glassOffScreen
 {
     if ([NSThread isMainThread]) {

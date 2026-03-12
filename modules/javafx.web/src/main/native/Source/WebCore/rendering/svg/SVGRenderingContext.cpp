@@ -34,6 +34,8 @@
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
+#include "PathOperation.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
@@ -41,6 +43,7 @@
 #include "SVGLengthContext.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -107,7 +110,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     // Setup transparency layers before setting up SVG resources!
     bool isRenderingMask = isRenderingMaskImage(*m_renderer);
     // RenderLayer takes care of root opacity.
-    float opacity = (renderer.isLegacyRenderSVGRoot() || isRenderingMask) ? 1 : style.opacity();
+    float opacity = (renderer.isLegacyRenderSVGRoot() || isRenderingMask) ? 1 : style.opacity().value.value;
     bool hasBlendMode = style.hasBlendMode();
     bool hasIsolation = style.hasIsolation();
     bool isolateMaskForBlending = false;
@@ -135,7 +138,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
         }
     }
 
-    bool hasSimpleClip = is<ShapePathOperation>(style.clipPath()) || is<BoxPathOperation>(style.clipPath());
+    bool hasSimpleClip = WTF::holdsAlternative<Style::BasicShapePath>(style.clipPath()) || WTF::holdsAlternative<Style::BoxPath>(style.clipPath());
     if (hasSimpleClip && !is<LegacyRenderSVGRoot>(renderer))
         SVGRenderSupport::clipContextToCSSClippingArea(m_paintInfo->context(), renderer);
 
@@ -207,7 +210,7 @@ static AffineTransform& currentContentTransformation()
 float SVGRenderingContext::calculateScreenFontSizeScalingFactor(const RenderObject& renderer)
 {
     AffineTransform ctm = calculateTransformationToOutermostCoordinateSystem(renderer);
-    return narrowPrecisionToFloat(std::hypot(ctm.xScale(), ctm.yScale()) / sqrtOfTwoDouble);
+    return narrowPrecisionToFloat(std::hypot(ctm.xScale(), ctm.yScale()) / std::numbers::sqrt2);
 }
 
 AffineTransform SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(const RenderObject& renderer)

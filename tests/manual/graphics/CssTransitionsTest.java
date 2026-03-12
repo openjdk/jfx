@@ -107,18 +107,23 @@ public class CssTransitionsTest extends Application {
             }
 
             #rect1 { transition-timing-function: linear; }
-            #rect2 { transition-timing-function: ease; }
-            #rect3 { transition-timing-function: ease-in; }
-            #rect4 { transition-timing-function: ease-out; }
-            #rect5 { transition-timing-function: ease-in-out; }
-            #rect6 { transition-timing-function: cubic-bezier(0.34, 2.2, 0.64, 1); }
+            #rect2 { transition-timing-function: linear(0, 0.063, 0.25, 0.563, 1 36.4%,
+                                                        0.812, 0.75, 0.813, 1 72.7%,
+                                                        0.953, 0.938, 0.953, 1 90.9%,
+                                                        0.984, 1 100% 100%); }
+            #rect3 { transition-timing-function: ease; }
+            #rect4 { transition-timing-function: ease-in; }
+            #rect5 { transition-timing-function: ease-out; }
+            #rect6 { transition-timing-function: ease-in-out; }
+            #rect7 { transition-timing-function: cubic-bezier(0.34, 2.2, 0.64, 1); }
             """,
             new RectInfo("#rect1", "rect1", Color.WHITE),
             new RectInfo("#rect2", "rect2", Color.WHITE),
             new RectInfo("#rect3", "rect3", Color.WHITE),
             new RectInfo("#rect4", "rect4", Color.WHITE),
             new RectInfo("#rect5", "rect5", Color.WHITE),
-            new RectInfo("#rect6", "rect6", Color.WHITE));
+            new RectInfo("#rect6", "rect6", Color.WHITE),
+            new RectInfo("#rect7", "rect7", Color.WHITE));
     }
 
     private Region createBackgroundTransitionsTab() {

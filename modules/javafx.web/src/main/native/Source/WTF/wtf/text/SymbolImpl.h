@@ -33,7 +33,7 @@ class RegisteredSymbolImpl;
 
 // SymbolImpl is used to represent the symbol string impl.
 // It is uniqued string impl, but is not registered in Atomic String tables, so it's not atomic.
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR SymbolImpl : public UniquedStringImpl {
+class SymbolImpl : public UniquedStringImpl {
 public:
     using Flags = unsigned;
     static constexpr Flags s_flagDefault = 0u;
@@ -62,7 +62,7 @@ public:
         template<unsigned characterCount>
         inline constexpr StaticSymbolImpl(const char16_t (&characters)[characterCount], Flags = s_flagDefault);
 
-        operator SymbolImpl&() { return *reinterpret_cast<SymbolImpl*>(this); }
+        operator SymbolImpl&() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<SymbolImpl*>(this); }
 
         SUPPRESS_UNCOUNTED_MEMBER StringImpl* m_owner { nullptr }; // We do not make StaticSymbolImpl BufferSubstring. Thus we can make this nullptr.
         unsigned m_hashForSymbolShiftedWithFlagCount;
@@ -75,7 +75,7 @@ protected:
     friend class StringImpl;
 
     inline SymbolImpl(std::span<const LChar>, Ref<StringImpl>&&, Flags = s_flagDefault);
-    inline SymbolImpl(std::span<const UChar>, Ref<StringImpl>&&, Flags = s_flagDefault);
+    inline SymbolImpl(std::span<const char16_t>, Ref<StringImpl>&&, Flags = s_flagDefault);
     inline SymbolImpl(Flags = s_flagDefault);
 
     // The pointer to the owner string should be immediately following after the StringImpl layout,
@@ -95,7 +95,7 @@ inline SymbolImpl::SymbolImpl(std::span<const LChar> characters, Ref<StringImpl>
     static_assert(StringImpl::tailOffset<StringImpl*>() == OBJECT_OFFSETOF(SymbolImpl, m_owner));
 }
 
-inline SymbolImpl::SymbolImpl(std::span<const UChar> characters, Ref<StringImpl>&& base, Flags flags)
+inline SymbolImpl::SymbolImpl(std::span<const char16_t> characters, Ref<StringImpl>&& base, Flags flags)
     : UniquedStringImpl(CreateSymbol, characters)
         , m_owner(&base.leakRef())
         , m_hashForSymbolShiftedWithFlagCount(nextHashForSymbol())
@@ -139,7 +139,7 @@ private:
     {
     }
 
-    PrivateSymbolImpl(std::span<const UChar> characters, Ref<StringImpl>&& base)
+    PrivateSymbolImpl(std::span<const char16_t> characters, Ref<StringImpl>&& base)
         : SymbolImpl(characters, WTFMove(base), s_flagIsPrivate)
     {
     }
@@ -163,7 +163,7 @@ private:
     {
     }
 
-    RegisteredSymbolImpl(std::span<const UChar> characters, Ref<StringImpl>&& base, SymbolRegistry& registry, Flags flags = s_flagIsRegistered)
+    RegisteredSymbolImpl(std::span<const char16_t> characters, Ref<StringImpl>&& base, SymbolRegistry& registry, Flags flags = s_flagIsRegistered)
         : SymbolImpl(characters, WTFMove(base), flags)
         , m_symbolRegistry(&registry)
     {

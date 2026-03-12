@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.css.media.expression;
 
 import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.List;
 import java.util.Objects;
@@ -33,11 +34,23 @@ import java.util.Objects;
 /**
  * Logical conjunction of the specified expressions.
  */
-public record ConjunctionExpression(MediaQuery left, MediaQuery right) implements MediaQuery {
+public final class ConjunctionExpression implements MediaQuery {
 
-    public ConjunctionExpression {
-        Objects.requireNonNull(left, "left cannot be null");
-        Objects.requireNonNull(right, "right cannot be null");
+    private final MediaQuery left;
+    private final MediaQuery right;
+    private final int contextAwareness;
+
+    private ConjunctionExpression(MediaQuery left, MediaQuery right) {
+        this.left = Objects.requireNonNull(left, "left cannot be null");
+        this.right = Objects.requireNonNull(right, "right cannot be null");
+        this.contextAwareness = left.getContextAwareness() | right.getContextAwareness();
+    }
+
+    /**
+     * Returns the conjunction of the specified expressions.
+     */
+    public static ConjunctionExpression of(MediaQuery left, MediaQuery right) {
+        return MediaQueryCache.getCachedMediaQuery(new ConjunctionExpression(left, right));
     }
 
     /**
@@ -48,13 +61,38 @@ public record ConjunctionExpression(MediaQuery left, MediaQuery right) implement
             throw new IllegalArgumentException();
         }
 
-        var result = new ConjunctionExpression(expressions.get(0), expressions.get(1));
+        var result = of(expressions.get(0), expressions.get(1));
 
         for (int i = 2; i < expressions.size(); i++) {
-            result = new ConjunctionExpression(result, expressions.get(i));
+            result = of(result, expressions.get(i));
         }
 
         return result;
+    }
+
+    public MediaQuery getLeft() {
+        return left;
+    }
+
+    public MediaQuery getRight() {
+        return right;
+    }
+
+    @Override
+    public int getContextAwareness() {
+        return contextAwareness;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof ConjunctionExpression other
+            && left.equals(other.left)
+            && right.equals(other.right);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ConjunctionExpression.class, left, right);
     }
 
     @Override

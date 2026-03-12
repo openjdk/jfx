@@ -229,7 +229,7 @@ void GraphBuilder::visit(AST::VariableStatement& variable)
 void GraphBuilder::visit(AST::Expression& expression)
 {
     SetForScope expressionDepthScope(m_expressionDepth, m_expressionDepth + 1);
-    if (UNLIKELY(m_expressionDepth > s_maxExpressionDepth)) {
+    if (m_expressionDepth > s_maxExpressionDepth) [[unlikely]] {
         setError({ makeString("reached maximum expression depth of "_s, String::number(s_maxExpressionDepth)), expression.span() });
         return;
     }

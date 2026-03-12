@@ -34,6 +34,7 @@ import javafx.scene.input.DataFormat;
 import com.sun.javafx.tk.Toolkit;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * Utilities for RichTextArea-based tests.
@@ -61,10 +62,26 @@ public class RTUtil {
      * @return the plain text
      */
     public static String getText(RichTextArea control) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            control.write(DataFormat.PLAIN_TEXT, out);
+            byte[] b = out.toByteArray();
+            return new String(b, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * Extracts plain text from the supplied StyledTextModel, using {@code write(DataFormat.PLAIN_TEXT)} method.
+     *
+     * @param model the model
+     * @return the plain text
+     */
+    public static String getText(StyledTextModel model) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             try {
-                control.write(DataFormat.PLAIN_TEXT, out);
+                model.write(null, DataFormat.PLAIN_TEXT, out);
                 byte[] b = out.toByteArray();
                 return new String(b, StandardCharsets.UTF_8);
             } finally {

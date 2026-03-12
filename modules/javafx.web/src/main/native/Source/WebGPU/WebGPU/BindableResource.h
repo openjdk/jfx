@@ -26,8 +26,14 @@
 #pragma once
 
 #import <Metal/Metal.h>
+#import <limits>
+#import <type_traits>
+#import <utility>
+#import <wtf/HashFunctions.h>
+#import <wtf/HashMap.h>
 #import <wtf/OptionSet.h>
 #import <wtf/RefPtr.h>
+#import <wtf/Variant.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
 
@@ -59,7 +65,7 @@ static constexpr auto isTextureBindGroupEntryUsage(OptionSet<BindGroupEntryUsage
 struct BindGroupEntryUsageData {
     OptionSet<BindGroupEntryUsage> usage { BindGroupEntryUsage::Undefined };
     uint32_t binding { 0 };
-    using Resource = std::variant<RefPtr<Buffer>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
+    using Resource = Variant<RefPtr<Buffer>, RefPtr<const TextureView>, RefPtr<const ExternalTexture>>;
     Resource resource;
     uint64_t entryOffset { 0 };
     uint64_t entrySize { 0 };
@@ -79,12 +85,13 @@ struct IndexData {
     uint32_t minVertexCount { UINT32_MAX };
     uint32_t minInstanceCount { UINT32_MAX };
     uint64_t bufferGpuAddress { 0 };
+    uint32_t indexBufferElementCountMinusOne { 0 };
     uint32_t indexCount { 0 };
     uint32_t instanceCount { 0 };
     uint32_t firstIndex { 0 };
     int32_t baseVertex { 0 };
     uint32_t firstInstance { 0 };
-    MTLPrimitiveType primitiveType { MTLPrimitiveTypeTriangle };
+    uint32_t primitiveType { MTLPrimitiveTypeTriangle };
 };
 
 struct IndexBufferAndIndexData {
@@ -93,5 +100,37 @@ struct IndexBufferAndIndexData {
     NSUInteger indexBufferOffsetInBytes { 0 };
     IndexData indexData;
 };
+
+using DrawIndexCacheContainerKey = std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, std::pair<uint32_t, uint64_t>>>>>>>>;
+
+struct DrawIndexCacheContainerValue {
+    uint32_t firstIndex { 0 };
+    uint32_t indexCount { 0 };
+    uint32_t vertexCount { 0 };
+    uint32_t instanceCount { 0 };
+    uint32_t firstInstance { 0 };
+    uint32_t baseVertex { 0 };
+    uint32_t minInstanceCount { 0 };
+    uint32_t primitiveOffsetWithIndexType { 0 };
+    uint64_t icb { 0 };
+    DrawIndexCacheContainerValue() { }
+    DrawIndexCacheContainerValue(const DrawIndexCacheContainerKey& key)
+        : firstIndex(key.first)
+        , indexCount(key.second.first)
+        , vertexCount(key.second.second.first)
+        , instanceCount(key.second.second.second.first)
+        , firstInstance(key.second.second.second.second.first)
+        , baseVertex(key.second.second.second.second.second.first)
+        , minInstanceCount(key.second.second.second.second.second.second.first)
+        , primitiveOffsetWithIndexType(key.second.second.second.second.second.second.second.first)
+        , icb(key.second.second.second.second.second.second.second.second)
+    {
+    }
+    uint32_t primitiveOffset() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x1); }
+    MTLIndexType indexType() { return static_cast<MTLIndexType>(primitiveOffsetWithIndexType & 0x2); }
+};
+
+using DrawIndexCacheContainer = HashMap<DrawIndexCacheContainerKey, bool>;
+using DrawIndexCacheContainerIterator = DrawIndexCacheContainer::const_iterator;
 
 } // namespace WebGPU

@@ -32,11 +32,11 @@
 #include <cinttypes>
 #include <cstdint>
 #include <memory>
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -80,7 +80,7 @@ struct Configuration {
     const HashSet<String> supportedFeatures = { };
 };
 
-std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration&);
+Variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration&);
 
 //
 // Step 2
@@ -151,7 +151,7 @@ struct BindGroupLayoutEntry {
     uint32_t binding;
     uint32_t webBinding;
     OptionSet<ShaderStage> visibility;
-    using BindingMember = std::variant<BufferBindingLayout, SamplerBindingLayout, TextureBindingLayout, StorageTextureBindingLayout, ExternalTextureBindingLayout>;
+    using BindingMember = Variant<BufferBindingLayout, SamplerBindingLayout, TextureBindingLayout, StorageTextureBindingLayout, ExternalTextureBindingLayout>;
     BindingMember bindingMember;
     String name;
     std::optional<uint32_t> vertexArgumentBufferIndex;
@@ -214,13 +214,13 @@ struct SpecializationConstant {
 };
 
 struct EntryPointInformation {
-    // FIXME: This can probably be factored better.
     String originalName;
     String mangledName;
     std::optional<PipelineLayout> defaultLayout; // If the input PipelineLayout is nullopt, the compiler computes a layout and returns it. https://gpuweb.github.io/gpuweb/#default-pipeline-layout
     HashMap<String, SpecializationConstant> specializationConstants;
-    std::variant<Vertex, Fragment, Compute> typedEntryPoint;
+    Variant<Vertex, Fragment, Compute> typedEntryPoint;
     size_t sizeForWorkgroupVariables { 0 };
+    size_t bindingCount { 0 };
 };
 
 } // namespace Reflection
@@ -230,10 +230,15 @@ struct PrepareResult {
     CompilationScope compilationScope;
 };
 
-std::variant<PrepareResult, Error> prepare(ShaderModule&, const HashMap<String, PipelineLayout*>&);
-std::variant<PrepareResult, Error> prepare(ShaderModule&, const String& entryPointName, PipelineLayout*);
+struct DeviceState {
+    unsigned appleGPUFamily { 4 };
+    bool shaderValidationEnabled { false };
+};
 
-std::variant<String, Error> generate(ShaderModule&, PrepareResult&, HashMap<String, ConstantValue>&);
+Variant<PrepareResult, Error> prepare(ShaderModule&, const HashMap<String, PipelineLayout*>&);
+Variant<PrepareResult, Error> prepare(ShaderModule&, const String& entryPointName, PipelineLayout*);
+
+Variant<String, Error> generate(ShaderModule&, PrepareResult&, HashMap<String, ConstantValue>&, DeviceState&&);
 
 std::optional<ConstantValue> evaluate(const AST::Expression&, const HashMap<String, ConstantValue>&);
 

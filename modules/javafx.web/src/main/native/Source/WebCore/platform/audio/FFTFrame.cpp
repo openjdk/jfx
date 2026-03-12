@@ -35,6 +35,7 @@
 #include "Logging.h"
 #include "VectorMath.h"
 #include <complex>
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -142,32 +143,32 @@ void FFTFrame::interpolateFrequencyComponents(const FFTFrame& frame1, const FFTF
         lastPhase2 = phase2;
 
         // Unwrap phase deltas
-        if (deltaPhase1 > piDouble)
-            deltaPhase1 -= 2.0 * piDouble;
-        if (deltaPhase1 < -piDouble)
-            deltaPhase1 += 2.0 * piDouble;
-        if (deltaPhase2 > piDouble)
-            deltaPhase2 -= 2.0 * piDouble;
-        if (deltaPhase2 < -piDouble)
-            deltaPhase2 += 2.0 * piDouble;
+        if (deltaPhase1 > std::numbers::pi)
+            deltaPhase1 -= 2.0 * std::numbers::pi;
+        if (deltaPhase1 < -std::numbers::pi)
+            deltaPhase1 += 2.0 * std::numbers::pi;
+        if (deltaPhase2 > std::numbers::pi)
+            deltaPhase2 -= 2.0 * std::numbers::pi;
+        if (deltaPhase2 < -std::numbers::pi)
+            deltaPhase2 += 2.0 * std::numbers::pi;
 
         // Blend group-delays
         double deltaPhaseBlend;
 
-        if (deltaPhase1 - deltaPhase2 > piDouble)
-            deltaPhaseBlend = s1 * deltaPhase1 + s2 * (2.0 * piDouble + deltaPhase2);
-        else if (deltaPhase2 - deltaPhase1 > piDouble)
-            deltaPhaseBlend = s1 * (2.0 * piDouble + deltaPhase1) + s2 * deltaPhase2;
+        if (deltaPhase1 - deltaPhase2 > std::numbers::pi)
+            deltaPhaseBlend = s1 * deltaPhase1 + s2 * (2.0 * std::numbers::pi + deltaPhase2);
+        else if (deltaPhase2 - deltaPhase1 > std::numbers::pi)
+            deltaPhaseBlend = s1 * (2.0 * std::numbers::pi + deltaPhase1) + s2 * deltaPhase2;
         else
             deltaPhaseBlend = s1 * deltaPhase1 + s2 * deltaPhase2;
 
         phaseAccum += deltaPhaseBlend;
 
         // Unwrap
-        if (phaseAccum > piDouble)
-            phaseAccum -= 2.0 * piDouble;
-        if (phaseAccum < -piDouble)
-            phaseAccum += 2.0 * piDouble;
+        if (phaseAccum > std::numbers::pi)
+            phaseAccum -= 2.0 * std::numbers::pi;
+        if (phaseAccum < -std::numbers::pi)
+            phaseAccum += 2.0 * std::numbers::pi;
 
         std::complex<double> c = std::polar(mag, phaseAccum);
 
@@ -216,7 +217,7 @@ double FFTFrame::extractAverageGroupDelay()
 
     int halfSize = fftSize() / 2;
 
-    const double kSamplePhaseDelay = (2.0 * piDouble) / double(fftSize());
+    const double kSamplePhaseDelay = (2.0 * std::numbers::pi) / double(fftSize());
 
     // Calculate weighted average group delay
     for (int i = 0; i < halfSize; i++) {
@@ -228,10 +229,10 @@ double FFTFrame::extractAverageGroupDelay()
         lastPhase = phase;
 
         // Unwrap
-        if (deltaPhase < -piDouble)
-            deltaPhase += 2.0 * piDouble;
-        if (deltaPhase > piDouble)
-            deltaPhase -= 2.0 * piDouble;
+        if (deltaPhase < -std::numbers::pi)
+            deltaPhase += 2.0 * std::numbers::pi;
+        if (deltaPhase > std::numbers::pi)
+            deltaPhase -= 2.0 * std::numbers::pi;
 
         aveSum += mag * deltaPhase;
         weightSum += mag;
@@ -261,7 +262,7 @@ void FFTFrame::addConstantGroupDelay(double sampleFrameDelay)
     auto& realP = realData();
     auto& imagP = imagData();
 
-    const double kSamplePhaseDelay = (2.0 * piDouble) / double(fftSize());
+    const double kSamplePhaseDelay = (2.0 * std::numbers::pi) / double(fftSize());
 
     double phaseAdj = -sampleFrameDelay * kSamplePhaseDelay;
 

@@ -56,7 +56,7 @@ public:
     ~AppHighlightStorage();
 
     WEBCORE_EXPORT void storeAppHighlight(Ref<StaticRange>&&, CompletionHandler<void(AppHighlight&&)>&&);
-    WEBCORE_EXPORT void restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuffer>&&, ScrollToHighlight);
+    WEBCORE_EXPORT void restoreAndScrollToAppHighlight(Ref<SharedBuffer>&&, ScrollToHighlight);
     void restoreUnrestoredAppHighlights();
 
     bool shouldRestoreHighlights(MonotonicTime timestamp);

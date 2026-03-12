@@ -111,14 +111,14 @@ public:
 
     void notifyWrite(VM& vm, JSCell* owner, JSCellType* value, const FireDetail& detail)
     {
-        if (LIKELY(state() == IsInvalidated))
+        if (state() == IsInvalidated) [[likely]]
             return;
         notifyWriteSlow(vm, owner, value, detail);
     }
 
     void notifyWrite(VM& vm, JSCell* owner, JSCellType* value, const char* reason)
     {
-        if (LIKELY(state() == IsInvalidated))
+        if (state() == IsInvalidated) [[likely]]
             return;
         notifyWriteSlow(vm, owner, value, reason);
     }
@@ -189,7 +189,7 @@ private:
 
     InferredValueWatchpointSet* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fat();
         return inflateSlow();
     }

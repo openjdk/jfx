@@ -290,7 +290,7 @@ void BytecodeGeneratorification::run()
 
 void performGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCodeBlockGenerator* codeBlock, JSInstructionStreamWriter& instructions, SymbolTable* generatorFrameSymbolTable, int generatorFrameSymbolTableIndex)
 {
-    if (UNLIKELY(Options::dumpBytecodesBeforeGeneratorification())) {
+    if (Options::dumpBytecodesBeforeGeneratorification()) [[unlikely]] {
         dataLogLn("Bytecodes before generatorification");
         CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>::dumpBlock(codeBlock, instructions, WTF::dataFile());
     }
@@ -298,7 +298,7 @@ void performGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCod
     BytecodeGeneratorification pass(bytecodeGenerator, codeBlock, instructions, generatorFrameSymbolTable, generatorFrameSymbolTableIndex);
     pass.run();
 
-    if (UNLIKELY(Options::dumpBytecodesBeforeGeneratorification())) {
+    if (Options::dumpBytecodesBeforeGeneratorification()) [[unlikely]] {
         dataLogLn("Bytecodes after generatorification");
         CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>::dumpBlock(codeBlock, instructions, WTF::dataFile());
     }

@@ -26,7 +26,6 @@
 #pragma once
 
 #include <optional>
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
 #include <wtf/StdLibExtras.h>
@@ -71,38 +70,21 @@ public:
     const struct in_addr& ipv4Address() const { return std::get<struct in_addr>(m_address); }
     const struct in6_addr& ipv6Address() const { return std::get<struct in6_addr>(m_address); }
 
-    enum class ComparisonResult : uint8_t {
-        CannotCompare,
-        Less,
-        Equal,
-        Greater
-    };
-
-    ComparisonResult compare(const IPAddress& other) const
+    friend std::partial_ordering operator<=>(const IPAddress& a, const IPAddress& b)
     {
-        auto comparisonResult = [](int result) {
-            if (!result)
-                return ComparisonResult::Equal;
-            if (result < 0)
-                return ComparisonResult::Less;
-            return ComparisonResult::Greater;
-        };
+        if (a.isIPv4() && b.isIPv4())
+            return compareSpans(asByteSpan(a.ipv4Address()), asByteSpan(b.ipv4Address()));
 
-        if (isIPv4() && other.isIPv4())
-            return comparisonResult(compareSpans(asByteSpan(ipv4Address()), asByteSpan(other.ipv4Address())));
+        if (a.isIPv6() && b.isIPv6())
+            return compareSpans(asByteSpan(a.ipv6Address()), asByteSpan(b.ipv6Address()));
 
-        if (isIPv6() && other.isIPv6())
-            return comparisonResult(compareSpans(asByteSpan(ipv6Address()), asByteSpan(other.ipv6Address())));
-
-        return ComparisonResult::CannotCompare;
+        return std::partial_ordering::unordered;
     }
 
-    bool operator<(const IPAddress& other) const { return compare(other) == ComparisonResult::Less; }
-    bool operator>(const IPAddress& other) const { return compare(other) == ComparisonResult::Greater; }
-    bool operator==(const IPAddress& other) const { return compare(other) == ComparisonResult::Equal; }
+    friend bool operator==(const IPAddress& a, const IPAddress& b) { return is_eq(a <=> b); }
 
 private:
-    std::variant<WTF::HashTableEmptyValueType, struct in_addr, struct in6_addr> m_address;
+    Variant<WTF::HashTableEmptyValueType, struct in_addr, struct in6_addr> m_address;
 };
 
 enum class DNSError { Unknown, CannotResolve, Cancelled };

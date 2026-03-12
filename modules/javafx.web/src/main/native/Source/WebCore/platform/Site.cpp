@@ -27,20 +27,42 @@
 #include "Site.h"
 
 #include <wtf/HashFunctions.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
+static const String& invalidProtocol()
+{
+    // Valid protocols from canonicalized URLs are always lower case.
+    static NeverDestroyed<String> protocol { "invalidProtocol"_s };
+    return protocol.get();
+}
+
+static String nonEmptyProtocol(String&& protocol)
+{
+    if (protocol.isEmpty())
+        return invalidProtocol();
+    return String(WTFMove(protocol));
+}
+
 Site::Site(const URL& url)
-    : m_protocol(url.protocol().toString())
+    : m_protocol(nonEmptyProtocol(url.protocol().toString()))
     , m_domain(url) { }
 
 Site::Site(String&& protocol, RegistrableDomain&& domain)
-    : m_protocol(WTFMove(protocol))
+    : m_protocol(nonEmptyProtocol(WTFMove(protocol)))
     , m_domain(WTFMove(domain)) { }
 
 Site::Site(const SecurityOriginData& data)
-    : m_protocol(data.protocol())
+    : m_protocol(nonEmptyProtocol(String(data.protocol())))
     , m_domain(data) { }
+
+const String& Site::protocol() const
+{
+    if (m_protocol == invalidProtocol()) [[unlikely]]
+        return emptyString();
+    return m_protocol;
+}
 
 unsigned Site::hash() const
 {

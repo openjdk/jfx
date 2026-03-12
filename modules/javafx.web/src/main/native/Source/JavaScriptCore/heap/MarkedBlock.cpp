@@ -259,7 +259,7 @@ void MarkedBlock::aboutToMarkSlow(HeapVersion markingVersion, HeapCell* cell)
         return;
 
     MarkedBlock::Handle* handle = header().handlePointerForNullCheck();
-    if (UNLIKELY(!handle))
+    if (!handle) [[unlikely]]
         dumpInfoAndCrashForInvalidHandleV2(locker, cell);
 
     BlockDirectory* directory = handle->directory();

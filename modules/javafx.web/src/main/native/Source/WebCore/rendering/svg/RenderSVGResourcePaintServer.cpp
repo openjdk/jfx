@@ -20,6 +20,7 @@
 #include "config.h"
 #include "RenderSVGResourcePaintServer.h"
 
+#include "NativeImage.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

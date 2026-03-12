@@ -27,6 +27,7 @@
 #include "PropertyTable.h"
 
 #include "JSCJSValueInlines.h"
+#include <wtf/MathExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -65,7 +66,7 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity)
     , m_keyCount(0)
     , m_deletedCount(0)
 {
-    ASSERT(isPowerOf2(m_indexSize));
+    ASSERT(isPowerOfTwo(m_indexSize));
     bool isCompact = tableCapacity() < UINT8_MAX;
     m_indexVector = allocateZeroedIndexVector(isCompact, m_indexSize);
     ASSERT(isCompact == this->isCompact());
@@ -79,7 +80,7 @@ PropertyTable::PropertyTable(VM& vm, const PropertyTable& other)
     , m_keyCount(other.m_keyCount)
     , m_deletedCount(other.m_deletedCount)
 {
-    ASSERT(isPowerOf2(m_indexSize));
+    ASSERT(isPowerOfTwo(m_indexSize));
     ASSERT(isCompact() == other.isCompact());
     memcpy(std::bit_cast<void*>(m_indexVector & indexVectorMask), std::bit_cast<void*>(other.m_indexVector & indexVectorMask), dataSize(isCompact()));
 
@@ -102,7 +103,7 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity, const PropertyTab
     , m_keyCount(0)
     , m_deletedCount(0)
 {
-    ASSERT(isPowerOf2(m_indexSize));
+    ASSERT(isPowerOfTwo(m_indexSize));
     ASSERT(initialCapacity >= other.m_keyCount);
     bool isCompact = other.isCompact() && tableCapacity() < UINT8_MAX;
     m_indexVector = allocateZeroedIndexVector(isCompact, m_indexSize);

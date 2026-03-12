@@ -33,6 +33,7 @@
 #include "CSSMarkup.h"
 #include "CSSPropertyParser.h"
 #include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -364,7 +365,7 @@ CSSParserToken::CSSParserToken(unsigned nonNewlineWhitespaceCount)
 }
 
 // Just a helper used for Delimiter tokens.
-CSSParserToken::CSSParserToken(CSSParserTokenType type, UChar c)
+CSSParserToken::CSSParserToken(CSSParserTokenType type, char16_t c)
     : m_type(type)
     , m_blockType(NotBlock)
     , m_delimiter(c)
@@ -448,7 +449,7 @@ StringView CSSParserToken::unitString() const
     return value().substring(m_nonUnitPrefixLength);
 }
 
-UChar CSSParserToken::delimiter() const
+char16_t CSSParserToken::delimiter() const
 {
     ASSERT(m_type == DelimiterToken);
     return m_delimiter;
@@ -578,7 +579,7 @@ bool CSSParserToken::operator==(const CSSParserToken& other) const
     case HashToken:
         if (m_hashTokenType != other.m_hashTokenType)
             return false;
-        FALLTHROUGH;
+        [[fallthrough]];
     case IdentToken:
     case FunctionToken:
     case StringToken:
@@ -591,7 +592,7 @@ bool CSSParserToken::operator==(const CSSParserToken& other) const
             return false;
             return m_numericSign == other.m_numericSign && m_numericValue == other.m_numericValue && m_numericValueType == other.m_numericValueType;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     case NumberToken:
     case PercentageToken:
         return originalText() == other.originalText();

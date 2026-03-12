@@ -58,7 +58,7 @@ static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBa
     emitThrowWasmToJSException(jit, GPRInfo::argumentGPR0, exceptionType);
 
     LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate()))
+    if (linkBuffer.didFailToAllocate()) [[unlikely]]
         return makeUnexpected(BindingFailure::OutOfMemory);
 
     return FINALIZE_WASM_CODE(linkBuffer, WasmEntryPtrTag, nullptr, "WebAssembly->JavaScript throw exception due to invalid use of restricted type in import[%i]", importIndex);
@@ -103,7 +103,7 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(TypeIn
     // https://webassembly.github.io/spec/js-api/index.html#exported-function-exotic-objects
     // If parameters or results contain v128, throw a TypeError.
     // Note: the above error is thrown each time the [[Call]] method is invoked.
-    if (UNLIKELY(signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()))
+    if (signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()) [[unlikely]]
         return handleBadImportTypeUse(jit, importIndex, ExceptionType::TypeErrorInvalidValueUse);
 
     // Here we assume that the JS calling convention saves at least all the wasm callee saved. We therefore don't need to save and restore more registers since the wasm callee already took care of this.
@@ -502,8 +502,8 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(TypeIn
         jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
     }
 
-    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
-    if (UNLIKELY(patchBuffer.didFailToAllocate()))
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk, JITCompilationMustSucceed);
+    if (patchBuffer.didFailToAllocate()) [[unlikely]]
         return makeUnexpected(BindingFailure::OutOfMemory);
 
     return FINALIZE_WASM_CODE(patchBuffer, WasmEntryPtrTag, nullptr, "WebAssembly->JavaScript import[%i] %s", importIndex, signature.toString().ascii().data());

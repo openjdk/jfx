@@ -28,6 +28,7 @@
 #include "BoxSides.h"
 #include "CSSPrimitiveNumericUnits.h"
 #include "CSSToLengthConversionData.h"
+#include "ContainerNodeInlines.h"
 #include "ContainerQueryEvaluator.h"
 #include "Document.h"
 #include "Element.h"

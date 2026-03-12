@@ -31,6 +31,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "FrameInlines.h"
 #include "Gamepad.h"
 #include "GamepadManager.h"
 #include "GamepadProvider.h"
@@ -53,22 +54,12 @@ NavigatorGamepad::NavigatorGamepad(Navigator& navigator)
 
 NavigatorGamepad::~NavigatorGamepad()
 {
-    GamepadManager::singleton().unregisterNavigator(protectedNavigator());
-}
-
-Ref<Navigator> NavigatorGamepad::protectedNavigator() const
-{
-    return m_navigator.get();
-}
-
-ASCIILiteral NavigatorGamepad::supplementName()
-{
-    return "NavigatorGamepad"_s;
+    GamepadManager::singleton().unregisterNavigator(m_navigator.get());
 }
 
 NavigatorGamepad& NavigatorGamepad::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorGamepad*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorGamepad>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorGamepad>(navigator);
         supplement = newSupplement.get();
@@ -98,11 +89,6 @@ ExceptionOr<const Vector<RefPtr<Gamepad>>&> NavigatorGamepad::getGamepads(Naviga
         return Exception { ExceptionCode::SecurityError, "Third-party iframes are not allowed to call getGamepads() unless explicitly allowed via Feature-Policy (gamepad)"_s };
 
     return NavigatorGamepad::from(navigator).gamepads();
-}
-
-Navigator& NavigatorGamepad::navigator() const
-{
-    return m_navigator.get();
 }
 
 // The UIProcess tracks when a WebPage has recently used gamepads to configure certain behaviors on the page.
@@ -136,7 +122,7 @@ Seconds NavigatorGamepad::gamepadsRecentlyAccessedThreshold()
 const Vector<RefPtr<Gamepad>>& NavigatorGamepad::gamepads()
 {
     if (RefPtr frame = m_navigator->frame()) {
-        if (RefPtr page = frame->protectedPage())
+        if (RefPtr page = frame->page())
             page->gamepadsRecentlyAccessed();
     }
 
@@ -150,9 +136,7 @@ const Vector<RefPtr<Gamepad>>& NavigatorGamepad::gamepads()
             ASSERT(!m_gamepads[i]);
             continue;
         }
-
-        ASSERT(m_gamepads[i]);
-        m_gamepads[i]->updateFromPlatformGamepad(*platformGamepads[i]);
+        Ref { *m_gamepads[i] }->updateFromPlatformGamepad(*platformGamepads[i]);
     }
 
     return m_gamepads;

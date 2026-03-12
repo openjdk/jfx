@@ -28,7 +28,6 @@
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 
-#include "AnimationMalloc.h"
 #include "Document.h"
 #include "LocalDOMWindow.h"
 #include "Page.h"
@@ -47,8 +46,8 @@ AcceleratedEffectStackUpdater::AcceleratedEffectStackUpdater(Document& document)
 {
     auto now = MonotonicTime::now();
     m_timeOrigin = now.secondsSinceEpoch();
-    if (RefPtr domWindow = document.domWindow())
-        m_timeOrigin -= Seconds::fromMilliseconds(domWindow->performance().relativeTimeFromTimeOriginInReducedResolution(now));
+    if (RefPtr window = document.window())
+        m_timeOrigin -= Seconds::fromMilliseconds(window->performance().relativeTimeFromTimeOriginInReducedResolution(now));
 }
 
 void AcceleratedEffectStackUpdater::updateEffectStacks()

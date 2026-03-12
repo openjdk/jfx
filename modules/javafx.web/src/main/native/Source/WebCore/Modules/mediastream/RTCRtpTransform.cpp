@@ -87,7 +87,7 @@ void RTCRtpTransform::attachToSender(RTCRtpSender& sender, RTCRtpTransform* prev
 
     if (previousTransform)
         m_backend = previousTransform->takeBackend();
-    else if (auto* backend = sender.backend())
+    else if (RefPtr backend = sender.backend())
         m_backend = backend->rtcRtpTransformBackend();
 
     if (!m_backend)

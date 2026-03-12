@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,12 @@
 #include "ApplicationCacheResource.h"
 #include "ContentSecurityPolicy.h"
 #include "DocumentLoader.h"
-#include "DOMApplicationCache.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
@@ -105,12 +105,12 @@ void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request,
             if (request.url().hasFragmentIdentifier()) {
                 URL url = responseToUse.url();
                 url.setFragmentIdentifier(request.url().fragmentIdentifier());
-                responseToUse.setURL(url);
+                responseToUse.setURL(WTFMove(url));
             }
 
             substituteData = SubstituteData(&resource->data(),
                                             URL(),
-                                            responseToUse,
+                                            WTFMove(responseToUse),
                                             SubstituteData::SessionHistoryVisibility::Visible);
         }
     }
@@ -254,7 +254,7 @@ static inline RefPtr<SharedBuffer> bufferFromResource(ApplicationCacheResource& 
     return SharedBuffer::createWithContentsOfFile(resource.path());
 }
 
-bool ApplicationCacheHost::maybeLoadSynchronously(ResourceRequest& request, ResourceError& error, ResourceResponse& response, RefPtr<SharedBuffer>& data)
+bool ApplicationCacheHost::maybeLoadSynchronously(const ResourceRequest& request, ResourceError& error, ResourceResponse& response, RefPtr<SharedBuffer>& data)
 {
     RefPtr<ApplicationCacheResource> resource;
     if (!shouldLoadResourceFromApplicationCache(request, resource))
@@ -290,12 +290,6 @@ void ApplicationCacheHost::maybeLoadFallbackSynchronously(const ResourceRequest&
 bool ApplicationCacheHost::canCacheInBackForwardCache()
 {
     return !applicationCache() && !candidateApplicationCacheGroup();
-}
-
-void ApplicationCacheHost::setDOMApplicationCache(DOMApplicationCache* domApplicationCache)
-{
-    ASSERT(!m_domApplicationCache || !domApplicationCache);
-    m_domApplicationCache = domApplicationCache;
 }
 
 void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType, int total, int done)
@@ -366,19 +360,8 @@ ApplicationCacheHost::CacheInfo ApplicationCacheHost::applicationCacheInfo()
     return { cache->manifestResource()->url(), 0, 0, cache->estimatedSizeInStorage() };
 }
 
-static Ref<Event> createApplicationCacheEvent(const AtomString& eventType, int total, int done)
+void ApplicationCacheHost::dispatchDOMEvent(const AtomString&, int, int)
 {
-    if (eventType == eventNames().progressEvent)
-        return ProgressEvent::create(eventType, true, done, total);
-    return Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No);
-}
-
-void ApplicationCacheHost::dispatchDOMEvent(const AtomString& eventType, int total, int done)
-{
-    if (!m_domApplicationCache || !m_domApplicationCache->frame())
-        return;
-
-    m_domApplicationCache->dispatchEvent(createApplicationCacheEvent(eventType, total, done));
 }
 
 void ApplicationCacheHost::setCandidateApplicationCacheGroup(ApplicationCacheGroup* group)

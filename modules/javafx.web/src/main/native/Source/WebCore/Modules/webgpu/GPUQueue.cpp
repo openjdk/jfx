@@ -41,6 +41,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "OffscreenCanvas.h"
 #include "PixelBuffer.h"
+#include "SecurityOrigin.h"
 #include "VideoFrame.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebGPUDevice.h"
@@ -355,7 +356,7 @@ static PixelFormat toPixelFormat(GPUTextureFormat textureFormat)
 }
 
 using ImageDataCallback = Function<void(std::span<const uint8_t>, size_t, size_t)>;
-static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer, const auto& destination, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
+static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer, const auto& destination, bool& needsPremultipliedAlpha, NOESCAPE const ImageDataCallback& callback)
 {
     UNUSED_PARAM(needsPremultipliedAlpha);
     if (!imageBuffer)
@@ -373,7 +374,7 @@ static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer,
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
-static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, ImageDataCallback&& callback)
+static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, NOESCAPE const ImageDataCallback& callback)
 {
     if (!videoFrame.get())
         return callback({ }, 0, 0);
@@ -409,7 +410,7 @@ static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<Vid
 }
 #endif
 
-static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
+static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, NOESCAPE const ImageDataCallback& callback)
 {
     UNUSED_PARAM(needsYFlip);
     UNUSED_PARAM(needsPremultipliedAlpha);
@@ -418,12 +419,12 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
     const auto& source = sourceDescriptor.source;
     using ResultType = void;
     return WTF::switchOn(source, [&](const RefPtr<ImageBitmap>& imageBitmap) -> ResultType {
-        return getImageBytesFromImageBuffer(imageBitmap->buffer(), destination, needsPremultipliedAlpha, WTFMove(callback));
+        return getImageBytesFromImageBuffer(imageBitmap->buffer(), destination, needsPremultipliedAlpha, callback);
 #if ENABLE(VIDEO) && ENABLE(WEB_CODECS)
     }, [&](const RefPtr<ImageData> imageData) -> ResultType {
         if (!imageData)
             return callback({ }, 0, 0);
-        callback(imageData->pixelBuffer()->bytes(), imageData->width(), imageData->height());
+        callback(imageData->byteArrayPixelBuffer()->bytes(), imageData->width(), imageData->height());
     }, [&](const RefPtr<HTMLImageElement> imageElement) -> ResultType {
 #if PLATFORM(COCOA)
         if (!imageElement)
@@ -431,16 +432,16 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
         auto* cachedImage = imageElement->cachedImage();
         if (!cachedImage)
             return callback({ }, 0, 0);
-        RefPtr image = cachedImage->image();
-        if (!image || !image->isBitmapImage())
+        RefPtr image = dynamicDowncast<BitmapImage>(cachedImage->image());
+        if (!image)
             return callback({ }, 0, 0);
-        RefPtr nativeImage = static_cast<BitmapImage*>(image.get())->nativeImage();
+        RefPtr nativeImage = image->nativeImage();
         if (!nativeImage)
             return callback({ }, 0, 0);
         RetainPtr platformImage = nativeImage->platformImage();
         if (!platformImage)
             return callback({ }, 0, 0);
-        RetainPtr pixelDataCfData = adoptCF(CGDataProviderCopyData(CGImageGetDataProvider(platformImage.get())));
+        RetainPtr pixelDataCfData = adoptCF(CGDataProviderCopyData(RetainPtr { CGImageGetDataProvider(platformImage.get()) }.get()));
                         if (!pixelDataCfData)
             return callback({ }, 0, 0);
 
@@ -503,25 +504,25 @@ static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescri
     }, [&](const RefPtr<HTMLVideoElement> videoElement) -> ResultType {
 #if PLATFORM(COCOA)
         if (RefPtr player = videoElement ? videoElement->player() : nullptr; player && player->isVideoPlayer())
-            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), WTFMove(callback));
+            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), callback);
 #else
         UNUSED_PARAM(videoElement);
 #endif
         return callback({ }, 0, 0);
     }, [&](const RefPtr<WebCodecsVideoFrame> webCodecsFrame) -> ResultType {
 #if PLATFORM(COCOA)
-        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), WTFMove(callback));
+        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), callback);
 #else
         UNUSED_PARAM(webCodecsFrame);
         return callback({ }, 0, 0);
 #endif
 #endif
     }, [&](const RefPtr<HTMLCanvasElement>& canvasElement) -> ResultType {
-        return getImageBytesFromImageBuffer(canvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, WTFMove(callback));
+        return getImageBytesFromImageBuffer(canvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, callback);
     }
 #if ENABLE(OFFSCREEN_CANVAS)
     , [&](const RefPtr<OffscreenCanvas>& offscreenCanvasElement) -> ResultType {
-        return getImageBytesFromImageBuffer(offscreenCanvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, WTFMove(callback));
+        return getImageBytesFromImageBuffer(offscreenCanvasElement->makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect::No), destination, needsPremultipliedAlpha, callback);
     }
 #endif
     );
@@ -537,10 +538,10 @@ static bool isOriginClean(const auto& source, ScriptExecutionContext& context)
     }, [&](const RefPtr<ImageData>) -> ResultType {
         return true;
     }, [&](const RefPtr<HTMLImageElement> imageElement) -> ResultType {
-        return imageElement->originClean(*context.securityOrigin());
+        return imageElement->originClean(*context.protectedSecurityOrigin().get());
     }, [&](const RefPtr<HTMLVideoElement> videoElement) -> ResultType {
 #if PLATFORM(COCOA)
-        return !videoElement->taintsOrigin(*context.securityOrigin());
+        return !videoElement->taintsOrigin(*context.protectedSecurityOrigin().get());
 #else
         UNUSED_PARAM(videoElement);
 #endif

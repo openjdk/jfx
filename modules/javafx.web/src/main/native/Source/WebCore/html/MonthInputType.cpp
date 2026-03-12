@@ -70,7 +70,7 @@ DateComponentsType MonthInputType::dateType() const
 WallTime MonthInputType::valueAsDate() const
 {
     ASSERT(element());
-    auto date = parseToDateComponents(element()->value());
+    auto date = parseToDateComponents(protectedElement()->value().get());
     if (!date)
         return WallTime::nan();
     double msec = date->millisecondsSinceEpoch();
@@ -104,10 +104,11 @@ Decimal MonthInputType::defaultValueForStepUp() const
 StepRange MonthInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
     ASSERT(element());
+    Ref element = *this->element();
     const Decimal stepBase = findStepBase(Decimal::fromDouble(monthDefaultStepBase));
-    const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumMonth()));
-    const Decimal maximum = parseToNumber(element()->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumMonth()));
-    const Decimal step = StepRange::parseStep(anyStepHandling, monthStepDescription, element()->attributeWithoutSynchronization(stepAttr));
+    const Decimal minimum = parseToNumber(element->attributeWithoutSynchronization(minAttr), Decimal::fromDouble(DateComponents::minimumMonth()));
+    const Decimal maximum = parseToNumber(element->attributeWithoutSynchronization(maxAttr), Decimal::fromDouble(DateComponents::maximumMonth()));
+    const Decimal step = StepRange::parseStep(anyStepHandling, monthStepDescription, element->attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, monthStepDescription);
 }
 

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2014 Google Inc. All rights reserved.
  *
@@ -143,7 +143,7 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
     if (!node)
         return false;
 
-    if (!containsIncludingShadowDOM(node.get()))
+    if (!isShadowIncludingInclusiveAncestorOf(node.get()))
         return false;
 
     for (const auto* it = node.get(); it && it != this; it = it->parentElementInComposedTree()) {
@@ -162,7 +162,7 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
         // If we can't find a control or if the control received the click
         // event, then there's no need for us to do anything.
         auto* eventTarget = dynamicDowncast<Node>(event.target());
-        if (!control || (eventTarget && control->containsIncludingShadowDOM(eventTarget))) {
+        if (!control || (eventTarget && control->isShadowIncludingInclusiveAncestorOf(eventTarget))) {
             HTMLElement::defaultEventHandler(event);
             return;
         }
@@ -198,8 +198,8 @@ bool HTMLLabelElement::willRespondToMouseClickEventsWithEditability(Editability 
 
 void HTMLLabelElement::focus(const FocusOptions& options)
 {
-    Ref<HTMLLabelElement> protectedThis(*this);
-    auto document = protectedDocument();
+    Ref protectedThis(*this);
+    Ref document = this->document();
     if (document->haveStylesheetsLoaded()) {
         document->updateLayout();
         if (isFocusable()) {

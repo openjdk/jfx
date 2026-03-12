@@ -93,7 +93,7 @@ JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame*
         RETURN_IF_EXCEPTION(scope, { });
 
         adderFunctionCallData = JSC::getCallData(adderFunction);
-        if (UNLIKELY(adderFunctionCallData.type == CallData::Type::None))
+        if (adderFunctionCallData.type == CallData::Type::None) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "'set' property of a Map should be callable."_s);
     }
 

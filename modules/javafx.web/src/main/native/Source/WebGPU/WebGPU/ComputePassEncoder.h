@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ public:
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
 
-    void setBindGroup(uint32_t groupIndex, const BindGroup&, std::span<const uint32_t> dynamicOffsets);
+    void setBindGroup(uint32_t groupIndex, const BindGroup*, std::optional<Vector<uint32_t>>&& dynamicOffsets);
     void setPipeline(const ComputePipeline&);
     void setLabel(String&&);
 
@@ -104,13 +104,15 @@ private:
     Vector<uint32_t> m_computeDynamicOffsets;
     Vector<uint32_t> m_priorComputeDynamicOffsets;
     RefPtr<const ComputePipeline> m_pipeline;
-    Ref<CommandEncoder> m_parentEncoder;
+    const Ref<CommandEncoder> m_parentEncoder;
     HashMap<uint32_t, Vector<uint32_t>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupDynamicOffsets;
     HashMap<uint32_t, Vector<const BindableResources*>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroupResources;
     HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    std::array<uint32_t, 32> m_maxDynamicOffsetAtIndex;
     NSString *m_lastErrorString { nil };
     bool m_passEnded { false };
-} SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);
+// FIXME: remove @safe once rdar://151039766 lands
+} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refComputePassEncoder, derefComputePassEncoder);
 
 
 } // namespace WebGPU

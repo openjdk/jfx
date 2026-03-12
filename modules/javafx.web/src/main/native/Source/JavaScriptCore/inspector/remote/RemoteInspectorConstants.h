@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,6 +91,8 @@
 #define WIRPingMessage                          @"WIRPingMessage"
 #define WIRPingSuccessMessage                   @"WIRPingSuccessMessage"
 
+#define WIRTargetAllowsAutomaticInspectionInSameProcessKey  @"WIRTargetAllowsAutomaticInspectionInSameProcess"
+
 // Allowed values for WIRMessageDataTypeKey.
 #define WIRMessageDataTypeFull                  @"WIRMessageDataTypeFull"
 #define WIRMessageDataTypeChunk                 @"WIRMessageDataTypeChunk"
@@ -117,7 +119,9 @@
 // The value for WIRSessionCapabilitiesKey is a dictionary that holds these capability key-value pairs.
 
 #define WIRAcceptInsecureCertificatesKey               @"org.webkit.webdriver.accept-insecure-certificates"
+#define WIRAlwaysAllowAutoplay                         @"org.webkit.webdriver.always-allow-autoplay"
 #define WIRAllowInsecureMediaCaptureCapabilityKey      @"org.webkit.webdriver.webrtc.allow-insecure-media-capture"
+#define WIRSiteIsolationEnabled                        @"org.webkit.webdriver.site-isolation-enabled"
 #define WIRSuppressICECandidateFilteringCapabilityKey  @"org.webkit.webdriver.webrtc.suppress-ice-candidate-filtering"
 
 // These definitions are shared with a Simulator webinspectord and

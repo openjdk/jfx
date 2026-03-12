@@ -42,7 +42,9 @@
 #include "pas_stream.h"
 #include "pas_thread_local_cache_layout.h"
 #include "pas_utility_heap.h"
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 
 pas_segregated_size_directory* pas_segregated_size_directory_create(
     pas_segregated_heap* heap,

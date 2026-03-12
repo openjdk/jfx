@@ -34,16 +34,16 @@
 
 namespace WebCore {
 
-AccessibilityTableHeaderContainer::AccessibilityTableHeaderContainer(AXID axID)
-    : AccessibilityMockObject(axID)
+AccessibilityTableHeaderContainer::AccessibilityTableHeaderContainer(AXID axID, AXObjectCache& cache)
+    : AccessibilityMockObject(axID, cache)
 {
 }
 
 AccessibilityTableHeaderContainer::~AccessibilityTableHeaderContainer() = default;
 
-Ref<AccessibilityTableHeaderContainer> AccessibilityTableHeaderContainer::create(AXID axID)
+Ref<AccessibilityTableHeaderContainer> AccessibilityTableHeaderContainer::create(AXID axID, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityTableHeaderContainer(axID));
+    return adoptRef(*new AccessibilityTableHeaderContainer(axID, cache));
 }
 
 LayoutRect AccessibilityTableHeaderContainer::elementRect() const
@@ -74,6 +74,10 @@ void AccessibilityTableHeaderContainer::addChildren()
 
     for (const auto& child : m_children)
         m_headerRect.unite(child->elementRect());
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "HTMLCanvasElement.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "PlatformXR.h"
@@ -130,7 +131,7 @@ private:
     };
 
     WeakPtr<Navigator> m_navigator;
-    Ref<PlatformXR::Device> m_defaultInlineDevice;
+    const Ref<PlatformXR::Device> m_defaultInlineDevice;
 
     bool m_immersiveXRDevicesHaveBeenEnumerated { false };
     uint m_testingDevices { 0 };

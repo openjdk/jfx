@@ -56,9 +56,9 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CanvasRenderingContext);
 
 Lock CanvasRenderingContext::s_instancesLock;
 
-UncheckedKeyHashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
+HashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
 {
-    static NeverDestroyed<UncheckedKeyHashSet<CanvasRenderingContext*>> instances;
+    static NeverDestroyed<HashSet<CanvasRenderingContext*>> instances;
     return instances;
 }
 
@@ -131,6 +131,11 @@ RefPtr<ImageBuffer> CanvasRenderingContext::transferToImageBuffer()
 ImageBufferPixelFormat CanvasRenderingContext::pixelFormat() const
 {
     return ImageBufferPixelFormat::BGRA8;
+}
+
+bool CanvasRenderingContext::isOpaque() const
+{
+    return imageBufferPixelFormatIsOpaque(pixelFormat());
 }
 
 DestinationColorSpace CanvasRenderingContext::colorSpace() const

@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002-2024 Apple Inc.
+ * Copyright (C) 2002-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -71,11 +71,7 @@ private:
 // The rule owns the live list.
 template <class Rule>
 class LiveCSSRuleList final : public CSSRuleList {
-#if PLATFORM(JAVA)
-    WTF_MAKE_FAST_ALLOCATED;
-#else
     WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(LiveCSSRuleList);
-#endif
 public:
     LiveCSSRuleList(Rule& rule)
         : m_rule(rule)
@@ -92,8 +88,7 @@ private:
 
     Rule& m_rule;
 };
-#if !PLATFORM(JAVA)
+
 WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<class Rule>, LiveCSSRuleList<Rule>);
-#endif
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -419,7 +419,8 @@ class WinWindow extends Window {
     private int nonClientHitTest(int x, int y) {
         // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest
         enum HT {
-            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20);
+            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20),
+            UNSPECIFIED('H' << 24 | 'T' << 16 | 'U' << 8 | 'N'); // see GlassWindow.cpp:HandleNCHitTestEvent
             HT(int value) { this.value = value; }
             final int value;
         }
@@ -441,9 +442,10 @@ class WinWindow extends Window {
             case null: break;
         }
 
-        // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
+        // Otherwise, pick the header area under the cursor and return the appropriate hit-testing constant.
         View.EventHandler eventHandler = view.getEventHandler();
         return switch (eventHandler != null ? eventHandler.pickHeaderArea(wx, wy) : null) {
+            case UNSPECIFIED -> HT.UNSPECIFIED.value;
             case DRAGBAR -> HT.CAPTION.value;
             case ICONIFY -> HT.MINBUTTON.value;
             case MAXIMIZE -> HT.MAXBUTTON.value;

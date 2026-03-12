@@ -44,9 +44,12 @@
 #include "pas_status_reporter.h"
 #include "pas_thread_local_cache.h"
 #include "pas_utility_heap.h"
+#include "pas_utils.h"
 #include <stdio.h>
+#if !PAS_OS(WINDOWS)
 #include <sys/time.h>
 #include <unistd.h>
+#endif
 
 static const bool verbose = false;
 static bool is_shut_down_enabled = true;
@@ -108,6 +111,7 @@ static pas_scavenger_data* ensure_data_instance(pas_lock_hold_mode heap_lock_hol
 
         pthread_mutex_init(&instance->lock, NULL);
         pthread_cond_init(&instance->cond, NULL);
+        pthread_mutex_init(&instance->foreign_work.lock, NULL);
 
         pas_fence();
 
@@ -120,11 +124,19 @@ static pas_scavenger_data* ensure_data_instance(pas_lock_hold_mode heap_lock_hol
 
 static double get_time_in_milliseconds(void)
 {
+#if PAS_OS(WINDOWS)
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+
+    return (counter.QuadPart * 1000.) / frequency.QuadPart;
+#else
     struct timeval current_time;
 
     gettimeofday(&current_time, NULL);
 
     return current_time.tv_sec * 1000. + current_time.tv_usec / 1000.;
+#endif
 }
 
 static void timed_wait(pthread_cond_t* cond, pthread_mutex_t* mutex,
@@ -157,7 +169,15 @@ static bool handle_expendable_memory(pas_expendable_memory_scavenge_kind kind)
     return should_go_again;
 }
 
+#if PAS_OS(WINDOWS)
+#define R_NULL 0
+
+unsigned scavenger_thread_main(void* arg)
+#else
+#define R_NULL NULL
+
 static void* scavenger_thread_main(void* arg)
+#endif
 {
     pas_scavenger_data* data;
     pas_scavenger_activity_callback did_start_callback;
@@ -191,6 +211,8 @@ static void* scavenger_thread_main(void* arg)
     pthread_set_qos_class_self_np(configured_qos_class, 0);
 #endif
 
+    PAS_PROFILE(SCAVENGER_THREAD_MAIN, data);
+
     for (;;) {
         pas_page_sharing_pool_scavenge_result scavenge_result;
         bool should_shut_down;
@@ -202,6 +224,7 @@ static void* scavenger_thread_main(void* arg)
         uint64_t epoch;
         uint64_t delta;
         uint64_t max_epoch;
+        int installed_foreign_work_descriptors;
         bool did_overflow;
 #if PAS_OS(DARWIN)
         qos_class_t current_qos_class;
@@ -285,6 +308,17 @@ static void* scavenger_thread_main(void* arg)
             PAS_ASSERT(!"Should not see pas_page_sharing_pool_take_locks_unavailable.");
             break;
         } }
+
+
+        installed_foreign_work_descriptors = data->foreign_work.next_open_descriptor;
+        PAS_ASSERT(installed_foreign_work_descriptors <= PAS_SCAVENGER_MAX_FOREIGN_WORK_DESCRIPTORS);
+        pas_fence();
+        for (int i = 0; i < installed_foreign_work_descriptors; i++) {
+            void* userdata = data->foreign_work.descriptors[i].userdata;
+            uint32_t requested_period_ticks = 1 << data->foreign_work.descriptors[i].period_log2_ticks;
+            if (!requested_period_ticks || pas_scavenger_tick_count % requested_period_ticks == 0)
+                should_go_again |= data->foreign_work.descriptors[i].func(userdata);
+        }
 
         if (verbose) {
             pas_log("%d: %.0lf: scavenger freed %zu bytes (%s, should_go_again = %s).\n",
@@ -379,12 +413,42 @@ static void* scavenger_thread_main(void* arg)
 
             if (verbose)
                 pas_log("Killing the scavenger.\n");
-            return NULL;
+            return R_NULL;
         }
     }
 
-    PAS_ASSERT(!"Should not be reached");
-    return NULL;
+    PAS_ASSERT_NOT_REACHED();
+    return R_NULL;
+}
+
+bool pas_scavenger_try_install_foreign_work_callback(
+    pas_scavenger_foreign_work_callback callback,
+    uint32_t period_log2_ms,
+    void* userdata)
+{
+    pas_scavenger_data* data;
+
+    PAS_ASSERT(callback);
+
+    data = ensure_data_instance(pas_lock_is_not_held);
+    pthread_mutex_lock(&data->foreign_work.lock);
+
+    int slot = data->foreign_work.next_open_descriptor;
+    if (slot >= PAS_SCAVENGER_MAX_FOREIGN_WORK_DESCRIPTORS)
+        return false;
+
+    double requested_period_ms = pow(2.0, period_log2_ms);
+    uint32_t requested_ticks = (uint32_t)(requested_period_ms / pas_scavenger_period_in_milliseconds);
+
+    data->foreign_work.descriptors[slot].period_log2_ticks = pas_log2(requested_ticks);
+    data->foreign_work.descriptors[slot].func = callback;
+    data->foreign_work.descriptors[slot].userdata = userdata;
+    pas_store_store_fence();
+    data->foreign_work.next_open_descriptor = slot + 1;
+
+    pthread_mutex_unlock(&data->foreign_work.lock);
+
+    return true;
 }
 
 bool pas_scavenger_did_create_eligible(void)
@@ -555,7 +619,7 @@ void pas_scavenger_perform_synchronous_operation(
 {
     switch (kind) {
     case pas_scavenger_invalid_synchronous_operation_kind:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     case pas_scavenger_clear_all_non_tlc_caches_kind:
         pas_scavenger_clear_all_non_tlc_caches();
@@ -576,7 +640,7 @@ void pas_scavenger_perform_synchronous_operation(
         pas_scavenger_run_synchronously_now();
         return;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 void pas_scavenger_disable_shut_down(void)

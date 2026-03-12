@@ -38,6 +38,7 @@
 #include "CSSStyleRule.h"
 #include "CachedImage.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
@@ -114,7 +115,7 @@ private:
 };
 
 PageSerializer::SerializerMarkupAccumulator::SerializerMarkupAccumulator(PageSerializer& serializer, Document& document, Vector<Ref<Node>>* nodes)
-    : MarkupAccumulator(nodes, ResolveURLs::Yes, document.isHTMLDocument() ? SerializationSyntax::HTML : SerializationSyntax::XML)
+    : MarkupAccumulator(nodes, ResolveURLs::Yes, MarkupAccumulator::serializationSyntax(document))
     , m_serializer(serializer)
     , m_document(document)
 {

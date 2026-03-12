@@ -29,7 +29,6 @@
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/SlotVisitor.h>
 #include <JavaScriptCore/WeakInlines.h>
-#include <variant>
 
 namespace WebCore {
 

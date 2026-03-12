@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@ class AudioDSPKernel;
 
 class DelayProcessor final : public AudioDSPKernelProcessor {
     WTF_MAKE_TZONE_ALLOCATED(DelayProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DelayProcessor);
 public:
     DelayProcessor(BaseAudioContext&, float sampleRate, unsigned numberOfChannels, double maxDelayTime);
     virtual ~DelayProcessor();
@@ -48,7 +49,7 @@ public:
 private:
     Type processorType() const final { return Type::Delay; }
 
-    Ref<AudioParam> m_delayTime;
+    const Ref<AudioParam> m_delayTime;
 };
 
 } // namespace WebCore

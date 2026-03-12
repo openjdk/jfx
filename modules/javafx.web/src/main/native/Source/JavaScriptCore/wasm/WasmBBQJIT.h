@@ -27,6 +27,8 @@
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
 
+#include "PCToCodeOriginMap.h"
+#include "SimpleRegisterAllocator.h"
 #include "WasmCallingConvention.h"
 #include "WasmCompilationContext.h"
 #include "WasmFunctionParser.h"
@@ -150,8 +152,8 @@ public:
         Address asAddress() const;
 
         GPRReg asGPR() const;
-
         FPRReg asFPR() const;
+        Reg asReg() const { return isGPR() ? Reg(asGPR()) : Reg(asFPR()); }
 
         GPRReg asGPRlo() const;
 
@@ -421,36 +423,16 @@ public:
             Temp = 2,
             Scratch = 3, // Denotes a register bound for use as a scratch, not as a local or temp's location.
         };
-        union {
-            uint32_t m_uintValue;
-            struct {
-                TypeKind m_type;
-                unsigned m_kind : 3;
-                unsigned m_index : LocalIndexBits;
-            };
-        };
 
-        RegisterBinding()
-            : m_uintValue(0)
-        { }
-
-        RegisterBinding(uint32_t uintValue)
-            : m_uintValue(uintValue)
-        { }
-
+        static RegisterBinding none() { return RegisterBinding(); }
         static RegisterBinding fromValue(Value value);
-
-        static RegisterBinding none();
-
         static RegisterBinding scratch();
 
         Value toValue() const;
 
-        bool isNone() const;
-
-        bool isValid() const;
-
-        bool isScratch() const;
+        bool isNone() const { return m_kind == None; }
+        bool isValid() const { return m_kind != None; }
+        bool isScratch() const { return m_kind == Scratch; }
 
         bool operator==(RegisterBinding other) const;
 
@@ -458,10 +440,232 @@ public:
 
         unsigned hash() const;
 
-        uint32_t encode() const;
+        TypeKind m_type { 0 };
+        unsigned m_kind : 3 { None };
+        unsigned m_index : LocalIndexBits { 0 };
+            };
+
+    // Register bank definitions for SimpleRegisterAllocator
+    struct GPRBank {
+        using JITBackend = BBQJIT;
+        using Register = GPRReg;
+        static constexpr Register invalidRegister = InvalidGPRReg;
+        // FIXME: Make this more precise
+        static constexpr unsigned numberOfRegisters = 32;
+        static constexpr Width defaultWidth = widthForBytes(sizeof(CPURegister));
+        };
+
+    struct FPRBank {
+        using JITBackend = BBQJIT;
+        using Register = FPRReg;
+        static constexpr Register invalidRegister = InvalidFPRReg;
+        // FIXME: Make this more precise
+        static constexpr unsigned numberOfRegisters = 32;
+        static constexpr Width defaultWidth = Width128;
     };
 
-public:
+    using SpillHint = uint32_t;
+
+    void flush(GPRReg, const RegisterBinding&);
+    void flush(FPRReg, const RegisterBinding&);
+
+    using GPRAllocator = SimpleRegisterAllocator<GPRBank>;
+    using FPRAllocator = SimpleRegisterAllocator<FPRBank>;
+
+    // Tables mapping from each register to the current value bound to it. Used for slow paths.
+    struct RegisterBindings {
+        void dump(PrintStream& out) const;
+        // FIXME: We should really compress this since it's copied by slow paths to know how to restore the correct state.
+        GPRAllocator::RegisterBindings m_gprBindings { RegisterBinding::none() }; // Tables mapping from each register to the current value bound to it.
+        FPRAllocator::RegisterBindings m_fprBindings { RegisterBinding::none() };
+    };
+    RegisterBindings copyBindings() { return { m_gprAllocator.copyBindings(), m_fprAllocator.copyBindings() }; }
+
+    template<unsigned GPRs, unsigned FPRs>
+    class ScratchScope {
+        WTF_MAKE_NONCOPYABLE(ScratchScope);
+        WTF_FORBID_HEAP_ALLOCATION;
+    public:
+        template<typename... Args>
+        ScratchScope(BBQJIT& generator, Args... locationsToPreserve)
+            : m_generator(generator)
+        {
+            initializedPreservedSet(locationsToPreserve...);
+            for (JSC::Reg reg : m_preserved) {
+                if (reg.isGPR())
+                    preserveGPR(reg.gpr());
+                else
+                    preserveFPR(reg.fpr());
+            }
+
+            for (unsigned i = 0; i < GPRs; i ++) {
+                m_tempGPRs[i] = m_generator.m_gprAllocator.allocate(m_generator, RegisterBinding::scratch(), std::nullopt);
+                m_generator.m_gprAllocator.lock(m_tempGPRs[i]);
+            }
+            for (unsigned i = 0; i < FPRs; i ++) {
+                m_tempFPRs[i] = m_generator.m_fprAllocator.allocate(m_generator, RegisterBinding::scratch(), std::nullopt);
+                m_generator.m_fprAllocator.lock(m_tempFPRs[i]);
+            }
+        }
+
+        ~ScratchScope()
+        {
+            unbindEarly();
+        }
+
+        void unbindEarly()
+        {
+            unbindScratches();
+            unbindPreserved();
+        }
+
+        void unbindScratches()
+        {
+            if (m_unboundScratches)
+                return;
+
+            m_unboundScratches = true;
+            for (unsigned i = 0; i < GPRs; i ++)
+                unbindGPR(m_tempGPRs[i]);
+            for (unsigned i = 0; i < FPRs; i ++)
+                unbindFPR(m_tempFPRs[i]);
+        }
+
+        void unbindPreserved()
+        {
+            if (m_unboundPreserved)
+                return;
+
+            m_unboundPreserved = true;
+            for (JSC::Reg reg : m_preserved) {
+                if (reg.isGPR())
+                    unbindGPR(reg.gpr());
+                else
+                    unbindFPR(reg.fpr());
+            }
+        }
+
+        inline GPRReg gpr(unsigned i) const
+        {
+            ASSERT(i < GPRs);
+            ASSERT(!m_unboundScratches);
+            return m_tempGPRs[i];
+        }
+
+        inline FPRReg fpr(unsigned i) const
+        {
+            ASSERT(i < FPRs);
+            ASSERT(!m_unboundScratches);
+            return m_tempFPRs[i];
+        }
+
+    private:
+        GPRReg preserveGPR(GPRReg reg)
+        {
+            if (!m_generator.validGPRs().contains(reg, IgnoreVectors))
+                return reg;
+            const RegisterBinding& binding = m_generator.bindingFor(reg);
+            m_generator.m_gprAllocator.lock(reg);
+            if (m_preserved.contains(reg, IgnoreVectors) && !binding.isNone()) {
+                if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                    dataLogLn("BBQ\tPreserving GPR ", MacroAssembler::gprName(reg), " currently bound to ", binding);
+                return reg; // If the register is already bound, we don't need to preserve it ourselves.
+            }
+            ASSERT(binding.isNone());
+            m_generator.m_gprAllocator.bind(reg, RegisterBinding::scratch(), 0);
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                dataLogLn("BBQ\tPreserving scratch GPR ", MacroAssembler::gprName(reg));
+            return reg;
+        }
+
+        FPRReg preserveFPR(FPRReg reg)
+        {
+            if (!m_generator.validFPRs().contains(reg, Width::Width128))
+                return reg;
+            const RegisterBinding& binding = m_generator.bindingFor(reg);
+            m_generator.m_fprAllocator.lock(reg);
+            if (m_preserved.contains(reg, Width::Width128) && !binding.isNone()) {
+                if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                    dataLogLn("BBQ\tPreserving FPR ", MacroAssembler::fprName(reg), " currently bound to ", binding);
+                return reg; // If the register is already bound, we don't need to preserve it ourselves.
+            }
+            ASSERT(binding.isNone());
+            m_generator.m_fprAllocator.bind(reg, RegisterBinding::scratch(), 0);
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                dataLogLn("BBQ\tPreserving scratch FPR ", MacroAssembler::fprName(reg));
+            return reg;
+        }
+
+        void unbindGPR(GPRReg reg)
+        {
+            if (!m_generator.validGPRs().contains(reg, IgnoreVectors))
+                return;
+            const RegisterBinding& binding = m_generator.bindingFor(reg);
+            m_generator.m_gprAllocator.unlock(reg);
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                dataLogLn("BBQ\tReleasing GPR ", MacroAssembler::gprName(reg), " preserved? ", m_preserved.contains(reg, IgnoreVectors), " binding: ", binding);
+            if (m_preserved.contains(reg, IgnoreVectors) && !binding.isScratch())
+                return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
+            ASSERT(binding.isScratch());
+            m_generator.m_gprAllocator.unbind(reg);
+        }
+
+        void unbindFPR(FPRReg reg)
+        {
+            if (!m_generator.validFPRs().contains(reg, Width::Width128))
+                return;
+            const RegisterBinding& binding = m_generator.bindingFor(reg);
+            m_generator.m_fprAllocator.unlock(reg);
+            if (Options::verboseBBQJITAllocation()) [[unlikely]]
+                dataLogLn("BBQ\tReleasing FPR ", MacroAssembler::fprName(reg), " preserved? ", m_preserved.contains(reg, Width::Width128), " binding: ", binding);
+            if (m_preserved.contains(reg, Width::Width128) && !binding.isScratch())
+                return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
+            ASSERT(binding.isScratch());
+            m_generator.m_fprAllocator.unbind(reg);
+        }
+
+        template<typename... Args>
+        void initializedPreservedSet(Location location, Args... args)
+        {
+            if (location.isGPR())
+                m_preserved.add(location.asGPR(), IgnoreVectors);
+            else if (location.isFPR())
+                m_preserved.add(location.asFPR(), Width::Width128);
+            else if (location.isGPR2()) {
+                m_preserved.add(location.asGPRlo(), IgnoreVectors);
+                m_preserved.add(location.asGPRhi(), IgnoreVectors);
+            }
+            initializedPreservedSet(args...);
+        }
+
+        template<typename... Args>
+        void initializedPreservedSet(RegisterSet registers, Args... args)
+        {
+            for (JSC::Reg reg : registers)
+                initializedPreservedSet(reg);
+            initializedPreservedSet(args...);
+        }
+
+        template<typename... Args>
+        void initializedPreservedSet(JSC::Reg reg, Args... args)
+        {
+            if (reg.isGPR())
+                m_preserved.add(reg.gpr(), IgnoreVectors);
+            else
+                m_preserved.add(reg.fpr(), Width::Width128);
+            initializedPreservedSet(args...);
+        }
+
+        inline void initializedPreservedSet() { }
+
+        BBQJIT& m_generator;
+        GPRReg m_tempGPRs[GPRs];
+        FPRReg m_tempFPRs[FPRs];
+        RegisterSet m_preserved;
+        bool m_unboundScratches { false };
+        bool m_unboundPreserved { false };
+    };
+
     struct ControlData {
         static bool isIf(const ControlData& control) { return control.blockType() == BlockType::If; }
         static bool isTry(const ControlData& control) { return control.blockType() == BlockType::Try; }
@@ -856,9 +1060,9 @@ private:
     }
 
 #define RESULT(...) Result { __VA_ARGS__ }
-#define LOG_INSTRUCTION(...) do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { logInstruction(__VA_ARGS__); } } while (false)
-#define LOG_INDENT() do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { m_loggingIndent += 2; } } while (false);
-#define LOG_DEDENT() do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { m_loggingIndent -= 2; } } while (false);
+#define LOG_INSTRUCTION(...) do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { logInstruction(__VA_ARGS__); } } while (false)
+#define LOG_INDENT() do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { m_loggingIndent += 2; } } while (false);
+#define LOG_DEDENT() do { if (Options::verboseBBQJITInstructions()) [[unlikely]] { m_loggingIndent -= 2; } } while (false);
 
 public:
     // FIXME: Support fused branch compare on 32-bit platforms.
@@ -920,6 +1124,7 @@ public:
     PartialResult WARN_UNUSED_RETURN getGlobal(uint32_t index, Value& result);
 
     void emitWriteBarrier(GPRReg cellGPR);
+    void emitMutatorFence();
 
     PartialResult WARN_UNUSED_RETURN setGlobal(uint32_t index, Value value);
 
@@ -1188,8 +1393,8 @@ public:
     // This will replace the existing value with a new value. Note that if this is an F32 then the top bits may be garbage but that's ok for our current usage.
     Value marshallToI64(Value value);
 
+    void emitAllocateGCArrayUninitialized(GPRReg result, uint32_t typeIndex, ExpressionType size, GPRReg scratchGPR, GPRReg scratchGPR2);
     PartialResult WARN_UNUSED_RETURN addArrayNew(uint32_t typeIndex, ExpressionType size, ExpressionType initValue, ExpressionType& result);
-
     PartialResult WARN_UNUSED_RETURN addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result);
 
     using ArraySegmentOperation = EncodedJSValue SYSV_ABI (&)(JSC::JSWebAssemblyInstance*, uint32_t, uint32_t, uint32_t, uint32_t);
@@ -1199,9 +1404,13 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addArrayNewElem(uint32_t typeIndex, uint32_t elemSegmentIndex, ExpressionType arraySize, ExpressionType offset, ExpressionType& result);
 
+    void emitArrayStoreElementUnchecked(StorageType elementType, GPRReg payloadGPR, Location index, Value value, bool preserveIndex = false);
+    void emitArrayStoreElementUnchecked(StorageType elementType, GPRReg payloadGPR, Value index, Value value);
     void emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value index, Value value);
 
     PartialResult WARN_UNUSED_RETURN addArrayNewFixed(uint32_t typeIndex, ArgumentList& args, ExpressionType& result);
+
+    void emitArrayGetPayload(StorageType, GPRReg arrayGPR, GPRReg payloadGPR);
 
     PartialResult WARN_UNUSED_RETURN addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType& result);
 
@@ -1217,12 +1426,11 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addArrayInitData(uint32_t dstTypeIndex, ExpressionType dst, ExpressionType dstOffset, uint32_t srcDataIndex, ExpressionType srcOffset, ExpressionType size);
 
-    void emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value);
+    // Returns true if a writeBarrier/mutatorFence is needed.
+    bool WARN_UNUSED_RETURN emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value);
 
-    void emitStructPayloadSet(GPRReg payloadGPR, const StructType& structType, uint32_t fieldIndex, Value value);
-
+    void emitAllocateGCStructUninitialized(GPRReg resultGPR, uint32_t typeIndex, GPRReg scratchGPR, GPRReg scratchGPR2);
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t typeIndex, ExpressionType& result);
-
     PartialResult WARN_UNUSED_RETURN addStructNew(uint32_t typeIndex, ArgumentList& args, Value& result);
 
     PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType structGetKind, Value structValue, const StructType& structType, uint32_t fieldIndex, Value& result);
@@ -1806,6 +2014,8 @@ public:
     template<size_t N>
     void saveValuesAcrossCallAndPassArguments(const Vector<Value, N>& arguments, const CallInformation& callInfo, const TypeDefinition& signature);
 
+    void slowPathSpillBindings(const RegisterBindings& bindings);
+    void slowPathRestoreBindings(const RegisterBindings&);
     void restoreValuesAfterCall(const CallInformation& callInfo);
 
     template<size_t N>
@@ -1907,15 +2117,21 @@ public:
 private:
     static bool isScratch(Location loc);
 
-    void emitStoreConst(Value constant, Location loc);
+    void emitStoreConst(Value constant, Location dst);
+    void emitStoreConst(StorageType, Value constant, BaseIndex dst);
+    void emitStoreConst(StorageType, Value constant, Address dst);
 
     void emitMoveConst(Value constant, Location loc);
 
     void emitStore(TypeKind type, Location src, Location dst);
+    void emitStore(StorageType, Location src, BaseIndex dst);
+    void emitStore(StorageType, Location src, Address dst);
 
     void emitStore(Value src, Location dst);
 
     void emitMoveMemory(TypeKind type, Location src, Location dst);
+    void emitMoveMemory(StorageType, Location src, BaseIndex dst);
+    void emitMoveMemory(StorageType, Location src, Address dst);
 
     void emitMoveMemory(Value src, Location dst);
 
@@ -1930,12 +2146,10 @@ private:
     void emitMove(TypeKind type, Location src, Location dst);
 
     void emitMove(Value src, Location dst);
+    void emitMove(StorageType, Value src, BaseIndex dst);
+    void emitMove(StorageType, Value src, Address dst);
 
-    enum class ShuffleStatus {
-        ToMove,
-        BeingMoved,
-        Moved
-    };
+    using ShuffleStatus = CCallHelpers::ShuffleStatus;
 
     template<size_t N, typename OverflowHandler>
     void emitShuffleMove(Vector<Value, N, OverflowHandler>& srcVector, Vector<Location, N, OverflowHandler>& dstVector, Vector<ShuffleStatus, N, OverflowHandler>& statusVector, unsigned index);
@@ -1945,9 +2159,9 @@ private:
 
     ControlData& currentControlData();
 
-    void setLRUKey(Location location, LocalOrTempIndex key);
-
-    void increaseKey(Location location);
+    void setLRUKey(Location, LocalOrTempIndex key);
+    void increaseLRUKey(Location);
+    uint32_t nextLRUKey() { return ++m_lastUseTimestamp; }
 
     Location bind(Value value);
 
@@ -1961,13 +2175,10 @@ private:
 
     Location loadIfNecessary(Value value);
 
+    // This should generally be avoided if possible but sometimes you just *need* a value in a register.
+    Location materializeToGPR(Value, std::optional<ScratchScope<1, 0>>&);
+
     void consume(Value value);
-
-    Location allocateRegister(TypeKind type);
-
-    Location allocateRegisterPair();
-
-    Location allocateRegister(Value value);
 
     Location bind(Value value, Location loc);
 
@@ -1975,272 +2186,14 @@ private:
 
     void unbindAllRegisters();
 
-    template<typename Register>
-    static Register fromJSCReg(Reg reg)
-    {
-        // This pattern avoids an explicit template specialization in class scope, which GCC does not support.
-        if constexpr (std::is_same_v<Register, GPRReg>) {
-            ASSERT(reg.isGPR());
-            return reg.gpr();
-        } else if constexpr (std::is_same_v<Register, FPRReg>) {
-            ASSERT(reg.isFPR());
-            return reg.fpr();
-        }
-        ASSERT_NOT_REACHED();
-    }
-
-    template<typename Register>
-    class LRU {
-    public:
-        ALWAYS_INLINE LRU(uint32_t numRegisters)
-            : m_keys(numRegisters, -1) // We use -1 to signify registers that can never be allocated or used.
-        { }
-
-        void add(RegisterSet registers)
-        {
-            registers.forEach([&] (JSC::Reg r) {
-                m_keys[fromJSCReg<Register>(r)] = 0;
-            });
-        }
-
-        Register findMin()
-        {
-            int32_t minIndex = -1;
-            int32_t minKey = -1;
-            for (unsigned i = 0; i < m_keys.size(); i ++) {
-                Register reg = static_cast<Register>(i);
-                if (m_locked.contains(reg, conservativeWidth(reg)))
-                    continue;
-                if (m_keys[i] < 0)
-                    continue;
-                if (minKey < 0 || m_keys[i] < minKey) {
-                    minKey = m_keys[i];
-                    minIndex = i;
-                }
-            }
-            ASSERT(minIndex >= 0, "No allocatable registers in LRU");
-            return static_cast<Register>(minIndex);
-        }
-
-        void increaseKey(Register reg, uint32_t newKey)
-        {
-            if (m_keys[reg] >= 0) // Leave untracked registers alone.
-                m_keys[reg] = newKey;
-        }
-
-        void lock(Register reg)
-        {
-            m_locked.add(reg, conservativeWidth(reg));
-        }
-
-        void unlock(Register reg)
-        {
-            m_locked.remove(reg);
-        }
-
-    private:
-        Vector<int32_t, 32> m_keys;
-        RegisterSet m_locked;
-    };
-
-    GPRReg nextGPR();
-
-    FPRReg nextFPR();
-
-    GPRReg evictGPR();
-
-    FPRReg evictFPR();
+    const RegisterBinding& bindingFor(JSC::Reg reg) { return reg.isGPR() ? m_gprAllocator.bindingFor(reg.gpr()) : m_fprAllocator.bindingFor(reg.fpr()); }
+    RegisterSet validGPRs() const { return m_gprAllocator.validRegisters(); }
+    RegisterSet validFPRs() const { return m_fprAllocator.validRegisters(); }
 
     // We use this to free up specific registers that might get clobbered by an instruction.
-
-    void clobber(GPRReg gpr);
-
-    void clobber(FPRReg fpr);
-
-    void clobber(JSC::Reg reg);
-
-    template<int GPRs, int FPRs>
-    class ScratchScope {
-        WTF_MAKE_NONCOPYABLE(ScratchScope);
-    public:
-        template<typename... Args>
-        ScratchScope(BBQJIT& generator, Args... locationsToPreserve)
-            : m_generator(generator)
-        {
-            initializedPreservedSet(locationsToPreserve...);
-            for (JSC::Reg reg : m_preserved) {
-                if (reg.isGPR())
-                    bindGPRToScratch(reg.gpr());
-                else
-                    bindFPRToScratch(reg.fpr());
-            }
-            for (int i = 0; i < GPRs; i ++)
-                m_tempGPRs[i] = bindGPRToScratch(m_generator.allocateRegister(is64Bit() ? TypeKind::I64 : TypeKind::I32).asGPR());
-            for (int i = 0; i < FPRs; i ++)
-                m_tempFPRs[i] = bindFPRToScratch(m_generator.allocateRegister(TypeKind::F64).asFPR());
-        }
-
-        ~ScratchScope()
-        {
-            unbindEarly();
-        }
-
-        void unbindEarly()
-        {
-            unbindScratches();
-            unbindPreserved();
-        }
-
-        void unbindScratches()
-        {
-            if (m_unboundScratches)
-                return;
-
-            m_unboundScratches = true;
-            for (int i = 0; i < GPRs; i ++)
-                unbindGPRFromScratch(m_tempGPRs[i]);
-            for (int i = 0; i < FPRs; i ++)
-                unbindFPRFromScratch(m_tempFPRs[i]);
-        }
-
-        void unbindPreserved()
-        {
-            if (m_unboundPreserved)
-                return;
-
-            m_unboundPreserved = true;
-            for (JSC::Reg reg : m_preserved) {
-                if (reg.isGPR())
-                    unbindGPRFromScratch(reg.gpr());
-                else
-                    unbindFPRFromScratch(reg.fpr());
-            }
-        }
-
-        inline GPRReg gpr(unsigned i) const
-        {
-            ASSERT(i < GPRs);
-            ASSERT(!m_unboundScratches);
-            return m_tempGPRs[i];
-        }
-
-        inline FPRReg fpr(unsigned i) const
-        {
-            ASSERT(i < FPRs);
-            ASSERT(!m_unboundScratches);
-            return m_tempFPRs[i];
-        }
-
-    private:
-        GPRReg bindGPRToScratch(GPRReg reg)
-        {
-            if (!m_generator.m_validGPRs.contains(reg, IgnoreVectors))
-                return reg;
-            RegisterBinding& binding = m_generator.m_gprBindings[reg];
-            m_generator.m_gprLRU.lock(reg);
-            if (m_preserved.contains(reg, IgnoreVectors) && !binding.isNone()) {
-                if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                    dataLogLn("BBQ\tPreserving GPR ", MacroAssembler::gprName(reg), " currently bound to ", binding);
-                return reg; // If the register is already bound, we don't need to preserve it ourselves.
-            }
-            ASSERT(binding.isNone());
-            binding = RegisterBinding::scratch();
-            m_generator.m_gprSet.remove(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReserving scratch GPR ", MacroAssembler::gprName(reg));
-            return reg;
-        }
-
-        FPRReg bindFPRToScratch(FPRReg reg)
-        {
-            if (!m_generator.m_validFPRs.contains(reg, Width::Width128))
-                return reg;
-            RegisterBinding& binding = m_generator.m_fprBindings[reg];
-            m_generator.m_fprLRU.lock(reg);
-            if (m_preserved.contains(reg, Width::Width128) && !binding.isNone()) {
-                if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                    dataLogLn("BBQ\tPreserving FPR ", MacroAssembler::fprName(reg), " currently bound to ", binding);
-                return reg; // If the register is already bound, we don't need to preserve it ourselves.
-            }
-            ASSERT(binding.isNone());
-            binding = RegisterBinding::scratch();
-            m_generator.m_fprSet.remove(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReserving scratch FPR ", MacroAssembler::fprName(reg));
-            return reg;
-        }
-
-        void unbindGPRFromScratch(GPRReg reg)
-        {
-            if (!m_generator.m_validGPRs.contains(reg, IgnoreVectors))
-                return;
-            RegisterBinding& binding = m_generator.m_gprBindings[reg];
-            m_generator.m_gprLRU.unlock(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReleasing GPR ", MacroAssembler::gprName(reg), " preserved? ", m_preserved.contains(reg, IgnoreVectors), " binding: ", binding);
-            if (m_preserved.contains(reg, IgnoreVectors) && !binding.isScratch())
-                return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
-            ASSERT(binding.isScratch());
-            binding = RegisterBinding::none();
-            m_generator.m_gprSet.add(reg, IgnoreVectors);
-        }
-
-        void unbindFPRFromScratch(FPRReg reg)
-        {
-            if (!m_generator.m_validFPRs.contains(reg, Width::Width128))
-                return;
-            RegisterBinding& binding = m_generator.m_fprBindings[reg];
-            m_generator.m_fprLRU.unlock(reg);
-            if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReleasing FPR ", MacroAssembler::fprName(reg), " preserved? ", m_preserved.contains(reg, Width::Width128), " binding: ", binding);
-            if (m_preserved.contains(reg, Width::Width128) && !binding.isScratch())
-                return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
-            ASSERT(binding.isScratch());
-            binding = RegisterBinding::none();
-            m_generator.m_fprSet.add(reg, Width::Width128);
-        }
-
-        template<typename... Args>
-        void initializedPreservedSet(Location location, Args... args)
-        {
-            if (location.isGPR())
-                m_preserved.add(location.asGPR(), IgnoreVectors);
-            else if (location.isFPR())
-                m_preserved.add(location.asFPR(), Width::Width128);
-            else if (location.isGPR2()) {
-                m_preserved.add(location.asGPRlo(), IgnoreVectors);
-                m_preserved.add(location.asGPRhi(), IgnoreVectors);
-            }
-            initializedPreservedSet(args...);
-        }
-
-        template<typename... Args>
-        void initializedPreservedSet(RegisterSet registers, Args... args)
-        {
-            for (JSC::Reg reg : registers)
-                initializedPreservedSet(reg);
-            initializedPreservedSet(args...);
-        }
-
-        template<typename... Args>
-        void initializedPreservedSet(JSC::Reg reg, Args... args)
-        {
-                if (reg.isGPR())
-                    m_preserved.add(reg.gpr(), IgnoreVectors);
-                else
-                    m_preserved.add(reg.fpr(), Width::Width128);
-            initializedPreservedSet(args...);
-        }
-
-        inline void initializedPreservedSet() { }
-
-        BBQJIT& m_generator;
-        GPRReg m_tempGPRs[GPRs];
-        FPRReg m_tempFPRs[FPRs];
-        RegisterSet m_preserved;
-        bool m_unboundScratches { false };
-        bool m_unboundPreserved { false };
-    };
+    void clobber(GPRReg gpr) { m_gprAllocator.clobber(*this, gpr); }
+    void clobber(FPRReg fpr) { m_fprAllocator.clobber(*this, fpr); }
+    void clobber(JSC::Reg reg) { reg.isGPR() ? clobber(reg.gpr()) : clobber(reg.fpr()); }
 
     Location canonicalSlot(Value value);
 
@@ -2277,18 +2230,15 @@ private:
     Vector<unsigned> m_outerLoops;
     unsigned m_osrEntryScratchBufferSize { 1 };
 
-    Vector<RegisterBinding, 32> m_gprBindings; // Tables mapping from each register to the current value bound to it.
-    Vector<RegisterBinding, 32> m_fprBindings;
-    RegisterSet m_gprSet, m_fprSet; // Sets tracking whether registers are bound or free.
-    RegisterSet m_validGPRs, m_validFPRs; // These contain the original register sets used in m_gprSet and m_fprSet.
     Vector<Location, 8> m_locals; // Vectors mapping local and temp indices to binding indices.
     Vector<Location, 8> m_temps;
     Vector<Location, 8> m_localSlots; // Persistent stack slots for local variables.
     Vector<TypeKind, 8> m_localTypes; // Types of all non-argument locals in this function.
-    LRU<GPRReg> m_gprLRU; // LRU cache tracking when general-purpose registers were last used.
-    LRU<FPRReg> m_fprLRU; // LRU cache tracking when floating-point registers were last used.
-    uint32_t m_lastUseTimestamp; // Monotonically increasing integer incrementing with each register use.
-    Vector<RefPtr<SharedTask<void(BBQJIT&, CCallHelpers&)>>, 8> m_latePaths; // Late paths to emit after the rest of the function body.
+    GPRAllocator m_gprAllocator; // SimpleRegisterAllocator for GPRs
+    FPRAllocator m_fprAllocator; // SimpleRegisterAllocator for FPRs
+    SpillHint m_lastUseTimestamp; // Monotonically increasing integer incrementing with each register use.
+    Vector<Function<void(BBQJIT&, CCallHelpers&)>, 8> m_latePaths; // Late paths to emit after the rest of the function body.
+    Vector<std::tuple<MacroAssembler::JumpList, MacroAssembler::Label, RegisterBindings, Function<void(BBQJIT&, CCallHelpers&)>>> m_slowPaths; // Like a late path but for when we need to make a CCall thus need to restore our state.
 
     // FIXME: All uses of this are to restore sp, so we should emit these as a patchable sub instruction rather than move.
     Vector<DataLabelPtr, 1> m_frameSizeLabels;
@@ -2309,8 +2259,6 @@ private:
     std::array<JumpList, numberOfExceptionTypes> m_exceptions { };
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
     Vector<CCallHelpers::Label> m_catchEntrypoints;
-
-    Vector<std::tuple<Jump, MacroAssembler::Label, TypeIndex, GPRReg>> m_rttSlowPathJumps;
 
     PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
     std::unique_ptr<BBQDisassembler> m_disassembler;

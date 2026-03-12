@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc.  All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "BitmapImageDescriptor.h"
 #include "ImageFrameWorkQueue.h"
 #include "ImageSource.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/WeakPtr.h>
 
@@ -38,7 +39,9 @@ class ImageDecoder;
 class ImageFrameAnimator;
 class ImageObserver;
 
-class BitmapImageSource : public ImageSource {
+class BitmapImageSource final : public ImageSource, public CanMakeCheckedPtr<BitmapImageSource> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BitmapImageSource);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BitmapImageSource);
 public:
     static Ref<BitmapImageSource> create(BitmapImage&, AlphaOption, GammaAndColorProfileOption);
 
@@ -59,7 +62,7 @@ public:
 
     // Decoding & animation
     bool isPendingDecodingAtIndex(unsigned index, SubsamplingLevel, const DecodingOptions&) const;
-    void destroyNativeImageAtIndex(unsigned index);
+    void destroyNativeImageAtIndex(unsigned index, std::optional<ShouldDecodeToHDR> = std::nullopt);
     void imageFrameAtIndexAvailable(unsigned index, ImageAnimatingState, DecodingStatus);
     void imageFrameDecodeAtIndexHasFinished(unsigned index, SubsamplingLevel, ImageAnimatingState, const DecodingOptions&, RefPtr<NativeImage>&&);
 
@@ -72,6 +75,7 @@ public:
     // NativeImage
     DecodingStatus requestNativeImageAtIndexIfNeeded(unsigned index, SubsamplingLevel, ImageAnimatingState, const DecodingOptions&);
 
+    RefPtr<NativeImage> primaryNativeImageIfExists() { return frameAtIndex(primaryFrameIndex()).nativeImage(std::nullopt); }
     RefPtr<NativeImage> primaryNativeImage() final { return nativeImageAtIndex(primaryFrameIndex()); }
 
     // Image Metadata
@@ -157,7 +161,8 @@ private:
     ImageOrientation orientation() const final { return m_descriptor.orientation(); }
     DestinationColorSpace colorSpace() const final { return m_descriptor.colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_descriptor.singlePixelSolidColor(); }
-    Headroom headroom() const final { return m_descriptor.headroom(); }
+    bool hasHDRGainMap() const final { return m_descriptor.hasHDRGainMap(); }
+    bool hasHDRContent() const final { return m_descriptor.hasHDRGainMap() || m_descriptor.hasHDRColorSpace() || hasHDRContentForTesting(); }
 
     String uti() const final { return m_descriptor.uti(); }
     String filenameExtension() const final { return m_descriptor.filenameExtension(); }
@@ -189,8 +194,8 @@ private:
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) final { m_clearDecoderAfterAsyncFrameRequestForTesting = enabled; }
     void setAsyncDecodingEnabledForTesting(bool enabled) final { m_isAsyncDecodingEnabledForTesting = enabled; }
     bool isAsyncDecodingEnabledForTesting() const final { return m_isAsyncDecodingEnabledForTesting; }
-    void setHeadroomForTesting(Headroom headroom) final { m_headroomForTesting = headroom; }
-    std::optional<Headroom> headroomForTesting() const final { return m_headroomForTesting; }
+    void setHasHDRContentForTesting() final;
+    bool hasHDRContentForTesting() const final { return m_hasHDRContentForTesting; }
 
     void dump(TextStream&) const final;
 
@@ -202,7 +207,7 @@ private:
 
     BitmapImageDescriptor m_descriptor;
     mutable RefPtr<ImageDecoder> m_decoder;
-    mutable std::unique_ptr<ImageFrameAnimator> m_frameAnimator;
+    const std::unique_ptr<ImageFrameAnimator> m_frameAnimator;
     mutable RefPtr<ImageFrameWorkQueue> m_workQueue;
     Vector<Function<void(DecodingStatus)>> m_decodeCallbacks;
 
@@ -216,7 +221,7 @@ private:
     unsigned m_blankDrawCountForTesting { 0 };
     bool m_isAsyncDecodingEnabledForTesting { false };
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
-    std::optional<Headroom> m_headroomForTesting;
+    bool m_hasHDRContentForTesting { false };
 };
 
 } // namespace WebCore

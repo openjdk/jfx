@@ -43,6 +43,7 @@ enum AXTextEditType {
     AXTextEditTypeDictation, // Insert via dictation
     AXTextEditTypeCut, // Delete via Cut
     AXTextEditTypePaste, // Insert via Paste
+    AXTextEditTypeReplace, // A deletion + insertion that should be notified as an atomic operation.
     AXTextEditTypeAttributesChange // Change font, style, alignment, color, etc.
 };
 
@@ -77,7 +78,7 @@ struct AXTextStateChangeIntent {
     AXTextStateChangeType type;
     union {
         AXTextSelection selection;
-        AXTextEditType change;
+        AXTextEditType editType;
     };
 
     AXTextStateChangeIntent(AXTextStateChangeType type = AXTextStateChangeTypeUnknown, AXTextSelection selection = AXTextSelection())
@@ -85,9 +86,9 @@ struct AXTextStateChangeIntent {
         , selection(selection)
     { }
 
-    AXTextStateChangeIntent(AXTextEditType change)
+    AXTextStateChangeIntent(AXTextEditType editType)
         : type(AXTextStateChangeTypeEdit)
-        , change(change)
+        , editType(editType)
     { }
 };
 

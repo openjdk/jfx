@@ -34,6 +34,7 @@
 #include "LocalFrame.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -164,6 +165,7 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
     result.orientation = orientation;
     result.shrinkToFit = shrinkToFit;
     result.viewportFit = viewportFit;
+    result.interactiveWidget = interactiveWidget;
 
     return result;
 }
@@ -203,7 +205,7 @@ void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& resu
         result.maximumScale = result.minimumScale = result.initialScale;
 }
 
-static float numericPrefix(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler, bool* ok = nullptr)
+static float numericPrefix(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler, bool* ok = nullptr)
 {
     size_t parsedLength;
     float numericValue;
@@ -224,7 +226,7 @@ static float numericPrefix(StringView key, StringView value, const InternalViewp
     return numericValue;
 }
 
-static float findSizeValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler, bool* valueWasExplicit = nullptr)
+static float findSizeValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler, bool* valueWasExplicit = nullptr)
 {
     // 1) Non-negative number values are translated to px lengths.
     // 2) Negative number values are translated to auto.
@@ -251,7 +253,7 @@ static float findSizeValue(StringView key, StringView value, const InternalViewp
     return sizeValue;
 }
 
-static float findScaleValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static float findScaleValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     // 1) Non-negative number values are translated to <number> values.
     // 2) Negative number values are translated to auto.
@@ -279,7 +281,7 @@ static float findScaleValue(StringView key, StringView value, const InternalView
     return numericValue;
 }
 
-static bool findBooleanValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static bool findBooleanValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     // yes and no are used as keywords.
     // Numbers >= 1, numbers <= -1, device-width and device-height are mapped to yes.
@@ -296,7 +298,7 @@ static bool findBooleanValue(StringView key, StringView value, const InternalVie
     return std::abs(numericPrefix(key, value, errorHandler)) >= 1;
 }
 
-static ViewportFit parseViewportFitValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
+static ViewportFit parseViewportFitValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
 {
     if (equalLettersIgnoringASCIICase(value, "auto"_s))
         return ViewportFit::Auto;
@@ -308,6 +310,20 @@ static ViewportFit parseViewportFitValue(StringView key, StringView value, const
     errorHandler(ViewportErrorCode::UnrecognizedViewportArgumentValue, value, key);
 
     return ViewportFit::Auto;
+}
+
+static InteractiveWidget parseInteractiveWidgetValue(StringView key, StringView value, NOESCAPE const InternalViewportErrorHandler& errorHandler)
+{
+    if (equalLettersIgnoringASCIICase(value, "resizes-visual"_s))
+        return InteractiveWidget::ResizesVisual;
+    if (equalLettersIgnoringASCIICase(value, "resizes-content"_s))
+        return InteractiveWidget::ResizesContent;
+    if (equalLettersIgnoringASCIICase(value, "overlays-content"_s))
+        return InteractiveWidget::OverlaysContent;
+
+    errorHandler(ViewportErrorCode::UnrecognizedViewportArgumentValue, value, key);
+
+    return InteractiveWidget::ResizesVisual;
 }
 
 static ASCIILiteral viewportErrorMessageTemplate(ViewportErrorCode errorCode)
@@ -366,7 +382,7 @@ static void reportViewportWarning(Document& document, ViewportErrorCode errorCod
     document.addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
 }
 
-void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, const ViewportErrorHandler& errorHandler)
+void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, bool metaViewportInteractiveWidgetEnabled, NOESCAPE const ViewportErrorHandler& errorHandler)
 {
     InternalViewportErrorHandler internalErrorHandler = [&errorHandler] (ViewportErrorCode errorCode, StringView replacement1, StringView replacement2) {
         errorHandler(errorCode, viewportErrorMessage(errorCode, replacement1, replacement2));
@@ -394,13 +410,15 @@ void setViewportFeature(ViewportArguments& arguments, StringView key, StringView
         arguments.shrinkToFit = findBooleanValue(key, value, internalErrorHandler);
     else if (equalLettersIgnoringASCIICase(key, "viewport-fit"_s))
         arguments.viewportFit = parseViewportFitValue(key, value, internalErrorHandler);
+    else if (metaViewportInteractiveWidgetEnabled && equalLettersIgnoringASCIICase(key, "interactive-widget"_s))
+        arguments.interactiveWidget = parseInteractiveWidgetValue(key, value, internalErrorHandler);
     else
         internalErrorHandler(ViewportErrorCode::UnrecognizedViewportArgumentKey, key, { });
 }
 
 void setViewportFeature(ViewportArguments& arguments, Document& document, StringView key, StringView value)
 {
-    setViewportFeature(arguments, key, value, [&](ViewportErrorCode errorCode, const String& message) {
+    setViewportFeature(arguments, key, value, document.settings().metaViewportInteractiveWidgetEnabled(), [&](ViewportErrorCode errorCode, const String& message) {
         reportViewportWarning(document, errorCode, message);
     });
 }
@@ -409,8 +427,8 @@ TextStream& operator<<(TextStream& ts, const ViewportArguments& viewportArgument
 {
     TextStream::IndentScope indentScope(ts);
 
-    ts << "\n" << indent << "(width " << viewportArguments.width << ", height " << viewportArguments.height << ")";
-    ts << "\n" << indent << "(zoom " << viewportArguments.zoom << ", minZoom " << viewportArguments.minZoom << ", maxZoom " << viewportArguments.maxZoom << ")";
+    ts << '\n' << indent << "(width "_s << viewportArguments.width << ", height "_s << viewportArguments.height << ')';
+    ts << '\n' << indent << "(zoom "_s << viewportArguments.zoom << ", minZoom "_s << viewportArguments.minZoom << ", maxZoom "_s << viewportArguments.maxZoom << ')';
 
     return ts;
 }

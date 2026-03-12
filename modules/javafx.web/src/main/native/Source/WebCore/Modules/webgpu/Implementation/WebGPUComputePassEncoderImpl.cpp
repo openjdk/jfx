@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ ComputePassEncoderImpl::~ComputePassEncoderImpl() = default;
 
 void ComputePassEncoderImpl::setPipeline(const ComputePipeline& computePipeline)
 {
-    wgpuComputePassEncoderSetPipeline(m_backing.get(), protectedConvertToBackingContext()->convertToBacking(computePipeline));
+    wgpuComputePassEncoderSetPipeline(m_backing.get(), m_convertToBackingContext->convertToBacking(computePipeline));
 }
 
 void ComputePassEncoderImpl::dispatch(Size32 workgroupCountX, Size32 workgroupCountY, Size32 workgroupCountZ)
@@ -60,7 +60,7 @@ void ComputePassEncoderImpl::dispatch(Size32 workgroupCountX, Size32 workgroupCo
 
 void ComputePassEncoderImpl::dispatchIndirect(const Buffer& indirectBuffer, Size64 indirectOffset)
 {
-    wgpuComputePassEncoderDispatchWorkgroupsIndirect(m_backing.get(), protectedConvertToBackingContext()->convertToBacking(indirectBuffer), indirectOffset);
+    wgpuComputePassEncoderDispatchWorkgroupsIndirect(m_backing.get(), m_convertToBackingContext->convertToBacking(indirectBuffer), indirectOffset);
 }
 
 void ComputePassEncoderImpl::end()
@@ -68,19 +68,15 @@ void ComputePassEncoderImpl::end()
     wgpuComputePassEncoderEnd(m_backing.get());
 }
 
-void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& offsets)
 {
-    auto backingOffsets = valueOrDefault(offsets);
-    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), static_cast<uint32_t>(backingOffsets.size()), backingOffsets.data());
+    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTFMove(offsets));
 }
 
-void ComputePassEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
-    std::span<const uint32_t> dynamicOffsetsArrayBuffer,
-    Size64 dynamicOffsetsDataStart,
-    Size32 dynamicOffsetsDataLength)
+void ComputePassEncoderImpl::setBindGroup(Index32, const BindGroup*, std::span<const uint32_t>, Size64, Size32)
 {
-    wgpuComputePassEncoderSetBindGroup(m_backing.get(), index, protectedConvertToBackingContext()->convertToBacking(bindGroup), dynamicOffsetsDataLength, dynamicOffsetsArrayBuffer.subspan(dynamicOffsetsDataStart).data());
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void ComputePassEncoderImpl::pushDebugGroup(String&& groupLabel)

@@ -153,8 +153,7 @@ static bool canPowerEfficientlyEncodeMedia(const MediaEncodingConfiguration& con
 void MediaEngineConfigurationFactoryMock::createDecodingConfiguration(MediaDecodingConfiguration&& configuration, DecodingConfigurationCallback&& callback)
 {
     if (!canDecodeMedia(configuration)) {
-        MediaCapabilitiesDecodingInfo info { WTFMove(configuration) };
-        callback(WTFMove(info));
+        callback({ { }, WTFMove(configuration) });
         return;
     }
     callback({{ true, canSmoothlyDecodeMedia(configuration), canPowerEfficientlyDecodeMedia(configuration) }, WTFMove(configuration)});
@@ -163,7 +162,7 @@ void MediaEngineConfigurationFactoryMock::createDecodingConfiguration(MediaDecod
 void MediaEngineConfigurationFactoryMock::createEncodingConfiguration(MediaEncodingConfiguration&& configuration, EncodingConfigurationCallback&& callback)
 {
     if (!canEncodeMedia(configuration)) {
-        callback({{ }, WTFMove(configuration) });
+        callback({ { }, WTFMove(configuration) });
         return;
     }
     callback({{ true, canSmoothlyEncodeMedia(configuration), canPowerEfficientlyEncodeMedia(configuration) }, WTFMove(configuration)});

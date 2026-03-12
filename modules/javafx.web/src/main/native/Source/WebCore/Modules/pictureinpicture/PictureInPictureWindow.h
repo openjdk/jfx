@@ -30,6 +30,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IntSize.h"
 #include <wtf/RefCounted.h>
 

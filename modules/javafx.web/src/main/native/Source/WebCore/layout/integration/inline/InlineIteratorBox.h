@@ -27,7 +27,6 @@
 
 #include "InlineIteratorBoxLegacyPath.h"
 #include "InlineIteratorBoxModernPath.h"
-#include <variant>
 
 namespace WebCore {
 
@@ -47,7 +46,7 @@ struct EndIterator { };
 
 class Box {
 public:
-    using PathVariant = std::variant<
+    using PathVariant = Variant<
         BoxModernPath,
         BoxLegacyPath
     >;

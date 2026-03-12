@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,7 @@ import javafx.beans.value.ObservableValue;
  * and no decorations.</li>
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
+ * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar} (Preview Feature).</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
  * <p>On some platforms decorations might not be available. For example, on

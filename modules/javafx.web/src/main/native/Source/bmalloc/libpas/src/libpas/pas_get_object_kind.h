@@ -69,7 +69,7 @@ static PAS_ALWAYS_INLINE pas_object_kind pas_get_object_kind(void* ptr,
         return pas_large_object_kind;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_not_an_object_kind;
 
 use_page_kind:

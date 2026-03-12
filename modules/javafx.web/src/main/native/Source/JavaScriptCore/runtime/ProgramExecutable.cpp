@@ -102,7 +102,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
 
     JSValue nextPrototype = globalObject->getPrototypeDirect();
     while (nextPrototype && nextPrototype.isObject()) {
-        if (UNLIKELY(asObject(nextPrototype)->type() == ProxyObjectType))
+        if (asObject(nextPrototype)->type() == ProxyObjectType) [[unlikely]]
             return createTypeError(globalObject, "Proxy is not allowed in the global prototype chain."_s);
         nextPrototype = asObject(nextPrototype)->getPrototypeDirect();
     }
@@ -123,7 +123,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
                 bool hasProperty = globalLexicalEnvironment->hasProperty(globalObject, entry.key.get());
                 RETURN_IF_EXCEPTION(throwScope, nullptr);
                 if (hasProperty) {
-                    if (UNLIKELY(entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext())) {
+                    if (entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext()) [[unlikely]] {
                         // We only allow "const" duplicate declarations under this setting.
                         // For example, we don't allow "let" variables to be overridden by "const" variables.
                         if (globalLexicalEnvironment->isConstVariable(entry.key.get()))
@@ -248,7 +248,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, JSGlobalObject* 
         SymbolTable* symbolTable = globalLexicalEnvironment->symbolTable();
         ConcurrentJSLocker locker(symbolTable->m_lock);
         for (auto& entry : lexicalDeclarations) {
-            if (UNLIKELY(entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext())) {
+            if (entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isInStrictContext()) [[unlikely]] {
                 if (symbolTable->contains(locker, entry.key.get()))
                     continue;
             }

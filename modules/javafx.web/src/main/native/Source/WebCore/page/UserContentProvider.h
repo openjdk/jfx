@@ -69,10 +69,10 @@ public:
     WEBCORE_EXPORT UserContentProvider();
     WEBCORE_EXPORT virtual ~UserContentProvider();
 
-    virtual void forEachUserScript(Function<void(DOMWrapperWorld&, const UserScript&)>&&) const = 0;
-    virtual void forEachUserStyleSheet(Function<void(const UserStyleSheet&)>&&) const = 0;
+    virtual void forEachUserScript(NOESCAPE const Function<void(DOMWrapperWorld&, const UserScript&)>&) const = 0;
+    virtual void forEachUserStyleSheet(NOESCAPE const Function<void(const UserStyleSheet&)>&) const = 0;
 #if ENABLE(USER_MESSAGE_HANDLERS)
-    virtual void forEachUserMessageHandler(Function<void(const UserMessageHandlerDescriptor&)>&&) const = 0;
+    virtual void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const = 0;
 #endif
 #if ENABLE(CONTENT_EXTENSIONS)
     virtual ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() = 0;

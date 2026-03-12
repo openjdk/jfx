@@ -290,7 +290,7 @@ bool optimizePairedLoadStore(Code& code)
                     if ((inst.args[1].base() == Tmp(CCallHelpers::stackPointerRegister) || inst.args[1].base() == Tmp(CCallHelpers::framePointerRegister)) && !inst.kind.spill)
                         continue;
                     if (tryStorePair(code, block, index, inst)) {
-                        block->insts().remove(index);
+                        block->insts().removeAt(index);
                         changed = true;
                     }
                     continue;

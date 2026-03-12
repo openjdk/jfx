@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -56,11 +56,12 @@ const AtomString& SubmitInputType::formControlType() const
 bool SubmitInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
-    if (!element()->isActivatedSubmit())
+    Ref element = *this->element();
+    if (!element->isActivatedSubmit())
         return false;
-    formData.append(element()->name(), element()->valueWithDefault());
-    if (auto& dirname = element()->attributeWithoutSynchronization(HTMLNames::dirnameAttr); !dirname.isNull())
-        formData.append(dirname, element()->directionForFormData());
+    formData.append(element->name(), element->valueWithDefault());
+    if (auto& dirname = element->attributeWithoutSynchronization(HTMLNames::dirnameAttr); !dirname.isNull())
+        formData.append(dirname, element->directionForFormData());
     return true;
 }
 
@@ -72,18 +73,18 @@ bool SubmitInputType::supportsRequired() const
 void SubmitInputType::handleDOMActivateEvent(Event& event)
 {
     ASSERT(element());
-    Ref<HTMLInputElement> protectedElement(*element());
-    if (protectedElement->isDisabledFormControl() || !protectedElement->form())
+    Ref element = *this->element();
+    if (element->isDisabledFormControl() || !element->form())
         return;
 
-    Ref<HTMLFormElement> protectedForm(*protectedElement->form());
+    Ref protectedForm = *element->form();
 
     // Update layout before processing form actions in case the style changes
     // the Form or button relationships.
-    protectedElement->protectedDocument()->updateLayoutIgnorePendingStylesheets();
+    element->protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-    if (RefPtr currentForm = protectedElement->form())
-        currentForm->submitIfPossible(&event, element()); // Event handlers can run.
+    if (RefPtr currentForm = element->form())
+        currentForm->submitIfPossible(&event, element.ptr()); // Event handlers can run.
     event.setDefaultHandled();
 }
 

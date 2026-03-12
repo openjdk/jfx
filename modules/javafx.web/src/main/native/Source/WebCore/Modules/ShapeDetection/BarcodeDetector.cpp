@@ -30,7 +30,7 @@
 #include "BarcodeFormat.h"
 #include "Chrome.h"
 #include "DetectedBarcode.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "ImageBitmap.h"
 #include "ImageBitmapOptions.h"
 #include "ImageBuffer.h"

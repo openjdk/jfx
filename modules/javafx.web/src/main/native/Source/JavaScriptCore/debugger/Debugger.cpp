@@ -27,6 +27,7 @@
 #include "DebuggerScope.h"
 #include "HeapIterationScope.h"
 #include "JSCInlines.h"
+#include "JSGenerator.h"
 #include "MarkedSpaceInlines.h"
 #include "Microtask.h"
 #include "VMEntryScopeInlines.h"
@@ -67,6 +68,7 @@ private:
 // This is very similar to SetForScope<bool>, but that cannot be used
 // as the m_isPaused field uses only one bit.
 class TemporaryPausedState {
+    WTF_FORBID_HEAP_ALLOCATION;
 public:
     TemporaryPausedState(Debugger& debugger)
         : m_debugger(debugger)
@@ -78,6 +80,24 @@ public:
     ~TemporaryPausedState()
     {
         m_debugger.m_isPaused = false;
+    }
+
+private:
+    Debugger& m_debugger;
+};
+
+class PauseReasonDeclaration {
+    WTF_FORBID_HEAP_ALLOCATION;
+public:
+    PauseReasonDeclaration(Debugger& debugger, Debugger::ReasonForPause reason)
+        : m_debugger(debugger)
+    {
+        m_debugger.m_reasonForPause = reason;
+    }
+
+    ~PauseReasonDeclaration()
+    {
+        m_debugger.m_reasonForPause = Debugger::NotPaused;
     }
 
 private:
@@ -135,6 +155,8 @@ Debugger::Debugger(VM& vm)
 
 Debugger::~Debugger()
 {
+    resetAsyncPauseState();
+
     m_vm.removeDebugger(*this);
 
     for (auto* globalObject : m_globalObjects)
@@ -180,7 +202,7 @@ void Debugger::detach(JSGlobalObject* globalObject, ReasonForDetach reason)
 
     if (m_isPaused && m_currentCallFrame && (!vm.isEntered() || vm.entryScope->globalObject() == globalObject)) {
         m_currentCallFrame = nullptr;
-        m_pauseOnCallFrame = nullptr;
+        resetAsyncPauseState();
         continueProgram();
     }
 
@@ -990,7 +1012,10 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
 
     DebuggerPausedScope debuggerPausedScope(*this);
 
+    bool didPauseInAwait = m_didPauseInAwait;
+
     resetImmediatePauseState();
+    resetAsyncPauseState();
 
     // Don't clear the `m_pauseOnCallFrame` if we've not hit it yet, as we may have encountered a breakpoint that won't pause.
     bool atDesiredCallFrame = !m_pauseOnCallFrame || m_pauseOnCallFrame == m_currentCallFrame;
@@ -1073,11 +1098,13 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
         auto reason = m_reasonForPause;
         if (afterBlackboxedScript)
             reason = PausedAfterBlackboxedScript;
+        else if (didPauseInAwait)
+            reason = PausedAfterAwait;
         else if (m_pausingBreakpointID)
             reason = PausedForBreakpoint;
         PauseReasonDeclaration rauseReasonDeclaration(*this, reason);
 
-        handlePause(globalObject, m_reasonForPause);
+        handlePause(globalObject);
         scope.releaseAssertNoException();
     }
 
@@ -1089,7 +1116,7 @@ void Debugger::pauseIfNeeded(JSGlobalObject* globalObject)
     }
 }
 
-void Debugger::handlePause(JSGlobalObject* globalObject, ReasonForPause)
+void Debugger::handlePause(JSGlobalObject* globalObject)
 {
     dispatchFunctionToObservers([&] (Observer& observer) {
         ASSERT(isPaused());
@@ -1208,6 +1235,56 @@ void Debugger::atExpression(CallFrame* callFrame)
 
     PauseReasonDeclaration reason(*this, PausedAtExpression);
     updateCallFrame(lexicalGlobalObjectForCallFrame(m_vm, callFrame), callFrame, shouldAttemptPause ? AttemptPause : NoPause);
+}
+
+void Debugger::willAwait(CallFrame* callFrame, JSValue generatorValue)
+{
+    if (m_isPaused)
+        return;
+
+    if (m_pauseForAwaitInGenerator)
+        return;
+
+    // This currently only handles "Step over" and "Step" as it'd be difficult to keep track of each
+    // parent `CallFrame` after each "Step into", and handling "Step out" would require knowing the
+    // await identifier of every parent `CallFrame` which would effectively mean holding on to all
+    // of them since we won't know ahead of time in which child `CallFrame` execution might pause.
+    if (!m_pauseOnCallFrame || m_pauseOnCallFrame != callFrame)
+        return;
+
+    m_pauseForAwaitInGenerator = jsDynamicCast<JSGenerator*>(generatorValue);
+    ASSERT(m_pauseForAwaitInGenerator);
+    if (!m_pauseForAwaitInGenerator)
+        return;
+
+    ASSERT(!m_abandonPauseInAwaitTimer);
+    if (!m_abandonPauseInAwaitTimer) {
+        m_abandonPauseInAwaitTimer = adoptRef(*new AbandonPauseInAwaitTimer(*this));
+        m_abandonPauseInAwaitTimer->setTimeUntilFire(1_s);
+    }
+
+    // Clear the pause state so that we don't keep stepping.
+    resetImmediatePauseState();
+    resetEventualPauseState();
+}
+
+void Debugger::didAwait(CallFrame*, JSValue generatorValue)
+{
+    if (m_isPaused)
+        return;
+
+    if (!m_pauseForAwaitInGenerator)
+        return;
+
+    JSGenerator* generator = jsDynamicCast<JSGenerator*>(generatorValue);
+    ASSERT(generator);
+    if (m_pauseForAwaitInGenerator != generator)
+        return;
+
+    resetAsyncPauseState();
+    m_didPauseInAwait = true;
+
+    schedulePauseAtNextOpportunity();
 }
 
 void Debugger::callEvent(CallFrame* callFrame)
@@ -1329,6 +1406,15 @@ void Debugger::resetEventualPauseState()
     m_pauseOnStepOut = false;
 }
 
+void Debugger::resetAsyncPauseState()
+{
+    m_pauseForAwaitInGenerator = nullptr;
+    m_didPauseInAwait = false;
+
+    if (auto abandonPauseInAwaitTimer = std::exchange(m_abandonPauseInAwaitTimer, nullptr))
+        abandonPauseInAwaitTimer->cancelTimer();
+}
+
 void Debugger::didReachDebuggerStatement(CallFrame* callFrame)
 {
     if (m_isPaused)
@@ -1387,6 +1473,20 @@ void Debugger::setBlackboxBreakpointEvaluations(bool blackboxBreakpointEvaluatio
 void Debugger::clearBlackbox()
 {
     m_blackboxConfigurations.clear();
+}
+
+Debugger::AbandonPauseInAwaitTimer::AbandonPauseInAwaitTimer(Debugger& debugger)
+    : JSRunLoopTimer(debugger.vm())
+    , m_debugger(debugger)
+{
+}
+
+void Debugger::AbandonPauseInAwaitTimer::doWork(VM& vm)
+{
+    ASSERT_UNUSED(vm, &vm == &m_debugger.vm());
+
+    m_debugger.resetAsyncPauseState();
+    ASSERT(!m_debugger.m_abandonPauseInAwaitTimer);
 }
 
 } // namespace JSC
