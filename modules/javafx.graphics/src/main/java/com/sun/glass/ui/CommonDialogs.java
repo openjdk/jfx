@@ -232,8 +232,7 @@ public class CommonDialogs {
             try {
                 return folder.getCanonicalPath();
             } catch (IOException e) {
-                // Do not propagate the exception and let the platfrom decide
-                // what folder to use as initial dirictory.
+                // Do not propagate the exception and let the platfrom decide what folder to use as initial directory.
             }
         }
 
