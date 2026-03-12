@@ -377,7 +377,7 @@ public class TextFieldTableCellTest {
      *
      **************************************************************************/
 
-    @Test public void test_rt_32869() {
+    @Test public void testContextMenuFocusShouldStay() {
         TableColumn tc = new TableColumn();
         tc.setCellValueFactory(param -> new ReadOnlyStringWrapper("Dummy Text"));
 
