@@ -228,15 +228,12 @@ public class CommonDialogs {
     }
 
     private static String convertFolder(File folder) {
-        if (folder != null) {
-            if (folder.isDirectory()) {
-                try {
-                    return folder.getCanonicalPath();
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("Unable to get a canonical path for the initial directory", e);
-                }
-            } else {
-                throw new IllegalArgumentException("The initial directory does not exist or is not a directory or is not accessible");
+        if (folder != null && folder.isDirectory()) {
+            try {
+                return folder.getCanonicalPath();
+            } catch (IOException e) {
+                // Do not propagate the exception and let the platfrom decide
+                // what folder to use as initial dirictory.
             }
         }
 

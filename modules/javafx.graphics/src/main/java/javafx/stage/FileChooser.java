@@ -205,6 +205,11 @@ public final class FileChooser {
 
     /**
      * The initial directory for the displayed file dialog.
+     * <p>
+     * If this directory is not set, does not exist, is not a directory or is not accessible,
+     * the dialog will fall back to the platform-default location. The default folder may vary
+     * across operating systems.
+     * </p>
      */
     private ObjectProperty<File> initialDirectory;
 
@@ -324,8 +329,6 @@ public final class FileChooser {
      * is being shown.
      *
      * @param ownerWindow the owner window of the displayed file dialog
-     * @throws IllegalArgumentException if the initial directory does not
-     *      exist or is not a directory or is not accessible
      * @return the selected file or {@code null} if no file has been selected
      */
     public File showOpenDialog(final Window ownerWindow) {
@@ -348,8 +351,6 @@ public final class FileChooser {
      * {@code UnsupportedOperationException} on each modification attempt.
      *
      * @param ownerWindow the owner window of the displayed file dialog
-     * @throws IllegalArgumentException if the initial directory does not
-     *      exist or is not a directory or is not accessible
      * @return the selected files or {@code null} if no file has been selected
      */
     public List<File> showOpenMultipleDialog(final Window ownerWindow) {
@@ -369,8 +370,6 @@ public final class FileChooser {
      * the dialog's owner chain is blocked while the file dialog is being shown.
      *
      * @param ownerWindow the owner window of the displayed file dialog
-     * @throws IllegalArgumentException if the initial directory does not
-     *      exist or is not a directory or is not accessible
      * @return the selected file or {@code null} if no file has been selected
      */
     public File showSaveDialog(final Window ownerWindow) {
