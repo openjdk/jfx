@@ -32,9 +32,9 @@
 #include "private/tree.h"
 
 /************************************************************************
- *									*
- *		Getting/Setting encoding meta tags			*
- *									*
+ *                                                                      *
+ *              Getting/Setting encoding meta tags                      *
+ *                                                                      *
  ************************************************************************/
 
 typedef struct {
@@ -440,9 +440,9 @@ htmlIsBooleanAttr(const xmlChar *name)
 
 #ifdef LIBXML_OUTPUT_ENABLED
 /************************************************************************
- *									*
- *		Dumping HTML tree content to a simple buffer		*
- *									*
+ *                                                                      *
+ *              Dumping HTML tree content to a simple buffer            *
+ *                                                                      *
  ************************************************************************/
 
 static xmlParserErrors
@@ -473,14 +473,14 @@ htmlBufNodeDumpFormat(xmlBufPtr buf, xmlDocPtr doc ATTRIBUTE_UNUSED,
     xmlOutputBufferPtr outbuf;
 
     if (cur == NULL) {
-	return ((size_t) -1);
+        return ((size_t) -1);
     }
     if (buf == NULL) {
-	return ((size_t) -1);
+        return ((size_t) -1);
     }
     outbuf = (xmlOutputBufferPtr) xmlMalloc(sizeof(xmlOutputBuffer));
     if (outbuf == NULL)
-	return ((size_t) -1);
+        return ((size_t) -1);
     memset(outbuf, 0, sizeof(xmlOutputBuffer));
     outbuf->buffer = buf;
     outbuf->encoder = NULL;
@@ -546,7 +546,7 @@ htmlNodeDump(xmlBuffer *buf, xmlDoc *doc, xmlNode *cur) {
  */
 int
 htmlNodeDumpFileFormat(FILE *out, xmlDoc *doc ATTRIBUTE_UNUSED,
-	               xmlNode *cur, const char *encoding, int format) {
+                       xmlNode *cur, const char *encoding, int format) {
     xmlOutputBufferPtr buf;
     xmlCharEncodingHandlerPtr handler;
     int ret;
@@ -610,14 +610,14 @@ htmlDocDumpMemoryFormat(xmlDoc *cur, xmlChar**mem, int *size, int format) {
     *mem = NULL;
     *size = 0;
     if (cur == NULL)
-	return;
+        return;
 
     if (htmlFindOutputEncoder((char *) cur->encoding, &handler) != XML_ERR_OK)
         return;
     buf = xmlAllocOutputBuffer(handler);
     if (buf == NULL) {
         xmlCharEncCloseFunc(handler);
-	return;
+        return;
     }
 
     htmlDocContentDumpFormatOutput(buf, cur, NULL, format);
@@ -654,9 +654,9 @@ htmlDocDumpMemory(xmlDoc *cur, xmlChar**mem, int *size) {
 
 
 /************************************************************************
- *									*
- *		Dumping HTML tree content to an I/O output buffer	*
- *									*
+ *                                                                      *
+ *              Dumping HTML tree content to an I/O output buffer       *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -670,24 +670,24 @@ htmlDocDumpMemory(xmlDoc *cur, xmlChar**mem, int *size) {
  */
 static void
 htmlDtdDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr doc,
-	          const char *encoding ATTRIBUTE_UNUSED) {
+                  const char *encoding ATTRIBUTE_UNUSED) {
     xmlDtdPtr cur = doc->intSubset;
 
     if (cur == NULL)
-	return;
+        return;
     xmlOutputBufferWrite(buf, 10, "<!DOCTYPE ");
     xmlOutputBufferWriteString(buf, (const char *)cur->name);
     if (cur->ExternalID != NULL) {
-	xmlOutputBufferWrite(buf, 8, " PUBLIC ");
-	xmlOutputBufferWriteQuotedString(buf, cur->ExternalID);
-	if (cur->SystemID != NULL) {
-	    xmlOutputBufferWrite(buf, 1, " ");
-	    xmlOutputBufferWriteQuotedString(buf, cur->SystemID);
-	}
+        xmlOutputBufferWrite(buf, 8, " PUBLIC ");
+        xmlOutputBufferWriteQuotedString(buf, cur->ExternalID);
+        if (cur->SystemID != NULL) {
+            xmlOutputBufferWrite(buf, 1, " ");
+            xmlOutputBufferWriteQuotedString(buf, cur->SystemID);
+        }
     } else if (cur->SystemID != NULL &&
-	       xmlStrcmp(cur->SystemID, BAD_CAST "about:legacy-compat")) {
-	xmlOutputBufferWrite(buf, 8, " SYSTEM ");
-	xmlOutputBufferWriteQuotedString(buf, cur->SystemID);
+               xmlStrcmp(cur->SystemID, BAD_CAST "about:legacy-compat")) {
+        xmlOutputBufferWrite(buf, 8, " SYSTEM ");
+        xmlOutputBufferWriteQuotedString(buf, cur->SystemID);
     }
     xmlOutputBufferWrite(buf, 2, ">\n");
 }
@@ -839,7 +839,7 @@ htmlNodeDumpInternal(xmlOutputBuffer *buf, xmlNode *cur,
     xmlInitParser();
 
     if ((cur == NULL) || (buf == NULL)) {
-	return;
+        return;
     }
 
     root = cur;
@@ -1157,7 +1157,7 @@ htmlNodeDumpOutput(xmlOutputBuffer *buf, xmlDoc *doc ATTRIBUTE_UNUSED,
  */
 void
 htmlDocContentDumpFormatOutput(xmlOutputBuffer *buf, xmlDoc *cur,
-	                       const char *encoding ATTRIBUTE_UNUSED,
+                               const char *encoding ATTRIBUTE_UNUSED,
                                int format) {
     htmlNodeDumpInternal(buf, (xmlNodePtr) cur, NULL, format);
 }
@@ -1173,14 +1173,14 @@ htmlDocContentDumpFormatOutput(xmlOutputBuffer *buf, xmlDoc *cur,
  */
 void
 htmlDocContentDumpOutput(xmlOutputBuffer *buf, xmlDoc *cur,
-	                 const char *encoding ATTRIBUTE_UNUSED) {
+                         const char *encoding ATTRIBUTE_UNUSED) {
     htmlNodeDumpInternal(buf, (xmlNodePtr) cur, NULL, 1);
 }
 
 /************************************************************************
- *									*
- *		Saving functions front-ends				*
- *									*
+ *                                                                      *
+ *              Saving functions front-ends                             *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -1210,7 +1210,7 @@ htmlDocDump(FILE *f, xmlDoc *cur) {
     xmlInitParser();
 
     if ((cur == NULL) || (f == NULL)) {
-	return(-1);
+        return(-1);
     }
 
     if (htmlFindOutputEncoder((char *) cur->encoding, &handler) != XML_ERR_OK)
@@ -1264,7 +1264,7 @@ htmlSaveFile(const char *filename, xmlDoc *cur) {
  */
 int
 htmlSaveFileFormat(const char *filename, xmlDoc *cur,
-	           const char *encoding, int format) {
+                   const char *encoding, int format) {
     xmlOutputBufferPtr buf;
     xmlCharEncodingHandlerPtr handler = NULL;
     int ret;

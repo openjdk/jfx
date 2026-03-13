@@ -146,9 +146,9 @@ typedef xmlError *xmlErrorPtr;
  */
 struct _xmlError {
     /** An xmlErrorDomain value. */
-    int		domain;
+    int         domain;
     /** The error code, e.g. an xmlParserErrors. */
-    int		code;
+    int         code;
     /** Human-readable error message. */
     char       *message;
     /** Error level. */
@@ -156,7 +156,7 @@ struct _xmlError {
     /** Filename if available */
     char       *file;
     /** Line number if available */
-    int		line;
+    int         line;
     /** Extra string information. */
     char       *str1;
     /** Extra string information. */
@@ -164,9 +164,9 @@ struct _xmlError {
     /** Extra string information. */
     char       *str3;
     /** Extra number information. */
-    int		int1;
+    int         int1;
     /** Column number if available. */
-    int		int2;
+    int         int2;
     /** Parser context if available */
     void       *ctxt;
     /** Node if available */
@@ -942,8 +942,8 @@ typedef enum {
  * @param ...  arguments to format
  */
 typedef void (*xmlGenericErrorFunc) (void *ctx,
-				 const char *msg,
-				 ...) LIBXML_ATTR_FORMAT(2,3);
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 /**
  * Structured error callback receiving an xmlError.
  *
@@ -998,11 +998,11 @@ XMLPUBFUN void **__xmlStructuredErrorContext(void);
 #endif
 
 XMLPUBFUN void
-    xmlSetGenericErrorFunc	(void *ctx,
-				 xmlGenericErrorFunc handler);
+    xmlSetGenericErrorFunc      (void *ctx,
+                                 xmlGenericErrorFunc handler);
 XMLPUBFUN void
-    xmlSetStructuredErrorFunc	(void *ctx,
-				 xmlStructuredErrorFunc handler);
+    xmlSetStructuredErrorFunc   (void *ctx,
+                                 xmlStructuredErrorFunc handler);
 
 XML_DEPRECATED
 XMLPUBFUN void
@@ -1017,47 +1017,47 @@ XMLPUBFUN void
  * Legacy error handlers.
  */
 XMLPUBFUN void
-    xmlParserError		(void *ctx,
-				 const char *msg,
-				 ...) LIBXML_ATTR_FORMAT(2,3);
+    xmlParserError              (void *ctx,
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 XMLPUBFUN void
-    xmlParserWarning		(void *ctx,
-				 const char *msg,
-				 ...) LIBXML_ATTR_FORMAT(2,3);
+    xmlParserWarning            (void *ctx,
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 XMLPUBFUN void
-    xmlParserValidityError	(void *ctx,
-				 const char *msg,
-				 ...) LIBXML_ATTR_FORMAT(2,3);
+    xmlParserValidityError      (void *ctx,
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 XMLPUBFUN void
-    xmlParserValidityWarning	(void *ctx,
-				 const char *msg,
-				 ...) LIBXML_ATTR_FORMAT(2,3);
+    xmlParserValidityWarning    (void *ctx,
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 struct _xmlParserInput;
 XMLPUBFUN void
-    xmlParserPrintFileInfo	(struct _xmlParserInput *input);
+    xmlParserPrintFileInfo      (struct _xmlParserInput *input);
 XMLPUBFUN void
-    xmlParserPrintFileContext	(struct _xmlParserInput *input);
+    xmlParserPrintFileContext   (struct _xmlParserInput *input);
 XMLPUBFUN void
-xmlFormatError			(const xmlError *err,
-				 xmlGenericErrorFunc channel,
-				 void *data);
+xmlFormatError                  (const xmlError *err,
+                                 xmlGenericErrorFunc channel,
+                                 void *data);
 
 /*
  * Extended error information routines
  */
 XMLPUBFUN const xmlError *
-    xmlGetLastError		(void);
+    xmlGetLastError             (void);
 XMLPUBFUN void
-    xmlResetLastError		(void);
+    xmlResetLastError           (void);
 XMLPUBFUN const xmlError *
-    xmlCtxtGetLastError		(void *ctx);
+    xmlCtxtGetLastError         (void *ctx);
 XMLPUBFUN void
-    xmlCtxtResetLastError	(void *ctx);
+    xmlCtxtResetLastError       (void *ctx);
 XMLPUBFUN void
-    xmlResetError		(xmlError *err);
+    xmlResetError               (xmlError *err);
 XMLPUBFUN int
-    xmlCopyError		(const xmlError *from,
-				 xmlError *to);
+    xmlCopyError                (const xmlError *from,
+                                 xmlError *to);
 
 #ifdef __cplusplus
 }

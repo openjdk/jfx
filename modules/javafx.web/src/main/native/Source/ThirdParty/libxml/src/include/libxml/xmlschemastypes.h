@@ -37,118 +37,118 @@ typedef enum {
 } xmlSchemaWhitespaceValueType;
 
 XMLPUBFUN int
-		xmlSchemaInitTypes		(void);
+                xmlSchemaInitTypes              (void);
 XML_DEPRECATED
 XMLPUBFUN void
-		xmlSchemaCleanupTypes		(void);
+                xmlSchemaCleanupTypes           (void);
 XMLPUBFUN xmlSchemaType *
-		xmlSchemaGetPredefinedType	(const xmlChar *name,
-						 const xmlChar *ns);
+                xmlSchemaGetPredefinedType      (const xmlChar *name,
+                                                 const xmlChar *ns);
 XMLPUBFUN int
-		xmlSchemaValidatePredefinedType	(xmlSchemaType *type,
-						 const xmlChar *value,
-						 xmlSchemaVal **val);
+                xmlSchemaValidatePredefinedType (xmlSchemaType *type,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal **val);
 XMLPUBFUN int
-		xmlSchemaValPredefTypeNode	(xmlSchemaType *type,
-						 const xmlChar *value,
-						 xmlSchemaVal **val,
-						 xmlNode *node);
+                xmlSchemaValPredefTypeNode      (xmlSchemaType *type,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal **val,
+                                                 xmlNode *node);
 XMLPUBFUN int
-		xmlSchemaValidateFacet		(xmlSchemaType *base,
-						 xmlSchemaFacet *facet,
-						 const xmlChar *value,
-						 xmlSchemaVal *val);
+                xmlSchemaValidateFacet          (xmlSchemaType *base,
+                                                 xmlSchemaFacet *facet,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal *val);
 XMLPUBFUN int
-		xmlSchemaValidateFacetWhtsp	(xmlSchemaFacet *facet,
-						 xmlSchemaWhitespaceValueType fws,
-						 xmlSchemaValType valType,
-						 const xmlChar *value,
-						 xmlSchemaVal *val,
-						 xmlSchemaWhitespaceValueType ws);
+                xmlSchemaValidateFacetWhtsp     (xmlSchemaFacet *facet,
+                                                 xmlSchemaWhitespaceValueType fws,
+                                                 xmlSchemaValType valType,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal *val,
+                                                 xmlSchemaWhitespaceValueType ws);
 XMLPUBFUN void
-		xmlSchemaFreeValue		(xmlSchemaVal *val);
+                xmlSchemaFreeValue              (xmlSchemaVal *val);
 XMLPUBFUN xmlSchemaFacet *
-		xmlSchemaNewFacet		(void);
+                xmlSchemaNewFacet               (void);
 XMLPUBFUN int
-		xmlSchemaCheckFacet		(xmlSchemaFacet *facet,
-						 xmlSchemaType *typeDecl,
-						 xmlSchemaParserCtxt *ctxt,
-						 const xmlChar *name);
+                xmlSchemaCheckFacet             (xmlSchemaFacet *facet,
+                                                 xmlSchemaType *typeDecl,
+                                                 xmlSchemaParserCtxt *ctxt,
+                                                 const xmlChar *name);
 XMLPUBFUN void
-		xmlSchemaFreeFacet		(xmlSchemaFacet *facet);
+                xmlSchemaFreeFacet              (xmlSchemaFacet *facet);
 XMLPUBFUN int
-		xmlSchemaCompareValues		(xmlSchemaVal *x,
-						 xmlSchemaVal *y);
+                xmlSchemaCompareValues          (xmlSchemaVal *x,
+                                                 xmlSchemaVal *y);
 XMLPUBFUN xmlSchemaType *
-    xmlSchemaGetBuiltInListSimpleTypeItemType	(xmlSchemaType *type);
+    xmlSchemaGetBuiltInListSimpleTypeItemType   (xmlSchemaType *type);
 XMLPUBFUN int
-    xmlSchemaValidateListSimpleTypeFacet	(xmlSchemaFacet *facet,
-						 const xmlChar *value,
-						 unsigned long actualLen,
-						 unsigned long *expectedLen);
+    xmlSchemaValidateListSimpleTypeFacet        (xmlSchemaFacet *facet,
+                                                 const xmlChar *value,
+                                                 unsigned long actualLen,
+                                                 unsigned long *expectedLen);
 XMLPUBFUN xmlSchemaType *
-		xmlSchemaGetBuiltInType		(xmlSchemaValType type);
+                xmlSchemaGetBuiltInType         (xmlSchemaValType type);
 XMLPUBFUN int
-		xmlSchemaIsBuiltInTypeFacet	(xmlSchemaType *type,
-						 int facetType);
+                xmlSchemaIsBuiltInTypeFacet     (xmlSchemaType *type,
+                                                 int facetType);
 XMLPUBFUN xmlChar *
-		xmlSchemaCollapseString		(const xmlChar *value);
+                xmlSchemaCollapseString         (const xmlChar *value);
 XMLPUBFUN xmlChar *
-		xmlSchemaWhiteSpaceReplace	(const xmlChar *value);
+                xmlSchemaWhiteSpaceReplace      (const xmlChar *value);
 XMLPUBFUN unsigned long
-		xmlSchemaGetFacetValueAsULong	(xmlSchemaFacet *facet);
+                xmlSchemaGetFacetValueAsULong   (xmlSchemaFacet *facet);
 XMLPUBFUN int
-		xmlSchemaValidateLengthFacet	(xmlSchemaType *type,
-						 xmlSchemaFacet *facet,
-						 const xmlChar *value,
-						 xmlSchemaVal *val,
-						 unsigned long *length);
+                xmlSchemaValidateLengthFacet    (xmlSchemaType *type,
+                                                 xmlSchemaFacet *facet,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal *val,
+                                                 unsigned long *length);
 XMLPUBFUN int
-		xmlSchemaValidateLengthFacetWhtsp(xmlSchemaFacet *facet,
-						  xmlSchemaValType valType,
-						  const xmlChar *value,
-						  xmlSchemaVal *val,
-						  unsigned long *length,
-						  xmlSchemaWhitespaceValueType ws);
+                xmlSchemaValidateLengthFacetWhtsp(xmlSchemaFacet *facet,
+                                                  xmlSchemaValType valType,
+                                                  const xmlChar *value,
+                                                  xmlSchemaVal *val,
+                                                  unsigned long *length,
+                                                  xmlSchemaWhitespaceValueType ws);
 XMLPUBFUN int
-		xmlSchemaValPredefTypeNodeNoNorm(xmlSchemaType *type,
-						 const xmlChar *value,
-						 xmlSchemaVal **val,
-						 xmlNode *node);
+                xmlSchemaValPredefTypeNodeNoNorm(xmlSchemaType *type,
+                                                 const xmlChar *value,
+                                                 xmlSchemaVal **val,
+                                                 xmlNode *node);
 XMLPUBFUN int
-		xmlSchemaGetCanonValue		(xmlSchemaVal *val,
-						 const xmlChar **retValue);
+                xmlSchemaGetCanonValue          (xmlSchemaVal *val,
+                                                 const xmlChar **retValue);
 XMLPUBFUN int
-		xmlSchemaGetCanonValueWhtsp	(xmlSchemaVal *val,
-						 const xmlChar **retValue,
-						 xmlSchemaWhitespaceValueType ws);
+                xmlSchemaGetCanonValueWhtsp     (xmlSchemaVal *val,
+                                                 const xmlChar **retValue,
+                                                 xmlSchemaWhitespaceValueType ws);
 XMLPUBFUN int
-		xmlSchemaValueAppend		(xmlSchemaVal *prev,
-						 xmlSchemaVal *cur);
+                xmlSchemaValueAppend            (xmlSchemaVal *prev,
+                                                 xmlSchemaVal *cur);
 XMLPUBFUN xmlSchemaVal *
-		xmlSchemaValueGetNext		(xmlSchemaVal *cur);
+                xmlSchemaValueGetNext           (xmlSchemaVal *cur);
 XMLPUBFUN const xmlChar *
-		xmlSchemaValueGetAsString	(xmlSchemaVal *val);
+                xmlSchemaValueGetAsString       (xmlSchemaVal *val);
 XMLPUBFUN int
-		xmlSchemaValueGetAsBoolean	(xmlSchemaVal *val);
+                xmlSchemaValueGetAsBoolean      (xmlSchemaVal *val);
 XMLPUBFUN xmlSchemaVal *
-		xmlSchemaNewStringValue		(xmlSchemaValType type,
-						 const xmlChar *value);
+                xmlSchemaNewStringValue         (xmlSchemaValType type,
+                                                 const xmlChar *value);
 XMLPUBFUN xmlSchemaVal *
-		xmlSchemaNewNOTATIONValue	(const xmlChar *name,
-						 const xmlChar *ns);
+                xmlSchemaNewNOTATIONValue       (const xmlChar *name,
+                                                 const xmlChar *ns);
 XMLPUBFUN xmlSchemaVal *
-		xmlSchemaNewQNameValue		(const xmlChar *namespaceName,
-						 const xmlChar *localName);
+                xmlSchemaNewQNameValue          (const xmlChar *namespaceName,
+                                                 const xmlChar *localName);
 XMLPUBFUN int
-		xmlSchemaCompareValuesWhtsp	(xmlSchemaVal *x,
-						 xmlSchemaWhitespaceValueType xws,
-						 xmlSchemaVal *y,
-						 xmlSchemaWhitespaceValueType yws);
+                xmlSchemaCompareValuesWhtsp     (xmlSchemaVal *x,
+                                                 xmlSchemaWhitespaceValueType xws,
+                                                 xmlSchemaVal *y,
+                                                 xmlSchemaWhitespaceValueType yws);
 XMLPUBFUN xmlSchemaVal *
-		xmlSchemaCopyValue		(xmlSchemaVal *val);
+                xmlSchemaCopyValue              (xmlSchemaVal *val);
 XMLPUBFUN xmlSchemaValType
-		xmlSchemaGetValType		(xmlSchemaVal *val);
+                xmlSchemaGetValType             (xmlSchemaVal *val);
 
 #ifdef __cplusplus
 }

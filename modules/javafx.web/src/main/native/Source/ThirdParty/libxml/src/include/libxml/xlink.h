@@ -84,11 +84,11 @@ typedef void (*xlinkNodeDetectFunc) (void *ctx, xmlNode *node);
  * @param title  the link title
  */
 typedef void
-(*xlinkSimpleLinkFunk)	(void *ctx,
-			 xmlNode *node,
-			 const xlinkHRef href,
-			 const xlinkRole role,
-			 const xlinkTitle title);
+(*xlinkSimpleLinkFunk)  (void *ctx,
+                         xmlNode *node,
+                         const xlinkHRef href,
+                         const xlinkRole role,
+                         const xlinkTitle title);
 
 /**
  * This is the prototype for a extended link detection callback.
@@ -109,18 +109,18 @@ typedef void
  */
 typedef void
 (*xlinkExtendedLinkFunk)(void *ctx,
-			 xmlNode *node,
-			 int nbLocators,
-			 const xlinkHRef *hrefs,
-			 const xlinkRole *roles,
-			 int nbArcs,
-			 const xlinkRole *from,
-			 const xlinkRole *to,
-			 xlinkShow *show,
-			 xlinkActuate *actuate,
-			 int nbTitles,
-			 const xlinkTitle *titles,
-			 const xmlChar **langs);
+                         xmlNode *node,
+                         int nbLocators,
+                         const xlinkHRef *hrefs,
+                         const xlinkRole *roles,
+                         int nbArcs,
+                         const xlinkRole *from,
+                         const xlinkRole *to,
+                         xlinkShow *show,
+                         xlinkActuate *actuate,
+                         int nbTitles,
+                         const xlinkTitle *titles,
+                         const xmlChar **langs);
 
 /**
  * This is the prototype for a extended link set detection callback.
@@ -135,14 +135,14 @@ typedef void
  * @param langs  array of xml:lang values for the titles
  */
 typedef void
-(*xlinkExtendedLinkSetFunk)	(void *ctx,
-				 xmlNode *node,
-				 int nbLocators,
-				 const xlinkHRef *hrefs,
-				 const xlinkRole *roles,
-				 int nbTitles,
-				 const xlinkTitle *titles,
-				 const xmlChar **langs);
+(*xlinkExtendedLinkSetFunk)     (void *ctx,
+                                 xmlNode *node,
+                                 int nbLocators,
+                                 const xlinkHRef *hrefs,
+                                 const xlinkRole *roles,
+                                 int nbTitles,
+                                 const xlinkTitle *titles,
+                                 const xmlChar **langs);
 
 typedef struct _xlinkHandler xlinkHandler;
 typedef xlinkHandler *xlinkHandlerPtr;
@@ -165,28 +165,28 @@ struct _xlinkHandler {
 
 XML_DEPRECATED
 XMLPUBFUN xlinkNodeDetectFunc
-		xlinkGetDefaultDetect	(void);
+                xlinkGetDefaultDetect   (void);
 XML_DEPRECATED
 XMLPUBFUN void
-		xlinkSetDefaultDetect	(xlinkNodeDetectFunc func);
+                xlinkSetDefaultDetect   (xlinkNodeDetectFunc func);
 
 /*
  * Routines to set/get the default handlers.
  */
 XML_DEPRECATED
 XMLPUBFUN xlinkHandler *
-		xlinkGetDefaultHandler	(void);
+                xlinkGetDefaultHandler  (void);
 XML_DEPRECATED
 XMLPUBFUN void
-		xlinkSetDefaultHandler	(xlinkHandler *handler);
+                xlinkSetDefaultHandler  (xlinkHandler *handler);
 
 /*
  * Link detection module itself.
  */
 XML_DEPRECATED
 XMLPUBFUN xlinkType
-		xlinkIsLink		(xmlDoc *doc,
-					 xmlNode *node);
+                xlinkIsLink             (xmlDoc *doc,
+                                         xmlNode *node);
 
 #ifdef __cplusplus
 }

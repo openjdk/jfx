@@ -38,39 +38,39 @@ XMLPUBFUN int  xmlInitializeDict(void);
  * Constructor and destructor.
  */
 XMLPUBFUN xmlDict *
-			xmlDictCreate	(void);
+                        xmlDictCreate   (void);
 XMLPUBFUN size_t
-			xmlDictSetLimit	(xmlDict *dict,
+                        xmlDictSetLimit (xmlDict *dict,
                                          size_t limit);
 XMLPUBFUN size_t
-			xmlDictGetUsage (xmlDict *dict);
+                        xmlDictGetUsage (xmlDict *dict);
 XMLPUBFUN xmlDict *
-			xmlDictCreateSub(xmlDict *sub);
+                        xmlDictCreateSub(xmlDict *sub);
 XMLPUBFUN int
-			xmlDictReference(xmlDict *dict);
+                        xmlDictReference(xmlDict *dict);
 XMLPUBFUN void
-			xmlDictFree	(xmlDict *dict);
+                        xmlDictFree     (xmlDict *dict);
 
 /*
  * Lookup of entry in the dictionary.
  */
 XMLPUBFUN const xmlChar *
-			xmlDictLookup	(xmlDict *dict,
-		                         const xmlChar *name,
-		                         int len);
+                        xmlDictLookup   (xmlDict *dict,
+                                         const xmlChar *name,
+                                         int len);
 XMLPUBFUN const xmlChar *
-			xmlDictExists	(xmlDict *dict,
-		                         const xmlChar *name,
-		                         int len);
+                        xmlDictExists   (xmlDict *dict,
+                                         const xmlChar *name,
+                                         int len);
 XMLPUBFUN const xmlChar *
-			xmlDictQLookup	(xmlDict *dict,
-		                         const xmlChar *prefix,
-		                         const xmlChar *name);
+                        xmlDictQLookup  (xmlDict *dict,
+                                         const xmlChar *prefix,
+                                         const xmlChar *name);
 XMLPUBFUN int
-			xmlDictOwns	(xmlDict *dict,
-					 const xmlChar *str);
+                        xmlDictOwns     (xmlDict *dict,
+                                         const xmlChar *str);
 XMLPUBFUN int
-			xmlDictSize	(xmlDict *dict);
+                        xmlDictSize     (xmlDict *dict);
 
 /*
  * Cleanup function

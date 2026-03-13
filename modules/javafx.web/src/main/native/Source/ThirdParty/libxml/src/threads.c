@@ -281,9 +281,9 @@ xmlRMutexUnlock(xmlRMutex *tok ATTRIBUTE_UNUSED)
 }
 
 /************************************************************************
- *									*
- *			Library wide thread interfaces			*
- *									*
+ *                                                                      *
+ *                      Library wide thread interfaces                  *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -337,9 +337,9 @@ xmlCleanupThreadsInternal(void) {
 }
 
 /************************************************************************
- *									*
- *			Library wide initialization			*
- *									*
+ *                                                                      *
+ *                      Library wide initialization                     *
+ *                                                                      *
  ************************************************************************/
 
 static int xmlParserInitialized = 0;

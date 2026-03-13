@@ -115,13 +115,13 @@ xmlFreeEntity(xmlEntity *entity)
  */
 static xmlEntityPtr
 xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
-	        const xmlChar *publicId, const xmlChar *systemId,
-	        const xmlChar *content) {
+                const xmlChar *publicId, const xmlChar *systemId,
+                const xmlChar *content) {
     xmlEntityPtr ret;
 
     ret = (xmlEntityPtr) xmlMalloc(sizeof(xmlEntity));
     if (ret == NULL)
-	return(NULL);
+        return(NULL);
     memset(ret, 0, sizeof(xmlEntity));
     ret->doc = doc;
     ret->type = XML_ENTITY_DECL;
@@ -131,7 +131,7 @@ xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
      */
     ret->etype = (xmlEntityType) type;
     if ((doc == NULL) || (doc->dict == NULL))
-	ret->name = xmlStrdup(name);
+        ret->name = xmlStrdup(name);
     else
         ret->name = xmlDictLookup(doc->dict, name, -1);
     if (ret->name == NULL)
@@ -148,7 +148,7 @@ xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
     }
     if (content != NULL) {
         ret->length = xmlStrlen(content);
-	ret->content = xmlStrndup(content, ret->length);
+        ret->content = xmlStrndup(content, ret->length);
         if (ret->content == NULL)
             goto error;
      } else {
@@ -156,7 +156,7 @@ xmlCreateEntity(xmlDocPtr doc, const xmlChar *name, int type,
         ret->content = NULL;
     }
     ret->URI = NULL; /* to be computed by the layer knowing
-			the defining entity */
+                        the defining entity */
     ret->orig = NULL;
 
     return(ret);
@@ -183,8 +183,8 @@ error:
  */
 int
 xmlAddEntity(xmlDoc *doc, int extSubset, const xmlChar *name, int type,
-	  const xmlChar *publicId, const xmlChar *systemId,
-	  const xmlChar *content, xmlEntity **out) {
+          const xmlChar *publicId, const xmlChar *systemId,
+          const xmlChar *content, xmlEntity **out) {
     xmlDtdPtr dtd;
     xmlDictPtr dict = NULL;
     xmlEntitiesTablePtr table = NULL;
@@ -194,7 +194,7 @@ xmlAddEntity(xmlDoc *doc, int extSubset, const xmlChar *name, int type,
     if (out != NULL)
         *out = NULL;
     if ((doc == NULL) || (name == NULL))
-	return(XML_ERR_ARGUMENT);
+        return(XML_ERR_ARGUMENT);
     dict = doc->dict;
 
     if (extSubset)
@@ -242,24 +242,24 @@ xmlAddEntity(xmlDoc *doc, int extSubset, const xmlChar *name, int type,
                 if (!valid)
                     return(XML_ERR_REDECL_PREDEF_ENTITY);
             }
-	    if (dtd->entities == NULL) {
-		dtd->entities = xmlHashCreateDict(0, dict);
+            if (dtd->entities == NULL) {
+                dtd->entities = xmlHashCreateDict(0, dict);
                 if (dtd->entities == NULL)
                     return(XML_ERR_NO_MEMORY);
             }
-	    table = dtd->entities;
-	    break;
+            table = dtd->entities;
+            break;
         case XML_INTERNAL_PARAMETER_ENTITY:
         case XML_EXTERNAL_PARAMETER_ENTITY:
-	    if (dtd->pentities == NULL) {
-		dtd->pentities = xmlHashCreateDict(0, dict);
+            if (dtd->pentities == NULL) {
+                dtd->pentities = xmlHashCreateDict(0, dict);
                 if (dtd->pentities == NULL)
                     return(XML_ERR_NO_MEMORY);
             }
-	    table = dtd->pentities;
-	    break;
+            table = dtd->pentities;
+            break;
         default:
-	    return(XML_ERR_ARGUMENT);
+            return(XML_ERR_ARGUMENT);
     }
     ret = xmlCreateEntity(dtd->doc, name, type, publicId, systemId, content);
     if (ret == NULL)
@@ -270,11 +270,11 @@ xmlAddEntity(xmlDoc *doc, int extSubset, const xmlChar *name, int type,
         xmlFreeEntity(ret);
         return(XML_ERR_NO_MEMORY);
     } else if (res == 0) {
-	/*
-	 * entity was already defined at another level.
-	 */
+        /*
+         * entity was already defined at another level.
+         */
         xmlFreeEntity(ret);
-	return(XML_WAR_ENTITY_REDEFINED);
+        return(XML_WAR_ENTITY_REDEFINED);
     }
 
     /*
@@ -283,11 +283,11 @@ xmlAddEntity(xmlDoc *doc, int extSubset, const xmlChar *name, int type,
     ret->parent = dtd;
     ret->doc = dtd->doc;
     if (dtd->last == NULL) {
-	dtd->children = dtd->last = (xmlNodePtr) ret;
+        dtd->children = dtd->last = (xmlNodePtr) ret;
     } else {
-	dtd->last->next = (xmlNodePtr) ret;
-	ret->prev = dtd->last;
-	dtd->last = (xmlNodePtr) ret;
+        dtd->last->next = (xmlNodePtr) ret;
+        ret->prev = dtd->last;
+        dtd->last = (xmlNodePtr) ret;
     }
 
     if (out != NULL)
@@ -306,25 +306,25 @@ xmlGetPredefinedEntity(const xmlChar *name) {
     if (name == NULL) return(NULL);
     switch (name[0]) {
         case 'l':
-	    if (xmlStrEqual(name, BAD_CAST "lt"))
-	        return(&xmlEntityLt);
-	    break;
+            if (xmlStrEqual(name, BAD_CAST "lt"))
+                return(&xmlEntityLt);
+            break;
         case 'g':
-	    if (xmlStrEqual(name, BAD_CAST "gt"))
-	        return(&xmlEntityGt);
-	    break;
+            if (xmlStrEqual(name, BAD_CAST "gt"))
+                return(&xmlEntityGt);
+            break;
         case 'a':
-	    if (xmlStrEqual(name, BAD_CAST "amp"))
-	        return(&xmlEntityAmp);
-	    if (xmlStrEqual(name, BAD_CAST "apos"))
-	        return(&xmlEntityApos);
-	    break;
+            if (xmlStrEqual(name, BAD_CAST "amp"))
+                return(&xmlEntityAmp);
+            if (xmlStrEqual(name, BAD_CAST "apos"))
+                return(&xmlEntityApos);
+            break;
         case 'q':
-	    if (xmlStrEqual(name, BAD_CAST "quot"))
-	        return(&xmlEntityQuot);
-	    break;
-	default:
-	    break;
+            if (xmlStrEqual(name, BAD_CAST "quot"))
+                return(&xmlEntityQuot);
+            break;
+        default:
+            break;
     }
     return(NULL);
 }
@@ -344,8 +344,8 @@ xmlGetPredefinedEntity(const xmlChar *name) {
  */
 xmlEntity *
 xmlAddDtdEntity(xmlDoc *doc, const xmlChar *name, int type,
-	        const xmlChar *publicId, const xmlChar *systemId,
-		const xmlChar *content) {
+                const xmlChar *publicId, const xmlChar *systemId,
+                const xmlChar *content) {
     xmlEntityPtr ret;
 
     xmlAddEntity(doc, 1, name, type, publicId, systemId, content, &ret);
@@ -367,8 +367,8 @@ xmlAddDtdEntity(xmlDoc *doc, const xmlChar *name, int type,
  */
 xmlEntity *
 xmlAddDocEntity(xmlDoc *doc, const xmlChar *name, int type,
-	        const xmlChar *publicId, const xmlChar *systemId,
-	        const xmlChar *content) {
+                const xmlChar *publicId, const xmlChar *systemId,
+                const xmlChar *content) {
     xmlEntityPtr ret;
 
     xmlAddEntity(doc, 0, name, type, publicId, systemId, content, &ret);
@@ -393,10 +393,10 @@ xmlAddDocEntity(xmlDoc *doc, const xmlChar *name, int type,
  */
 xmlEntity *
 xmlNewEntity(xmlDoc *doc, const xmlChar *name, int type,
-	     const xmlChar *publicId, const xmlChar *systemId,
-	     const xmlChar *content) {
+             const xmlChar *publicId, const xmlChar *systemId,
+             const xmlChar *content) {
     if ((doc != NULL) && (doc->intSubset != NULL)) {
-	return(xmlAddDocEntity(doc, name, type, publicId, systemId, content));
+        return(xmlAddDocEntity(doc, name, type, publicId, systemId, content));
     }
     if (name == NULL)
         return(NULL);
@@ -429,16 +429,16 @@ xmlGetParameterEntity(xmlDoc *doc, const xmlChar *name) {
     xmlEntityPtr ret;
 
     if (doc == NULL)
-	return(NULL);
+        return(NULL);
     if ((doc->intSubset != NULL) && (doc->intSubset->pentities != NULL)) {
-	table = (xmlEntitiesTablePtr) doc->intSubset->pentities;
-	ret = xmlGetEntityFromTable(table, name);
-	if (ret != NULL)
-	    return(ret);
+        table = (xmlEntitiesTablePtr) doc->intSubset->pentities;
+        ret = xmlGetEntityFromTable(table, name);
+        if (ret != NULL)
+            return(ret);
     }
     if ((doc->extSubset != NULL) && (doc->extSubset->pentities != NULL)) {
-	table = (xmlEntitiesTablePtr) doc->extSubset->pentities;
-	return(xmlGetEntityFromTable(table, name));
+        table = (xmlEntitiesTablePtr) doc->extSubset->pentities;
+        return(xmlGetEntityFromTable(table, name));
     }
     return(NULL);
 }
@@ -455,10 +455,10 @@ xmlGetDtdEntity(xmlDoc *doc, const xmlChar *name) {
     xmlEntitiesTablePtr table;
 
     if (doc == NULL)
-	return(NULL);
+        return(NULL);
     if ((doc->extSubset != NULL) && (doc->extSubset->entities != NULL)) {
-	table = (xmlEntitiesTablePtr) doc->extSubset->entities;
-	return(xmlGetEntityFromTable(table, name));
+        table = (xmlEntitiesTablePtr) doc->extSubset->entities;
+        return(xmlGetEntityFromTable(table, name));
     }
     return(NULL);
 }
@@ -477,21 +477,21 @@ xmlGetDocEntity(const xmlDoc *doc, const xmlChar *name) {
     xmlEntitiesTablePtr table;
 
     if (doc != NULL) {
-	if ((doc->intSubset != NULL) && (doc->intSubset->entities != NULL)) {
-	    table = (xmlEntitiesTablePtr) doc->intSubset->entities;
-	    cur = xmlGetEntityFromTable(table, name);
-	    if (cur != NULL)
-		return(cur);
-	}
-	if (doc->standalone != 1) {
-	    if ((doc->extSubset != NULL) &&
-		(doc->extSubset->entities != NULL)) {
-		table = (xmlEntitiesTablePtr) doc->extSubset->entities;
-		cur = xmlGetEntityFromTable(table, name);
-		if (cur != NULL)
-		    return(cur);
-	    }
-	}
+        if ((doc->intSubset != NULL) && (doc->intSubset->entities != NULL)) {
+            table = (xmlEntitiesTablePtr) doc->intSubset->entities;
+            cur = xmlGetEntityFromTable(table, name);
+            if (cur != NULL)
+                return(cur);
+        }
+        if (doc->standalone != 1) {
+            if ((doc->extSubset != NULL) &&
+                (doc->extSubset->entities != NULL)) {
+                table = (xmlEntitiesTablePtr) doc->extSubset->entities;
+                cur = xmlGetEntityFromTable(table, name);
+                if (cur != NULL)
+                    return(cur);
+            }
+        }
     }
     return(xmlGetPredefinedEntity(name));
 }
@@ -573,7 +573,7 @@ xmlCreateEntitiesTable(void) {
 static void
 xmlFreeEntityWrapper(void *entity, const xmlChar *name ATTRIBUTE_UNUSED) {
     if (entity != NULL)
-	xmlFreeEntity((xmlEntityPtr) entity);
+        xmlFreeEntity((xmlEntityPtr) entity);
 }
 
 /**
@@ -602,38 +602,38 @@ xmlCopyEntity(void *payload, const xmlChar *name ATTRIBUTE_UNUSED) {
 
     cur = (xmlEntityPtr) xmlMalloc(sizeof(xmlEntity));
     if (cur == NULL)
-	return(NULL);
+        return(NULL);
     memset(cur, 0, sizeof(xmlEntity));
     cur->type = XML_ENTITY_DECL;
 
     cur->etype = ent->etype;
     if (ent->name != NULL) {
-	cur->name = xmlStrdup(ent->name);
+        cur->name = xmlStrdup(ent->name);
         if (cur->name == NULL)
             goto error;
     }
     if (ent->ExternalID != NULL) {
-	cur->ExternalID = xmlStrdup(ent->ExternalID);
+        cur->ExternalID = xmlStrdup(ent->ExternalID);
         if (cur->ExternalID == NULL)
             goto error;
     }
     if (ent->SystemID != NULL) {
-	cur->SystemID = xmlStrdup(ent->SystemID);
+        cur->SystemID = xmlStrdup(ent->SystemID);
         if (cur->SystemID == NULL)
             goto error;
     }
     if (ent->content != NULL) {
-	cur->content = xmlStrdup(ent->content);
+        cur->content = xmlStrdup(ent->content);
         if (cur->content == NULL)
             goto error;
     }
     if (ent->orig != NULL) {
-	cur->orig = xmlStrdup(ent->orig);
+        cur->orig = xmlStrdup(ent->orig);
         if (cur->orig == NULL)
             goto error;
     }
     if (ent->URI != NULL) {
-	cur->URI = xmlStrdup(ent->URI);
+        cur->URI = xmlStrdup(ent->URI);
         if (cur->URI == NULL)
             goto error;
     }

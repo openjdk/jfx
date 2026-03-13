@@ -79,69 +79,69 @@ typedef xmlSchematronValidCtxt *xmlSchematronValidCtxtPtr;
  * Interfaces for parsing.
  */
 XMLPUBFUN xmlSchematronParserCtxt *
-	    xmlSchematronNewParserCtxt	(const char *URL);
+            xmlSchematronNewParserCtxt  (const char *URL);
 XMLPUBFUN xmlSchematronParserCtxt *
-	    xmlSchematronNewMemParserCtxt(const char *buffer,
-					 int size);
+            xmlSchematronNewMemParserCtxt(const char *buffer,
+                                         int size);
 XMLPUBFUN xmlSchematronParserCtxt *
-	    xmlSchematronNewDocParserCtxt(xmlDoc *doc);
+            xmlSchematronNewDocParserCtxt(xmlDoc *doc);
 XMLPUBFUN void
-	    xmlSchematronFreeParserCtxt	(xmlSchematronParserCtxt *ctxt);
+            xmlSchematronFreeParserCtxt (xmlSchematronParserCtxt *ctxt);
 /*****
 XMLPUBFUN void
-	    xmlSchematronSetParserErrors(xmlSchematronParserCtxt *ctxt,
-					 xmlSchematronValidityErrorFunc err,
-					 xmlSchematronValidityWarningFunc warn,
-					 void *ctx);
+            xmlSchematronSetParserErrors(xmlSchematronParserCtxt *ctxt,
+                                         xmlSchematronValidityErrorFunc err,
+                                         xmlSchematronValidityWarningFunc warn,
+                                         void *ctx);
 XMLPUBFUN int
-		xmlSchematronGetParserErrors(xmlSchematronParserCtxt *ctxt,
-					xmlSchematronValidityErrorFunc * err,
-					xmlSchematronValidityWarningFunc * warn,
-					void **ctx);
+                xmlSchematronGetParserErrors(xmlSchematronParserCtxt *ctxt,
+                                        xmlSchematronValidityErrorFunc * err,
+                                        xmlSchematronValidityWarningFunc * warn,
+                                        void **ctx);
 XMLPUBFUN int
-		xmlSchematronIsValid	(xmlSchematronValidCtxt *ctxt);
+                xmlSchematronIsValid    (xmlSchematronValidCtxt *ctxt);
  *****/
 XMLPUBFUN xmlSchematron *
-	    xmlSchematronParse		(xmlSchematronParserCtxt *ctxt);
+            xmlSchematronParse          (xmlSchematronParserCtxt *ctxt);
 XMLPUBFUN void
-	    xmlSchematronFree		(xmlSchematron *schema);
+            xmlSchematronFree           (xmlSchematron *schema);
 /*
  * Interfaces for validating
  */
 XMLPUBFUN void
-	    xmlSchematronSetValidStructuredErrors(
-	                                  xmlSchematronValidCtxt *ctxt,
-					  xmlStructuredErrorFunc serror,
-					  void *ctx);
+            xmlSchematronSetValidStructuredErrors(
+                                          xmlSchematronValidCtxt *ctxt,
+                                          xmlStructuredErrorFunc serror,
+                                          void *ctx);
 /******
 XMLPUBFUN void
-	    xmlSchematronSetValidErrors	(xmlSchematronValidCtxt *ctxt,
-					 xmlSchematronValidityErrorFunc err,
-					 xmlSchematronValidityWarningFunc warn,
-					 void *ctx);
+            xmlSchematronSetValidErrors (xmlSchematronValidCtxt *ctxt,
+                                         xmlSchematronValidityErrorFunc err,
+                                         xmlSchematronValidityWarningFunc warn,
+                                         void *ctx);
 XMLPUBFUN int
-	    xmlSchematronGetValidErrors	(xmlSchematronValidCtxt *ctxt,
-					 xmlSchematronValidityErrorFunc *err,
-					 xmlSchematronValidityWarningFunc *warn,
-					 void **ctx);
+            xmlSchematronGetValidErrors (xmlSchematronValidCtxt *ctxt,
+                                         xmlSchematronValidityErrorFunc *err,
+                                         xmlSchematronValidityWarningFunc *warn,
+                                         void **ctx);
 XMLPUBFUN int
-	    xmlSchematronSetValidOptions(xmlSchematronValidCtxt *ctxt,
-					 int options);
+            xmlSchematronSetValidOptions(xmlSchematronValidCtxt *ctxt,
+                                         int options);
 XMLPUBFUN int
-	    xmlSchematronValidCtxtGetOptions(xmlSchematronValidCtxt *ctxt);
+            xmlSchematronValidCtxtGetOptions(xmlSchematronValidCtxt *ctxt);
 XMLPUBFUN int
             xmlSchematronValidateOneElement (xmlSchematronValidCtxt *ctxt,
-			                 xmlNode *elem);
+                                         xmlNode *elem);
  *******/
 
 XMLPUBFUN xmlSchematronValidCtxt *
-	    xmlSchematronNewValidCtxt	(xmlSchematron *schema,
-					 int options);
+            xmlSchematronNewValidCtxt   (xmlSchematron *schema,
+                                         int options);
 XMLPUBFUN void
-	    xmlSchematronFreeValidCtxt	(xmlSchematronValidCtxt *ctxt);
+            xmlSchematronFreeValidCtxt  (xmlSchematronValidCtxt *ctxt);
 XMLPUBFUN int
-	    xmlSchematronValidateDoc	(xmlSchematronValidCtxt *ctxt,
-					 xmlDoc *instance);
+            xmlSchematronValidateDoc    (xmlSchematronValidCtxt *ctxt,
+                                         xmlDoc *instance);
 
 #ifdef __cplusplus
 }

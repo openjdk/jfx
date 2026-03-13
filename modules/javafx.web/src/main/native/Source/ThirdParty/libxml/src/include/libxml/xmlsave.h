@@ -40,15 +40,15 @@ typedef enum {
     /**
      * Don't emit empty tags.
      */
-    XML_SAVE_NO_EMPTY	= 1<<2,
+    XML_SAVE_NO_EMPTY   = 1<<2,
     /**
      * Don't serialize as XHTML.
      */
-    XML_SAVE_NO_XHTML	= 1<<3,
+    XML_SAVE_NO_XHTML   = 1<<3,
     /**
      * Always serialize as XHTML.
      */
-    XML_SAVE_XHTML	= 1<<4,
+    XML_SAVE_XHTML      = 1<<4,
     /**
      * Serialize HTML documents as XML.
      */
@@ -91,50 +91,50 @@ typedef struct _xmlSaveCtxt xmlSaveCtxt;
 typedef xmlSaveCtxt *xmlSaveCtxtPtr;
 
 XMLPUBFUN xmlSaveCtxt *
-		xmlSaveToFd		(int fd,
-					 const char *encoding,
-					 int options);
+                xmlSaveToFd             (int fd,
+                                         const char *encoding,
+                                         int options);
 XMLPUBFUN xmlSaveCtxt *
-		xmlSaveToFilename	(const char *filename,
-					 const char *encoding,
-					 int options);
+                xmlSaveToFilename       (const char *filename,
+                                         const char *encoding,
+                                         int options);
 
 XMLPUBFUN xmlSaveCtxt *
-		xmlSaveToBuffer		(xmlBuffer *buffer,
-					 const char *encoding,
-					 int options);
+                xmlSaveToBuffer         (xmlBuffer *buffer,
+                                         const char *encoding,
+                                         int options);
 
 XMLPUBFUN xmlSaveCtxt *
-		xmlSaveToIO		(xmlOutputWriteCallback iowrite,
-					 xmlOutputCloseCallback ioclose,
-					 void *ioctx,
-					 const char *encoding,
-					 int options);
+                xmlSaveToIO             (xmlOutputWriteCallback iowrite,
+                                         xmlOutputCloseCallback ioclose,
+                                         void *ioctx,
+                                         const char *encoding,
+                                         int options);
 
 XMLPUBFUN long
-		xmlSaveDoc		(xmlSaveCtxt *ctxt,
-					 xmlDoc *doc);
+                xmlSaveDoc              (xmlSaveCtxt *ctxt,
+                                         xmlDoc *doc);
 XMLPUBFUN long
-		xmlSaveTree		(xmlSaveCtxt *ctxt,
-					 xmlNode *node);
+                xmlSaveTree             (xmlSaveCtxt *ctxt,
+                                         xmlNode *node);
 
 XMLPUBFUN int
-		xmlSaveFlush		(xmlSaveCtxt *ctxt);
+                xmlSaveFlush            (xmlSaveCtxt *ctxt);
 XMLPUBFUN int
-		xmlSaveClose		(xmlSaveCtxt *ctxt);
+                xmlSaveClose            (xmlSaveCtxt *ctxt);
 XMLPUBFUN xmlParserErrors
-		xmlSaveFinish		(xmlSaveCtxt *ctxt);
+                xmlSaveFinish           (xmlSaveCtxt *ctxt);
 XMLPUBFUN int
-		xmlSaveSetIndentString	(xmlSaveCtxt *ctxt,
-					 const char *indent);
+                xmlSaveSetIndentString  (xmlSaveCtxt *ctxt,
+                                         const char *indent);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlSaveSetEscape	(xmlSaveCtxt *ctxt,
-					 xmlCharEncodingOutputFunc escape);
+                xmlSaveSetEscape        (xmlSaveCtxt *ctxt,
+                                         xmlCharEncodingOutputFunc escape);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlSaveSetAttrEscape	(xmlSaveCtxt *ctxt,
-					 xmlCharEncodingOutputFunc escape);
+                xmlSaveSetAttrEscape    (xmlSaveCtxt *ctxt,
+                                         xmlCharEncodingOutputFunc escape);
 
 XML_DEPRECATED
 XMLPUBFUN int

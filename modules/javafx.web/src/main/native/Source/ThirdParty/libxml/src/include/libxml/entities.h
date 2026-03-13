@@ -92,72 +92,72 @@ typedef struct _xmlHashTable xmlEntitiesTable;
 typedef xmlEntitiesTable *xmlEntitiesTablePtr;
 
 XMLPUBFUN xmlEntity *
-			xmlNewEntity		(xmlDoc *doc,
-						 const xmlChar *name,
-						 int type,
-						 const xmlChar *publicId,
-						 const xmlChar *systemId,
-						 const xmlChar *content);
+                        xmlNewEntity            (xmlDoc *doc,
+                                                 const xmlChar *name,
+                                                 int type,
+                                                 const xmlChar *publicId,
+                                                 const xmlChar *systemId,
+                                                 const xmlChar *content);
 XMLPUBFUN void
-			xmlFreeEntity		(xmlEntity *entity);
+                        xmlFreeEntity           (xmlEntity *entity);
 XMLPUBFUN int
-			xmlAddEntity		(xmlDoc *doc,
-						 int extSubset,
-						 const xmlChar *name,
-						 int type,
-						 const xmlChar *publicId,
-						 const xmlChar *systemId,
-						 const xmlChar *content,
-						 xmlEntity **out);
+                        xmlAddEntity            (xmlDoc *doc,
+                                                 int extSubset,
+                                                 const xmlChar *name,
+                                                 int type,
+                                                 const xmlChar *publicId,
+                                                 const xmlChar *systemId,
+                                                 const xmlChar *content,
+                                                 xmlEntity **out);
 XMLPUBFUN xmlEntity *
-			xmlAddDocEntity		(xmlDoc *doc,
-						 const xmlChar *name,
-						 int type,
-						 const xmlChar *publicId,
-						 const xmlChar *systemId,
-						 const xmlChar *content);
+                        xmlAddDocEntity         (xmlDoc *doc,
+                                                 const xmlChar *name,
+                                                 int type,
+                                                 const xmlChar *publicId,
+                                                 const xmlChar *systemId,
+                                                 const xmlChar *content);
 XMLPUBFUN xmlEntity *
-			xmlAddDtdEntity		(xmlDoc *doc,
-						 const xmlChar *name,
-						 int type,
-						 const xmlChar *publicId,
-						 const xmlChar *systemId,
-						 const xmlChar *content);
+                        xmlAddDtdEntity         (xmlDoc *doc,
+                                                 const xmlChar *name,
+                                                 int type,
+                                                 const xmlChar *publicId,
+                                                 const xmlChar *systemId,
+                                                 const xmlChar *content);
 XMLPUBFUN xmlEntity *
-			xmlGetPredefinedEntity	(const xmlChar *name);
+                        xmlGetPredefinedEntity  (const xmlChar *name);
 XMLPUBFUN xmlEntity *
-			xmlGetDocEntity		(const xmlDoc *doc,
-						 const xmlChar *name);
+                        xmlGetDocEntity         (const xmlDoc *doc,
+                                                 const xmlChar *name);
 XMLPUBFUN xmlEntity *
-			xmlGetDtdEntity		(xmlDoc *doc,
-						 const xmlChar *name);
+                        xmlGetDtdEntity         (xmlDoc *doc,
+                                                 const xmlChar *name);
 XMLPUBFUN xmlEntity *
-			xmlGetParameterEntity	(xmlDoc *doc,
-						 const xmlChar *name);
+                        xmlGetParameterEntity   (xmlDoc *doc,
+                                                 const xmlChar *name);
 XMLPUBFUN xmlChar *
-			xmlEncodeEntitiesReentrant(xmlDoc *doc,
-						 const xmlChar *input);
+                        xmlEncodeEntitiesReentrant(xmlDoc *doc,
+                                                 const xmlChar *input);
 XMLPUBFUN xmlChar *
-			xmlEncodeSpecialChars	(const xmlDoc *doc,
-						 const xmlChar *input);
+                        xmlEncodeSpecialChars   (const xmlDoc *doc,
+                                                 const xmlChar *input);
 XML_DEPRECATED
 XMLPUBFUN xmlEntitiesTable *
-			xmlCreateEntitiesTable	(void);
+                        xmlCreateEntitiesTable  (void);
 XML_DEPRECATED
 XMLPUBFUN xmlEntitiesTable *
-			xmlCopyEntitiesTable	(xmlEntitiesTable *table);
+                        xmlCopyEntitiesTable    (xmlEntitiesTable *table);
 XML_DEPRECATED
 XMLPUBFUN void
-			xmlFreeEntitiesTable	(xmlEntitiesTable *table);
+                        xmlFreeEntitiesTable    (xmlEntitiesTable *table);
 #ifdef LIBXML_OUTPUT_ENABLED
 XML_DEPRECATED
 XMLPUBFUN void
-			xmlDumpEntitiesTable	(xmlBuffer *buf,
-						 xmlEntitiesTable *table);
+                        xmlDumpEntitiesTable    (xmlBuffer *buf,
+                                                 xmlEntitiesTable *table);
 XML_DEPRECATED
 XMLPUBFUN void
-			xmlDumpEntityDecl	(xmlBuffer *buf,
-						 xmlEntity *ent);
+                        xmlDumpEntityDecl       (xmlBuffer *buf,
+                                                 xmlEntity *ent);
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 #ifdef __cplusplus

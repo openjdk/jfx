@@ -29,39 +29,39 @@ typedef struct _xmlRMutex xmlRMutex;
 typedef xmlRMutex *xmlRMutexPtr;
 
 XMLPUBFUN int
-			xmlCheckThreadLocalStorage(void);
+                        xmlCheckThreadLocalStorage(void);
 
 XMLPUBFUN xmlMutex *
-			xmlNewMutex	(void);
+                        xmlNewMutex     (void);
 XMLPUBFUN void
-			xmlMutexLock	(xmlMutex *tok);
+                        xmlMutexLock    (xmlMutex *tok);
 XMLPUBFUN void
-			xmlMutexUnlock	(xmlMutex *tok);
+                        xmlMutexUnlock  (xmlMutex *tok);
 XMLPUBFUN void
-			xmlFreeMutex	(xmlMutex *tok);
+                        xmlFreeMutex    (xmlMutex *tok);
 
 XMLPUBFUN xmlRMutex *
-			xmlNewRMutex	(void);
+                        xmlNewRMutex    (void);
 XMLPUBFUN void
-			xmlRMutexLock	(xmlRMutex *tok);
+                        xmlRMutexLock   (xmlRMutex *tok);
 XMLPUBFUN void
-			xmlRMutexUnlock	(xmlRMutex *tok);
+                        xmlRMutexUnlock (xmlRMutex *tok);
 XMLPUBFUN void
-			xmlFreeRMutex	(xmlRMutex *tok);
+                        xmlFreeRMutex   (xmlRMutex *tok);
 
 /*
  * Library wide APIs.
  */
 XML_DEPRECATED
 XMLPUBFUN void
-			xmlInitThreads	(void);
+                        xmlInitThreads  (void);
 XMLPUBFUN void
-			xmlLockLibrary	(void);
+                        xmlLockLibrary  (void);
 XMLPUBFUN void
-			xmlUnlockLibrary(void);
+                        xmlUnlockLibrary(void);
 XML_DEPRECATED
 XMLPUBFUN void
-			xmlCleanupThreads(void);
+                        xmlCleanupThreads(void);
 
 /** @cond IGNORE */
 #if defined(LIBXML_THREAD_ENABLED) && defined(_WIN32) && \

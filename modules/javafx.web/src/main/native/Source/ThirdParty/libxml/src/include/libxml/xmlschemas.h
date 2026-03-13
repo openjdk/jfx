@@ -33,8 +33,8 @@ extern "C" {
  * This error codes are obsolete; not used any more.
  */
 typedef enum {
-    XML_SCHEMAS_ERR_OK		= 0,
-    XML_SCHEMAS_ERR_NOROOT	= 1,
+    XML_SCHEMAS_ERR_OK          = 0,
+    XML_SCHEMAS_ERR_NOROOT      = 1,
     XML_SCHEMAS_ERR_UNDECLAREDELEM,
     XML_SCHEMAS_ERR_NOTTOPLEVEL,
     XML_SCHEMAS_ERR_MISSING,
@@ -70,17 +70,17 @@ typedef enum {
  * This is the set of XML Schema validation options.
  */
 typedef enum {
-    XML_SCHEMA_VAL_VC_I_CREATE			= 1<<0
-	/* Default/fixed: create an attribute node
-	* or an element's text node on the instance.
-	*/
+    XML_SCHEMA_VAL_VC_I_CREATE                  = 1<<0
+        /* Default/fixed: create an attribute node
+        * or an element's text node on the instance.
+        */
 } xmlSchemaValidOption;
 
 /*
-    XML_SCHEMA_VAL_XSI_ASSEMBLE			= 1<<1,
-	* assemble schemata using
-	* xsi:schemaLocation and
-	* xsi:noNamespaceSchemaLocation
+    XML_SCHEMA_VAL_XSI_ASSEMBLE                 = 1<<1,
+        * assemble schemata using
+        * xsi:schemaLocation and
+        * xsi:noNamespaceSchemaLocation
 */
 
 /** XML schema */
@@ -133,93 +133,93 @@ typedef int (*xmlSchemaValidityLocatorFunc) (void *ctx,
  * Interfaces for parsing.
  */
 XMLPUBFUN xmlSchemaParserCtxt *
-	    xmlSchemaNewParserCtxt	(const char *URL);
+            xmlSchemaNewParserCtxt      (const char *URL);
 XMLPUBFUN xmlSchemaParserCtxt *
-	    xmlSchemaNewMemParserCtxt	(const char *buffer,
-					 int size);
+            xmlSchemaNewMemParserCtxt   (const char *buffer,
+                                         int size);
 XMLPUBFUN xmlSchemaParserCtxt *
-	    xmlSchemaNewDocParserCtxt	(xmlDoc *doc);
+            xmlSchemaNewDocParserCtxt   (xmlDoc *doc);
 XMLPUBFUN void
-	    xmlSchemaFreeParserCtxt	(xmlSchemaParserCtxt *ctxt);
+            xmlSchemaFreeParserCtxt     (xmlSchemaParserCtxt *ctxt);
 XMLPUBFUN void
-	    xmlSchemaSetParserErrors	(xmlSchemaParserCtxt *ctxt,
-					 xmlSchemaValidityErrorFunc err,
-					 xmlSchemaValidityWarningFunc warn,
-					 void *ctx);
+            xmlSchemaSetParserErrors    (xmlSchemaParserCtxt *ctxt,
+                                         xmlSchemaValidityErrorFunc err,
+                                         xmlSchemaValidityWarningFunc warn,
+                                         void *ctx);
 XMLPUBFUN void
-	    xmlSchemaSetParserStructuredErrors(xmlSchemaParserCtxt *ctxt,
-					 xmlStructuredErrorFunc serror,
-					 void *ctx);
+            xmlSchemaSetParserStructuredErrors(xmlSchemaParserCtxt *ctxt,
+                                         xmlStructuredErrorFunc serror,
+                                         void *ctx);
 XMLPUBFUN int
-	    xmlSchemaGetParserErrors	(xmlSchemaParserCtxt *ctxt,
-					xmlSchemaValidityErrorFunc * err,
-					xmlSchemaValidityWarningFunc * warn,
-					void **ctx);
+            xmlSchemaGetParserErrors    (xmlSchemaParserCtxt *ctxt,
+                                        xmlSchemaValidityErrorFunc * err,
+                                        xmlSchemaValidityWarningFunc * warn,
+                                        void **ctx);
 XMLPUBFUN void
-	    xmlSchemaSetResourceLoader	(xmlSchemaParserCtxt *ctxt,
-					 xmlResourceLoader loader,
-					 void *data);
+            xmlSchemaSetResourceLoader  (xmlSchemaParserCtxt *ctxt,
+                                         xmlResourceLoader loader,
+                                         void *data);
 XMLPUBFUN int
-	    xmlSchemaIsValid		(xmlSchemaValidCtxt *ctxt);
+            xmlSchemaIsValid            (xmlSchemaValidCtxt *ctxt);
 
 XMLPUBFUN xmlSchema *
-	    xmlSchemaParse		(xmlSchemaParserCtxt *ctxt);
+            xmlSchemaParse              (xmlSchemaParserCtxt *ctxt);
 XMLPUBFUN void
-	    xmlSchemaFree		(xmlSchema *schema);
+            xmlSchemaFree               (xmlSchema *schema);
 #ifdef LIBXML_DEBUG_ENABLED
 XMLPUBFUN void
-	    xmlSchemaDump		(FILE *output,
-					 xmlSchema *schema);
+            xmlSchemaDump               (FILE *output,
+                                         xmlSchema *schema);
 #endif /* LIBXML_DEBUG_ENABLED */
 /*
  * Interfaces for validating
  */
 XMLPUBFUN void
-	    xmlSchemaSetValidErrors	(xmlSchemaValidCtxt *ctxt,
-					 xmlSchemaValidityErrorFunc err,
-					 xmlSchemaValidityWarningFunc warn,
-					 void *ctx);
+            xmlSchemaSetValidErrors     (xmlSchemaValidCtxt *ctxt,
+                                         xmlSchemaValidityErrorFunc err,
+                                         xmlSchemaValidityWarningFunc warn,
+                                         void *ctx);
 XMLPUBFUN void
-	    xmlSchemaSetValidStructuredErrors(xmlSchemaValidCtxt *ctxt,
-					 xmlStructuredErrorFunc serror,
-					 void *ctx);
+            xmlSchemaSetValidStructuredErrors(xmlSchemaValidCtxt *ctxt,
+                                         xmlStructuredErrorFunc serror,
+                                         void *ctx);
 XMLPUBFUN int
-	    xmlSchemaGetValidErrors	(xmlSchemaValidCtxt *ctxt,
-					 xmlSchemaValidityErrorFunc *err,
-					 xmlSchemaValidityWarningFunc *warn,
-					 void **ctx);
+            xmlSchemaGetValidErrors     (xmlSchemaValidCtxt *ctxt,
+                                         xmlSchemaValidityErrorFunc *err,
+                                         xmlSchemaValidityWarningFunc *warn,
+                                         void **ctx);
 XMLPUBFUN int
-	    xmlSchemaSetValidOptions	(xmlSchemaValidCtxt *ctxt,
-					 int options);
+            xmlSchemaSetValidOptions    (xmlSchemaValidCtxt *ctxt,
+                                         int options);
 XMLPUBFUN void
             xmlSchemaValidateSetFilename(xmlSchemaValidCtxt *vctxt,
-	                                 const char *filename);
+                                         const char *filename);
 XMLPUBFUN int
-	    xmlSchemaValidCtxtGetOptions(xmlSchemaValidCtxt *ctxt);
+            xmlSchemaValidCtxtGetOptions(xmlSchemaValidCtxt *ctxt);
 
 XMLPUBFUN xmlSchemaValidCtxt *
-	    xmlSchemaNewValidCtxt	(xmlSchema *schema);
+            xmlSchemaNewValidCtxt       (xmlSchema *schema);
 XMLPUBFUN void
-	    xmlSchemaFreeValidCtxt	(xmlSchemaValidCtxt *ctxt);
+            xmlSchemaFreeValidCtxt      (xmlSchemaValidCtxt *ctxt);
 XMLPUBFUN int
-	    xmlSchemaValidateDoc	(xmlSchemaValidCtxt *ctxt,
-					 xmlDoc *instance);
+            xmlSchemaValidateDoc        (xmlSchemaValidCtxt *ctxt,
+                                         xmlDoc *instance);
 XMLPUBFUN int
             xmlSchemaValidateOneElement (xmlSchemaValidCtxt *ctxt,
-			                 xmlNode *elem);
+                                         xmlNode *elem);
 XMLPUBFUN int
-	    xmlSchemaValidateStream	(xmlSchemaValidCtxt *ctxt,
-					 xmlParserInputBuffer *input,
-					 xmlCharEncoding enc,
-					 const xmlSAXHandler *sax,
-					 void *user_data);
+            xmlSchemaValidateStream     (xmlSchemaValidCtxt *ctxt,
+                                         xmlParserInputBuffer *input,
+                                         xmlCharEncoding enc,
+                                         const xmlSAXHandler *sax,
+                                         void *user_data);
 XMLPUBFUN int
-	    xmlSchemaValidateFile	(xmlSchemaValidCtxt *ctxt,
-					 const char * filename,
-					 int options);
+            xmlSchemaValidateFile       (xmlSchemaValidCtxt *ctxt,
+                                         const char * filename,
+                                         int options);
 
 XMLPUBFUN xmlParserCtxt *
-	    xmlSchemaValidCtxtGetParserCtxt(xmlSchemaValidCtxt *ctxt);
+            xmlSchemaValidCtxtGetParserCtxt(xmlSchemaValidCtxt *ctxt);
 
 /**
  * Interface to insert Schemas SAX validation in a SAX stream
@@ -228,17 +228,17 @@ typedef struct _xmlSchemaSAXPlug xmlSchemaSAXPlugStruct;
 typedef xmlSchemaSAXPlugStruct *xmlSchemaSAXPlugPtr;
 
 XMLPUBFUN xmlSchemaSAXPlugStruct *
-            xmlSchemaSAXPlug		(xmlSchemaValidCtxt *ctxt,
-					 xmlSAXHandler **sax,
-					 void **user_data);
+            xmlSchemaSAXPlug            (xmlSchemaValidCtxt *ctxt,
+                                         xmlSAXHandler **sax,
+                                         void **user_data);
 XMLPUBFUN int
-            xmlSchemaSAXUnplug		(xmlSchemaSAXPlugStruct *plug);
+            xmlSchemaSAXUnplug          (xmlSchemaSAXPlugStruct *plug);
 
 
 XMLPUBFUN void
-            xmlSchemaValidateSetLocator	(xmlSchemaValidCtxt *vctxt,
-					 xmlSchemaValidityLocatorFunc f,
-					 void *ctxt);
+            xmlSchemaValidateSetLocator (xmlSchemaValidCtxt *vctxt,
+                                         xmlSchemaValidityLocatorFunc f,
+                                         void *ctxt);
 
 #ifdef __cplusplus
 }

@@ -61,79 +61,79 @@ typedef int (*xmlListWalker) (const void *data, void *user);
 
 /* Creation/Deletion */
 XMLPUBFUN xmlList *
-		xmlListCreate		(xmlListDeallocator deallocator,
-	                                 xmlListDataCompare compare);
+                xmlListCreate           (xmlListDeallocator deallocator,
+                                         xmlListDataCompare compare);
 XMLPUBFUN void
-		xmlListDelete		(xmlList *l);
+                xmlListDelete           (xmlList *l);
 
 /* Basic Operators */
 XMLPUBFUN void *
-		xmlListSearch		(xmlList *l,
-					 void *data);
+                xmlListSearch           (xmlList *l,
+                                         void *data);
 XMLPUBFUN void *
-		xmlListReverseSearch	(xmlList *l,
-					 void *data);
+                xmlListReverseSearch    (xmlList *l,
+                                         void *data);
 XMLPUBFUN int
-		xmlListInsert		(xmlList *l,
-					 void *data) ;
+                xmlListInsert           (xmlList *l,
+                                         void *data) ;
 XMLPUBFUN int
-		xmlListAppend		(xmlList *l,
-					 void *data) ;
+                xmlListAppend           (xmlList *l,
+                                         void *data) ;
 XMLPUBFUN int
-		xmlListRemoveFirst	(xmlList *l,
-					 void *data);
+                xmlListRemoveFirst      (xmlList *l,
+                                         void *data);
 XMLPUBFUN int
-		xmlListRemoveLast	(xmlList *l,
-					 void *data);
+                xmlListRemoveLast       (xmlList *l,
+                                         void *data);
 XMLPUBFUN int
-		xmlListRemoveAll	(xmlList *l,
-					 void *data);
+                xmlListRemoveAll        (xmlList *l,
+                                         void *data);
 XMLPUBFUN void
-		xmlListClear		(xmlList *l);
+                xmlListClear            (xmlList *l);
 XMLPUBFUN int
-		xmlListEmpty		(xmlList *l);
+                xmlListEmpty            (xmlList *l);
 XMLPUBFUN xmlLink *
-		xmlListFront		(xmlList *l);
+                xmlListFront            (xmlList *l);
 XMLPUBFUN xmlLink *
-		xmlListEnd		(xmlList *l);
+                xmlListEnd              (xmlList *l);
 XMLPUBFUN int
-		xmlListSize		(xmlList *l);
+                xmlListSize             (xmlList *l);
 
 XMLPUBFUN void
-		xmlListPopFront		(xmlList *l);
+                xmlListPopFront         (xmlList *l);
 XMLPUBFUN void
-		xmlListPopBack		(xmlList *l);
+                xmlListPopBack          (xmlList *l);
 XMLPUBFUN int
-		xmlListPushFront	(xmlList *l,
-					 void *data);
+                xmlListPushFront        (xmlList *l,
+                                         void *data);
 XMLPUBFUN int
-		xmlListPushBack		(xmlList *l,
-					 void *data);
+                xmlListPushBack         (xmlList *l,
+                                         void *data);
 
 /* Advanced Operators */
 XMLPUBFUN void
-		xmlListReverse		(xmlList *l);
+                xmlListReverse          (xmlList *l);
 XMLPUBFUN void
-		xmlListSort		(xmlList *l);
+                xmlListSort             (xmlList *l);
 XMLPUBFUN void
-		xmlListWalk		(xmlList *l,
-					 xmlListWalker walker,
-					 void *user);
+                xmlListWalk             (xmlList *l,
+                                         xmlListWalker walker,
+                                         void *user);
 XMLPUBFUN void
-		xmlListReverseWalk	(xmlList *l,
-					 xmlListWalker walker,
-					 void *user);
+                xmlListReverseWalk      (xmlList *l,
+                                         xmlListWalker walker,
+                                         void *user);
 XMLPUBFUN void
-		xmlListMerge		(xmlList *l1,
-					 xmlList *l2);
+                xmlListMerge            (xmlList *l1,
+                                         xmlList *l2);
 XMLPUBFUN xmlList *
-		xmlListDup		(xmlList *old);
+                xmlListDup              (xmlList *old);
 XMLPUBFUN int
-		xmlListCopy		(xmlList *cur,
-					 xmlList *old);
+                xmlListCopy             (xmlList *cur,
+                                         xmlList *old);
 /* Link operators */
 XMLPUBFUN void *
-		xmlLinkGetData          (xmlLink *lk);
+                xmlLinkGetData          (xmlLink *lk);
 
 /* xmlListUnique() */
 /* xmlListSwap */

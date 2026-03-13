@@ -45,7 +45,7 @@ extern "C" {
 #define xmlDefaultBufferSize 4096
 #define XML_GET_CONTENT(n) \
     ((n)->type == XML_ELEMENT_NODE ? NULL : (n)->content)
-#define XML_GET_LINE(n)	xmlGetLineNo(n)
+#define XML_GET_LINE(n) xmlGetLineNo(n)
 /** @endcond */
 
 /*
@@ -91,12 +91,12 @@ typedef xmlEntity *xmlEntityPtr;
  * Removed, buffers always use XML_BUFFER_ALLOC_IO now.
  */
 typedef enum {
-    XML_BUFFER_ALLOC_DOUBLEIT,	/* double each time one need to grow */
-    XML_BUFFER_ALLOC_EXACT,	/* grow only to the minimal size */
+    XML_BUFFER_ALLOC_DOUBLEIT,  /* double each time one need to grow */
+    XML_BUFFER_ALLOC_EXACT,     /* grow only to the minimal size */
     XML_BUFFER_ALLOC_IMMUTABLE, /* immutable buffer, deprecated */
-    XML_BUFFER_ALLOC_IO,	/* special allocation scheme used for I/O */
-    XML_BUFFER_ALLOC_HYBRID,	/* exact up to a threshold, and doubleit thereafter */
-    XML_BUFFER_ALLOC_BOUNDED	/* limit the upper size of the buffer */
+    XML_BUFFER_ALLOC_IO,        /* special allocation scheme used for I/O */
+    XML_BUFFER_ALLOC_HYBRID,    /* exact up to a threshold, and doubleit thereafter */
+    XML_BUFFER_ALLOC_BOUNDED    /* limit the upper size of the buffer */
 } xmlBufferAllocationScheme;
 
 /** Buffer type */
@@ -165,92 +165,92 @@ typedef enum {
      *
      * Objects of this type are an xmlNode.
      */
-    XML_ELEMENT_NODE=		1,
+    XML_ELEMENT_NODE=           1,
     /**
      * An attribute.
      *
      * Objects of this type are an xmlAttr.
      */
-    XML_ATTRIBUTE_NODE=		2,
+    XML_ATTRIBUTE_NODE=         2,
     /**
      * A text node.
      *
      * Objects of this type are an xmlNode.
      */
-    XML_TEXT_NODE=		3,
+    XML_TEXT_NODE=              3,
     /**
      * A CDATA section.
      *
      * Objects of this type are an xmlNode.
      */
-    XML_CDATA_SECTION_NODE=	4,
+    XML_CDATA_SECTION_NODE=     4,
     /**
      * An entity reference.
      *
      * Objects of this type are an xmlNode. The `children` member
      * points to the entity declaration if available.
      */
-    XML_ENTITY_REF_NODE=	5,
+    XML_ENTITY_REF_NODE=        5,
     /** unused */
-    XML_ENTITY_NODE=		6,
+    XML_ENTITY_NODE=            6,
     /**
      * A processing instruction.
      *
      * Objects of this type are an xmlNode.
      */
-    XML_PI_NODE=		7,
+    XML_PI_NODE=                7,
     /**
      * A comment.
      *
      * Objects of this type are an xmlNode.
      */
-    XML_COMMENT_NODE=		8,
+    XML_COMMENT_NODE=           8,
     /**
      * A document.
      *
      * Objects of this type are an xmlDoc.
      */
-    XML_DOCUMENT_NODE=		9,
+    XML_DOCUMENT_NODE=          9,
     /** unused */
-    XML_DOCUMENT_TYPE_NODE=	10,
+    XML_DOCUMENT_TYPE_NODE=     10,
     /**
      * A document fragment.
      *
      * Objects of this type are an xmlNode.
      */
-    XML_DOCUMENT_FRAG_NODE=	11,
+    XML_DOCUMENT_FRAG_NODE=     11,
     /** A notation, unused */
-    XML_NOTATION_NODE=		12,
+    XML_NOTATION_NODE=          12,
     /**
      * An HTML document.
      *
      * Objects of this type are an xmlDoc.
      */
-    XML_HTML_DOCUMENT_NODE=	13,
+    XML_HTML_DOCUMENT_NODE=     13,
     /**
      * A document type definition.
      *
      * Objects of this type are an xmlDtd.
      */
-    XML_DTD_NODE=		14,
+    XML_DTD_NODE=               14,
     /**
      * An element declaration.
      *
      * Objects of this type are an xmlElement.
      */
-    XML_ELEMENT_DECL=		15,
+    XML_ELEMENT_DECL=           15,
     /**
      * An attribute declaration.
      *
      * Objects of this type are an xmlAttribute.
      */
-    XML_ATTRIBUTE_DECL=		16,
+    XML_ATTRIBUTE_DECL=         16,
     /**
      * An entity declaration.
      *
      * Objects of this type are an xmlEntity.
      */
-    XML_ENTITY_DECL=		17,
+    XML_ENTITY_DECL=            17,
     /**
      * An XPath namespace node.
      *
@@ -262,22 +262,22 @@ typedef enum {
      * Nodes of this type must be handled with extreme care to
      * avoid type confusion bugs.
      */
-    XML_NAMESPACE_DECL=		18,
+    XML_NAMESPACE_DECL=         18,
     /**
      * An XInclude start marker.
      *
      * Objects of this type are an xmlNode. Inserted as preceding
      * sibling of XIncluded content.
      */
-    XML_XINCLUDE_START=		19,
+    XML_XINCLUDE_START=         19,
     /**
      * An XInclude end marker.
      *
      * Objects of this type are an xmlNode. Inserted as following
      * sibling of XIncluded content.
      */
-    XML_XINCLUDE_END=		20
-    /* XML_DOCB_DOCUMENT_NODE=	21 */ /* removed */
+    XML_XINCLUDE_END=           20
+    /* XML_DOCB_DOCUMENT_NODE=  21 */ /* removed */
 } xmlElementType;
 
 /** @cond IGNORE */
@@ -309,7 +309,7 @@ struct _xmlNotation {
 typedef enum {
     XML_ATTRIBUTE_CDATA = 1,
     XML_ATTRIBUTE_ID,
-    XML_ATTRIBUTE_IDREF	,
+    XML_ATTRIBUTE_IDREF ,
     XML_ATTRIBUTE_IDREFS,
     XML_ATTRIBUTE_ENTITY,
     XML_ATTRIBUTE_ENTITIES,
@@ -489,7 +489,7 @@ struct _xmlElement {
     /** validating regexp */
     xmlRegexp         *contModel XML_DEPRECATED_MEMBER;
 #else
-    void	      *contModel XML_DEPRECATED_MEMBER;
+    void              *contModel XML_DEPRECATED_MEMBER;
 #endif
 };
 
@@ -761,21 +761,21 @@ struct _xmlNode {
  */
 typedef enum {
     /** document is XML well formed */
-    XML_DOC_WELLFORMED		= 1<<0,
+    XML_DOC_WELLFORMED          = 1<<0,
     /** document is Namespace valid */
-    XML_DOC_NSVALID		= 1<<1,
+    XML_DOC_NSVALID             = 1<<1,
     /** parsed with old XML-1.0 parser */
-    XML_DOC_OLD10		= 1<<2,
+    XML_DOC_OLD10               = 1<<2,
     /** DTD validation was successful */
-    XML_DOC_DTDVALID		= 1<<3,
+    XML_DOC_DTDVALID            = 1<<3,
     /** XInclude substitution was done */
-    XML_DOC_XINCLUDE		= 1<<4,
+    XML_DOC_XINCLUDE            = 1<<4,
     /** Document was built using the API and not by parsing an instance */
-    XML_DOC_USERBUILT		= 1<<5,
+    XML_DOC_USERBUILT           = 1<<5,
     /** built for internal processing */
-    XML_DOC_INTERNAL		= 1<<6,
+    XML_DOC_INTERNAL            = 1<<6,
     /** parsed or built HTML document */
-    XML_DOC_HTML		= 1<<7
+    XML_DOC_HTML                = 1<<7
 } xmlDocProperties;
 
 /** XML or HTML document */
@@ -861,9 +861,9 @@ typedef xmlDOMWrapCtxt *xmlDOMWrapCtxtPtr;
  * @returns an xmlNs or NULL in case of an error.
  */
 typedef xmlNs *(*xmlDOMWrapAcquireNsFunction) (xmlDOMWrapCtxt *ctxt,
-						 xmlNode *node,
-						 const xmlChar *nsName,
-						 const xmlChar *nsPrefix);
+                                                 xmlNode *node,
+                                                 const xmlChar *nsName,
+                                                 const xmlChar *nsPrefix);
 
 /**
  * Context for DOM wrapper-operations.
@@ -940,524 +940,524 @@ XMLPUBFUN xmlDeregisterNodeFunc *__xmlDeregisterNodeDefaultValue(void);
  * Some helper functions
  */
 XMLPUBFUN int
-		xmlValidateNCName	(const xmlChar *value,
-					 int space);
+                xmlValidateNCName       (const xmlChar *value,
+                                         int space);
 
 XMLPUBFUN int
-		xmlValidateQName	(const xmlChar *value,
-					 int space);
+                xmlValidateQName        (const xmlChar *value,
+                                         int space);
 XMLPUBFUN int
-		xmlValidateName		(const xmlChar *value,
-					 int space);
+                xmlValidateName         (const xmlChar *value,
+                                         int space);
 XMLPUBFUN int
-		xmlValidateNMToken	(const xmlChar *value,
-					 int space);
+                xmlValidateNMToken      (const xmlChar *value,
+                                         int space);
 
 XMLPUBFUN xmlChar *
-		xmlBuildQName		(const xmlChar *ncname,
-					 const xmlChar *prefix,
-					 xmlChar *memory,
-					 int len);
+                xmlBuildQName           (const xmlChar *ncname,
+                                         const xmlChar *prefix,
+                                         xmlChar *memory,
+                                         int len);
 XMLPUBFUN xmlChar *
-		xmlSplitQName2		(const xmlChar *name,
-					 xmlChar **prefix);
+                xmlSplitQName2          (const xmlChar *name,
+                                         xmlChar **prefix);
 XMLPUBFUN const xmlChar *
-		xmlSplitQName3		(const xmlChar *name,
-					 int *len);
+                xmlSplitQName3          (const xmlChar *name,
+                                         int *len);
 
 /*
  * Creating/freeing new structures.
  */
 XMLPUBFUN xmlDtd *
-		xmlCreateIntSubset	(xmlDoc *doc,
-					 const xmlChar *name,
-					 const xmlChar *publicId,
-					 const xmlChar *systemId);
+                xmlCreateIntSubset      (xmlDoc *doc,
+                                         const xmlChar *name,
+                                         const xmlChar *publicId,
+                                         const xmlChar *systemId);
 XMLPUBFUN xmlDtd *
-		xmlNewDtd		(xmlDoc *doc,
-					 const xmlChar *name,
-					 const xmlChar *publicId,
-					 const xmlChar *systemId);
+                xmlNewDtd               (xmlDoc *doc,
+                                         const xmlChar *name,
+                                         const xmlChar *publicId,
+                                         const xmlChar *systemId);
 XMLPUBFUN xmlDtd *
-		xmlGetIntSubset		(const xmlDoc *doc);
+                xmlGetIntSubset         (const xmlDoc *doc);
 XMLPUBFUN void
-		xmlFreeDtd		(xmlDtd *cur);
+                xmlFreeDtd              (xmlDtd *cur);
 XMLPUBFUN xmlNs *
-		xmlNewNs		(xmlNode *node,
-					 const xmlChar *href,
-					 const xmlChar *prefix);
+                xmlNewNs                (xmlNode *node,
+                                         const xmlChar *href,
+                                         const xmlChar *prefix);
 XMLPUBFUN void
-		xmlFreeNs		(xmlNs *cur);
+                xmlFreeNs               (xmlNs *cur);
 XMLPUBFUN void
-		xmlFreeNsList		(xmlNs *cur);
+                xmlFreeNsList           (xmlNs *cur);
 XMLPUBFUN xmlDoc *
-		xmlNewDoc		(const xmlChar *version);
+                xmlNewDoc               (const xmlChar *version);
 XMLPUBFUN void
-		xmlFreeDoc		(xmlDoc *cur);
+                xmlFreeDoc              (xmlDoc *cur);
 XMLPUBFUN xmlAttr *
-		xmlNewDocProp		(xmlDoc *doc,
-					 const xmlChar *name,
-					 const xmlChar *value);
+                xmlNewDocProp           (xmlDoc *doc,
+                                         const xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN xmlAttr *
-		xmlNewProp		(xmlNode *node,
-					 const xmlChar *name,
-					 const xmlChar *value);
+                xmlNewProp              (xmlNode *node,
+                                         const xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN xmlAttr *
-		xmlNewNsProp		(xmlNode *node,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *value);
+                xmlNewNsProp            (xmlNode *node,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN xmlAttr *
-		xmlNewNsPropEatName	(xmlNode *node,
-					 xmlNs *ns,
-					 xmlChar *name,
-					 const xmlChar *value);
+                xmlNewNsPropEatName     (xmlNode *node,
+                                         xmlNs *ns,
+                                         xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN void
-		xmlFreePropList		(xmlAttr *cur);
+                xmlFreePropList         (xmlAttr *cur);
 XMLPUBFUN void
-		xmlFreeProp		(xmlAttr *cur);
+                xmlFreeProp             (xmlAttr *cur);
 XMLPUBFUN xmlAttr *
-		xmlCopyProp		(xmlNode *target,
-					 xmlAttr *cur);
+                xmlCopyProp             (xmlNode *target,
+                                         xmlAttr *cur);
 XMLPUBFUN xmlAttr *
-		xmlCopyPropList		(xmlNode *target,
-					 xmlAttr *cur);
+                xmlCopyPropList         (xmlNode *target,
+                                         xmlAttr *cur);
 XMLPUBFUN xmlDtd *
-		xmlCopyDtd		(xmlDtd *dtd);
+                xmlCopyDtd              (xmlDtd *dtd);
 XMLPUBFUN xmlDoc *
-		xmlCopyDoc		(xmlDoc *doc,
-					 int recursive);
+                xmlCopyDoc              (xmlDoc *doc,
+                                         int recursive);
 /*
  * Creating new nodes.
  */
 XMLPUBFUN xmlNode *
-		xmlNewDocNode		(xmlDoc *doc,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewDocNode           (xmlDoc *doc,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocNodeEatName	(xmlDoc *doc,
-					 xmlNs *ns,
-					 xmlChar *name,
-					 const xmlChar *content);
+                xmlNewDocNodeEatName    (xmlDoc *doc,
+                                         xmlNs *ns,
+                                         xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewNode		(xmlNs *ns,
-					 const xmlChar *name);
+                xmlNewNode              (xmlNs *ns,
+                                         const xmlChar *name);
 XMLPUBFUN xmlNode *
-		xmlNewNodeEatName	(xmlNs *ns,
-					 xmlChar *name);
+                xmlNewNodeEatName       (xmlNs *ns,
+                                         xmlChar *name);
 XMLPUBFUN xmlNode *
-		xmlNewChild		(xmlNode *parent,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewChild             (xmlNode *parent,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocText		(const xmlDoc *doc,
-					 const xmlChar *content);
+                xmlNewDocText           (const xmlDoc *doc,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewText		(const xmlChar *content);
+                xmlNewText              (const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocPI		(xmlDoc *doc,
-					 const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewDocPI             (xmlDoc *doc,
+                                         const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewPI		(const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewPI                (const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocTextLen	(xmlDoc *doc,
-					 const xmlChar *content,
-					 int len);
+                xmlNewDocTextLen        (xmlDoc *doc,
+                                         const xmlChar *content,
+                                         int len);
 XMLPUBFUN xmlNode *
-		xmlNewTextLen		(const xmlChar *content,
-					 int len);
+                xmlNewTextLen           (const xmlChar *content,
+                                         int len);
 XMLPUBFUN xmlNode *
-		xmlNewDocComment	(xmlDoc *doc,
-					 const xmlChar *content);
+                xmlNewDocComment        (xmlDoc *doc,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewComment		(const xmlChar *content);
+                xmlNewComment           (const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewCDataBlock	(xmlDoc *doc,
-					 const xmlChar *content,
-					 int len);
+                xmlNewCDataBlock        (xmlDoc *doc,
+                                         const xmlChar *content,
+                                         int len);
 XMLPUBFUN xmlNode *
-		xmlNewCharRef		(xmlDoc *doc,
-					 const xmlChar *name);
+                xmlNewCharRef           (xmlDoc *doc,
+                                         const xmlChar *name);
 XMLPUBFUN xmlNode *
-		xmlNewReference		(const xmlDoc *doc,
-					 const xmlChar *name);
+                xmlNewReference         (const xmlDoc *doc,
+                                         const xmlChar *name);
 XMLPUBFUN xmlNode *
-		xmlCopyNode		(xmlNode *node,
-					 int recursive);
+                xmlCopyNode             (xmlNode *node,
+                                         int recursive);
 XMLPUBFUN xmlNode *
-		xmlDocCopyNode		(xmlNode *node,
-					 xmlDoc *doc,
-					 int recursive);
+                xmlDocCopyNode          (xmlNode *node,
+                                         xmlDoc *doc,
+                                         int recursive);
 XMLPUBFUN xmlNode *
-		xmlDocCopyNodeList	(xmlDoc *doc,
-					 xmlNode *node);
+                xmlDocCopyNodeList      (xmlDoc *doc,
+                                         xmlNode *node);
 XMLPUBFUN xmlNode *
-		xmlCopyNodeList		(xmlNode *node);
+                xmlCopyNodeList         (xmlNode *node);
 XMLPUBFUN xmlNode *
-		xmlNewTextChild		(xmlNode *parent,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewTextChild         (xmlNode *parent,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocRawNode	(xmlDoc *doc,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *content);
+                xmlNewDocRawNode        (xmlDoc *doc,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *content);
 XMLPUBFUN xmlNode *
-		xmlNewDocFragment	(xmlDoc *doc);
+                xmlNewDocFragment       (xmlDoc *doc);
 
 /*
  * Navigating.
  */
 XMLPUBFUN long
-		xmlGetLineNo		(const xmlNode *node);
+                xmlGetLineNo            (const xmlNode *node);
 XMLPUBFUN xmlChar *
-		xmlGetNodePath		(const xmlNode *node);
+                xmlGetNodePath          (const xmlNode *node);
 XMLPUBFUN xmlNode *
-		xmlDocGetRootElement	(const xmlDoc *doc);
+                xmlDocGetRootElement    (const xmlDoc *doc);
 XMLPUBFUN xmlNode *
-		xmlGetLastChild		(const xmlNode *parent);
+                xmlGetLastChild         (const xmlNode *parent);
 XMLPUBFUN int
-		xmlNodeIsText		(const xmlNode *node);
+                xmlNodeIsText           (const xmlNode *node);
 XMLPUBFUN int
-		xmlIsBlankNode		(const xmlNode *node);
+                xmlIsBlankNode          (const xmlNode *node);
 
 /*
  * Changing the structure.
  */
 XMLPUBFUN xmlNode *
-		xmlDocSetRootElement	(xmlDoc *doc,
-					 xmlNode *root);
+                xmlDocSetRootElement    (xmlDoc *doc,
+                                         xmlNode *root);
 XMLPUBFUN void
-		xmlNodeSetName		(xmlNode *cur,
-					 const xmlChar *name);
+                xmlNodeSetName          (xmlNode *cur,
+                                         const xmlChar *name);
 XMLPUBFUN xmlNode *
-		xmlAddChild		(xmlNode *parent,
-					 xmlNode *cur);
+                xmlAddChild             (xmlNode *parent,
+                                         xmlNode *cur);
 XMLPUBFUN xmlNode *
-		xmlAddChildList		(xmlNode *parent,
-					 xmlNode *cur);
+                xmlAddChildList         (xmlNode *parent,
+                                         xmlNode *cur);
 XMLPUBFUN xmlNode *
-		xmlReplaceNode		(xmlNode *old,
-					 xmlNode *cur);
+                xmlReplaceNode          (xmlNode *old,
+                                         xmlNode *cur);
 XMLPUBFUN xmlNode *
-		xmlAddPrevSibling	(xmlNode *cur,
-					 xmlNode *elem);
+                xmlAddPrevSibling       (xmlNode *cur,
+                                         xmlNode *elem);
 XMLPUBFUN xmlNode *
-		xmlAddSibling		(xmlNode *cur,
-					 xmlNode *elem);
+                xmlAddSibling           (xmlNode *cur,
+                                         xmlNode *elem);
 XMLPUBFUN xmlNode *
-		xmlAddNextSibling	(xmlNode *cur,
-					 xmlNode *elem);
+                xmlAddNextSibling       (xmlNode *cur,
+                                         xmlNode *elem);
 XMLPUBFUN void
-		xmlUnlinkNode		(xmlNode *cur);
+                xmlUnlinkNode           (xmlNode *cur);
 XMLPUBFUN xmlNode *
-		xmlTextMerge		(xmlNode *first,
-					 xmlNode *second);
+                xmlTextMerge            (xmlNode *first,
+                                         xmlNode *second);
 XMLPUBFUN int
-		xmlTextConcat		(xmlNode *node,
-					 const xmlChar *content,
-					 int len);
+                xmlTextConcat           (xmlNode *node,
+                                         const xmlChar *content,
+                                         int len);
 XMLPUBFUN void
-		xmlFreeNodeList		(xmlNode *cur);
+                xmlFreeNodeList         (xmlNode *cur);
 XMLPUBFUN void
-		xmlFreeNode		(xmlNode *cur);
+                xmlFreeNode             (xmlNode *cur);
 XMLPUBFUN int
-		xmlSetTreeDoc		(xmlNode *tree,
-					 xmlDoc *doc);
+                xmlSetTreeDoc           (xmlNode *tree,
+                                         xmlDoc *doc);
 XMLPUBFUN int
-		xmlSetListDoc		(xmlNode *list,
-					 xmlDoc *doc);
+                xmlSetListDoc           (xmlNode *list,
+                                         xmlDoc *doc);
 /*
  * Namespaces.
  */
 XMLPUBFUN xmlNs *
-		xmlSearchNs		(xmlDoc *doc,
-					 xmlNode *node,
-					 const xmlChar *nameSpace);
+                xmlSearchNs             (xmlDoc *doc,
+                                         xmlNode *node,
+                                         const xmlChar *nameSpace);
 XMLPUBFUN xmlNs *
-		xmlSearchNsByHref	(xmlDoc *doc,
-					 xmlNode *node,
-					 const xmlChar *href);
+                xmlSearchNsByHref       (xmlDoc *doc,
+                                         xmlNode *node,
+                                         const xmlChar *href);
 XMLPUBFUN int
-		xmlGetNsListSafe	(const xmlDoc *doc,
-					 const xmlNode *node,
-					 xmlNs ***out);
+                xmlGetNsListSafe        (const xmlDoc *doc,
+                                         const xmlNode *node,
+                                         xmlNs ***out);
 XMLPUBFUN xmlNs **
-		xmlGetNsList		(const xmlDoc *doc,
-					 const xmlNode *node);
+                xmlGetNsList            (const xmlDoc *doc,
+                                         const xmlNode *node);
 
 XMLPUBFUN void
-		xmlSetNs		(xmlNode *node,
-					 xmlNs *ns);
+                xmlSetNs                (xmlNode *node,
+                                         xmlNs *ns);
 XMLPUBFUN xmlNs *
-		xmlCopyNamespace	(xmlNs *cur);
+                xmlCopyNamespace        (xmlNs *cur);
 XMLPUBFUN xmlNs *
-		xmlCopyNamespaceList	(xmlNs *cur);
+                xmlCopyNamespaceList    (xmlNs *cur);
 
 /*
  * Changing the content.
  */
 XMLPUBFUN xmlAttr *
-		xmlSetProp		(xmlNode *node,
-					 const xmlChar *name,
-					 const xmlChar *value);
+                xmlSetProp              (xmlNode *node,
+                                         const xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN xmlAttr *
-		xmlSetNsProp		(xmlNode *node,
-					 xmlNs *ns,
-					 const xmlChar *name,
-					 const xmlChar *value);
+                xmlSetNsProp            (xmlNode *node,
+                                         xmlNs *ns,
+                                         const xmlChar *name,
+                                         const xmlChar *value);
 XMLPUBFUN int
-		xmlNodeGetAttrValue	(const xmlNode *node,
-					 const xmlChar *name,
-					 const xmlChar *nsUri,
-					 xmlChar **out);
+                xmlNodeGetAttrValue     (const xmlNode *node,
+                                         const xmlChar *name,
+                                         const xmlChar *nsUri,
+                                         xmlChar **out);
 XMLPUBFUN xmlChar *
-		xmlGetNoNsProp		(const xmlNode *node,
-					 const xmlChar *name);
+                xmlGetNoNsProp          (const xmlNode *node,
+                                         const xmlChar *name);
 XMLPUBFUN xmlChar *
-		xmlGetProp		(const xmlNode *node,
-					 const xmlChar *name);
+                xmlGetProp              (const xmlNode *node,
+                                         const xmlChar *name);
 XMLPUBFUN xmlAttr *
-		xmlHasProp		(const xmlNode *node,
-					 const xmlChar *name);
+                xmlHasProp              (const xmlNode *node,
+                                         const xmlChar *name);
 XMLPUBFUN xmlAttr *
-		xmlHasNsProp		(const xmlNode *node,
-					 const xmlChar *name,
-					 const xmlChar *nameSpace);
+                xmlHasNsProp            (const xmlNode *node,
+                                         const xmlChar *name,
+                                         const xmlChar *nameSpace);
 XMLPUBFUN xmlChar *
-		xmlGetNsProp		(const xmlNode *node,
-					 const xmlChar *name,
-					 const xmlChar *nameSpace);
+                xmlGetNsProp            (const xmlNode *node,
+                                         const xmlChar *name,
+                                         const xmlChar *nameSpace);
 XMLPUBFUN xmlNode *
-		xmlStringGetNodeList	(const xmlDoc *doc,
-					 const xmlChar *value);
+                xmlStringGetNodeList    (const xmlDoc *doc,
+                                         const xmlChar *value);
 XMLPUBFUN xmlNode *
-		xmlStringLenGetNodeList	(const xmlDoc *doc,
-					 const xmlChar *value,
-					 int len);
+                xmlStringLenGetNodeList (const xmlDoc *doc,
+                                         const xmlChar *value,
+                                         int len);
 XMLPUBFUN xmlChar *
-		xmlNodeListGetString	(xmlDoc *doc,
-					 const xmlNode *list,
-					 int inLine);
+                xmlNodeListGetString    (xmlDoc *doc,
+                                         const xmlNode *list,
+                                         int inLine);
 XMLPUBFUN xmlChar *
-		xmlNodeListGetRawString	(const xmlDoc *doc,
-					 const xmlNode *list,
-					 int inLine);
+                xmlNodeListGetRawString (const xmlDoc *doc,
+                                         const xmlNode *list,
+                                         int inLine);
 XMLPUBFUN int
-		xmlNodeSetContent	(xmlNode *cur,
-					 const xmlChar *content);
+                xmlNodeSetContent       (xmlNode *cur,
+                                         const xmlChar *content);
 XMLPUBFUN int
-		xmlNodeSetContentLen	(xmlNode *cur,
-					 const xmlChar *content,
-					 int len);
+                xmlNodeSetContentLen    (xmlNode *cur,
+                                         const xmlChar *content,
+                                         int len);
 XMLPUBFUN int
-		xmlNodeAddContent	(xmlNode *cur,
-					 const xmlChar *content);
+                xmlNodeAddContent       (xmlNode *cur,
+                                         const xmlChar *content);
 XMLPUBFUN int
-		xmlNodeAddContentLen	(xmlNode *cur,
-					 const xmlChar *content,
-					 int len);
+                xmlNodeAddContentLen    (xmlNode *cur,
+                                         const xmlChar *content,
+                                         int len);
 XMLPUBFUN xmlChar *
-		xmlNodeGetContent	(const xmlNode *cur);
+                xmlNodeGetContent       (const xmlNode *cur);
 
 XMLPUBFUN int
-		xmlNodeBufGetContent	(xmlBuffer *buffer,
-					 const xmlNode *cur);
+                xmlNodeBufGetContent    (xmlBuffer *buffer,
+                                         const xmlNode *cur);
 XMLPUBFUN int
-		xmlBufGetNodeContent	(xmlBuf *buf,
-					 const xmlNode *cur);
+                xmlBufGetNodeContent    (xmlBuf *buf,
+                                         const xmlNode *cur);
 
 XMLPUBFUN xmlChar *
-		xmlNodeGetLang		(const xmlNode *cur);
+                xmlNodeGetLang          (const xmlNode *cur);
 XMLPUBFUN int
-		xmlNodeGetSpacePreserve	(const xmlNode *cur);
+                xmlNodeGetSpacePreserve (const xmlNode *cur);
 XMLPUBFUN int
-		xmlNodeSetLang		(xmlNode *cur,
-					 const xmlChar *lang);
+                xmlNodeSetLang          (xmlNode *cur,
+                                         const xmlChar *lang);
 XMLPUBFUN int
-		xmlNodeSetSpacePreserve (xmlNode *cur,
-					 int val);
+                xmlNodeSetSpacePreserve (xmlNode *cur,
+                                         int val);
 XMLPUBFUN int
-		xmlNodeGetBaseSafe	(const xmlDoc *doc,
-					 const xmlNode *cur,
-					 xmlChar **baseOut);
+                xmlNodeGetBaseSafe      (const xmlDoc *doc,
+                                         const xmlNode *cur,
+                                         xmlChar **baseOut);
 XMLPUBFUN xmlChar *
-		xmlNodeGetBase		(const xmlDoc *doc,
-					 const xmlNode *cur);
+                xmlNodeGetBase          (const xmlDoc *doc,
+                                         const xmlNode *cur);
 XMLPUBFUN int
-		xmlNodeSetBase		(xmlNode *cur,
-					 const xmlChar *uri);
+                xmlNodeSetBase          (xmlNode *cur,
+                                         const xmlChar *uri);
 
 /*
  * Removing content.
  */
 XMLPUBFUN int
-		xmlRemoveProp		(xmlAttr *cur);
+                xmlRemoveProp           (xmlAttr *cur);
 XMLPUBFUN int
-		xmlUnsetNsProp		(xmlNode *node,
-					 xmlNs *ns,
-					 const xmlChar *name);
+                xmlUnsetNsProp          (xmlNode *node,
+                                         xmlNs *ns,
+                                         const xmlChar *name);
 XMLPUBFUN int
-		xmlUnsetProp		(xmlNode *node,
-					 const xmlChar *name);
+                xmlUnsetProp            (xmlNode *node,
+                                         const xmlChar *name);
 
 #ifdef LIBXML_OUTPUT_ENABLED
 XMLPUBFUN void xmlAttrSerializeTxtContent(xmlBuffer *buf,
-					 xmlDoc *doc,
-					 xmlAttr *attr,
-					 const xmlChar *string);
+                                         xmlDoc *doc,
+                                         xmlAttr *attr,
+                                         const xmlChar *string);
 #endif /* LIBXML_OUTPUT_ENABLED */
 
 /*
  * Namespace handling.
  */
 XMLPUBFUN int
-		xmlReconciliateNs	(xmlDoc *doc,
-					 xmlNode *tree);
+                xmlReconciliateNs       (xmlDoc *doc,
+                                         xmlNode *tree);
 
 #ifdef LIBXML_OUTPUT_ENABLED
 /*
  * Saving.
  */
 XMLPUBFUN void
-		xmlDocDumpFormatMemory	(xmlDoc *cur,
-					 xmlChar **mem,
-					 int *size,
-					 int format);
+                xmlDocDumpFormatMemory  (xmlDoc *cur,
+                                         xmlChar **mem,
+                                         int *size,
+                                         int format);
 XMLPUBFUN void
-		xmlDocDumpMemory	(xmlDoc *cur,
-					 xmlChar **mem,
-					 int *size);
+                xmlDocDumpMemory        (xmlDoc *cur,
+                                         xmlChar **mem,
+                                         int *size);
 XMLPUBFUN void
-		xmlDocDumpMemoryEnc	(xmlDoc *out_doc,
-					 xmlChar **doc_txt_ptr,
-					 int * doc_txt_len,
-					 const char *txt_encoding);
+                xmlDocDumpMemoryEnc     (xmlDoc *out_doc,
+                                         xmlChar **doc_txt_ptr,
+                                         int * doc_txt_len,
+                                         const char *txt_encoding);
 XMLPUBFUN void
-		xmlDocDumpFormatMemoryEnc(xmlDoc *out_doc,
-					 xmlChar **doc_txt_ptr,
-					 int * doc_txt_len,
-					 const char *txt_encoding,
-					 int format);
+                xmlDocDumpFormatMemoryEnc(xmlDoc *out_doc,
+                                         xmlChar **doc_txt_ptr,
+                                         int * doc_txt_len,
+                                         const char *txt_encoding,
+                                         int format);
 XMLPUBFUN int
-		xmlDocFormatDump	(FILE *f,
-					 xmlDoc *cur,
-					 int format);
+                xmlDocFormatDump        (FILE *f,
+                                         xmlDoc *cur,
+                                         int format);
 XMLPUBFUN int
-		xmlDocDump		(FILE *f,
-					 xmlDoc *cur);
+                xmlDocDump              (FILE *f,
+                                         xmlDoc *cur);
 XMLPUBFUN void
-		xmlElemDump		(FILE *f,
-					 xmlDoc *doc,
-					 xmlNode *cur);
+                xmlElemDump             (FILE *f,
+                                         xmlDoc *doc,
+                                         xmlNode *cur);
 XMLPUBFUN int
-		xmlSaveFile		(const char *filename,
-					 xmlDoc *cur);
+                xmlSaveFile             (const char *filename,
+                                         xmlDoc *cur);
 XMLPUBFUN int
-		xmlSaveFormatFile	(const char *filename,
-					 xmlDoc *cur,
-					 int format);
+                xmlSaveFormatFile       (const char *filename,
+                                         xmlDoc *cur,
+                                         int format);
 XMLPUBFUN size_t
-		xmlBufNodeDump		(xmlBuf *buf,
-					 xmlDoc *doc,
-					 xmlNode *cur,
-					 int level,
-					 int format);
+                xmlBufNodeDump          (xmlBuf *buf,
+                                         xmlDoc *doc,
+                                         xmlNode *cur,
+                                         int level,
+                                         int format);
 XMLPUBFUN int
-		xmlNodeDump		(xmlBuffer *buf,
-					 xmlDoc *doc,
-					 xmlNode *cur,
-					 int level,
-					 int format);
+                xmlNodeDump             (xmlBuffer *buf,
+                                         xmlDoc *doc,
+                                         xmlNode *cur,
+                                         int level,
+                                         int format);
 
 XMLPUBFUN int
-		xmlSaveFileTo		(xmlOutputBuffer *buf,
-					 xmlDoc *cur,
-					 const char *encoding);
+                xmlSaveFileTo           (xmlOutputBuffer *buf,
+                                         xmlDoc *cur,
+                                         const char *encoding);
 XMLPUBFUN int
-		xmlSaveFormatFileTo     (xmlOutputBuffer *buf,
-					 xmlDoc *cur,
-				         const char *encoding,
-				         int format);
+                xmlSaveFormatFileTo     (xmlOutputBuffer *buf,
+                                         xmlDoc *cur,
+                                         const char *encoding,
+                                         int format);
 XMLPUBFUN void
-		xmlNodeDumpOutput	(xmlOutputBuffer *buf,
-					 xmlDoc *doc,
-					 xmlNode *cur,
-					 int level,
-					 int format,
-					 const char *encoding);
+                xmlNodeDumpOutput       (xmlOutputBuffer *buf,
+                                         xmlDoc *doc,
+                                         xmlNode *cur,
+                                         int level,
+                                         int format,
+                                         const char *encoding);
 
 XMLPUBFUN int
-		xmlSaveFormatFileEnc    (const char *filename,
-					 xmlDoc *cur,
-					 const char *encoding,
-					 int format);
+                xmlSaveFormatFileEnc    (const char *filename,
+                                         xmlDoc *cur,
+                                         const char *encoding,
+                                         int format);
 
 XMLPUBFUN int
-		xmlSaveFileEnc		(const char *filename,
-					 xmlDoc *cur,
-					 const char *encoding);
+                xmlSaveFileEnc          (const char *filename,
+                                         xmlDoc *cur,
+                                         const char *encoding);
 
 #endif /* LIBXML_OUTPUT_ENABLED */
 /*
  * XHTML
  */
 XMLPUBFUN int
-		xmlIsXHTML		(const xmlChar *systemID,
-					 const xmlChar *publicID);
+                xmlIsXHTML              (const xmlChar *systemID,
+                                         const xmlChar *publicID);
 
 /*
  * Compression.
  */
 XMLPUBFUN int
-		xmlGetDocCompressMode	(const xmlDoc *doc);
+                xmlGetDocCompressMode   (const xmlDoc *doc);
 XMLPUBFUN void
-		xmlSetDocCompressMode	(xmlDoc *doc,
-					 int mode);
+                xmlSetDocCompressMode   (xmlDoc *doc,
+                                         int mode);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlGetCompressMode	(void);
+                xmlGetCompressMode      (void);
 XML_DEPRECATED
 XMLPUBFUN void
-		xmlSetCompressMode	(int mode);
+                xmlSetCompressMode      (int mode);
 
 /*
 * DOM-wrapper helper functions.
 */
 XMLPUBFUN xmlDOMWrapCtxt *
-		xmlDOMWrapNewCtxt	(void);
+                xmlDOMWrapNewCtxt       (void);
 XMLPUBFUN void
-		xmlDOMWrapFreeCtxt	(xmlDOMWrapCtxt *ctxt);
+                xmlDOMWrapFreeCtxt      (xmlDOMWrapCtxt *ctxt);
 XMLPUBFUN int
-	    xmlDOMWrapReconcileNamespaces(xmlDOMWrapCtxt *ctxt,
-					 xmlNode *elem,
-					 int options);
+            xmlDOMWrapReconcileNamespaces(xmlDOMWrapCtxt *ctxt,
+                                         xmlNode *elem,
+                                         int options);
 XMLPUBFUN int
-	    xmlDOMWrapAdoptNode		(xmlDOMWrapCtxt *ctxt,
-					 xmlDoc *sourceDoc,
-					 xmlNode *node,
-					 xmlDoc *destDoc,
-					 xmlNode *destParent,
-					 int options);
+            xmlDOMWrapAdoptNode         (xmlDOMWrapCtxt *ctxt,
+                                         xmlDoc *sourceDoc,
+                                         xmlNode *node,
+                                         xmlDoc *destDoc,
+                                         xmlNode *destParent,
+                                         int options);
 XMLPUBFUN int
-	    xmlDOMWrapRemoveNode	(xmlDOMWrapCtxt *ctxt,
-					 xmlDoc *doc,
-					 xmlNode *node,
-					 int options);
+            xmlDOMWrapRemoveNode        (xmlDOMWrapCtxt *ctxt,
+                                         xmlDoc *doc,
+                                         xmlNode *node,
+                                         int options);
 XMLPUBFUN int
-	    xmlDOMWrapCloneNode		(xmlDOMWrapCtxt *ctxt,
-					 xmlDoc *sourceDoc,
-					 xmlNode *node,
-					 xmlNode **clonedNode,
-					 xmlDoc *destDoc,
-					 xmlNode *destParent,
-					 int deep,
-					 int options);
+            xmlDOMWrapCloneNode         (xmlDOMWrapCtxt *ctxt,
+                                         xmlDoc *sourceDoc,
+                                         xmlNode *node,
+                                         xmlNode **clonedNode,
+                                         xmlDoc *destDoc,
+                                         xmlNode *destParent,
+                                         int deep,
+                                         int options);
 
 /*
  * 5 interfaces from DOM ElementTraversal, but different in entities
@@ -1476,10 +1476,10 @@ XMLPUBFUN xmlNode *
 
 XML_DEPRECATED
 XMLPUBFUN xmlRegisterNodeFunc
-	    xmlRegisterNodeDefault	(xmlRegisterNodeFunc func);
+            xmlRegisterNodeDefault      (xmlRegisterNodeFunc func);
 XML_DEPRECATED
 XMLPUBFUN xmlDeregisterNodeFunc
-	    xmlDeregisterNodeDefault	(xmlDeregisterNodeFunc func);
+            xmlDeregisterNodeDefault    (xmlDeregisterNodeFunc func);
 XML_DEPRECATED
 XMLPUBFUN xmlRegisterNodeFunc
             xmlThrDefRegisterNodeDefault(xmlRegisterNodeFunc func);
@@ -1493,78 +1493,78 @@ XMLPUBFUN xmlDeregisterNodeFunc
 
 XML_DEPRECATED
 XMLPUBFUN void
-		xmlSetBufferAllocationScheme(xmlBufferAllocationScheme scheme);
+                xmlSetBufferAllocationScheme(xmlBufferAllocationScheme scheme);
 XML_DEPRECATED
 XMLPUBFUN xmlBufferAllocationScheme
-		xmlGetBufferAllocationScheme(void);
+                xmlGetBufferAllocationScheme(void);
 
 XMLPUBFUN xmlBuffer *
-		xmlBufferCreate		(void);
+                xmlBufferCreate         (void);
 XMLPUBFUN xmlBuffer *
-		xmlBufferCreateSize	(size_t size);
+                xmlBufferCreateSize     (size_t size);
 XMLPUBFUN xmlBuffer *
-		xmlBufferCreateStatic	(void *mem,
-					 size_t size);
+                xmlBufferCreateStatic   (void *mem,
+                                         size_t size);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlBufferResize		(xmlBuffer *buf,
-					 unsigned int size);
+                xmlBufferResize         (xmlBuffer *buf,
+                                         unsigned int size);
 XMLPUBFUN void
-		xmlBufferFree		(xmlBuffer *buf);
+                xmlBufferFree           (xmlBuffer *buf);
 XMLPUBFUN int
-		xmlBufferDump		(FILE *file,
-					 xmlBuffer *buf);
+                xmlBufferDump           (FILE *file,
+                                         xmlBuffer *buf);
 XMLPUBFUN int
-		xmlBufferAdd		(xmlBuffer *buf,
-					 const xmlChar *str,
-					 int len);
+                xmlBufferAdd            (xmlBuffer *buf,
+                                         const xmlChar *str,
+                                         int len);
 XMLPUBFUN int
-		xmlBufferAddHead	(xmlBuffer *buf,
-					 const xmlChar *str,
-					 int len);
+                xmlBufferAddHead        (xmlBuffer *buf,
+                                         const xmlChar *str,
+                                         int len);
 XMLPUBFUN int
-		xmlBufferCat		(xmlBuffer *buf,
-					 const xmlChar *str);
+                xmlBufferCat            (xmlBuffer *buf,
+                                         const xmlChar *str);
 XMLPUBFUN int
-		xmlBufferCCat		(xmlBuffer *buf,
-					 const char *str);
+                xmlBufferCCat           (xmlBuffer *buf,
+                                         const char *str);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlBufferShrink		(xmlBuffer *buf,
-					 unsigned int len);
+                xmlBufferShrink         (xmlBuffer *buf,
+                                         unsigned int len);
 XML_DEPRECATED
 XMLPUBFUN int
-		xmlBufferGrow		(xmlBuffer *buf,
-					 unsigned int len);
+                xmlBufferGrow           (xmlBuffer *buf,
+                                         unsigned int len);
 XMLPUBFUN void
-		xmlBufferEmpty		(xmlBuffer *buf);
+                xmlBufferEmpty          (xmlBuffer *buf);
 XMLPUBFUN const xmlChar*
-		xmlBufferContent	(const xmlBuffer *buf);
+                xmlBufferContent        (const xmlBuffer *buf);
 XMLPUBFUN xmlChar*
-		xmlBufferDetach         (xmlBuffer *buf);
+                xmlBufferDetach         (xmlBuffer *buf);
 XMLPUBFUN void
-		xmlBufferSetAllocationScheme(xmlBuffer *buf,
-					 xmlBufferAllocationScheme scheme);
+                xmlBufferSetAllocationScheme(xmlBuffer *buf,
+                                         xmlBufferAllocationScheme scheme);
 XMLPUBFUN int
-		xmlBufferLength		(const xmlBuffer *buf);
+                xmlBufferLength         (const xmlBuffer *buf);
 XMLPUBFUN void
-		xmlBufferWriteCHAR	(xmlBuffer *buf,
-					 const xmlChar *string);
+                xmlBufferWriteCHAR      (xmlBuffer *buf,
+                                         const xmlChar *string);
 XMLPUBFUN void
-		xmlBufferWriteChar	(xmlBuffer *buf,
-					 const char *string);
+                xmlBufferWriteChar      (xmlBuffer *buf,
+                                         const char *string);
 XMLPUBFUN void
-		xmlBufferWriteQuotedString(xmlBuffer *buf,
-					 const xmlChar *string);
+                xmlBufferWriteQuotedString(xmlBuffer *buf,
+                                         const xmlChar *string);
 
 /*
  * A few public routines for xmlBuf. As those are expected to be used
  * mostly internally the bulk of the routines are internal in buf.h
  */
-XMLPUBFUN xmlChar*       xmlBufContent	(const xmlBuf* buf);
+XMLPUBFUN xmlChar*       xmlBufContent  (const xmlBuf* buf);
 XMLPUBFUN xmlChar*       xmlBufEnd      (xmlBuf *buf);
 XMLPUBFUN size_t         xmlBufUse      (xmlBuf *buf);
-XMLPUBFUN size_t         xmlBufShrink	(xmlBuf *buf, size_t len);
+XMLPUBFUN size_t         xmlBufShrink   (xmlBuf *buf, size_t len);
 
 #ifdef __cplusplus
 }
