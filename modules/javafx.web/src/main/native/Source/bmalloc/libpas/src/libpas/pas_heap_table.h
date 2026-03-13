@@ -57,7 +57,7 @@ static inline bool pas_heap_table_has_index(pas_large_heap* heap)
             pas_log("going to get an index for heap %p.\n", heap);
         return true;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     }
 }

@@ -338,7 +338,7 @@ static std::optional<RetainPtr<CFDataRef>> decodeCFData(Decoder& decoder)
     std::optional<uint64_t> size;
     decoder >> size;
 
-    if (UNLIKELY(!isInBounds<size_t>(*size)))
+    if (!isInBounds<size_t>(*size)) [[unlikely]]
         return std::nullopt;
 
     auto buffer = decoder.bufferPointerForDirectRead(static_cast<size_t>(*size));

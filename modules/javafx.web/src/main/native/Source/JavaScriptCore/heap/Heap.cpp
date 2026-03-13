@@ -114,37 +114,57 @@ static constexpr bool verboseStop = false;
 
 namespace {
 
-double maxPauseMS(double thisPauseMS)
+static double maxPauseMS(double thisPauseMS)
 {
     static double maxPauseMS;
     maxPauseMS = std::max(thisPauseMS, maxPauseMS);
     return maxPauseMS;
 }
 
-size_t minHeapSize(HeapType heapType, size_t ramSize)
+static GrowthMode growthMode(size_t ramSize)
 {
-    if (heapType == HeapType::Large) {
-        double result = std::min(
-            static_cast<double>(Options::largeHeapSize()),
-            ramSize * Options::smallHeapRAMFraction());
-        return static_cast<size_t>(result);
-    }
-    return Options::smallHeapSize();
+    // An Aggressive heap uses more memory to go faster.
+    // We do this for machines with enough RAM.
+    size_t aggressiveHeapThresholdInBytes = static_cast<size_t>(Options::aggressiveHeapThresholdInMB()) * MB;
+    if (ramSize >= aggressiveHeapThresholdInBytes)
+        return GrowthMode::Aggressive;
+    return GrowthMode::Default;
 }
 
-size_t proportionalHeapSize(size_t heapSize, size_t ramSize)
+static size_t minHeapSize(HeapType heapType, size_t ramSize)
+{
+    switch (heapType) {
+    case HeapType::Large:
+        return static_cast<size_t>(std::min(
+            static_cast<double>(Options::largeHeapSize()),
+            ramSize * Options::smallHeapRAMFraction()));
+    case HeapType::Medium:
+        return Options::mediumHeapSize();
+    case HeapType::Small:
+    return Options::smallHeapSize();
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
+static size_t maxEdenSizeForRateLimiting(GrowthMode growthMode, size_t minBytesPerCycle)
+{
+    // Only do rate limiting for Aggressive heaps.
+    if (growthMode == GrowthMode::Aggressive)
+        return Options::maxEdenSizeForRateLimitingMultiplier() * minBytesPerCycle;
+    return 0.0;
+}
+
+static size_t proportionalHeapSize(size_t heapSize, GrowthMode growthMode, size_t ramSize)
 {
     if (VM::isInMiniMode())
         return Options::miniVMHeapGrowthFactor() * heapSize;
 
-    bool useNewHeapGrowthFactor = true;
+    bool useNewHeapGrowthFactor = growthMode == GrowthMode::Aggressive;
 
-    // Use new heuristic function for machines >= 16GB RAM.
+    // Use new heuristic function for Aggressive heaps (machines >= 16GB RAM).
     // https://www.mathway.com/en/Algebra?asciimath=2%20*%20e%5E(-1%20*%20x)%20%2B%201%20%3Dy
-    size_t heapGrowthFunctionThresholdInBytes = static_cast<size_t>(Options::heapGrowthFunctionThresholdInMB()) * MB;
-    if (ramSize < heapGrowthFunctionThresholdInBytes)
-        useNewHeapGrowthFactor = false;
-
     // Disable it for Darwin Intel machine.
 #if OS(DARWIN) && CPU(X86_64)
     useNewHeapGrowthFactor = false;
@@ -171,7 +191,7 @@ size_t proportionalHeapSize(size_t heapSize, size_t ramSize)
     return Options::largeHeapGrowthFactor() * heapSize;
 }
 
-void recordType(TypeCountSet& set, JSCell* cell)
+static void recordType(TypeCountSet& set, JSCell* cell)
 {
     auto typeName = "[unknown]"_s;
     const ClassInfo* info = cell->classInfo();
@@ -296,12 +316,14 @@ private:
     , name ISO_SUBSPACE_INIT(*this, heapCellType, type)
 
 #define INIT_SERVER_STRUCTURE_ISO_SUBSPACE(name, heapCellType, type) \
-    , name("IsoSubspace" #name, *this, heapCellType, WTF::roundUpToMultipleOf<type::atomSize>(sizeof(type)), type::numberOfLowerTierPreciseCells, makeUnique<StructureAlignedMemoryAllocator>("Structure"))
+    , name(#name, *this, heapCellType, WTF::roundUpToMultipleOf<type::atomSize>(sizeof(type)), type::numberOfLowerTierPreciseCells, makeUnique<StructureAlignedMemoryAllocator>())
 
 Heap::Heap(VM& vm, HeapType heapType)
     : m_heapType(heapType)
     , m_ramSize(Options::forceRAMSize() ? Options::forceRAMSize() : ramSize())
+    , m_growthMode(growthMode(m_ramSize))
     , m_minBytesPerCycle(minHeapSize(m_heapType, m_ramSize))
+    , m_maxEdenSizeForRateLimiting(maxEdenSizeForRateLimiting(m_growthMode, m_minBytesPerCycle))
     , m_maxEdenSize(m_minBytesPerCycle)
     , m_maxHeapSize(m_minBytesPerCycle)
     , m_objectSpace(this)
@@ -491,7 +513,7 @@ void Heap::dumpHeapStatisticsAtVMDestruction()
 void Heap::lastChanceToFinalize()
 {
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: shutdown ");
     }
@@ -559,7 +581,7 @@ void Heap::lastChanceToFinalize()
 
     dataLogIf(Options::logGC(), "5 ");
 
-    if (UNLIKELY(Options::dumpHeapStatisticsAtVMDestruction()))
+    if (Options::dumpHeapStatisticsAtVMDestruction()) [[unlikely]]
         dumpHeapStatisticsAtVMDestruction();
 
     m_arrayBuffers.lastChanceToFinalize();
@@ -616,7 +638,7 @@ void Heap::reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(const JSCell*
     // We need to report this additionally to tell GC that we get additional extra memory now,
     // and GC needs to consider scheduling GC based on this increase.
 
-    if (UNLIKELY(mutatorShouldBeFenced())) {
+    if (mutatorShouldBeFenced()) [[unlikely]] {
         // In this case, the barrierThreshold is the tautological threshold, so cell could still be
         // not black. But we can't know for sure until we fire off a fence.
         WTF::storeLoadFence();
@@ -648,7 +670,7 @@ void Heap::reportExtraMemoryAllocatedSlowCase(GCDeferralContext* deferralContext
 {
     didAllocate(size);
     if (cell) {
-        if (UNLIKELY(isWithinThreshold(cell->cellState(), barrierThreshold())))
+        if (isWithinThreshold(cell->cellState(), barrierThreshold())) [[unlikely]]
             reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(cell, size);
     }
     collectIfNecessaryOrDefer(deferralContext);
@@ -660,7 +682,10 @@ void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
     // https://bugs.webkit.org/show_bug.cgi?id=170411
     CheckedSize checkedNewSize = m_deprecatedExtraMemorySize;
     checkedNewSize += size;
-    m_deprecatedExtraMemorySize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.value();
+    size_t newSize = std::numeric_limits<size_t>::max();
+    if (!checkedNewSize.hasOverflowed()) [[likely]]
+        newSize = checkedNewSize.value();
+    m_deprecatedExtraMemorySize = newSize;
     reportExtraMemoryAllocatedSlowCase(nullptr, nullptr, size);
 }
 
@@ -989,7 +1014,9 @@ size_t Heap::extraMemorySize()
     CheckedSize checkedTotal = m_extraMemorySize;
     checkedTotal += m_deprecatedExtraMemorySize;
     checkedTotal += m_arrayBuffers.size();
-    size_t total = UNLIKELY(checkedTotal.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedTotal.value();
+    size_t total = std::numeric_limits<size_t>::max();
+    if (!checkedTotal.hasOverflowed()) [[likely]]
+        total = checkedTotal.value();
 
     // It would be nice to have `ASSERT(m_objectSpace.capacity() >= m_objectSpace.size());` here but `m_objectSpace.size()`
     // requires having heap access which thread might not. Specifically, we might be called from the resource usage thread.
@@ -1044,25 +1071,25 @@ size_t Heap::protectedObjectCount()
     return result;
 }
 
-std::unique_ptr<TypeCountSet> Heap::protectedObjectTypeCounts()
+TypeCountSet Heap::protectedObjectTypeCounts()
 {
-    std::unique_ptr<TypeCountSet> result = makeUnique<TypeCountSet>();
+    TypeCountSet result;
     forEachProtectedCell(
         [&] (JSCell* cell) {
-            recordType(*result, cell);
+            recordType(result, cell);
         });
     return result;
 }
 
-std::unique_ptr<TypeCountSet> Heap::objectTypeCounts()
+TypeCountSet Heap::objectTypeCounts()
 {
-    std::unique_ptr<TypeCountSet> result = makeUnique<TypeCountSet>();
+    TypeCountSet result;
     HeapIterationScope iterationScope(*this);
     m_objectSpace.forEachLiveCell(
         iterationScope,
         [&] (HeapCell* cell, HeapCell::Kind kind) -> IterationStatus {
             if (isJSCellKind(kind))
-                recordType(*result, static_cast<JSCell*>(cell));
+                recordType(result, static_cast<JSCell*>(cell));
             return IterationStatus::Continue;
         });
     return result;
@@ -1193,17 +1220,17 @@ void Heap::addToRememberedSet(const JSCell* constCell)
 
 void Heap::sweepSynchronously()
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     MonotonicTime before { };
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         dataLog("Full sweep: ", capacity() / 1024, "kb ");
         before = MonotonicTime::now();
     }
     m_objectSpace.sweepBlocks();
     m_objectSpace.shrink();
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         dataLog("=> ", capacity() / 1024, "kb, ", (after - before).milliseconds(), "ms");
     }
@@ -1211,7 +1238,7 @@ void Heap::sweepSynchronously()
 
 void Heap::collect(Synchronousness synchronousness, GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     switch (synchronousness) {
@@ -1228,7 +1255,7 @@ void Heap::collect(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1245,7 +1272,7 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
         collectSync(request);
 
         DeferGCForAWhile deferGC(vm());
-        if (UNLIKELY(Options::useImmortalObjects()))
+        if (Options::useImmortalObjects()) [[unlikely]]
             sweeper().stopSweeping();
 
         bool alreadySweptInCollectSync = shouldSweepSynchronously();
@@ -1264,7 +1291,7 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectAsync(GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1291,7 +1318,7 @@ void Heap::collectAsync(GCRequest request)
 
 void Heap::collectSync(GCRequest request)
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if constexpr (validateDFGDoesGC)
@@ -1351,7 +1378,7 @@ auto Heap::runCurrentPhase(GCConductor conn, CurrentThreadState* currentThreadSt
 {
     checkConn(conn);
     m_currentThreadState = currentThreadState;
-    m_currentThread = &Thread::current();
+    m_currentThread = &Thread::currentSingleton();
 
     if (conn == GCConductor::Mutator)
         sanitizeStackForVM(vm());
@@ -1433,7 +1460,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
 
     willStartCollection();
 
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         // Verify that live objects from the last GC cycle haven't been corrupted by
         // mutators before we begin this new GC cycle.
         m_verifier->verify(HeapVerifier::Phase::BeforeGC);
@@ -1444,7 +1471,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
 
     ASSERT(m_collectionScope);
     bool isFullGC = m_collectionScope.value() == CollectionScope::Full;
-    if (UNLIKELY(Options::useGCSignpost())) {
+    if (Options::useGCSignpost()) [[unlikely]] {
         StringPrintStream stream;
         stream.print("GC:(", RawPointer(this), "),mode:(", (isFullGC ? "Full" : "Eden"), "),version:(", m_gcVersion, "),conn:(", gcConductorShortName(conn), "),capacity(", capacity() / 1024, "kb)");
         m_signpostMessage = stream.toCString();
@@ -1498,7 +1525,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     m_constraintSet->didStartMarking();
 
     m_scheduler->beginCollection();
-    if (UNLIKELY(Options::logGC()))
+    if (Options::logGC()) [[unlikely]]
         m_scheduler->log();
 
     // After this, we will almost certainly fall through all of the "visitor.isEmpty()"
@@ -1526,7 +1553,7 @@ NEVER_INLINE bool Heap::runFixpointPhase(GCConductor conn)
 
     SlotVisitor& visitor = *m_collectorSlotVisitor;
 
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         UncheckedKeyHashMap<const char*, size_t> visitMap;
         forEachSlotVisitor(
             [&] (SlotVisitor& visitor) {
@@ -1598,7 +1625,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     m_scheduler->willResume();
 
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         double thisPauseMS = (MonotonicTime::now() - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), ")...]\n");
     }
@@ -1646,7 +1673,7 @@ NEVER_INLINE bool Heap::runReloopPhase(GCConductor conn)
 
     m_scheduler->didStop();
 
-    if (UNLIKELY(Options::logGC()))
+    if (Options::logGC()) [[unlikely]]
         m_scheduler->log();
 
     return changePhase(conn, CollectorPhase::Fixpoint);
@@ -1675,18 +1702,18 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     updateObjectCounts();
     endMarking();
 
-    if (UNLIKELY(Options::verifyGC()))
+    if (Options::verifyGC()) [[unlikely]]
         verifyGC();
 
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         m_verifier->gatherLiveCells(HeapVerifier::Phase::AfterMarking);
         m_verifier->verify(HeapVerifier::Phase::AfterMarking);
     }
 
     {
-        auto* previous = Thread::current().setCurrentAtomStringTable(nullptr);
+        auto* previous = Thread::currentSingleton().setCurrentAtomStringTable(nullptr);
         auto scopeExit = makeScopeExit([&] {
-            Thread::current().setCurrentAtomStringTable(previous);
+            Thread::currentSingleton().setCurrentAtomStringTable(previous);
         });
 
         if (vm().typeProfiler())
@@ -1717,7 +1744,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     m_objectSpace.prepareForAllocation();
     updateAllocationLimits();
 
-    if (UNLIKELY(m_verifier)) {
+    if (m_verifier) [[unlikely]] {
         m_verifier->trimDeadCells();
         m_verifier->verify(HeapVerifier::Phase::AfterGC);
     }
@@ -1734,7 +1761,7 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         m_objectSpace.dumpBits();
     }
 
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         double thisPauseMS = (m_afterGC - m_stopTime).milliseconds();
         dataLog("p=", thisPauseMS, "ms (max ", maxPauseMS(thisPauseMS), "), cycle ", (m_afterGC - m_beforeGC).milliseconds(), "ms END]\n");
     }
@@ -1748,15 +1775,20 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
     ParkingLot::unparkAll(&m_worldState);
 
     dataLogLnIf(Options::logGC(), "GC END!");
-    if (UNLIKELY(Options::useGCSignpost())) {
+    if (Options::useGCSignpost()) [[unlikely]] {
         WTFEndSignpost(this, JSCGarbageCollector, "%" PUBLIC_LOG_STRING, m_signpostMessage.data() ? m_signpostMessage.data() : "(nullptr)");
         m_signpostMessage = { };
     }
 
     setNeedFinalize();
 
+    MonotonicTime now = MonotonicTime::now();
+    if (m_maxEdenSizeForRateLimiting) {
+        m_gcRateLimitingValue = projectedGCRateLimitingValue(now);
+        m_gcRateLimitingValue += 1.0;
+    }
     m_lastGCStartTime = m_currentGCStartTime;
-    m_lastGCEndTime = MonotonicTime::now();
+    m_lastGCEndTime = now;
     m_totalGCTime += m_lastGCEndTime - m_lastGCStartTime;
     if (endingCollectionScope == CollectionScope::Full)
         m_lastFullGCEndTime = m_lastGCEndTime;
@@ -2237,7 +2269,7 @@ void Heap::notifyThreadStopping(const AbstractLocker&)
 void Heap::finalize()
 {
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: finalize ");
     }
@@ -2271,7 +2303,7 @@ void Heap::finalize()
     if (shouldSweepSynchronously())
         sweepSynchronously();
 
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         dataLog((after - before).milliseconds(), "ms]\n");
     }
@@ -2282,7 +2314,7 @@ Heap::Ticket Heap::requestCollection(GCRequest request)
     stopIfNecessary();
 
     ASSERT(vm().currentThreadIsHoldingAPILock());
-    RELEASE_ASSERT(vm().atomStringTable() == Thread::current().atomStringTable());
+    RELEASE_ASSERT(vm().atomStringTable() == Thread::currentSingleton().atomStringTable());
 
     Locker locker { *m_threadLock };
     // We may be able to steal the conn. That only works if the collector is definitely not running
@@ -2339,7 +2371,7 @@ bool Heap::suspendCompilerThreads()
 void Heap::willStartCollection()
 {
     ++m_gcVersion;
-    if (UNLIKELY(Options::verifyGC())) {
+    if (Options::verifyGC()) [[unlikely]] {
         m_verifierSlotVisitor = makeUnique<VerifierSlotVisitor>(*this);
         ASSERT(!m_isMarkingForGCVerifier);
     }
@@ -2426,6 +2458,16 @@ void Heap::notifyIncrementalSweeper()
     m_sweeper->startSweeping(*this);
 }
 
+double Heap::projectedGCRateLimitingValue(MonotonicTime now)
+{
+    if (!m_lastGCEndTime) {
+        ASSERT(!m_gcRateLimitingValue);
+        return 0.0;
+    }
+    Seconds timeSinceLastGC = now - m_lastGCEndTime;
+    return m_gcRateLimitingValue * pow(0.5, timeSinceLastGC.milliseconds() / Options::gcRateLimitingHalfLifeInMS());
+}
+
 void Heap::updateAllocationLimits()
 {
     constexpr bool verbose = false;
@@ -2463,10 +2505,17 @@ void Heap::updateAllocationLimits()
         // To avoid pathological GC churn in very small and very large heaps, we set
         // the new allocation limit based on the current size of the heap, with a
         // fixed minimum.
-        if (!m_isInOpportunisticTask)
-        m_maxHeapSize = std::max(minHeapSize(m_heapType, m_ramSize), proportionalHeapSize(currentHeapSize, m_ramSize));
-        dataLogLnIf(verbose, "Full: maxHeapSize = ", m_maxHeapSize);
+        size_t lastMaxHeapSize = m_maxHeapSize;
+        m_maxHeapSize = std::max(m_minBytesPerCycle, proportionalHeapSize(currentHeapSize, m_growthMode, m_ramSize));
         m_maxEdenSize = m_maxHeapSize - currentHeapSize;
+        if (m_isInOpportunisticTask) {
+            // After an Opportunistic Full GC, we allow eden to occupy all the space we recovered.
+            // In this case, m_maxHeapSize may be larger than currentHeapSize + m_maxEdenSize.
+            // Note that m_maxEdenSize is still used when we increase m_maxHeapSize after an
+            // Eden GC to ensure that eden can grow to at least m_maxHeapSize.
+            m_maxHeapSize = std::max(m_maxHeapSize, lastMaxHeapSize);
+        }
+        dataLogLnIf(verbose, "Full: maxHeapSize = ", m_maxHeapSize);
         dataLogLnIf(verbose, "Full: maxEdenSize = ", m_maxEdenSize);
         m_sizeAfterLastFullCollect = currentHeapSize;
         dataLogLnIf(verbose, "Full: sizeAfterLastFullCollect = ", currentHeapSize);
@@ -2476,18 +2525,16 @@ void Heap::updateAllocationLimits()
         ASSERT(currentHeapSize >= m_sizeAfterLastCollect);
         // Theoretically, we shouldn't ever scan more memory than the heap size we planned to have.
         // But we are sloppy, so we have to defend against the overflow.
-        m_maxEdenSize = currentHeapSize > m_maxHeapSize ? 0 : m_maxHeapSize - currentHeapSize;
-        dataLogLnIf(verbose, "Eden: maxEdenSize = ", m_maxEdenSize);
+        size_t remainingHeapSize = currentHeapSize > m_maxHeapSize ? 0 : m_maxHeapSize - currentHeapSize;
+        dataLogLnIf(verbose, "Eden: remainingHeapSize = ", remainingHeapSize);
         m_sizeAfterLastEdenCollect = currentHeapSize;
         dataLogLnIf(verbose, "Eden: sizeAfterLastEdenCollect = ", currentHeapSize);
-        double edenToOldGenerationRatio = (double)m_maxEdenSize / (double)m_maxHeapSize;
+        double edenToOldGenerationRatio = (double)remainingHeapSize / (double)m_maxHeapSize;
         double minEdenToOldGenerationRatio = 1.0 / 3.0;
         if (edenToOldGenerationRatio < minEdenToOldGenerationRatio)
             m_shouldDoFullCollection = true;
-        // This seems suspect at first, but what it does is ensure that the nursery size is fixed.
-        m_maxHeapSize += currentHeapSize - m_sizeAfterLastCollect;
+        m_maxHeapSize = std::max(m_maxHeapSize, currentHeapSize + m_maxEdenSize);
         dataLogLnIf(verbose, "Eden: maxHeapSize = ", m_maxHeapSize);
-        m_maxEdenSize = m_maxHeapSize - currentHeapSize;
         dataLogLnIf(verbose, "Eden: maxEdenSize = ", m_maxEdenSize);
         if (m_fullActivityCallback) {
             ASSERT(currentHeapSize >= m_sizeAfterLastFullCollect);
@@ -2527,7 +2574,7 @@ void Heap::didFinishCollection()
         removeDeadHeapSnapshotNodes(*heapProfiler);
     }
 
-    if (UNLIKELY(m_verifier))
+    if (m_verifier) [[unlikely]]
         m_verifier->endGC();
 
     RELEASE_ASSERT(m_collectionScope);
@@ -2736,7 +2783,7 @@ void Heap::forEachCodeBlockIgnoringJITPlansImpl(const AbstractLocker& locker, co
 
 void Heap::writeBarrierSlowPath(const JSCell* from)
 {
-    if (UNLIKELY(mutatorShouldBeFenced())) {
+    if (mutatorShouldBeFenced()) [[unlikely]] {
         // In this case, the barrierThreshold is the tautological threshold, so from could still be
         // not black. But we can't know for sure until we fire off a fence.
         WTF::storeLoadFence();
@@ -2762,7 +2809,9 @@ void Heap::reportExtraMemoryVisited(size_t size)
         // https://bugs.webkit.org/show_bug.cgi?id=170411
         CheckedSize checkedNewSize = oldSize;
         checkedNewSize += size;
-        size_t newSize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.value();
+        size_t newSize = std::numeric_limits<size_t>::max();
+        if (!checkedNewSize.hasOverflowed()) [[likely]]
+            newSize = checkedNewSize.value();
         if (WTF::atomicCompareExchangeWeakRelaxed(counter, oldSize, newSize))
             return;
     }
@@ -2798,7 +2847,7 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     case MutatorState::Collecting:
         return;
     }
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     if (mayNeedToStop()) {
@@ -2813,9 +2862,9 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
     auto shouldRequestGC = [&] () -> bool {
         bool logRequestGC = false;
         // Don't log if we already have a request pending or if we have to come back later so we don't flood dataFile.
-        if (UNLIKELY(Options::logGC()))
+        if (Options::logGC()) [[unlikely]]
             logRequestGC = m_requests.isEmpty() && !deferralContext && !isDeferred();
-    if (UNLIKELY(Options::gcMaxHeapSize())) {
+        if (Options::gcMaxHeapSize()) [[unlikely]] {
             size_t bytesAllocatedThisCycle = totalBytesAllocatedThisCycle();
             if (bytesAllocatedThisCycle <= Options::gcMaxHeapSize())
                 return false;
@@ -2823,7 +2872,8 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
             return true;
         }
 
-        size_t bytesAllowedThisCycle = m_maxEdenSize;
+        ASSERT(m_maxHeapSize > m_sizeAfterLastCollect);
+        size_t bytesAllowedThisCycle = m_maxHeapSize - m_sizeAfterLastCollect;
 
         bool isCritical = false;
 #if USE(BMALLOC_MEMORY_FOOTPRINT_API)
@@ -2835,6 +2885,10 @@ void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
         size_t bytesAllocatedThisCycle = totalBytesAllocatedThisCycle();
         if (bytesAllocatedThisCycle <= bytesAllowedThisCycle)
             return false;
+        if (bytesAllocatedThisCycle < m_maxEdenSizeForRateLimiting) {
+            if (projectedGCRateLimitingValue(MonotonicTime::now()) > 1.0)
+                return false;
+        }
 
         // We don't want to GC if the last oversized allocation makes up too much of the memory allocated this cycle since it's likely
         //  that object is still live and doesn't give us much indication about how much memory we could actually reclaim. That said,
@@ -2909,7 +2963,7 @@ template<typename Visitor>
 static ALWAYS_INLINE void visitSamplingProfiler(VM& vm, Visitor& visitor)
 {
     SamplingProfiler* samplingProfiler = vm.samplingProfiler();
-    if (UNLIKELY(samplingProfiler)) {
+    if (samplingProfiler) [[unlikely]] {
         Locker locker { samplingProfiler->getLock() };
         samplingProfiler->processUnverifiedStackTraces();
         samplingProfiler->visit(visitor);
@@ -2957,7 +3011,7 @@ void Heap::addCoreConstraints()
 
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
                 visitor.append(conservativeRoots);
-                if (UNLIKELY(m_verifierSlotVisitor)) {
+                if (m_verifierSlotVisitor) [[unlikely]] {
                     SetRootMarkReasonScope rootScope(*m_verifierSlotVisitor, RootMarkReason::ConservativeScan);
                     m_verifierSlotVisitor->append(conservativeRoots);
                 }
@@ -2966,7 +3020,7 @@ void Heap::addCoreConstraints()
                 // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::JITStubRoutines);
                 m_jitStubRoutines->traceMarkedStubRoutines(visitor);
-                if (UNLIKELY(m_verifierSlotVisitor)) {
+            if (m_verifierSlotVisitor) [[unlikely]] {
                     // It's important to cast m_verifierSlotVisitor to an AbstractSlotVisitor here
                     // so that we'll call the AbstractSlotVisitor version of traceMarkedStubRoutines().
                     AbstractSlotVisitor& visitor = *m_verifierSlotVisitor;
@@ -3143,11 +3197,11 @@ void Heap::addMarkingConstraint(std::unique_ptr<MarkingConstraint> constraint)
 
 void Heap::notifyIsSafeToCollect()
 {
-    if (UNLIKELY(!Options::useGC()))
+    if (!Options::useGC()) [[unlikely]]
         return;
 
     MonotonicTime before;
-    if (UNLIKELY(Options::logGC())) {
+    if (Options::logGC()) [[unlikely]] {
         before = MonotonicTime::now();
         dataLog("[GC<", RawPointer(this), ">: starting ");
     }
@@ -3347,7 +3401,7 @@ void Heap::verifyGC()
             return;
 
         dataLogLn("\n" "GC Verifier: ERROR cell ", RawPointer(cell), " was not marked");
-        if (UNLIKELY(Options::verboseVerifyGC()))
+        if (Options::verboseVerifyGC()) [[unlikely]]
             visitor.dumpMarkerData(cell);
         RELEASE_ASSERT(this->isMarked(cell));
     });
@@ -3368,17 +3422,6 @@ void Heap::scheduleOpportunisticFullCollection()
 {
     m_shouldDoOpportunisticFullCollection = true;
 }
-
-#if ENABLE(WEBASSEMBLY)
-PreciseSubspace* Heap::webAssemblyInstanceSpaceSlow()
-{
-    ASSERT(!m_webAssemblyInstanceSpace);
-    auto space = makeUnique<PreciseSubspace>("PreciseSubspace JSWebAssemblyInstance"_s, *this, webAssemblyInstanceHeapCellType, fastMallocAllocator.get());
-    WTF::storeStoreFence();
-    m_webAssemblyInstanceSpace = WTFMove(space);
-    return m_webAssemblyInstanceSpace.get();
-}
-#endif // ENABLE(WEBASSEMBLY)
 
 #define DEFINE_DYNAMIC_ISO_SUBSPACE_MEMBER_SLOW(name, heapCellType, type) \
     IsoSubspace* Heap::name##Slow() \
@@ -3408,6 +3451,19 @@ DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(evalExecutableSpace, destructibleCellHe
 DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW(moduleProgramExecutableSpace, destructibleCellHeapCellType, ModuleProgramExecutable, Heap::ScriptExecutableSpaceAndSets) // Hash:0x6506fa3c
 
 #undef DEFINE_DYNAMIC_SPACE_AND_SET_MEMBER_SLOW
+
+#define DEFINE_DYNAMIC_NON_ISO_SUBSPACE_MEMBER_SLOW(name, heapCellType, type, SubspaceType) \
+    SubspaceType* Heap::name##Slow() \
+    { \
+        ASSERT(!m_##name); \
+        auto space = makeUnique<SubspaceType>(ASCIILiteral(#SubspaceType " " #name), *this, heapCellType, fastMallocAllocator.get()); \
+        WTF::storeStoreFence(); \
+        m_##name = WTFMove(space); \
+        return m_##name.get(); \
+    }
+
+FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(DEFINE_DYNAMIC_NON_ISO_SUBSPACE_MEMBER_SLOW)
+#undef DEFINE_DYNAMIC_NON_ISO_SUBSPACE_MEMBER_SLOW
 
 #if ENABLE(WEBASSEMBLY)
 

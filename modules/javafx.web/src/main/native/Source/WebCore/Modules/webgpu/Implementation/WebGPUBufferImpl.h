@@ -60,7 +60,7 @@ private:
     WGPUBuffer backing() const { return m_backing.get(); }
 
     void mapAsync(MapModeFlags, Size64 offset, std::optional<Size64> sizeForMap, CompletionHandler<void(bool)>&&) final;
-    void getMappedRange(Size64 offset, std::optional<Size64>, NOESCAPE Function<void(std::span<uint8_t>)>&&) final;
+    void getMappedRange(Size64 offset, std::optional<Size64>, NOESCAPE const Function<void(std::span<uint8_t>)>&) final;
     std::span<uint8_t> getBufferContents() final;
     void unmap() final;
     void copyFrom(std::span<const uint8_t>, size_t offset) final;
@@ -69,8 +69,8 @@ private:
 
     void setLabelInternal(const String&) final;
 
-    WebGPUPtr<WGPUBuffer> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const WebGPUPtr<WGPUBuffer> m_backing;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

@@ -33,13 +33,13 @@ BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "AvailableMemory.h"
 #include "Cache.h"
 #include "CompactAllocationMode.h"
-#include "DebugHeap.h"
 #include "Gigacage.h"
 #include "Heap.h"
 #include "IsoTLS.h"
 #include "Mutex.h"
 #include "PerHeapKind.h"
 #include "Scavenger.h"
+#include "SystemHeap.h"
 
 #if BUSE(LIBPAS)
 #include "bmalloc_heap_inlines.h"
@@ -235,8 +235,8 @@ BEXPORT void forceEnablePGM(uint16_t guardMallocRate);
 #if BENABLE(MALLOC_SIZE)
 inline size_t mallocSize(const void* object)
 {
-    if (auto* debugHeap = DebugHeap::tryGet())
-        return debugHeap->mallocSize(object);
+    if (auto* systemHeap = SystemHeap::tryGet())
+        return systemHeap->mallocSize(object);
     return bmalloc_get_allocation_size(const_cast<void*>(object));
 }
 #endif
@@ -244,8 +244,8 @@ inline size_t mallocSize(const void* object)
 #if BENABLE(MALLOC_GOOD_SIZE)
 inline size_t mallocGoodSize(size_t size)
 {
-    if (auto* debugHeap = DebugHeap::tryGet())
-        return debugHeap->mallocGoodSize(size);
+    if (auto* systemHeap = SystemHeap::tryGet())
+        return systemHeap->mallocGoodSize(size);
     return size;
 }
 #endif

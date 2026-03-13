@@ -45,4 +45,9 @@ struct TextManipulationControllerManipulationFailure {
     Type type;
 };
 
+struct TextManipulationControllerManipulationResult {
+    Vector<TextManipulationControllerManipulationFailure> failures;
+    Vector<uint64_t> succeededIndexes;
+};
+
 } // namespace WebCore

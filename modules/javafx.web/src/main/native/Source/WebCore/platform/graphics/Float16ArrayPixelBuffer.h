@@ -40,9 +40,9 @@ public:
     WEBCORE_EXPORT static RefPtr<Float16ArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&);
     WEBCORE_EXPORT static RefPtr<Float16ArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&, Ref<JSC::ArrayBuffer>&&);
 
-    JSC::Float16Array& data() const { return m_data.get(); }
+    JSC::Float16Array& data() const LIFETIME_BOUND { return m_data.get(); }
     Ref<JSC::Float16Array>&& takeData() { return WTFMove(m_data); }
-    WEBCORE_EXPORT std::span<const uint8_t> span() const;
+    WEBCORE_EXPORT std::span<const uint8_t> span() const LIFETIME_BOUND;
 
     Type type() const override { return Type::Float16Array; }
     RefPtr<PixelBuffer> createScratchPixelBuffer(const IntSize&) const override;

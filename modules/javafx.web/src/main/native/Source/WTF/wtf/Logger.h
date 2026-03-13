@@ -359,13 +359,13 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLog(&channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
 #elif OS(ANDROID)
         __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s", channel.name, logMessage.utf8().data());
 #elif ENABLE(JOURNALD_LOG)
-        sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
+        sd_journal_send("WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
-        fprintf(stderr, "[%s:%s:-] %s\n", channel.subsystem, channel.name, logMessage.utf8().data());
+        fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s\n", channel.name, logMessage.utf8().data());
 #endif
 
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
@@ -387,7 +387,7 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLogVerbose(file, line, function, &channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
         UNUSED_PARAM(file);
         UNUSED_PARAM(line);
         UNUSED_PARAM(function);
@@ -396,9 +396,9 @@ private:
 #elif ENABLE(JOURNALD_LOG)
         auto fileString = makeString("CODE_FILE="_s, unsafeSpan(file));
         auto lineString = makeString("CODE_LINE="_s, line);
-        sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
+        sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
-        fprintf(stderr, "[%s:%s:-] %s FILE=%s:%d %s\n", channel.subsystem, channel.name, logMessage.utf8().data(), file, line, function);
+        fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s FILE=%s:%d %s\n", channel.name, logMessage.utf8().data(), file, line, function);
 #endif
 
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
@@ -430,11 +430,20 @@ private:
     const void* m_owner;
 };
 
+WTF_EXPORT_PRIVATE const Logger& emptyLogger();
+
 template<> struct LogArgument<Logger::LogSiteIdentifier> {
     static String toString(const Logger::LogSiteIdentifier& value) { return value.toString(); }
 };
 template<> struct LogArgument<const void*> {
     WTF_EXPORT_PRIVATE static String toString(const void*);
+};
+template<typename T>
+struct LogArgument<std::optional<T>> {
+    static String toString(const std::optional<T>& value)
+    {
+        return value ? LogArgument<T>::toString(value.value()) : "nullopt"_s;
+    }
 };
 
 #ifdef __OBJC__
@@ -452,3 +461,4 @@ template<> struct LogArgument<id> {
 
 using WTF::Logger;
 using WTF::JSONLogValue;
+using WTF::emptyLogger;

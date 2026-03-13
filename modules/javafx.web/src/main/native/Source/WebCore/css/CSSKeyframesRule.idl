@@ -28,16 +28,18 @@
 
 // https://drafts.csswg.org/css-animations/#csskeyframesrule
 
+typedef USVString CSSOMString;
+
 [
     Exposed=Window
 ] interface CSSKeyframesRule : CSSRule {
-    attribute [AtomString] DOMString name;
+    attribute [AtomString] CSSOMString name;
     readonly attribute CSSRuleList cssRules;
     readonly attribute unsigned long length;
     
     getter CSSKeyframeRule (unsigned long index);
-    undefined appendRule(DOMString rule);
-    undefined deleteRule(DOMString key);
-    CSSKeyframeRule? findRule(DOMString key);
+    undefined appendRule(CSSOMString rule);
+    undefined deleteRule(CSSOMString key);
+    CSSKeyframeRule? findRule(CSSOMString key);
 };
 

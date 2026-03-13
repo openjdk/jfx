@@ -43,7 +43,7 @@ private:
     SVGPathParser(SVGPathConsumer&, SVGPathSource&, PathParsingMode);
     bool parsePathData(bool checkForInitialMoveTo);
 
-    bool decomposeArcToCubic(float angle, float rx, float ry, FloatPoint&, FloatPoint&, bool largeArcFlag, bool sweepFlag);
+    bool decomposeArcToCubic(float angle, float rx, float ry, const FloatPoint&, const FloatPoint&, bool largeArcFlag, bool sweepFlag);
     void parseClosePathSegment();
     bool parseMoveToSegment();
     bool parseLineToSegment();

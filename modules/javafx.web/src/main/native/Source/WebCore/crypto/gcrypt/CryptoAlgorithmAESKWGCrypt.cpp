@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include <pal/crypto/gcrypt/Handle.h>
 #include <pal/crypto/gcrypt/Utilities.h>
 
@@ -50,7 +51,7 @@ static std::optional<Vector<uint8_t>> gcryptWrapKey(const Vector<uint8_t>& key, 
     }
 
     // Use the given key for this cipher object.
-    error = gcry_cipher_setkey(handle, key.data(), key.size());
+    error = gcry_cipher_setkey(handle, key.span().data(), key.size());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return std::nullopt;
@@ -65,7 +66,7 @@ static std::optional<Vector<uint8_t>> gcryptWrapKey(const Vector<uint8_t>& key, 
 
     // Perform the encryption. The provided output buffer must be 64 bits larger than the input buffer.
     Vector<uint8_t> output(data.size() + 8);
-    error = gcry_cipher_encrypt(handle, output.data(), output.size(), data.data(), data.size());
+    error = gcry_cipher_encrypt(handle, output.mutableSpan().data(), output.size(), data.span().data(), data.size());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return std::nullopt;
@@ -90,7 +91,7 @@ static std::optional<Vector<uint8_t>> gcryptUnwrapKey(const Vector<uint8_t>& key
     }
 
     // Use the given key for this cipher object.
-    error = gcry_cipher_setkey(handle, key.data(), key.size());
+    error = gcry_cipher_setkey(handle, key.span().data(), key.size());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return std::nullopt;
@@ -105,7 +106,7 @@ static std::optional<Vector<uint8_t>> gcryptUnwrapKey(const Vector<uint8_t>& key
 
     // Perform the decryption. The output buffer may be specified 64 bits shorter than the input buffer.
     Vector<uint8_t> output(data.size() - 8);
-    error = gcry_cipher_decrypt(handle, output.data(), output.size(), data.data(), data.size());
+    error = gcry_cipher_decrypt(handle, output.mutableSpan().data(), output.size(), data.span().data(), data.size());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return std::nullopt;

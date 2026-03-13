@@ -110,9 +110,11 @@ static void compileRecovery(
     const UncheckedKeyHashMap<ExitTimeObjectMaterialization*, EncodedJSValue*>& materializationToPointer)
 {
     switch (value.kind()) {
-    case ExitValueDead:
-        jit.move(MacroAssembler::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT0);
+    case ExitValueDead: {
+        EncodedJSValue deadValue = Options::poisonDeadOSRExitVariables() ? poisonedDeadOSRExitValue : encodedJSUndefined();
+        jit.move(MacroAssembler::TrustedImm64(deadValue), GPRInfo::regT0);
         break;
+    }
 
     case ExitValueConstant:
         jit.move(MacroAssembler::TrustedImm64(JSValue::encode(value.constant())), GPRInfo::regT0);
@@ -150,7 +152,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
     CCallHelpers jit(codeBlock);
 
-    if (UNLIKELY(Options::printEachOSRExit())) {
+    if (Options::printEachOSRExit()) [[unlikely]] {
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
@@ -238,7 +240,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     jit.popToRestore(GPRInfo::regT0);
     jit.checkStackPointerAlignment();
 
-    if (UNLIKELY(vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation)) {
+    if (vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation) [[unlikely]] {
         Profiler::Database& database = *vm.m_perBytecodeProfiler;
         Profiler::Compilation* compilation = jitCode->dfgCommon()->compilation.get();
 
@@ -278,8 +280,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 notTypedArray.link(&jit);
                 jit.load8(MacroAssembler::Address(GPRInfo::regT0, JSCell::indexingTypeAndMiscOffset()), GPRInfo::regT1);
                 jit.and32(MacroAssembler::TrustedImm32(IndexingModeMask), GPRInfo::regT1);
-                jit.move(MacroAssembler::TrustedImm32(1), GPRInfo::regT2);
-                jit.lshift32(GPRInfo::regT1, GPRInfo::regT2);
+                jit.lshift32(MacroAssembler::TrustedImm32(1), GPRInfo::regT1, GPRInfo::regT2);
                 storeArrayModes.link(&jit);
                 jit.or32(GPRInfo::regT2, CCallHelpers::Address(GPRInfo::regT3, ArrayProfile::offsetOfArrayModes()));
             }
@@ -388,7 +389,13 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             if (value.dataFormat() == DataFormatJS) {
                 switch (value.kind()) {
                 case ExitValueDead:
-                    if (UNLIKELY(!undefinedGPR)) {
+                    if (Options::poisonDeadOSRExitVariables()) [[unlikely]] {
+                        spooler.moveConstant(poisonedDeadOSRExitValue);
+                        spooler.storeGPR(index * sizeof(EncodedJSValue));
+                        break;
+                    }
+
+                    if (!undefinedGPR) [[unlikely]] {
                         jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                         undefinedGPR = GPRInfo::regT4;
                     }
@@ -399,7 +406,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 case ExitValueConstant: {
                     EncodedJSValue currentConstant = JSValue::encode(value.constant());
                     if (currentConstant == encodedJSUndefined()) {
-                        if (UNLIKELY(!undefinedGPR)) {
+                        if (!undefinedGPR) [[unlikely]] {
                             jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                             undefinedGPR = GPRInfo::regT4;
                         }
@@ -585,6 +592,14 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     }
 
     size_t baselineVirtualRegistersForCalleeSaves = CodeBlock::calleeSaveSpaceAsVirtualRegisters(*baselineCodeBlock->jitCode()->calleeSaveRegisters());
+
+    if (exit.m_kind == WillThrowOutOfMemoryError) {
+        jit.store32(CCallHelpers::TrustedImm32(exit.m_exitCallSiteIndex.bits()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+        jit.setupArguments<decltype(operationThrowOutOfMemoryError)>(CCallHelpers::TrustedImmPtr(&vm));
+        jit.prepareCallOperation(vm);
+        jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationThrowOutOfMemoryError)), GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
+    }
 
     if (exit.m_codeOrigin.inlineStackContainsActiveCheckpoint()) {
         EncodedJSValue* tmpScratch = scratch + exit.m_descriptor->m_values.tmpIndex(0);

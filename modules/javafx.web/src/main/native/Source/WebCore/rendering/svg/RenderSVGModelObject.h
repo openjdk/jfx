@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,8 +95,8 @@ protected:
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
     LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* = nullptr) const final;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;

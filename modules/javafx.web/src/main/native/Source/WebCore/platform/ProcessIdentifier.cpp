@@ -33,6 +33,13 @@ namespace Process {
 
 static std::optional<ProcessIdentifier> globalIdentifier;
 
+ProcessIdentifier generateIdentifier()
+{
+    ASSERT(isUIThread());
+    static uint64_t nextIdentifier { 1 };
+    return ProcessIdentifier(nextIdentifier++);
+}
+
 void setIdentifier(ProcessIdentifier processIdentifier)
 {
     ASSERT(isUIThread());
@@ -44,7 +51,7 @@ ProcessIdentifier identifier()
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         if (!globalIdentifier)
-            globalIdentifier = ProcessIdentifier::generate();
+            globalIdentifier = generateIdentifier();
     });
 
     return *globalIdentifier;

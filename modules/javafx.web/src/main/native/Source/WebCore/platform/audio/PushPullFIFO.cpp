@@ -34,27 +34,26 @@ namespace WebCore {
 
 PushPullFIFO::PushPullFIFO(unsigned numberOfChannels, size_t fifoLength)
     : m_fifoLength(fifoLength)
+    , m_fifoBus(AudioBus::create(numberOfChannels, m_fifoLength))
 {
     ASSERT(m_fifoLength <= maxFIFOLength);
-    m_fifoBus = AudioBus::create(numberOfChannels, m_fifoLength);
 }
 
 PushPullFIFO::~PushPullFIFO() = default;
 
 // Push the data from |inputBus| to FIFO. The size of push is determined by
 // the length of |inputBus|.
-void PushPullFIFO::push(const AudioBus* inputBus)
+void PushPullFIFO::push(const AudioBus& inputBus)
 {
-    ASSERT(inputBus);
-    ASSERT(inputBus->length() <= m_fifoLength);
+    ASSERT(inputBus.length() <= m_fifoLength);
     ASSERT(m_indexWrite < m_fifoLength);
 
-    const size_t inputBusLength = inputBus->length();
+    const size_t inputBusLength = inputBus.length();
     const size_t remainder = m_fifoLength - m_indexWrite;
 
     for (unsigned i = 0; i < m_fifoBus->numberOfChannels(); ++i) {
         auto fifoBusChannel = m_fifoBus->channel(i)->mutableSpan();
-        auto inputBusChannel = inputBus->channel(i)->span();
+        auto inputBusChannel = inputBus.channel(i)->span();
         if (remainder >= inputBusLength) {
             // The remainder is big enough for the input data.
             memcpySpan(fifoBusChannel.subspan(m_indexWrite), inputBusChannel);
@@ -80,10 +79,9 @@ void PushPullFIFO::push(const AudioBus* inputBus)
 
 // Pull the data out of FIFO to |outputBus|. If remaining frame in the FIFO
 // is less than the frames to pull, provides remaining frame plus the silence.
-size_t PushPullFIFO::pull(AudioBus* outputBus, size_t framesRequested)
+size_t PushPullFIFO::pull(AudioBus& outputBus, size_t framesRequested)
 {
-    ASSERT(outputBus);
-    ASSERT(framesRequested <= outputBus->length());
+    ASSERT(framesRequested <= outputBus.length());
     ASSERT(framesRequested <= m_fifoLength);
     ASSERT(m_indexRead < m_fifoLength);
 
@@ -92,7 +90,7 @@ size_t PushPullFIFO::pull(AudioBus* outputBus, size_t framesRequested)
 
     for (unsigned i = 0; i < m_fifoBus->numberOfChannels(); ++i) {
         auto fifoBusChannel = m_fifoBus->channel(i)->span();
-        auto outputBusChannel = outputBus->channel(i)->mutableSpan();
+        auto outputBusChannel = outputBus.channel(i)->mutableSpan();
 
         // Fill up the output bus with the available frames first.
         if (remainder >= framesToFill) {

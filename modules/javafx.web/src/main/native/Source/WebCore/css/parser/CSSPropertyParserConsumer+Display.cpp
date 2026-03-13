@@ -31,13 +31,14 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 // Keep in sync with the single keyword value fast path of CSSParserFastPaths's parseDisplay.
-RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'display'>        = [ <display-outside> || <display-inside> ] | <display-listitem> | <display-internal> | <display-box> | <display-legacy>
     // <display-outside>  = block | inline | run-in
@@ -82,7 +83,7 @@ RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange& range, const CSSParserConte
 
     auto allowsValue = [&](CSSValueID value) {
         bool isRuby = value == CSSValueRubyBase || value == CSSValueRubyText || value == CSSValueBlockRuby || value == CSSValueRuby;
-        return !isRuby || isUASheetBehavior(context.mode);
+        return !isRuby || isUASheetBehavior(state.context.mode);
     };
 
     if (singleKeyword) {

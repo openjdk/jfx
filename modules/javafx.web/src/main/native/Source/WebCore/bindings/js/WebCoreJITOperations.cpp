@@ -43,7 +43,7 @@ void populateJITOperations()
         JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCore, &endOfJITOperationsInWebCore);
     });
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(JSC::Options::needDisassemblySupport()))
+    if (JSC::Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabels();
 #endif
 }

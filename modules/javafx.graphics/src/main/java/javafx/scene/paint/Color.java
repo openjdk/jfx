@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,8 @@
 
 package javafx.scene.paint;
 
-import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
+import com.sun.javafx.css.parser.CssColorParser;
 import com.sun.javafx.util.InterpolationUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
@@ -391,157 +390,15 @@ public final class Color extends Paint {
      */
     public static Color web(String colorString, double opacity) {
         if (colorString == null) {
-            throw new NullPointerException(
-                    "The color components or name must be specified");
-        }
-        if (colorString.isEmpty()) {
-            throw new IllegalArgumentException("Invalid color specification");
+            throw new NullPointerException("Color components or name must be specified");
         }
 
-        String color = colorString.toLowerCase(Locale.ROOT);
-
-        if (color.startsWith("#")) {
-            color = color.substring(1);
-        } else if (color.startsWith("0x")) {
-            color = color.substring(2);
-        } else if (color.startsWith("rgb")) {
-            if (color.startsWith("(", 3)) {
-                return parseRGBColor(color, 4, false, opacity);
-            } else if (color.startsWith("a(", 3)) {
-                return parseRGBColor(color, 5, true, opacity);
-            }
-        } else if (color.startsWith("hsl")) {
-            if (color.startsWith("(", 3)) {
-                return parseHSLColor(color, 4, false, opacity);
-            } else if (color.startsWith("a(", 3)) {
-                return parseHSLColor(color, 5, true, opacity);
-            }
-        } else {
-            Color col = NamedColors.get(color);
-            if (col != null) {
-                if (opacity == 1.0) {
-                    return col;
-                } else {
-                    return Color.color(col.red, col.green, col.blue, opacity);
-                }
-            }
+        Color result = CssColorParser.tryParseColor(colorString, opacity);
+        if (result == null) {
+            throw new IllegalArgumentException("Invalid color: " + colorString);
         }
 
-        int len = color.length();
-
-        try {
-            int r;
-            int g;
-            int b;
-            int a;
-
-            if (len == 3) {
-                r = Integer.parseInt(color.substring(0, 1), 16);
-                g = Integer.parseInt(color.substring(1, 2), 16);
-                b = Integer.parseInt(color.substring(2, 3), 16);
-                return Color.color(r / 15.0, g / 15.0, b / 15.0, opacity);
-            } else if (len == 4) {
-                r = Integer.parseInt(color.substring(0, 1), 16);
-                g = Integer.parseInt(color.substring(1, 2), 16);
-                b = Integer.parseInt(color.substring(2, 3), 16);
-                a = Integer.parseInt(color.substring(3, 4), 16);
-                return Color.color(r / 15.0, g / 15.0, b / 15.0,
-                        opacity * a / 15.0);
-            } else if (len == 6) {
-                r = Integer.parseInt(color.substring(0, 2), 16);
-                g = Integer.parseInt(color.substring(2, 4), 16);
-                b = Integer.parseInt(color.substring(4, 6), 16);
-                return Color.rgb(r, g, b, opacity);
-            } else if (len == 8) {
-                r = Integer.parseInt(color.substring(0, 2), 16);
-                g = Integer.parseInt(color.substring(2, 4), 16);
-                b = Integer.parseInt(color.substring(4, 6), 16);
-                a = Integer.parseInt(color.substring(6, 8), 16);
-                return Color.rgb(r, g, b, opacity * a / 255.0);
-            }
-        } catch (NumberFormatException nfe) {}
-
-        throw new IllegalArgumentException("Invalid color specification");
-    }
-
-    private static Color parseRGBColor(String color, int roff,
-                                       boolean hasAlpha, double a)
-    {
-        try {
-            int rend = color.indexOf(',', roff);
-            int gend = rend < 0 ? -1 : color.indexOf(',', rend+1);
-            int bend = gend < 0 ? -1 : color.indexOf(hasAlpha ? ',' : ')', gend+1);
-            int aend = hasAlpha ? (bend < 0 ? -1 : color.indexOf(')', bend+1)) : bend;
-            if (aend >= 0) {
-                double r = parseComponent(color, roff, rend, PARSE_COMPONENT);
-                double g = parseComponent(color, rend+1, gend, PARSE_COMPONENT);
-                double b = parseComponent(color, gend+1, bend, PARSE_COMPONENT);
-                if (hasAlpha) {
-                    a *= parseComponent(color, bend+1, aend, PARSE_ALPHA);
-                }
-                return new Color(r, g, b, a);
-            }
-        } catch (NumberFormatException nfe) {}
-
-        throw new IllegalArgumentException("Invalid color specification");
-    }
-
-    private static Color parseHSLColor(String color, int hoff,
-                                       boolean hasAlpha, double a)
-    {
-        try {
-            int hend = color.indexOf(',', hoff);
-            int send = hend < 0 ? -1 : color.indexOf(',', hend+1);
-            int lend = send < 0 ? -1 : color.indexOf(hasAlpha ? ',' : ')', send+1);
-            int aend = hasAlpha ? (lend < 0 ? -1 : color.indexOf(')', lend+1)) : lend;
-            if (aend >= 0) {
-                double h = parseComponent(color, hoff, hend, PARSE_ANGLE);
-                double s = parseComponent(color, hend+1, send, PARSE_PERCENT);
-                double l = parseComponent(color, send+1, lend, PARSE_PERCENT);
-                if (hasAlpha) {
-                    a *= parseComponent(color, lend+1, aend, PARSE_ALPHA);
-                }
-                return Color.hsb(h, s, l, a);
-            }
-        } catch (NumberFormatException nfe) {}
-
-        throw new IllegalArgumentException("Invalid color specification");
-    }
-
-    private static final int PARSE_COMPONENT = 0; // percent, or clamped to [0,255] => [0,1]
-    private static final int PARSE_PERCENT = 1; // clamped to [0,100]% => [0,1]
-    private static final int PARSE_ANGLE = 2; // clamped to [0,360]
-    private static final int PARSE_ALPHA = 3; // clamped to [0.0,1.0]
-    private static double parseComponent(String color, int off, int end, int type) {
-        color = color.substring(off, end).trim();
-        if (color.endsWith("%")) {
-            if (type > PARSE_PERCENT) {
-                throw new IllegalArgumentException("Invalid color specification");
-            }
-            type = PARSE_PERCENT;
-            color = color.substring(0, color.length()-1).trim();
-        } else if (type == PARSE_PERCENT) {
-            throw new IllegalArgumentException("Invalid color specification");
-        }
-        double c = ((type == PARSE_COMPONENT)
-                    ? Integer.parseInt(color)
-                    : Double.parseDouble(color));
-        switch (type) {
-            case PARSE_ALPHA:
-                return (c < 0.0) ? 0.0 : ((c > 1.0) ? 1.0 : c);
-            case PARSE_PERCENT:
-                return (c <= 0.0) ? 0.0 : ((c >= 100.0) ? 1.0 : (c / 100.0));
-            case PARSE_COMPONENT:
-                return (c <= 0.0) ? 0.0 : ((c >= 255.0) ? 1.0 : (c / 255.0));
-            case PARSE_ANGLE:
-                return ((c < 0.0)
-                        ? ((c % 360.0) + 360.0)
-                        : ((c > 360.0)
-                            ? (c % 360.0)
-                            : c));
-        }
-
-        throw new IllegalArgumentException("Invalid color specification");
+        return result;
     }
 
     /**
@@ -1675,167 +1532,6 @@ public final class Color extends Paint {
      * <div style="border:1px solid black;width:40px;height:20px;background-color:#9ACD32;float:right;margin: 0 10px 0 0"></div>
      */
     public static final Color YELLOWGREEN = new Color(0.6039216f, 0.8039216f, 0.19607843f);
-
-    /*
-     * Named colors moved to nested class to initialize them only when they
-     * are needed.
-     */
-    private static final class NamedColors {
-
-        private static Color get(String name) {
-            return NAMED_COLORS.get(name);
-        }
-
-        private static final Map<String, Color> NAMED_COLORS = Map.ofEntries(
-            Map.entry("aliceblue",            ALICEBLUE),
-            Map.entry("antiquewhite",         ANTIQUEWHITE),
-            Map.entry("aqua",                 AQUA),
-            Map.entry("aquamarine",           AQUAMARINE),
-            Map.entry("azure",                AZURE),
-            Map.entry("beige",                BEIGE),
-            Map.entry("bisque",               BISQUE),
-            Map.entry("black",                BLACK),
-            Map.entry("blanchedalmond",       BLANCHEDALMOND),
-            Map.entry("blue",                 BLUE),
-            Map.entry("blueviolet",           BLUEVIOLET),
-            Map.entry("brown",                BROWN),
-            Map.entry("burlywood",            BURLYWOOD),
-            Map.entry("cadetblue",            CADETBLUE),
-            Map.entry("chartreuse",           CHARTREUSE),
-            Map.entry("chocolate",            CHOCOLATE),
-            Map.entry("coral",                CORAL),
-            Map.entry("cornflowerblue",       CORNFLOWERBLUE),
-            Map.entry("cornsilk",             CORNSILK),
-            Map.entry("crimson",              CRIMSON),
-            Map.entry("cyan",                 CYAN),
-            Map.entry("darkblue",             DARKBLUE),
-            Map.entry("darkcyan",             DARKCYAN),
-            Map.entry("darkgoldenrod",        DARKGOLDENROD),
-            Map.entry("darkgray",             DARKGRAY),
-            Map.entry("darkgreen",            DARKGREEN),
-            Map.entry("darkgrey",             DARKGREY),
-            Map.entry("darkkhaki",            DARKKHAKI),
-            Map.entry("darkmagenta",          DARKMAGENTA),
-            Map.entry("darkolivegreen",       DARKOLIVEGREEN),
-            Map.entry("darkorange",           DARKORANGE),
-            Map.entry("darkorchid",           DARKORCHID),
-            Map.entry("darkred",              DARKRED),
-            Map.entry("darksalmon",           DARKSALMON),
-            Map.entry("darkseagreen",         DARKSEAGREEN),
-            Map.entry("darkslateblue",        DARKSLATEBLUE),
-            Map.entry("darkslategray",        DARKSLATEGRAY),
-            Map.entry("darkslategrey",        DARKSLATEGREY),
-            Map.entry("darkturquoise",        DARKTURQUOISE),
-            Map.entry("darkviolet",           DARKVIOLET),
-            Map.entry("deeppink",             DEEPPINK),
-            Map.entry("deepskyblue",          DEEPSKYBLUE),
-            Map.entry("dimgray",              DIMGRAY),
-            Map.entry("dimgrey",              DIMGREY),
-            Map.entry("dodgerblue",           DODGERBLUE),
-            Map.entry("firebrick",            FIREBRICK),
-            Map.entry("floralwhite",          FLORALWHITE),
-            Map.entry("forestgreen",          FORESTGREEN),
-            Map.entry("fuchsia",              FUCHSIA),
-            Map.entry("gainsboro",            GAINSBORO),
-            Map.entry("ghostwhite",           GHOSTWHITE),
-            Map.entry("gold",                 GOLD),
-            Map.entry("goldenrod",            GOLDENROD),
-            Map.entry("gray",                 GRAY),
-            Map.entry("green",                GREEN),
-            Map.entry("greenyellow",          GREENYELLOW),
-            Map.entry("grey",                 GREY),
-            Map.entry("honeydew",             HONEYDEW),
-            Map.entry("hotpink",              HOTPINK),
-            Map.entry("indianred",            INDIANRED),
-            Map.entry("indigo",               INDIGO),
-            Map.entry("ivory",                IVORY),
-            Map.entry("khaki",                KHAKI),
-            Map.entry("lavender",             LAVENDER),
-            Map.entry("lavenderblush",        LAVENDERBLUSH),
-            Map.entry("lawngreen",            LAWNGREEN),
-            Map.entry("lemonchiffon",         LEMONCHIFFON),
-            Map.entry("lightblue",            LIGHTBLUE),
-            Map.entry("lightcoral",           LIGHTCORAL),
-            Map.entry("lightcyan",            LIGHTCYAN),
-            Map.entry("lightgoldenrodyellow", LIGHTGOLDENRODYELLOW),
-            Map.entry("lightgray",            LIGHTGRAY),
-            Map.entry("lightgreen",           LIGHTGREEN),
-            Map.entry("lightgrey",            LIGHTGREY),
-            Map.entry("lightpink",            LIGHTPINK),
-            Map.entry("lightsalmon",          LIGHTSALMON),
-            Map.entry("lightseagreen",        LIGHTSEAGREEN),
-            Map.entry("lightskyblue",         LIGHTSKYBLUE),
-            Map.entry("lightslategray",       LIGHTSLATEGRAY),
-            Map.entry("lightslategrey",       LIGHTSLATEGREY),
-            Map.entry("lightsteelblue",       LIGHTSTEELBLUE),
-            Map.entry("lightyellow",          LIGHTYELLOW),
-            Map.entry("lime",                 LIME),
-            Map.entry("limegreen",            LIMEGREEN),
-            Map.entry("linen",                LINEN),
-            Map.entry("magenta",              MAGENTA),
-            Map.entry("maroon",               MAROON),
-            Map.entry("mediumaquamarine",     MEDIUMAQUAMARINE),
-            Map.entry("mediumblue",           MEDIUMBLUE),
-            Map.entry("mediumorchid",         MEDIUMORCHID),
-            Map.entry("mediumpurple",         MEDIUMPURPLE),
-            Map.entry("mediumseagreen",       MEDIUMSEAGREEN),
-            Map.entry("mediumslateblue",      MEDIUMSLATEBLUE),
-            Map.entry("mediumspringgreen",    MEDIUMSPRINGGREEN),
-            Map.entry("mediumturquoise",      MEDIUMTURQUOISE),
-            Map.entry("mediumvioletred",      MEDIUMVIOLETRED),
-            Map.entry("midnightblue",         MIDNIGHTBLUE),
-            Map.entry("mintcream",            MINTCREAM),
-            Map.entry("mistyrose",            MISTYROSE),
-            Map.entry("moccasin",             MOCCASIN),
-            Map.entry("navajowhite",          NAVAJOWHITE),
-            Map.entry("navy",                 NAVY),
-            Map.entry("oldlace",              OLDLACE),
-            Map.entry("olive",                OLIVE),
-            Map.entry("olivedrab",            OLIVEDRAB),
-            Map.entry("orange",               ORANGE),
-            Map.entry("orangered",            ORANGERED),
-            Map.entry("orchid",               ORCHID),
-            Map.entry("palegoldenrod",        PALEGOLDENROD),
-            Map.entry("palegreen",            PALEGREEN),
-            Map.entry("paleturquoise",        PALETURQUOISE),
-            Map.entry("palevioletred",        PALEVIOLETRED),
-            Map.entry("papayawhip",           PAPAYAWHIP),
-            Map.entry("peachpuff",            PEACHPUFF),
-            Map.entry("peru",                 PERU),
-            Map.entry("pink",                 PINK),
-            Map.entry("plum",                 PLUM),
-            Map.entry("powderblue",           POWDERBLUE),
-            Map.entry("purple",               PURPLE),
-            Map.entry("red",                  RED),
-            Map.entry("rosybrown",            ROSYBROWN),
-            Map.entry("royalblue",            ROYALBLUE),
-            Map.entry("saddlebrown",          SADDLEBROWN),
-            Map.entry("salmon",               SALMON),
-            Map.entry("sandybrown",           SANDYBROWN),
-            Map.entry("seagreen",             SEAGREEN),
-            Map.entry("seashell",             SEASHELL),
-            Map.entry("sienna",               SIENNA),
-            Map.entry("silver",               SILVER),
-            Map.entry("skyblue",              SKYBLUE),
-            Map.entry("slateblue",            SLATEBLUE),
-            Map.entry("slategray",            SLATEGRAY),
-            Map.entry("slategrey",            SLATEGREY),
-            Map.entry("snow",                 SNOW),
-            Map.entry("springgreen",          SPRINGGREEN),
-            Map.entry("steelblue",            STEELBLUE),
-            Map.entry("tan",                  TAN),
-            Map.entry("teal",                 TEAL),
-            Map.entry("thistle",              THISTLE),
-            Map.entry("tomato",               TOMATO),
-            Map.entry("transparent",          TRANSPARENT),
-            Map.entry("turquoise",            TURQUOISE),
-            Map.entry("violet",               VIOLET),
-            Map.entry("wheat",                WHEAT),
-            Map.entry("white",                WHITE),
-            Map.entry("whitesmoke",           WHITESMOKE),
-            Map.entry("yellow",               YELLOW),
-            Map.entry("yellowgreen",          YELLOWGREEN));
-    }
 
     /**
      * The red component of the {@code Color}, in the range {@code 0.0-1.0}.

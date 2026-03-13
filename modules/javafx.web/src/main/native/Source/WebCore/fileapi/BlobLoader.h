@@ -37,12 +37,13 @@
 
 namespace WebCore {
 
-class BlobLoader final : public FileReaderLoaderClient {
+class BlobLoader final : public FileReaderLoaderClient, public RefCounted<BlobLoader> {
     WTF_MAKE_TZONE_ALLOCATED(BlobLoader);
 public:
     // CompleteCallback is always called except if BlobLoader is cancelled/deallocated.
     using CompleteCallback = Function<void(BlobLoader&)>;
-    explicit BlobLoader(CompleteCallback&&);
+
+    static Ref<BlobLoader> create(CompleteCallback&& callback) { return adoptRef(*new BlobLoader(WTFMove(callback))); }
     ~BlobLoader();
 
     void start(Blob&, ScriptExecutionContext*, FileReaderLoader::ReadType);
@@ -55,6 +56,8 @@ public:
     std::optional<ExceptionCode> errorCode() const { return m_loader ? m_loader->errorCode() : std::nullopt; }
 
 private:
+    explicit BlobLoader(CompleteCallback&&);
+
     void didStartLoading() final { }
     void didReceiveData() final { }
 

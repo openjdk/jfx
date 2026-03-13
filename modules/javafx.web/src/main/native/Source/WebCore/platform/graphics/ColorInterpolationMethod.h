@@ -28,7 +28,6 @@
 #include "AlphaPremultiplication.h"
 #include "ColorTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Hasher.h>
 
 namespace WTF {
@@ -151,7 +150,7 @@ struct ColorInterpolationMethod {
 
     friend constexpr bool operator==(const ColorInterpolationMethod&, const ColorInterpolationMethod&) = default;
 
-    std::variant<
+    Variant<
         HSL,
         HWB,
         LCH,

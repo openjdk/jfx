@@ -44,7 +44,7 @@ void AXObjectCache::attachWrapper(AccessibilityObject& axObject)
 
 void AXObjectCache::platformPerformDeferredCacheUpdate()
 {
-    auto handleParentChanged = [&](const AXCoreObject& axObject) {
+    auto handleParentChanged = [&](const AccessibilityObject& axObject) {
         auto* wrapper = axObject.wrapper();
         if (!wrapper)
             return;
@@ -146,7 +146,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject& coreObject, AX
     }
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
+void AXObjectCache::postTextSelectionChangePlatformNotification(AccessibilityObject* coreObject, const AXTextStateChangeIntent&, const VisibleSelection& selection)
 {
     if (!coreObject)
         coreObject = rootWebArea();
@@ -183,6 +183,10 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
         break;
     case AXTextEditTypeAttributesChange:
         wrapper->textAttributesChanged();
+        break;
+    case AXTextEditTypeReplace:
+        // Should call postTextReplacementPlatformNotification instead.
+        ASSERT_NOT_REACHED();
         break;
     case AXTextEditTypeUnknown:
         break;
@@ -236,7 +240,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* c
     if (!coreObject)
         return;
 
-    if (coreObject->roleValue() != AccessibilityRole::WebArea)
+    if (coreObject->role() != AccessibilityRole::WebArea)
         return;
 
     auto* wrapper = coreObject->wrapper();

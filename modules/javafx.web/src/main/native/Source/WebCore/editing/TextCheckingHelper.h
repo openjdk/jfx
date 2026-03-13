@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SimpleRange.h"
 #include "TextChecking.h"
 
@@ -34,6 +33,8 @@ class VisibleSelection;
 
 struct TextCheckingResult;
 
+template<typename> class ExceptionOr;
+
 // FIXME: Should move this class to its own header.
 class TextCheckingParagraph {
 public:
@@ -45,7 +46,7 @@ public:
     ExceptionOr<uint64_t> offsetTo(const Position&) const;
     void expandRangeToNextEnd();
 
-    StringView text() const;
+    StringView text() const LIFETIME_BOUND;
 
     bool isEmpty() const;
 
@@ -94,7 +95,7 @@ public:
 
     MisspelledWord findFirstMisspelledWord() const;
     UngrammaticalPhrase findFirstUngrammaticalPhrase() const;
-    std::variant<MisspelledWord, UngrammaticalPhrase> findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const;
+    Variant<MisspelledWord, UngrammaticalPhrase> findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const;
 
     std::optional<SimpleRange> markAllMisspelledWords() const; // Returns the range of the first misspelled word.
     void markAllUngrammaticalPhrases() const;

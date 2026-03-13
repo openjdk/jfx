@@ -48,6 +48,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         DollarVMAssertScope assertScope;
@@ -76,8 +78,6 @@ private:
     void addConstructibleFunction(VM&, JSGlobalObject*, ASCIILiteral name, NativeFunction, unsigned arguments);
 
     static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-
-    DECLARE_VISIT_CHILDREN;
 
     WriteBarrierStructureID m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID;
 };

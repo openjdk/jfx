@@ -132,18 +132,20 @@ struct GlobalMetadata {
 // Constant metadata structures
 
 struct Const32Metadata {
+    // instructionLength needs to go first because we encode small
+    // i32 as just instructionLength with the value embedded in bytecode.
     InstructionLengthMetadata instructionLength;
     uint32_t value;
 };
 
 struct Const64Metadata {
-    InstructionLengthMetadata instructionLength;
     uint64_t value;
+    InstructionLengthMetadata instructionLength;
 };
 
 struct Const128Metadata {
-    InstructionLengthMetadata instructionLength;
     v128_t value;
+    InstructionLengthMetadata instructionLength;
 };
 
 struct TableInitMetadata {
@@ -249,6 +251,7 @@ enum class CallResultBytecode : uint8_t { // (mINT)
 
 struct CallReturnMetadata {
     uint32_t stackFrameSize; // 4B for stack frame size
+    uint32_t firstStackArgumentSPOffset; // 4B for stack argument offset
     CallResultBytecode resultBytecode[0];
 };
 

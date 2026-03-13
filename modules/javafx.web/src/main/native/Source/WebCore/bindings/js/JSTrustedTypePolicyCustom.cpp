@@ -27,27 +27,28 @@
 #include "JSTrustedTypePolicy.h"
 
 #include <JavaScriptCore/SlotVisitorInlines.h>
+#include <JavaScriptCore/StructureInlines.h>
 
 namespace WebCore {
 
 template<typename Visitor>
 void JSTrustedTypePolicy::visitAdditionalChildren(Visitor& visitor)
 {
-    RefPtr<CreateHTMLCallback> protectedCreateHTML;
-    RefPtr<CreateScriptCallback> protectedCreateScript;
-    RefPtr<CreateScriptURLCallback> protectedCreateScriptURL;
+    SUPPRESS_UNCOUNTED_LOCAL CreateHTMLCallback* createHTML = nullptr;
+    SUPPRESS_UNCOUNTED_LOCAL CreateScriptCallback* createScript = nullptr;
+    SUPPRESS_UNCOUNTED_LOCAL CreateScriptURLCallback* createScriptURL = nullptr;
     {
         Locker locker { wrapped().lock() };
-        protectedCreateHTML = wrapped().options().createHTML;
-        protectedCreateScript = wrapped().options().createScript;
-        protectedCreateScriptURL = wrapped().options().createScriptURL;
+        createHTML = wrapped().options().createHTML.get();
+        createScript = wrapped().options().createScript.get();
+        createScriptURL = wrapped().options().createScriptURL.get();
     }
-    if (protectedCreateHTML)
-        protectedCreateHTML->visitJSFunction(visitor);
-    if (protectedCreateScript)
-        protectedCreateScript->visitJSFunction(visitor);
-    if (protectedCreateScriptURL)
-        protectedCreateScriptURL->visitJSFunction(visitor);
+    if (createHTML)
+        SUPPRESS_UNCOUNTED_ARG createHTML->visitJSFunction(visitor);
+    if (createScript)
+        SUPPRESS_UNCOUNTED_ARG createScript->visitJSFunction(visitor);
+    if (createScriptURL)
+        SUPPRESS_UNCOUNTED_ARG createScriptURL->visitJSFunction(visitor);
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSTrustedTypePolicy);

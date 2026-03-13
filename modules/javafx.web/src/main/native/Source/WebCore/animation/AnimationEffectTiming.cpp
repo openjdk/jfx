@@ -167,7 +167,7 @@ BasicEffectTiming AnimationEffectTiming::getBasicTiming(const ResolutionData& da
             // Set unlimited current time based on the first matching condition:
             // - start time is resolved: (timeline time - start time) × playback rate
             // - Otherwise: animation's current time
-            auto unlimitedCurrentTime = data.startTime && data.timelineTime ? (*data.timelineTime - *data.startTime) * data.playbackRate : *data.localTime;
+            auto unlimitedCurrentTime = (data.startTime && data.timelineTime) ? (*data.timelineTime - *data.startTime) * data.playbackRate : *data.localTime;
             // Let effective timeline time be unlimited current time / animation’s playback rate + effective start time
             auto effectiveTimelineTime = unlimitedCurrentTime / data.playbackRate + effectiveStartTime;
             // Let effective timeline progress be effective timeline time / timeline duration

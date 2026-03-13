@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR) && PLATFORM(COCOA)
 
+#include "ContextDestructionObserverInlines.h"
 #include "GraphicsContextGLCocoa.h"
 #include "IntSize.h"
 #include "Logging.h"
@@ -114,12 +115,12 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
 {
     releaseAllDisplayAttachments();
 
-    if (RefPtr gl = m_context.graphicsContextGL()) {
+    if (RefPtr gl = m_context->graphicsContextGL()) {
         m_drawAttachments.release(*gl);
         m_resolveAttachments.release(*gl);
         m_displayFBO.release(*gl);
         m_resolvedFBO.release(*gl);
-        m_context.deleteFramebuffer(m_drawFramebuffer.ptr());
+        m_context->deleteFramebuffer(m_drawFramebuffer.ptr());
     } else {
         // The GraphicsContextGL is gone, so disarm the GCGLOwned objects so
         // their destructors don't assert.
@@ -132,7 +133,7 @@ WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
 
 void WebXROpaqueFramebuffer::startFrame(PlatformXR::FrameData::LayerData& data)
 {
-    RefPtr gl = m_context.graphicsContextGL();
+    RefPtr gl = m_context->graphicsContextGL();
     if (!gl)
         return;
 
@@ -197,7 +198,7 @@ void WebXROpaqueFramebuffer::startFrame(PlatformXR::FrameData::LayerData& data)
 
 void WebXROpaqueFramebuffer::endFrame()
 {
-    RefPtr gl = m_context.graphicsContextGL();
+    RefPtr gl = m_context->graphicsContextGL();
     if (!gl)
         return;
 
@@ -393,7 +394,7 @@ bool WebXROpaqueFramebuffer::setupFramebuffer(GraphicsContextGL& gl, const Platf
     const bool needsIntermediateResolve = m_attributes.antialias && layeredLayout;
 
     // Set up recommended samples for WebXR.
-    auto sampleCount = m_attributes.antialias ? std::min(4, m_context.maxSamples()) : 0;
+    auto sampleCount = m_attributes.antialias ? std::min(4, m_context->maxSamples()) : 0;
 
     // Drawing target
     if (framebufferResize) {
@@ -445,7 +446,7 @@ const std::array<WebXRExternalAttachments, 2>* WebXROpaqueFramebuffer::reusableD
 
     auto reusableTextureIndex = textureData.reusableTextureIndex;
     if (reusableTextureIndex >= m_displayAttachmentsSets.size() || !m_displayAttachmentsSets[reusableTextureIndex][0]) {
-        RELEASE_LOG_FAULT(XR, "Unable to find reusable texture at index: %zu", reusableTextureIndex);
+        RELEASE_LOG_FAULT(XR, "Unable to find reusable texture at index: %llu", reusableTextureIndex);
         ASSERT_NOT_REACHED();
         return nullptr;
     }
@@ -453,7 +454,7 @@ const std::array<WebXRExternalAttachments, 2>* WebXROpaqueFramebuffer::reusableD
     return &m_displayAttachmentsSets[reusableTextureIndex];
 }
 
-void WebXROpaqueFramebuffer::bindCompositorTexturesForDisplay(GraphicsContextGL& gl, const PlatformXR::FrameData::LayerData& layerData)
+void WebXROpaqueFramebuffer::bindCompositorTexturesForDisplay(GraphicsContextGL& gl, PlatformXR::FrameData::LayerData& layerData)
 {
     int layerCount = (m_displayLayout == PlatformXR::Layout::Layered) ? 2 : 1;
 
@@ -508,7 +509,7 @@ void WebXROpaqueFramebuffer::releaseDisplayAttachmentsAtIndex(size_t index)
     if (index >= m_displayAttachmentsSets.size())
         return;
 
-    RefPtr gl = m_context.graphicsContextGL();
+    RefPtr gl = m_context->graphicsContextGL();
     for (auto& attachments : m_displayAttachmentsSets[index]) {
         if (gl)
             attachments.release(*gl);

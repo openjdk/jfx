@@ -27,9 +27,7 @@
 #include "PaintRenderingContext2D.h"
 
 #include "CustomPaintCanvas.h"
-#include "DisplayListDrawingContext.h"
-#include "DisplayListRecorder.h"
-#include "DisplayListReplayer.h"
+#include "DisplayListRecorderImpl.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -56,13 +54,13 @@ CustomPaintCanvas& PaintRenderingContext2D::canvas() const
 GraphicsContext* PaintRenderingContext2D::ensureDrawingContext() const
 {
     if (!m_recordingContext)
-        m_recordingContext = makeUnique<DisplayList::DrawingContext>(canvasBase().size());
-    return &m_recordingContext->context();
+        m_recordingContext.emplace(canvasBase().size());
+    return &*m_recordingContext;
 }
 
 GraphicsContext* PaintRenderingContext2D::existingDrawingContext() const
 {
-    return m_recordingContext ? &m_recordingContext->context() : nullptr;
+    return m_recordingContext ? &*m_recordingContext : nullptr;
 }
 
 AffineTransform PaintRenderingContext2D::baseTransform() const
@@ -78,12 +76,7 @@ void PaintRenderingContext2D::replayDisplayList(GraphicsContext& target) const
 {
     if (!m_recordingContext)
         return;
-    auto& displayList = m_recordingContext->displayList();
-    if (displayList.isEmpty())
-        return;
-    DisplayList::Replayer replayer(target, displayList);
-    replayer.replay(FloatRect { { }, canvasBase().size() });
-    displayList.clear();
+    target.drawDisplayList(m_recordingContext->takeDisplayList());
 }
 
 } // namespace WebCore

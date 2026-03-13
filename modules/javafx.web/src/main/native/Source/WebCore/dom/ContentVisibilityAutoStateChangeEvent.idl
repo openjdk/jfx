@@ -24,7 +24,6 @@
  */
 
 [
-    EnabledBySetting=CSSContentVisibilityEnabled,
     Exposed=Window
 ] interface ContentVisibilityAutoStateChangeEvent : Event {
     constructor([AtomString] DOMString type, optional ContentVisibilityAutoStateChangeEventInit eventInitDict = {});

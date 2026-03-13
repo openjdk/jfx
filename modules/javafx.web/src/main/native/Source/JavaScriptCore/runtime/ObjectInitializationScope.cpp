@@ -76,9 +76,11 @@ void ObjectInitializationScope::verifyPropertiesAreInitialized(JSObject* object)
     Structure* structure = object->structure();
     IndexingType indexingType = structure->indexingType();
     unsigned vectorLength = butterfly->vectorLength();
-    if (UNLIKELY(hasUndecided(indexingType)) || !hasIndexedProperties(indexingType)) {
+    if (hasUndecided(indexingType)) [[unlikely]] {
         // Nothing to verify.
-    } else if (LIKELY(!hasAnyArrayStorage(indexingType))) {
+    } else if (!hasIndexedProperties(indexingType)) {
+        // Nothing to verify.
+    } else if (!hasAnyArrayStorage(indexingType)) [[likely]] {
         auto data = butterfly->contiguous().data();
         for (unsigned i = 0; i < vectorLength; ++i) {
             if (isScribbledValue(data[i].get())) {

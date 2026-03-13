@@ -18,18 +18,16 @@
  * Boston, MA 02110-1301, USA.
  */
 
-// https://drafts.csswg.org/cssom/#the-cssstylerule-interface
+// https://drafts.csswg.org/cssom/#cssstylerule
 
 typedef USVString CSSOMString;
 
+// FIXME: This should inherit from CSSGroupRule.
 [
     Exposed=Window
 ] interface CSSStyleRule : CSSRule {
     attribute DOMString selectorText;
-    [SameObject, PutForwards=cssText] readonly attribute CSSStyleDeclaration style;
-
-    // https://drafts.css-houdini.org/css-typed-om/#declared-stylepropertymap-objects
-    [SameObject] readonly attribute StylePropertyMap styleMap;
+    [SameObject, PutForwards=cssText] readonly attribute CSSStyleProperties style;
 
     [SameObject] readonly attribute CSSRuleList cssRules;
     unsigned long insertRule(CSSOMString rule, optional unsigned long index = 0);

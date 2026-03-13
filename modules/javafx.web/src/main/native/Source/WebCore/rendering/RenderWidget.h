@@ -48,7 +48,7 @@ public:
     static void scheduleWidgetToMove(Widget&, LocalFrameView*);
 
 private:
-    using WidgetToParentMap = UncheckedKeyHashMap<RefPtr<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
+    using WidgetToParentMap = HashMap<RefPtr<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
     static WidgetToParentMap& widgetNewParentMap();
 
     WEBCORE_EXPORT void moveWidgets();
@@ -56,20 +56,14 @@ private:
     WEBCORE_EXPORT static bool s_haveScheduledWidgetToMove;
 };
 
-inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& widget, LocalFrameView* frame)
-{
-    s_haveScheduledWidgetToMove = true;
-    widgetNewParentMap().set(&widget, frame);
-}
-
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderWidget);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderWidget);
 public:
     virtual ~RenderWidget();
 
-    HTMLFrameOwnerElement& frameOwnerElement() const { return downcast<HTMLFrameOwnerElement>(nodeForNonAnonymous()); }
-    Ref<HTMLFrameOwnerElement> protectedFrameOwnerElement() const { return frameOwnerElement(); }
+    inline HTMLFrameOwnerElement& frameOwnerElement() const; // Defined in RenderWidgetInlines.h
+    inline Ref<HTMLFrameOwnerElement> protectedFrameOwnerElement() const; // Defined in RenderWidgetInlines.h
 
     Widget* widget() const { return m_widget.get(); }
     RefPtr<Widget> protectedWidget() const { return m_widget; }
@@ -98,7 +92,7 @@ protected:
 private:
     void element() const = delete;
 
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
 
     void setSelectionState(HighlightState) final;

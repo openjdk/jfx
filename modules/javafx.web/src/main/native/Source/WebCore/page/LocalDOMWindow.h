@@ -26,20 +26,15 @@
 
 #pragma once
 
-#include "Base64Utilities.h"
 #include "ContextDestructionObserverInlines.h"
+#include "DOMHighResTimeStamp.h"
 #include "DOMWindow.h"
-#include "ExceptionOr.h"
-#include "LocalFrame.h"
-#include "PushManager.h"
+#include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "PushSubscriptionOwner.h"
-#include "ReducedResolutionSeconds.h"
-#include "ScrollToOptions.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
-#include "WindowPostMessageOptions.h"
-#include <JavaScriptCore/HandleTypes.h>
-#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/HandleForward.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
@@ -59,11 +54,19 @@ namespace JSC {
 class CallFrame;
 class JSObject;
 class JSValue;
+template <typename, ShouldStrongDestructorGrabLock> class Strong;
 }
 
 namespace WebCore {
 
 class CloseWatcherManager;
+class LocalFrame;
+struct ScrollToOptions;
+struct WindowPostMessageOptions;
+
+using ReducedResolutionSeconds = Seconds;
+
+template<typename> class ExceptionOr;
 
 enum class IncludeTargetOrigin : bool { No, Yes };
 
@@ -81,7 +84,6 @@ public:
 class LocalDOMWindow final
     : public DOMWindow
     , public ContextDestructionObserver
-    , public Base64Utilities
     , public WindowOrWorkerGlobalScope
     , public Supplementable<LocalDOMWindow>
 #if ENABLE(DECLARATIVE_WEB_PUSH)
@@ -110,7 +112,8 @@ public:
     void suspendForBackForwardCache();
     void resumeFromBackForwardCache();
 
-    WEBCORE_EXPORT LocalFrame* frame() const final;
+    WEBCORE_EXPORT Frame* frame() const final;
+    WEBCORE_EXPORT LocalFrame* localFrame() const;
     RefPtr<LocalFrame> protectedFrame() const;
 
     RefPtr<WebCore::MediaQueryList> matchMedia(const String&);
@@ -137,7 +140,7 @@ public:
     BarProp& statusbar();
     BarProp& toolbar();
     WEBCORE_EXPORT Navigator& navigator();
-    Ref<Navigator> protectedNavigator();
+    WEBCORE_EXPORT Ref<Navigator> protectedNavigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
@@ -285,6 +288,19 @@ public:
     void releaseEvents();
 
     void finishedLoading();
+
+    // EventTiming API
+    struct PerformanceEventTimingCandidate {
+        EventTypeInfo typeInfo;
+        bool cancelable { false };
+        DOMHighResTimeStamp startTime { 0 };
+        DOMHighResTimeStamp processingStart { 0 };
+        DOMHighResTimeStamp processingEnd { 0 };
+        RefPtr<EventTarget> target { nullptr };
+    };
+    PerformanceEventTimingCandidate initializeEventTimingEntry(const Event&, EventTypeInfo);
+    void finalizeEventTimingEntry(const PerformanceEventTimingCandidate&, const Event&);
+    void dispatchPendingEventTimingEntries();
 
     // HTML 5 key/value storage
     ExceptionOr<Storage*> sessionStorage();
@@ -445,6 +461,9 @@ private:
     mutable RefPtr<Navigation> m_navigation;
     mutable RefPtr<CloseWatcherManager> m_closeWatcherManager;
 
+    // Equivalent to the list of PerformanceEventTiming objects mentioned in https://www.w3.org/TR/event-timing/#sec-modifications-HTML :
+    Vector<PerformanceEventTimingCandidate, 6> m_performanceEventTimingCandidates;
+
     String m_status;
 #if PLATFORM(JAVA)
     String m_defaultStatus;
@@ -488,7 +507,7 @@ private:
     RefPtr<CookieStore> m_cookieStore;
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    PushManager m_pushManager;
+    const std::unique_ptr<PushManager> m_pushManager;
 #endif
 };
 

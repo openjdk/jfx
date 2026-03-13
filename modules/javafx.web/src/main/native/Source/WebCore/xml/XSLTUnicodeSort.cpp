@@ -72,10 +72,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr* rawSorts,
                     number[j] = 1;
                 else
                     xsltTransformError(ctxt, nullptr, sorts[j], "xsltDoSortFunction: no support for data-type = %s\n", stype);
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(stype);
-IGNORE_WARNINGS_END
             }
         } else
             number[j] = comp->number;
@@ -89,10 +86,7 @@ IGNORE_WARNINGS_END
                     desc[j] = 1;
                 else
                     xsltTransformError(ctxt, nullptr, sorts[j], "xsltDoSortFunction: invalid value %s for order\n", order);
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(order);
-IGNORE_WARNINGS_END
             }
         } else
             desc[j] = comp->descending;
@@ -244,10 +238,7 @@ IGNORE_WARNINGS_END
         if (resultsTab[j].data()) {
             for (int i = 0; i < len; ++i)
                 xmlXPathFreeObject(resultsTab[j][i]);
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(resultsTab[j].data());
-IGNORE_WARNINGS_END
         }
     }
 }

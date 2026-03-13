@@ -120,7 +120,7 @@ sub license()
     return "/*
  * THIS FILE WAS AUTOMATICALLY GENERATED, DO NOT EDIT.
  *
- * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -224,7 +224,7 @@ sub generateInterfacesHeader()
 
     print F "namespace WebCore {\n";
     print F "\n";
-    print F "enum class ${namespace}InterfaceType {\n";
+    print F "enum class ${namespace}InterfaceType : uint8_t {\n";
 
     my $suffix = "InterfaceType";
     if ($useNamespaceAsSuffix eq "true") {

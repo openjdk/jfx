@@ -34,9 +34,9 @@ namespace CSS {
 // <ellipse()> = ellipse( <radial-size>? [ at <position> ]? )
 // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-ellipse
 struct Ellipse {
-    using Extent = std::variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
+    using Extent = Variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
     using Length = CSS::LengthPercentage<Nonnegative>;
-    using RadialSize = std::variant<Length, Extent>;
+    using RadialSize = Variant<Length, Extent>;
 
     // FIXME: The spec says that this should take only a single RadialSize, not a pair, but this does not match the tests.
     SpaceSeparatedPair<RadialSize> radii;

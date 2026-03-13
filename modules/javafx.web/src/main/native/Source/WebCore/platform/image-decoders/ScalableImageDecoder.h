@@ -139,9 +139,6 @@ public:
     // Make the best effort guess to check if the requested frame has alpha channel.
     bool frameHasAlphaAtIndex(size_t) const override;
 
-    // Number of bytes in the decoded frame requested. Return 0 if not yet decoded.
-    unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const override;
-
     Seconds frameDurationAtIndex(size_t) const final;
 
     PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) override;

@@ -28,7 +28,6 @@
 #include "CreateHTMLCallback.h"
 #include "CreateScriptCallback.h"
 #include "CreateScriptURLCallback.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include "TrustedTypePolicyOptions.h"
 #include <JavaScriptCore/Strong.h>
@@ -40,9 +39,11 @@ namespace WebCore {
 class TrustedHTML;
 class TrustedScript;
 class TrustedScriptURL;
-enum class TrustedType : int8_t;
-struct TrustedTypePolicyOptions;
 class WebCoreOpaqueRoot;
+struct TrustedTypePolicyOptions;
+template<typename> class ExceptionOr;
+
+enum class TrustedType : int8_t;
 
 enum class IfMissing : bool { Throw, ReturnNull };
 

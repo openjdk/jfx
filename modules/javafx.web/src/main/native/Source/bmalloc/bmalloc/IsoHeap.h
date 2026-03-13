@@ -74,7 +74,7 @@ struct IsoHeapBase {
     static pas_heap_ref& provideHeap()
     {
         static const bmalloc_type type = BMALLOC_TYPE_INITIALIZER(sizeof(LibPasBmallocHeapType), alignof(LibPasBmallocHeapType), __PRETTY_FUNCTION__);
-        static pas_heap_ref heap = BMALLOC_HEAP_REF_INITIALIZER(&type);
+        static pas_heap_ref heap = BMALLOC_HEAP_REF_INITIALIZER(&type, pas_bmalloc_heap_ref_kind_non_compact);
         return heap;
     }
 };

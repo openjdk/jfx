@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class SharedWorkerIdentifierType { };
+struct SharedWorkerIdentifierType;
 using SharedWorkerIdentifier = ObjectIdentifier<SharedWorkerIdentifierType>;
 
 } // namespace WebCore

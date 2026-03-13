@@ -90,7 +90,7 @@ struct AccessibilitySearchCriteria {
 };
 
 class AXSearchManager {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXSearchManager);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AXSearchManager, AXSearchManager);
 public:
     AXCoreObject::AccessibilityChildrenVector findMatchingObjects(AccessibilitySearchCriteria&&);
     std::optional<AXTextMarkerRange> findMatchingRange(AccessibilitySearchCriteria&&);
@@ -102,7 +102,7 @@ private:
     bool matchForSearchKeyAtIndex(Ref<AXCoreObject>, const AccessibilitySearchCriteria&, size_t);
 
     // Keeps the ranges of misspellings for each object.
-    UncheckedKeyHashMap<AXID, Vector<AXTextMarkerRange>> m_misspellingRanges;
+    HashMap<AXID, Vector<AXTextMarkerRange>> m_misspellingRanges;
 };
 
 inline AXCoreObject::AccessibilityChildrenVector AXSearchManager::findMatchingObjects(AccessibilitySearchCriteria&& criteria)

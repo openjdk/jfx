@@ -45,7 +45,7 @@ static inline const char* pas_tree_direction_get_string(pas_tree_direction direc
     case pas_tree_direction_right:
         return "right";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -57,7 +57,7 @@ static inline pas_tree_direction pas_tree_direction_invert(pas_tree_direction di
     case pas_tree_direction_right:
         return pas_tree_direction_left;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_tree_direction_left;
 }
 
@@ -72,7 +72,7 @@ pas_tree_direction_invert_comparison_result_if_right(
     case pas_tree_direction_right:
         return -comparison_result;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

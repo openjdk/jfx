@@ -63,7 +63,7 @@ Structure* JSRawJSONObject::createStructure(VM& vm, JSGlobalObject* globalObject
 
 JSString* JSRawJSONObject::rawJSON(VM& vm)
 {
-    if (LIKELY(!structure()->didTransition()))
+    if (!structure()->didTransition()) [[likely]]
         return jsCast<JSString*>(getDirect(rawJSONObjectRawJSONPropertyOffset));
     return jsCast<JSString*>(getDirect(vm, vm.propertyNames->rawJSON));
 }

@@ -38,7 +38,6 @@
 #include "WasmFunctionIPIntMetadataGenerator.h"
 #include "WasmFunctionParser.h"
 #include "WasmGeneratorTraits.h"
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
@@ -218,7 +217,7 @@ public:
         return UnexpectedResult(makeString("WebAssembly.Module failed compiling: "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition))                  \
+        if (condition) [[unlikely]]                  \
             return fail(__VA_ARGS__);             \
     } while (0)
 
@@ -663,7 +662,6 @@ IPIntGenerator::IPIntGenerator(ModuleInformation& info, FunctionCodeIndex functi
     , m_functionIndex(functionIndex)
     , m_metadata(WTF::makeUnique<FunctionIPIntMetadataGenerator>(functionIndex, bytecode))
 {
-    m_metadata->m_callees = FixedBitVector(m_info.internalFunctionCount());
 }
 
 PartialResult WARN_UNUSED_RETURN IPIntGenerator::addDrop(ExpressionType)
@@ -2000,7 +1998,7 @@ void IPIntGenerator::coalesceControlFlow(bool force)
 
     for (auto& src : m_exitHandlersAwaitingCoalescing) {
         IPInt::BlockMetadata md = { static_cast<int32_t>(here.pc - src.pc), static_cast<int32_t>(here.mc - src.mc) };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
     m_exitHandlersAwaitingCoalescing.shrink(0);
 }
@@ -2012,12 +2010,12 @@ void IPIntGenerator::resolveEntryTarget(unsigned index, IPIntLocation loc)
     for (auto& src : control.m_awaitingEntryTarget) {
         // write delta PC and delta MC
         IPInt::BlockMetadata md = { static_cast<int32_t>(loc.pc - src.pc), static_cast<int32_t>(loc.mc - src.mc) };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
     if (control.isLoop) {
         for (auto& src : control.m_awaitingBranchTarget) {
             IPInt::BlockMetadata md = { static_cast<int32_t>(loc.pc - src.pc), static_cast<int32_t>(loc.mc - src.mc) };
-            WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+            WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
         }
         control.m_awaitingBranchTarget.clear();
     }
@@ -2033,12 +2031,12 @@ void IPIntGenerator::resolveExitTarget(unsigned index, IPIntLocation loc)
     for (auto& src : control.m_awaitingExitTarget) {
         // write delta PC and delta MC
         IPInt::BlockMetadata md = { static_cast<int32_t>(loc.pc - src.pc), static_cast<int32_t>(loc.mc - src.mc) };
-        WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+        WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
         }
     if (!control.isLoop) {
         for (auto& src : control.m_awaitingBranchTarget) {
             IPInt::BlockMetadata md = { static_cast<int32_t>(loc.pc - src.pc), static_cast<int32_t>(loc.mc - src.mc) };
-            WRITE_TO_METADATA(m_metadata->m_metadata.data() + src.mc, md, IPInt::BlockMetadata);
+            WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + src.mc, md, IPInt::BlockMetadata);
     }
         control.m_awaitingBranchTarget.clear();
     }
@@ -2079,7 +2077,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBlock(BlockSignature signatu
 
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->addBlankSpace<IPInt::BlockMetadata>();
-    tryToResolveEntryTarget(block.m_index, here, m_metadata->m_metadata.data());
+    tryToResolveEntryTarget(block.m_index, here, m_metadata->m_metadata.mutableSpan().data());
 
     coalesceControlFlow();
 
@@ -2155,7 +2153,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addElseToUnreachable(ControlTyp
     changeStackSize(signature.argumentCount());
     auto ifIndex = block.m_index;
 
-    auto mdIf = reinterpret_cast<IPInt::IfMetadata*>(m_metadata->m_metadata.data() + block.m_pendingOffset);
+    auto mdIf = reinterpret_cast<IPInt::IfMetadata*>(m_metadata->m_metadata.mutableSpan().data() + block.m_pendingOffset);
 
     // delta PC
     mdIf->elseDeltaPC = nextPC() - block.m_pc;
@@ -2235,7 +2233,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
 
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->addBlankSpace<IPInt::BlockMetadata>();
-    tryToResolveEntryTarget(result.m_index, here, m_metadata->m_metadata.data());
+    tryToResolveEntryTarget(result.m_index, here, m_metadata->m_metadata.mutableSpan().data());
 
     result.m_tryTableTargets.appendUsingFunctor(targets.size(),
         [&](unsigned i) -> ControlType::TryTableTarget {
@@ -2262,7 +2260,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addTryTable(BlockSignature sign
             .deltaPC = 0xbeef, .deltaMC = 0xbeef
         });
 
-        tryToResolveBranchTarget(entry, here, m_metadata->m_metadata.data());
+        tryToResolveBranchTarget(entry, here, m_metadata->m_metadata.mutableSpan().data());
     }
 
     coalesceControlFlow();
@@ -2415,7 +2413,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addRethrow(unsigned, ControlTyp
     };
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(sizeof(mdRethrow));
-    WRITE_TO_METADATA(m_metadata->m_metadata.data() + size, mdRethrow, IPInt::RethrowMetadata);
+    WRITE_TO_METADATA(m_metadata->m_metadata.mutableSpan().data() + size, mdRethrow, IPInt::RethrowMetadata);
 
     return { };
 }
@@ -2450,7 +2448,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranch(ControlType& block, E
     };
     m_metadata->appendMetadata(branch);
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2476,7 +2474,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchNull(ControlType& bloc
     };
     m_metadata->appendMetadata(branch);
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2499,7 +2497,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addBranchCast(ControlType& bloc
         .instructionLength = { .length = safeCast<uint8_t>(getCurrentInstructionLength()) }
     });
 
-    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(block, here, m_metadata->m_metadata.mutableSpan().data());
     return { };
 }
 
@@ -2520,7 +2518,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
         };
         IPIntLocation here = { curPC(), curMC() };
         m_metadata->appendMetadata(target);
-        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.data());
+        tryToResolveBranchTarget(*block, here, m_metadata->m_metadata.mutableSpan().data());
     }
     IPInt::BranchTargetMetadata defaultTarget {
         .block = { .deltaPC = 0xbeef, .deltaMC = 0xbeef },
@@ -2529,7 +2527,7 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addSwitch(ExpressionType, const
     };
     IPIntLocation here = { curPC(), curMC() };
     m_metadata->appendMetadata(defaultTarget);
-    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.data());
+    tryToResolveBranchTarget(defaultJump, here, m_metadata->m_metadata.mutableSpan().data());
 
     return { };
 }
@@ -2657,7 +2655,7 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
     if (!m_cachedCallBytecode.isEmpty()) {
         size_t size = m_metadata->m_metadata.size();
         m_metadata->addBlankSpace(m_cachedCallBytecode.size());
-        memcpy(m_metadata->m_metadata.data() + size, m_cachedCallBytecode.data(), m_cachedCallBytecode.size());
+        memcpy(m_metadata->m_metadata.mutableSpan().data() + size, m_cachedCallBytecode.span().data(), m_cachedCallBytecode.size());
         return;
     }
 
@@ -2714,9 +2712,9 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
 
     IPInt::CallReturnMetadata commonReturn {
         .stackFrameSize = static_cast<uint32_t>(callConvention.headerAndArgumentStackSizeInBytes),
+        .firstStackArgumentSPOffset = 0,
         .resultBytecode = { }
     };
-    m_cachedCallBytecode.append(toSpan(commonReturn));
 
     constexpr static int NUM_MINT_RET_GPRS = 8;
     constexpr static int NUM_MINT_RET_FPRS = 8;
@@ -2724,12 +2722,9 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
     ASSERT_UNUSED(NUM_MINT_RET_FPRS, wasmCallingConvention().fprArgs.size() <= NUM_MINT_RET_FPRS);
 
     bool hasSeenStackArgument = false;
-    uint32_t firstStackArgumentSPOffset = 0;
 
-    size_t indexForSPOffset = m_cachedCallBytecode.size();
-    m_cachedCallBytecode.append(toSpan(firstStackArgumentSPOffset));
-
-    m_cachedCallBytecode.appendUsingFunctor(callConvention.results.size(),
+    Vector<uint8_t, 16> returnBytecode;
+    returnBytecode.appendUsingFunctor(callConvention.results.size(),
         [&](unsigned index) -> uint8_t {
             auto loc = callConvention.results[index].location;
             if (loc.isGPR()) {
@@ -2751,7 +2746,7 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
                     hasSeenStackArgument = true;
                     // If our first argument starts further down the frame, we need to push a bunch of empty values
                     // If our first stack argument is in an "odd" slot, we need to skip one slot.
-                    firstStackArgumentSPOffset = loc.offsetFromSP();
+                    commonReturn.firstStackArgumentSPOffset = loc.offsetFromSP();
                 }
                 return static_cast<uint8_t>(IPInt::CallResultBytecode::ResultStack);
             }
@@ -2759,13 +2754,14 @@ void IPIntGenerator::addCallCommonData(const FunctionSignature&, const CallInfor
             RELEASE_ASSERT_NOT_REACHED();
             return 0;
         });
-    m_cachedCallBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::End));
-    for (uint8_t v : toSpan(firstStackArgumentSPOffset))
-        m_cachedCallBytecode[indexForSPOffset++] = v;
+    returnBytecode.append(static_cast<uint8_t>(IPInt::CallResultBytecode::End));
+
+    m_cachedCallBytecode.append(toSpan(commonReturn));
+    m_cachedCallBytecode.append(returnBytecode.span());
 
     size_t size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(m_cachedCallBytecode.size());
-    memcpy(m_metadata->m_metadata.data() + size, m_cachedCallBytecode.data(), m_cachedCallBytecode.size());
+    memcpy(m_metadata->m_metadata.mutableSpan().data() + size, m_cachedCallBytecode.mutableSpan().data(), m_cachedCallBytecode.size());
 }
 
 void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
@@ -2818,7 +2814,7 @@ void IPIntGenerator::addTailCallCommonData(const FunctionSignature& signature)
 
     auto size = m_metadata->m_metadata.size();
     m_metadata->addBlankSpace(mINTBytecode.size());
-    std::ranges::reverse_copy(mINTBytecode, m_metadata->m_metadata.data() + size);
+    std::ranges::reverse_copy(mINTBytecode, m_metadata->m_metadata.mutableSpan().data() + size);
 
     uint32_t numStackValues = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), callConvention.numberOfStackValues);
 
@@ -2860,8 +2856,6 @@ PartialResult WARN_UNUSED_RETURN IPIntGenerator::addCall(FunctionSpaceIndex inde
     auto& callConvention = cachedCallInformationFor(signature);
     results.appendUsingFunctor(signature.returnCount(), [](unsigned) { return Value { }; });
     changeStackSize(signature.returnCount() - signature.argumentCount());
-    if (!m_info.isImportedFunctionFromFunctionIndexSpace(index))
-        m_metadata->m_callees.testAndSet(index - m_info.importFunctionCount());
 
     IPInt::CallMetadata functionIndexMetadata {
         .length = safeCast<uint8_t>(getCurrentInstructionLength()),
@@ -2999,7 +2993,7 @@ std::unique_ptr<FunctionIPIntMetadataGenerator> IPIntGenerator::finalize()
     if (m_usesRethrow) {
         m_metadata->m_numAlignedRethrowSlots = roundUpToMultipleOf<2>(m_maxTryDepth);
         for (uint32_t catchSPOffset : m_catchSPMetadataOffsets)
-            *reinterpret_cast_ptr<uint32_t*>(m_metadata->m_metadata.data() + catchSPOffset) += m_metadata->m_numAlignedRethrowSlots;
+            *reinterpret_cast_ptr<uint32_t*>(m_metadata->m_metadata.mutableSpan().data() + catchSPOffset) += m_metadata->m_numAlignedRethrowSlots;
     }
 
     // Pad the metadata to an even number since we will allocate the rounded up size

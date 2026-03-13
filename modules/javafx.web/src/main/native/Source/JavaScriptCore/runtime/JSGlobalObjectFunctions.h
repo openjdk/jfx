@@ -63,6 +63,7 @@ JSC_DECLARE_HOST_FUNCTION(globalFuncCloneObject);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandleNegativeProxyHasTrapResult);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandleProxyGetTrapResult);
+JSC_DECLARE_HOST_FUNCTION(globalFuncIsFinite);
 JSC_DECLARE_HOST_FUNCTION(globalFuncIsNaN);
 JSC_DECLARE_HOST_FUNCTION(globalFuncToIntegerOrInfinity);
 JSC_DECLARE_HOST_FUNCTION(globalFuncToLength);

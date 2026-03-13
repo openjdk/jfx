@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ArgList.h"
+#include <numeric>
 #include <wtf/Int128.h>
 #include <wtf/StdLibExtras.h>
 
@@ -35,7 +36,7 @@ namespace JSC {
 
 static ALWAYS_INLINE bool coerceComparatorResultToBoolean(JSGlobalObject* globalObject, JSValue comparatorResult)
 {
-    if (LIKELY(comparatorResult.isInt32()))
+    if (comparatorResult.isInt32()) [[likely]]
         return comparatorResult.asInt32() < 0;
 
     // See https://bugs.webkit.org/show_bug.cgi?id=47825 on boolean special-casing
@@ -59,7 +60,7 @@ static ALWAYS_INLINE void arrayInsertionSort(VM& vm, std::span<ElementType> span
         size_t left = 0;
         size_t right = i;
         for (; left < right;) {
-            size_t m = left + (right - left) / 2;
+            size_t m = std::midpoint(left, right);
             auto target = array[m];
             bool result = comparator(value, target);
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, void());

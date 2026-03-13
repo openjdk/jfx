@@ -30,7 +30,9 @@
 #include "ColorSerialization.h"
 #include "ContentfulPaintChecker.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
+#include "FixedContainerEdges.h"
 #include "FrameSnapshotting.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"
@@ -41,6 +43,7 @@
 #include "IntRect.h"
 #include "IntSize.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "Node.h"
@@ -48,11 +51,12 @@
 #include "PixelBuffer.h"
 #include "RegistrableDomain.h"
 #include "RenderImage.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "Settings.h"
 #include "Styleable.h"
 #include "WebAnimation.h"
+#include <ranges>
 #include <wtf/HashCountedSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/OptionSet.h>
@@ -277,72 +281,89 @@ std::optional<Color> PageColorSampler::sampleTop(Page& page)
         return averageColor(std::span(samples));
 }
 
-Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
+bool PageColorSampler::colorsAreSimilar(const Color& a, const Color& b)
+{
+    static constexpr auto maxDistanceSquaredForSimilarColors = 36;
+    auto [redA, greenA, blueA, alphaA] = a.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
+    auto [redB, greenB, blueB, alphaB] = b.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
+    auto distance = pow(255 * (redA - redB), 2) + pow(255 * (greenA - greenB), 2) + pow(255 * (blueA - blueB), 2);
+    return distance <= maxDistanceSquaredForSimilarColors;
+}
+
+Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteRect)
 {
     RefPtr frame = page.localMainFrame();
     if (!frame)
-        return { };
+        return PredominantColorType::None;
 
     RefPtr view = frame->view();
     if (!view)
-        return { };
+        return PredominantColorType::None;
 
     RefPtr document = frame->document();
     if (!document)
-        return { };
+        return PredominantColorType::None;
+
+    static constexpr OptionSet snapshotFlags {
+        SnapshotFlags::ExcludeSelectionHighlighting,
+        SnapshotFlags::PaintEverythingExcludingSelection,
+        SnapshotFlags::ExcludeReplacedContentExceptForIFrames,
+        SnapshotFlags::ExcludeText,
+        SnapshotFlags::FixedAndStickyLayersOnly,
+    };
 
     auto colorSpace = DestinationColorSpace::SRGB();
-    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), {
-        { SnapshotFlags::ExcludeSelectionHighlighting, SnapshotFlags::PaintEverythingExcludingSelection },
-        ImageBufferPixelFormat::BGRA8,
-        colorSpace
-    });
-
+    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), { snapshotFlags, ImageBufferPixelFormat::BGRA8, colorSpace });
     if (!snapshot)
-        return { };
+        return PredominantColorType::None;
 
     auto pixelBuffer = snapshot->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, PixelFormat::BGRA8, colorSpace }, { { }, snapshot->truncatedLogicalSize() });
     if (!pixelBuffer)
-        return { };
+        return PredominantColorType::None;
 
-    static constexpr auto sampleCount = 17;
-    static constexpr auto minimumSampleCountForPredominantColor = 0.5 * sampleCount;
+    static constexpr auto sampleCount = 29;
+    static constexpr auto minimumSampleCountForPredominantColor = 0.67 * sampleCount;
     static constexpr auto bytesPerPixel = 4;
+
+    auto isNearlyTransparent = [](const Color& color) {
+        return color.alphaAsFloat() < nearlyTransparentAlphaThreshold;
+    };
 
     auto numberOfBytes = pixelBuffer->bytes().size();
     auto numberOfPixels = numberOfBytes / bytesPerPixel;
     if (numberOfPixels <= sampleCount)
-        return { };
+        return PredominantColorType::None;
 
     auto byteSamplingInterval = bytesPerPixel * (numberOfPixels / (sampleCount - 1));
     auto pixels = pixelBuffer->bytes();
     HashCountedSet<Color> colorDistribution;
     for (uint64_t i = 0; i < numberOfBytes; i += byteSamplingInterval) {
-        if (auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } }; color.isValid())
-            colorDistribution.add(WTFMove(color));
+        auto color = Color { SRGBA<uint8_t> { pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3] } };
+        if (!color.isVisible())
+            continue;
+
+        colorDistribution.add(color);
     }
+
+    if (colorDistribution.isEmpty())
+        return PredominantColorType::None;
 
     for (auto& [color, count] : colorDistribution) {
-        if (count > minimumSampleCountForPredominantColor)
-            return color;
+        if (count > minimumSampleCountForPredominantColor) {
+            if (isNearlyTransparent(color))
+                return PredominantColorType::None;
+
+            return { WTFMove(color) };
+    }
     }
 
-    auto colorsAreSimilar = [](const Color& a, const Color& b) {
-        static constexpr auto maxDistanceSquaredForSimilarColors = 36;
-        auto [redA, greenA, blueA, alphaA] = a.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
-        auto [redB, greenB, blueB, alphaB] = b.toResolvedColorComponentsInColorSpace(DestinationColorSpace::SRGB());
-        auto distance = pow(255 * (redA - redB), 2) + pow(255 * (greenA - greenB), 2) + pow(255 * (blueA - blueB), 2);
-        return distance <= maxDistanceSquaredForSimilarColors;
-    };
-
-    Vector<std::pair<Color, unsigned>> colorsByDescendingFrequency;
+    using PairType = std::pair<Color, unsigned>;
+    Vector<PairType> colorsByDescendingFrequency;
     colorsByDescendingFrequency.reserveInitialCapacity(colorDistribution.size());
     for (auto& [color, count] : colorDistribution)
         colorsByDescendingFrequency.append({ color, count });
 
-    std::stable_sort(colorsByDescendingFrequency.begin(), colorsByDescendingFrequency.end(), [](auto& a, auto& b) {
-        return a.second > b.second;
-    });
+    std::ranges::stable_sort(colorsByDescendingFrequency, std::ranges::greater { }, &PairType::second);
 
     std::optional<Color> mostFrequentColor;
     unsigned mostFrequentColorCount = 0;
@@ -360,11 +381,15 @@ Color PageColorSampler::predominantColor(Page& page, const LayoutRect& absoluteR
 
         mostFrequentColorCount += count;
 
-        if (mostFrequentColorCount > minimumSampleCountForPredominantColor)
-            return WTFMove(*mostFrequentColor);
+        if (mostFrequentColorCount > minimumSampleCountForPredominantColor) {
+            if (isNearlyTransparent(*mostFrequentColor))
+                return PredominantColorType::None;
+
+            return { WTFMove(*mostFrequentColor) };
+    }
     }
 
-    return { };
+    return PredominantColorType::Multiple;
 }
 
 } // namespace WebCore

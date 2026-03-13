@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "FontCache.h"
 #include "MIMETypeRegistry.h"
 #include "QualifiedNameCache.h"
+#include "SharedTimer.h"
 #include "ThreadTimers.h"
 #include <wtf/MainThread.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -43,7 +44,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadGlobalData);
 
 ThreadGlobalData::ThreadGlobalData()
-    : m_threadTimers(makeUnique<ThreadTimers>())
+    : m_threadTimers(makeUniqueRef<ThreadTimers>())
 #ifndef NDEBUG
     , m_isMainThread(isMainThread())
 #endif
@@ -69,16 +70,16 @@ void ThreadGlobalData::setWebCoreThreadData()
     ASSERT(&threadGlobalData() != sharedMainThreadStaticData);
 
     // Set WebThread's ThreadGlobalData object to be the same as the main UI thread.
-    Thread::current().m_clientData = adoptRef(sharedMainThreadStaticData);
+    Thread::currentSingleton().m_clientData = adoptRef(sharedMainThreadStaticData);
 
     ASSERT(&threadGlobalData() == sharedMainThreadStaticData);
 }
 
 ThreadGlobalData& threadGlobalDataSlow()
 {
-    auto& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (UNLIKELY(clientData))
+    if (clientData) [[unlikely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);
@@ -96,9 +97,9 @@ ThreadGlobalData& threadGlobalDataSlow()
 
 ThreadGlobalData& threadGlobalDataSlow()
 {
-    auto& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     auto* clientData = thread.m_clientData.get();
-    if (UNLIKELY(clientData))
+    if (clientData) [[unlikely]]
         return *static_cast<ThreadGlobalData*>(clientData);
 
     auto data = adoptRef(*new ThreadGlobalData);

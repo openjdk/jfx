@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,13 +39,13 @@ namespace WebCore {
 class LibWebRTCRtpTransformableFrame final : public RTCRtpTransformableFrame {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpTransformableFrame);
 public:
-    static Ref<LibWebRTCRtpTransformableFrame> create(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudioSenderFrame) { return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(frame), isAudioSenderFrame)); }
+    static Ref<LibWebRTCRtpTransformableFrame> create(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudio) { return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(frame), isAudio)); }
     ~LibWebRTCRtpTransformableFrame();
 
     std::unique_ptr<webrtc::TransformableFrameInterface> takeRTCFrame();
 
 private:
-    LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&&, bool isAudioSenderFrame);
+    LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&&, bool isAudio);
 
     // RTCRtpTransformableFrame
     std::span<const uint8_t> data() const final;
@@ -54,9 +54,12 @@ private:
     uint64_t timestamp() const final;
     RTCEncodedAudioFrameMetadata audioMetadata() const final;
     RTCEncodedVideoFrameMetadata videoMetadata() const final;
+    Ref<RTCRtpTransformableFrame> clone() final;
+    void setOptions(const RTCEncodedAudioFrameMetadata&) final;
+    void setOptions(const RTCEncodedVideoFrameMetadata&) final;
 
     std::unique_ptr<webrtc::TransformableFrameInterface> m_rtcFrame;
-    bool m_isAudioSenderFrame;
+    bool m_isAudio;
 };
 
 } // namespace WebCore

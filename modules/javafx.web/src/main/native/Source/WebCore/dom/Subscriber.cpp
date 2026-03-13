@@ -46,7 +46,7 @@ Subscriber::Subscriber(ScriptExecutionContext& context, Ref<InternalObserver>&& 
     , m_observer(observer)
     , m_options(options)
 {
-    followSignal(protectedSignal());
+    followSignal(m_signal);
     if (RefPtr signal = options.signal)
         followSignal(*signal);
     suspendIfNeeded();
@@ -94,7 +94,7 @@ void Subscriber::addTeardown(Ref<VoidCallback> callback)
         Locker locker { m_teardownsLock };
         m_teardowns.append(callback);
     } else
-        callback->handleEvent();
+        callback->invoke();
 }
 
 void Subscriber::followSignal(AbortSignal& signal)
@@ -115,14 +115,14 @@ void Subscriber::close(JSC::JSValue reason)
 
     m_active = false;
 
-    protectedSignal()->signalAbort(reason);
+    m_signal->signalAbort(reason);
 
     {
         Locker locker { m_teardownsLock };
         for (auto teardown = m_teardowns.rbegin(); teardown != m_teardowns.rend(); ++teardown) {
             if (isInactiveDocument())
                 return;
-            (*teardown)->handleEvent();
+            (*teardown)->invoke();
         }
     }
 

@@ -50,7 +50,7 @@ static inline const char* pas_allocation_kind_get_string(pas_allocation_kind kin
     case pas_delegate_allocation:
         return "delegate";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

@@ -26,9 +26,12 @@
 #include "config.h"
 #include "RemoteFrame.h"
 
+#include "AutoplayPolicy.h"
 #include "Document.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLFrameOwnerElement.h"
+#include "FrameInlines.h"
+#include "NodeInlines.h"
 #include "RemoteDOMWindow.h"
 #include "RemoteFrameClient.h"
 #include "RemoteFrameView.h"
@@ -36,26 +39,27 @@
 
 namespace WebCore {
 
-Ref<RemoteFrame> RemoteFrame::createMainFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame* opener)
+Ref<RemoteFrame> RemoteFrame::createMainFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, nullptr, std::nullopt, opener));
+    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, nullptr, std::nullopt, opener, WTFMove(frameTreeSyncData)));
 }
 
-Ref<RemoteFrame> RemoteFrame::createSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame& parent, Frame* opener)
+Ref<RemoteFrame> RemoteFrame::createSubframe(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, Frame& parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, &parent, std::nullopt, opener));
+    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, nullptr, &parent, std::nullopt, opener, WTFMove(frameTreeSyncData), addToFrameTree));
 }
 
-Ref<RemoteFrame> RemoteFrame::createSubframeWithContentsInAnotherProcess(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement, std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier)
+Ref<RemoteFrame> RemoteFrame::createSubframeWithContentsInAnotherProcess(Page& page, ClientCreator&& clientCreator, FrameIdentifier identifier, HTMLFrameOwnerElement& ownerElement, std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier, Ref<FrameTreeSyncData>&& frameTreeSyncData)
 {
-    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, &ownerElement, ownerElement.document().frame(), layerHostingContextIdentifier, nullptr));
+    return adoptRef(*new RemoteFrame(page, WTFMove(clientCreator), identifier, &ownerElement, ownerElement.document().frame(), layerHostingContextIdentifier, nullptr, WTFMove(frameTreeSyncData), AddToFrameTree::No));
 }
 
-RemoteFrame::RemoteFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement, Frame* parent, Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier, Frame* opener)
-    : Frame(page, frameID, FrameType::Remote, ownerElement, parent, opener)
+RemoteFrame::RemoteFrame(Page& page, ClientCreator&& clientCreator, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement, Frame* parent, Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
+    : Frame(page, frameID, FrameType::Remote, ownerElement, parent, opener, WTFMove(frameTreeSyncData), addToFrameTree)
     , m_window(RemoteDOMWindow::create(*this, GlobalWindowIdentifier { Process::identifier(), WindowIdentifier::generate() }))
     , m_client(clientCreator(*this))
     , m_layerHostingContextIdentifier(layerHostingContextIdentifier)
+    , m_autoplayPolicy(AutoplayPolicy::Default)
 {
     setView(RemoteFrameView::create(*this));
 }
@@ -165,6 +169,16 @@ void RemoteFrame::updateScrollingMode()
 {
     if (RefPtr ownerElement = this->ownerElement())
         m_client->updateScrollingMode(ownerElement->scrollingMode());
+}
+
+RefPtr<SecurityOrigin> RemoteFrame::frameDocumentSecurityOrigin() const
+{
+    return frameTreeSyncData().frameDocumentSecurityOrigin;
+}
+
+AutoplayPolicy RemoteFrame::autoplayPolicy() const
+{
+    return m_autoplayPolicy;
 }
 
 } // namespace WebCore

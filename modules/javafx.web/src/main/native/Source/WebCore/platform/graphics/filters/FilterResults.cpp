@@ -65,7 +65,7 @@ bool FilterResults::canCacheResult(const FilterImage& result) const
     return totalMemoryCost <= maxAllowedMemoryCost;
 }
 
-void FilterResults::setEffectResult(FilterEffect& effect, const FilterImageVector& inputs, Ref<FilterImage>&& result)
+void FilterResults::setEffectResult(FilterEffect& effect, std::span<const Ref<FilterImage>> inputs, Ref<FilterImage>&& result)
 {
     if (!canCacheResult(result))
         return;

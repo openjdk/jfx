@@ -1,7 +1,7 @@
 /*
  * This file is part of the render object implementation for KHTML.
  *
- * Copyright (C) 2003 Apple Inc.
+ * Copyright (C) 2003 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -52,6 +52,8 @@ public:
 private:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
+    void layoutSingleClampedFlexItem();
+    bool hasClampingAndNoFlexing() const;
 
     LayoutUnit allowedChildFlex(RenderBox* child, bool expanding, unsigned group);
     void placeChild(RenderBox* child, const LayoutPoint& location, LayoutSize* childLayoutDelta = nullptr);

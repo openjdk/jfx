@@ -148,6 +148,7 @@ public:
     bool isImage() const { return m_nodeType == NodeType::Image; }
     bool isLineBreakBox() const { return m_nodeType == NodeType::LineBreak || m_nodeType == NodeType::WordBreakOpportunity; }
     bool isWordBreakOpportunity() const { return m_nodeType == NodeType::WordBreakOpportunity; }
+    bool isListItem() const { return style().display() == DisplayType::ListItem; }
     bool isListMarkerBox() const { return m_nodeType == NodeType::ListMarker; }
     bool isReplacedBox() const { return m_nodeType == NodeType::ReplacedElement || m_nodeType == NodeType::Image || m_nodeType == NodeType::ListMarker; }
 
@@ -230,7 +231,7 @@ private:
 
     OptionSet<BaseTypeFlag> baseTypeFlags() const { return OptionSet<BaseTypeFlag>::fromRaw(m_baseTypeFlags); }
 
-    typedef UncheckedKeyHashMap<const Box*, std::unique_ptr<BoxRareData>> RareDataMap;
+    typedef HashMap<const Box*, std::unique_ptr<BoxRareData>> RareDataMap;
 
     static RareDataMap& rareDataMap();
 

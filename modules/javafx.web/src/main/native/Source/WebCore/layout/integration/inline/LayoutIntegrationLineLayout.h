@@ -63,7 +63,7 @@ struct LineAdjustment;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LayoutIntegration_LineLayout);
 
 class LineLayout final : public CanMakeCheckedPtr<LineLayout> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LayoutIntegration_LineLayout);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LineLayout, LayoutIntegration_LineLayout);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LineLayout);
 public:
     LineLayout(RenderBlockFlow&);
@@ -85,14 +85,15 @@ public:
     // Partial invalidation.
     bool insertedIntoTree(const RenderElement& parent, RenderObject& child);
     bool removedFromTree(const RenderElement& parent, RenderObject& child);
-    bool updateTextContent(const RenderText&, size_t offset, int delta);
+    bool updateTextContent(const RenderText&, std::optional<size_t> offset, size_t oldLength);
     bool rootStyleWillChange(const RenderBlockFlow&, const RenderStyle& newStyle);
     bool styleWillChange(const RenderElement&, const RenderStyle& newStyle, StyleDifference);
     bool boxContentWillChange(const RenderBox&);
 
     std::pair<LayoutUnit, LayoutUnit> computeIntrinsicWidthConstraints();
 
-    std::optional<LayoutRect> layout();
+    enum class ForceFullLayout : bool { No, Yes };
+    std::optional<LayoutRect> layout(ForceFullLayout = ForceFullLayout::No);
     void paint(PaintInfo&, const LayoutPoint& paintOffset, const RenderInline* layerRenderer = nullptr);
     bool hitTest(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint& accumulatedOffset, HitTestAction, const RenderInline* layerRenderer = nullptr);
     void adjustForPagination();
@@ -162,7 +163,11 @@ private:
 
     LayoutUnit physicalBaselineForLine(const InlineDisplay::Line&) const;
 
+    bool isContentConsideredStale() const;
+
+private:
     CheckedPtr<Layout::ElementBox> m_rootLayoutBox;
+    CheckedPtr<Document> m_document;
     WeakPtr<Layout::LayoutState> m_layoutState;
     Layout::BlockFormattingState& m_blockFormattingState;
     Layout::InlineContentCache& m_inlineContentCache;

@@ -30,7 +30,6 @@
 #include "GPUStoreOp.h"
 #include "GPUTextureView.h"
 #include "WebGPURenderPassDepthStencilAttachment.h"
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {

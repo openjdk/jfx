@@ -127,8 +127,8 @@ public:
     StringRange(const char* begin, const char* end)
         : m_string({ begin, end })
     { }
-    operator const char*() const { return m_string.data(); }
-    const char* get() const { return m_string.data(); }
+    operator const char*() const LIFETIME_BOUND { return m_string.data(); }
+    const char* get() const LIFETIME_BOUND { return m_string.data(); }
 
 private:
     CString m_string;

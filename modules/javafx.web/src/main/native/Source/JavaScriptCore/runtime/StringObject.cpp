@@ -70,7 +70,7 @@ bool StringObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
 
     if (propertyName == vm.propertyNames->length)
         return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
-    if (UNLIKELY(slot.thisValue() != thisObject))
+    if (slot.thisValue() != thisObject) [[unlikely]]
         RELEASE_AND_RETURN(scope, JSObject::put(cell, globalObject, propertyName, value, slot));
     if (std::optional<uint32_t> index = parseIndex(propertyName))
         RELEASE_AND_RETURN(scope, putByIndex(cell, globalObject, index.value(), value, slot.isStrictMode()));

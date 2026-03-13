@@ -28,6 +28,7 @@
 
 #if ENABLE(JIT)
 
+#include <numeric>
 #include <wtf/ListDump.h>
 
 namespace JSC {
@@ -330,7 +331,7 @@ void BinarySwitch::build(unsigned start, bool hardStart, unsigned end)
     // are more likely to take one of the cases than the default, so we use leafThreshold = 3
     // and get a 1/6 speed-up on average for taking an explicit case.
 
-    unsigned medianIndex = (start + end) / 2;
+    unsigned medianIndex = std::midpoint(start, end);
 
     if (BinarySwitchInternal::verbose)
         dataLog("medianIndex = ", medianIndex, "\n");

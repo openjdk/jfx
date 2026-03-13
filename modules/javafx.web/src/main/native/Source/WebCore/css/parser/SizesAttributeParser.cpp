@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2025 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "SizesCalcParser.h"
 #include "StyleLengthResolution.h"
@@ -105,8 +106,8 @@ std::optional<float> SizesAttributeParser::calculateLengthInPixels(CSSParserToke
 bool SizesAttributeParser::mediaConditionMatches(const MQ::MediaQuery& mediaCondition)
 {
     // A Media Condition cannot have a media type other than screen.
-    auto document = protectedDocument();
-    auto* renderer = document->renderView();
+    Ref document = m_document.get();
+    CheckedPtr renderer = document->renderView();
     if (!renderer)
         return false;
     auto& style = renderer->style();
@@ -132,7 +133,7 @@ bool SizesAttributeParser::parse(CSSParserTokenRange range, const CSSParserConte
         auto length = calculateLengthInPixels(lengthTokenStart.rangeUntil(lengthTokenEnd));
         if (!length)
             continue;
-        auto mediaCondition = MQ::MediaQueryParser::parseCondition(mediaConditionStart.rangeUntil(lengthTokenStart), MediaQueryParserContext(context));
+        auto mediaCondition = MQ::MediaQueryParser::parseCondition(mediaConditionStart.rangeUntil(lengthTokenStart), context);
         if (!mediaCondition)
             continue;
         bool matches = mediaConditionMatches(*mediaCondition);

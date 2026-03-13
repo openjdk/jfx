@@ -120,7 +120,7 @@ static void validate_min_heap(void)
             &pas_large_sharing_min_heap_instance, index);
 
         if (verbose) {
-            pas_log(" %d:%p:%lu-%lu:%llu",
+            pas_log(" %d:%p:%zu-%zu:%llu",
                     node->index_in_min_heap,
                     node, node->range.begin, node->range.end,
                     (unsigned long long)node->use_epoch);
@@ -346,7 +346,7 @@ static void update_min_heap(pas_large_sharing_node* node)
        all fine so long as you call update_min_heap on all affected nodes once you're done. */
 
     if (verbose)
-        pas_log("updating node in min_heap = %p:%lu-%lu\n", node, node->range.begin, node->range.end);
+        pas_log("updating node in min_heap = %p:%zu-%zu\n", node, node->range.begin, node->range.end);
 
     PAS_ASSERT(!node->index_in_min_heap);
 
@@ -378,7 +378,7 @@ split_node_and_get_right_impl(pas_large_sharing_node* node,
     validate_node_if_asserting_aggressively(node);
 
     if (verbose)
-        pas_log("Splitting %p:%lu-%lu at %lu\n", node, node->range.begin, node->range.end, split_point);
+        pas_log("Splitting %p:%zu-%zu at %zu\n", node, node->range.begin, node->range.end, split_point);
 
     remove_from_min_heap(node);
 
@@ -400,7 +400,7 @@ split_node_and_get_right_impl(pas_large_sharing_node* node,
     validate_node_if_asserting_aggressively(right_node);
 
     if (verbose) {
-        pas_log("Now have %p:%lu-%lu and %p:%lu-%lu\n",
+        pas_log("Now have %p:%zu-%zu and %p:%zu-%zu\n",
                 node, node->range.begin, node->range.end,
                 right_node, right_node->range.begin, right_node->range.end);
     }
@@ -528,14 +528,15 @@ static void splat_live_bytes(pas_large_sharing_node* node,
                              size_t delta,
                              pas_free_mode free_mode)
 {
+    PAS_TESTING_ASSERT(sizeof(size_t) == sizeof(unsigned long long));
     bool did_overflow;
     switch (free_mode) {
     case pas_free:
-        did_overflow = __builtin_usubl_overflow(node->num_live_bytes, delta, &node->num_live_bytes);
+        did_overflow = __builtin_usubll_overflow((unsigned long long) node->num_live_bytes, delta, (unsigned long long *) &node->num_live_bytes);
         PAS_ASSERT(!did_overflow);
         break;
     case pas_allocated:
-        did_overflow = __builtin_uaddl_overflow(node->num_live_bytes, delta, &node->num_live_bytes);
+        did_overflow = __builtin_uaddll_overflow((unsigned long long) node->num_live_bytes, delta, (unsigned long long *) &node->num_live_bytes);
         PAS_ASSERT(!did_overflow);
         PAS_ASSERT(node->num_live_bytes <= pas_range_size(node->range));
         break;
@@ -573,7 +574,7 @@ static const char* splat_command_get_string(splat_command command)
     case splat_boot_free:
         return "boot_free";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -589,7 +590,7 @@ static pas_free_mode splat_command_get_free_mode(splat_command command)
     case splat_boot_free:
         return pas_free;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_free;
 }
 
@@ -728,7 +729,7 @@ static bool try_splat_impl(pas_range range,
     }
 
     if (verbose)
-        pas_log("min_node = %p:%lu-%lu, max_node = %p:%lu-%lu\n", min_node, min_node->range.begin, min_node->range.end, max_node, max_node->range.begin, max_node->range.end);
+        pas_log("min_node = %p:%zu-%zu, max_node = %p:%zu-%zu\n", min_node, min_node->range.begin, min_node->range.end, max_node, max_node->range.begin, max_node->range.end);
 
     begin_node = min_node;
     end_node = successor(max_node);
@@ -876,7 +877,7 @@ static bool try_splat_impl(pas_range range,
 
     for (node = begin_node; node != end_node; node = successor(node)) {
         if (verbose)
-            pas_log("Dealing with node = %p:%lu-%lu\n", node, node->range.begin, node->range.end);
+            pas_log("Dealing with node = %p:%zu-%zu\n", node, node->range.begin, node->range.end);
 
         remove_from_min_heap(node);
 
@@ -1068,7 +1069,7 @@ bool pas_large_sharing_pool_allocate_and_commit(
 
     if (verbose) {
         pas_log("Doing allocate and commit %p-%p.\n", (void*)range.begin, (void*)range.end);
-        pas_log("Balance = %ld.\n", pas_physical_page_sharing_pool_balance);
+        pas_log("Balance = %zd.\n", pas_physical_page_sharing_pool_balance);
     }
 
     if (!pas_large_sharing_pool_enabled) {
@@ -1113,7 +1114,7 @@ bool pas_large_sharing_pool_allocate_and_commit(
             PAS_ASSERT(num_locks_held <= max_num_locks_held);
 
             if (verbose)
-                pas_log("Doing a take of %lu bytes.\n", commit_log.total);
+                pas_log("Doing a take of %zu bytes.\n", commit_log.total);
             pas_physical_page_sharing_pool_take(
                 commit_log.total, pas_lock_is_held, locks_held, num_locks_held);
 
@@ -1151,7 +1152,7 @@ pas_large_sharing_pool_decommit_least_recently_used(
     validate_node(node);
 
     if (verbose) {
-        pas_log("Going to decommit %lu to %lu with epoch %llu\n",
+        pas_log("Going to decommit %zu to %zu with epoch %llu\n",
                node->range.begin, node->range.end, (unsigned long long)node->use_epoch);
     }
 

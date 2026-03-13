@@ -69,12 +69,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getLabel
     return JavaReturn<String>(env, IMPL->label());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setLabelImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setLabel(AtomString {String(env, value)});
-}
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getDefaultSelectedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
@@ -103,12 +97,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getValue
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->value());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptionElementImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)

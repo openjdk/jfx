@@ -52,7 +52,9 @@ public:
 
     bool run()
     {
-        RELEASE_ASSERT(m_graph.m_form == ThreadedCPS);
+        // SSA computes its own Phi nodes using variablesAtHead from CPS-form basic blocks.
+        // As long as those are correctly computed and preserved, this is safe.
+        RELEASE_ASSERT(m_graph.m_form == ThreadedCPS || m_graph.m_form == LoadStore);
         RELEASE_ASSERT(!m_graph.m_isInSSAConversion);
         m_graph.m_isInSSAConversion = true;
 
@@ -444,7 +446,7 @@ public:
             block->variablesAtTail.clear();
             block->valuesAtHead.clear();
             block->valuesAtHead.clear();
-            block->ssa = makeUnique<BasicBlock::SSAData>(block);
+            block->ssa = makeUniqueWithoutFastMallocCheck<BasicBlock::SSAData>(block);
         }
 
         for (auto& pair : entrypointIndexToArgumentsBlock) {

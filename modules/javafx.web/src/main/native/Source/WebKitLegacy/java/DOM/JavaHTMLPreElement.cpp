@@ -44,13 +44,6 @@ extern "C" {
 #define IMPL (static_cast<HTMLPreElement*>(jlong_to_ptr(peer)))
 
 
-// Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::widthAttr);
-}
-
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLPreElementImpl_setWidthImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;

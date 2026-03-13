@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,7 +52,8 @@ public:
     virtual Type type() const = 0;
     virtual AuthenticatorResponseData data() const;
 
-    WEBCORE_EXPORT ArrayBuffer* rawId() const;
+    ArrayBuffer* rawId() const { return m_rawId.ptr(); }
+
     WEBCORE_EXPORT void setExtensions(AuthenticationExtensionsClientOutputs&&);
     WEBCORE_EXPORT AuthenticationExtensionsClientOutputs extensions() const;
     WEBCORE_EXPORT void setClientDataJSON(Ref<ArrayBuffer>&&);
@@ -63,7 +64,7 @@ protected:
     AuthenticatorResponse(Ref<ArrayBuffer>&&, AuthenticatorAttachment);
 
 private:
-    Ref<ArrayBuffer> m_rawId;
+    const Ref<ArrayBuffer> m_rawId;
     AuthenticationExtensionsClientOutputs m_extensions;
     RefPtr<ArrayBuffer> m_clientDataJSON;
     AuthenticatorAttachment m_attachment;

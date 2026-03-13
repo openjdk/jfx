@@ -39,6 +39,7 @@
 #include "PaymentCoordinatorClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {

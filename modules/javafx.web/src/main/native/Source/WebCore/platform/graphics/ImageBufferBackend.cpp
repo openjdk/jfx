@@ -28,6 +28,8 @@
 
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "Logging.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include "PixelBufferConversion.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -71,7 +73,14 @@ RefPtr<NativeImage> ImageBufferBackend::sinkIntoNativeImage()
     return createNativeImageReference();
 }
 
-void ImageBufferBackend::convertToLuminanceMask()
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+void ImageBufferBackend::convertToLuminanceMaskFloat16()
+{
+    LOG(Images, "convertToLuminanceMask() is not implemented for Float16 ImageBuffers.");
+}
+#endif
+
+void ImageBufferBackend::convertToLuminanceMaskUint8()
 {
     IntRect sourceRect { { }, size() };
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, colorSpace() };
@@ -94,6 +103,16 @@ void ImageBufferBackend::convertToLuminanceMask()
     }
 
     putPixelBuffer(*pixelBuffer, sourceRect, IntPoint::zero(), AlphaPremultiplication::Premultiplied);
+}
+
+void ImageBufferBackend::convertToLuminanceMask()
+{
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    if (pixelFormat() == PixelFormat::RGBA16F)
+        convertToLuminanceMaskFloat16();
+    else
+#endif
+        convertToLuminanceMaskUint8();
 }
 
 void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, std::span<const uint8_t> sourceData, PixelBuffer& destinationPixelBuffer)
@@ -131,7 +150,7 @@ void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, std::span<con
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, std::span<uint8_t> destinationData)
+void ImageBufferBackend::putPixelBuffer(const PixelBufferSourceView& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, std::span<uint8_t> destinationData)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRect);
@@ -184,8 +203,8 @@ AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& par
 TextStream& operator<<(TextStream& ts, VolatilityState state)
 {
     switch (state) {
-    case VolatilityState::NonVolatile: ts << "non-volatile"; break;
-    case VolatilityState::Volatile: ts << "volatile"; break;
+    case VolatilityState::NonVolatile: ts << "non-volatile"_s; break;
+    case VolatilityState::Volatile: ts << "volatile"_s; break;
     }
     return ts;
 }

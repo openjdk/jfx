@@ -138,6 +138,11 @@ static bool shouldSetDefaultPortsForWPT(const std::string& pathOrURL)
         || pathContains(pathOrURL, "127.0.0.1:8800/") || pathContains(pathOrURL, "127.0.0.1:9443/");
 }
 
+static bool shouldEnableLockdownMode(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "lockdown-mode/");
+}
+
 TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
 {
     TestFeatures features;
@@ -161,6 +166,8 @@ TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
         features.uint16TestRunnerFeatures.insert({ "insecureUpgradePort", 8800 });
         features.uint16TestRunnerFeatures.insert({ "secureUpgradePort", 9443 });
     }
+    if (shouldEnableLockdownMode(command.pathOrURL))
+        features.boolWebPreferenceFeatures.insert({ "LockdownModeEnabled", true });
 
     return features;
 }

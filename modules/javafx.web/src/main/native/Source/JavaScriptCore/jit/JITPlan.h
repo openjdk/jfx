@@ -107,12 +107,31 @@ public:
 
     void runMainThreadFinalizationTasks();
 
+    enum class SignpostDetail { None, Canceled };
+
+    CString signpostMessage();
+
+    void beginSignpost()
+    {
+        if (Options::useCompilerSignpost()) [[unlikely]]
+            beginSignpostImpl();
+    }
+
+    void endSignpost(SignpostDetail detail = SignpostDetail::None)
+    {
+        if (Options::useCompilerSignpost()) [[unlikely]]
+            endSignpostImpl(detail);
+    }
+
 protected:
     bool computeCompileTimes() const;
     bool reportCompileTimes() const;
 
     enum CompilationPath { FailPath, BaselinePath, DFGPath, FTLPath, CancelPath };
     virtual CompilationPath compileInThreadImpl() = 0;
+
+    void beginSignpostImpl();
+    void endSignpostImpl(SignpostDetail);
 
     JITPlanStage m_stage { JITPlanStage::Preparing };
     JITCompilationMode m_mode;
@@ -121,6 +140,7 @@ protected:
     CodeBlock* m_codeBlock;
     JITWorklistThread* m_thread { nullptr };
     Vector<RefPtr<SharedTask<void()>>> m_mainThreadFinalizationTasks;
+    CString m_signpostMessage; // Non-null iff Options::useCompilerSignpost()
 };
 
 } // namespace JSC

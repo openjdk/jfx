@@ -25,12 +25,14 @@
 #include "config.h"
 #include "CSSCalcTree+CalculationValue.h"
 
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCalcSymbolTable.h"
 #include "CSSCalcTree+Evaluation.h"
 #include "CSSCalcTree+Mappings.h"
 #include "CSSCalcTree+Simplification.h"
 #include "CSSCalcTree+Traversal.h"
 #include "CSSCalcTree.h"
+#include "CSSUnevaluatedCalc.h"
 #include "CalculationCategory.h"
 #include "CalculationExecutor.h"
 #include "CalculationTree.h"
@@ -55,7 +57,7 @@ struct ToConversionOptions {
     EvaluationOptions evaluation;
 };
 
-static auto fromCalculationValue(const Calculation::Random::CachingOptions&, const FromConversionOptions&) -> Random::CachingOptions;
+static auto fromCalculationValue(const Calculation::Random::Fixed&, const FromConversionOptions&) -> Random::Sharing;
 static auto fromCalculationValue(const Calculation::None&, const FromConversionOptions&) -> CSS::Keyword::None;
 static auto fromCalculationValue(const Calculation::ChildOrNone&, const FromConversionOptions&) -> ChildOrNone;
 static auto fromCalculationValue(const Calculation::Children&, const FromConversionOptions&) -> Children;
@@ -67,7 +69,7 @@ static auto fromCalculationValue(const Calculation::Dimension&, const FromConver
 static auto fromCalculationValue(const Calculation::IndirectNode<Calculation::Blend>&, const FromConversionOptions&) -> Child;
 template<typename CalculationOp> auto fromCalculationValue(const Calculation::IndirectNode<CalculationOp>&, const FromConversionOptions&) -> Child;
 
-static auto toCalculationValue(const Random::CachingOptions&, const ToConversionOptions&) -> Calculation::Random::CachingOptions;
+static auto toCalculationValue(const Random::Sharing&, const ToConversionOptions&) -> Calculation::Random::Fixed;
 static auto toCalculationValue(const std::optional<Child>&, const ToConversionOptions&) -> std::optional<Calculation::Child>;
 static auto toCalculationValue(const CSS::Keyword::None&, const ToConversionOptions&) -> Calculation::None;
 static auto toCalculationValue(const ChildOrNone&, const ToConversionOptions&) -> Calculation::ChildOrNone;
@@ -78,8 +80,8 @@ static auto toCalculationValue(const Percentage&, const ToConversionOptions&) ->
 static auto toCalculationValue(const CanonicalDimension&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const NonCanonicalDimension&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const Symbol&, const ToConversionOptions&) -> Calculation::Child;
-static auto toCalculationValue(const IndirectNode<MediaProgress>&, const ToConversionOptions&) -> Calculation::Child;
-static auto toCalculationValue(const IndirectNode<ContainerProgress>&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const SiblingCount&, const ToConversionOptions&) -> Calculation::Child;
+static auto toCalculationValue(const SiblingIndex&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const IndirectNode<Anchor>&, const ToConversionOptions&) -> Calculation::Child;
 static auto toCalculationValue(const IndirectNode<AnchorSize>&, const ToConversionOptions&) -> Calculation::Child;
 template<typename Op> auto toCalculationValue(const IndirectNode<Op>&, const ToConversionOptions&) -> Calculation::Child;
@@ -111,12 +113,9 @@ static CanonicalDimension::Dimension determineCanonicalDimension(Calculation::Ca
 
 // MARK: - From
 
-Random::CachingOptions fromCalculationValue(const Calculation::Random::CachingOptions& cachingOptions, const FromConversionOptions&)
+Random::Sharing fromCalculationValue(const Calculation::Random::Fixed& randomFixed, const FromConversionOptions&)
 {
-    return Random::CachingOptions {
-        .identifier = cachingOptions.identifier,
-        .perElement = cachingOptions.perElement,
-    };
+    return Random::SharingFixed { randomFixed.baseValue };
 }
 
 CSS::Keyword::None fromCalculationValue(const Calculation::None&, const FromConversionOptions&)
@@ -217,24 +216,35 @@ template<typename CalculationOp> Child fromCalculationValue(const Calculation::I
 
 // MARK: - To.
 
-auto toCalculationValue(const Random::CachingOptions& cachingOptions, const ToConversionOptions& options) -> Calculation::Random::CachingOptions
+auto toCalculationValue(const Random::Sharing& randomSharing, const ToConversionOptions& options) -> Calculation::Random::Fixed
 {
     ASSERT(options.evaluation.conversionData);
     ASSERT(options.evaluation.conversionData->styleBuilderState());
 
-    if (cachingOptions.perElement) {
+    return WTF::switchOn(randomSharing,
+        [&](const Random::SharingOptions& sharingOptions) -> Calculation::Random::Fixed {
+            if (!sharingOptions.elementShared.has_value()) {
         ASSERT(options.evaluation.conversionData->styleBuilderState()->element());
     }
 
-    auto keyMap = options.evaluation.conversionData->styleBuilderState()->randomKeyMap(
-        cachingOptions.perElement
+            auto baseValue = options.evaluation.conversionData->styleBuilderState()->lookupCSSRandomBaseValue(
+                sharingOptions.identifier,
+                sharingOptions.elementShared
     );
 
-    return Calculation::Random::CachingOptions {
-        .identifier = cachingOptions.identifier,
-        .perElement = cachingOptions.perElement,
-        .keyMap = WTFMove(keyMap),
-    };
+            return Calculation::Random::Fixed { baseValue };
+        },
+        [&](const Random::SharingFixed& sharingFixed) -> Calculation::Random::Fixed {
+            return WTF::switchOn(sharingFixed.value,
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Raw& raw) -> Calculation::Random::Fixed {
+                    return Calculation::Random::Fixed { raw.value };
+                },
+                [&](const CSS::Number<CSS::ClosedUnitRange>::Calc& calc) -> Calculation::Random::Fixed {
+                    return Calculation::Random::Fixed { calc.evaluate(Calculation::Category::Number, *options.evaluation.conversionData->styleBuilderState()) };
+                }
+            );
+        }
+    );
 }
 
 std::optional<Calculation::Child> toCalculationValue(const std::optional<Child>& optionalChild, const ToConversionOptions& options)
@@ -305,15 +315,15 @@ Calculation::Child toCalculationValue(const Symbol&, const ToConversionOptions&)
     return Calculation::number(0);
 }
 
-Calculation::Child toCalculationValue(const IndirectNode<MediaProgress>&, const ToConversionOptions&)
+Calculation::Child toCalculationValue(const SiblingCount&, const ToConversionOptions&)
 {
-    ASSERT_NOT_REACHED("Unevaluated media-progress() functions are not supported in the Calculation::Tree");
+    ASSERT_NOT_REACHED("Unevaluated sibling-count() functions are not supported in the Calculation::Tree");
     return Calculation::number(0);
 }
 
-Calculation::Child toCalculationValue(const IndirectNode<ContainerProgress>&, const ToConversionOptions&)
+Calculation::Child toCalculationValue(const SiblingIndex&, const ToConversionOptions&)
 {
-    ASSERT_NOT_REACHED("Unevaluated container-progress() functions are not supported in the Calculation::Tree");
+    ASSERT_NOT_REACHED("Unevaluated sibling-index() functions are not supported in the Calculation::Tree");
     return Calculation::number(0);
 }
 

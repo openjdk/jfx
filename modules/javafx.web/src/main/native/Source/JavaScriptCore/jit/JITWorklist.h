@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,7 +88,11 @@ public:
 private:
     JITWorklist();
 
+    void wakeThreads(const AbstractLocker&, unsigned enqueuedTier);
+    unsigned planLoad(JITPlan&);
+
     size_t queueLength(const AbstractLocker&) const;
+    size_t totalOngoingCompilations(const AbstractLocker&) const;
 
     void waitUntilAllPlansForVMAreReady(VM&);
 
@@ -100,8 +104,10 @@ private:
     void dump(const AbstractLocker&, PrintStream&) const;
 
     unsigned m_numberOfActiveThreads { 0 };
+    unsigned m_totalLoad { 0 }; // Total load of the queues and ongoing compilations
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_ongoingCompilationsPerTier { 0, 0, 0 };
     std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_maximumNumberOfConcurrentCompilationsPerTier;
+    std::array<unsigned, static_cast<size_t>(JITPlan::Tier::Count)> m_loadWeightsPerTier;
 
     Vector<Ref<JITWorklistThread>> m_threads;
 
@@ -121,7 +127,7 @@ private:
     Lock m_suspensionLock;
     Box<Lock> m_lock;
 
-    Ref<AutomaticThreadCondition> m_planEnqueued;
+    const Ref<AutomaticThreadCondition> m_planEnqueued;
     Condition m_planCompiledOrCancelled;
 };
 

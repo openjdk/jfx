@@ -40,10 +40,13 @@
 #include "Texture.h"
 #include "TextureView.h"
 #include "WebGPU.h"
+#include <algorithm>
 #include <cstdint>
+#include <os/log.h>
 #include <span>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HashSet.h>
+#include <wtf/MathExtras.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
 
@@ -74,7 +77,7 @@ inline void logString(const char * input)
 }
 
 using RefComputePassEncoder = Ref<WebGPU::ComputePassEncoder>;
-inline unsigned long roundUpToMultipleOfNonPowerOfTwoCheckedUInt32UnsignedLong(Checked<uint32_t> x, unsigned long y) { return WTF::roundUpToMultipleOfNonPowerOfTwo<unsigned long int, Checked<uint32_t>>(x, y); }
+inline unsigned long roundUpToMultipleOfNonPowerOfTwoCheckedUInt32UnsignedLong(Checked<uint32_t> x, unsigned long y) { return WTF::roundUpToMultipleOfNonPowerOfTwo(x, y); }
 inline uint32_t roundUpToMultipleOfNonPowerOfTwoUInt32UInt32(uint32_t a, uint32_t b) { return WTF::roundUpToMultipleOfNonPowerOfTwo<uint32_t, Checked<uint32_t>>(a, b); }
 
 inline Checked<size_t> checkedDifferenceSizeT(size_t left, size_t right)

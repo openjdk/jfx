@@ -46,13 +46,13 @@ std::unique_ptr<TextureMapperDamageVisualizer> TextureMapperDamageVisualizer::cr
     return nullptr;
 }
 
-void TextureMapperDamageVisualizer::paintDamage(TextureMapper& textureMapper, const Damage& damage) const
+void TextureMapperDamageVisualizer::paintDamage(TextureMapper& textureMapper, const std::optional<Damage>& damage) const
 {
-    if (damage.isInvalid())
+    if (!damage)
         return;
 
     const auto color = Color::red.colorWithAlphaByte(200);
-    for (const auto& rect : damage.rects())
+    for (const auto& rect : *damage)
         textureMapper.drawSolidColor(rect + m_margin, { }, color, true);
 }
 

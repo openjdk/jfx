@@ -52,8 +52,7 @@ void WebGLPolygonMode::polygonModeWEBGL(GCGLenum face, GCGLenum mode)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->polygonModeANGLE(face, mode);
+    protectedContext()->protectedGraphicsContextGL()->polygonModeANGLE(face, mode);
 }
 
 } // namespace WebCore

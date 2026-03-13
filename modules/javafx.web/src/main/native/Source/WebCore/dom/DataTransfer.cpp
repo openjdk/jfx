@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -321,7 +321,7 @@ void DataTransfer::didAddFileToItemList()
 DataTransferItemList& DataTransfer::items(Document& document)
 {
     if (!m_itemList)
-        m_itemList = makeUniqueWithoutRefCountedCheck<DataTransferItemList>(document, *this);
+        lazyInitialize(m_itemList, makeUniqueWithoutRefCountedCheck<DataTransferItemList>(document, *this));
     return *m_itemList;
 }
 
@@ -436,7 +436,7 @@ struct PasteboardFileTypeReader final : PasteboardFileReader {
         types.add(type);
     }
 
-    UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> types;
+    HashSet<String, ASCIICaseInsensitiveHash> types;
 };
 
 bool DataTransfer::hasFileOfType(const String& type)
@@ -557,7 +557,7 @@ void DataTransfer::setDragImage(Ref<Element>&& element, int x, int y)
 
     m_dragLocation = IntPoint(x, y);
 
-    Ref document = element->protectedDocument();
+    Ref document = element->document();
     if (m_dragImageLoader && m_dragImage)
         m_dragImageLoader->stopLoading(m_dragImage);
     m_dragImage = image;

@@ -39,14 +39,14 @@
 #include "JSWebCodecsVideoDecoderSupport.h"
 #include "OffscreenCanvas.h"
 #include "SVGImageElement.h"
-#include "ScriptExecutionContext.h"
+#include "Settings.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsErrorCallback.h"
 #include "WebCodecsUtilities.h"
 #include "WebCodecsVideoFrame.h"
 #include "WebCodecsVideoFrameOutputCallback.h"
-#include <variant>
 #include <wtf/ASCIICType.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -70,7 +70,7 @@ WebCodecsVideoDecoder::WebCodecsVideoDecoder(ScriptExecutionContext& context, In
 
 WebCodecsVideoDecoder::~WebCodecsVideoDecoder() = default;
 
-static bool isSupportedDecoderCodec(const String& codec, const Settings::Values& settings)
+static bool isSupportedDecoderCodec(const String& codec, const SettingsValues& settings)
 {
     return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
 #if ENABLE(WEB_RTC)
@@ -85,7 +85,7 @@ static bool isValidDecoderConfig(const WebCodecsVideoDecoderConfig& config)
 {
     // https://w3c.github.io/webcodecs/#valid-videodecoderconfig
     // 1. If codec is empty after stripping leading and trailing ASCII whitespace, return false.
-    if (StringView(config.codec).trim(isASCIIWhitespace<UChar>).isEmpty())
+    if (StringView(config.codec).trim(isASCIIWhitespace<char16_t>).isEmpty())
         return false;
 
     // 2. If one of codedWidth or codedHeight is provided but the other isn’t, return false.
@@ -109,7 +109,7 @@ static bool isValidDecoderConfig(const WebCodecsVideoDecoderConfig& config)
         return false;
 
     // 6. If description is [detached], return false.
-    if (config.description && std::visit([](auto& view) { return view->isDetached(); }, *config.description))
+    if (config.description && WTF::visit([](auto& view) { return view->isDetached(); }, *config.description))
         return false;
 
     // 7. Return true.
@@ -120,7 +120,7 @@ static VideoDecoder::Config createVideoDecoderConfig(const WebCodecsVideoDecoder
 {
     Vector<uint8_t> description;
     if (config.description) {
-        auto data = std::visit([](auto& buffer) {
+        auto data = WTF::visit([](auto& buffer) {
             return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, *config.description);
         if (!data.empty())
@@ -172,15 +172,17 @@ ExceptionOr<void> WebCodecsVideoDecoder::configure(ScriptExecutionContext& conte
             }
 
             auto decodedResult = WTFMove(result).value();
-            WebCodecsVideoFrame::BufferInit init;
-            init.codedWidth = decodedResult.frame->presentationSize().width();
-            init.codedHeight = decodedResult.frame->presentationSize().height();
-            init.timestamp = decodedResult.timestamp;
-            init.duration = decodedResult.duration;
-            init.colorSpace = decodedResult.frame->colorSpace();
+                WebCodecsVideoFrame::BufferInit init {
+                    .format = convertVideoFramePixelFormat(decodedResult.frame->pixelFormat()),
+                    .codedWidth = static_cast<size_t>(decodedResult.frame->presentationSize().width()),
+                    .codedHeight = static_cast<size_t>(decodedResult.frame->presentationSize().height()),
+                    .timestamp = decodedResult.timestamp,
+                    .duration = decodedResult.duration,
+                    .colorSpace = decodedResult.frame->colorSpace()
+                };
 
                 auto videoFrame = WebCodecsVideoFrame::create(*decoder.scriptExecutionContext(), WTFMove(decodedResult.frame), WTFMove(init));
-                decoder.m_output->handleEvent(WTFMove(videoFrame));
+                decoder.m_output->invoke(WTFMove(videoFrame));
             });
         });
 
@@ -286,7 +288,7 @@ ExceptionOr<void> WebCodecsVideoDecoder::closeDecoder(Exception&& exception)
     setState(WebCodecsCodecState::Closed);
     m_internalDecoder = nullptr;
     if (exception.code() != ExceptionCode::AbortError)
-            m_error->handleEvent(DOMException::create(WTFMove(exception)));
+        m_error->invoke(DOMException::create(WTFMove(exception)));
 
     return { };
 }

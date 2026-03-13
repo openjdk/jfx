@@ -55,8 +55,8 @@ void Content::insert(Content&& newContent, size_t lineIndex, size_t boxIndex)
 
 void Content::remove(size_t firstLineIndex, size_t numberOfLines, size_t firstBoxIndex, size_t numberOfBoxes)
 {
-    lines.remove(firstLineIndex, numberOfLines);
-    boxes.remove(firstBoxIndex, numberOfBoxes);
+    lines.removeAt(firstLineIndex, numberOfLines);
+    boxes.removeAt(firstBoxIndex, numberOfBoxes);
 }
 
 }

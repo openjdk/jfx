@@ -162,7 +162,7 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
         enumerator = vm.emptyPropertyNameEnumerator();
     else {
         enumerator = JSPropertyNameEnumerator::tryCreate(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTFMove(propertyNames));
-        if (UNLIKELY(!enumerator)) {
+        if (!enumerator) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
         }

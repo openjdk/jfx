@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "MediaRecorderPrivateOptions.h"
 #include "MediaStream.h"
 #include "MediaStreamTrackPrivate.h"
@@ -41,6 +41,7 @@ namespace WebCore {
 class Blob;
 class Document;
 class MediaRecorderPrivate;
+template<typename> class ExceptionOr;
 
 class MediaRecorder final
     : public ActiveDOMObject
@@ -104,7 +105,7 @@ private:
     void dispatchError(Exception&&);
 
     enum class TakePrivateRecorder : bool { No, Yes };
-    using FetchDataCallback = Function<void(RefPtr<FragmentedSharedBuffer>&&, const String& mimeType, double)>;
+    using FetchDataCallback = Function<void(MediaRecorder&, Ref<FragmentedSharedBuffer>&&, const String& mimeType, double)>;
     void fetchData(FetchDataCallback&&, TakePrivateRecorder);
     enum class ReturnDataIfEmpty : bool { No, Yes };
     ExceptionOr<void> requestDataInternal(ReturnDataIfEmpty);
@@ -124,11 +125,12 @@ private:
     void computeInitialBitRates() { computeBitRates(nullptr); }
     void updateBitRates() { computeBitRates(&m_stream->privateStream()); }
     void computeBitRates(const MediaStreamPrivate*);
+    void timeSlicerTimerFired();
 
     static CreatorFunction m_customCreator;
 
     Options m_options;
-    Ref<MediaStream> m_stream;
+    const Ref<MediaStream> m_stream;
     std::unique_ptr<MediaRecorderPrivate> m_private;
     RecordingState m_state { RecordingState::Inactive };
     Vector<Ref<MediaStreamTrackPrivate>> m_tracks;

@@ -147,10 +147,4 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLScriptElementImpl_getCross
     return JavaReturn<String>(env, IMPL->crossOrigin());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLScriptElementImpl_setCrossOriginImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setCrossOrigin(AtomString{String(env, value)});
-}
-
 }

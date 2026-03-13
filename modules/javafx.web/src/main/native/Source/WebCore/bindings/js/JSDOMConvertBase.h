@@ -179,7 +179,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -188,7 +188,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return toJS<IDL>(lexicalGlobalObject, throwScope, valueOrFunctor());
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }
@@ -209,7 +209,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -218,7 +218,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJS(JSC::JSGlobalObject&
             return toJS<IDL>(lexicalGlobalObject, globalObject, throwScope, valueOrFunctor());
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }
@@ -239,7 +239,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSG
             return JSC::jsUndefined();
         } else if constexpr (std::is_same_v<ExceptionOr<void>, FunctorReturnType>) {
             auto result = valueOrFunctor();
-            if (UNLIKELY(result.hasException())) {
+            if (result.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, result.releaseException());
                 return { };
             }
@@ -249,7 +249,7 @@ template<typename IDL, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::JSG
 
     } else {
         if constexpr (IsExceptionOr<U>) {
-            if (UNLIKELY(valueOrFunctor.hasException())) {
+            if (valueOrFunctor.hasException()) [[unlikely]] {
                 propagateException(lexicalGlobalObject, throwScope, valueOrFunctor.releaseException());
                 return { };
             }

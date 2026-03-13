@@ -63,6 +63,10 @@ template<size_t I> const auto& get(const Ray& value)
 
 DEFINE_TYPE_MAPPING(CSS::Ray, Ray)
 
+// MARK: Serialization
+
+template<> struct Serialize<Ray> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const Ray&); };
+
 } // namespace Style
 } // namespace WebCore
 

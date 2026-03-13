@@ -92,7 +92,7 @@ public:
     Ref<DOMRect> getBoundingClientRect() const;
     static Ref<DOMRect> boundingClientRect(const SimpleRange&);
 
-    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& fragment);
+    WEBCORE_EXPORT ExceptionOr<Ref<DocumentFragment>> createContextualFragment(Variant<RefPtr<TrustedHTML>, String>&& fragment);
 
     // Expand range to a unit (word or sentence or block or document) boundary.
     // Please refer to https://bugs.webkit.org/show_bug.cgi?id=27632 comment #5 for details.

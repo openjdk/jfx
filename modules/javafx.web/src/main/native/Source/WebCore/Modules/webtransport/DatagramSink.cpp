@@ -27,6 +27,7 @@
 #include "DatagramSink.h"
 
 #include "Exception.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebTransport.h"
 #include "WebTransportSession.h"
 #include <wtf/CompletionHandler.h>
@@ -55,7 +56,7 @@ void DatagramSink::write(ScriptExecutionContext& context, JSC::JSValue value, DO
     auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
     auto bufferSource = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView>>(globalObject, value);
-    if (UNLIKELY(bufferSource.hasException(scope)))
+    if (bufferSource.hasException(scope)) [[unlikely]]
         return promise.settle(Exception { ExceptionCode::ExistingExceptionError });
 
     RefPtr transport = m_transport.get();

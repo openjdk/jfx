@@ -82,13 +82,13 @@ public:
 
     using const_iterator = Conditions::const_iterator;
 
-    const_iterator begin() const
+    const_iterator begin() const LIFETIME_BOUND
     {
         if (!m_data)
             return nullptr;
         return m_data->cbegin();
     }
-    const_iterator end() const
+    const_iterator end() const LIFETIME_BOUND
     {
         if (!m_data)
             return nullptr;
@@ -169,9 +169,7 @@ ObjectPropertyConditionSet generateConditionsForPropertyMiss(
 ObjectPropertyConditionSet generateConditionsForPropertySetterMiss(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForIndexedMiss(VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure);
-ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
-    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
-    UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid, unsigned attributes);
@@ -179,13 +177,10 @@ ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
 ObjectPropertyConditionSet generateConditionsForInstanceOf(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype, bool shouldHit);
 
-ObjectPropertyConditionSet generateConditionsForPrototypeEquivalenceConcurrently(
-    VM&, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
-    UniquedStringImpl* uid);
-ObjectPropertyConditionSet generateConditionsForPropertyMissConcurrently(
-    VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
-ObjectPropertyConditionSet generateConditionsForPropertySetterMissConcurrently(
-    VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForPrototypeEquivalenceConcurrently(VM&, JSGlobalObject*, Structure* headStructure, JSObject* prototype, UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitConcurrently(VM&, JSGlobalObject*, Structure* headStructure, JSObject* prototype, UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForPropertyMissConcurrently(VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForPropertySetterMissConcurrently(VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 
 struct PrototypeChainCachingStatus {
     bool usesPolyProto;

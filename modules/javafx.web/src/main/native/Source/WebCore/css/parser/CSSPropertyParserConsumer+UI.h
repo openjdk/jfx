@@ -31,13 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <'cursor'> consuming
 // https://drafts.csswg.org/css-ui/#propdef-cursor
-RefPtr<CSSValue> consumeCursor(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCursor(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

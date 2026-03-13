@@ -26,7 +26,6 @@
 #pragma once
 
 #include "EpochTimeStamp.h"
-#include "ExceptionOr.h"
 
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <optional>
@@ -34,6 +33,8 @@
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class PushSubscriptionOptions : public RefCounted<PushSubscriptionOptions> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushSubscriptionOptions);

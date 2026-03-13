@@ -55,7 +55,7 @@ static inline const char* pas_segregated_directory_kind_get_string(
     case pas_segregated_shared_page_directory_kind:
         return "segregated_shared_page_directory";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

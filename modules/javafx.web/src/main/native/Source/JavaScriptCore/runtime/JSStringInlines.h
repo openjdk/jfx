@@ -75,12 +75,12 @@ ALWAYS_INLINE bool JSString::equalInline(JSGlobalObject* globalObject, JSString*
     return WTF::equal(str1, str2, length);
 }
 
-JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, UChar search, JSString* replacement, uint8_t* stackLimit, bool& found)
+JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, char16_t search, JSString* replacement, uint8_t* stackLimit, bool& found)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit))
+    if (std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit) [[unlikely]]
         return nullptr; // Stack overflow
 
     if (this->isNonSubstringRope()) {
@@ -92,7 +92,7 @@ JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, UChar se
         ASSERT(oldFiber0);
         JSString* newFiber0 = oldFiber0->tryReplaceOneCharImpl(globalObject, search, replacement, stackLimit, found);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        if (UNLIKELY(!newFiber0))
+        if (!newFiber0) [[unlikely]]
             return nullptr;
         if (found)
             RELEASE_AND_RETURN(scope, jsString(globalObject, newFiber0, oldFiber1, oldFiber2));
@@ -100,7 +100,7 @@ JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, UChar se
         if (oldFiber1) {
             JSString* newFiber1 = oldFiber1->tryReplaceOneCharImpl(globalObject, search, replacement, stackLimit, found);
             RETURN_IF_EXCEPTION(scope, nullptr);
-            if (UNLIKELY(!newFiber1))
+            if (!newFiber1) [[unlikely]]
                 return nullptr;
             if (found)
                 RELEASE_AND_RETURN(scope, jsString(globalObject, oldFiber0, newFiber1, oldFiber2));
@@ -109,7 +109,7 @@ JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, UChar se
         if (oldFiber2) {
             JSString* newFiber2 = oldFiber2->tryReplaceOneCharImpl(globalObject, search, replacement, stackLimit, found);
             RETURN_IF_EXCEPTION(scope, nullptr);
-            if (UNLIKELY(!newFiber2))
+            if (!newFiber2) [[unlikely]]
                 return nullptr;
             if (found)
                 RELEASE_AND_RETURN(scope, jsString(globalObject, oldFiber0, oldFiber1, newFiber2));
@@ -152,7 +152,7 @@ JSString* JSString::tryReplaceOneCharImpl(JSGlobalObject* globalObject, UChar se
     RELEASE_AND_RETURN(scope, jsString(globalObject, left, replacement, right));
 }
 
-JSString* JSString::tryReplaceOneChar(JSGlobalObject* globalObject, UChar search, JSString* replacement)
+JSString* JSString::tryReplaceOneChar(JSGlobalObject* globalObject, char16_t search, JSString* replacement)
 {
     uint8_t* stackLimit = std::bit_cast<uint8_t*>(globalObject->vm().softStackLimit());
     bool found = false;
@@ -173,17 +173,21 @@ inline JSValue jsMakeNontrivialString(JSGlobalObject* globalObject, StringType&&
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
     String result = tryMakeString(std::forward<StringType>(string), std::forward<StringTypes>(strings)...);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     ASSERT(result.length() <= JSString::MaxLength);
     return jsNontrivialString(vm, WTFMove(result));
 }
 
 template <typename CharacterType>
+    requires (std::same_as<CharacterType, LChar> || std::same_as<CharacterType, char16_t>)
 inline JSString* repeatCharacter(JSGlobalObject* globalObject, CharacterType character, unsigned repeatCount)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!repeatCount)
+        return jsEmptyString(vm);
 
     std::span<CharacterType> buffer;
     auto impl = StringImpl::tryCreateUninitialized(repeatCount, buffer);
@@ -192,7 +196,13 @@ inline JSString* repeatCharacter(JSGlobalObject* globalObject, CharacterType cha
         return nullptr;
     }
 
-    std::fill_n(buffer.data(), repeatCount, character);
+    *buffer.data() = character;
+    unsigned copied = 1;
+    while (copied < repeatCount) {
+        unsigned copyLen = std::min(copied, repeatCount - copied);
+        memcpySpan(buffer.subspan(copied, copyLen), buffer.subspan(0, copyLen));
+        copied += copyLen;
+    }
 
     RELEASE_AND_RETURN(scope, jsString(vm, impl.releaseNonNull()));
 }
@@ -208,6 +218,31 @@ inline void JSRopeString::convertToNonRope(String&& string) const
     // We do not clear the trailing fibers and length information (fiber1 and fiber2) because we could be reading the length concurrently.
     ASSERT(!JSString::isRope());
     notifyNeedsDestruction();
+}
+
+inline StringImpl* JSRopeString::tryGetLHS(ASCIILiteral rhs) const
+{
+    if (isSubstring())
+        return nullptr;
+
+    JSString* fiber2 = this->fiber2();
+    if (fiber2)
+        return nullptr;
+
+    JSString* fiber1 = this->fiber1();
+    ASSERT(fiber1);
+    if (fiber1->isRope())
+        return nullptr;
+
+    JSString* fiber0 = this->fiber0();
+    ASSERT(fiber0);
+    if (fiber0->isRope())
+        return nullptr;
+
+    if (fiber1->valueInternal() != rhs)
+        return nullptr;
+
+    return fiber0->valueInternal().impl();
 }
 
 // Overview: These functions convert a JSString from holding a string in rope form
@@ -287,7 +322,7 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                 unsigned offset = rope0->substringOffset();
                 view0.substring(offset, rope0Length).getCharacters(buffer);
             } else {
-                if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit))
+                if (std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit) [[unlikely]]
                     MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
                 resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
             }
@@ -304,10 +339,10 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
     }
 
     // 2 fibers.
-    if (LIKELY(fiber1)) {
+    if (fiber1) [[likely]] {
         if (fiber0->isRope()) {
             if (fiber1->isRope()) {
-                if (UNLIKELY(std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit))
+                if (std::bit_cast<uint8_t*>(currentStackPointer()) < stackLimit) [[unlikely]]
                     MUST_TAIL_CALL return JSRopeString::resolveToBufferSlow(fiber0, fiber1, fiber2, buffer, stackLimit);
 
                 auto* rope0 = static_cast<const JSRopeString*>(fiber0);
@@ -318,6 +353,12 @@ inline void JSRopeString::resolveToBuffer(JSString* fiber0, JSString* fiber1, JS
                     view0.substring(offset, rope0Length).getCharacters(buffer);
                 } else
                     resolveToBuffer(rope0->fiber0(), rope0->fiber1(), rope0->fiber2(), buffer.first(rope0Length), stackLimit);
+
+                // Both ropes are the same fibers! Then we can just copy the previously generated characters.
+                if (fiber0 == fiber1) {
+                    memcpySpan(buffer.subspan(rope0Length, rope0Length), buffer.first(rope0Length));
+                    return;
+                }
                 skip(buffer, rope0Length);
 
                 auto* rope1 = static_cast<const JSRopeString*>(fiber1);
@@ -416,7 +457,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
             return vm.keyAtomStringCache.make(vm, buffer, createFromNonRope);
         }
 
-        WTF::HashTranslatorCharBuffer<UChar> buffer { string->valueInternal().span16(), string->valueInternal().hash() };
+        WTF::HashTranslatorCharBuffer<char16_t> buffer { string->valueInternal().span16(), string->valueInternal().hash() };
         return vm.keyAtomStringCache.make(vm, buffer, createFromNonRope);
     }
 
@@ -430,7 +471,6 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         return ropeString;
     };
 
-    AtomString atomString;
     if (!ropeString->isSubstring()) {
         uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm.softStackLimit());
         JSString* fiber0 = ropeString->fiber0();
@@ -442,9 +482,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
             WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters }.first(length) };
             return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
         }
-        std::array<UChar, KeyAtomStringCache::maxStringLengthForCache> characters;
+        std::array<char16_t, KeyAtomStringCache::maxStringLengthForCache> characters;
         JSRopeString::resolveToBuffer(fiber0, fiber1, fiber2, std::span { characters }.first(length), stackLimit);
-        WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters }.first(length) };
+        WTF::HashTranslatorCharBuffer<char16_t> buffer { std::span { characters }.first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
 
@@ -453,7 +493,7 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* st
         WTF::HashTranslatorCharBuffer<LChar> buffer { view.span8() };
         return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
     }
-    WTF::HashTranslatorCharBuffer<UChar> buffer { view.span16() };
+    WTF::HashTranslatorCharBuffer<char16_t> buffer { view.span16() };
     return vm.keyAtomStringCache.make(vm, buffer, createFromRope);
 }
 
@@ -531,9 +571,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
         WTF::HashTranslatorCharBuffer<LChar> buffer { std::span(characters).first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
-    UChar characters[KeyAtomStringCache::maxStringLengthForCache];
+    char16_t characters[KeyAtomStringCache::maxStringLengthForCache];
     resolveWith2Fibers(s1, s2, std::span(characters).first(length));
-    WTF::HashTranslatorCharBuffer<UChar> buffer { std::span(characters).first(length) };
+    WTF::HashTranslatorCharBuffer<char16_t> buffer { std::span(characters).first(length) };
     return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
 }
 
@@ -590,9 +630,9 @@ inline JSString* jsAtomString(JSGlobalObject* globalObject, VM& vm, JSString* s1
         WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { characters }.first(length) };
         return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
     }
-    UChar characters[KeyAtomStringCache::maxStringLengthForCache];
+    char16_t characters[KeyAtomStringCache::maxStringLengthForCache];
     resolveWith3Fibers(s1, s2, s3, std::span { characters }.first(length));
-    WTF::HashTranslatorCharBuffer<UChar> buffer { std::span { characters }.first(length) };
+    WTF::HashTranslatorCharBuffer<char16_t> buffer { std::span { characters }.first(length) };
     return vm.keyAtomStringCache.make(vm, buffer, createFromFibers);
 }
 
@@ -621,19 +661,37 @@ inline JSString* jsSubstringOfResolved(VM& vm, GCDeferralContext* deferralContex
         if (auto c = base.characterAt(offset); c <= maxSingleCharacterString)
             return vm.smallStrings.singleCharacterString(c);
     } else if (length == 2) {
-        UChar first = base.characterAt(offset);
-        UChar second = base.characterAt(offset + 1);
+        char16_t first = base.characterAt(offset);
+        char16_t second = base.characterAt(offset + 1);
         if ((first | second) < 0x80) {
             auto createFromSubstring = [&](VM& vm, auto& buffer) {
                 auto impl = AtomStringImpl::add(buffer);
                 return JSString::create(vm, deferralContext, impl.releaseNonNull());
             };
             LChar buf[] = { static_cast<LChar>(first), static_cast<LChar>(second) };
-            WTF::HashTranslatorCharBuffer<LChar> buffer { std::span { buf, length } };
+            WTF::HashTranslatorCharBuffer<LChar> buffer { unsafeMakeSpan(buf, length) };
             return vm.keyAtomStringCache.make(vm, buffer, createFromSubstring);
         }
     }
     return JSRopeString::createSubstringOfResolved(vm, deferralContext, s, offset, length, base.is8Bit());
+}
+
+template<typename CharacterType>
+void JSString::resolveToBuffer(std::span<CharacterType> destination)
+{
+    if (isRope()) {
+        auto* rope = jsCast<JSRopeString*>(this);
+        if (rope->isSubstring()) {
+            StringView view = *rope->substringBase()->valueInternal().impl();
+            unsigned offset = rope->substringOffset();
+            view.substring(offset, rope->length()).getCharacters(destination);
+            return;
+        }
+
+        uint8_t* stackLimit = std::bit_cast<uint8_t*>(vm().softStackLimit());
+        return JSRopeString::resolveToBuffer(rope->fiber0(), rope->fiber1(), rope->fiber2(), destination, stackLimit);
+    }
+    StringView(valueInternal().impl()).getCharacters(destination);
 }
 
 } // namespace JSC

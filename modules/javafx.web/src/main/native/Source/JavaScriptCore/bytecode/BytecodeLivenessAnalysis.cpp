@@ -43,7 +43,7 @@ BytecodeLivenessAnalysis::BytecodeLivenessAnalysis(CodeBlock* codeBlock)
 {
     runLivenessFixpoint(codeBlock, codeBlock->instructions(), m_graph);
 
-    if (UNLIKELY(Options::dumpBytecodeLivenessResults()))
+    if (Options::dumpBytecodeLivenessResults()) [[unlikely]]
         dumpResults(codeBlock);
 }
 

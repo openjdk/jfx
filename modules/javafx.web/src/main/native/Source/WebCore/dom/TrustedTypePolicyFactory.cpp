@@ -56,7 +56,7 @@ TrustedTypePolicyFactory::TrustedTypePolicyFactory(ScriptExecutionContext& conte
 
 ExceptionOr<Ref<TrustedTypePolicy>> TrustedTypePolicyFactory::createPolicy(ScriptExecutionContext& context, const String& policyName, const TrustedTypePolicyOptions& options)
 {
-    auto csp = context.checkedContentSecurityPolicy();
+    CheckedPtr csp = context.contentSecurityPolicy();
     ASSERT(csp);
 
     AllowTrustedTypePolicy policyAllowed = csp->allowTrustedTypesPolicy(policyName, m_createdPolicyNames.contains(policyName));

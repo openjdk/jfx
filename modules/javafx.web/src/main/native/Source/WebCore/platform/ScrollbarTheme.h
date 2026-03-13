@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -110,6 +110,7 @@ public:
     virtual void didCreateScrollerImp(Scrollbar&) { };
 
     virtual bool isMockTheme() const { return false; }
+    virtual bool isScrollbarThemeMac() const { return false; }
 
     WEBCORE_EXPORT static ScrollbarTheme& theme();
 

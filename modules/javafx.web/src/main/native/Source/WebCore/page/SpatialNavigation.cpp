@@ -29,6 +29,7 @@
 #include "config.h"
 #include "SpatialNavigation.h"
 
+#include "ContainerNodeInlines.h"
 #include "FrameTree.h"
 #include "HTMLAreaElement.h"
 #include "HTMLImageElement.h"
@@ -37,7 +38,7 @@
 #include "IntRect.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
-#include "Node.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
@@ -54,41 +55,33 @@ static bool isRectInDirection(FocusDirection, const LayoutRect&, const LayoutRec
 static void deflateIfOverlapped(LayoutRect&, LayoutRect&);
 static LayoutRect rectToAbsoluteCoordinates(LocalFrame* initialFrame, const LayoutRect&);
 static void entryAndExitPointsForDirection(FocusDirection, const LayoutRect& startingRect, const LayoutRect& potentialRect, LayoutPoint& exitPoint, LayoutPoint& entryPoint);
-static bool isScrollableNode(const Node*);
+static bool isScrollableNode(const ContainerNode&);
 
-FocusCandidate::FocusCandidate(Node* node, FocusDirection direction)
+FocusCandidate::FocusCandidate(Element* element, FocusDirection direction)
     : distance(maxDistance())
     , alignment(RectsAlignment::None)
     , isOffscreen(true)
     , isOffscreenAfterScrolling(true)
 {
-    ASSERT(is<Element>(node));
-
-    if (is<HTMLAreaElement>(*node)) {
-        HTMLAreaElement& area = downcast<HTMLAreaElement>(*node);
-        RefPtr image = area.imageElement();
+    if (CheckedPtr area = dynamicDowncast<HTMLAreaElement>(element)) {
+        RefPtr image = area->imageElement();
         if (!image || !image->renderer())
             return;
 
         visibleNode = image.get();
-        rect = virtualRectForAreaElementAndDirection(&area, direction);
+        rect = virtualRectForAreaElementAndDirection(area.get(), direction);
     } else {
-        if (!node->renderer())
+        if (!element->renderer())
             return;
 
-        visibleNode = node;
-        rect = nodeRectInAbsoluteCoordinates(node, true /* ignore border */);
+        visibleNode = element;
+        rect = nodeRectInAbsoluteCoordinates(*element, true /* ignore border */);
     }
 
-    focusableNode = node;
+    focusableNode = element;
     RefPtr protectedVisibleNode { visibleNode.get() };
-    isOffscreen = hasOffscreenRect(protectedVisibleNode.get());
-    isOffscreenAfterScrolling = hasOffscreenRect(protectedVisibleNode.get(), direction);
-}
-
-bool isSpatialNavigationEnabled(const LocalFrame* frame)
-{
-    return (frame && frame->settings().spatialNavigationEnabled());
+    isOffscreen = hasOffscreenRect(*protectedVisibleNode);
+    isOffscreenAfterScrolling = hasOffscreenRect(*protectedVisibleNode, direction);
 }
 
 static RectsAlignment alignmentForRects(FocusDirection direction, const LayoutRect& curRect, const LayoutRect& targetRect, const LayoutSize& viewSize)
@@ -285,12 +278,12 @@ static bool isRectInDirection(FocusDirection direction, const LayoutRect& curRec
 // Checks if |node| is offscreen the visible area (viewport) of its container
 // document. In case it is, one can scroll in direction or take any different
 // desired action later on.
-bool hasOffscreenRect(Node* node, FocusDirection direction)
+bool hasOffscreenRect(const Node& node, FocusDirection direction)
 {
     // Get the FrameView in which |node| is (which means the current viewport if |node|
     // is not in an inner document), so we can check if its content rect is visible
     // before we actually move the focus to it.
-    auto* frameView = node->document().view();
+    auto* frameView = node.document().view();
     if (!frameView)
         return true;
 
@@ -320,7 +313,7 @@ bool hasOffscreenRect(Node* node, FocusDirection direction)
         break;
     }
 
-    RenderObject* render = node->renderer();
+    auto* render = node.renderer();
     if (!render)
         return true;
 
@@ -335,7 +328,7 @@ bool scrollInDirection(LocalFrame* frame, FocusDirection direction)
 {
     ASSERT(frame);
 
-    if (frame && canScrollInDirection(frame->protectedDocument().get(), direction)) {
+    if (frame && canScrollInDirection(*frame->protectedDocument(), direction)) {
         LayoutUnit dx;
         LayoutUnit dy;
         switch (direction) {
@@ -362,39 +355,38 @@ bool scrollInDirection(LocalFrame* frame, FocusDirection direction)
     return false;
 }
 
-bool scrollInDirection(Node* container, FocusDirection direction)
+bool scrollInDirection(const ContainerNode& container, FocusDirection direction)
 {
-    ASSERT(container);
-    if (is<Document>(*container))
-        return scrollInDirection(downcast<Document>(*container).protectedFrame().get(), direction);
+    if (is<Document>(container))
+        return scrollInDirection(downcast<Document>(container).protectedFrame().get(), direction);
 
-    if (!container->renderBox())
+    if (!canScrollInDirection(container, direction))
         return false;
 
-    if (canScrollInDirection(container, direction)) {
+    if (CheckedPtr renderBox = container.renderBox()) {
         LayoutUnit dx;
         LayoutUnit dy;
         switch (direction) {
         case FocusDirection::Left:
-            dx = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollLeft());
+            dx = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), renderBox->scrollLeft());
             break;
         case FocusDirection::Right:
-            ASSERT(container->renderBox()->scrollWidth() > (container->renderBox()->scrollLeft() + container->renderBox()->clientWidth()));
-            dx = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollWidth() - (container->renderBox()->scrollLeft() + container->renderBox()->clientWidth()));
+            ASSERT(renderBox->scrollWidth() > (renderBox->scrollLeft() + renderBox->clientWidth()));
+            dx = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), renderBox->scrollWidth() - (renderBox->scrollLeft() + renderBox->clientWidth()));
             break;
         case FocusDirection::Up:
-            dy = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollTop());
+            dy = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), renderBox->scrollTop());
             break;
         case FocusDirection::Down:
-            ASSERT(container->renderBox()->scrollHeight() - (container->renderBox()->scrollTop() + container->renderBox()->clientHeight()));
-            dy = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollHeight() - (container->renderBox()->scrollTop() + container->renderBox()->clientHeight()));
+            ASSERT(renderBox->scrollHeight() - (renderBox->scrollTop() + renderBox->clientHeight()));
+            dy = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), renderBox->scrollHeight() - (renderBox->scrollTop() + renderBox->clientHeight()));
             break;
         default:
             ASSERT_NOT_REACHED();
             return false;
         }
 
-        if (auto* scrollableArea = container->renderBox()->enclosingLayer()->scrollableArea())
+        if (auto* scrollableArea = renderBox->enclosingLayer()->scrollableArea())
             scrollableArea->scrollByRecursively(IntSize(dx, dy));
         return true;
     }
@@ -417,55 +409,57 @@ static void deflateIfOverlapped(LayoutRect& a, LayoutRect& b)
         b.inflate(deflateFactor);
 }
 
-bool isScrollableNode(const Node* node)
+bool isScrollableNode(const ContainerNode& container)
 {
-    if (!node)
+    ASSERT(!container.isDocumentNode());
+    if (!container.hasChildNodes())
         return false;
-    ASSERT(!node->isDocumentNode());
-    auto* renderer = node->renderer();
-    return is<RenderBox>(renderer) && downcast<RenderBox>(*renderer).canBeScrolledAndHasScrollableArea() && node->hasChildNodes();
+    if (CheckedPtr renderBox = dynamicDowncast<RenderBox>(container.renderer()))
+        return renderBox->canBeScrolledAndHasScrollableArea();
+    return false;
 }
 
-Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection direction, Node* node)
+ContainerNode* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection direction, ContainerNode& container)
 {
-    ASSERT(node);
-    Node* parent = node;
+    auto* parent = &container;
     do {
         if (is<Document>(*parent))
             parent = downcast<Document>(*parent).document().frame()->ownerElement();
         else
             parent = parent->parentNode();
-    } while (parent && !canScrollInDirection(parent, direction) && !is<Document>(*parent));
+    } while (parent && !canScrollInDirection(*parent, direction) && !is<Document>(*parent));
 
     return parent;
 }
 
-bool canScrollInDirection(const Node* container, FocusDirection direction)
+bool canScrollInDirection(const ContainerNode& container, FocusDirection direction)
 {
-    ASSERT(container);
-
-    if (is<HTMLSelectElement>(*container))
+    if (is<HTMLSelectElement>(container))
         return false;
 
-    if (is<Document>(*container))
-        return canScrollInDirection(downcast<Document>(*container).protectedFrame().get(), direction);
+    if (is<Document>(container))
+        return canScrollInDirection(downcast<Document>(container).protectedFrame().get(), direction);
 
     if (!isScrollableNode(container))
         return false;
 
+    if (CheckedPtr renderBox = container.renderBox()) {
     switch (direction) {
     case FocusDirection::Left:
-        return (container->renderer()->style().overflowX() != Overflow::Hidden && container->renderBox()->scrollLeft() > 0);
+            return renderBox->style().overflowX() != Overflow::Hidden && renderBox->scrollLeft() > 0;
     case FocusDirection::Up:
-        return (container->renderer()->style().overflowY() != Overflow::Hidden && container->renderBox()->scrollTop() > 0);
+            return renderBox->style().overflowY() != Overflow::Hidden && renderBox->scrollTop() > 0;
     case FocusDirection::Right:
-        return (container->renderer()->style().overflowX() != Overflow::Hidden && container->renderBox()->scrollLeft() + container->renderBox()->clientWidth() < container->renderBox()->scrollWidth());
+            return renderBox->style().overflowX() != Overflow::Hidden && renderBox->scrollLeft() + renderBox->clientWidth() < renderBox->scrollWidth();
     case FocusDirection::Down:
-        return (container->renderer()->style().overflowY() != Overflow::Hidden && container->renderBox()->scrollTop() + container->renderBox()->clientHeight() < container->renderBox()->scrollHeight());
+            return renderBox->style().overflowY() != Overflow::Hidden && renderBox->scrollTop() + renderBox->clientHeight() < renderBox->scrollHeight();
     default:
         ASSERT_NOT_REACHED();
         return false;
     }
+    }
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 bool canScrollInDirection(const LocalFrame* frame, FocusDirection direction)
@@ -514,25 +508,27 @@ static LayoutRect rectToAbsoluteCoordinates(LocalFrame* initialFrame, const Layo
     return rect;
 }
 
-LayoutRect nodeRectInAbsoluteCoordinates(Node* node, bool ignoreBorder)
+LayoutRect nodeRectInAbsoluteCoordinates(const ContainerNode& containerNode, bool ignoreBorder)
 {
-    ASSERT(node && node->renderer() && !node->document().view()->needsLayout());
+    ASSERT(containerNode.renderer() && !containerNode.document().view()->needsLayout());
 
-    if (is<Document>(*node))
-        return frameRectInAbsoluteCoordinates(downcast<Document>(*node).protectedFrame().get());
+    if (is<Document>(containerNode))
+        return frameRectInAbsoluteCoordinates(downcast<Document>(containerNode).protectedFrame().get());
 
-    LayoutRect rect;
-    if (CheckedPtr renderer = node->renderer())
-        rect = rectToAbsoluteCoordinates(node->document().protectedFrame().get(), renderer->absoluteBoundingBoxRect());
-
+    if (CheckedPtr renderer = containerNode.renderer()) {
+        auto rect = rectToAbsoluteCoordinates(containerNode.document().protectedFrame().get(), renderer->absoluteBoundingBoxRect());
     // For authors that use border instead of outline in their CSS, we compensate by ignoring the border when calculating
     // the rect of the focused element.
     if (ignoreBorder) {
-        rect.move(node->renderer()->style().borderLeftWidth(), node->renderer()->style().borderTopWidth());
-        rect.setWidth(rect.width() - node->renderer()->style().borderLeftWidth() - node->renderer()->style().borderRightWidth());
-        rect.setHeight(rect.height() - node->renderer()->style().borderTopWidth() - node->renderer()->style().borderBottomWidth());
+            auto& style = renderer->style();
+            rect.move(Style::evaluate(style.borderLeftWidth()), Style::evaluate(style.borderTopWidth()));
+            rect.setWidth(rect.width() - Style::evaluate(style.borderLeftWidth()) - Style::evaluate(style.borderRightWidth()));
+            rect.setHeight(rect.height() - Style::evaluate(style.borderTopWidth()) - Style::evaluate(style.borderBottomWidth()));
     }
     return rect;
+    }
+
+    return { };
 }
 
 LayoutRect frameRectInAbsoluteCoordinates(LocalFrame* frame)
@@ -708,17 +704,17 @@ bool canBeScrolledIntoView(FocusDirection direction, const FocusCandidate& candi
 {
     ASSERT(candidate.visibleNode && candidate.isOffscreen);
     LayoutRect candidateRect = candidate.rect;
-    for (Node* parentNode = candidate.visibleNode->parentNode(); parentNode; parentNode = parentNode->parentNode()) {
+    for (ContainerNode* parentNode = candidate.visibleNode->parentNode(); parentNode; parentNode = parentNode->parentNode()) {
         if (!parentNode->renderer())
             continue;
-        LayoutRect parentRect = nodeRectInAbsoluteCoordinates(parentNode);
+        LayoutRect parentRect = nodeRectInAbsoluteCoordinates(*parentNode);
         if (!candidateRect.intersects(parentRect)) {
             if (((direction == FocusDirection::Left || direction == FocusDirection::Right) && parentNode->renderer()->style().overflowX() == Overflow::Hidden)
                 || ((direction == FocusDirection::Up || direction == FocusDirection::Down) && parentNode->renderer()->style().overflowY() == Overflow::Hidden))
                 return false;
         }
         if (parentNode == candidate.enclosingScrollableBox)
-            return canScrollInDirection(parentNode, direction);
+            return canScrollInDirection(*parentNode, direction);
     }
     return true;
 }

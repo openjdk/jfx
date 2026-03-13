@@ -39,6 +39,7 @@ PAS_BEGIN_EXTERN_C;
 
 PAS_API extern const bmalloc_type bmalloc_common_primitive_type;
 PAS_API extern pas_heap bmalloc_common_primitive_heap;
+PAS_API extern pas_primitive_heap_ref bmalloc_compact_primitive_heap_ref;
 PAS_API extern pas_intrinsic_heap_support bmalloc_common_primitive_heap_support;
 PAS_API extern pas_allocator_counts bmalloc_allocator_counts;
 

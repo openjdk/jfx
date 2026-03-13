@@ -50,7 +50,7 @@
 #include "RenderStyle.h"
 #include "ScriptExecutionContext.h"
 #include "Settings.h"
-#include "StyleBuilderConverter.h"
+#include "StyleBuilderChecking.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleLengthResolution.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
@@ -88,7 +88,7 @@ FontSelectionValue fontWeightFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontWeightFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -164,7 +164,7 @@ FontSelectionValue fontStretchFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontStretchFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -188,7 +188,7 @@ FontSelectionValue fontStyleAngleFromCSSValueDeprecated(const CSSValue& value)
 
 FontSelectionValue fontStyleAngleFromCSSValue(BuilderState& builderState, const CSSValue& value)
 {
-    RefPtr primitiveValue = BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+    RefPtr primitiveValue = requiredDowncast<CSSPrimitiveValue>(builderState, value);
     if (!primitiveValue)
         return { };
 
@@ -430,7 +430,7 @@ FontFeatureSettings fontFeatureSettingsFromCSSValue(BuilderState& builderState, 
         return { };
     }
 
-    auto list = BuilderConverter::requiredListDowncast<CSSValueList, CSSFontFeatureValue>(builderState, value);
+    auto list = requiredListDowncast<CSSValueList, CSSFontFeatureValue>(builderState, value);
     if (!list)
         return { };
 
@@ -449,7 +449,7 @@ FontVariationSettings fontVariationSettingsFromCSSValue(BuilderState& builderSta
         return { };
     }
 
-    auto list = BuilderConverter::requiredListDowncast<CSSValueList, CSSFontVariationValue>(builderState, value);
+    auto list = requiredListDowncast<CSSValueList, CSSFontVariationValue>(builderState, value);
     if (!list)
         return { };
 
@@ -479,15 +479,15 @@ FontSizeAdjust fontSizeAdjustFromCSSValue(BuilderState& builderState, const CSSV
         return { defaultMetric, FontSizeAdjust::ValueType::FromFont, std::nullopt };
     }
 
-    auto pair = BuilderConverter::requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
+    auto pair = requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
     if (!pair)
         return { };
 
-    auto metric = fromCSSValueID<FontSizeAdjust::Metric>(pair->first.valueID());
-    if (pair->second.isNumber())
-        return { metric, FontSizeAdjust::ValueType::Number, pair->second.resolveAsNumber(builderState.cssToLengthConversionData()) };
+    auto metric = fromCSSValueID<FontSizeAdjust::Metric>(pair->first->valueID());
+    if (pair->second->isNumber())
+        return { metric, FontSizeAdjust::ValueType::Number, pair->second->resolveAsNumber(builderState.cssToLengthConversionData()) };
 
-    ASSERT(pair->second.valueID() == CSSValueFromFont);
+    ASSERT(pair->second->valueID() == CSSValueFromFont);
     return { metric, FontSizeAdjust::ValueType::FromFont, std::nullopt };
 }
 

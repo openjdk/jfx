@@ -31,17 +31,20 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <'quotes'> consuming
 // https://drafts.csswg.org/css-content-3/#propdef-quotes
-RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeQuotes(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <'content'> consuming
 // https://drafts.csswg.org/css-content-3/#propdef-content
-RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeContent(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

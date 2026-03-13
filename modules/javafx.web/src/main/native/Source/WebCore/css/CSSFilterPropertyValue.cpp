@@ -27,6 +27,7 @@
 
 #include "CSSPrimitiveNumericTypes+CSSValueVisitation.h"
 #include "CSSPrimitiveNumericTypes+Serialization.h"
+#include "CSSURLValue.h"
 #include "CSSValuePool.h"
 #include "DeprecatedCSSOMFilterFunctionValue.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
@@ -70,7 +71,7 @@ Ref<DeprecatedCSSOMValue> CSSFilterPropertyValue::createDeprecatedCSSOMWrapper(C
             auto values = list.value.template map<Vector<Ref<DeprecatedCSSOMValue>, 4>>([&](const auto& value) {
                 return WTF::switchOn(value,
                     [&](const CSS::FilterReference& reference) -> Ref<DeprecatedCSSOMValue> {
-                        return DeprecatedCSSOMPrimitiveValue::create(CSSPrimitiveValue::createURI(reference.url), owner);
+                        return DeprecatedCSSOMPrimitiveValue::create(CSSURLValue::create(reference.url), owner);
                     },
                     [&](const auto& function) -> Ref<DeprecatedCSSOMValue> {
                         return DeprecatedCSSOMFilterFunctionValue::create(CSS::FilterFunction { function }, owner);

@@ -81,9 +81,6 @@ static void initializeSQLiteIfNecessary()
     });
 }
 
-static Lock isDatabaseOpeningForbiddenLock;
-static bool isDatabaseOpeningForbidden WTF_GUARDED_BY_LOCK(isDatabaseOpeningForbiddenLock) { false };
-
 void SQLiteDatabase::useFastMalloc()
 {
 #if ENABLE(SQLITE_FAST_MALLOC)
@@ -104,12 +101,6 @@ void SQLiteDatabase::useFastMalloc()
     returnCode = sqlite3_config(SQLITE_CONFIG_MALLOC, &fastMallocMethods);
     RELEASE_LOG_ERROR_IF(returnCode != SQLITE_OK, SQLDatabase, "Unable to replace SQLite malloc: %d", returnCode);
 #endif
-}
-
-void SQLiteDatabase::setIsDatabaseOpeningForbidden(bool isForbidden)
-{
-    Locker locker { isDatabaseOpeningForbiddenLock };
-    isDatabaseOpeningForbidden = isForbidden;
 }
 
 SQLiteDatabase::SQLiteDatabase() = default;
@@ -135,12 +126,6 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<O
     });
 
     {
-        Locker locker { isDatabaseOpeningForbiddenLock };
-        if (isDatabaseOpeningForbidden) {
-            m_openErrorMessage = "opening database is forbidden";
-            return false;
-        }
-
         int flags = SQLITE_OPEN_AUTOPROXY;
         switch (openMode) {
         case OpenMode::ReadOnly:
@@ -177,7 +162,7 @@ bool SQLiteDatabase::open(const String& filename, OpenMode openMode, OptionSet<O
 
     overrideUnauthorizedFunctions();
 
-    m_openingThread = &Thread::current();
+    m_openingThread = Thread::currentSingleton();
     if (sqlite3_extended_result_codes(m_db, 1) != SQLITE_OK)
         return false;
 
@@ -296,23 +281,14 @@ void SQLiteDatabase::close()
         ASSERT_WITH_MESSAGE(!m_statementCount, "All SQLiteTransaction objects should be destroyed before closing the database");
 
         // FIXME: This is being called on the main thread during JS GC. <rdar://problem/5739818>
-        // ASSERT(m_openingThread == &Thread::current());
+        // ASSERT(m_openingThread == &Thread::currentSingleton());
         sqlite3* db = m_db;
         {
             Locker locker { m_databaseClosingMutex };
             m_db = 0;
         }
 
-        int closeResult;
-        if (m_useWAL) {
-            // Close in the scope of counter as it may acquire lock of database.
-            SQLiteTransactionInProgressAutoCounter transactionCounter;
-            closeResult = sqlite3_close(db);
-        } else
-            closeResult = sqlite3_close(db);
-
-        if (closeResult != SQLITE_OK)
-            RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::close: Failed to close database (%d) - %" PUBLIC_LOG_STRING, closeResult, lastErrorMsg());
+        sqlite3_close_v2(db);
     }
 }
 
@@ -535,8 +511,14 @@ int SQLiteDatabase::runIncrementalVacuumCommand()
     Locker locker { m_authorizerLock };
     enableAuthorizer(false);
 
-    if (!executeCommand("PRAGMA incremental_vacuum"_s))
+    if (auto statement = prepareStatement("PRAGMA incremental_vacuum"_s)) {
+        auto ret = statement->step();
+        while (ret == SQLITE_ROW)
+            ret = statement->step();
+
+        if (ret != SQLITE_DONE)
         LOG(SQLDatabase, "Unable to run incremental vacuum - %s", lastErrorMsg());
+    }
 
     enableAuthorizer(true);
     return lastError();
@@ -670,7 +652,7 @@ void SQLiteDatabase::setAuthorizer(DatabaseAuthorizer& authorizer)
 
     Locker locker { m_authorizerLock };
 
-    m_authorizer = &authorizer;
+    m_authorizer = authorizer;
 
     enableAuthorizer(true);
 }
@@ -783,7 +765,7 @@ static Expected<sqlite3_stmt*, int> constructAndPrepareStatement(SQLiteDatabase&
 
 Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatementSlow(StringView queryString)
 {
-    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).utf8();
     auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());
@@ -804,7 +786,7 @@ Expected<SQLiteStatement, int> SQLiteDatabase::prepareStatement(ASCIILiteral que
 
 Expected<UniqueRef<SQLiteStatement>, int> SQLiteDatabase::prepareHeapStatementSlow(StringView queryString)
 {
-    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).utf8();
+    auto query = queryString.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).utf8();
     auto sqlStatement = constructAndPrepareStatement(*this, query.spanIncludingNullTerminator());
     if (!sqlStatement) {
         RELEASE_LOG_ERROR(SQLDatabase, "SQLiteDatabase::prepareHeapStatement: Failed to prepare statement %" PUBLIC_LOG_STRING, query.data());

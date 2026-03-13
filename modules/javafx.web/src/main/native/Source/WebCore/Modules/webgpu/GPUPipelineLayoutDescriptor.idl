@@ -29,5 +29,5 @@
     EnabledBySetting=WebGPUEnabled
 ]
 dictionary GPUPipelineLayoutDescriptor : GPUObjectDescriptorBase {
-    required sequence<GPUBindGroupLayout> bindGroupLayouts;
+    required sequence<GPUBindGroupLayout?> bindGroupLayouts;
 };

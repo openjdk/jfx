@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@ namespace JSC {
 class BytecodeCacheError;
 class CachedBytecode;
 class SourceCodeKey;
+class SourceProvider;
 class UnlinkedCodeBlock;
 class UnlinkedFunctionCodeBlock;
 class UnlinkedFunctionExecutable;
@@ -103,7 +104,7 @@ private:
     Decoder(VM&, Ref<CachedBytecode>, RefPtr<SourceProvider>);
 
     VM& m_vm;
-    Ref<CachedBytecode> m_cachedBytecode;
+    const Ref<CachedBytecode> m_cachedBytecode;
     UncheckedKeyHashMap<ptrdiff_t, void*> m_offsetToPtrMap;
     Vector<std::function<void()>> m_finalizers;
     UncheckedKeyHashMap<CompactTDZEnvironment*, CompactTDZEnvironmentMap::Handle> m_environmentToHandleMap;
@@ -111,7 +112,7 @@ private:
 };
 
 JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*);
-JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*, FileSystem::PlatformFileHandle fd, BytecodeCacheError&);
+JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*, FileSystem::FileHandle&, BytecodeCacheError&);
 
 UnlinkedCodeBlock* decodeCodeBlockImpl(VM&, const SourceCodeKey&, Ref<CachedBytecode>);
 

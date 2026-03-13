@@ -51,8 +51,7 @@ void EXTPolygonOffsetClamp::polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat un
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->polygonOffsetClampEXT(factor, units, clamp);
+    protectedContext()->protectedGraphicsContextGL()->polygonOffsetClampEXT(factor, units, clamp);
 }
 
 } // namespace WebCore

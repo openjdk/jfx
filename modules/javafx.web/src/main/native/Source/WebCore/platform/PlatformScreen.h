@@ -31,13 +31,9 @@
 #if PLATFORM(MAC)
 OBJC_CLASS NSScreen;
 OBJC_CLASS NSWindow;
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
+
 typedef struct CGRect NSRect;
 typedef struct CGPoint NSPoint;
-#else
-typedef struct _NSRect NSRect;
-typedef struct _NSPoint NSPoint;
-#endif
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -99,6 +95,7 @@ constexpr DynamicRangeMode preferredDynamicRangeMode(Widget* = nullptr) { return
 
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
 WEBCORE_EXPORT bool screenSupportsHighDynamicRange(Widget* = nullptr);
+WEBCORE_EXPORT bool screenSupportsHighDynamicRange(PlatformDisplayID);
 #else
 constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false; }
 #endif
@@ -115,6 +112,10 @@ WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
 #if HAVE(SUPPORT_HDR_DISPLAY)
 WEBCORE_EXPORT void setScreenContentsFormatsForTesting(OptionSet<ContentsFormat>);
 OptionSet<ContentsFormat> screenContentsFormatsForTesting();
+
+WEBCORE_EXPORT float currentEDRHeadroomForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT float maxEDRHeadroomForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT bool suppressEDRForDisplay(PlatformDisplayID);
 #endif
 
 #if PLATFORM(MAC)
@@ -160,12 +161,10 @@ WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-#if PLATFORM(GTK) || PLATFORM(WPE)
+#if PLATFORM(GTK)
 WEBCORE_EXPORT bool screenHasTouchDevice();
-WEBCORE_EXPORT bool screenIsTouchPrimaryInputDevice();
 #else
 constexpr bool screenHasTouchDevice() { return true; }
-constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
 #endif
 #endif
 
