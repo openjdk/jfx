@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
+
+// Notification name for when a menu in the menu bar begins opening
+static NSNotificationName const GlassMenuBarWillOpenNotification = @"GlassMenuBarWillOpen";
 
 @interface GlassMenubar : NSObject
 {
