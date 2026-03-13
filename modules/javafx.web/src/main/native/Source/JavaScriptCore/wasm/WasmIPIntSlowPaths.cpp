@@ -257,6 +257,57 @@ WASM_IPINT_EXTERN_CPP_DECL(prologue_osr, CallFrame* callFrame)
         WASM_RETURN_TWO(nullptr, nullptr);
 }
 
+template<SavedFPWidth savedFPWidth>
+static ALWAYS_INLINE uint64_t* buildEntryBufferForLoopOSR(Wasm::IPIntCallee* ipintCallee, Wasm::BBQCallee* bbqCallee, JSWebAssemblyInstance* instance, const Wasm::IPIntTierUpCounter::OSREntryData& osrEntryData, IPIntLocal* pl)
+{
+    ASSERT(bbqCallee->compilationMode() == Wasm::CompilationMode::BBQMode);
+    size_t osrEntryScratchBufferSize = bbqCallee->osrEntryScratchBufferSize();
+
+    constexpr unsigned valueSize = Wasm::Context::scratchBufferSlotsPerValue(savedFPWidth);
+    RELEASE_ASSERT(osrEntryScratchBufferSize >= valueSize * (ipintCallee->numLocals() + osrEntryData.numberOfStackValues + osrEntryData.tryDepth + Wasm::BBQCallee::extraOSRValuesForLoopIndex));
+
+    uint64_t* buffer = instance->vm().wasmContext.scratchBufferForSize(osrEntryScratchBufferSize);
+    if (!buffer)
+        return nullptr;
+
+    size_t bufferIndex = 0;
+    auto copyValueToBuffer = [&](const IPIntLocal& local) ALWAYS_INLINE_LAMBDA {
+        if constexpr (savedFPWidth == SavedFPWidth::SaveVectors)
+            *std::bit_cast<v128_t*>(buffer + bufferIndex) = local.v128;
+        else
+            buffer[bufferIndex] = local.i64;
+        bufferIndex += valueSize;
+    };
+
+    // The loop index isn't really an IPIntLocal value, but it occupies the first slot of the OSR scratch buffer
+    IPIntLocal loopIndexLocal = { };
+    loopIndexLocal.v128.u64x2[0] = osrEntryData.loopIndex;
+    loopIndexLocal.v128.u64x2[1] = 0;
+    copyValueToBuffer(loopIndexLocal);
+
+    for (uint32_t i = 0; i < ipintCallee->numLocals(); ++i)
+        copyValueToBuffer(pl[i]);
+
+    if (ipintCallee->rethrowSlots()) {
+        ASSERT(osrEntryData.tryDepth <= ipintCallee->rethrowSlots());
+        for (uint32_t i = 0; i < osrEntryData.tryDepth; ++i)
+            copyValueToBuffer(pl[ipintCallee->localSizeToAlloc() + i]);
+    } else {
+        // If there's no rethrow slots just 0 fill the buffer.
+        IPIntLocal zeroValue = { };
+        zeroValue.v128 = vectorAllZeros();
+        for (uint32_t i = 0; i < osrEntryData.tryDepth; ++i)
+            copyValueToBuffer(zeroValue);
+    }
+
+    for (uint32_t i = 0; i < osrEntryData.numberOfStackValues; ++i) {
+        pl -= 1;
+        copyValueToBuffer(*pl);
+    }
+    return buffer;
+}
+
+
 WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint8_t* pc, IPIntLocal* pl)
 {
     Wasm::IPIntCallee* callee = IPINT_CALLEE(callFrame);
@@ -285,27 +336,15 @@ WASM_IPINT_EXTERN_CPP_DECL(loop_osr, CallFrame* callFrame, uint8_t* pc, IPIntLoc
 
     auto* bbqCallee = static_cast<Wasm::BBQCallee*>(compiledCallee.get());
     ASSERT(bbqCallee->compilationMode() == Wasm::CompilationMode::BBQMode);
-        size_t osrEntryScratchBufferSize = bbqCallee->osrEntryScratchBufferSize();
-    RELEASE_ASSERT(osrEntryScratchBufferSize >= callee->numLocals() + osrEntryData.numberOfStackValues + osrEntryData.tryDepth);
 
-        uint64_t* buffer = instance->vm().wasmContext.scratchBufferForSize(osrEntryScratchBufferSize);
+    uint64_t* buffer;
+    if (bbqCallee->savedFPWidth() == SavedFPWidth::SaveVectors)
+        buffer = buildEntryBufferForLoopOSR<SavedFPWidth::SaveVectors>(callee, bbqCallee, instance, osrEntryData, pl);
+    else
+        buffer = buildEntryBufferForLoopOSR<SavedFPWidth::DontSaveVectors>(callee, bbqCallee, instance, osrEntryData, pl);
+
         if (!buffer)
             WASM_RETURN_TWO(nullptr, nullptr);
-
-        uint32_t index = 0;
-        buffer[index++] = osrEntryData.loopIndex;
-    for (uint32_t i = 0; i < callee->numLocals(); ++i)
-        buffer[index++] = pl[i].i64;
-
-        // If there's no rethrow slots just 0 fill the buffer.
-    ASSERT(osrEntryData.tryDepth <= callee->rethrowSlots() || !callee->rethrowSlots());
-        for (uint32_t i = 0; i < osrEntryData.tryDepth; ++i)
-        buffer[index++] = callee->rethrowSlots() ? pl[callee->localSizeToAlloc() + i].i64 : 0;
-
-        for (uint32_t i = 0; i < osrEntryData.numberOfStackValues; ++i) {
-        pl -= 1;
-        buffer[index++] = pl->i64;
-        }
 
         auto sharedLoopEntrypoint = bbqCallee->sharedLoopEntrypoint();
         RELEASE_ASSERT(sharedLoopEntrypoint);

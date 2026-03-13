@@ -30,6 +30,7 @@
 #include "AXObjectCache.h"
 #include "DocumentInlines.h"
 #include "FrameSelection.h"
+#include "HTMLMarqueeElement.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyRenderSVGContainer.h"
 #include "LegacyRenderSVGRoot.h"
@@ -86,6 +87,24 @@ namespace WebCore {
 
 RenderTreeBuilder* RenderTreeBuilder::s_current;
 
+static bool isRenderMarquee(const RenderObject& renderer)
+{
+    if (auto* renderElement = dynamicDowncast<RenderElement>(renderer)) {
+        if (RefPtr marquee = dynamicDowncast<HTMLMarqueeElement>(renderElement->element()))
+            return marquee->hasRenderMarquee();
+    }
+    return false;
+}
+
+static bool isWithinNeverLaidOutRenderMarqueeSubtree(const RenderObject& renderer)
+{
+    for (CheckedPtr renderObject = &renderer; renderObject && !renderObject->everHadLayout(); renderObject = renderObject->parent()) {
+        if (isRenderMarquee(*renderObject))
+            return true;
+    }
+    return false;
+}
+
 enum class IsRemoval : bool { No, Yes };
 static void invalidateLineLayout(RenderObject& renderer, IsRemoval isRemoval)
 {
@@ -93,9 +112,11 @@ static void invalidateLineLayout(RenderObject& renderer, IsRemoval isRemoval)
     if (!container)
         return;
 
-    if (isRemoval == IsRemoval::Yes && !renderer.everHadLayout()) {
+    if (isRemoval == IsRemoval::Yes && !renderer.everHadLayout()
+        && !isWithinNeverLaidOutRenderMarqueeSubtree(renderer)) {
         // Certain mutations can make renderer to be removed before running layout. In such cases we don't have to try to
         // run invalidation only remove it from layout tree.
+        // One exception is for RenderMarquee, which may have run preferred width computation without performing layout.
         if (auto* inlineLayout = container->inlineLayout())
             inlineLayout->removedFromTree(*renderer.parent(), renderer);
         return;

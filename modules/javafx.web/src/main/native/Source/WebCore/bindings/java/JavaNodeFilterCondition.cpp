@@ -27,10 +27,13 @@
 
 #pragma once
 
-#if USE(SKIA)
-
-#include "FilterEffectApplier.h"
-#include <wtf/TZoneMalloc.h>
+#if USE(SKIA) && !OS(ANDROID) && !PLATFORM(WIN)
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/core/SkFontStyle.h>
+#include <skia/core/SkTypeface.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+#include <wtf/HashMap.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 

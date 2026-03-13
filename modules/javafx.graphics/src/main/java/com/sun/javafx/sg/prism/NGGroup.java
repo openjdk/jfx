@@ -36,27 +36,17 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Blend;
-import com.sun.scenario.effect.Blend.Mode;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.ImageData;
-import com.sun.scenario.effect.impl.prism.PrDrawable;
-import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import javafx.scene.Node;
 
-/**
- */
 public class NGGroup extends NGNode {
-    /**
-     * The blend mode to use with this group.
-     */
-    private Blend.Mode blendMode = Blend.Mode.SRC_OVER;
+
     // NOTE I need a special array list here where all nodes added can have
     // their parent set correctly, and all nodes removed have it cleared correctly.
     // Actually, if a node is removed, I probably don't have to worry about
     // clearing it because as soon as it is added to another parent it will be set
     // and there is no magic listener foo going on here.
-    private List<NGNode> children = new ArrayList<>(1);
-    private List<NGNode> unmod = Collections.unmodifiableList(children);
+    private final List<NGNode> children = new ArrayList<>(1);
+    private final List<NGNode> unmod = Collections.unmodifiableList(children);
     private List<NGNode> removed;
 
     /**
@@ -73,12 +63,6 @@ public class NGGroup extends NGNode {
      * Which means it looks like this: 00010101010101010101010101010101 (first bit for sign)
      */
     private static final int REGION_INTERSECTS_MASK = 0x15555555;
-
-    /***************************************************************************
-     *                                                                         *
-     * Implementation of the PGGroup interface                                 *
-     *                                                                         *
-     **************************************************************************/
 
     /**
      * Gets an unmodifiable list of the current children on this group
@@ -205,29 +189,9 @@ public class NGGroup extends NGNode {
         visualsChanged();
     }
 
-    /**
-     * Set by the FX scene graph.
-     * @param blendMode cannot be null
-     */
-    public void setBlendMode(Object blendMode) {
-        // Verify the arguments
-        if (blendMode == null) {
-            throw new IllegalArgumentException("Mode must be non-null");
-        }
-        // If the blend mode has changed, mark this node as dirty and
-        // invalidate its cache
-        if (this.blendMode != blendMode) {
-            this.blendMode = (Blend.Mode)blendMode;
-            visualsChanged();
-        }
-    }
-
     @Override
     public void renderForcedContent(Graphics gOptional) {
         List<NGNode> orderedChildren = getOrderedChildren();
-        if (orderedChildren == null) {
-            return;
-        }
         for (int i = 0; i < orderedChildren.size(); i++) {
             orderedChildren.get(i).renderForcedContent(gOptional);
         }
@@ -236,9 +200,6 @@ public class NGGroup extends NGNode {
     @Override
     protected void renderContent(Graphics g) {
         List<NGNode> orderedChildren = getOrderedChildren();
-        if (orderedChildren == null) {
-            return;
-        }
 
         NodePath renderRoot = g.getRenderRoot();
         int startPos = 0;
@@ -251,82 +212,25 @@ public class NGGroup extends NGNode {
             }
         }
 
-        if (blendMode == Blend.Mode.SRC_OVER ||
-                orderedChildren.size() < 2) {  // Blend modes only work "between" siblings
-
-            // Guard against case where renderRoot is not part of orderedChildren
-            for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
-                NGNode child;
-                try {
-                    child = orderedChildren.get(i);
-                } catch (Exception e) {
-                    child = null;
-                }
-                // minimal protection against concurrent update of the list.
-                if (child != null) {
-                    child.render(g);
-                }
-            }
-            return;
-        }
-
-        Blend b = new Blend(blendMode, null, null);
-        FilterContext fctx = getFilterContext(g);
-
-        ImageData bot = null;
-        boolean idValid = true;
-        do {
-            // TODO: probably don't need to wrap the transform here... (JDK-8092196)
-            BaseTransform transform = g.getTransformNoClone().copy();
-            if (bot != null) {
-                bot.unref();
-                bot = null;
-            }
-            Rectangle rclip = PrEffectHelper.getGraphicsClipNoClone(g);
-            for (int i = startPos; i < orderedChildren.size(); i++) {
-                NGNode child = orderedChildren.get(i);
-                ImageData top = NodeEffectInput.
-                    getImageDataForNode(fctx, child, false, transform, rclip);
-                if (bot == null) {
-                    bot = top;
-                } else {
-                    ImageData newbot =
-                        b.filterImageDatas(fctx, transform, rclip, null, bot, top);
-                    bot.unref();
-                    top.unref();
-                    bot = newbot;
-                }
-            }
-            if (bot != null && (idValid = bot.validate(fctx))) {
-                Rectangle r = bot.getUntransformedBounds();
-                PrDrawable botimg = (PrDrawable)bot.getUntransformedImage();
-                g.setTransform(bot.getTransform());
-                g.drawTexture(botimg.getTextureObject(),
-                        r.x, r.y, r.width, r.height);
-            }
-        } while (bot == null || !idValid);
-
-        if (bot != null) {
-            bot.unref();
+        // Guard against case where renderRoot is not part of orderedChildren
+        for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
+            NGNode child = orderedChildren.get(i);
+            child.render(g);
         }
     }
 
     @Override
     protected boolean hasOverlappingContents() {
-        if (blendMode != Mode.SRC_OVER) {
-            // All other modes are flattened so there are no overlapping issues
-            return false;
-        }
         List<NGNode> orderedChildren = getOrderedChildren();
-        int n = (orderedChildren == null ? 0 : orderedChildren.size());
+        int n = orderedChildren.size();
         if (n == 1) {
             return orderedChildren.get(0).hasOverlappingContents();
         }
-        return (n != 0);
+        return (n > 0);
     }
 
     public boolean isEmpty() {
-        return children == null || children.isEmpty();
+        return children.isEmpty();
     }
 
     @Override
@@ -405,7 +309,7 @@ public class NGGroup extends NGNode {
 
         // We need to keep a reference to the result of calling computeRenderRoot on each child
         RenderRootResult result = RenderRootResult.NO_RENDER_ROOT;
-        // True if every child _after_ the the found render root is clean
+        // True if every child _after_ the found render root is clean
         boolean followingChildrenClean = true;
         // Iterate over all children, looking for a render root.
         List<NGNode> orderedChildren = getOrderedChildren();

@@ -3326,7 +3326,8 @@ StackMap BBQJIT::makeStackMap(const ControlData& data, Stack& enclosingStack)
     }
 
     RELEASE_ASSERT(stackMapIndex == numElements);
-        m_osrEntryScratchBufferSize = std::max(m_osrEntryScratchBufferSize, numElements + BBQCallee::extraOSRValuesForLoopIndex);
+    unsigned bufferSize = Context::scratchBufferSlotsPerValue(m_callee.savedFPWidth()) * (BBQCallee::extraOSRValuesForLoopIndex + numElements);
+    m_osrEntryScratchBufferSize = std::max(m_osrEntryScratchBufferSize, bufferSize);
         return stackMap;
 }
 

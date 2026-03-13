@@ -2285,7 +2285,7 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     {
     ConcurrentJSLocker locker(m_lock);
     forEachStructureStubInfo([&](StructureStubInfo& stubInfo) {
-        stubInfo.reset(locker, this);
+            stubInfo.deref();
         return IterationStatus::Continue;
     });
     }

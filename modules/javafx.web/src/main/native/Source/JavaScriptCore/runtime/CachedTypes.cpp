@@ -2258,6 +2258,7 @@ ALWAYS_INLINE UnlinkedCodeBlock::UnlinkedCodeBlock(Decoder& decoder, Structure* 
     , m_binaryArithProfiles(cachedCodeBlock.numBinaryArithProfiles())
     , m_unaryArithProfiles(cachedCodeBlock.numUnaryArithProfiles())
 {
+    m_llintExecuteCounter.setNewThreshold(thresholdForJIT(Options::thresholdForJITAfterWarmUp()));
 }
 
 template<typename CodeBlockType>

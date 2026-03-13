@@ -307,6 +307,9 @@ RefPtr<CacheStorageConnection> WorkerMessagingProxy::createCacheStorageConnectio
         return nullptr;
 
     RefPtr document = dynamicDowncast<Document>(*m_scriptExecutionContext);
+    if (!document)
+        document = Document::allDocumentsMap().get(m_loaderContextIdentifier);
+
     ASSERT(document);
     if (!document || !document->page())
         return nullptr;
@@ -317,6 +320,9 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> WorkerMessagingProxy::createRTCDat
 {
     ASSERT(isMainThread());
     RefPtr document = dynamicDowncast<Document>(*m_scriptExecutionContext);
+    if (!document)
+        document = Document::allDocumentsMap().get(m_loaderContextIdentifier);
+
     ASSERT(document);
     if (!document || !document->page())
         return nullptr;

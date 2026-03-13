@@ -30,6 +30,7 @@ import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.media.MediaQueryList;
 import com.sun.javafx.css.media.MediaRule;
 import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.parser.CssColorParser;
 import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
@@ -39,6 +40,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.media.MediaQueryParser;
+import com.sun.javafx.css.parser.CssNumberParser;
 import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
@@ -554,34 +556,8 @@ final public class CssParser {
 
     // Assumes string is not a lookup!
     private ParsedValueImpl<Color,Color> colorValueOfString(String str) {
-
-        if(str.startsWith("#") || str.startsWith("0x")) {
-
-            double a = 1.0f;
-            String c = str;
-            final int prefixLength = (str.startsWith("#")) ? 1 : 2;
-
-            final int len = c.length();
-            // rgba or rrggbbaa - trim off the alpha
-            if ( (len-prefixLength) == 4) {
-                a = Integer.parseInt(c.substring(len-1), 16) / 15.0f;
-                c = c.substring(0,len-1);
-            } else if ((len-prefixLength) == 8) {
-                a = Integer.parseInt(c.substring(len-2), 16) / 255.0f;
-                c = c.substring(0,len-2);
-            }
-            // else color was rgb or rrggbb (no alpha)
-            return new ParsedValueImpl<>(Color.web(c,a), null);
-        }
-
-        try {
-            return new ParsedValueImpl<>(Color.web(str), null);
-        } catch (final IllegalArgumentException e) {
-        } catch (final NullPointerException e) {
-        }
-
-        // not a color
-        return null;
+        Color color = CssColorParser.tryParseColor(str);
+        return color != null ? new ParsedValueImpl<>(color, null) : null;
     }
 
     private String stripQuotes(String string) {
@@ -636,12 +612,24 @@ final public class CssParser {
 
     private static Size sizeImpl(final Token token) {
         SizeUnits units = SizeUnits.PX;
-        // Amount to trim off the suffix, if any. Most are 2 chars.
-        int trim = 2;
-        final String sval = token.getText().trim();
-        final int len = sval.length();
-        final int ttype = token.getType();
-        switch (ttype) {
+        int trim = 2; // Amount to trim off the suffix, if any. Most are 2 chars.
+        String sval = token.getText();
+        int start = 0;
+        int end = sval.length();
+
+        while (start < end && Character.isWhitespace(sval.charAt(start))) {
+            start++;
+        }
+
+        while (end > start && Character.isWhitespace(sval.charAt(end - 1))) {
+            end--;
+        }
+
+        if (start >= end) {
+            return null;
+        }
+
+        switch (token.getType()) {
         case CssLexer.NUMBER:
             units = SizeUnits.PX;
             trim = 0;
@@ -702,7 +690,7 @@ final public class CssParser {
         }
         // TODO: Handle NumberFormatException
         return new Size(
-            Double.parseDouble(sval.substring(0,len-trim)),
+            CssNumberParser.parseDouble(sval, start, end - trim),
             units
         );
     }
@@ -720,16 +708,30 @@ final public class CssParser {
     }
 
     private Size time(Token token) throws ParseException {
+        String sval = token.getText();
+        int start = 0;
+        int end = sval.length();
+
+        while (start < end && Character.isWhitespace(sval.charAt(start))) {
+            start++;
+        }
+
+        while (end > start && Character.isWhitespace(sval.charAt(end - 1))) {
+            end--;
+        }
+
+        if (start >= end) {
+            return null;
+        }
+
         return switch (token.getType()) {
             case CssLexer.SECONDS -> {
-                String sval = token.getText().trim();
-                double v = Double.parseDouble(sval.substring(0, sval.length() - 1).trim());
+                double v = CssNumberParser.parseDouble(sval, start, end - 1);
                 yield new Size(v, SizeUnits.S);
             }
 
             case CssLexer.MS -> {
-                String sval = token.getText().trim();
-                double v = Double.parseDouble(sval.substring(0, sval.length() - 2).trim());
+                double v = CssNumberParser.parseDouble(sval, start, end - 2);
                 yield new Size(v, SizeUnits.MS);
             }
 
@@ -1182,17 +1184,17 @@ final public class CssParser {
         double gval = 0;
         double bval = 0;
         if (argType == CssLexer.NUMBER) {
-            rval = clamp(0.0f, Double.parseDouble(rtext) / 255.0f, 1.0f);
-            gval = clamp(0.0f, Double.parseDouble(gtext) / 255.0f, 1.0f);
-            bval = clamp(0.0f, Double.parseDouble(btext) / 255.0f, 1.0f);
+            rval = clamp(0.0f, CssNumberParser.parseDouble(rtext) / 255.0f, 1.0f);
+            gval = clamp(0.0f, CssNumberParser.parseDouble(gtext) / 255.0f, 1.0f);
+            bval = clamp(0.0f, CssNumberParser.parseDouble(btext) / 255.0f, 1.0f);
         } else {
-            rval = clamp(0.0f, Double.parseDouble(rtext.substring(0,rtext.length()-1)) / 100.0f, 1.0f);
-            gval = clamp(0.0f, Double.parseDouble(gtext.substring(0,gtext.length()-1)) / 100.0f, 1.0f);
-            bval = clamp(0.0f, Double.parseDouble(btext.substring(0,btext.length()-1)) / 100.0f, 1.0f);
+            rval = clamp(0.0f, CssNumberParser.parseDouble(rtext, 0, rtext.length() - 1) / 100.0f, 1.0f);
+            gval = clamp(0.0f, CssNumberParser.parseDouble(gtext, 0, gtext.length() - 1) / 100.0f, 1.0f);
+            bval = clamp(0.0f, CssNumberParser.parseDouble(btext, 0, btext.length() - 1) / 100.0f, 1.0f);
         }
 
         final String atext = (atok != null) ? atok.getText() : null;
-        final double aval =  (atext != null) ? clamp(0.0f, Double.parseDouble(atext), 1.0f) : 1.0;
+        final double aval = (atext != null) ? clamp(0.0f, CssNumberParser.parseDouble(atext), 1.0f) : 1.0;
 
         return new ParsedValueImpl<Color,Color>(Color.color(rval,gval,bval,aval), null);
 
@@ -4122,7 +4124,7 @@ final public class CssParser {
                     if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
                         error(arg != null ? arg : term,  "Expected \'<number>\'");
                     } else {
-                        args[j] = Double.parseDouble(arg.token.getText());
+                        args[j] = CssNumberParser.parseDouble(arg.token.getText());
                     }
 
                     if (j % 2 == 0 && (args[j] < 0 || args[j] > 1)) {
@@ -4170,7 +4172,7 @@ final public class CssParser {
                     if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
                         error(arg, "Expected \'<number>\'");
                     } else {
-                        outputValue = Double.parseDouble(arg.token.getText());
+                        outputValue = CssNumberParser.parseDouble(arg.token.getText());
                     }
 
                     // 0, 1, or 2 <percentage>s
