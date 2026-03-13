@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -221,21 +221,44 @@ extern NSSize maxScreenDimensions;
     }
 
     NSUInteger mask = [self->nsWindow styleMask];
+    BOOL isPopupOrUtility = (mask & NSWindowStyleMaskUtilityWindow) != 0 || (mask & NSWindowStyleMaskNonactivatingPanel) != 0;
 
     if (resizable) {
         mask |= NSWindowStyleMaskResizable;
         [self->nsWindow setStyleMask: mask];
-        [self->nsWindow setShowsResizeIndicator:YES];
 
         NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
         [zoomButton setEnabled:YES];
+
+        // When window becomes resizable, ownerless window gets the Full Screen Toggle control
+        if (!self->owner && !isPopupOrUtility) {
+            NSWindowCollectionBehavior behavior = [self->nsWindow collectionBehavior];
+            behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+            [self->nsWindow setCollectionBehavior: behavior];
+        }
     } else {
+        // Disable zoom button immediately to provide visual feedback
+        [[self->nsWindow standardWindowButton:NSWindowZoomButton] setEnabled:NO];
+
+        // If window is currently in full screen, exit fullscreen mode immediately
+        BOOL isInFullScreen = (mask & NSWindowStyleMaskFullScreen) != 0;
+        if (isInFullScreen) {
+            [self->nsWindow toggleFullScreen:nil];
+            // Defer style mask changes to windowDidExitFullScreen, when fullscreen exit animation completes
+            return;
+        }
+
         mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
         [self->nsWindow setStyleMask: mask];
-        [self->nsWindow setShowsResizeIndicator:NO];
 
-        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-        [zoomButton setEnabled:NO];
+        // When window becomes non-resizable, remove behavior to prevent access to fullscreen/Mission Control, unless
+        // is is a borderless window
+        BOOL isTitled = (mask & NSWindowStyleMaskTitled) != 0;
+        if (!self->owner && !isPopupOrUtility && isTitled) {
+            NSWindowCollectionBehavior behavior = [self->nsWindow collectionBehavior];
+            behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
+            [self->nsWindow setCollectionBehavior: behavior];
+        }
     }
 }
 
