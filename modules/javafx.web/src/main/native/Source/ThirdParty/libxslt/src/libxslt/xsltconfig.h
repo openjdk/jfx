@@ -41,7 +41,7 @@ extern "C" {
  *
  * extra version information, used to show a Git commit description
  */
-#define	LIBXSLT_VERSION_EXTRA ""
+#define LIBXSLT_VERSION_EXTRA ""
 
 /**
  * WITH_XSLT_DEBUG:
@@ -72,8 +72,8 @@ extern "C" {
 #endif
 #endif
 
-#ifdef	XSLT_NEED_TRIO
-#define	TRIO_REPLACE_STDIO
+#ifdef  XSLT_NEED_TRIO
+#define TRIO_REPLACE_STDIO
 #endif
 
 /**
