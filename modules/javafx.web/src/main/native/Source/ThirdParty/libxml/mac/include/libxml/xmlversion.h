@@ -15,21 +15,21 @@
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.14.6"
+#define LIBXML_DOTTED_VERSION "2.15.2"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION 21406
+#define LIBXML_VERSION 21502
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXML_VERSION_STRING "21406"
+#define LIBXML_VERSION_STRING "21502"
 
 /**
  * LIBXML_VERSION_EXTRA:
@@ -44,7 +44,7 @@
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(21406);
+#define LIBXML_TEST_VERSION xmlCheckVersion(21502);
 
 /**
  * LIBXML_THREAD_ENABLED:
@@ -125,13 +125,11 @@
 #define LIBXML_SAX1_ENABLED
 #endif
 
-/**
- * LIBXML_HTTP_ENABLED:
- *
- * Whether the HTTP support is configured in
- */
 #if 0
-#define LIBXML_HTTP_ENABLED
+/**
+ * HTTP support was removed in 2.15
+ */
+#define LIBXML_HTTP_STUBS_ENABLED
 #endif
 
 /**
@@ -305,15 +303,6 @@
  */
 #if 0
 #define LIBXML_ZLIB_ENABLED
-#endif
-
-/**
- * LIBXML_LZMA_ENABLED:
- *
- * Whether the Lzma support is compiled in
- */
-#if 0
-#define LIBXML_LZMA_ENABLED
 #endif
 
 #include <libxml/xmlexports.h>
