@@ -1,4 +1,4 @@
-## xmlsoft.org: libxslt v1.1.43
+## xmlsoft.org: libxslt v1.1.45
 
 ### libxslt License
 ```
@@ -146,5 +146,6 @@ Roumen Petrov <bugtrack@roumenpetrov.info>
 Stefan Kost <ensonic@users.sf.net>
 Tomasz Kłoczko <kloczek@src.gnome.org>
 Chris Evans <cevans@chromium.org>
+Iván Chavero <ichavero@chavero.com.mx>
 
 ```
