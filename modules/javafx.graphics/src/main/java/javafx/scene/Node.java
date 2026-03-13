@@ -2856,7 +2856,7 @@ public abstract sealed class Node
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
+                    if (p != null && !p.inLayoutChildren()) {
                         if (isManaged()) {
                             // Force its parent to fix the layout since it is a managed child.
                             p.requestLayout(true);
@@ -2930,7 +2930,7 @@ public abstract sealed class Node
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
+                    if (p != null && !p.inLayoutChildren()) {
                         if (isManaged()) {
                             // Force its parent to fix the layout since it is a managed child.
                             p.requestLayout(true);
