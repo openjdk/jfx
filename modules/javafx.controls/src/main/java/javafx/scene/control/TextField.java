@@ -31,7 +31,6 @@ import java.util.List;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
@@ -197,25 +196,18 @@ public class TextField extends TextInputControl {
      *
      * The action handler is normally called when the user types the ENTER key.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
-        @Override
-        protected void invalidated() {
-            setEventHandler(ActionEvent.ACTION, get());
-        }
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
+        return (ObjectProperty<EventHandler<ActionEvent>>) (ObjectProperty<?>)
+                eventHandlerProperty(ActionEvent.ACTION, "onAction");
+    }
 
-        @Override
-        public Object getBean() {
-            return TextField.this;
-        }
+    public final EventHandler<ActionEvent> getOnAction() {
+        return (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
+    }
 
-        @Override
-        public String getName() {
-            return "onAction";
-        }
-    };
-    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
-    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+    public final void setOnAction(EventHandler<ActionEvent> value) {
+        setEventHandler(ActionEvent.ACTION, value);
+    }
 
     /**
      * Specifies how the text should be aligned when there is empty

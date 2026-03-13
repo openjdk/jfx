@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
@@ -120,24 +119,18 @@ public abstract class ButtonBase extends Labeled {
      * @return the property to represent the button's action, which is invoked
      * whenever the button is fired
      */
-    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
-    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
-    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
-        @Override protected void invalidated() {
-            setEventHandler(ActionEvent.ACTION, get());
-        }
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
+        return (ObjectProperty<EventHandler<ActionEvent>>) (ObjectProperty<?>)
+                eventHandlerProperty(ActionEvent.ACTION, "onAction");
+    }
 
-        @Override
-        public Object getBean() {
-            return ButtonBase.this;
-        }
+    public final EventHandler<ActionEvent> getOnAction() {
+        return (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
+    }
 
-        @Override
-        public String getName() {
-            return "onAction";
-        }
-    };
+    public final void setOnAction(EventHandler<ActionEvent> value) {
+        setEventHandler(ActionEvent.ACTION, value);
+    }
 
 
     /* *************************************************************************

@@ -26,8 +26,11 @@
 package com.sun.javafx.event;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -39,7 +42,8 @@ import javafx.event.EventType;
  */
 public class EventHandlerManager extends BasicEventDispatcher {
     private final Map<EventType<? extends Event>,
-                      CompositeEventHandler<? extends Event>> eventHandlerMap;
+            CompositeEventHandler<? extends Event>> eventHandlerMap;
+    private Map<EventType<?>, EventHandlerProperty<?>> eventHandlerProperties;
 
     private final Object eventSource;
 
@@ -141,13 +145,23 @@ public class EventHandlerManager extends BasicEventDispatcher {
      * @param eventType the event type to associate with the given eventHandler
      * @param eventHandler the handler to register, or null to unregister
      * @throws NullPointerException if the event type is null
+     * @throws RuntimeException if the property for the event type is already bound
      */
     public final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         validateEventType(eventType);
 
-        CompositeEventHandler<T> compositeEventHandler =
+        if (eventHandlerProperties != null) {
+            EventHandlerProperty<T> property = (EventHandlerProperty<T>)
+                    eventHandlerProperties.get(eventType);
+            if (property != null) {
+                property.set(eventHandler);
+                return;
+            }
+        }
+
+       CompositeEventHandler<T> compositeEventHandler =
                 (CompositeEventHandler<T>) eventHandlerMap.get(eventType);
 
         if (compositeEventHandler == null) {
@@ -169,6 +183,60 @@ public class EventHandlerManager extends BasicEventDispatcher {
         return (compositeEventHandler != null)
                        ? compositeEventHandler.getEventHandler()
                        : null;
+    }
+
+    public final <T extends Event> ObjectProperty<EventHandler<? super T>> eventHandlerProperty(
+            final EventType<T> eventType,
+            final String name) {
+        validateEventType(eventType);
+
+        if (eventHandlerProperties == null) {
+            eventHandlerProperties = new IdentityHashMap<>();
+        }
+
+        EventHandlerProperty<T> property = (EventHandlerProperty<T>)
+                eventHandlerProperties.get(eventType);
+
+        if (property == null) {
+            property = new EventHandlerProperty<>(name, createGetCompositeEventHandler(eventType));
+            eventHandlerProperties.put(eventType, property);
+        } else {
+            if (!name.equals(property.getName())) {
+                throw new IllegalArgumentException("Property name mismatch: "
+                        + name + " != " + property.getName());
+            }
+        }
+
+        return property;
+    }
+
+    private final class EventHandlerProperty<T extends Event>
+            extends ObjectPropertyBase<EventHandler<? super T>> {
+
+        private final String name;
+        private final CompositeEventHandler<T> compositeEventHandler;
+
+        private EventHandlerProperty(
+                final String name,
+                final CompositeEventHandler<T> compositeEventHandler) {
+            this.name = name;
+            this.compositeEventHandler = compositeEventHandler;
+        }
+
+        @Override
+        public Object getBean() {
+            return eventSource;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        protected void invalidated() {
+            compositeEventHandler.setEventHandler(get());
+        }
     }
 
     @Override
