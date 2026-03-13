@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,18 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.function.DoubleSupplier;
 
-import javafx.scene.input.KeyCombination;
+import javafx.application.ColorScheme;
+import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.scene.input.KeyCombination;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
@@ -44,14 +50,14 @@ import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.stage.StageUtils;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
+import com.sun.javafx.util.Utils;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
-import java.util.Locale;
-import java.util.ResourceBundle;
 
 public class WindowStage extends GlassStage {
 
@@ -66,7 +72,6 @@ public class WindowStage extends GlassStage {
     private OverlayWarning warning = null;
     private boolean rtl = false;
     private boolean transparent = false;
-    private boolean darkFrame = false;
     private boolean isPrimaryStage = false;
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
@@ -86,15 +91,31 @@ public class WindowStage extends GlassStage {
         ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
                                  ".QuantumMessagesBundle", LOCALE);
 
-    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
-                       TKStage owner, boolean darkFrame) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
-        this.darkFrame = darkFrame;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
+
+            fxStage.sceneProperty()
+                .map(Scene::getPreferences)
+                .flatMap(Scene.Preferences::colorSchemeProperty)
+                .subscribe(colorScheme -> {
+                    QuantumToolkit.getToolkit().checkFxUserThread();
+                    if (platformWindow != null) {
+                        platformWindow.setDarkFrame(colorScheme == ColorScheme.DARK);
+                        updatePlatformWindowBackground();
+                    }
+                });
+
+            fxStage.sceneProperty()
+                .flatMap(Scene::fillProperty)
+                .subscribe(() -> {
+                    QuantumToolkit.getToolkit().checkFxUserThread();
+                    updatePlatformWindowBackground();
+                });
         } else {
             fxStage = null;
         }
@@ -179,7 +200,7 @@ public class WindowStage extends GlassStage {
                 windowMask |= Window.MODAL;
             }
 
-            if (darkFrame) {
+            if (fxStage != null && StageUtils.isDarkFrame(fxStage)) {
                 windowMask |= Window.DARK_FRAME;
             }
 
@@ -198,37 +219,16 @@ public class WindowStage extends GlassStage {
                 platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
             }
 
-            if (fxStage != null && fxStage.getScene() != null) {
-                javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
-                if (paint instanceof javafx.scene.paint.Color) {
-                    javafx.scene.paint.Color color = (javafx.scene.paint.Color) paint;
-                    platformWindow.setBackground((float) color.getRed(), (float) color.getGreen(), (float) color.getBlue());
-                } else if (paint instanceof javafx.scene.paint.LinearGradient) {
-                    javafx.scene.paint.LinearGradient lgradient = (javafx.scene.paint.LinearGradient) paint;
-                    computeAndSetBackground(lgradient.getStops());
-                } else if (paint instanceof javafx.scene.paint.RadialGradient) {
-                    javafx.scene.paint.RadialGradient rgradient = (javafx.scene.paint.RadialGradient) paint;
-                    computeAndSetBackground(rgradient.getStops());
-                }
-            }
-
+            updatePlatformWindowBackground();
         }
+
         platformWindows.put(platformWindow, this);
     }
 
-    private void computeAndSetBackground(List<javafx.scene.paint.Stop> stops) {
-        if (stops.size() == 1) {
-            javafx.scene.paint.Color color = stops.get(0).getColor();
-            platformWindow.setBackground((float) color.getRed(),
-                    (float) color.getGreen(), (float) color.getBlue());
-        } else if (stops.size() > 1) {
-            // A simple attempt to find a reasonable average color that is
-            // within the stops arrange.
-            javafx.scene.paint.Color color = stops.get(0).getColor();
-            javafx.scene.paint.Color color2 = stops.get(stops.size() - 1).getColor();
-            platformWindow.setBackground((float) ((color.getRed() + color2.getRed()) / 2.0),
-                    (float) ((color.getGreen() + color2.getGreen()) / 2.0),
-                    (float) ((color.getBlue() + color2.getBlue()) / 2.0));
+    private void updatePlatformWindowBackground() {
+        if (fxStage != null && platformWindow != null) {
+            Color fill = StageUtils.calculateRepresentativeColor(fxStage);
+            platformWindow.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
         }
     }
 
@@ -908,15 +908,6 @@ public class WindowStage extends GlassStage {
     public void setPrefHeaderButtonHeight(double height) {
         if (platformWindow != null) {
             platformWindow.setPrefHeaderButtonHeight(height);
-        }
-    }
-
-    @Override
-    public void setDarkFrame(boolean value) {
-        darkFrame = value;
-
-        if (platformWindow != null) {
-            platformWindow.setDarkFrame(value);
         }
     }
 }

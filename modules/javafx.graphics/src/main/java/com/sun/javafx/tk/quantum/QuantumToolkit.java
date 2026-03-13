@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -614,9 +614,9 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
+                                           Modality modality, TKStage owner, boolean rtl) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -699,7 +699,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;

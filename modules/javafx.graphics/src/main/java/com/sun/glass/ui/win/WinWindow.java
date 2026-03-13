@@ -270,15 +270,8 @@ class WinWindow extends Window {
         super.notifyResize(type, width, height);
     }
 
-    native protected boolean _setBackground2(long ptr, float r, float g, float b);
     @Override
-    protected boolean _setBackground(long ptr, float r, float g, float b) {
-        // Revert to old behavior for standalone application on Windows as the
-        // call to setBackground causes flickering when resizing window.
-        // For more details see JDK-8171852: JavaFX Stage flickers on resize on
-        // Windows platforms
-        return true;
-    }
+    native protected boolean _setBackground(long ptr, float r, float g, float b);
 
     private native void _setDarkFrame(long ptr, boolean value);
 

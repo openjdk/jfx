@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,7 @@ package javafx.stage;
 
 import java.util.HashMap;
 
-import javafx.application.ColorScheme;
 import javafx.application.Platform;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -42,7 +40,6 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -824,7 +821,6 @@ public class Window implements EventTarget {
     public final ReadOnlyObjectProperty<Scene> sceneProperty() { return scene.getReadOnlyProperty(); }
 
     private final class SceneModel extends ReadOnlyObjectWrapper<Scene> {
-        private final ChangeListener<ColorScheme> colorSchemeListener = this::updateDarkFrame;
         private Scene oldScene;
 
         @Override protected void invalidated() {
@@ -839,7 +835,6 @@ public class Window implements EventTarget {
             updatePeerScene(null);
             // Second, dispose scene peer
             if (oldScene != null) {
-                oldScene.getPreferences().colorSchemeProperty().removeListener(colorSchemeListener);
                 SceneHelper.setWindow(oldScene, null);
                 StyleManager.getInstance().forget(oldScene);
             }
@@ -869,8 +864,6 @@ public class Window implements EventTarget {
                         adjustSize(true);
                     }
                 }
-
-                newScene.getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
             }
 
             oldScene = newScene;
@@ -890,13 +883,6 @@ public class Window implements EventTarget {
             if (peer != null) {
                 // Set scene impl on stage impl
                 peer.setScene(tkScene);
-            }
-        }
-
-        private void updateDarkFrame(Observable observable, ColorScheme oldValue, ColorScheme newValue) {
-            if (peer != null) {
-                Toolkit.getToolkit().checkFxUserThread();
-                peer.setDarkFrame(newValue == ColorScheme.DARK);
             }
         }
     }
