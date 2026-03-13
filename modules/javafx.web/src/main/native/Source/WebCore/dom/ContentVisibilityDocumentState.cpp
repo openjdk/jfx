@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ContentVisibilityDocumentState.h"
 
+#include "ContainerNodeInlines.h"
 #include "ContentVisibilityAutoStateChangeEvent.h"
 #include "DocumentInlines.h"
 #include "DocumentTimeline.h"
@@ -33,6 +34,7 @@
 #include "FrameSelection.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
+#include "Logging.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
 #include "RenderStyleInlines.h"
@@ -40,6 +42,7 @@
 #include "StyleOriginatedAnimation.h"
 #include "VisibleSelection.h"
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -60,7 +63,7 @@ private:
 
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
+    CallbackResult<void> invoke(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
 
@@ -71,9 +74,9 @@ private:
         return { };
     }
 
-    CallbackResult<void> handleEventRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
+    CallbackResult<void> invokeRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
     {
-        return handleEvent(thisObserver, entries, observer);
+        return invoke(thisObserver, entries, observer);
     }
 };
 
@@ -100,8 +103,9 @@ IntersectionObserver* ContentVisibilityDocumentState::intersectionObserver(Docum
 {
     if (!m_observer) {
         auto callback = ContentVisibilityIntersectionObserverCallback::create(document);
-        IntersectionObserver::Init options { &document, { }, { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        IntersectionObserver::Init options { &document, { }, { }, { } };
+        auto includeObscuredInsets = document.settings().contentInsetBackgroundFillEnabled() ? IncludeObscuredInsets::Yes : IncludeObscuredInsets::No;
+        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options), includeObscuredInsets);
         if (observer.hasException())
             return nullptr;
         m_observer = observer.releaseReturnValue();
@@ -115,12 +119,14 @@ bool ContentVisibilityDocumentState::checkRelevancyOfContentVisibilityElement(El
     OptionSet<ContentRelevancy> newRelevancy;
     if (oldRelevancy)
         newRelevancy = *oldRelevancy;
+
     auto setRelevancyValue = [&](ContentRelevancy reason, bool value) {
                 if (value)
                     newRelevancy.add(reason);
                 else
                     newRelevancy.remove(reason);
             };
+
     if (relevancyToCheck.contains(ContentRelevancy::OnScreen)) {
         auto viewportProximityIterator = m_elementViewportProximities.find(target);
         auto viewportProximity = ViewportProximity::Far;
@@ -152,6 +158,8 @@ bool ContentVisibilityDocumentState::checkRelevancyOfContentVisibilityElement(El
 
     if (oldRelevancy && oldRelevancy == newRelevancy)
         return false;
+
+    LOG_WITH_STREAM(ContentVisibility, stream << "ContentVisibilityDocumentState::checkRelevancyOfContentVisibilityElement - relevancy of " << target << " changed from " << oldRelevancy << " to " << newRelevancy);
 
     auto wasSkippedContent = target.isRelevantToUser() ? IsSkippedContent::No : IsSkippedContent::Yes;
     target.setContentRelevancy(newRelevancy);
@@ -214,7 +222,7 @@ void ContentVisibilityDocumentState::updateContentRelevancyForScrollIfNeeded(con
     auto findSkippedContentRoot = [](const Element& element) -> RefPtr<const Element> {
         RefPtr<const Element> found;
         if (element.renderer() && element.renderer()->isSkippedContent()) {
-            for (RefPtr candidate = &element; candidate; candidate = candidate->parentElementInComposedTree()) {
+            for (RefPtr candidate = element; candidate; candidate = candidate->parentElementInComposedTree()) {
                 if (candidate->renderer() && candidate->renderStyle()->contentVisibility() == ContentVisibility::Auto)
                     found = candidate;
             }
@@ -255,7 +263,7 @@ void ContentVisibilityDocumentState::updateAnimations(const Element& element, Is
         if (!styleOriginatedAnimation)
             continue;
         auto owningElement = styleOriginatedAnimation->owningElement();
-        if (!owningElement || !owningElement->element.isDescendantOrShadowDescendantOf(&element))
+        if (!owningElement || !owningElement->element.isShadowIncludingDescendantOf(&element))
             continue;
 
         if (RefPtr timeline = styleOriginatedAnimation->timeline())

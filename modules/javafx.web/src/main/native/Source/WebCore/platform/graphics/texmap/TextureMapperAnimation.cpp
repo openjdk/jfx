@@ -22,6 +22,7 @@
 
 #if USE(TEXTURE_MAPPER)
 
+#include "AnimationUtilities.h"
 #include "LayoutSize.h"
 #include "TranslateTransformOperation.h"
 #include <wtf/Scope.h>
@@ -155,7 +156,7 @@ static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& orig
 
     // Currently translation operations are the only transform operations that store a non-fixed
     // Length. Some Lengths, in particular those for calc() operations, are not thread-safe or
-    // multiprocess safe, because they maintain indices into a shared UncheckedKeyHashMap of CalculationValues.
+    // multiprocess safe, because they maintain indices into a shared HashMap of CalculationValues.
     // This code converts all possible unsafe Length parameters to fixed Lengths, which are safe to
     // use in other threads and across IPC channels.
     KeyframeValueList keyframes = originalKeyframes;

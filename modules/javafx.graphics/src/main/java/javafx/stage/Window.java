@@ -1082,7 +1082,30 @@ public class Window implements EventTarget {
                         SceneHelper.preferredSize(getScene());
                     }
 
-                    updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
+                    /*
+                     * Based on the position of the Window, find out on what Screen
+                     * it is located to correctly set the output scales. The correct
+                     * output scale is required for the scene to be sized properly
+                     * as there may otherwise be slight differences in size depending
+                     * on the scale (which can cause controls to be cut-off and show
+                     * ellipsis for example).
+                     *
+                     * We don't apply the bounds to the peer just yet, as we need it
+                     * to trigger a width/height change to the Scene **after** we
+                     * set the Scene to its preferred size. Setting the size on the
+                     * scene cannot be skipped when both dimensions are set explicitly
+                     * as PopupWindow seems to be relying on it.
+                     */
+
+                    Screen windowScreen = Utils.getScreenForRectangle(new Rectangle2D(
+                        Double.isNaN(getX()) ? 0 : getX(),
+                        Double.isNaN(getY()) ? 0 : getY(),
+                        Double.isNaN(getWidth()) ? 0 : getWidth(),
+                        Double.isNaN(getHeight()) ? 0 : getHeight()
+                    ));
+
+                    updateOutputScales(windowScreen.getOutputScaleX(), windowScreen.getOutputScaleY());
+
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
                     // then the lazy render scale properties might think

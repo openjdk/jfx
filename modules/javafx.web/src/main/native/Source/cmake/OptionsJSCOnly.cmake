@@ -20,8 +20,7 @@ WEBKIT_OPTION_DEFINE(ENABLE_STATIC_JSC "Whether to build JavaScriptCore as a sta
 WEBKIT_OPTION_DEFINE(USE_LIBBACKTRACE "Whether to enable usage of libbacktrace." PUBLIC OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_REMOTE_INSPECTOR PRIVATE OFF)
 if (WIN32)
-    # FIXME: Port bmalloc to Windows. https://bugs.webkit.org/show_bug.cgi?id=143310
-    WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE ON)
+    WEBKIT_OPTION_DEFAULT_PORT_VALUE(USE_SYSTEM_MALLOC PRIVATE OFF)
 endif ()
 
 WEBKIT_OPTION_END()
@@ -72,19 +71,9 @@ if (WIN32)
     # FIXME: warning STL4042: std::float_denorm_style, std::numeric_limits::has_denorm, and std::numeric_limits::has_denorm_loss are deprecated in C++23.
     add_definitions(-D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
 
-    if (NOT WEBKIT_LIBRARIES_DIR)
-        if (DEFINED ENV{WEBKIT_LIBRARIES})
-            file(TO_CMAKE_PATH "$ENV{WEBKIT_LIBRARIES}" WEBKIT_LIBRARIES_DIR)
-        else ()
-            file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}/WebKitLibraries/win" WEBKIT_LIBRARIES_DIR)
-        endif ()
-    endif ()
-
     if (DEFINED ENV{WEBKIT_IGNORE_PATH})
         set(CMAKE_IGNORE_PATH $ENV{WEBKIT_IGNORE_PATH})
     endif ()
-
-    set(CMAKE_PREFIX_PATH ${WEBKIT_LIBRARIES_DIR})
 
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")

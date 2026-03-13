@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/HashTable.h>
 #include <wtf/WeakPtr.h>
 
@@ -34,7 +34,7 @@ namespace WTF {
 // Value will be deleted lazily upon rehash or amortized over time. For manual cleanup, call removeNullReferences().
 template<typename KeyType, typename ValueType, typename WeakPtrImpl>
 class WeakHashMap final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakHashMap);
 public:
 
     using RefType = Ref<WeakPtrImpl>;
@@ -211,10 +211,11 @@ public:
     }
 
     template<typename T, typename V>
-    void set(const T& key, V&& value)
+    AddResult set(const T& key, V&& value)
     {
         amortizedCleanupIfNeeded();
-        m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        auto addResult = m_map.set(makeKeyImpl(key), std::forward<V>(value));
+        return AddResult { WeakHashMapIterator(*this, addResult.iterator), addResult.isNewEntry };
     }
 
     iterator find(const KeyType& key)
@@ -325,7 +326,7 @@ public:
             return true;
 
         auto onlyContainsNullReferences = begin() == end();
-        if (UNLIKELY(onlyContainsNullReferences))
+        if (onlyContainsNullReferences) [[unlikely]]
             const_cast<WeakHashMap&>(*this).clear();
         return onlyContainsNullReferences;
     }
@@ -333,7 +334,7 @@ public:
     bool hasNullReferences() const
     {
         unsigned count = 0;
-        auto result = WTF::anyOf(m_map, [&] (auto& iterator) {
+        auto result = std::ranges::any_of(m_map, [&](auto& iterator) {
             ++count;
             return !iterator.key.get();
         });

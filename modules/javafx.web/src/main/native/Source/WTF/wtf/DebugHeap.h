@@ -30,9 +30,7 @@
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 #include <mutex>
-#if OS(DARWIN)
 #include <malloc/malloc.h>
-#endif
 #endif
 
 namespace WTF {
@@ -50,12 +48,14 @@ public:
     WTF_EXPORT_PRIVATE void* calloc(size_t numElements, size_t elementSize);
     WTF_EXPORT_PRIVATE void* memalign(size_t alignment, size_t, bool crashOnFailure);
     WTF_EXPORT_PRIVATE void* realloc(void*, size_t);
+    WTF_EXPORT_PRIVATE void* mallocCompact(size_t);
+    WTF_EXPORT_PRIVATE void* callocCompact(size_t numElements, size_t elementSize);
+    WTF_EXPORT_PRIVATE void* memalignCompact(size_t alignment, size_t, bool crashOnFailure);
+    WTF_EXPORT_PRIVATE void* reallocCompact(void*, size_t);
     WTF_EXPORT_PRIVATE void free(void*);
 
 private:
-#if OS(DARWIN)
     malloc_zone_t* m_zone;
-#endif
 };
 
 #define DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
@@ -92,7 +92,25 @@ private:
     struct MakeDebugHeapMallocedImplMacroSemicolonifier##Type { }
 
 #define DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export) \
-    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(Type, Export)
+    struct Type##Malloc { \
+        static Export WTF::DebugHeap& debugHeap(); \
+\
+        static void* malloc(size_t size) { return debugHeap().mallocCompact(size); } \
+\
+        static void* tryMalloc(size_t size) { return debugHeap().mallocCompact(size); } \
+\
+        static void* zeroedMalloc(size_t size) { return debugHeap().callocCompact(1, size); } \
+\
+        static void* tryZeroedMalloc(size_t size) { return debugHeap().callocCompact(1, size); } \
+\
+        static void* realloc(void* p, size_t size) { return debugHeap().reallocCompact(p, size); } \
+\
+        static void* tryRealloc(void* p, size_t size) { return debugHeap().reallocCompact(p, size); } \
+\
+        static void free(void* p) { debugHeap().free(p); } \
+\
+        static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity) { return capacity + capacity / 4 + 1; } \
+    }
 
 #define DEFINE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type) \
     DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Type)

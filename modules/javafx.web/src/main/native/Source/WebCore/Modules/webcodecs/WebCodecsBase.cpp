@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_CODECS)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "WebCodecsControlMessage.h"
@@ -44,6 +45,11 @@ WebCodecsBase::WebCodecsBase(ScriptExecutionContext& context)
 }
 
 WebCodecsBase::~WebCodecsBase() = default;
+
+ScriptExecutionContext* WebCodecsBase::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
 
 void WebCodecsBase::queueControlMessageAndProcess(WebCodecsControlMessage&& message)
 {
@@ -73,9 +79,9 @@ void WebCodecsBase::scheduleDequeueEvent()
         return;
 
     m_dequeueEventScheduled = true;
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this]() mutable {
-        dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        m_dequeueEventScheduled = false;
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [](auto& codecs) mutable {
+        codecs.dispatchEvent(Event::create(eventNames().dequeueEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        codecs.m_dequeueEventScheduled = false;
     });
 }
 

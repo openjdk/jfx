@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://drafts.csswg.org/css-contain-3/#csscontainerrule
+// https://drafts.csswg.org/css-conditional-5/#csscontainerrule
 
 typedef USVString CSSOMString;
 

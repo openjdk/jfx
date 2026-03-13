@@ -54,12 +54,14 @@ public:
 
     RegExp* ensureEmptyRegExp(VM& vm)
     {
-        if (LIKELY(m_emptyRegExp))
+        if (m_emptyRegExp) [[likely]]
             return m_emptyRegExp;
         return ensureEmptyRegExpSlow(vm);
     }
 
     DECLARE_VISIT_AGGREGATE;
+
+    RegExp* lookup(VM&, const WTF::String& patternString, OptionSet<Yarr::Flags>);
 
 private:
     static constexpr unsigned maxStrongCacheablePatternLength = 256;
@@ -73,8 +75,9 @@ private:
     RegExp* lookupOrCreate(VM&, const WTF::String& patternString, OptionSet<Yarr::Flags>);
     void addToStrongCache(RegExp*);
 
-    RegExpCacheMap m_weakCache; // Holds all regular expressions currently live.
     unsigned m_nextEntryInStrongCache { 0 };
+    Lock m_lock;
+    RegExpCacheMap m_weakCache; // Holds all regular expressions currently live.
     std::array<RegExp*, maxStrongCacheableEntries> m_strongCache { }; // Holds a select few regular expressions that have compiled and executed
     RegExp* m_emptyRegExp { nullptr };
 };

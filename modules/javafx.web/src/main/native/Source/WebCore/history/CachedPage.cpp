@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Navigation.h"
@@ -142,7 +143,7 @@ void CachedPage::restore(Page& page)
 
     // Restore the focus appearance for the focused element.
     // FIXME: Right now we don't support pages w/ frames in the b/f cache.  This may need to be tweaked when we add support for that.
-    RefPtr focusedOrMainFrame = page.checkedFocusController()->focusedOrMainFrame();
+    RefPtr focusedOrMainFrame = page.focusController().focusedOrMainFrame();
     if (!focusedOrMainFrame)
         return;
 
@@ -185,17 +186,17 @@ void CachedPage::restore(Page& page)
             frameView->updateContentsSize();
     }
 
-    if (CheckedRef backForwardController = page.backForward(); page.settings().navigationAPIEnabled() && focusedDocument->domWindow() && backForwardController->currentItem()) {
+    if (CheckedRef backForwardController = page.backForward(); page.settings().navigationAPIEnabled() && focusedDocument->window() && backForwardController->currentItem()) {
         Ref currentItem = *backForwardController->currentItem();
         auto allItems = backForwardController->allItems();
-        focusedDocument->domWindow()->navigation().updateForReactivation(allItems, currentItem);
+        focusedDocument->window()->navigation().updateForReactivation(allItems, currentItem);
     }
 
     firePageShowEvent(page);
 
     for (auto& domain : m_loadedSubresourceDomains) {
         if (localMainFrame)
-            localMainFrame->protectedLoader()->client().didLoadFromRegistrableDomain(WTFMove(domain));
+            localMainFrame->loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
     }
 
     clear();

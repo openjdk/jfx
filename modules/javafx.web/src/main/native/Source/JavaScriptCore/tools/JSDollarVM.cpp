@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -291,7 +291,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, ASCIILiteral* reason) final
     {
         DollarVMAssertScope assertScope;
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "JSC::Element is opaque root"_s;
         Element* element = jsCast<Element*>(handle.slot()->asCell());
         return visitor.containsOpaqueRoot(element->root());
@@ -2000,7 +2000,7 @@ public:
 
     DECLARE_INFO;
 
-    Ref<Wasm::ModuleInformation> m_info;
+    const Ref<Wasm::ModuleInformation> m_info;
     Client m_client;
     Wasm::StreamingParser m_streamingParser;
 };
@@ -2021,7 +2021,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingParserAddBytes, (JSGlobalObject* g
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard guard(provider);
+    SourceProviderBufferGuard guard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -2048,20 +2048,20 @@ public:
         return &vm.destructibleObjectSpace();
     }
 
-    WasmStreamingCompiler(VM& vm, Structure* structure, Wasm::CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject)
+    WasmStreamingCompiler(VM& vm, Structure* structure, Wasm::CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject, const SourceCode& source)
         : Base(vm, structure)
         , m_promise(promise, WriteBarrierEarlyInit)
-        , m_streamingCompiler(Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, promise, importObject))
+        , m_streamingCompiler(Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, promise, importObject, source))
     {
         DollarVMAssertScope assertScope;
     }
 
-    static WasmStreamingCompiler* create(VM& vm, JSGlobalObject* globalObject, Wasm::CompilerMode compilerMode, JSObject* importObject)
+    static WasmStreamingCompiler* create(VM& vm, JSGlobalObject* globalObject, Wasm::CompilerMode compilerMode, JSObject* importObject, const SourceCode& source)
     {
         DollarVMAssertScope assertScope;
         JSPromise* promise = JSPromise::create(vm, globalObject->promiseStructure());
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        WasmStreamingCompiler* result = new (NotNull, allocateCell<WasmStreamingCompiler>(vm)) WasmStreamingCompiler(vm, structure, compilerMode, globalObject, promise, importObject);
+        WasmStreamingCompiler* result = new (NotNull, allocateCell<WasmStreamingCompiler>(vm)) WasmStreamingCompiler(vm, structure, compilerMode, globalObject, promise, importObject, source);
         result->finishCreation(vm);
         return result;
     }
@@ -2089,8 +2089,9 @@ public:
 
     DECLARE_INFO;
 
+private:
     WriteBarrier<JSPromise> m_promise;
-    Ref<Wasm::StreamingCompiler> m_streamingCompiler;
+    const Ref<Wasm::StreamingCompiler> m_streamingCompiler;
 };
 
 template<typename Visitor>
@@ -2121,7 +2122,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingCompilerAddBytes, (JSGlobalObject*
     BaseWebAssemblySourceProvider* provider = nullptr;
     if (auto* source = jsDynamicCast<JSSourceCode*>(value))
         provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
-    WebAssemblySourceProviderBufferGuard guard(provider);
+    SourceProviderBufferGuard guard(provider);
 
     auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, { });
@@ -2270,6 +2271,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionCallFromCPPAsFirstEntry);
 static JSC_DECLARE_HOST_FUNCTION(functionCallFromCPP);
 static JSC_DECLARE_HOST_FUNCTION(functionCachedCallFromCPP);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpLineBreakData);
+static JSC_DECLARE_HOST_FUNCTION(functionWeakCreate);
 
 const ClassInfo JSDollarVM::s_info = { "DollarVM"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDollarVM) };
 
@@ -3057,7 +3059,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(functionCallWithStackSize, SUPPRESS_ASA
 
     size_t desiredStackSize = arg1.asNumber();
 
-    const StackBounds& bounds = Thread::current().stack();
+    const StackBounds& bounds = Thread::currentSingleton().stack();
     uint8_t* currentStackPosition = std::bit_cast<uint8_t*>(currentStackPointer());
     uint8_t* end = std::bit_cast<uint8_t*>(bounds.end());
     uint8_t* desiredStart = end + desiredStackSize;
@@ -3137,7 +3139,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateProxy, (JSGlobalObject* globalObject, Cal
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     JSGlobalObject* target = jsDynamicCast<JSGlobalObject*>(callFrame->argument(0));
-    if (UNLIKELY(!target))
+    if (!target) [[unlikely]]
         return JSValue::encode(jsUndefined());
     Structure* structure = JSGlobalProxy::createStructure(vm, target, target->getPrototypeDirect());
     return JSValue::encode(JSGlobalProxy::create(vm, structure, target));
@@ -3261,16 +3263,19 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForCompile, (JSGloba
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    auto [taintedness, url] = sourceTaintedOriginFromStack(vm, callFrame);
+    auto source = makeSource("[wasm code]"_s, SourceOrigin(url), taintedness);
+
     auto callback = jsDynamicCast<JSFunction*>(callFrame->argument(0));
     if (!callback)
         return throwVMTypeError(globalObject, scope, "First argument is not a JS function"_s);
 
-    auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::Validation, nullptr);
+    auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::Validation, nullptr, source);
     MarkedArgumentBuffer args;
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -3284,21 +3289,24 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    auto [taintedness, url] = sourceTaintedOriginFromStack(vm, callFrame);
+    auto source = makeSource("[wasm code]"_s, SourceOrigin(url), taintedness);
+
     auto callback = jsDynamicCast<JSFunction*>(callFrame->argument(0));
     if (!callback)
         return throwVMTypeError(globalObject, scope, "First argument is not a JS function"_s);
 
     JSValue importArgument = callFrame->argument(1);
     JSObject* importObject = importArgument.getObject();
-    if (UNLIKELY(!importArgument.isUndefined() && !importObject))
+    if (!importArgument.isUndefined() && !importObject) [[unlikely]]
         return throwVMTypeError(globalObject, scope);
 
-    auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::FullCompile, importObject);
+    auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::FullCompile, importObject, source);
     MarkedArgumentBuffer args;
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -3375,7 +3383,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetImpureGetterDelegate, (JSGlobalObject* globa
     if (!delegate.isObject())
         return JSValue::encode(jsUndefined());
     ImpureGetter* impureGetter = jsDynamicCast<ImpureGetter*>(asObject(base.asCell()));
-    if (UNLIKELY(!impureGetter)) {
+    if (!impureGetter) [[unlikely]] {
         throwTypeError(globalObject, scope, "argument is not an ImpureGetter"_s);
         return encodedJSValue();
     }
@@ -3491,7 +3499,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGetHiddenValue, (JSGlobalObject* globalObject, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(callFrame->argument(0));
-    if (UNLIKELY(!simpleObject)) {
+    if (!simpleObject) [[unlikely]] {
         throwTypeError(globalObject, scope, "Invalid use of getHiddenValue test function"_s);
         return encodedJSValue();
     }
@@ -3506,7 +3514,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetHiddenValue, (JSGlobalObject* globalObject, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(callFrame->argument(0));
-    if (UNLIKELY(!simpleObject)) {
+    if (!simpleObject) [[unlikely]] {
         throwTypeError(globalObject, scope, "Invalid use of setHiddenValue test function"_s);
         return encodedJSValue();
     }
@@ -3766,7 +3774,7 @@ JSC_DEFINE_HOST_FUNCTION(functionLoadGetterFromGetterSetter, (JSGlobalObject* gl
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     GetterSetter* getterSetter = jsDynamicCast<GetterSetter*>(callFrame->argument(0));
-    if (UNLIKELY(!getterSetter)) {
+    if (!getterSetter) [[unlikely]] {
         throwTypeError(globalObject, scope, "Invalid use of loadGetterFromGetterSetter test function: argument is not a GetterSetter"_s);
         return encodedJSValue();
     }
@@ -4284,7 +4292,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCachedCallFromCPP, (JSGlobalObject* globalObjec
         cachedCall.appendArgument(callFrame->argument(i));
     cachedCall.setThis(jsNull());
 
-    if (UNLIKELY(cachedCall.hasOverflowedArguments()))
+    if (cachedCall.hasOverflowedArguments()) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     for (int32_t i = 0; i < count; ++i) {
@@ -4299,6 +4307,13 @@ JSC_DEFINE_HOST_FUNCTION(functionDumpLineBreakData, (JSGlobalObject*, CallFrame*
 {
     DollarVMAssertScope assertScope;
     dumpLineBreakData();
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionWeakCreate, (JSGlobalObject* globalObject, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    Weak<JSGlobalObject> unusedWeak(globalObject);
     return JSValue::encode(jsUndefined());
 }
 
@@ -4499,6 +4514,7 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "callFromCPP"_s, functionCallFromCPP, 2);
     addFunction(vm, "cachedCallFromCPP"_s, functionCachedCallFromCPP, 2);
     addFunction(vm, "dumpLineBreakData"_s, functionDumpLineBreakData, 0);
+    addFunction(vm, "weakCreate"_s, functionWeakCreate, 0);
 
     m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID.set(vm, this, ObjectDoingSideEffectPutWithoutCorrectSlotStatus::createStructure(vm, globalObject, jsNull()));
 }

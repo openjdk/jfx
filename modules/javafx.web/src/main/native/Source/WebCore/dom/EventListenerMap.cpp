@@ -74,6 +74,7 @@ bool EventListenerMap::containsActive(const AtomString& eventType) const
 
 void EventListenerMap::clear()
 {
+    releaseAssertOrSetThreadUID();
     Locker locker { m_lock };
 
     for (auto& entry : m_entries) {
@@ -103,6 +104,7 @@ static inline size_t findListener(const EventListenerVector& listeners, EventLis
 
 void EventListenerMap::replace(const AtomString& eventType, EventListener& oldListener, Ref<EventListener>&& newListener, const RegisteredEventListener::Options& options)
 {
+    releaseAssertOrSetThreadUID();
     Locker locker { m_lock };
 
     auto* listeners = find(eventType);
@@ -116,6 +118,7 @@ void EventListenerMap::replace(const AtomString& eventType, EventListener& oldLi
 
 bool EventListenerMap::add(const AtomString& eventType, Ref<EventListener>&& listener, const RegisteredEventListener::Options& options)
 {
+    releaseAssertOrSetThreadUID();
     Locker locker { m_lock };
 
     if (auto* listeners = find(eventType)) {
@@ -132,23 +135,24 @@ bool EventListenerMap::add(const AtomString& eventType, Ref<EventListener>&& lis
 static bool removeListenerFromVector(EventListenerVector& listeners, EventListener& listener, bool useCapture)
 {
     size_t indexOfRemovedListener = findListener(listeners, listener, useCapture);
-    if (UNLIKELY(indexOfRemovedListener == notFound))
+    if (indexOfRemovedListener == notFound) [[unlikely]]
         return false;
 
     listeners[indexOfRemovedListener]->markAsRemoved();
-    listeners.remove(indexOfRemovedListener);
+    listeners.removeAt(indexOfRemovedListener);
     return true;
 }
 
 bool EventListenerMap::remove(const AtomString& eventType, EventListener& listener, bool useCapture)
 {
+    releaseAssertOrSetThreadUID();
     Locker locker { m_lock };
 
     for (unsigned i = 0; i < m_entries.size(); ++i) {
         if (m_entries[i].first == eventType) {
             bool wasRemoved = removeListenerFromVector(m_entries[i].second, listener, useCapture);
             if (m_entries[i].second.isEmpty())
-                m_entries.remove(i);
+                m_entries.removeAt(i);
             return wasRemoved;
         }
     }
@@ -180,13 +184,14 @@ static void removeFirstListenerCreatedFromMarkup(EventListenerVector& listenerVe
 
 void EventListenerMap::removeFirstEventListenerCreatedFromMarkup(const AtomString& eventType)
 {
+    releaseAssertOrSetThreadUID();
     Locker locker { m_lock };
 
     for (unsigned i = 0; i < m_entries.size(); ++i) {
         if (m_entries[i].first == eventType) {
             removeFirstListenerCreatedFromMarkup(m_entries[i].second);
             if (m_entries[i].second.isEmpty())
-                m_entries.remove(i);
+                m_entries.removeAt(i);
             return;
         }
     }

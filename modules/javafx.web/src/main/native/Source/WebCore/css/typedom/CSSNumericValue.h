@@ -27,7 +27,6 @@
 
 #include "CSSNumericType.h"
 #include "CSSStyleValue.h"
-#include <variant>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -44,7 +43,7 @@ class CSSMathSum;
 
 template<typename> class ExceptionOr;
 
-using CSSNumberish = std::variant<double, RefPtr<CSSNumericValue>>;
+using CSSNumberish = Variant<double, RefPtr<CSSNumericValue>>;
 
 class CSSNumericValue : public CSSStyleValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSNumericValue);
@@ -69,7 +68,7 @@ public:
     static Ref<CSSNumericValue> rectifyNumberish(CSSNumberish&&);
 
     // https://drafts.css-houdini.org/css-typed-om/#sum-value-value
-    using UnitMap = UncheckedKeyHashMap<CSSUnitType, int, WTF::IntHash<CSSUnitType>, WTF::StrongEnumHashTraits<CSSUnitType>>;
+    using UnitMap = HashMap<CSSUnitType, int, WTF::IntHash<CSSUnitType>, WTF::StrongEnumHashTraits<CSSUnitType>>;
     struct Addend {
         double value;
         UnitMap units;

@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <JavaScriptCore/InspectorAuditAgent.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
@@ -35,6 +34,7 @@ namespace WebCore {
 
 class Document;
 class Node;
+template<typename> class ExceptionOr;
 
 class InspectorAuditAccessibilityObject : public RefCounted<InspectorAuditAccessibilityObject> {
 public:

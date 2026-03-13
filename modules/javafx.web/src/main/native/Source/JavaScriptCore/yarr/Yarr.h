@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include <limits.h>
+#include <limits>
 #include "YarrErrorCode.h"
 
 namespace JSC { namespace Yarr {
@@ -73,6 +73,15 @@ enum class BuiltInCharacterClassID : unsigned {
     WordClassID,
     DotClassID,
     BaseUnicodePropertyID,
+};
+
+enum class SpecificPattern : uint8_t {
+    None,
+    Atom,
+    LeadingSpacesStar,
+    LeadingSpacesPlus,
+    TrailingSpacesStar,
+    TrailingSpacesPlus,
 };
 
 struct BytecodePattern;

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 
 #if CHECK_HASHTABLE_ITERATORS
@@ -62,12 +63,12 @@ template<typename ValueArg> struct ListHashSetNode;
 template<typename HashArg> struct ListHashSetNodeHashFunctions;
 template<typename HashArg> struct ListHashSetTranslator;
 
-template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>> class ListHashSet final
+template<typename ValueArg, typename HashArg> class ListHashSet final
 #if CHECK_HASHTABLE_ITERATORS
     : public CanMakeWeakPtr<ListHashSet<ValueArg, HashArg>, WeakPtrFactoryInitialization::Eager>
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ListHashSet);
 private:
     typedef ListHashSetNode<ValueArg> Node;
 
@@ -103,26 +104,26 @@ public:
     unsigned capacity() const;
     bool isEmpty() const;
 
-    iterator begin() { return makeIterator(m_head); }
-    iterator end() { return makeIterator(nullptr); }
-    const_iterator begin() const { return makeConstIterator(m_head); }
-    const_iterator end() const { return makeConstIterator(nullptr); }
+    iterator begin() LIFETIME_BOUND { return makeIterator(m_head); }
+    iterator end() LIFETIME_BOUND { return makeIterator(nullptr); }
+    const_iterator begin() const LIFETIME_BOUND { return makeConstIterator(m_head); }
+    const_iterator end() const LIFETIME_BOUND { return makeConstIterator(nullptr); }
 
-    iterator random() { return makeIterator(m_impl.random()); }
-    const_iterator random() const { return makeIterator(m_impl.random()); }
+    iterator random() LIFETIME_BOUND { return makeIterator(m_impl.random()); }
+    const_iterator random() const LIFETIME_BOUND { return makeIterator(m_impl.random()); }
 
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return reverse_iterator(end()); }
+    reverse_iterator rend() LIFETIME_BOUND { return reverse_iterator(begin()); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return const_reverse_iterator(begin()); }
 
-    ValueType& first();
-    const ValueType& first() const;
+    ValueType& first() LIFETIME_BOUND;
+    const ValueType& first() const LIFETIME_BOUND;
     void removeFirst();
     ValueType takeFirst();
 
-    ValueType& last();
-    const ValueType& last() const;
+    ValueType& last() LIFETIME_BOUND;
+    const ValueType& last() const LIFETIME_BOUND;
     void removeLast();
     ValueType takeLast();
 
@@ -199,7 +200,7 @@ template<typename ValueArg> struct ListHashSetNode
     : CanMakeWeakPtr<ListHashSetNode<ValueArg>, WeakPtrFactoryInitialization::Eager>
 #endif
 {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ListHashSetNode);
 
     template<typename T> ListHashSetNode(T&& value)
         : m_value(std::forward<T>(value))
@@ -218,7 +219,7 @@ template<typename HashArg> struct ListHashSetNodeHashFunctions {
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetIterator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ListHashSetIterator);
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;
@@ -237,7 +238,7 @@ public:
     typedef ValueType& reference;
     typedef std::bidirectional_iterator_tag iterator_category;
 
-    ListHashSetIterator() { }
+    ListHashSetIterator() = default;
 
     // default copy, assignment and destructor are OK
 
@@ -246,8 +247,12 @@ public:
     ValueType* operator->() const { return get(); }
 
     iterator& operator++() { ++m_iterator; return *this; }
-
-    // postfix ++ intentionally omitted
+    iterator operator++(int)
+    {
+        iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
 
     iterator& operator--() { --m_iterator; return *this; }
 
@@ -265,7 +270,7 @@ private:
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetConstIterator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ListHashSetConstIterator);
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;
@@ -321,7 +326,12 @@ public:
         return *this;
     }
 
-    // postfix ++ intentionally omitted
+    const_iterator operator++(int)
+    {
+        const_iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
 
     const_iterator& operator--()
     {
@@ -381,8 +391,8 @@ template<typename T, typename U>
 inline ListHashSet<T, U>::ListHashSet(const ListHashSet& other)
     : ListHashSet<T, U>()
 {
-    for (auto it = other.begin(), end = other.end(); it != end; ++it)
-        add(*it);
+    for (auto& item : other)
+        add(item);
 }
 
 template<typename T, typename U>
@@ -458,7 +468,7 @@ template<typename T, typename U>
 inline T ListHashSet<T, U>::takeFirst()
 {
     ASSERT(!isEmpty());
-    auto it = m_impl.find(m_head);
+    auto it = m_impl.template find<ShouldValidateKey::Yes>(m_head);
 
     T result = WTFMove((*it)->m_value);
     m_impl.remove(it);
@@ -498,7 +508,7 @@ template<typename T, typename U>
 inline T ListHashSet<T, U>::takeLast()
 {
     ASSERT(!isEmpty());
-    auto it = m_impl.find(m_tail);
+    auto it = m_impl.template find<ShouldValidateKey::Yes>(m_tail);
 
     T result = WTFMove((*it)->m_value);
     m_impl.remove(it);
@@ -510,7 +520,7 @@ inline T ListHashSet<T, U>::takeLast()
 template<typename T, typename U>
 inline auto ListHashSet<T, U>::find(const ValueType& value) -> iterator
 {
-    auto it = m_impl.template find<BaseTranslator>(value);
+    auto it = m_impl.template find<BaseTranslator, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeIterator(*it);
@@ -519,7 +529,7 @@ inline auto ListHashSet<T, U>::find(const ValueType& value) -> iterator
 template<typename T, typename U>
 inline auto ListHashSet<T, U>::find(const ValueType& value) const -> const_iterator
 {
-    auto it = m_impl.template find<BaseTranslator>(value);
+    auto it = m_impl.template find<BaseTranslator, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeConstIterator(*it);
@@ -535,7 +545,7 @@ template<typename ValueType, typename U>
 template<typename HashTranslator, typename T>
 inline auto ListHashSet<ValueType, U>::find(const T& value) -> iterator
 {
-    auto it = m_impl.template find<ListHashSetTranslatorAdapter<HashTranslator>>(value);
+    auto it = m_impl.template find<ListHashSetTranslatorAdapter<HashTranslator>, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeIterator(*it);
@@ -545,7 +555,7 @@ template<typename ValueType, typename U>
 template<typename HashTranslator, typename T>
 inline auto ListHashSet<ValueType, U>::find(const T& value) const -> const_iterator
 {
-    auto it = m_impl.template find<ListHashSetTranslatorAdapter<HashTranslator>>(value);
+    auto it = m_impl.template find<ListHashSetTranslatorAdapter<HashTranslator>, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeConstIterator(*it);
@@ -555,19 +565,19 @@ template<typename ValueType, typename U>
 template<typename HashTranslator, typename T>
 inline bool ListHashSet<ValueType, U>::contains(const T& value) const
 {
-    return m_impl.template contains<ListHashSetTranslatorAdapter<HashTranslator>>(value);
+    return m_impl.template contains<ListHashSetTranslatorAdapter<HashTranslator>, ShouldValidateKey::Yes>(value);
 }
 
 template<typename T, typename U>
 inline bool ListHashSet<T, U>::contains(const ValueType& value) const
 {
-    return m_impl.template contains<BaseTranslator>(value);
+    return m_impl.template contains<BaseTranslator, ShouldValidateKey::Yes>(value);
 }
 
 template<typename T, typename U>
 auto ListHashSet<T, U>::add(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(value, [] { return nullptr; });
     if (result.isNewEntry)
         appendNode(*result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -576,7 +586,7 @@ auto ListHashSet<T, U>::add(const ValueType& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::add(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(WTFMove(value), [] { return nullptr; });
     if (result.isNewEntry)
         appendNode(*result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -585,7 +595,7 @@ auto ListHashSet<T, U>::add(ValueType&& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::appendOrMoveToLast(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(value, [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -597,7 +607,7 @@ auto ListHashSet<T, U>::appendOrMoveToLast(const ValueType& value) -> AddResult
 template<typename T, typename U>
 auto ListHashSet<T, U>::appendOrMoveToLast(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(WTFMove(value), [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -609,7 +619,7 @@ auto ListHashSet<T, U>::appendOrMoveToLast(ValueType&& value) -> AddResult
 template<typename T, typename U>
 bool ListHashSet<T, U>::moveToLastIfPresent(const ValueType& value)
 {
-    auto iterator = m_impl.template find<BaseTranslator>(value);
+    auto iterator = m_impl.template find<BaseTranslator, ShouldValidateKey::Yes>(value);
     if (iterator == m_impl.end())
         return false;
     Node* node = *iterator;
@@ -621,7 +631,7 @@ bool ListHashSet<T, U>::moveToLastIfPresent(const ValueType& value)
 template<typename T, typename U>
 auto ListHashSet<T, U>::prependOrMoveToFirst(const ValueType& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(value, [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(value, [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -633,7 +643,7 @@ auto ListHashSet<T, U>::prependOrMoveToFirst(const ValueType& value) -> AddResul
 template<typename T, typename U>
 auto ListHashSet<T, U>::prependOrMoveToFirst(ValueType&& value) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(value), [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(WTFMove(value), [] { return nullptr; });
     Node* node = *result.iterator;
     if (!result.isNewEntry)
         unlink(node);
@@ -657,7 +667,7 @@ auto ListHashSet<T, U>::insertBefore(const ValueType& beforeValue, ValueType&& n
 template<typename T, typename U>
 auto ListHashSet<T, U>::insertBefore(iterator it, const ValueType& newValue) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(newValue, [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(newValue, [] { return nullptr; });
     if (result.isNewEntry)
         insertNodeBefore(it.node(), *result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -666,7 +676,7 @@ auto ListHashSet<T, U>::insertBefore(iterator it, const ValueType& newValue) -> 
 template<typename T, typename U>
 auto ListHashSet<T, U>::insertBefore(iterator it, ValueType&& newValue) -> AddResult
 {
-    auto result = m_impl.template add<BaseTranslator>(WTFMove(newValue), [] { return nullptr; });
+    auto result = m_impl.template add<BaseTranslator, ShouldValidateKey::Yes>(WTFMove(newValue), [] { return nullptr; });
     if (result.isNewEntry)
         insertNodeBefore(it.node(), *result.iterator);
     return AddResult(makeIterator(*result.iterator), result.isNewEntry);
@@ -677,7 +687,7 @@ inline bool ListHashSet<T, U>::remove(iterator it)
 {
     if (it == end())
         return false;
-    m_impl.remove(it.node());
+    m_impl.template remove<ShouldValidateKey::Yes>(it.node());
     unlinkAndDelete(it.node());
     return true;
 }
@@ -701,7 +711,7 @@ template<typename T, typename U>
 template<typename V>
 inline auto ListHashSet<T, U>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
 {
-    auto it = m_impl.template find<BaseTranslator>(value);
+    auto it = m_impl.template find<BaseTranslator, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeIterator(*it);
@@ -711,7 +721,7 @@ template<typename T, typename U>
 template<typename V>
 inline auto ListHashSet<T, U>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, const_iterator>::type
 {
-    auto it = m_impl.template find<BaseTranslator>(value);
+    auto it = m_impl.template find<BaseTranslator, ShouldValidateKey::Yes>(value);
     if (it == m_impl.end())
         return end();
     return makeConstIterator(*it);
@@ -721,7 +731,7 @@ template<typename T, typename U>
 template<typename V>
 inline auto ListHashSet<T, U>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
 {
-    return m_impl.template contains<BaseTranslator>(value);
+    return m_impl.template contains<BaseTranslator, ShouldValidateKey::Yes>(value);
 }
 
 template<typename T, typename U>

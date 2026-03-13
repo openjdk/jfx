@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaSession.h"
 #include "MediaSessionCoordinatorPrivate.h"
 #include "MediaSessionCoordinatorState.h"

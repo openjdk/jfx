@@ -116,14 +116,14 @@ protected:
 #define RETURN_IF_EXCEPTION(scope__, value__) do { \
         SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = (scope__).vm(); \
         EXCEPTION_ASSERT(!!(scope__).exception() == vm.traps().needHandling(JSC::VMTraps::NeedExceptionHandling)); \
-        if (UNLIKELY(vm.traps().maybeNeedHandling())) { \
+        if (vm.traps().maybeNeedHandling()) [[unlikely]] { \
             if (vm.hasExceptionsAfterHandlingTraps()) \
                 return value__; \
         } \
     } while (false)
 
 #define RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope__, value__) do { \
-        if (UNLIKELY((scope__).exception())) \
+        if ((scope__).exception()) [[unlikely]] \
             return value__; \
     } while (false)
 

@@ -28,6 +28,7 @@
 
 #include "JSDOMBinding.h"
 #include "JSNode.h"
+#include "NodeInlines.h"
 #include "WebCoreOpaqueRoot.h"
 
 namespace JSC {
@@ -54,7 +55,7 @@ WEBCORE_EXPORT JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject*, Node
 
 inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Node& node)
 {
-    if (LIKELY(globalObject->worldIsNormal())) {
+    if (globalObject->worldIsNormal()) [[likely]] {
         if (auto* wrapper = node.wrapper())
             return wrapper;
     } else {

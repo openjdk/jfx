@@ -50,7 +50,7 @@ public:
 
     private:
         size_t m_index { 0 };
-        Ref<NodeList> m_list;
+        const Ref<NodeList> m_list;
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator(*this); }
 

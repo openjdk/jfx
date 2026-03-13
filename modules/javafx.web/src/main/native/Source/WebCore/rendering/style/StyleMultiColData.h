@@ -25,8 +25,10 @@
 #pragma once
 
 #include "BorderValue.h"
-#include "GapLength.h"
 #include "RenderStyleConstants.h"
+#include "StyleValueTypes.h"
+#include "StylePrimitiveNumericTypes.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include <wtf/RefCounted.h>
 
 namespace WTF {
@@ -35,11 +37,13 @@ class TextStream;
 
 namespace WebCore {
 
+using namespace CSS::Literals;
+
 // CSS3 Multi Column Layout
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMultiColData);
 class StyleMultiColData : public RefCounted<StyleMultiColData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleMultiColData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleMultiColData, StyleMultiColData);
 public:
     static Ref<StyleMultiColData> create() { return adoptRef(*new StyleMultiColData); }
     Ref<StyleMultiColData> copy() const;
@@ -50,10 +54,10 @@ public:
     void dumpDifferences(TextStream&, const StyleMultiColData&) const;
 #endif
 
-    unsigned short ruleWidth() const
+    Style::LineWidth ruleWidth() const
     {
         if (rule.style() == BorderStyle::None || rule.style() == BorderStyle::Hidden)
-            return 0;
+            return 0_css_px;
         return rule.width();
     }
 
@@ -64,10 +68,10 @@ public:
 
     bool autoWidth : 1;
     bool autoCount : 1;
-    unsigned fill : 1; // ColumnFill
-    unsigned columnSpan : 1; // ColumnSpan
-    unsigned axis : 2; // ColumnAxis
-    unsigned progression : 2; // ColumnProgression
+    PREFERRED_TYPE(ColumnFill) unsigned fill : 1;
+    PREFERRED_TYPE(ColumnSpan) unsigned columnSpan : 1;
+    PREFERRED_TYPE(ColumnAxis) unsigned axis : 2;
+    PREFERRED_TYPE(ColumnProgression) unsigned progression : 2;
 
 private:
     StyleMultiColData();

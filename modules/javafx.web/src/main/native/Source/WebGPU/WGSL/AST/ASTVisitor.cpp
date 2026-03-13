@@ -64,7 +64,15 @@ void Visitor::visit(AST::Directive& directive)
     }
 }
 
-void Visitor::visit(AST::DiagnosticDirective&)
+void Visitor::visit(AST::DiagnosticDirective& directive)
+{
+    visit(directive.diagnostic());
+}
+
+
+// Diagnostic
+
+void Visitor::visit(AST::Diagnostic&)
 {
 }
 
@@ -169,8 +177,9 @@ void Visitor::visit(AST::ConstAttribute&)
 {
 }
 
-void Visitor::visit(AST::DiagnosticAttribute&)
+void Visitor::visit(AST::DiagnosticAttribute& attribute)
 {
+    visit(attribute.diagnostic());
 }
 
 void Visitor::visit(AST::BuiltinAttribute&)
@@ -235,9 +244,6 @@ void Visitor::visit(Expression& expression)
     case AST::NodeKind::BinaryExpression:
         checkErrorAndVisit(uncheckedDowncast<AST::BinaryExpression>(expression));
         break;
-    case AST::NodeKind::BitcastExpression:
-        checkErrorAndVisit(uncheckedDowncast<AST::BitcastExpression>(expression));
-        break;
     case AST::NodeKind::BoolLiteral:
         checkErrorAndVisit(uncheckedDowncast<AST::BoolLiteral>(expression));
         break;
@@ -297,11 +303,6 @@ void Visitor::visit(AST::BinaryExpression& binaryExpression)
 {
     checkErrorAndVisit(binaryExpression.leftExpression());
     checkErrorAndVisit(binaryExpression.rightExpression());
-}
-
-void Visitor::visit(AST::BitcastExpression& bitcastExpression)
-{
-    checkErrorAndVisit(bitcastExpression.expression());
 }
 
 void Visitor::visit(BoolLiteral&)
@@ -435,9 +436,6 @@ void Visitor::visit(Statement& statement)
     case AST::NodeKind::ReturnStatement:
         checkErrorAndVisit(uncheckedDowncast<AST::ReturnStatement>(statement));
         break;
-    case AST::NodeKind::StaticAssertStatement:
-        checkErrorAndVisit(uncheckedDowncast<AST::StaticAssertStatement>(statement));
-        break;
     case AST::NodeKind::SwitchStatement:
         checkErrorAndVisit(uncheckedDowncast<AST::SwitchStatement>(statement));
         break;
@@ -541,11 +539,6 @@ void Visitor::visit(AST::PhonyAssignmentStatement& phonyAssignmentStatement)
 void Visitor::visit(AST::ReturnStatement& returnStatement)
 {
     maybeCheckErrorAndVisit(returnStatement.maybeExpression());
-}
-
-void Visitor::visit(AST::StaticAssertStatement& staticAssertStatement)
-{
-    checkErrorAndVisit(staticAssertStatement.expression());
 }
 
 void Visitor::visit(AST::SwitchStatement& statement)

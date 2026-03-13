@@ -49,37 +49,37 @@ public:
     // Collects the items participating in baseline alignment and updates the corresponding baseline-sharing
     // group of the Baseline Context the items belongs to.
     // All the baseline offsets are updated accordingly based on the added item.
-    void updateBaselineAlignmentContext(ItemPosition, unsigned sharedContext, const RenderBox&, GridAxis);
+    void updateBaselineAlignmentContext(ItemPosition, unsigned sharedContext, const RenderBox&, Style::GridTrackSizingDirection alignmentContextType);
 
     // Returns the baseline offset of a particular item, based on the max-ascent for its associated
     // baseline-sharing group
-    LayoutUnit baselineOffsetForGridItem(ItemPosition, unsigned sharedContext, const RenderBox&, GridAxis) const;
+    LayoutUnit baselineOffsetForGridItem(ItemPosition, unsigned sharedContext, const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
 
     // Sets the Grid Container's writing mode so that we can avoid the dependecy of the LayoutGrid class for
     // determining whether a grid item is orthogonal or not.
     void setWritingMode(WritingMode writingMode) { m_writingMode = writingMode; };
 
     // Clearing the Baseline Alignment context and their internal classes and data structures.
-    void clear(GridAxis);
+    void clear(Style::GridTrackSizingDirection alignmentContextType);
 
 private:
-    const BaselineGroup& baselineGroupForGridItem(ItemPosition, unsigned sharedContext, const RenderBox&, GridAxis) const;
-    LayoutUnit marginOverForGridItem(const RenderBox&, GridAxis) const;
-    LayoutUnit marginUnderForGridItem(const RenderBox&, GridAxis) const;
-    LayoutUnit logicalAscentForGridItem(const RenderBox&, GridAxis, ItemPosition) const;
-    LayoutUnit ascentForGridItem(const RenderBox&, GridAxis, ItemPosition) const;
-    LayoutUnit descentForGridItem(const RenderBox&, LayoutUnit, GridAxis, ExtraMarginsFromSubgrids) const;
-    bool isDescentBaselineForGridItem(const RenderBox&, GridAxis) const;
-    bool isVerticalAlignmentContext(GridAxis) const;
+    const BaselineGroup& baselineGroupForGridItem(ItemPosition, unsigned sharedContext, const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
+    LayoutUnit marginOverForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
+    LayoutUnit marginUnderForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
+    LayoutUnit logicalAscentForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType, ItemPosition) const;
+    LayoutUnit ascentForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType, ItemPosition) const;
+    LayoutUnit descentForGridItem(const RenderBox&, LayoutUnit, Style::GridTrackSizingDirection alignmentContextType, ExtraMarginsFromSubgrids) const;
+    bool isDescentBaselineForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
+    bool isVerticalAlignmentContext(Style::GridTrackSizingDirection alignmentContextType) const;
     bool isOrthogonalGridItemForBaseline(const RenderBox&) const;
-    bool isParallelToAlignmentAxisForGridItem(const RenderBox&, GridAxis) const;
+    bool isParallelToAlignmentAxisForGridItem(const RenderBox&, Style::GridTrackSizingDirection alignmentContextType) const;
 
-    typedef UncheckedKeyHashMap<unsigned, std::unique_ptr<BaselineAlignmentState>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineAlignmentStateMap;
+    typedef HashMap<unsigned, std::unique_ptr<BaselineAlignmentState>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineAlignmentStateMap;
 
     // Grid Container's writing mode, used to determine grid item's orthogonality.
     WritingMode m_writingMode;
-    BaselineAlignmentStateMap m_rowAxisBaselineAlignmentStates;
-    BaselineAlignmentStateMap m_colAxisBaselineAlignmentStates;
+    BaselineAlignmentStateMap m_rowAlignmentContextStates;
+    BaselineAlignmentStateMap m_columnAlignmentContextStates;
 };
 
 } // namespace WebCore

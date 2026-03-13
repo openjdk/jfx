@@ -130,7 +130,7 @@ protected:
     static RawValue hashTableDeletedValue() { return UUID { HashTableDeletedValue }; }
 
 private:
-    RawValue m_identifier { UUID::MarkableTraits::emptyValue() };
+    RawValue m_identifier { MarkableTraits<UUID>::emptyValue() };
 };
 
 template<typename T, typename ThreadSafety, typename RawValue>
@@ -158,13 +158,9 @@ public:
     // Do not call this constructor explicitly, it should only be used by the Hashtable implementation.
     ObjectIdentifierGeneric(HashTableDeletedValueType) : ObjectIdentifierGenericBase<RawValue>(HashTableDeletedValue) { }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(ObjectIdentifierGeneric identifier) { return !identifier.toRawValue(); }
-        static constexpr ObjectIdentifierGeneric emptyValue() { return ObjectIdentifierGeneric(InvalidIdValue); }
-    };
-
 private:
     friend struct HashTraits<ObjectIdentifierGeneric>;
+    friend struct MarkableTraits<ObjectIdentifierGeneric>;
     template<typename U, typename V> friend struct ObjectIdentifierGenericHash;
 
     enum AssumeValidId { AssumeValidIdValue };
@@ -180,6 +176,12 @@ private:
     }
 
     inline static bool m_generationProtected { false };
+};
+
+template<typename T, typename ThreadSafety, typename RawValue>
+struct MarkableTraits<ObjectIdentifierGeneric<T, ThreadSafety, RawValue>> {
+    static bool isEmptyValue(ObjectIdentifierGeneric<T, ThreadSafety, RawValue> identifier) { return !identifier.toRawValue(); }
+    static constexpr ObjectIdentifierGeneric<T, ThreadSafety, RawValue> emptyValue() { return ObjectIdentifierGeneric<T, ThreadSafety, RawValue>::InvalidIdValue; }
 };
 
 template<typename T, typename RawValue> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue>;
@@ -277,40 +279,16 @@ public:
         : StringTypeAdapter<UUID>(identifier.toRawValue()) { }
 };
 
-template<typename T, typename ThreadSafety>
-bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, UUID>& a, const ObjectIdentifierGeneric<T, ThreadSafety, UUID>& b)
+template<typename T, typename ThreadSafety, typename RawValue>
+bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& a, const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& b)
 {
     return a.toRawValue() == b.toRawValue();
 }
 
 template<typename T, typename ThreadSafety>
-bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
+std::strong_ordering operator<=>(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
 {
-    return a.toRawValue() == b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator>(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() > b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator>=(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() >= b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() < b.toRawValue();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<=(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
-{
-    return a.toRawValue() <= b.toRawValue();
+    return a.toRawValue() <=> b.toRawValue();
 }
 
 } // namespace WTF

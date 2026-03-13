@@ -35,6 +35,7 @@
 #include "AudioUtilities.h"
 #include "DenormalDisabler.h"
 #include <algorithm>
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -279,7 +280,7 @@ void DynamicsCompressorKernel::process(std::span<std::span<const float>> sourceC
         float desiredGain = m_detectorAverage;
 
         // Pre-warp so we get desiredGain after sin() warp below.
-        float scaledDesiredGain = asinf(desiredGain) / (0.5f * piFloat);
+        float scaledDesiredGain = asinf(desiredGain) / (0.5f * std::numbers::pi_v<float>);
 
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Deal with envelopes
@@ -411,7 +412,7 @@ void DynamicsCompressorKernel::process(std::span<std::span<const float>> sourceC
                 }
 
                 // Warp pre-compression gain to smooth out sharp exponential transition points.
-                float postWarpCompressorGain = sinf(0.5f * piFloat * compressorGain);
+                float postWarpCompressorGain = sinf(0.5f * std::numbers::pi_v<float> * compressorGain);
 
                 // Calculate total gain using master gain and effect blend.
                 float totalGain = dryMix + wetMix * masterLinearGain * postWarpCompressorGain;

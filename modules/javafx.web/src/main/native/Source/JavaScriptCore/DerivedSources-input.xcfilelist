@@ -39,12 +39,14 @@ $(PROJECT_DIR)/b3/air/opcode_generator.rb
 $(PROJECT_DIR)/builtins/ArrayConstructor.js
 $(PROJECT_DIR)/builtins/ArrayIteratorPrototype.js
 $(PROJECT_DIR)/builtins/ArrayPrototype.js
+$(PROJECT_DIR)/builtins/AsyncDisposableStackPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFromSyncIteratorPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFunctionPrototype.js
 $(PROJECT_DIR)/builtins/AsyncGeneratorPrototype.js
+$(PROJECT_DIR)/builtins/AsyncIteratorPrototype.js
+$(PROJECT_DIR)/builtins/DisposableStackPrototype.js
 $(PROJECT_DIR)/builtins/FunctionPrototype.js
 $(PROJECT_DIR)/builtins/GeneratorPrototype.js
-$(PROJECT_DIR)/builtins/GlobalObject.js
 $(PROJECT_DIR)/builtins/GlobalOperations.js
 $(PROJECT_DIR)/builtins/InternalPromiseConstructor.js
 $(PROJECT_DIR)/builtins/IteratorHelpers.js
@@ -55,7 +57,6 @@ $(PROJECT_DIR)/builtins/MapConstructor.js
 $(PROJECT_DIR)/builtins/MapIteratorPrototype.js
 $(PROJECT_DIR)/builtins/MapPrototype.js
 $(PROJECT_DIR)/builtins/ModuleLoader.js
-$(PROJECT_DIR)/builtins/NumberConstructor.js
 $(PROJECT_DIR)/builtins/ObjectConstructor.js
 $(PROJECT_DIR)/builtins/PromiseConstructor.js
 $(PROJECT_DIR)/builtins/PromiseOperations.js

@@ -28,7 +28,6 @@
 #include "CryptoAlgorithmParameters.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 
 #if ENABLE(WEB_CRYPTO)
 
@@ -38,7 +37,7 @@ class CryptoAlgorithmRsaHashedImportParams final : public CryptoAlgorithmParamet
     WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmRsaHashedImportParams);
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
 
     Class parametersClass() const final { return Class::RsaHashedImportParams; }

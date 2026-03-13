@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "ImageDecoder.h"
-#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
+
+#include "ImageFrame.h"
+#if !PLATFORM(JAVA)
 #include "ScalableImageDecoder.h"
 #endif
 #include <wtf/NeverDestroyed.h>
@@ -33,7 +35,8 @@
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
-#elif PLATFORM(JAVA)
+#endif
+#if PLATFORM(JAVA)
 #include "ImageDecoderJava.h"
 #endif
 
@@ -114,14 +117,10 @@ RefPtr<ImageDecoder> ImageDecoder::create(FragmentedSharedBuffer& data, const St
 #endif
 
 #if USE(CG)
-#if USE(AVIF)
     // ScalableImageDecoder is used on CG ports for some specific image formats which the platform doesn't support directly.
     if (auto imageDecoder = ScalableImageDecoder::create(data, alphaOption, gammaAndColorProfileOption))
         return imageDecoder;
-#endif
     return ImageDecoderCG::create(data, alphaOption, gammaAndColorProfileOption);
-#elif USE(DIRECT2D)
-    return ImageDecoderDirect2D::create(data, alphaOption, gammaAndColorProfileOption);
 #elif PLATFORM(JAVA)
     return ImageDecoderJava::create(data, alphaOption, gammaAndColorProfileOption);
 #else
@@ -172,17 +171,15 @@ bool ImageDecoder::supportsMediaType(MediaType type)
 bool ImageDecoder::fetchFrameMetaDataAtIndex(size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& options, ImageFrame& frame) const
 {
     if (options.hasSizeForDrawing()) {
-        ASSERT(frame.hasNativeImage());
-        frame.m_size = frame.nativeImage()->size();
+        ASSERT(frame.hasNativeImage(options.shouldDecodeToHDR()));
+        frame.m_size = frame.nativeImage(options.shouldDecodeToHDR())->size();
     } else
         frame.m_size = frameSizeAtIndex(index, subsamplingLevel);
 
     frame.m_densityCorrectedSize = frameDensityCorrectedSizeAtIndex(index);
     frame.m_subsamplingLevel = subsamplingLevel;
-    frame.m_decodingOptions = options;
     frame.m_hasAlpha = frameHasAlphaAtIndex(index);
     frame.m_orientation = frameOrientationAtIndex(index);
-    frame.m_headroom = frameHeadroomAtIndex(index);
     frame.m_decodingStatus = frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
     return true;
 }

@@ -33,7 +33,7 @@
 #include "pas_heap_config.h"
 #include "pas_page_base_inlines.h"
 #include "pas_page_sharing_pool.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 
@@ -530,7 +530,7 @@ static inline const char* pas_bitfit_page_deallocate_with_page_impl_mode_get_str
     case pas_bitfit_page_deallocate_with_page_impl_shrink_mode:
         return "shrink";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -784,7 +784,7 @@ static PAS_ALWAYS_INLINE uintptr_t pas_bitfit_page_deallocate_with_page_impl(
                     }
 
                     default:
-                        PAS_ASSERT(!"Should not be reached");
+                        PAS_ASSERT_NOT_REACHED();
                         /* Tell the compiler to chill out. */
                         modified_word_index = 0;
                         modified_bit_index_in_word = 0;
@@ -858,7 +858,7 @@ static PAS_ALWAYS_INLINE uintptr_t pas_bitfit_page_deallocate_with_page_impl(
                 break;
 
             default:
-                PAS_ASSERT(!"Should not be reached");
+                PAS_ASSERT_NOT_REACHED();
                 range = pas_range_create_empty();
                 break;
             }

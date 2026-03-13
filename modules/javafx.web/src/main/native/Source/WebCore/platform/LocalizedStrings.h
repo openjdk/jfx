@@ -179,9 +179,12 @@ namespace WebCore {
 #endif
 #if ENABLE(WRITING_TOOLS)
     String contextMenuItemTagWritingTools();
+    String contextMenuItemTagProofread();
+    String contextMenuItemTagRewrite();
+    String contextMenuItemTagSummarize();
 #endif
 #if ENABLE(UNIFIED_PDF)
-    WEBCORE_EXPORT String contextMenuItemPDFOpenWithPreview();
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithDefaultViewer(const String& appName);
 #endif
 #if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
     WEBCORE_EXPORT String contextMenuItemPDFSinglePage();
@@ -205,6 +208,10 @@ namespace WebCore {
     String searchMenuClearRecentSearchesText();
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+    String defaultSystemSpeakerLabel();
+#endif
+
     String AXWebAreaText();
     String AXLinkText();
     String AXListMarkerText();
@@ -215,6 +222,7 @@ namespace WebCore {
     String AXDescriptionListText();
     String AXDescriptionListTermText();
     String AXDescriptionListDetailText();
+    String AXHeaderRoleDescriptionText();
     String AXFooterRoleDescriptionText();
     String AXSuggestionRoleDescriptionText();
     String AXFileUploadButtonText();

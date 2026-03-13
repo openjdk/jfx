@@ -236,7 +236,7 @@ private:
             // XXX: be smarter and resolve to the low Tmp
             if (value->type().kind() == Int32)
                 return false;
-            FALLTHROUGH;
+            [[fallthrough]];
         case Identity:
         case Opaque:
             return true;

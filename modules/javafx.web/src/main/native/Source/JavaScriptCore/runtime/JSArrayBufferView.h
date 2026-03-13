@@ -255,8 +255,6 @@ protected:
     JS_EXPORT_PRIVATE JSArrayBufferView(VM&, ConstructionContext&);
     JS_EXPORT_PRIVATE void finishCreation(VM&);
 
-    DECLARE_VISIT_CHILDREN;
-
 public:
     TypedArrayMode mode() const { return m_mode; }
     bool hasArrayBuffer() const { return JSC::hasArrayBuffer(mode()); }
@@ -288,11 +286,11 @@ public:
 
     size_t byteOffset() const
     {
-        if (LIKELY(canUseRawFieldsDirectly()))
+        if (canUseRawFieldsDirectly()) [[likely]]
             return byteOffsetRaw();
 
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
-        if (UNLIKELY(isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter)))
+        if (isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter)) [[unlikely]]
             return 0;
         return byteOffsetRaw();
     }
@@ -301,7 +299,7 @@ public:
 
     size_t length() const
     {
-        if (LIKELY(canUseRawFieldsDirectly()))
+        if (canUseRawFieldsDirectly()) [[likely]]
             return lengthRaw();
 
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
@@ -314,7 +312,7 @@ public:
     {
         // The absence of overflow is already checked in the constructor, so I only add the extra sanity check when asserts are enabled.
         // https://tc39.es/proposal-resizablearraybuffer/#sec-get-%typedarray%.prototype.bytelength
-        if (LIKELY(canUseRawFieldsDirectly()))
+        if (canUseRawFieldsDirectly()) [[likely]]
             return byteLengthRaw();
 
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
@@ -335,15 +333,17 @@ public:
     bool isOutOfBounds() const
     {
         // https://tc39.es/proposal-resizablearraybuffer/#sec-isarraybufferviewoutofbounds
-        if (UNLIKELY(isDetached()))
+        if (isDetached()) [[unlikely]]
             return true;
-        if (LIKELY(!isResizableNonShared()))
+        if (!isResizableNonShared()) [[likely]]
             return false;
         IdempotentArrayBufferByteLengthGetter<std::memory_order_seq_cst> getter;
         return isArrayBufferViewOutOfBounds(const_cast<JSArrayBufferView*>(this), getter);
     }
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     static constexpr ptrdiff_t offsetOfVector() { return OBJECT_OFFSETOF(JSArrayBufferView, m_vector); }
     static constexpr ptrdiff_t offsetOfLength() { return OBJECT_OFFSETOF(JSArrayBufferView, m_length); }

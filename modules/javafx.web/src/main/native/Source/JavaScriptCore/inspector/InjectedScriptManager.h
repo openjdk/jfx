@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,7 @@ private:
     Expected<JSC::JSObject*, NakedPtr<JSC::Exception>> createInjectedScript(JSC::JSGlobalObject*, int id);
 
     InspectorEnvironment& m_environment;
-    Ref<InjectedScriptHost> m_injectedScriptHost;
+    const Ref<InjectedScriptHost> m_injectedScriptHost;
     int m_nextInjectedScriptId;
 };
 

@@ -31,17 +31,20 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <single-transition-property-or-none> consuming
 // https://drafts.csswg.org/css-transitions/#single-transition-property
-RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <single-transition-property> consuming
 // https://drafts.csswg.org/css-transitions/#single-transition-property
-RefPtr<CSSValue> consumeSingleTransitionProperty(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeSingleTransitionProperty(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

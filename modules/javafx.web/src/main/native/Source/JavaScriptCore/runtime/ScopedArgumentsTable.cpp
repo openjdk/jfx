@@ -59,14 +59,14 @@ ScopedArgumentsTable* ScopedArgumentsTable::create(VM& vm)
 ScopedArgumentsTable* ScopedArgumentsTable::tryCreate(VM& vm, uint32_t length)
 {
     void* buffer = tryAllocateCell<ScopedArgumentsTable>(vm);
-    if (UNLIKELY(!buffer))
+    if (!buffer) [[unlikely]]
         return nullptr;
     ScopedArgumentsTable* result = new (NotNull, buffer) ScopedArgumentsTable(vm);
     result->finishCreation(vm);
 
     result->m_length = length;
     result->m_arguments = ArgumentsPtr::tryCreate(length);
-    if (UNLIKELY(!result->m_arguments))
+    if (!result->m_arguments) [[unlikely]]
         return nullptr;
     result->m_watchpointSets.fill(nullptr, length);
     return result;
@@ -75,7 +75,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::tryCreate(VM& vm, uint32_t length)
 ScopedArgumentsTable* ScopedArgumentsTable::tryClone(VM& vm)
 {
     ScopedArgumentsTable* result = tryCreate(vm, m_length);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     for (unsigned i = m_length; i--;)
         result->at(i) = this->at(i);
@@ -85,9 +85,9 @@ ScopedArgumentsTable* ScopedArgumentsTable::tryClone(VM& vm)
 
 ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLength)
 {
-    if (LIKELY(!m_locked)) {
+    if (!m_locked) [[likely]] {
         ArgumentsPtr newArguments = ArgumentsPtr::tryCreate(newLength, newLength);
-        if (UNLIKELY(!newArguments))
+        if (!newArguments) [[unlikely]]
             return nullptr;
         for (unsigned i = std::min(m_length, newLength); i--;)
             newArguments.at(i) = this->at(i);
@@ -98,7 +98,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLen
     }
 
     ScopedArgumentsTable* result = tryCreate(vm, newLength);
-    if (UNLIKELY(!result))
+    if (!result) [[unlikely]]
         return nullptr;
     m_watchpointSets.resize(newLength);
     for (unsigned i = std::min(m_length, newLength); i--;) {
@@ -113,9 +113,9 @@ static_assert(std::is_trivially_destructible<ScopeOffset>::value);
 ScopedArgumentsTable* ScopedArgumentsTable::trySet(VM& vm, uint32_t i, ScopeOffset value)
 {
     ScopedArgumentsTable* result;
-    if (UNLIKELY(m_locked)) {
+    if (m_locked) [[unlikely]] {
         result = tryClone(vm);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return nullptr;
     } else
         result = this;

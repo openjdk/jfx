@@ -50,9 +50,6 @@ public:
 
     void paintOutlineForRowIfNeeded(PaintInfo&, const LayoutPoint&);
 
-    static RenderPtr<RenderTableRow> createAnonymousWithParentRenderer(const RenderTableSection&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     void setRowIndex(unsigned);
     bool rowIndexWasSet() const { return m_rowIndex != unsetRowIndex; }
     unsigned rowIndex() const;
@@ -76,7 +73,7 @@ public:
 private:
     static RenderPtr<RenderTableRow> createTableRowWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s; }
+    ASCIILiteral renderName() const override;
     bool canHaveChildren() const override { return true; }
     void willBeRemovedFromTree() override;
     void layout() override;
@@ -100,7 +97,7 @@ private:
 
 inline void RenderTableRow::setRowIndex(unsigned rowIndex)
 {
-    if (UNLIKELY(rowIndex > maxRowIndex))
+    if (rowIndex > maxRowIndex) [[unlikely]]
         CRASH();
     m_rowIndex = rowIndex;
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007, 2008, 2009 Rob Buis <buis@kde.org>
  * Copyright (C) 2009 Google, Inc.
@@ -29,10 +29,12 @@
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
+#include "ImageQualityController.h"
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGResource.h"
 #include "PointerEventsHitRules.h"
 #include "RenderImageResource.h"
+#include "RenderObjectInlines.h"
 #include "RenderLayer.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
@@ -52,7 +54,7 @@ LegacyRenderSVGImage::LegacyRenderSVGImage(SVGImageElement& element, RenderStyle
     : LegacyRenderSVGModelObject(Type::LegacySVGImage, element, WTFMove(style), SVGModelObjectFlag::UsesBoundaryCaching)
     , m_needsBoundariesUpdate(true)
     , m_needsTransformUpdate(true)
-    , m_imageResource(makeUnique<RenderImageResource>())
+    , m_imageResource(makeUniqueRef<RenderImageResource>())
 {
     imageResource().initialize(*this);
     ASSERT(isLegacyRenderSVGImage());
@@ -60,9 +62,15 @@ LegacyRenderSVGImage::LegacyRenderSVGImage(SVGImageElement& element, RenderStyle
 
 LegacyRenderSVGImage::~LegacyRenderSVGImage() = default;
 
-CheckedRef<RenderImageResource> LegacyRenderSVGImage::checkedImageResource() const
+void LegacyRenderSVGImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
 {
-    return *m_imageResource;
+    if (renderTreeBeingDestroyed())
+        return;
+
+    if (RefPtr image = dynamicDowncast<SVGImageElement>(LegacyRenderSVGModelObject::element()))
+        page().didFinishLoadingImageForSVGImage(*image);
+
+    LegacyRenderSVGModelObject::notifyFinished(newImage, metrics, loadWillContinueInAnotherProcess);
 }
 
 void LegacyRenderSVGImage::willBeDestroyed()
@@ -85,8 +93,8 @@ FloatRect LegacyRenderSVGImage::calculateObjectBoundingBox() const
     Ref imageElement = this->imageElement();
     SVGLengthContext lengthContext(imageElement.ptr());
 
-    Length width = style().width();
-    Length height = style().height();
+    auto& width = style().width();
+    auto& height = style().height();
 
     float concreteWidth;
     if (!width.isAuto())
@@ -213,7 +221,12 @@ void LegacyRenderSVGImage::paintForeground(PaintInfo& paintInfo)
 
     imageElement().preserveAspectRatio().transformRect(destRect, srcRect);
 
-    paintInfo.context().drawImage(*image, destRect, srcRect);
+    ImagePaintingOptions options = {
+        imageOrientation(),
+        ImageQualityController::chooseInterpolationQualityForSVG(paintInfo.context(), *this, *image)
+    };
+
+    paintInfo.context().drawImage(*image, destRect, srcRect, options);
 }
 
 void LegacyRenderSVGImage::invalidateBufferedForeground()
@@ -260,7 +273,7 @@ void LegacyRenderSVGImage::imageChanged(WrappedImagePtr, const IntRect*)
     // The image resource defaults to nullImage until the resource arrives.
     // This empty image may be cached by SVG resources which must be invalidated.
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this))
-        resources->removeClientFromCache(*this);
+        resources->removeClientFromCacheAndMarkForInvalidation(*this);
 
     // Eventually notify parent resources, that we've changed.
     LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidation(*this, false);

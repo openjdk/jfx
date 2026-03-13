@@ -39,7 +39,7 @@ DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Standard keyword)
 {
 }
 
-DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::ConstrainedHigh keyword)
+DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Constrained keyword)
     : value { keyword }
 {
 }

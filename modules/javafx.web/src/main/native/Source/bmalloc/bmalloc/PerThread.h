@@ -30,7 +30,10 @@
 #include "PerHeapKind.h"
 #include "VMAllocate.h"
 #include <mutex>
+
+#if !BOS(WINDOWS)
 #include <pthread.h>
+#endif
 
 #if defined(__has_include)
 #if __has_include(<System/pthread_machdep.h>)

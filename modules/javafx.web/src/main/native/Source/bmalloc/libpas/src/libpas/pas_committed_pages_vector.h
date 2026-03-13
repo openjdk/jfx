@@ -28,7 +28,9 @@
 
 #include "pas_utils.h"
 #include <sys/types.h>
+#if !PAS_OS(WINDOWS)
 #include <sys/mman.h>
+#endif
 
 PAS_BEGIN_EXTERN_C;
 
@@ -54,7 +56,7 @@ static inline bool pas_committed_pages_vector_is_committed(pas_committed_pages_v
                                                            size_t page_index)
 {
     PAS_ASSERT(page_index < vector->size);
-#if PAS_OS(LINUX)
+#if PAS_OS(LINUX) || PAS_OS(WINDOWS)
     return vector->raw_data[page_index];
 #else
     return vector->raw_data[page_index] & (MINCORE_REFERENCED |

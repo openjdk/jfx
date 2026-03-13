@@ -147,9 +147,9 @@ RefPtr<LegacyCDMSession> LegacyCDM::createSession(LegacyCDMSessionClient& client
 
 RefPtr<MediaPlayer> LegacyCDM::mediaPlayer() const
 {
-    if (!m_client)
+    if (CheckedPtr client = m_client)
+        return client->cdmMediaPlayer(this);
         return nullptr;
-    return m_client->cdmMediaPlayer(this);
 }
 
 }

@@ -113,7 +113,7 @@ ALWAYS_INLINE JSValue Interpreter::executeCachedCall(CachedCall& cachedCall)
     // so the called JS function always handles it.
 
     auto* entry = cachedCall.m_addressForCall;
-    if (UNLIKELY(!entry)) {
+    if (!entry) [[unlikely]] {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
         cachedCall.relink();
         RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
@@ -145,7 +145,7 @@ ALWAYS_INLINE JSValue Interpreter::tryCallWithArguments(CachedCall& cachedCall, 
     // so the called JS function always handles it.
 
     auto* entry = cachedCall.m_addressForCall;
-    if (UNLIKELY(!entry))
+    if (!entry) [[unlikely]]
         return { };
 
     // Execute the code:

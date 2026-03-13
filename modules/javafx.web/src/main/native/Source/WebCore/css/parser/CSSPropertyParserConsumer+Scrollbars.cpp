@@ -37,7 +37,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeScrollbarColor(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeScrollbarColor(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'scrollbar-color'> = auto | <color>{2}
     // https://drafts.csswg.org/css-scrollbars/#propdef-scrollbar-color
@@ -45,8 +45,8 @@ RefPtr<CSSValue> consumeScrollbarColor(CSSParserTokenRange& range, const CSSPars
     if (auto ident = consumeIdent<CSSValueAuto>(range))
         return ident;
 
-    if (auto thumbColor = consumeColor(range, context)) {
-        if (auto trackColor = consumeColor(range, context))
+    if (auto thumbColor = consumeColor(range, state)) {
+        if (auto trackColor = consumeColor(range, state))
             return CSSValuePair::createNoncoalescing(thumbColor.releaseNonNull(), trackColor.releaseNonNull());
     }
 

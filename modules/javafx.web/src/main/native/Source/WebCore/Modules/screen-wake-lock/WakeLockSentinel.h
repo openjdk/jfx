@@ -27,6 +27,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "WakeLockType.h"
 #include <wtf/RefCounted.h>
 

@@ -36,13 +36,11 @@ class AccessibilityTable;
 
 class AccessibilityTableRow : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityTableRow> create(AXID, RenderObject&);
-    static Ref<AccessibilityTableRow> create(AXID, Node&);
+    static Ref<AccessibilityTableRow> create(AXID, RenderObject&, AXObjectCache&, bool isARIAGridRow = false);
+    static Ref<AccessibilityTableRow> create(AXID, Node&, AXObjectCache&, bool isARIAGridRow = false);
     virtual ~AccessibilityTableRow();
 
-    // retrieves the "row" header (a th tag in the rightmost column)
-    AccessibilityObject* rowHeader() override;
-    virtual AccessibilityTable* parentTable() const;
+    AccessibilityTable* parentTable() const;
 
     void setRowIndex(unsigned);
     unsigned rowIndex() const override { return m_rowIndex; }
@@ -53,12 +51,17 @@ public:
 
     void addChildren() final;
 
-    int axColumnIndex() const final;
-    int axRowIndex() const final;
+    std::optional<unsigned> axColumnIndex() const final;
+    std::optional<unsigned> axRowIndex() const final;
+    String axRowIndexText() const final;
+    // aria-colindextext is not allowed on rows
+
+    AccessibilityChildrenVector disclosedRows() override;
+    AccessibilityObject* disclosedByRow() const override;
 
 protected:
-    explicit AccessibilityTableRow(AXID, RenderObject&);
-    explicit AccessibilityTableRow(AXID, Node&);
+    explicit AccessibilityTableRow(AXID, RenderObject&, AXObjectCache&, bool isARIAGridRow = false);
+    explicit AccessibilityTableRow(AXID, Node&, AXObjectCache&, bool isARIAGridRow = false);
 
     AccessibilityRole determineAccessibilityRole() final;
 
@@ -69,7 +72,11 @@ private:
     AccessibilityObject* observableObject() const final;
     bool computeIsIgnored() const final;
 
+    bool isARIAGridRow() const final { return m_isARIAGridRow; }
+    bool isARIATreeGridRow() const final;
+
     unsigned m_rowIndex;
+    bool m_isARIAGridRow { false };
 };
 
 } // namespace WebCore

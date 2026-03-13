@@ -35,8 +35,10 @@ struct BoundaryPoint {
 
     BoundaryPoint(Ref<Node>&&, unsigned);
 
-    Document& document() const;
-    WEBCORE_EXPORT Ref<Document> protectedDocument() const;
+    inline Document& document() const; // Defined in BoundaryPointInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in BoundaryPointInlines.h
+
+    String debugDescription() const;
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
@@ -59,11 +61,6 @@ inline BoundaryPoint::BoundaryPoint(Ref<Node>&& container, unsigned offset)
 {
 }
 
-inline Document& BoundaryPoint::document() const
-{
-    return container->document();
-}
-
 inline bool operator==(const BoundaryPoint& a, const BoundaryPoint& b)
 {
     return a.container.ptr() == b.container.ptr() && a.offset == b.offset;
@@ -74,10 +71,7 @@ inline BoundaryPoint makeBoundaryPointBeforeNodeContents(Node& node)
     return { node, 0 };
 }
 
-inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
-{
-    return { node, node.length() };
-}
+inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
 
 struct WeakBoundaryPoint {
     WeakPtr<Node, Node::WeakPtrImplType> container;

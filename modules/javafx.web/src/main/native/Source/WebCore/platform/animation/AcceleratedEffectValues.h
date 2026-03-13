@@ -30,11 +30,11 @@
 #include "FilterOperations.h"
 #include "Length.h"
 #include "LengthPoint.h"
-#include "OffsetRotation.h"
 #include "PathOperation.h"
 #include "RenderStyleConstants.h"
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
+#include "StyleOffsetRotate.h"
 #include "TransformOperations.h"
 #include "TransformationMatrix.h"
 #include "TranslateTransformOperation.h"
@@ -59,13 +59,13 @@ struct AcceleratedEffectValues {
     Length offsetDistance { };
     LengthPoint offsetPosition { };
     LengthPoint offsetAnchor { };
-    OffsetRotation offsetRotate { };
+    Style::OffsetRotate offsetRotate { CSS::Keyword::Auto { } };
     FilterOperations filter { };
     FilterOperations backdropFilter { };
 
     AcceleratedEffectValues() = default;
     AcceleratedEffectValues(const RenderStyle&, const IntRect&, const RenderLayerModelObject* = nullptr);
-    AcceleratedEffectValues(float opacity, std::optional<TransformOperationData>&& transformOperationData, LengthPoint&& transformOrigin, TransformBox transformBox, TransformOperations&& transform, RefPtr<TransformOperation>&& translate, RefPtr<TransformOperation>&& scale, RefPtr<TransformOperation>&& rotate, RefPtr<PathOperation>&& offsetPath, Length&& offsetDistance, LengthPoint&& offsetPosition, LengthPoint&& offsetAnchor, OffsetRotation&& offsetRotate, FilterOperations&& filter, FilterOperations&& backdropFilter)
+    AcceleratedEffectValues(float opacity, std::optional<TransformOperationData>&& transformOperationData, LengthPoint&& transformOrigin, TransformBox transformBox, TransformOperations&& transform, RefPtr<TransformOperation>&& translate, RefPtr<TransformOperation>&& scale, RefPtr<TransformOperation>&& rotate, RefPtr<PathOperation>&& offsetPath, Length&& offsetDistance, LengthPoint&& offsetPosition, LengthPoint&& offsetAnchor, Style::OffsetRotate&& offsetRotate, FilterOperations&& filter, FilterOperations&& backdropFilter)
         : opacity(opacity)
         , transformOperationData(WTFMove(transformOperationData))
         , transformOrigin(WTFMove(transformOrigin))

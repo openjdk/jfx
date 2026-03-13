@@ -29,7 +29,7 @@
 #if ENABLE(APPLE_PAY_AMS_UI) && ENABLE(PAYMENT_REQUEST)
 
 #include "ApplePayAMSUIRequest.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "JSApplePayAMSUIRequest.h"
 #include "JSDOMConvert.h"
 #include "Page.h"
@@ -73,7 +73,7 @@ bool ApplePayAMSUIPaymentHandler::handlesIdentifier(const PaymentRequest::Method
 
 bool ApplePayAMSUIPaymentHandler::hasActiveSession(Document& document)
 {
-    auto* page = document.page();
+    RefPtr page = document.page();
     return page && page->hasActiveApplePayAMSUISession();
 }
 
@@ -133,7 +133,8 @@ ExceptionOr<void> ApplePayAMSUIPaymentHandler::show(Document&)
 {
     ASSERT(m_applePayAMSUIRequest);
 
-    if (!page().startApplePayAMSUISession(page().mainFrameURL(), *this, *m_applePayAMSUIRequest))
+    Ref page = this->page();
+    if (!page->startApplePayAMSUISession(page->mainFrameURL(), *this, *m_applePayAMSUIRequest))
         return Exception { ExceptionCode::AbortError };
 
     return { };
@@ -141,12 +142,12 @@ ExceptionOr<void> ApplePayAMSUIPaymentHandler::show(Document&)
 
 void ApplePayAMSUIPaymentHandler::hide()
 {
-    page().abortApplePayAMSUISession(*this);
+    Ref { page() }->abortApplePayAMSUISession(*this);
 }
 
 void ApplePayAMSUIPaymentHandler::canMakePayment(Document& document, Function<void(bool)>&& completionHandler)
 {
-    auto* page = document.page();
+    RefPtr page = document.page();
     completionHandler(page && !page->hasActiveApplePayAMSUISession());
 }
 
@@ -170,7 +171,7 @@ ExceptionOr<void> ApplePayAMSUIPaymentHandler::complete(Document&, std::optional
 
 ExceptionOr<void> ApplePayAMSUIPaymentHandler::retry(PaymentValidationErrors&&)
 {
-    return show(document());
+    return show(Ref { document() }.get());
 }
 
 } // namespace WebCore

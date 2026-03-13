@@ -126,12 +126,12 @@ void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDefer
 
     // Goofy corner case: the GC called a callback and now this directory has a currentBlock. This only
     // happens when running WebKit tests, which inject a callback into the GC's finalization.
-    if (UNLIKELY(m_currentBlock))
+    if (m_currentBlock) [[unlikely]]
         return allocate(heap, cellSize, deferralContext, failureMode);
 
     void* result = tryAllocateWithoutCollecting(cellSize);
 
-    if (LIKELY(result != nullptr))
+    if (result) [[likely]]
         return result;
 
     // FIXME GlobalGC: Need to synchronize here to when allocating from the BlockDirectory in the server.
@@ -258,7 +258,7 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block, size_t cellSize)
 
 void LocalAllocator::doTestCollectionsIfNeeded(JSC::Heap& heap, GCDeferralContext* deferralContext)
 {
-    if (LIKELY(!Options::slowPathAllocsBetweenGCs()))
+    if (!Options::slowPathAllocsBetweenGCs()) [[likely]]
         return;
 
     static unsigned allocationCount = 0;

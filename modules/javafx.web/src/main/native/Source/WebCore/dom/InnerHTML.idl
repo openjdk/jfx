@@ -27,6 +27,6 @@
 
 interface mixin InnerHTML {
     [CEReactions=Needed] undefined setHTMLUnsafe((TrustedHTML or DOMString) html);
-    [CEReactions=NotNeeded, EnabledBySetting=DeclarativeShadowRootsSerializerAPIsEnabled] DOMString getHTML(optional GetHTMLOptions options = {});
+    [CEReactions=NotNeeded] DOMString getHTML(optional GetHTMLOptions options = {});
     [CEReactions=Needed] attribute (TrustedHTML or [LegacyNullToEmptyString] DOMString) innerHTML;
 };

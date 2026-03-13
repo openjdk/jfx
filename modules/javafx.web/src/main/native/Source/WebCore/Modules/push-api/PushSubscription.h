@@ -26,14 +26,12 @@
 #pragma once
 
 #include "EpochTimeStamp.h"
-#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "PushEncryptionKeyName.h"
 #include "PushSubscriptionData.h"
 #include "PushSubscriptionJSON.h"
 
 #include <optional>
-#include <variant>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -47,6 +45,7 @@ class PushSubscriptionOptions;
 class PushSubscriptionOwner;
 class ScriptExecutionContext;
 class ServiceWorkerContainer;
+template<typename> class ExceptionOr;
 
 class PushSubscription : public RefCounted<PushSubscription> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(PushSubscription, WEBCORE_EXPORT);

@@ -35,11 +35,11 @@ namespace CSS {
 
 struct SerializationContext {
     SerializationContext();
-    SerializationContext(UncheckedKeyHashMap<String, String>&&, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&&, bool);
+    SerializationContext(HashMap<String, String>&&, HashMap<Ref<CSSStyleSheet>, String>&&, bool);
     ~SerializationContext();
 
-    UncheckedKeyHashMap<String, String> replacementURLStrings;
-    UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> replacementURLStringsForCSSStyleSheet;
+    HashMap<String, String> replacementURLStrings;
+    HashMap<Ref<CSSStyleSheet>, String> replacementURLStringsForCSSStyleSheet;
     bool shouldUseResolvedURLInCSSText = false;
 };
 

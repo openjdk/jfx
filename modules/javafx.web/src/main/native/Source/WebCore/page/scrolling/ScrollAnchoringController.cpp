@@ -25,13 +25,17 @@
 
 #include "config.h"
 #include "ScrollAnchoringController.h"
+
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementIterator.h"
 #include "HTMLHtmlElement.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TypedElementDescendantIteratorInlines.h"
@@ -53,7 +57,7 @@ ScrollAnchoringController::~ScrollAnchoringController()
 
 LocalFrameView& ScrollAnchoringController::frameView()
 {
-    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea))
+    if (auto* renderLayerScrollableArea = dynamicDowncast<RenderLayerScrollableArea>(m_owningScrollableArea.get()))
         return renderLayerScrollableArea->layer().renderer().view().frameView();
     return downcast<LocalFrameView>(downcast<ScrollView>(m_owningScrollableArea));
 }
@@ -213,7 +217,7 @@ static bool canDescendIntoElement(Element& element)
 
 CandidateExaminationResult ScrollAnchoringController::examineAnchorCandidate(Element& element)
 {
-    if (elementForScrollableArea(m_owningScrollableArea) && elementForScrollableArea(m_owningScrollableArea)->identifier() == element.identifier())
+    if (elementForScrollableArea(m_owningScrollableArea) && elementForScrollableArea(m_owningScrollableArea)->nodeIdentifier() == element.nodeIdentifier())
         return CandidateExaminationResult::Skip;
 
     auto containingRect = boundingRectForScrollableArea(m_owningScrollableArea);
@@ -261,16 +265,16 @@ static TextStream& operator<<(TextStream& ts, CandidateExaminationResult result)
 {
     switch (result) {
     case CandidateExaminationResult::Exclude:
-        ts << "Exclude";
+        ts << "Exclude"_s;
         break;
     case CandidateExaminationResult::Select:
-        ts << "Select";
+        ts << "Select"_s;
         break;
     case CandidateExaminationResult::Descend:
-        ts << "Descend";
+        ts << "Descend"_s;
         break;
     case CandidateExaminationResult::Skip:
-        ts << "Skip";
+        ts << "Skip"_s;
         break;
     }
     return ts;
@@ -326,7 +330,7 @@ void ScrollAnchoringController::chooseAnchorElement(Document& document)
 
 void ScrollAnchoringController::updateAnchorElement()
 {
-    if (m_owningScrollableArea.scrollPosition().isZero() || m_isQueuedForScrollPositionUpdate || frameView().layoutContext().layoutPhase() != LocalFrameViewLayoutContext::LayoutPhase::OutsideLayout)
+    if (m_owningScrollableArea->scrollPosition().isZero() || m_isQueuedForScrollPositionUpdate || frameView().layoutContext().layoutPhase() != LocalFrameViewLayoutContext::LayoutPhase::OutsideLayout)
         return;
 
     RefPtr document = frameView().frame().document();
@@ -363,22 +367,22 @@ void ScrollAnchoringController::adjustScrollPositionForAnchoring()
 
     FloatSize adjustment = computeOffsetFromOwningScroller(*renderer) - m_lastOffsetForAnchorElement;
     if (!adjustment.isZero()) {
-        if (m_owningScrollableArea.isUserScrollInProgress()) {
+        if (m_owningScrollableArea->isUserScrollInProgress()) {
             invalidateAnchorElement();
             updateAnchorElement();
             return;
         }
-        auto newScrollPosition = m_owningScrollableArea.scrollPosition() + IntPoint(adjustment.width(), adjustment.height());
-        RELEASE_LOG(ScrollAnchoring, "ScrollAnchoringController::updateScrollPosition() is main frame: %d, is main scroller: %d, adjusting from: (%d, %d) to: (%d, %d)",  frameView().frame().isMainFrame(), !m_owningScrollableArea.isRenderLayer(), m_owningScrollableArea.scrollPosition().x(), m_owningScrollableArea.scrollPosition().y(), newScrollPosition.x(), newScrollPosition.y());
-        LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::updateScrollPosition() for scroller element: " << ValueOrNull(elementForScrollableArea(m_owningScrollableArea)) << " anchor node: " << *m_anchorElement << "adjusting from: " << m_owningScrollableArea.scrollPosition() << " to: " << newScrollPosition);
+        auto newScrollPosition = m_owningScrollableArea->scrollPosition() + IntPoint(adjustment.width(), adjustment.height());
+        RELEASE_LOG(ScrollAnchoring, "ScrollAnchoringController::updateScrollPosition() is main frame: %d, is main scroller: %d, adjusting from: (%d, %d) to: (%d, %d)",  frameView().frame().isMainFrame(), !m_owningScrollableArea->isRenderLayer(), m_owningScrollableArea->scrollPosition().x(), m_owningScrollableArea->scrollPosition().y(), newScrollPosition.x(), newScrollPosition.y());
+        LOG_WITH_STREAM(ScrollAnchoring, stream << "ScrollAnchoringController::updateScrollPosition() for scroller element: " << ValueOrNull(elementForScrollableArea(m_owningScrollableArea)) << " anchor node: " << *m_anchorElement << "adjusting from: " << m_owningScrollableArea->scrollPosition() << " to: " << newScrollPosition);
 
         auto options = ScrollPositionChangeOptions::createProgrammatic();
         options.originalScrollDelta = adjustment;
-        auto oldScrollType = m_owningScrollableArea.currentScrollType();
-        m_owningScrollableArea.setCurrentScrollType(ScrollType::Programmatic);
-        if (!m_owningScrollableArea.requestScrollToPosition(newScrollPosition, options))
-            m_owningScrollableArea.scrollToPositionWithoutAnimation(newScrollPosition);
-        m_owningScrollableArea.setCurrentScrollType(oldScrollType);
+        auto oldScrollType = m_owningScrollableArea->currentScrollType();
+        m_owningScrollableArea->setCurrentScrollType(ScrollType::Programmatic);
+        if (!m_owningScrollableArea->requestScrollToPosition(newScrollPosition, options))
+            m_owningScrollableArea->scrollToPositionWithoutAnimation(newScrollPosition);
+        m_owningScrollableArea->setCurrentScrollType(oldScrollType);
     }
 }
 

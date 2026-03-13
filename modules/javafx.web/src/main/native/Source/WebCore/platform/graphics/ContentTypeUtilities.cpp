@@ -27,7 +27,7 @@
 #include "ContentTypeUtilities.h"
 
 #include "FourCC.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 
 namespace WebCore {
 
@@ -39,8 +39,8 @@ bool contentTypeMeetsContainerAndCodecTypeRequirements(const ContentType& type, 
     if (!allowedMediaCodecTypes)
         return true;
 
-    return WTF::allOf(type.codecs(), [&] (auto& codec) {
-        return WTF::anyOf(*allowedMediaCodecTypes, [&] (auto& allowedCodec) {
+    return std::ranges::all_of(type.codecs(), [&](auto& codec) {
+        return std::ranges::any_of(*allowedMediaCodecTypes, [&](auto& allowedCodec) {
             return codec.startsWith(allowedCodec);
         });
     });

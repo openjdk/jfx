@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,8 +38,8 @@ class AudioBufferCallback : public RefCounted<AudioBufferCallback>, public Activ
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(AudioBuffer*) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(AudioBuffer*) = 0;
+    virtual CallbackResult<void> invoke(AudioBuffer*) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(AudioBuffer*) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

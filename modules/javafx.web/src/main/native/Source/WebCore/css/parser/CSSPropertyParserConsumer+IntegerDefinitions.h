@@ -30,7 +30,7 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct IntegerValidator {
-    static constexpr std::optional<CSS::IntegerUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::IntegerUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
         return CSS::UnitTraits<CSS::IntegerUnit>::validate(unitType);
         }
@@ -44,7 +44,7 @@ struct IntegerValidator {
 template<typename Primitive, typename Validator> struct NumberConsumerForIntegerValues {
     static constexpr CSSParserTokenType tokenType = NumberToken;
 
-    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, const CSSParserContext&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
+    static std::optional<typename Primitive::Raw> consume(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions options)
     {
         ASSERT(range.peek().type() == NumberToken);
 

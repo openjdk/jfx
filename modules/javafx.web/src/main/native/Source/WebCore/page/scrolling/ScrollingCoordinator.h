@@ -35,7 +35,6 @@
 #include "ScrollingCoordinatorTypes.h"
 #include "UserInterfaceLayoutDirection.h"
 #include "WheelEventTestMonitor.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -89,7 +88,7 @@ public:
     // Should be called whenever the given frame view has been laid out.
     virtual void frameViewLayoutUpdated(LocalFrameView&) { }
 
-    using LayoutViewportOriginOrOverrideRect = std::variant<std::optional<FloatPoint>, std::optional<FloatRect>>;
+    using LayoutViewportOriginOrOverrideRect = Variant<std::optional<FloatPoint>, std::optional<FloatRect>>;
     virtual void reconcileScrollingState(LocalFrameView&, const FloatPoint&, const LayoutViewportOriginOrOverrideRect&, ScrollType, ViewportRectStability, ScrollingLayerPositionAction) { }
 
     // Should be called whenever the set of fixed objects changes.
@@ -164,6 +163,7 @@ public:
         GraphicsLayer* rootContentsLayer { nullptr };
         GraphicsLayer* horizontalScrollbarLayer { nullptr };
         GraphicsLayer* verticalScrollbarLayer { nullptr };
+        GraphicsLayer* viewportAnchorLayer { nullptr };
     };
     virtual void setNodeLayers(ScrollingNodeID, const NodeLayers&) { }
 

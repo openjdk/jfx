@@ -53,6 +53,14 @@ StackFrame::StackFrame(VM& vm, JSCell* owner, CodeBlock* codeBlock, BytecodeInde
 
 StackFrame::StackFrame(Wasm::IndexOrName indexOrName)
     : m_wasmFunctionIndexOrName(indexOrName)
+    , m_wasmFunctionIndex(0)
+    , m_isWasmFrame(true)
+{
+}
+
+StackFrame::StackFrame(Wasm::IndexOrName indexOrName, size_t functionIndex)
+    : m_wasmFunctionIndexOrName(indexOrName)
+    , m_wasmFunctionIndex(functionIndex)
     , m_isWasmFrame(true)
 {
 }
@@ -80,7 +88,7 @@ static String processSourceURL(VM& vm, const JSC::StackFrame& frame, const Strin
 String StackFrame::sourceURL(VM& vm) const
 {
     if (m_isWasmFrame)
-        return "[wasm code]"_s;
+        return makeString(m_wasmFunctionIndexOrName.moduleName(), ":wasm-function["_s, m_wasmFunctionIndex, ']');
 
     if (!m_codeBlock)
         return "[native code]"_s;
@@ -91,7 +99,7 @@ String StackFrame::sourceURL(VM& vm) const
 String StackFrame::sourceURLStripped(VM& vm) const
 {
     if (m_isWasmFrame)
-        return "[wasm code]"_s;
+        return makeString(m_wasmFunctionIndexOrName.moduleName(), ":wasm-function["_s, m_wasmFunctionIndex, ']');
 
     if (!m_codeBlock)
         return "[native code]"_s;
@@ -101,8 +109,13 @@ String StackFrame::sourceURLStripped(VM& vm) const
 
 String StackFrame::functionName(VM& vm) const
 {
-    if (m_isWasmFrame)
-        return makeString(m_wasmFunctionIndexOrName);
+    if (m_isWasmFrame) {
+        if (m_wasmFunctionIndexOrName.isEmpty() || !m_wasmFunctionIndexOrName.nameSection())
+            return "wasm-stub"_s;
+        if (m_wasmFunctionIndexOrName.isIndex())
+            return WTF::toString(m_wasmFunctionIndexOrName.index());
+        return WTF::toString(m_wasmFunctionIndexOrName.name()->span());
+    }
 
     if (m_codeBlock) {
         switch (m_codeBlock->codeType()) {

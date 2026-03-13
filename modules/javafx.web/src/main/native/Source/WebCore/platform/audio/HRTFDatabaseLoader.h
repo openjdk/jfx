@@ -32,7 +32,6 @@
 #include "HRTFDatabase.h"
 #include <memory>
 #include <wtf/Lock.h>
-#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Threading.h>

@@ -45,7 +45,7 @@ public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     // Produces results in the range [1, 2**31 - 2]. Algorithm is:
     // r = (a * r) mod m where a = s_randAmplitude = 16807 and
@@ -95,7 +95,7 @@ private:
     struct ApplyParameters {
         IntRect filterRegion;
         FloatSize filterScale;
-        RefPtr<PixelBuffer> pixelBuffer;
+        PixelBuffer* pixelBuffer;
         PaintingData* paintingData;
         StitchData stitchData;
         int startY;

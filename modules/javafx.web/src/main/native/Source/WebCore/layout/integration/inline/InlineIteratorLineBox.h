@@ -29,7 +29,6 @@
 #include "InlineIteratorLineBoxLegacyPath.h"
 #include "InlineIteratorLineBoxModernPath.h"
 #include "RenderBlockFlow.h"
-#include <variant>
 
 namespace WebCore {
 
@@ -45,7 +44,7 @@ struct EndLineBoxIterator { };
 
 class LineBox {
 public:
-    using PathVariant = std::variant<
+    using PathVariant = Variant<
         LineBoxIteratorModernPath,
         LineBoxIteratorLegacyPath
     >;

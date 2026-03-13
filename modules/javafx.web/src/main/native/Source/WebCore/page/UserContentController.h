@@ -50,10 +50,10 @@ private:
     UserContentController();
 
     // UserContentProvider
-    void forEachUserScript(Function<void(DOMWrapperWorld&, const UserScript&)>&&) const final;
-    void forEachUserStyleSheet(Function<void(const UserStyleSheet&)>&&) const final;
+    void forEachUserScript(NOESCAPE const Function<void(DOMWrapperWorld&, const UserScript&)>&) const final;
+    void forEachUserStyleSheet(NOESCAPE const Function<void(const UserStyleSheet&)>&) const final;
 #if ENABLE(USER_MESSAGE_HANDLERS)
-    void forEachUserMessageHandler(Function<void(const UserMessageHandlerDescriptor&)>&&) const final;
+    void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const final;
 #endif
 #if ENABLE(CONTENT_EXTENSIONS)
     ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() override { return m_contentExtensionBackend; }

@@ -62,7 +62,7 @@ public:
 
     void appendVideoFrame(VideoFrame&);
     void appendAudioSampleBuffer(const PlatformAudioData&, const AudioStreamDescription&, const WTF::MediaTime&, size_t);
-    void fetchData(CompletionHandler<void(RefPtr<FragmentedSharedBuffer>&&, double)>&&);
+    void fetchData(CompletionHandler<void(Ref<FragmentedSharedBuffer>&&, double)>&&);
 
     void pause();
     void resume();
@@ -75,6 +75,7 @@ public:
 
     bool hasAudio() const { return m_hasAudio; }
     bool hasVideo() const { return m_hasVideo; }
+    bool shouldApplyVideoRotation() const { return m_writer ? m_writer->shouldApplyVideoRotation() : false; }
 
 private:
     MediaRecorderPrivateEncoder(bool hasAudio, bool hasVideo);
@@ -102,7 +103,7 @@ private:
 
     void generateMIMEType();
 
-    void audioSamplesDescriptionChanged(const AudioStreamBasicDescription&);
+    void audioSamplesDescriptionChanged(const AudioStreamBasicDescription&, InProcessCARingBuffer*, size_t);
     void audioSamplesAvailable(const MediaTime&, size_t, size_t);
     RefPtr<AudioSampleBufferConverter> audioConverter() const;
     void enqueueCompressedAudioSampleBuffers();
@@ -125,7 +126,7 @@ private:
 
     void addRingBuffer(const AudioStreamDescription&);
     void writeDataToRingBuffer(AudioBufferList*, size_t, size_t);
-    void updateCurrentRingBufferIfNeeded();
+    void clearRingBuffersIfPossible();
 
     std::atomic<bool> m_isStopped { false };
     bool m_writerIsStarted WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { false };
@@ -151,9 +152,10 @@ private:
     std::optional<AudioStreamBasicDescription> m_originalOutputDescription WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     Deque<UniqueRef<MediaSamplesBlock>> m_encodedAudioFrames WTF_GUARDED_BY_CAPABILITY(queueSingleton());
     std::optional<std::pair<const MediaTime, GenericPromise::Producer>> m_pendingAudioFramePromise WTF_GUARDED_BY_CAPABILITY(queueSingleton());
-    Lock m_ringBuffersLock;
-    Deque<std::unique_ptr<InProcessCARingBuffer>> m_ringBuffers WTF_GUARDED_BY_LOCK(m_ringBuffersLock);
+    Deque<std::pair<std::unique_ptr<InProcessCARingBuffer>, size_t>, 4> m_ringBuffers;
+    size_t m_lastRingBufferId { 0 }; // accessed on the audio thread only.
     InProcessCARingBuffer* m_currentRingBuffer WTF_GUARDED_BY_CAPABILITY(queueSingleton()) { nullptr };
+    std::atomic<size_t> m_currentRingBufferId { 0 };
     std::atomic<int64_t> m_lastEnqueuedAudioTimeUs { 0 };
     std::atomic<int64_t> m_currentAudioTimeUs { 0 };
 
@@ -200,7 +202,7 @@ private:
     const bool m_hasAudio { false };
     const bool m_hasVideo { false };
     const Ref<Listener> m_listener;
-    std::unique_ptr<MediaRecorderPrivateWriter> m_writer; // Always set and immutable once initialize() has been called
+    const std::unique_ptr<MediaRecorderPrivateWriter> m_writer; // Always set and immutable once initialize() has been called
 };
 
 } // namespace WebCore

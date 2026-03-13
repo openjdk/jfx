@@ -28,6 +28,7 @@
 #include "FrameRateAligner.h"
 #include "ReducedResolutionSeconds.h"
 #include "Timer.h"
+#include "WebAnimationTypes.h"
 #include <wtf/CancellableTask.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Markable.h>
@@ -38,6 +39,7 @@ namespace WebCore {
 
 class AnimationTimeline;
 class Document;
+class ScrollTimeline;
 class WeakPtrImplWithEventTargetData;
 class WebAnimation;
 
@@ -47,7 +49,7 @@ class AcceleratedEffectStackUpdater;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AnimationTimelinesController);
 class AnimationTimelinesController final : public CanMakeCheckedPtr<AnimationTimelinesController> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AnimationTimelinesController);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AnimationTimelinesController, AnimationTimelinesController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AnimationTimelinesController);
 public:
     explicit AnimationTimelinesController(Document&);
@@ -57,8 +59,10 @@ public:
     void removeTimeline(AnimationTimeline&);
     void detachFromDocument();
     void updateAnimationsAndSendEvents(ReducedResolutionSeconds);
+    void updateStaleScrollTimelines();
+    void addPendingAnimation(WebAnimation&);
 
-    std::optional<Seconds> currentTime();
+    std::optional<Seconds> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes);
     std::optional<FramesPerSecond> maximumAnimationFrameRate() const { return m_frameRateAligner.maximumFrameRate(); }
     std::optional<Seconds> timeUntilNextTickForAnimationsWithFrameRate(FramesPerSecond) const;
 
@@ -75,7 +79,8 @@ private:
 
     ReducedResolutionSeconds liveCurrentTime() const;
     void cacheCurrentTime(ReducedResolutionSeconds);
-    void maybeClearCachedCurrentTime();
+    void clearCachedCurrentTime();
+    void processPendingAnimations();
     bool isPendingTimelineAttachment(const WebAnimation&) const;
 
     Ref<Document> protectedDocument() const { return m_document.get(); }
@@ -84,14 +89,16 @@ private:
     std::unique_ptr<AcceleratedEffectStackUpdater> m_acceleratedEffectStackUpdater;
 #endif
 
-    UncheckedKeyHashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
+    Timer m_cachedCurrentTimeClearanceTimer;
+    Vector<Ref<ScrollTimeline>> m_updatedScrollTimelines;
+    HashMap<FramesPerSecond, ReducedResolutionSeconds> m_animationFrameRateToLastTickTimeMap;
     WeakHashSet<AnimationTimeline> m_timelines;
-    TaskCancellationGroup m_currentTimeClearingTaskCancellationGroup;
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_pendingAnimations;
+    TaskCancellationGroup m_pendingAnimationsProcessingTaskCancellationGroup;
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     FrameRateAligner m_frameRateAligner;
-    Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
+    Markable<Seconds> m_cachedCurrentTime;
     bool m_isSuspended { false };
-    bool m_waitingOnVMIdle { false };
 };
 
 } // namespace WebCore

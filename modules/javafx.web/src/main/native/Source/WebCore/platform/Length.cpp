@@ -29,9 +29,8 @@
 #include "CalculationCategory.h"
 #include "CalculationTree.h"
 #include "CalculationValue.h"
+#include "CalculationValueMap.h"
 #include <wtf/ASCIICType.h>
-#include <wtf/HashMap.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -48,7 +47,7 @@ struct SameSizeAsLength {
 };
 static_assert(sizeof(Length) == sizeof(SameSizeAsLength), "length should stay small");
 
-static Length parseLength(std::span<const UChar> data)
+static Length parseLength(std::span<const char16_t> data)
 {
     if (data.empty())
         return Length(1, LengthType::Relative);
@@ -70,7 +69,7 @@ static Length parseLength(std::span<const UChar> data)
         ++i;
 
     bool ok;
-    UChar next = (i < data.size()) ? data[i] : ' ';
+    char16_t next = (i < data.size()) ? data[i] : ' ';
     if (next == '%') {
         // IE quirk: accept decimal fractions for percentages.
         double r = charactersToDouble(data.first(doubleLength), &ok);
@@ -86,7 +85,7 @@ static Length parseLength(std::span<const UChar> data)
     return Length(0, LengthType::Relative);
 }
 
-static unsigned countCharacter(StringImpl& string, UChar character)
+static unsigned countCharacter(StringImpl& string, char16_t character)
 {
     unsigned count = 0;
     unsigned length = string.length();
@@ -127,95 +126,16 @@ UniqueArray<Length> newLengthArray(const String& string, int& len)
     return r;
 }
 
-class CalculationValueMap {
-public:
-    CalculationValueMap();
-
-    unsigned insert(Ref<CalculationValue>&&);
-    void ref(unsigned handle);
-    void deref(unsigned handle);
-
-    CalculationValue& get(unsigned handle) const;
-
-private:
-    struct Entry {
-        uint64_t referenceCountMinusOne { 0 };
-        RefPtr<CalculationValue> value;
-        Entry() = default;
-        Entry(Ref<CalculationValue>&&);
-    };
-
-    unsigned m_nextAvailableHandle;
-    UncheckedKeyHashMap<unsigned, Entry> m_map;
-};
-
-inline CalculationValueMap::Entry::Entry(Ref<CalculationValue>&& value)
-    : value(WTFMove(value))
-{
-}
-
-inline CalculationValueMap::CalculationValueMap()
-    : m_nextAvailableHandle(1)
-{
-}
-
-inline unsigned CalculationValueMap::insert(Ref<CalculationValue>&& value)
-{
-    ASSERT(m_nextAvailableHandle);
-
-    Entry entry(WTFMove(value));
-
-    // FIXME: This monotonically increasing handle generation scheme is potentially wasteful
-    // of the handle space. Consider reusing empty handles. https://bugs.webkit.org/show_bug.cgi?id=80489
-    while (!m_map.isValidKey(m_nextAvailableHandle) || !m_map.add(m_nextAvailableHandle, entry).isNewEntry)
-        ++m_nextAvailableHandle;
-
-    return m_nextAvailableHandle++;
-}
-
-inline CalculationValue& CalculationValueMap::get(unsigned handle) const
-{
-    ASSERT(m_map.contains(handle));
-
-    return *m_map.find(handle)->value.value;
-}
-
-inline void CalculationValueMap::ref(unsigned handle)
-{
-    ASSERT(m_map.contains(handle));
-
-    ++m_map.find(handle)->value.referenceCountMinusOne;
-}
-
-inline void CalculationValueMap::deref(unsigned handle)
-{
-    ASSERT(m_map.contains(handle));
-
-    auto it = m_map.find(handle);
-    if (it->value.referenceCountMinusOne) {
-        --it->value.referenceCountMinusOne;
-        return;
-    }
-
-    m_map.remove(it);
-}
-
-static CalculationValueMap& calculationValues()
-{
-    static NeverDestroyed<CalculationValueMap> map;
-    return map;
-}
-
 Length::Length(Ref<CalculationValue>&& value)
     : m_type(LengthType::Calculated)
 {
-    m_calculationValueHandle = calculationValues().insert(WTFMove(value));
+    m_calculationValueHandle = CalculationValueMap::calculationValues().insert(WTFMove(value));
 }
 
 CalculationValue& Length::calculationValue() const
 {
     ASSERT(isCalculated());
-    return calculationValues().get(m_calculationValueHandle);
+    return CalculationValueMap::calculationValues().get(m_calculationValueHandle);
 }
 
 Ref<CalculationValue> Length::protectedCalculationValue() const
@@ -226,18 +146,18 @@ Ref<CalculationValue> Length::protectedCalculationValue() const
 void Length::ref() const
 {
     ASSERT(isCalculated());
-    calculationValues().ref(m_calculationValueHandle);
+    CalculationValueMap::calculationValues().ref(m_calculationValueHandle);
 }
 
 void Length::deref() const
 {
     ASSERT(isCalculated());
-    calculationValues().deref(m_calculationValueHandle);
+    CalculationValueMap::calculationValues().deref(m_calculationValueHandle);
 }
 
 LengthType Length::typeFromIndex(const IPCData& data)
 {
-    static_assert(std::variant_size_v<IPCData> == 13);
+    static_assert(WTF::VariantSizeV<IPCData> == 13);
     switch (data.index()) {
     case WTF::alternativeIndexV<AutoData, IPCData>:
         return LengthType::Auto;
@@ -413,7 +333,7 @@ static Length blendMixedTypes(const Length& from, const Length& to, const Blendi
     if (context.compositeOperation != CompositeOperation::Replace)
         return makeLength(Calculation::add(lengthCalculation(from), lengthCalculation(to)));
 
-    if (from.isIntrinsicOrAuto() || to.isIntrinsicOrAuto()) {
+    if ((!from.isSpecified() && !from.isRelative()) || (!to.isSpecified() && !to.isRelative())) {
         ASSERT(context.isDiscrete);
         ASSERT(!context.progress || context.progress == 1);
         return context.progress ? to : from;
@@ -475,20 +395,20 @@ Length blend(const Length& from, const Length& to, const BlendingContext& contex
 static TextStream& operator<<(TextStream& ts, LengthType type)
 {
     switch (type) {
-    case LengthType::Auto: ts << "auto"; break;
-    case LengthType::Calculated: ts << "calc"; break;
-    case LengthType::Content: ts << "content"; break;
-    case LengthType::FillAvailable: ts << "fill-available"; break;
-    case LengthType::FitContent: ts << "fit-content"; break;
-    case LengthType::Fixed: ts << "fixed"; break;
-    case LengthType::Intrinsic: ts << "intrinsic"; break;
-    case LengthType::MinIntrinsic: ts << "min-intrinsic"; break;
-    case LengthType::MinContent: ts << "min-content"; break;
-    case LengthType::MaxContent: ts << "max-content"; break;
-    case LengthType::Normal: ts << "normal"; break;
-    case LengthType::Percent: ts << "percent"; break;
-    case LengthType::Relative: ts << "relative"; break;
-    case LengthType::Undefined: ts << "undefined"; break;
+    case LengthType::Auto: ts << "auto"_s; break;
+    case LengthType::Calculated: ts << "calc"_s; break;
+    case LengthType::Content: ts << "content"_s; break;
+    case LengthType::FillAvailable: ts << "fill-available"_s; break;
+    case LengthType::FitContent: ts << "fit-content"_s; break;
+    case LengthType::Fixed: ts << "fixed"_s; break;
+    case LengthType::Intrinsic: ts << "intrinsic"_s; break;
+    case LengthType::MinIntrinsic: ts << "min-intrinsic"_s; break;
+    case LengthType::MinContent: ts << "min-content"_s; break;
+    case LengthType::MaxContent: ts << "max-content"_s; break;
+    case LengthType::Normal: ts << "normal"_s; break;
+    case LengthType::Percent: ts << "percent"_s; break;
+    case LengthType::Relative: ts << "relative"_s; break;
+    case LengthType::Undefined: ts << "undefined"_s; break;
     }
     return ts;
 }
@@ -503,7 +423,7 @@ TextStream& operator<<(TextStream& ts, Length length)
         ts << length.type();
         break;
     case LengthType::Fixed:
-        ts << TextStream::FormatNumberRespectingIntegers(length.value()) << "px";
+        ts << TextStream::FormatNumberRespectingIntegers(length.value()) << "px"_s;
         break;
     case LengthType::Relative:
     case LengthType::Intrinsic:
@@ -512,10 +432,10 @@ TextStream& operator<<(TextStream& ts, Length length)
     case LengthType::MaxContent:
     case LengthType::FillAvailable:
     case LengthType::FitContent:
-        ts << length.type() << " " << TextStream::FormatNumberRespectingIntegers(length.value());
+        ts << length.type() << ' ' << TextStream::FormatNumberRespectingIntegers(length.value());
         break;
     case LengthType::Percent:
-        ts << TextStream::FormatNumberRespectingIntegers(length.percent()) << "%";
+        ts << TextStream::FormatNumberRespectingIntegers(length.percent()) << '%';
         break;
     case LengthType::Calculated:
         ts << length.protectedCalculationValue();
@@ -523,7 +443,7 @@ TextStream& operator<<(TextStream& ts, Length length)
     }
 
     if (length.hasQuirk())
-        ts << " has-quirk";
+        ts << " has-quirk"_s;
 
     return ts;
 }

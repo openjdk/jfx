@@ -36,6 +36,7 @@
 #include <climits>
 #include <limits>
 #include <wtf/CheckedRef.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -58,18 +59,18 @@ public:
         m_offsetsInString.clear();
     }
 
-    std::span<const Font*> fonts(size_t from = 0, size_t count = std::dynamic_extent) { return m_fonts.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) { return m_glyphs.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) { return m_advances.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) { return m_origins.mutableSpan().subspan(from, count); }
-    std::span<GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) { return m_offsetsInString.mutableSpan().subspan(from, count); }
-    std::span<const Font* const> fonts(size_t from = 0, size_t count = std::dynamic_extent) const { return m_fonts.subspan(from, count); }
-    std::span<const GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) const { return m_glyphs.subspan(from, count); }
-    std::span<const GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) const { return m_advances.subspan(from, count); }
-    std::span<const GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) const { return m_origins.subspan(from, count); }
-    std::span<const GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) const { return m_offsetsInString.subspan(from, count); }
+    std::span<const Font*> fonts(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_fonts.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_glyphs.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_advances.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_origins.mutableSpan().subspan(from, count); }
+    std::span<GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) LIFETIME_BOUND { return m_offsetsInString.mutableSpan().subspan(from, count); }
+    std::span<const Font* const> fonts(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_fonts.subspan(from, count); }
+    std::span<const GlyphBufferGlyph> glyphs(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_glyphs.subspan(from, count); }
+    std::span<const GlyphBufferAdvance> advances(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_advances.subspan(from, count); }
+    std::span<const GlyphBufferOrigin> origins(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_origins.subspan(from, count); }
+    std::span<const GlyphBufferStringOffset> offsetsInString(size_t from = 0, size_t count = std::dynamic_extent) const LIFETIME_BOUND { return m_offsetsInString.subspan(from, count); }
 
-    const Font& fontAt(size_t index) const
+    const Font& fontAt(size_t index) const LIFETIME_BOUND
     {
         ASSERT(m_fonts[index]);
         return *m_fonts[index];
@@ -78,20 +79,20 @@ public:
     Ref<const Font> protectedFontAt(size_t index) const { return fontAt(index); }
 
     GlyphBufferGlyph glyphAt(size_t index) const { return m_glyphs[index]; }
-    GlyphBufferAdvance& advanceAt(size_t index) { return m_advances[index]; }
+    GlyphBufferAdvance& advanceAt(size_t index) LIFETIME_BOUND { return m_advances[index]; }
     GlyphBufferAdvance advanceAt(size_t index) const { return m_advances[index]; }
     GlyphBufferOrigin originAt(size_t index) const { return m_origins[index]; }
     GlyphBufferStringOffset uncheckedStringOffsetAt(size_t index) const { return m_offsetsInString[index]; }
     std::optional<GlyphBufferStringOffset> checkedStringOffsetAt(size_t index, unsigned stringLength) const
     {
         auto result = uncheckedStringOffsetAt(index);
-        if (static_cast<std::make_unsigned_t<GlyphBufferStringOffset>>(result) >= stringLength)
+        if (unsignedCast(result) >= stringLength)
             return std::nullopt;
         return result;
     }
 
     void setInitialAdvance(GlyphBufferAdvance initialAdvance) { m_initialAdvance = initialAdvance; }
-    const GlyphBufferAdvance& initialAdvance() const { return m_initialAdvance; }
+    const GlyphBufferAdvance& initialAdvance() const LIFETIME_BOUND { return m_initialAdvance; }
     void expandInitialAdvance(float width) { setWidth(m_initialAdvance, WebCore::width(m_initialAdvance) + width); }
     void expandInitialAdvance(GlyphBufferAdvance additionalAdvance)
     {
@@ -117,11 +118,11 @@ public:
 
     void remove(unsigned location, unsigned length)
     {
-        m_fonts.remove(location, length);
-        m_glyphs.remove(location, length);
-        m_advances.remove(location, length);
-        m_origins.remove(location, length);
-        m_offsetsInString.remove(location, length);
+        m_fonts.removeAt(location, length);
+        m_glyphs.removeAt(location, length);
+        m_advances.removeAt(location, length);
+        m_origins.removeAt(location, length);
+        m_offsetsInString.removeAt(location, length);
     }
 
     void deleteGlyphWithoutAffectingSize(unsigned index)
@@ -253,25 +254,11 @@ public:
 private:
     void swap(unsigned index1, unsigned index2)
     {
-        auto font = m_fonts[index1];
-        m_fonts[index1] = m_fonts[index2];
-        m_fonts[index2] = font;
-
-        auto glyph = m_glyphs[index1];
-        m_glyphs[index1] = m_glyphs[index2];
-        m_glyphs[index2] = glyph;
-
-        auto advance = m_advances[index1];
-        m_advances[index1] = m_advances[index2];
-        m_advances[index2] = advance;
-
-        auto origin = m_origins[index1];
-        m_origins[index1] = m_origins[index2];
-        m_origins[index2] = origin;
-
-        auto offset = m_offsetsInString[index1];
-        m_offsetsInString[index1] = m_offsetsInString[index2];
-        m_offsetsInString[index2] = offset;
+        std::swap(m_fonts[index1], m_fonts[index2]);
+        std::swap(m_glyphs[index1], m_glyphs[index2]);
+        std::swap(m_advances[index1], m_advances[index2]);
+        std::swap(m_origins[index1], m_origins[index2]);
+        std::swap(m_offsetsInString[index1], m_offsetsInString[index2]);
     }
 
     Vector<const Font*, 1024> m_fonts;

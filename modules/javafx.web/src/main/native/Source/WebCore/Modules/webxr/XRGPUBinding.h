@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,6 @@
 #include "XREye.h"
 #include "XRGPUProjectionLayerInit.h"
 
-#include <ExceptionOr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -65,6 +64,8 @@ struct XRGPUProjectionLayerInit;
 struct XRProjectionLayerInit;
 struct XRQuadLayerInit;
 
+template<typename> class ExceptionOr;
+
 // https://github.com/immersive-web/WebXR-WebGPU-Binding/blob/main/explainer.md
 class XRGPUBinding : public RefCounted<XRGPUBinding> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRGPUBinding);
@@ -94,7 +95,7 @@ private:
     RefPtr<WebGPU::XRBinding> m_backing;
     RefPtr<const WebXRSession> m_session;
     std::optional<XRGPUProjectionLayerInit> m_init;
-    Ref<GPUDevice> m_device;
+    const Ref<GPUDevice> m_device;
 };
 
 } // namespace WebCore

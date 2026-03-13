@@ -162,6 +162,8 @@ public:
     inline void copyFromInt32ShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
     inline void copyFromDoubleShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     friend struct TypedArrayClassInfos;
 
@@ -179,7 +181,6 @@ protected:
     static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
 
     static size_t estimatedSize(JSCell*, VM&);
-    DECLARE_VISIT_CHILDREN;
 
     // Returns true if successful, and false on error; it will throw on error.
     template<typename OtherAdaptor>

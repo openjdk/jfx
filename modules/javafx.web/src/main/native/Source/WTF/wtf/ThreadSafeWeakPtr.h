@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Atomics.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>
+#include <wtf/SwiftBridging.h>
 #include <wtf/TaggedPtr.h>
 
 namespace WTF {
@@ -38,7 +40,7 @@ template<typename, DestructionThread> class ThreadSafeRefCountedAndCanMakeThread
 
 class ThreadSafeWeakPtrControlBlock {
     WTF_MAKE_NONCOPYABLE(ThreadSafeWeakPtrControlBlock);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadSafeWeakPtrControlBlock);
 public:
     ThreadSafeWeakPtrControlBlock* weakRef()
     {
@@ -70,11 +72,11 @@ public:
     template<typename T, DestructionThread destructionThread>
     void strongDeref() const
     {
-        T* object;
+        SUPPRESS_UNCOUNTED_LOCAL T* object;
         {
             Locker locker { m_lock };
             ASSERT_WITH_SECURITY_IMPLICATION(m_object);
-            if (LIKELY(--m_strongReferenceCount))
+            if (--m_strongReferenceCount) [[likely]]
                 return;
             object = static_cast<T*>(std::exchange(m_object, nullptr));
             // We need to take a weak ref so `this` survives until the `delete object` below.
@@ -87,7 +89,7 @@ public:
             m_weakReferenceCount++;
         }
 
-        auto deleteObject = [this, object] {
+        auto deleteObject = [this, object] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
             delete static_cast<const T*>(object);
 
             bool hasOtherWeakRefs;
@@ -185,14 +187,14 @@ private:
 struct ThreadSafeWeakPtrControlBlockRefDerefTraits {
     static ALWAYS_INLINE ThreadSafeWeakPtrControlBlock* refIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             return ptr->weakRef();
         return nullptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(ThreadSafeWeakPtrControlBlock* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->weakDeref();
     }
 };
@@ -201,7 +203,7 @@ using ControlBlockRefPtr = RefPtr<ThreadSafeWeakPtrControlBlock, RawPtrTraits<Th
 template<typename T, DestructionThread destructionThread = DestructionThread::Any>
 class ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr {
     WTF_MAKE_NONCOPYABLE(ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr);
 public:
     static_assert(alignof(ThreadSafeWeakPtrControlBlock) >= 2);
     static constexpr uintptr_t strongOnlyFlag = 1;
@@ -239,7 +241,7 @@ public:
         if (didDerefStrongOnly) {
             if (newStrongOnlyRefCount == strongOnlyFlag) {
                 ASSERT(m_bits.exchangeOr(destructionStartedFlag) == newStrongOnlyRefCount);
-                auto deleteObject = [this] {
+                auto deleteObject = [this] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
                     delete static_cast<const T*>(this);
                 };
                 switch (destructionThread) {
@@ -282,7 +284,7 @@ protected:
         // that seems unlikely since this is a one-way street. Once we add a controlBlock we don't go back
         // to strong only.
         uintptr_t bits = m_bits.loadRelaxed();
-        if (LIKELY(!isStrongOnly(bits)))
+        if (!isStrongOnly(bits)) [[likely]]
             return *std::bit_cast<ThreadSafeWeakPtrControlBlock*>(bits);
 
         auto* controlBlock = new ThreadSafeWeakPtrControlBlock(this);
@@ -442,7 +444,7 @@ private:
     // from ThreadSafeWeakPtrControlBlock::m_object and don't support structs larger than 65535.
     // https://bugs.webkit.org/show_bug.cgi?id=283929
     ControlBlockRefPtr m_controlBlock;
-};
+} SWIFT_ESCAPABLE;
 
 template<class T> ThreadSafeWeakPtr(const T&) -> ThreadSafeWeakPtr<T>;
 template<class T> ThreadSafeWeakPtr(const T*) -> ThreadSafeWeakPtr<T>;

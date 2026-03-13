@@ -156,7 +156,7 @@ void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& 
         page->chrome().client().addMessageToConsole(consoleMessage->source(), consoleMessage->level(), message, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
         page->chrome().client().addMessageWithArgumentsToConsole(consoleMessage->source(), consoleMessage->level(), message, additionalArguments, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
 
-        if (UNLIKELY(page->settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions()))
+        if (page->settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions()) [[unlikely]]
             logMessageToSystemConsole(*consoleMessage);
     }
 
@@ -308,7 +308,7 @@ static CanvasRenderingContext* canvasRenderingContext(JSC::VM& vm, JSC::JSValue 
 
 void PageConsoleClient::record(JSC::JSGlobalObject* lexicalGlobalObject, Ref<ScriptArguments>&& arguments)
 {
-    if (LIKELY(!InspectorInstrumentation::hasFrontends()))
+    if (!InspectorInstrumentation::hasFrontends()) [[likely]]
         return;
 
     if (auto* target = objectArgumentAt(arguments, 0)) {
@@ -319,7 +319,7 @@ void PageConsoleClient::record(JSC::JSGlobalObject* lexicalGlobalObject, Ref<Scr
 
 void PageConsoleClient::recordEnd(JSC::JSGlobalObject* lexicalGlobalObject, Ref<ScriptArguments>&& arguments)
 {
-    if (LIKELY(!InspectorInstrumentation::hasFrontends()))
+    if (!InspectorInstrumentation::hasFrontends()) [[likely]]
         return;
 
     if (auto* target = objectArgumentAt(arguments, 0)) {
@@ -341,7 +341,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
 
         if (auto* node = JSNode::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 RefPtr<ImageBuffer> snapshot;
 
                 // Only try to do something special for subclasses of Node if they're detached from the DOM tree.
@@ -390,29 +390,29 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
             }
         } else if (auto* imageData = JSImageData::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 auto sourceSize = imageData->size();
                 if (auto imageBuffer = ImageBuffer::create(sourceSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8)) {
                     IntRect sourceRect(IntPoint(), sourceSize);
-                    imageBuffer->putPixelBuffer(imageData->pixelBuffer(), sourceRect);
+                    imageBuffer->putPixelBuffer(imageData->byteArrayPixelBuffer().get(), sourceRect);
                     dataURL = imageBuffer->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
                 }
             }
         } else if (auto* imageBitmap = JSImageBitmap::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 if (auto* imageBuffer = imageBitmap->buffer())
                     dataURL = imageBuffer->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
             }
         } else if (auto* context = canvasRenderingContext(vm, possibleTarget)) {
                 target = possibleTarget;
-                if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 if (auto result = InspectorCanvas::getContentAsDataURL(*context))
                         dataURL = result.value();
                 }
         } else if (auto* rect = JSDOMRectReadOnly::toWrapped(vm, possibleTarget)) {
             target = possibleTarget;
-            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+            if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
                 if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame())) {
                     if (auto snapshot = WebCore::snapshotFrameRect(*localMainFrame, enclosingIntRect(rect->toFloatRect()), { { }, ImageBufferPixelFormat::BGRA8, DestinationColorSpace::SRGB() }))
                         dataURL = snapshot->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
@@ -427,7 +427,7 @@ void PageConsoleClient::screenshot(JSC::JSGlobalObject* lexicalGlobalObject, Ref
         }
     }
 
-    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+    if (InspectorInstrumentation::hasFrontends()) [[unlikely]] {
         if (!target) {
             if (RefPtr localMainFrame = m_page->localMainFrame()) {
             // If no target is provided, capture an image of the viewport.

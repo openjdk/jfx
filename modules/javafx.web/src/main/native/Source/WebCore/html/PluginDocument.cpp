@@ -25,7 +25,10 @@
 #include "config.h"
 #include "PluginDocument.h"
 
+#include "ContainerNodeInlines.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
@@ -35,12 +38,12 @@
 #include "HTMLStyleElement.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
-#include "LocalFrameView.h"
 #include "Logging.h"
 #include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include "StyleSheetContents.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -184,7 +187,7 @@ PluginViewBase* PluginDocument::pluginWidget()
 
 void PluginDocument::setPluginElement(HTMLPlugInElement& element)
 {
-    m_pluginElement = &element;
+    m_pluginElement = element;
 }
 
 void PluginDocument::detachFromPluginElement()

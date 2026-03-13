@@ -136,7 +136,7 @@ bool GenericArgumentsImpl<Type>::put(JSCell* cell, JSGlobalObject* globalObject,
 
     // https://tc39.github.io/ecma262/#sec-arguments-exotic-objects-set-p-v-receiver
     // Fall back to the OrdinarySet when the receiver is altered from the thisObject.
-    if (UNLIKELY(slot.thisValue() != thisObject))
+    if (slot.thisValue() != thisObject) [[unlikely]]
         RELEASE_AND_RETURN(scope, Base::put(thisObject, globalObject, ident, value, slot));
 
     std::optional<uint32_t> index = parseIndex(ident);
@@ -279,7 +279,7 @@ void GenericArgumentsImpl<Type>::initModifiedArgumentsDescriptor(JSGlobalObject*
 
     if (argsLength) {
         void* backingStore = vm.gigacageAuxiliarySpace(m_modifiedArgumentsDescriptor.kind).allocate(vm, WTF::roundUpToMultipleOf<8>(argsLength), nullptr, AllocationFailureMode::ReturnNull);
-        if (UNLIKELY(!backingStore)) {
+        if (!backingStore) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }

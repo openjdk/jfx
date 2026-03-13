@@ -101,10 +101,11 @@ private:
     [[noreturn]] Ref<CommandBuffer> invalidCommandBuffer() final;
     [[noreturn]] Ref<RenderPassEncoder> invalidRenderPassEncoder() final;
     [[noreturn]] Ref<ComputePassEncoder> invalidComputePassEncoder() final;
+    [[noreturn]] Ref<BindGroupLayout> emptyBindGroupLayout() const final;
 
     WebGPUPtr<WGPUDevice> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
-    Ref<QueueImpl> m_queue;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<QueueImpl> m_queue;
 };
 
 } // namespace WebCore::WebGPU

@@ -35,7 +35,7 @@ namespace JSC { namespace B3 {
 
 WasmBoundsCheckValue::~WasmBoundsCheckValue() = default;
 
-WasmBoundsCheckValue::WasmBoundsCheckValue(Origin origin, GPRReg pinnedSize, Value* ptr, unsigned offset)
+WasmBoundsCheckValue::WasmBoundsCheckValue(Origin origin, GPRReg pinnedSize, Value* ptr, uint64_t offset)
     : Value(CheckedOpcode, WasmBoundsCheck, One, origin, ptr)
     , m_offset(offset)
     , m_boundsType(Type::Pinned)
@@ -43,7 +43,7 @@ WasmBoundsCheckValue::WasmBoundsCheckValue(Origin origin, GPRReg pinnedSize, Val
     m_bounds.pinnedSize = pinnedSize;
 }
 
-WasmBoundsCheckValue::WasmBoundsCheckValue(Origin origin, Value* ptr, unsigned offset, size_t maximum)
+WasmBoundsCheckValue::WasmBoundsCheckValue(Origin origin, Value* ptr, uint64_t offset, size_t maximum)
     : Value(CheckedOpcode, WasmBoundsCheck, One, origin, ptr)
     , m_offset(offset)
     , m_boundsType(Type::Maximum)

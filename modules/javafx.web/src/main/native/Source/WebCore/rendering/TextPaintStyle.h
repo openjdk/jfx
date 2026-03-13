@@ -28,6 +28,7 @@
 #include "Color.h"
 #include "GraphicsTypes.h"
 #include "RenderStyleConstants.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -35,8 +36,13 @@ class GraphicsContext;
 class LocalFrame;
 class RenderStyle;
 class RenderText;
-class ShadowData;
 struct PaintInfo;
+
+namespace Style {
+struct TextShadow;
+template<typename> struct Shadows;
+using TextShadows = Shadows<TextShadow>;
+}
 
 struct TextPaintStyle {
     TextPaintStyle() = default;
@@ -50,7 +56,6 @@ struct TextPaintStyle {
     float strokeWidth { 0 };
     // This is not set for -webkit-text-fill-color.
     bool hasExplicitlySetFillColor { false };
-    bool useDarkAppearance { false };
     PaintOrder paintOrder { PaintOrder::Normal };
     LineJoin lineJoin { LineJoin::Miter };
     LineCap lineCap { LineCap::Butt };
@@ -59,7 +64,7 @@ struct TextPaintStyle {
 
 bool textColorIsLegibleAgainstBackgroundColor(const Color& textColor, const Color& backgroundColor);
 TextPaintStyle computeTextPaintStyle(const RenderText&, const RenderStyle&, const PaintInfo&);
-TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle&, const RenderText&, const RenderStyle&, const PaintInfo&, std::optional<ShadowData>& selectionShadow);
+TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle&, const RenderText&, const RenderStyle&, const PaintInfo&, Style::TextShadows& selectionShadow);
 
 enum FillColorType { UseNormalFillColor, UseEmphasisMarkColor };
 void updateGraphicsContext(GraphicsContext&, const TextPaintStyle&, FillColorType = UseNormalFillColor);

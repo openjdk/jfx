@@ -28,6 +28,7 @@
 #include "Length.h"
 #include "StyleColor.h"
 #include "StyleFontData.h"
+#include "StyleWebKitBorderSpacing.h"
 #include <wtf/DataRef.h>
 
 namespace WTF {
@@ -38,7 +39,7 @@ namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInheritedData);
 class StyleInheritedData : public RefCounted<StyleInheritedData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleInheritedData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleInheritedData, StyleInheritedData);
 public:
     static Ref<StyleInheritedData> create() { return adoptRef(*new StyleInheritedData); }
     Ref<StyleInheritedData> copy() const;
@@ -53,8 +54,8 @@ public:
     bool nonFastPathInheritedEqual(const StyleInheritedData&) const;
     void fastPathInheritFrom(const StyleInheritedData&);
 
-    float horizontalBorderSpacing;
-    float verticalBorderSpacing;
+    Style::WebkitBorderSpacing borderHorizontalSpacing;
+    Style::WebkitBorderSpacing borderVerticalSpacing;
 
     Length lineHeight;
 #if ENABLE(TEXT_AUTOSIZING)

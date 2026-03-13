@@ -55,7 +55,7 @@ class ScrollingEffectsControllerTimer : public RunLoop::TimerBase {
     WTF_MAKE_TZONE_ALLOCATED(ScrollingEffectsControllerTimer);
 public:
     ScrollingEffectsControllerTimer(RunLoop& runLoop, Function<void()>&& callback)
-        : RunLoop::TimerBase(runLoop)
+        : RunLoop::TimerBase(runLoop, "ScrollingEffectsControllerTimer"_s)
         , m_callback(WTFMove(callback))
     {
     }

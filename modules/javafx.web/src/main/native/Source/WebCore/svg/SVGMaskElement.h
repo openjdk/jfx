@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGTests.h"

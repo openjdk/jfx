@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,8 +38,6 @@ class Document;
 class LegacyRenderSVGResourceClipper;
 class LegacyRenderSVGResourceContainer;
 class QualifiedName;
-class ReferenceFilterOperation;
-class ReferencePathOperation;
 class RenderElement;
 class RenderSVGResourceFilter;
 class RenderStyle;
@@ -50,6 +48,12 @@ class SVGMarkerElement;
 class SVGMaskElement;
 class StyleImage;
 class TreeScope;
+
+namespace Style {
+class ReferenceFilterOperation;
+struct ReferencePath;
+struct URL;
+}
 
 class ReferencedSVGResources {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReferencedSVGResources);
@@ -64,17 +68,17 @@ public:
     void updateReferencedResources(TreeScope&, const SVGElementIdentifierAndTagPairs&);
 
     // Legacy: Clipping needs a renderer, filters use an element.
-    static LegacyRenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const ReferencePathOperation&);
-    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const ReferenceFilterOperation&);
+    static LegacyRenderSVGResourceClipper* referencedClipperRenderer(TreeScope&, const Style::ReferencePath&);
+    static RefPtr<SVGFilterElement> referencedFilterElement(TreeScope&, const Style::ReferenceFilterOperation&);
 
     static LegacyRenderSVGResourceContainer* referencedRenderResource(TreeScope&, const AtomString& fragment);
 
     // LBSE: All element based.
-    static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const ReferencePathOperation&);
-    static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const String&);
+    static RefPtr<SVGClipPathElement> referencedClipPathElement(TreeScope&, const Style::ReferencePath&);
+    static RefPtr<SVGMarkerElement> referencedMarkerElement(TreeScope&, const Style::URL&);
     static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const StyleImage&);
     static RefPtr<SVGMaskElement> referencedMaskElement(TreeScope&, const AtomString&);
-    static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const String&);
+    static RefPtr<SVGElement> referencedPaintServerElement(TreeScope&, const Style::URL&);
 
 private:
     static RefPtr<SVGElement> elementForResourceID(TreeScope&, const AtomString& resourceID, const SVGQualifiedName& tagName);
@@ -83,7 +87,7 @@ private:
     void addClientForTarget(SVGElement& targetElement, const AtomString&);
     void removeClientForTarget(TreeScope&, const AtomString&);
 
-    CheckedRef<RenderElement> m_renderer;
+    const CheckedRef<RenderElement> m_renderer;
     MemoryCompactRobinHoodHashMap<AtomString, std::unique_ptr<CSSSVGResourceElementClient>> m_elementClients;
 };
 

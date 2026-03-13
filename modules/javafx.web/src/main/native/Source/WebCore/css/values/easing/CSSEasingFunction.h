@@ -34,7 +34,7 @@ namespace CSS {
 
 // `EasingFunction` uses a wrapping a struct to allow forward declaration.
 struct EasingFunction {
-    std::variant<
+    Variant<
         // <linear()>
         Keyword::Linear,        // Equivalent to linear(0, 1)
         LinearEasingFunction,
@@ -66,4 +66,4 @@ struct EasingFunction {
 } // namespace CSS
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::EasingFunction> = true;
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::EasingFunction)

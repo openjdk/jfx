@@ -93,6 +93,12 @@ struct Config {
     void* defaultCallThunk;
     void* arityFixupThunk;
 
+    void* ipint_dispatch_base;
+    void* ipint_gc_dispatch_base;
+    void* ipint_conversion_dispatch_base;
+    void* ipint_simd_dispatch_base;
+    void* ipint_atomic_dispatch_base;
+
 #if ENABLE(SEPARATED_WX_HEAP)
     JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
 #endif

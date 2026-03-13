@@ -57,10 +57,17 @@ struct OSRExitBase {
     CodeOrigin m_codeOrigin;
     CodeOrigin m_codeOriginForExitProfile;
     CallSiteIndex m_exceptionHandlerCallSiteIndex;
+    CallSiteIndex m_exitCallSiteIndex;
     uint32_t m_dfgNodeIndex;
 
     ALWAYS_INLINE bool isExceptionHandler() const
     {
+        return m_kind == ExceptionCheck || m_kind == GenericUnwind || m_kind == WillThrowOutOfMemoryError;
+    }
+
+    ALWAYS_INLINE bool isOSRExitDueToException() const
+    {
+        // WillThrowOutOfMemoryError will throw an error. It is not an OSR due to thrown exception.
         return m_kind == ExceptionCheck || m_kind == GenericUnwind;
     }
 

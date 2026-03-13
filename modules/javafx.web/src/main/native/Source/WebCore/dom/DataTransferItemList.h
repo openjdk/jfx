@@ -33,7 +33,6 @@
 
 #include "ContextDestructionObserver.h"
 #include "DataTransfer.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
@@ -46,6 +45,7 @@ namespace WebCore {
 class DataTransferItem;
 class Document;
 class File;
+template<typename> class ExceptionOr;
 
 class DataTransferItemList final : public ScriptWrappable, public ContextDestructionObserver, public CanMakeWeakPtr<DataTransferItemList> {
     WTF_MAKE_NONCOPYABLE(DataTransferItemList);

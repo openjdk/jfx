@@ -29,12 +29,10 @@
 #if ENABLE(WEBXR)
 
 #include "CanvasObserver.h"
-#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "GraphicsTypesGL.h"
 #include "PlatformXR.h"
 #include "WebXRLayer.h"
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -52,12 +50,13 @@ class WebXRSession;
 class WebXRView;
 class WebXRViewport;
 struct XRWebGLLayerInit;
+template<typename> class ExceptionOr;
 
 class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRWebGLLayer);
 public:
 
-    using WebXRRenderingContext = std::variant<
+    using WebXRRenderingContext = Variant<
         RefPtr<WebGLRenderingContext>,
         RefPtr<WebGL2RenderingContext>
     >;

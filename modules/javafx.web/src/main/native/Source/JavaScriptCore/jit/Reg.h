@@ -137,27 +137,7 @@ public:
             MacroAssembler::firstFPRegister() + (m_index - MacroAssembler::numberOfRegisters()));
     }
 
-    friend constexpr bool operator==(const Reg&, const Reg&) = default;
-
-    constexpr bool operator<(const Reg& other) const
-    {
-        return m_index < other.m_index;
-    }
-
-    constexpr bool operator>(const Reg& other) const
-    {
-        return m_index > other.m_index;
-    }
-
-    constexpr bool operator<=(const Reg& other) const
-    {
-        return m_index <= other.m_index;
-    }
-
-    constexpr bool operator>=(const Reg& other) const
-    {
-        return m_index >= other.m_index;
-    }
+    friend constexpr auto operator<=>(const Reg&, const Reg&) = default;
 
     constexpr unsigned hash() const
     {

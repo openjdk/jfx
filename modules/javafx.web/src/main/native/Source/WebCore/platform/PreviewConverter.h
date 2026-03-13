@@ -95,7 +95,7 @@ public:
     WEBCORE_EXPORT static void setPasswordForTesting(const String&);
 
 private:
-    static UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> platformSupportedMIMETypes();
+    static HashSet<String, ASCIICaseInsensitiveHash> platformSupportedMIMETypes();
 
     PreviewConverter(const ResourceResponse&, PreviewConverterProvider&);
 

@@ -115,6 +115,9 @@ enum TracePointCode {
     WebXRLayerEndFrameEnd,
     WebXRSessionFrameCallbacksStart,
     WebXRSessionFrameCallbacksEnd,
+    ProgrammaticScroll,
+    FixedContainerEdgeSamplingStart,
+    FixedContainerEdgeSamplingEnd,
 
     WebKitRange = 10000,
     WebHTMLViewPaintStart,
@@ -216,7 +219,7 @@ inline void tracePoint(TracePointCode code, uint64_t data1 = 0, uint64_t data2 =
 }
 
 class TraceScope {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TraceScope);
 public:
 
     TraceScope(TracePointCode entryCode, TracePointCode exitCode, uint64_t data1 = 0, uint64_t data2 = 0, uint64_t data3 = 0, uint64_t data4 = 0)
@@ -264,11 +267,14 @@ WTF_EXTERN_C_END
     M(RegisterImportMap) \
     M(JSCGarbageCollector) \
     M(JSCJITCompiler) \
+    M(JSCJITPlanQueued) \
+    M(JSCJITPlanReady) \
     M(JSCJSGlobalObject) \
     M(IPCConnection) \
     M(StreamClientConnection) \
     M(ScrollingPerformanceTestFingerDownInterval) \
     M(ScrollingPerformanceTestMomentumInterval) \
+    M(WebKitPerformance) \
 
 #define DECLARE_WTF_SIGNPOST_NAME_ENUM(name) WTFOSSignpostName ## name,
 
@@ -292,7 +298,7 @@ enum WTFOSSignpostType {
 // By default, os_signpost always emits signpost data to logd. We want to avoid that for WebKit
 // signposts. Instead, we use kdebug_is_enabled to make WebKit's os_signposts behave like kdebug
 // trace points (i.e. we only enable them if a tracing tool is active).
-#define WTFSignpostsEnabled() UNLIKELY(kdebug_is_enabled(KDBG_EVENTID(DBG_APPS, DBG_APPS_WEBKIT_MISC, 0)))
+#define WTFSignpostsEnabled() kdebug_is_enabled(KDBG_EVENTID(DBG_APPS, DBG_APPS_WEBKIT_MISC, 0))
 #else
 #define WTFSignpostsEnabled() true
 #endif
@@ -341,7 +347,7 @@ enum WTFOSSignpostType {
 
 #define WTFEmitSignpostWithType(type, emitMacro, pointer, name, timeDelta, timeFormat, format, ...) \
     do { \
-        if (WTFSignpostsEnabled()) \
+        if (WTFSignpostsEnabled()) [[unlikely]] \
             WTFEmitSignpostAlwaysWithType(type, emitMacro, pointer, name, timeDelta, timeFormat, format, ##__VA_ARGS__); \
     } while (0)
 
@@ -360,14 +366,16 @@ enum WTFOSSignpostType {
 
 #define WTFEmitSignpostDirectlyWithType(emitMacro, pointer, name, format, ...) \
     do { \
-    os_log_t wtfHandle = WTFSignpostLogHandle(); \
+        RetainPtr<os_log_t> wtfHandle = WTFSignpostLogHandle(); \
     const void *wtfPointer = (pointer); \
-    os_signpost_id_t wtfSignpostID = wtfPointer ? os_signpost_id_make_with_pointer(wtfHandle, wtfPointer) : OS_SIGNPOST_ID_EXCLUSIVE; \
-        emitMacro(wtfHandle, wtfSignpostID, #name, format, ##__VA_ARGS__); \
+        os_signpost_id_t wtfSignpostID = wtfPointer ? os_signpost_id_make_with_pointer(wtfHandle.get(), wtfPointer) : OS_SIGNPOST_ID_EXCLUSIVE; \
+        emitMacro(wtfHandle.get(), wtfSignpostID, #name, format, ##__VA_ARGS__); \
     } while (0)
 
 #define WTFEmitSignpostIndirectlyWithType(type, pointer, name, timeDelta, format, ...) \
-    os_log(WTFSignpostLogHandle(), "type=%d name=%d p=%" PRIuPTR " ts=%llu " format, type, WTFOSSignpostName ## name, reinterpret_cast<uintptr_t>(pointer), WTFCurrentContinuousTime(timeDelta), ##__VA_ARGS__)
+    SUPPRESS_UNCOUNTED_LOCAL os_log(WTFSignpostLogHandle(), "type=%d name=%d p=%" PRIuPTR " ts=%llu " format, type, WTFOSSignpostName ## name, reinterpret_cast<uintptr_t>(pointer), WTFCurrentContinuousTime(timeDelta), ##__VA_ARGS__)
+
+#define WTFSetCounter(name, value) do { } while (0)
 
 #elif USE(SYSPROF_CAPTURE)
 
@@ -414,6 +422,12 @@ enum WTFOSSignpostType {
 #define WTFBeginSignpostAlwaysWithTimeDelta(pointer, name, timeDelta, ...) WTFBeginSignpostWithTimeDelta((pointer), name, (timeDelta), ##__VA_ARGS__)
 #define WTFEndSignpostAlwaysWithTimeDelta(pointer, name, timeDelta, ...) WTFEndSignpostWithTimeDelta((pointer), name, (timeDelta), ##__VA_ARGS__)
 
+#define WTFSetCounter(name, value) \
+    do { \
+        if (auto* annotator = SysprofAnnotator::singletonIfCreated()) \
+            annotator->setCounter(std::span(_STRINGIFY(name)), value); \
+    } while (0)
+
 #else
 
 #define WTFEmitSignpost(pointer, name, ...) do { } while (0)
@@ -431,5 +445,7 @@ enum WTFOSSignpostType {
 #define WTFEmitSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
 #define WTFBeginSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
 #define WTFEndSignpostAlwaysWithTimeDelta(pointer, name, ...) do { } while (0)
+
+#define WTFSetCounter(name, value) do { } while (0)
 
 #endif

@@ -31,17 +31,20 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-// <'clip'> = <rect()> | auto
-// https://drafts.fxtf.org/css-masking/#propdef-clip
-RefPtr<CSSValue> consumeClip(CSSParserTokenRange&, const CSSParserContext&);
+// rect() = rect( [ <length> | auto ]#{4} | [ <length> | auto ]{4} )
+// https://drafts.fxtf.org/css-masking/#funcdef-clip-rect
+RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // <'clip-path'> = none | <clip-source> | [ <basic-shape> || <geometry-box> ]
 // https://drafts.fxtf.org/css-masking/#propdef-clip-path
-RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

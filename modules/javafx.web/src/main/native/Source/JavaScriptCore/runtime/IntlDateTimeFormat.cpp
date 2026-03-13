@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -102,20 +102,18 @@ void IntlDateTimeFormat::setBoundFormat(VM& vm, JSBoundFunction* format)
     m_boundFormat.set(vm, this, format);
 }
 
-static String canonicalizeTimeZoneName(const String& timeZoneName)
+// https://tc39.es/ecma402/#sec-getavailablenamedtimezoneidentifier
+static String availableNamedTimeZoneIdentifier(StringView timeZoneName)
 {
-    // 6.4.1 IsValidTimeZoneName (timeZone)
-    // The abstract operation returns true if timeZone, converted to upper case as described in 6.1, is equal to one of the Zone or Link names of the IANA Time Zone Database, converted to upper case as described in 6.1. It returns false otherwise.
     UErrorCode status = U_ZERO_ERROR;
     UEnumeration* timeZones = ucal_openTimeZones(&status);
     ASSERT(U_SUCCESS(status));
 
-    String canonical;
     do {
         status = U_ZERO_ERROR;
         int32_t ianaTimeZoneLength;
-        // Time zone names are represented as UChar[] in all related ICU APIs.
-        const UChar* ianaTimeZone = uenum_unext(timeZones, &ianaTimeZoneLength, &status);
+        // Time zone names are represented as char16_t[] in all related ICU APIs.
+        const char16_t* ianaTimeZone = uenum_unext(timeZones, &ianaTimeZoneLength, &status);
         ASSERT(U_SUCCESS(status));
 
         // End of enumeration.
@@ -125,25 +123,11 @@ static String canonicalizeTimeZoneName(const String& timeZoneName)
         StringView ianaTimeZoneView(std::span(ianaTimeZone, ianaTimeZoneLength));
         if (!equalIgnoringASCIICase(timeZoneName, ianaTimeZoneView))
             continue;
-
-        // Found a match, now canonicalize.
-        // 6.4.2 CanonicalizeTimeZoneName (timeZone) (ECMA-402 2.0)
-        // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database such that timeZone, converted to upper case as described in 6.1, is equal to ianaTimeZone, converted to upper case as described in 6.1.
-        // 2. If ianaTimeZone is a Link name, then let ianaTimeZone be the corresponding Zone name as specified in the “backward” file of the IANA Time Zone Database.
-
-        Vector<UChar, 32> buffer;
-        auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, ianaTimeZone, ianaTimeZoneLength, buffer, nullptr);
-        ASSERT_UNUSED(status, U_SUCCESS(status));
-        canonical = String(buffer);
-    } while (canonical.isNull());
+        return ianaTimeZoneView.toString();
+    } while (true);
     uenum_close(timeZones);
 
-    // 3. If ianaTimeZone is "Etc/UTC", "Etc/GMT", or "GMT", then return "UTC".
-    if (isUTCEquivalent(canonical))
-        return "UTC"_s;
-
-    // 4. Return ianaTimeZone.
-    return canonical;
+    return String();
 }
 
 Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExtensionKey key)
@@ -159,12 +143,23 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
         while (const char* availableName = uenum_next(calendars, &nameLength, &status)) {
             ASSERT(U_SUCCESS(status));
             String calendar = String(unsafeMakeSpan(availableName, static_cast<size_t>(nameLength)));
-            keyLocaleData.append(calendar);
             // Adding "islamicc" candidate for backward compatibility.
             if (calendar == "islamic-civil"_s)
                 keyLocaleData.append("islamicc"_s);
-            if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
+
+            if (auto mapped = mapICUCalendarKeywordToBCP47(calendar)) {
+                // Specially allowing non BCP-47 compliant cases here, e.g. "gregorian"
+                // This is fine because this function's purpose is collecting what calendar strings are accepted by IntlDateTimeFormat.
+                // When "gregorian" is specified, we convert it to "gregory" to make it aligned to BCP-47. Thus we accept non BCP-47 compliant
+                // calendar IDs only when we can convert it to corresponding BCP-47 compliant ID: when mapICUCalendarKeywordToBCP47 returns a mapped value.
+                keyLocaleData.append(WTFMove(calendar));
                 keyLocaleData.append(WTFMove(mapped.value()));
+            } else {
+                // Skip if the obtained calendar code is not meeting Unicode Locale Identifier's `type` definition
+                // as whole ECMAScript's i18n is relying on Unicode Local Identifiers.
+                if (isUnicodeLocaleIdentifierType(calendar))
+                    keyLocaleData.append(WTFMove(calendar));
+        }
         }
         uenum_close(calendars);
         break;
@@ -367,7 +362,7 @@ IntlDateTimeFormat::HourCycle IntlDateTimeFormat::parseHourCycle(const String& h
     return HourCycle::None;
 }
 
-inline IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromSymbol(UChar symbol)
+inline IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromSymbol(char16_t symbol)
 {
     switch (symbol) {
     case 'K':
@@ -382,7 +377,7 @@ inline IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromSymbol(UCh
     return HourCycle::None;
 }
 
-IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromPattern(const Vector<UChar, 32>& pattern)
+IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromPattern(const Vector<char16_t, 32>& pattern)
 {
     for (unsigned i = 0, length = pattern.size(); i < length; ++i) {
         auto character = pattern[i];
@@ -403,9 +398,9 @@ IntlDateTimeFormat::HourCycle IntlDateTimeFormat::hourCycleFromPattern(const Vec
     return HourCycle::None;
 }
 
-inline void IntlDateTimeFormat::replaceHourCycleInSkeleton(Vector<UChar, 32>& skeleton, bool isHour12)
+inline void IntlDateTimeFormat::replaceHourCycleInSkeleton(Vector<char16_t, 32>& skeleton, bool isHour12)
 {
-    UChar skeletonCharacter = 'H';
+    char16_t skeletonCharacter = 'H';
     if (isHour12)
         skeletonCharacter = 'h';
     for (unsigned i = 0, length = skeleton.size(); i < length; ++i) {
@@ -428,9 +423,9 @@ inline void IntlDateTimeFormat::replaceHourCycleInSkeleton(Vector<UChar, 32>& sk
     }
 }
 
-inline void IntlDateTimeFormat::replaceHourCycleInPattern(Vector<UChar, 32>& pattern, HourCycle hourCycle)
+inline void IntlDateTimeFormat::replaceHourCycleInPattern(Vector<char16_t, 32>& pattern, HourCycle hourCycle)
 {
-    UChar hourFromHourCycle = 'H';
+    char16_t hourFromHourCycle = 'H';
     switch (hourCycle) {
     case HourCycle::H11:
         hourFromHourCycle = 'K';
@@ -554,7 +549,7 @@ String IntlDateTimeFormat::buildSkeleton(Weekday weekday, Era era, Year year, Mo
         //     > hourCycle = h23: "H", plus modifying the resolved pattern to use the hour symbol "H".
         //     > hourCycle = h24: "H", plus modifying the resolved pattern to use the hour symbol "k".
         //
-        UChar skeletonCharacter = 'j';
+        char16_t skeletonCharacter = 'j';
         if (hour12 == TriState::Indeterminate) {
             switch (hourCycle) {
             case HourCycle::None:
@@ -718,8 +713,8 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     {
         String calendar = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Ca)];
         if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
-            m_calendar = WTFMove(mapped.value());
-        else
+            calendar = WTFMove(mapped.value());
+
             m_calendar = WTFMove(calendar);
         // Handling "islamicc" candidate for backward compatibility.
         if (m_calendar == "islamicc"_s)
@@ -747,7 +742,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             tz = makeString(minutes < 0 ? '-' : '+', pad('0', 2, absMinutes / 60), ':', pad('0', 2, absMinutes % 60));
             timeZoneForICU = makeString("GMT"_s, minutes < 0 ? '-' : '+', pad('0', 2, absMinutes / 60), pad('0', 2, absMinutes % 60));
         } else {
-            tz = canonicalizeTimeZoneName(originalTz);
+            tz = availableNamedTimeZoneIdentifier(originalTz);
             if (tz.isNull()) {
                 String message = tryMakeString("invalid time zone: "_s, originalTz);
                 if (!message)
@@ -806,7 +801,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     m_timeStyle = intlOption<DateTimeStyle>(globalObject, options, vm.propertyNames->timeStyle, { { "full"_s, DateTimeStyle::Full }, { "long"_s, DateTimeStyle::Long }, { "medium"_s, DateTimeStyle::Medium }, { "short"_s, DateTimeStyle::Short } }, "timeStyle must be \"full\", \"long\", \"medium\", or \"short\""_s, DateTimeStyle::None);
     RETURN_IF_EXCEPTION(scope, void());
 
-    Vector<UChar, 32> patternBuffer;
+    Vector<char16_t, 32> patternBuffer;
     if (m_dateStyle != DateTimeStyle::None || m_timeStyle != DateTimeStyle::None) {
         // 30. For each row in Table 1, except the header row, do
         //     i. Let prop be the name given in the Property column of the row.
@@ -834,12 +829,12 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             return UDAT_NONE;
         };
 
-        if (UNLIKELY(required == RequiredComponent::Date && m_timeStyle != DateTimeStyle::None)) {
+        if (required == RequiredComponent::Date && m_timeStyle != DateTimeStyle::None) [[unlikely]] {
             throwTypeError(globalObject, scope, "timeStyle is specified while formatting date is requested"_s);
             return;
         }
 
-        if (UNLIKELY(required == RequiredComponent::Time && m_dateStyle != DateTimeStyle::None)) {
+        if (required == RequiredComponent::Time && m_dateStyle != DateTimeStyle::None) [[unlikely]] {
             throwTypeError(globalObject, scope, "dateStyle is specified while formatting time is requested"_s);
             return;
         }
@@ -883,8 +878,8 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
                 specifiedHour12 = isHour12(hourCycle);
             HourCycle extractedHourCycle = hourCycleFromPattern(patternBuffer);
             if (extractedHourCycle != HourCycle::None && isHour12(extractedHourCycle) != specifiedHour12) {
-                Vector<UChar, 32> skeleton;
-                auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, patternBuffer.data(), patternBuffer.size(), skeleton);
+                Vector<char16_t, 32> skeleton;
+                auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, patternBuffer.span().data(), patternBuffer.size(), skeleton);
                 if (U_FAILURE(status)) {
                     throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
                     return;
@@ -1260,7 +1255,7 @@ JSValue IntlDateTimeFormat::format(JSGlobalObject* globalObject, double value) c
     if (!std::isfinite(value))
         return throwRangeError(globalObject, scope, "date value is not finite in DateTimeFormat format()"_s);
 
-    Vector<UChar, 32> result;
+    Vector<char16_t, 32> result;
     auto status = callBufferProducingFunction(udat_format, m_dateFormat.get(), value, result, nullptr);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
@@ -1348,7 +1343,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to open field position iterator"_s);
 
-    Vector<UChar, 32> result;
+    Vector<char16_t, 32> result;
     status = callBufferProducingFunction(udat_formatForFields, m_dateFormat.get(), value, result, fields.get());
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
@@ -1408,7 +1403,7 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
     if (m_dateIntervalFormat)
         return m_dateIntervalFormat.get();
 
-    Vector<UChar, 32> pattern;
+    Vector<char16_t, 32> pattern;
     {
         auto status = callBufferProducingFunction(udat_toPattern, m_dateFormat.get(), false, pattern);
         if (U_FAILURE(status)) {
@@ -1417,9 +1412,9 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
         }
     }
 
-    Vector<UChar, 32> skeleton;
+    Vector<char16_t, 32> skeleton;
     {
-        auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, pattern.data(), pattern.size(), skeleton);
+        auto status = callBufferProducingFunction(udatpg_getSkeleton, nullptr, pattern.span().data(), pattern.size(), skeleton);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
             return nullptr;
@@ -1438,7 +1433,7 @@ UDateIntervalFormat* IntlDateTimeFormat::createDateIntervalFormatIfNecessary(JSG
 
     UErrorCode status = U_ZERO_ERROR;
     StringView timeZoneView(m_timeZoneForICU);
-    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.data(), skeleton.data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
+    m_dateIntervalFormat = std::unique_ptr<UDateIntervalFormat, UDateIntervalFormatDeleter>(udtitvfmt_open(dataLocaleWithExtensions.data(), skeleton.span().data(), skeleton.size(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DateIntervalFormat"_s);
         return nullptr;
@@ -1570,12 +1565,12 @@ JSValue IntlDateTimeFormat::formatRange(JSGlobalObject* globalObject, double sta
         RELEASE_AND_RETURN(scope, format(globalObject, startDate));
 
     int32_t formattedStringLength = 0;
-    const UChar* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
+    const char16_t* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "Failed to format date interval"_s);
         return { };
     }
-    Vector<UChar, 32> buffer(std::span<const UChar> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
+    Vector<char16_t, 32> buffer(std::span<const char16_t> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(buffer);
 
     return jsString(vm, String(WTFMove(buffer)));
@@ -1674,12 +1669,12 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
     }
 
     int32_t formattedStringLength = 0;
-    const UChar* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
+    const char16_t* formattedStringPointer = ufmtval_getString(formattedValue, &formattedStringLength, &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "Failed to format date interval"_s);
         return { };
     }
-    Vector<UChar, 32> buffer(std::span<const UChar> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
+    Vector<char16_t, 32> buffer(std::span<const char16_t> { formattedStringPointer, static_cast<size_t>(formattedStringLength) });
     replaceNarrowNoBreakSpaceOrThinSpaceWithNormalSpace(buffer);
 
     StringView resultStringView(buffer.span());

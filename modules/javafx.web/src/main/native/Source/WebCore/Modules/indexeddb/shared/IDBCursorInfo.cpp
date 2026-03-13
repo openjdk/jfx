@@ -67,7 +67,7 @@ IDBCursorInfo::IDBCursorInfo(IDBTransaction& transaction, IDBObjectStoreIdentifi
 {
 }
 
-IDBCursorInfo::IDBCursorInfo(const IDBResourceIdentifier& cursorIdentifier, const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, std::variant<IDBObjectStoreIdentifier, IDBIndexIdentifier> sourceIdentifier, const IDBKeyRangeData& range, IndexedDB::CursorSource source, IndexedDB::CursorDirection direction, IndexedDB::CursorType type)
+IDBCursorInfo::IDBCursorInfo(const IDBResourceIdentifier& cursorIdentifier, const IDBResourceIdentifier& transactionIdentifier, IDBObjectStoreIdentifier objectStoreIdentifier, Variant<IDBObjectStoreIdentifier, IDBIndexIdentifier> sourceIdentifier, const IDBKeyRangeData& range, IndexedDB::CursorSource source, IndexedDB::CursorDirection direction, IndexedDB::CursorType type)
     : m_cursorIdentifier(cursorIdentifier)
     , m_transactionIdentifier(transactionIdentifier)
     , m_objectStoreIdentifier(objectStoreIdentifier)

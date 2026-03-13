@@ -155,7 +155,7 @@ static void copyDataFromJSArrayToBuses(VM& vm, JSGlobalObject& globalObject, JSA
         auto& bus = buses[i];
         auto* channelsArray = getArrayAtIndex<JSArray>(jsArray, globalObject, i);
         RETURN_IF_EXCEPTION(scope, void());
-        if (UNLIKELY(!channelsArray)) {
+        if (!channelsArray) [[unlikely]] {
             bus->zero();
             continue;
         }
@@ -163,7 +163,7 @@ static void copyDataFromJSArrayToBuses(VM& vm, JSGlobalObject& globalObject, JSA
             auto* channel = bus->channel(j);
             auto* jsChannelData = getArrayAtIndex<JSFloat32Array>(*channelsArray, globalObject, j);
             RETURN_IF_EXCEPTION(scope, void());
-            if (LIKELY(jsChannelData && !jsChannelData->isShared() && jsChannelData->length() == channel->length()))
+            if (jsChannelData && !jsChannelData->isShared() && jsChannelData->length() == channel->length()) [[likely]]
                 memcpySpan(channel->mutableSpan(), jsChannelData->typedSpan().first(channel->length()));
             else
                 channel->zero();
@@ -301,7 +301,7 @@ bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vect
 
     ASSERT(wrapper());
     auto* globalObject = jsDynamicCast<JSDOMGlobalObject*>(m_globalScope->globalObject());
-    if (UNLIKELY(!globalObject))
+    if (!globalObject) [[unlikely]]
         return false;
 
     ASSERT(globalObject->scriptExecutionContext());
@@ -310,9 +310,15 @@ bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vect
     auto& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
+    auto scope = DECLARE_THROW_SCOPE(vm);
     MarkedArgumentBuffer args;
     buildJSArguments(vm, *globalObject, args, inputs, outputs, paramValuesMap);
     ASSERT(!args.hasOverflowed());
+    if (scope.exception()) [[unlikely]] {
+        reportException(globalObject, scope.exception());
+        threwException = true;
+        return false;
+    }
 
     NakedPtr<JSC::Exception> returnedException;
     auto result = JSCallbackData::invokeCallback(*globalObject, wrapper(), jsUndefined(), args, JSCallbackData::CallbackType::Object, Identifier::fromString(vm, "process"_s), returnedException);

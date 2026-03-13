@@ -65,9 +65,11 @@ private:
     void setLabelInternal(const String&) final;
     void destroy() final;
     void undestroy() final;
+#if PLATFORM(COCOA)
     void updateExternalTexture(CVPixelBufferRef) final;
+#endif
 
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 
     WebGPUPtr<WGPUExternalTexture> m_backing;
     PredefinedColorSpace m_colorSpace;

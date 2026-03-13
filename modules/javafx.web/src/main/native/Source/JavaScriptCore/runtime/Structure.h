@@ -42,7 +42,6 @@
 #include "StructureTransitionTable.h"
 #include "TypeInfoBlob.h"
 #include "Watchpoint.h"
-#include "WriteBarrierInlines.h"
 #include <wtf/Atomics.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactPtr.h>
@@ -218,16 +217,13 @@ public:
     using SeenProperties = TinyBloomFilter<CompactPtr<UniquedStringImpl>::StorageType>;
 
     enum PolyProtoTag { PolyProto };
-    inline static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
+    inline static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0); // Defined in StructureInlines.h
     static Structure* create(PolyProtoTag, VM&, JSGlobalObject*, JSObject* prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
 
     ~Structure();
 
     template<typename CellType, SubspaceAccess>
-    static GCClient::IsoSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.structureSpace();
-    }
+    inline static GCClient::IsoSubspace* subspaceFor(VM&); // Defined in StructureInlines.h
 
     JS_EXPORT_PRIVATE static bool isValidPrototype(JSValue);
 
@@ -245,20 +241,14 @@ protected:
         previous->fireStructureTransitionWatchpoint(deferred);
     }
 
-private:
     void finishCreation(VM& vm)
     {
         Base::finishCreation(vm);
         ASSERT(m_prototype.get().isEmpty() || isValidPrototype(m_prototype.get()));
     }
 
-    void finishCreation(VM& vm, CreatingEarlyCellTag)
-    {
-        Base::finishCreation(vm, this, CreatingEarlyCell);
-        ASSERT(m_prototype);
-        ASSERT(m_prototype.isNull());
-        ASSERT(!vm.structureStructure);
-    }
+private:
+    inline void finishCreation(VM&, CreatingEarlyCellTag); // Defined in StructureInlines.h
 
     void validateFlags();
 
@@ -300,6 +290,8 @@ public:
 
         return false;
     }
+
+    Structure* trySingleTransition() { return m_transitionTable.trySingleTransition(); }
 
     JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addNewPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext, DeferredStructureTransitionWatchpointFire* = nullptr);
@@ -348,6 +340,7 @@ public:
 
     bool isDictionary() const { return dictionaryKind() != NoneDictionaryKind; }
     bool isUncacheableDictionary() const { return dictionaryKind() == UncachedDictionaryKind; }
+    bool isCacheableDictionary() const { return dictionaryKind() == CachedDictionaryKind; }
 
     bool prototypeQueriesAreCacheable()
     {
@@ -587,7 +580,7 @@ public:
 
         ASSERT(outOfLineSize > initialOutOfLineCapacity);
         static_assert(outOfLineGrowthFactor == 2);
-        return WTF::roundUpToPowerOfTwo(outOfLineSize);
+        return roundUpToPowerOfTwo(outOfLineSize);
     }
 
     static unsigned outOfLineSize(PropertyOffset maxOffset)
@@ -845,7 +838,7 @@ public:
 
     void startWatchingInternalPropertiesIfNecessary(VM& vm)
     {
-        if (LIKELY(didWatchInternalProperties()))
+        if (didWatchInternalProperties()) [[likely]]
             return;
         startWatchingInternalProperties(vm);
     }
@@ -910,14 +903,22 @@ public:
     DEFINE_BITFIELD(bool, didTransition, DidTransition, 1, 21);
     DEFINE_BITFIELD(bool, staticPropertiesReified, StaticPropertiesReified, 1, 22);
     DEFINE_BITFIELD(bool, hasBeenFlattenedBefore, HasBeenFlattenedBefore, 1, 23);
-    DEFINE_BITFIELD(bool, isBrandedStructure, IsBrandedStructure, 1, 24);
-    DEFINE_BITFIELD(bool, didWatchInternalProperties, DidWatchInternalProperties, 1, 25);
-    DEFINE_BITFIELD(bool, transitionWatchpointIsLikelyToBeFired, TransitionWatchpointIsLikelyToBeFired, 1, 26);
-    DEFINE_BITFIELD(bool, hasBeenDictionary, HasBeenDictionary, 1, 27);
-    DEFINE_BITFIELD(bool, protectPropertyTableWhileTransitioning, ProtectPropertyTableWhileTransitioning, 1, 28);
-    DEFINE_BITFIELD(bool, hasUnderscoreProtoPropertyExcludingOriginalProto, HasUnderscoreProtoPropertyExcludingOriginalProto, 1, 29);
-    DEFINE_BITFIELD(bool, hasNonConfigurableProperties, HasNonConfigurableProperties, 1, 30);
-    DEFINE_BITFIELD(bool, hasNonConfigurableReadOnlyOrGetterSetterProperties, HasNonConfigurableReadOnlyOrGetterSetterProperties, 1, 31);
+    DEFINE_BITFIELD(bool, didWatchInternalProperties, DidWatchInternalProperties, 1, 24);
+    DEFINE_BITFIELD(bool, transitionWatchpointIsLikelyToBeFired, TransitionWatchpointIsLikelyToBeFired, 1, 25);
+    DEFINE_BITFIELD(bool, hasBeenDictionary, HasBeenDictionary, 1, 26);
+    DEFINE_BITFIELD(bool, protectPropertyTableWhileTransitioning, ProtectPropertyTableWhileTransitioning, 1, 27);
+    DEFINE_BITFIELD(bool, hasUnderscoreProtoPropertyExcludingOriginalProto, HasUnderscoreProtoPropertyExcludingOriginalProto, 1, 28);
+    DEFINE_BITFIELD(bool, hasNonConfigurableProperties, HasNonConfigurableProperties, 1, 29);
+    DEFINE_BITFIELD(bool, hasNonConfigurableReadOnlyOrGetterSetterProperties, HasNonConfigurableReadOnlyOrGetterSetterProperties, 1, 30);
+
+    enum class StructureVariant : uint8_t {
+        Normal,
+        Branded,
+        WebAssemblyGC,
+    };
+
+    StructureVariant variant() const { return m_structureVariant; }
+    bool isBrandedStructure() { return variant() == StructureVariant::Branded; }
 
     static_assert(s_bitWidthOfTransitionKind <= sizeof(TransitionKind) * 8);
 
@@ -948,7 +949,8 @@ public:
     void finalizeUnconditionally(VM&, CollectionScope);
 
 protected:
-    Structure(VM&, Structure*);
+    Structure(VM&, StructureVariant, Structure* previous); // Branded/Normal only
+    Structure(VM&, StructureVariant, JSGlobalObject*, const TypeInfo&, const ClassInfo*); // WebAssemblyGC only
 
 private:
     friend class LLIntOffsetsExtractor;
@@ -1069,6 +1071,9 @@ private:
 
     uint32_t m_bitField;
     TransitionPropertyAttributes m_transitionPropertyAttributes { 0 };
+
+    // FIXME: We should probably have a brandedStructureStructure/webAssemblyGCStructureStructure instead of this.
+    StructureVariant m_structureVariant { StructureVariant::Normal };
 
     uint16_t m_transitionOffset;
     uint16_t m_maxOffset;

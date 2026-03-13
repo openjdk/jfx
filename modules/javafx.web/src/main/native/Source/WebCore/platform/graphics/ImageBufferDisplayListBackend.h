@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "DisplayListDrawingContext.h"
+#include "DisplayListRecorderImpl.h"
 #include "ImageBufferBackend.h"
 
 namespace WebCore {
@@ -33,12 +33,14 @@ namespace WebCore {
 class ImageBufferDisplayListBackend : public ImageBufferBackend {
 public:
     WEBCORE_EXPORT static std::unique_ptr<ImageBufferDisplayListBackend> create(const Parameters&, const ImageBufferCreationContext&);
+    WEBCORE_EXPORT static std::unique_ptr<ImageBufferDisplayListBackend> create(const FloatSize&, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, RenderingPurpose, ControlFactory&);
+
     static size_t calculateMemoryCost(const Parameters&) { return 0; }
 
     static constexpr RenderingMode renderingMode = RenderingMode::DisplayList;
 
 private:
-    ImageBufferDisplayListBackend(const Parameters&);
+    ImageBufferDisplayListBackend(const Parameters&, ControlFactory&);
 
     bool canMapBackingStore() const final { return false; }
     unsigned bytesPerRow() const final { return 0; }
@@ -48,13 +50,14 @@ private:
     RefPtr<NativeImage> copyNativeImage() final;
     RefPtr<NativeImage> createNativeImageReference() final { return copyNativeImage(); }
     void getPixelBuffer(const IntRect&, PixelBuffer&) final { ASSERT_NOT_REACHED(); }
-    void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) final { ASSERT_NOT_REACHED(); }
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect&, const IntPoint&, AlphaPremultiplication) final { ASSERT_NOT_REACHED(); }
 
     RefPtr<SharedBuffer> sinkIntoPDFDocument() final;
 
     String debugDescription() const final;
 
-    DisplayList::DrawingContext m_drawingContext;
+    const Ref<WebCore::ControlFactory> m_controlFactory;
+    DisplayList::RecorderImpl m_drawingContext;
 };
 
 } // namespace WebCore

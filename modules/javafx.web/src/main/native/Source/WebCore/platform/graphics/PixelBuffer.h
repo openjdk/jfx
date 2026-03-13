@@ -27,7 +27,9 @@
 
 #include "IntSize.h"
 #include "PixelBufferFormat.h"
-#include <wtf/ThreadSafeRefCounted.h>
+#include <optional>
+#include <span>
+#include <wtf/RefCounted.h>
 
 namespace WTF {
 class TextStream;
@@ -35,7 +37,9 @@ class TextStream;
 
 namespace WebCore {
 
-class PixelBuffer : public ThreadSafeRefCounted<PixelBuffer> {
+// Type for holding pixel buffers data.
+// For functions that source pixel buffers, see PixelBufferSourceView.
+class PixelBuffer : public RefCounted<PixelBuffer> {
     WTF_MAKE_NONCOPYABLE(PixelBuffer);
 public:
     static CheckedUint32 computePixelCount(const IntSize&);
@@ -75,6 +79,42 @@ protected:
     IntSize m_size;
 
     std::span<uint8_t> m_bytes;
+};
+
+// Type to use for functions that use the PixelBuffer data as source during the call, but do not store a reference to the object or modify the data.
+class PixelBufferSourceView {
+public:
+    PixelBufferSourceView() = delete;
+    PixelBufferSourceView(const PixelBuffer& pixelBuffer)
+        : PixelBufferSourceView(pixelBuffer.format(), pixelBuffer.size(), pixelBuffer.bytes())
+    {
+    }
+
+    static std::optional<PixelBufferSourceView> create(const PixelBufferFormat& format, const IntSize& size, std::span<const uint8_t> bytes)
+    {
+        if (!PixelBuffer::supportedPixelFormat(format.pixelFormat))
+            return std::nullopt;
+        auto bufferSize = PixelBuffer::computeBufferSize(format.pixelFormat, size);
+        if (bufferSize.hasOverflowed() || bytes.size() != bufferSize)
+            return std::nullopt;
+        return PixelBufferSourceView(format, size, bytes);
+    }
+
+    const PixelBufferFormat& format() const { return m_format; }
+    IntSize size() const { return m_size; }
+    std::span<const uint8_t> bytes() const LIFETIME_BOUND { return m_bytes; }
+
+private:
+    PixelBufferSourceView(const PixelBufferFormat& format, const IntSize& size, std::span<const uint8_t> bytes)
+        : m_format(format)
+        , m_size(size)
+        , m_bytes(bytes)
+    {
+    }
+
+    PixelBufferFormat m_format;
+    IntSize m_size;
+    std::span<const uint8_t> m_bytes;
 };
 
 } // namespace WebCore

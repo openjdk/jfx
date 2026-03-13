@@ -30,6 +30,7 @@
 #include "ColorNormalization.h"
 #include "ColorSpace.h"
 #include "DestinationColorSpace.h"
+#include <numeric>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -83,7 +84,7 @@ HSLA<float> ColorConversion<HSLA<float>, ExtendedSRGBA<float>>::convert(const Ex
     auto d = max - min;
 
     float hue = std::numeric_limits<float>::quiet_NaN();
-    float lightness = (min + max) / 2.0f;
+    float lightness = std::midpoint(min, max);
     float saturation;
 
     if (d != 0.0f) {
