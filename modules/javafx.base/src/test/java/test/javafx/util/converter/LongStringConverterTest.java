@@ -25,30 +25,28 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.LongStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.LongStringConverter;
+
 public class LongStringConverterTest {
-    private LongStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new LongStringConverter();
+    private static final LongStringConverter CONVERTER = new LongStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(10, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals(Long.valueOf(10), converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(10, CONVERTER.fromString("      10      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(Long.valueOf(10), converter.fromString("      10      "));
-    }
-
-    @Test public void toString_validInput() {
-        assertEquals("10", converter.toString(10L));
+    @Test
+    void toString_validInput() {
+        assertEquals("10", CONVERTER.toString(10L));
     }
 }
