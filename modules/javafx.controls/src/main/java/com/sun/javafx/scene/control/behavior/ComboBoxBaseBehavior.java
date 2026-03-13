@@ -280,10 +280,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
     public void show() {
-        if (! getNode().isShowing()) {
-            if (getNode().isFocusTraversable()) {
-                getNode().requestFocus();
-            }
+        if (!getNode().isShowing()) {
+            getNode().requestFocus();
             getNode().show();
         }
     }

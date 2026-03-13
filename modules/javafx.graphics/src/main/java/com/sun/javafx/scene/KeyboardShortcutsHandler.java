@@ -295,7 +295,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                 firstMnemonics = mnemonic;
             }
 
-            if (NodeHelper.isTreeVisible(currentNode) && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
+            if (NodeHelper.isTreeVisible(currentNode) && !currentNode.isDisabled()) {
                 if (firstNode == null) {
                     firstNode = currentNode;
                 } else {

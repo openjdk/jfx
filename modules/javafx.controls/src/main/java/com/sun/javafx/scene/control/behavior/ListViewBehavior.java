@@ -398,7 +398,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             }
         }
 
-        if (! getNode().isFocused() && getNode().isFocusTraversable()) {
+        if (!getNode().isFocused()) {
             getNode().requestFocus();
         }
     }

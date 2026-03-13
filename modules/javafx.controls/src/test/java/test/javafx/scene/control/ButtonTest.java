@@ -542,9 +542,17 @@ public class ButtonTest {
         // did green revert to original after green hover=false?
         // This is the acid test. If this fails, then JDK-8126478 is present.
         assertTrue(greenStops0.equals(greenStops3));
-
     }
 
+    @Test
+    void testNonFocusTraversableButtonCanBeFocused() {
+        btn.setFocusTraversable(false);
+
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(btn);
+        mouseEventFirer.fireMousePressed();
+
+        assertTrue(btn.isFocused());
+    }
 
 //  private Button button1;
 //  private Button button2;
