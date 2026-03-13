@@ -1,7 +1,7 @@
 /*
  * xmlmemory.c:  libxml memory allocator wrapper.
  *
- * daniel@veillard.com
+ * Author: Daniel Veillard
  */
 
 #define IN_LIBXML
@@ -26,9 +26,9 @@ static unsigned long  debugMemBlocks = 0;
 static xmlMutex xmlMemMutex;
 
 /************************************************************************
- *                                                                      *
- *              Macros, variables and associated types                  *
- *                                                                      *
+ *									*
+ *		Macros, variables and associated types			*
+ *									*
  ************************************************************************/
 
 /*
@@ -48,7 +48,7 @@ typedef struct memnod {
 #define ALIGN_SIZE  sizeof(double)
 #endif
 #define RESERVE_SIZE (((sizeof(MEMHDR) + ALIGN_SIZE - 1) \
-                      / ALIGN_SIZE ) * ALIGN_SIZE)
+		      / ALIGN_SIZE ) * ALIGN_SIZE)
 
 #define MAX_SIZE_T ((size_t)-1)
 
@@ -56,14 +56,12 @@ typedef struct memnod {
 #define HDR_2_CLIENT(a)    ((void *) (((char *) (a)) + RESERVE_SIZE))
 
 /**
- * xmlMallocLoc:
- * @size:  an int specifying the size in byte to allocate.
- * @file:  the file name or NULL
- * @line:  the line number
+ * @deprecated don't use
  *
- * DEPRECATED: don't use
- *
- * Returns a pointer to the allocated area or NULL in case of lack of memory.
+ * @param size  an int specifying the size in byte to allocate.
+ * @param file  the file name or NULL
+ * @param line  the line number
+ * @returns a pointer to the allocated area or NULL in case of lack of memory.
  */
 void *
 xmlMallocLoc(size_t size, const char *file ATTRIBUTE_UNUSED,
@@ -73,14 +71,12 @@ xmlMallocLoc(size_t size, const char *file ATTRIBUTE_UNUSED,
 }
 
 /**
- * xmlMallocAtomicLoc:
- * @size:  an unsigned int specifying the size in byte to allocate.
- * @file:  the file name or NULL
- * @line:  the line number
+ * @deprecated don't use
  *
- * DEPRECATED: don't use
- *
- * Returns a pointer to the allocated area or NULL in case of lack of memory.
+ * @param size  an unsigned int specifying the size in byte to allocate.
+ * @param file  the file name or NULL
+ * @param line  the line number
+ * @returns a pointer to the allocated area or NULL in case of lack of memory.
  */
 void *
 xmlMallocAtomicLoc(size_t size, const char *file ATTRIBUTE_UNUSED,
@@ -90,12 +86,10 @@ xmlMallocAtomicLoc(size_t size, const char *file ATTRIBUTE_UNUSED,
 }
 
 /**
- * xmlMemMalloc:
- * @size:  an int specifying the size in byte to allocate.
- *
  * a malloc() equivalent, with logging of the allocation info.
  *
- * Returns a pointer to the allocated area or NULL in case of lack of memory.
+ * @param size  an int specifying the size in byte to allocate.
+ * @returns a pointer to the allocated area or NULL in case of lack of memory.
  */
 void *
 xmlMemMalloc(size_t size)
@@ -122,15 +116,13 @@ xmlMemMalloc(size_t size)
 }
 
 /**
- * xmlReallocLoc:
- * @ptr:  the initial memory block pointer
- * @size:  an int specifying the size in byte to allocate.
- * @file:  the file name or NULL
- * @line:  the line number
+ * @deprecated don't use
  *
- * DEPRECATED: don't use
- *
- * Returns a pointer to the allocated area or NULL in case of lack of memory.
+ * @param ptr  the initial memory block pointer
+ * @param size  an int specifying the size in byte to allocate.
+ * @param file  the file name or NULL
+ * @param line  the line number
+ * @returns a pointer to the allocated area or NULL in case of lack of memory.
  */
 void *
 xmlReallocLoc(void *ptr, size_t size, const char *file ATTRIBUTE_UNUSED,
@@ -140,13 +132,11 @@ xmlReallocLoc(void *ptr, size_t size, const char *file ATTRIBUTE_UNUSED,
 }
 
 /**
- * xmlMemRealloc:
- * @ptr:  the initial memory block pointer
- * @size:  an int specifying the size in byte to allocate.
- *
  * a realloc() equivalent, with logging of the allocation info.
  *
- * Returns a pointer to the allocated area or NULL in case of lack of memory.
+ * @param ptr  the initial memory block pointer
+ * @param size  an int specifying the size in byte to allocate.
+ * @returns a pointer to the allocated area or NULL in case of lack of memory.
  */
 void *
 xmlMemRealloc(void *ptr, size_t size) {
@@ -187,10 +177,9 @@ xmlMemRealloc(void *ptr, size_t size) {
 }
 
 /**
- * xmlMemFree:
- * @ptr:  the memory block pointer
- *
  * a free() equivalent, with error checking.
+ *
+ * @param ptr  the memory block pointer
  */
 void
 xmlMemFree(void *ptr)
@@ -222,14 +211,12 @@ xmlMemFree(void *ptr)
 }
 
 /**
- * xmlMemStrdupLoc:
- * @str:  the initial string pointer
- * @file:  the file name or NULL
- * @line:  the line number
+ * @deprecated don't use
  *
- * DEPRECATED: don't use
- *
- * Returns a pointer to the new string or NULL if allocation error occurred.
+ * @param str  the initial string pointer
+ * @param file  the file name or NULL
+ * @param line  the line number
+ * @returns a pointer to the new string or NULL if allocation error occurred.
  */
 char *
 xmlMemStrdupLoc(const char *str, const char *file ATTRIBUTE_UNUSED,
@@ -239,12 +226,10 @@ xmlMemStrdupLoc(const char *str, const char *file ATTRIBUTE_UNUSED,
 }
 
 /**
- * xmlMemoryStrdup:
- * @str:  the initial string pointer
- *
  * a strdup() equivalent, with logging of the allocation info.
  *
- * Returns a pointer to the new string or NULL if allocation error occurred.
+ * @param str  the initial string pointer
+ * @returns a pointer to the new string or NULL if allocation error occurred.
  */
 char *
 xmlMemoryStrdup(const char *str) {
@@ -276,10 +261,8 @@ xmlMemoryStrdup(const char *str) {
 }
 
 /**
- * xmlMemSize:
- * @ptr:  pointer to the memory allocation
- *
- * Returns the size of a memory allocation.
+ * @param ptr  pointer to the memory allocation
+ * @returns the size of a memory allocation.
  */
 
 size_t
@@ -287,7 +270,7 @@ xmlMemSize(void *ptr) {
     MEMHDR *p;
 
     if (ptr == NULL)
-        return(0);
+	return(0);
 
     p = CLIENT_2_HDR(ptr);
     if (p->mh_tag != MEMTAG)
@@ -297,11 +280,9 @@ xmlMemSize(void *ptr) {
 }
 
 /**
- * xmlMemUsed:
- *
  * Provides the amount of memory currently allocated
  *
- * Returns an int representing the amount of memory allocated.
+ * @returns an int representing the amount of memory allocated.
  */
 
 int
@@ -310,11 +291,9 @@ xmlMemUsed(void) {
 }
 
 /**
- * xmlMemBlocks:
- *
  * Provides the number of memory areas currently allocated
  *
- * Returns an int representing the number of blocks
+ * @returns an int representing the number of blocks
  */
 
 int
@@ -328,11 +307,9 @@ xmlMemBlocks(void) {
 }
 
 /**
- * xmlMemDisplayLast:
- * @fp:  a FILE descriptor
- * @nbBytes: the amount of memory to dump
- *
- * DEPRECATED: This feature was removed.
+ * @deprecated This feature was removed.
+ * @param fp  a FILE descriptor
+ * @param nbBytes  the amount of memory to dump
  */
 void
 xmlMemDisplayLast(FILE *fp ATTRIBUTE_UNUSED, long nbBytes ATTRIBUTE_UNUSED)
@@ -340,10 +317,8 @@ xmlMemDisplayLast(FILE *fp ATTRIBUTE_UNUSED, long nbBytes ATTRIBUTE_UNUSED)
 }
 
 /**
- * xmlMemDisplay:
- * @fp:  a FILE descriptor
- *
- * DEPRECATED: This feature was removed.
+ * @deprecated This feature was removed.
+ * @param fp  a FILE descriptor
  */
 void
 xmlMemDisplay(FILE *fp ATTRIBUTE_UNUSED)
@@ -351,11 +326,9 @@ xmlMemDisplay(FILE *fp ATTRIBUTE_UNUSED)
 }
 
 /**
- * xmlMemShow:
- * @fp:  a FILE descriptor
- * @nr:  number of entries to dump
- *
- * DEPRECATED: This feature was removed.
+ * @deprecated This feature was removed.
+ * @param fp  a FILE descriptor
+ * @param nr  number of entries to dump
  */
 void
 xmlMemShow(FILE *fp ATTRIBUTE_UNUSED, int nr ATTRIBUTE_UNUSED)
@@ -363,9 +336,7 @@ xmlMemShow(FILE *fp ATTRIBUTE_UNUSED, int nr ATTRIBUTE_UNUSED)
 }
 
 /**
- * xmlMemoryDump:
- *
- * DEPRECATED: This feature was removed.
+ * @deprecated This feature was removed.
  */
 void
 xmlMemoryDump(void)
@@ -374,17 +345,15 @@ xmlMemoryDump(void)
 
 
 /****************************************************************
- *                                                              *
- *              Initialization Routines                         *
- *                                                              *
+ *								*
+ *		Initialization Routines				*
+ *								*
  ****************************************************************/
 
 /**
- * xmlInitMemory:
+ * @deprecated Alias for #xmlInitParser.
  *
- * DEPRECATED: Alias for xmlInitParser.
- *
- * Returns 0.
+ * @returns 0.
  */
 int
 xmlInitMemory(void) {
@@ -393,8 +362,6 @@ xmlInitMemory(void) {
 }
 
 /**
- * xmlInitMemoryInternal:
- *
  * Initialize the memory layer.
  */
 void
@@ -403,10 +370,8 @@ xmlInitMemoryInternal(void) {
 }
 
 /**
- * xmlCleanupMemory:
- *
- * DEPRECATED: This function is a no-op. Call xmlCleanupParser
- * to free global state but see the warnings there. xmlCleanupParser
+ * @deprecated This function is a no-op. Call #xmlCleanupParser
+ * to free global state but see the warnings there. #xmlCleanupParser
  * should be only called once at program exit. In most cases, you don't
  * have call cleanup functions at all.
  */
@@ -415,8 +380,6 @@ xmlCleanupMemory(void) {
 }
 
 /**
- * xmlCleanupMemoryInternal:
- *
  * Free up all the memory allocated by the library for its own
  * use. This should not be called by user level code.
  */
@@ -435,31 +398,29 @@ xmlCleanupMemoryInternal(void) {
 }
 
 /**
- * xmlMemSetup:
- * @freeFunc: the free() function to use
- * @mallocFunc: the malloc() function to use
- * @reallocFunc: the realloc() function to use
- * @strdupFunc: the strdup() function to use
- *
  * Override the default memory access functions with a new set
  * This has to be called before any other libxml routines !
  *
  * Should this be blocked if there was already some allocations
  * done ?
  *
- * Returns 0 on success
+ * @param freeFunc  the free() function to use
+ * @param mallocFunc  the malloc() function to use
+ * @param reallocFunc  the realloc() function to use
+ * @param strdupFunc  the strdup() function to use
+ * @returns 0 on success
  */
 int
 xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
             xmlReallocFunc reallocFunc, xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-        return(-1);
+	return(-1);
     if (mallocFunc == NULL)
-        return(-1);
+	return(-1);
     if (reallocFunc == NULL)
-        return(-1);
+	return(-1);
     if (strdupFunc == NULL)
-        return(-1);
+	return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocFunc;
@@ -469,19 +430,17 @@ xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
 }
 
 /**
- * xmlMemGet:
- * @freeFunc: place to save the free() function in use
- * @mallocFunc: place to save the malloc() function in use
- * @reallocFunc: place to save the realloc() function in use
- * @strdupFunc: place to save the strdup() function in use
- *
  * Provides the memory access functions set currently in use
  *
- * Returns 0 on success
+ * @param freeFunc  place to save the free() function in use
+ * @param mallocFunc  place to save the malloc() function in use
+ * @param reallocFunc  place to save the realloc() function in use
+ * @param strdupFunc  place to save the strdup() function in use
+ * @returns 0 on success
  */
 int
 xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
-          xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
+	  xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (reallocFunc != NULL) *reallocFunc = xmlRealloc;
@@ -490,39 +449,37 @@ xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
 }
 
 /**
- * xmlGcMemSetup:
- * @freeFunc: the free() function to use
- * @mallocFunc: the malloc() function to use
- * @mallocAtomicFunc: the malloc() function to use for atomic allocations
- * @reallocFunc: the realloc() function to use
- * @strdupFunc: the strdup() function to use
- *
- * DEPRECATED: Use xmlMemSetup.
- *
  * Override the default memory access functions with a new set
  * This has to be called before any other libxml routines !
  * The mallocAtomicFunc is specialized for atomic block
  * allocations (i.e. of areas  useful for garbage collected memory allocators
  *
+ * @deprecated Use #xmlMemSetup.
+ *
  * Should this be blocked if there was already some allocations
  * done ?
  *
- * Returns 0 on success
+ * @param freeFunc  the free() function to use
+ * @param mallocFunc  the malloc() function to use
+ * @param mallocAtomicFunc  the malloc() function to use for atomic allocations
+ * @param reallocFunc  the realloc() function to use
+ * @param strdupFunc  the strdup() function to use
+ * @returns 0 on success
  */
 int
 xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
               xmlMallocFunc mallocAtomicFunc, xmlReallocFunc reallocFunc,
-              xmlStrdupFunc strdupFunc) {
+	      xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-        return(-1);
+	return(-1);
     if (mallocFunc == NULL)
-        return(-1);
+	return(-1);
     if (mallocAtomicFunc == NULL)
-        return(-1);
+	return(-1);
     if (reallocFunc == NULL)
-        return(-1);
+	return(-1);
     if (strdupFunc == NULL)
-        return(-1);
+	return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocAtomicFunc;
@@ -532,25 +489,23 @@ xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
 }
 
 /**
- * xmlGcMemGet:
- * @freeFunc: place to save the free() function in use
- * @mallocFunc: place to save the malloc() function in use
- * @mallocAtomicFunc: place to save the atomic malloc() function in use
- * @reallocFunc: place to save the realloc() function in use
- * @strdupFunc: place to save the strdup() function in use
- *
- * DEPRECATED: xmlMemGet.
- *
  * Provides the memory access functions set currently in use
  * The mallocAtomicFunc is specialized for atomic block
  * allocations (i.e. of areas  useful for garbage collected memory allocators
  *
- * Returns 0 on success
+ * @deprecated Use #xmlMemGet.
+ *
+ * @param freeFunc  place to save the free() function in use
+ * @param mallocFunc  place to save the malloc() function in use
+ * @param mallocAtomicFunc  place to save the atomic malloc() function in use
+ * @param reallocFunc  place to save the realloc() function in use
+ * @param strdupFunc  place to save the strdup() function in use
+ * @returns 0 on success
  */
 int
 xmlGcMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
             xmlMallocFunc *mallocAtomicFunc, xmlReallocFunc *reallocFunc,
-            xmlStrdupFunc *strdupFunc) {
+	    xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (mallocAtomicFunc != NULL) *mallocAtomicFunc = xmlMallocAtomic;
