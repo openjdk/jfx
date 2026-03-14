@@ -316,16 +316,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         int minRow = Math.min(focusedIndex, index);
         int maxRow = Math.max(focusedIndex, index);
 
-        // To prevent JDK-8123898, we make a copy of the selected indices
-        // list first, so that we are not iterating and modifying it
-        // concurrently.
-        List<Integer> selectedIndices = new ArrayList<>(getSelectionModel().getSelectedIndices());
-        for (int i = 0, max = selectedIndices.size(); i < max; i++) {
-            int selectedIndex = selectedIndices.get(i);
-            if (selectedIndex < minRow || selectedIndex > maxRow) {
-                getSelectionModel().clearSelection(selectedIndex);
-            }
-        }
+        getSelectionModel().clearSelection();
 
         if (minRow == maxRow) {
             // JDK-8115366: This prevents the anchor 'sticking' in
