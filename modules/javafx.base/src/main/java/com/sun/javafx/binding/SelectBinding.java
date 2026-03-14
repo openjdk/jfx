@@ -144,7 +144,7 @@ public class SelectBinding {
             } else if (val != null) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, expected Boolean. Returning default value.");
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }
@@ -195,7 +195,7 @@ public class SelectBinding {
             } else if (val != null) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }
@@ -246,7 +246,7 @@ public class SelectBinding {
             } else if (val != null) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }
@@ -297,7 +297,7 @@ public class SelectBinding {
             } else if (val != null) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }
@@ -348,7 +348,7 @@ public class SelectBinding {
             } else if (val != null) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }
@@ -395,7 +395,7 @@ public class SelectBinding {
             if (val != null) {
                 return val.toString();
             } else {
-                Logging.getLogger().fine("Value of select binding is null, returning default value");
+                Logging.getLogger().fine("Value of select binding is null. Returning default value");
             }
             return DEFAULT_VALUE;
         }

@@ -36,7 +36,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import com.sun.javafx.binding.SelectBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
@@ -45,7 +44,6 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.LongBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -412,7 +410,7 @@ public class SelectBindingTest {
 
         // This does not throw an exception on get() due to generic type erasure
         Object returnedPerson = objectBinding.get();
-        Assertions.assertEquals(person1, returnedPerson);
+        assertEquals(person1, returnedPerson);
 
         // It throws an exception on assigment, but outside the get() method
         assertThrows(ClassCastException.class, () -> {

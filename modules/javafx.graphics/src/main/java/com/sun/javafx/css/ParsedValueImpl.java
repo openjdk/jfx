@@ -671,7 +671,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 try {
                     units = Enum.valueOf(SizeUnits.class, unitStr);
                 } catch (IllegalArgumentException iae) {
-                    System.err.println(iae.toString());
+                    System.err.println(iae);
                 }
             }
             return new ParsedValueImpl<Size,Size>(new Size(val,units), converter, lookup);

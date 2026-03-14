@@ -6303,7 +6303,7 @@ public final class Bindings {
                 try {
                     final Boolean value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value;
                     }
@@ -6366,7 +6366,7 @@ public final class Bindings {
                 try {
                     final Boolean value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value;
                     }
@@ -6418,7 +6418,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.doubleValue();
                     }
@@ -6481,7 +6481,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.doubleValue();
                     }
@@ -6533,7 +6533,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.floatValue();
                     }
@@ -6596,7 +6596,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.floatValue();
                     }
@@ -6648,7 +6648,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.intValue();
                     }
@@ -6711,7 +6711,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.intValue();
                     }
@@ -6763,7 +6763,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.longValue();
                     }
@@ -6826,7 +6826,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.longValue();
                     }
@@ -7471,8 +7471,7 @@ public final class Bindings {
 
             @Override
             protected V computeValue() {
-                final V val = getMapValue(op, key);
-                return val;
+                return getMapValue(op, key);
             }
 
             @Override
@@ -7558,7 +7557,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expecting Boolean. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return false;
             }
@@ -7606,7 +7605,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Boolean. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return false;
             }
@@ -7653,7 +7652,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0;
             }
@@ -7701,7 +7700,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0;
             }
@@ -7748,7 +7747,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0f;
             }
@@ -7796,7 +7795,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0f;
             }
@@ -7843,7 +7842,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0;
             }
@@ -7891,7 +7890,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0;
             }
@@ -7938,7 +7937,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0L;
             }
@@ -7986,7 +7985,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0L;
             }
@@ -8033,7 +8032,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return null;
             }
@@ -8081,7 +8080,7 @@ public final class Bindings {
                 } else if (val != null) {
                     Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
                 } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return null;
             }
