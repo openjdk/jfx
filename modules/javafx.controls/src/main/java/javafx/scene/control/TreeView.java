@@ -1671,9 +1671,11 @@ public class TreeView<T> extends Control {
             }
 
             showRootListener = obs -> {
-                if (isFocused(0)) {
-                    focus(-1);
-                    focus(0);
+                if (getFocusedIndex() >= 0) {
+                    final int newIndex = treeView.isShowRoot()
+                            ? getFocusedIndex() + 1
+                            : Math.max(0, getFocusedIndex() - 1);
+                    focus(newIndex);
                 }
             };
             treeView.showRootProperty().addListener(new WeakInvalidationListener(showRootListener));
