@@ -6303,7 +6303,7 @@ public final class Bindings {
                 try {
                     final Boolean value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value;
                     }
@@ -6366,7 +6366,7 @@ public final class Bindings {
                 try {
                     final Boolean value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value;
                     }
@@ -6418,7 +6418,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.doubleValue();
                     }
@@ -6481,7 +6481,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.doubleValue();
                     }
@@ -6533,7 +6533,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.floatValue();
                     }
@@ -6596,7 +6596,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.floatValue();
                     }
@@ -6648,7 +6648,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.intValue();
                     }
@@ -6711,7 +6711,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.intValue();
                     }
@@ -6763,7 +6763,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index);
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.longValue();
                     }
@@ -6826,7 +6826,7 @@ public final class Bindings {
                 try {
                     final Number value = op.get(index.intValue());
                     if (value == null) {
-                        Logging.getLogger().fine("List element is null, returning default value instead.", new NullPointerException());
+                        Logging.getLogger().fine("List element is null. Returning default value instead.", new NullPointerException());
                     } else {
                         return value.longValue();
                     }
@@ -7471,16 +7471,7 @@ public final class Bindings {
 
             @Override
             protected V computeValue() {
-                try {
-                    return op.get(key);
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                }
-                return null;
+                return getMapValue(op, key);
             }
 
             @Override
@@ -7519,16 +7510,9 @@ public final class Bindings {
 
             @Override
             protected V computeValue() {
-                try {
-                    return op.get(key.getValue());
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                }
-                return null;
+                final Object currentKey = key.getValue();
+                final V val = getMapValue(op, currentKey);
+                return val;
             }
 
             @Override
@@ -7567,19 +7551,13 @@ public final class Bindings {
 
             @Override
             protected boolean computeValue() {
-                try {
-                    final Boolean value = op.get(key);
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value;
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof Boolean booleanVal) {
+                    return booleanVal;
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expecting Boolean. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return false;
             }
@@ -7620,19 +7598,14 @@ public final class Bindings {
 
             @Override
             protected boolean computeValue() {
-                try {
-                    final Boolean value = op.get(key.getValue());
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value;
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof Boolean booleanVal) {
+                    return booleanVal;
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Boolean. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return false;
             }
@@ -7673,19 +7646,13 @@ public final class Bindings {
 
             @Override
             protected double computeValue() {
-                try {
-                    final Number value = op.get(key);
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.doubleValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof Number numberVal) {
+                    return numberVal.doubleValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0;
             }
@@ -7726,19 +7693,14 @@ public final class Bindings {
 
             @Override
             protected double computeValue() {
-                try {
-                    final Number value = op.get(key.getValue());
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.doubleValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof Number numberVal) {
+                    return numberVal.doubleValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0;
             }
@@ -7779,19 +7741,13 @@ public final class Bindings {
 
             @Override
             protected float computeValue() {
-                try {
-                    final Number value = op.get(key);
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.floatValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof Number numberVal) {
+                    return numberVal.floatValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0f;
             }
@@ -7832,19 +7788,14 @@ public final class Bindings {
 
             @Override
             protected float computeValue() {
-                try {
-                    final Number value = op.get(key.getValue());
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.floatValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof Number numberVal) {
+                    return numberVal.floatValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0.0f;
             }
@@ -7885,19 +7836,13 @@ public final class Bindings {
 
             @Override
             protected int computeValue() {
-                try {
-                    final Number value = op.get(key);
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.intValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof Number numberVal) {
+                    return numberVal.intValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0;
             }
@@ -7938,19 +7883,14 @@ public final class Bindings {
 
             @Override
             protected int computeValue() {
-                try {
-                    final Number value = op.get(key.getValue());
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.intValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof Number numberVal) {
+                    return numberVal.intValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0;
             }
@@ -7991,19 +7931,13 @@ public final class Bindings {
 
             @Override
             protected long computeValue() {
-                try {
-                    final Number value = op.get(key);
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.longValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof Number numberVal) {
+                    return numberVal.longValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0L;
             }
@@ -8044,19 +7978,14 @@ public final class Bindings {
 
             @Override
             protected long computeValue() {
-                try {
-                    final Number value = op.get(key.getValue());
-                    if (value == null) {
-                        Logging.getLogger().fine("Element not found in map, returning default value instead.", new NullPointerException());
-                    } else {
-                        return value.longValue();
-                    }
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof Number numberVal) {
+                    return numberVal.longValue();
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return 0L;
             }
@@ -8097,14 +8026,13 @@ public final class Bindings {
 
             @Override
             protected String computeValue() {
-                try {
-                    return op.get(key);
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object val = getMapValue(op, key);
+                if (val instanceof String stringVal) {
+                    return stringVal;
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return null;
             }
@@ -8145,14 +8073,14 @@ public final class Bindings {
 
             @Override
             protected String computeValue() {
-                try {
-                    return op.get(key.getValue());
-                } catch (ClassCastException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
-                } catch (NullPointerException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
-                    // ignore
+                final Object currentKey = key.getValue();
+                final Object val = getMapValue(op, currentKey);
+                if (val instanceof String stringVal) {
+                    return stringVal;
+                } else if (val != null) {
+                    Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
+                } else {
+                    Logging.getLogger().fine("Element not found in map. Returning default value instead.");
                 }
                 return null;
             }
@@ -8164,5 +8092,15 @@ public final class Bindings {
         };
     }
 
-
+    private static <K, V> V getMapValue(ObservableMap<K, V> op, Object key) {
+        try {
+            // This can throw a NPE if the map does not support null keys
+            // or a ClassCastException for mismatched types
+            // However, custom map implementations can throw arbitrary exceptions, so just catch all
+            return op.get(key);
+        } catch (Exception ex) {
+            Logging.getLogger().warning("Exception while evaluating binding", ex);
+            return null;
+        }
+    }
 }
