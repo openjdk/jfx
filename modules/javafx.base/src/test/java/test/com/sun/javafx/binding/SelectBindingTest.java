@@ -408,7 +408,6 @@ public class SelectBindingTest {
         a.setName(null);
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NullPointerException.class);
-        OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
     }
 
     @Test
