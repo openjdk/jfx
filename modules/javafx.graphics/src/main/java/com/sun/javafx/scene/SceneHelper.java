@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene;
 
-import com.sun.glass.ui.Accessible;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.util.Utils;
 import javafx.scene.Camera;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -35,6 +32,9 @@ import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Window;
+import com.sun.glass.ui.Accessible;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.util.Utils;
 
 /**
  * Used to access internal scene methods.
@@ -162,5 +162,4 @@ public final class SceneHelper {
 
         SceneContext getSceneContext(Scene scene);
     }
-
 }
