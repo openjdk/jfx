@@ -74,6 +74,7 @@ import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
+import test.jfx.incubator.scene.control.richtext.model.TestRichTextModel;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.control.richtext.support.TestStyledInput;
 import test.jfx.incubator.scene.util.TUtil;
@@ -420,7 +421,7 @@ public class RichTextAreaTest {
         String s = Clipboard.getSystemClipboard().getString();
         assertEquals(null, s);
         Object v = Clipboard.getSystemClipboard().getContent(fmt);
-        assertEquals("{}a{!}", v);
+        assertEquals(TestRichTextModel.DOC_PROPS + "{}a{!}", v);
     }
 
     @Test
@@ -891,7 +892,7 @@ public class RichTextAreaTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
-        assertEquals("{}1 {b}bold{!}", new String(b, StandardCharsets.US_ASCII));
+        assertEquals(TestRichTextModel.DOC_PROPS + "{}1 {b}bold{!}", new String(b, StandardCharsets.US_ASCII));
     }
 
     @Test

@@ -38,6 +38,7 @@ public class RichTextAreaHelper {
 
     public interface Accessor {
         public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit);
+        public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height);
     }
 
     static {
@@ -57,5 +58,9 @@ public class RichTextAreaHelper {
 
     public static boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
         return accessor.getText(t, start, end, sb, limit);
+    }
+
+    public static void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+        accessor.setDocumentArea(t, minX, minY, width, height);
     }
 }
