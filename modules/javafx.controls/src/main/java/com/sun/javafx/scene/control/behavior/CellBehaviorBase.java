@@ -320,7 +320,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         // list first, so that we are not iterating and modifying it
         // concurrently.
         List<Integer> selectedIndices = new ArrayList<>(getSelectionModel().getSelectedIndices());
-        for (int i = selectedIndices.size() - 1; i >= 0; i--) {
+        for (int i = 0, max = selectedIndices.size(); i < max; i++) {
             int selectedIndex = selectedIndices.get(i);
             if (selectedIndex < minRow || selectedIndex > maxRow) {
                 getSelectionModel().clearSelection(selectedIndex);
