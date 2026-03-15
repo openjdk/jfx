@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.IntPredicate;
-import java.util.stream.Collectors;
 
 class ControlUtils {
     private ControlUtils() { }
@@ -168,9 +167,7 @@ class ControlUtils {
         int size = indices.size();
         for (int i = 0; i < size; i++) {
             int begin = indices.get(i);
-            while (i + 1 < size && indices.get(i + 1) == indices.get(i) + 1) {
-                i++;
-            }
+            while (i + 1 < size && indices.get(i + 1) == indices.get(i) + 1) i++;
             int end = indices.get(i) + 1;
             sm.selectedIndices.set(begin, end, isSet);
         }
@@ -188,7 +185,7 @@ class ControlUtils {
                     .filter(removeRowFilter)
                     .sorted()
                     .boxed()
-                    .collect(Collectors.toList());
+                    .toList();
 
             processContiguousRanges(sm, removed, false);
 
@@ -197,7 +194,7 @@ class ControlUtils {
                     .distinct()
                     .sorted()
                     .boxed()
-                    .collect(Collectors.toList());
+                    .toList();
 
             processContiguousRanges(sm, added, true);
 
