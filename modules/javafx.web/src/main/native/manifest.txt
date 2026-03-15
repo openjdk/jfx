@@ -67,6 +67,8 @@ exclude Source/JavaScriptCore/replay/scripts/tests
 exclude Source/WebDriver
 exclude Source/ThirdParty
 exclude Source/WebCore/platform/audio/resources
+exclude Source/WebCore/platform/graphics/skia
+exclude Source/WebCore/platform/graphics/filters/skia
 exclude Source/WebCore/bindings/scripts/test
 exclude Source/WebCore/Resources
 exclude Source/WTF/icu

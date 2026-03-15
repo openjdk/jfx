@@ -163,9 +163,9 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> ServiceWorkerThreadProxy::createRT
     return m_page->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
 }
 
-std::unique_ptr<FetchLoader> ServiceWorkerThreadProxy::createBlobLoader(FetchLoaderClient& client, const URL& blobURL)
+RefPtr<FetchLoader> ServiceWorkerThreadProxy::createBlobLoader(FetchLoaderClient& client, const URL& blobURL)
 {
-    auto loader = makeUnique<FetchLoader>(client, nullptr);
+    Ref loader = FetchLoader::create(client, nullptr);
     loader->startLoadingBlobURL(m_document, blobURL);
     if (!loader->isStarted())
         return nullptr;

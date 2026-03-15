@@ -149,7 +149,9 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         // We don't specify an encoding here. Neither Gecko nor WinIE respects
         // the encoding specified in the HTTP headers.
         auto dataSpan = byteCast<char>(data->span());
-        return xmlReadMemory(dataSpan.data(), dataSpan.size(), byteCast<char>(uri), nullptr, options);
+        if (dataSpan.size() > std::numeric_limits<int>::max())
+            return nullptr;
+        return xmlReadMemory(dataSpan.data(), static_cast<int>(dataSpan.size()), byteCast<char>(uri), nullptr, options);
     }
     case XSLT_LOAD_STYLESHEET:
         return globalProcessor->xslStylesheet()->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);

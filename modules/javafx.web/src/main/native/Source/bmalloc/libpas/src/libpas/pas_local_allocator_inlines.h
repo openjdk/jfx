@@ -1824,6 +1824,7 @@ pas_local_allocator_try_allocate(pas_local_allocator* allocator,
     pas_allocation_result result;
 
     PAS_TESTING_ASSERT(!allocator->scavenger_data.is_in_use);
+    PAS_TESTING_ASSERT(size <= allocator->object_size || !allocator->object_size);
 
     if (verbose) {
         pas_log("Allocator %p (%s) allocating size = %zu, alignment = %zu.\n",
@@ -1845,6 +1846,7 @@ pas_local_allocator_try_allocate(pas_local_allocator* allocator,
                     (void*)result.begin);
         }
 
+        PAS_TESTING_ASSERT(size <= allocator->object_size);
         return result_filter(
             pas_allocation_result_create_success_with_zero_mode(result.begin, result.zero_mode));
     }
@@ -1866,6 +1868,7 @@ pas_local_allocator_try_allocate(pas_local_allocator* allocator,
             allocator, allocation_mode, counts, result_filter);
         if (verbose)
             pas_log("in small segregated slow return - result.begin = %p\n", (void*)result.begin);
+        PAS_TESTING_ASSERT(size <= allocator->object_size);
         return result;
     }
 
@@ -1873,6 +1876,7 @@ pas_local_allocator_try_allocate(pas_local_allocator* allocator,
         allocator, size, alignment, allocation_mode, counts, result_filter);
     if (verbose)
         pas_log("in generic return - result.begin = %p\n", (void*)result.begin);
+    PAS_TESTING_ASSERT(size <= allocator->object_size);
     return result;
 }
 

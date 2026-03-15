@@ -425,12 +425,19 @@ LayoutUnit FloatingObjects::logicalRightOffset(LayoutUnit fixedOffset, LayoutUni
 
 void FloatingObjects::shiftFloatsBy(LayoutUnit blockShift)
 {
-    LayoutUnit shiftX = (m_horizontalWritingMode) ? 0_lu : -blockShift;
-    LayoutUnit shiftY = (m_horizontalWritingMode) ? blockShift : 0_lu;
+    auto shiftX = (m_horizontalWritingMode) ? 0_lu : -blockShift;
+    auto shiftY = (m_horizontalWritingMode) ? blockShift : 0_lu;
 
-    for (auto& floater : m_set) {
-        floater->m_frameRect.move(shiftX, shiftY);
-        floater->renderer().move(shiftX, shiftY);
+    for (auto& floatBox : m_set) {
+        auto isPlaced = floatBox->isPlaced();
+        if (isPlaced)
+            removePlacedObject(floatBox.get());
+
+        floatBox->m_frameRect.move(shiftX, shiftY);
+        floatBox->renderer().move(shiftX, shiftY);
+
+        if (isPlaced)
+            addPlacedObject(floatBox.get());
     }
 }
 
