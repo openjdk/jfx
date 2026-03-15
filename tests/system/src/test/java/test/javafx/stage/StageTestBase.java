@@ -56,7 +56,7 @@ abstract class StageTestBase {
     protected static final double POSITION_DELTA = 1.0;
 
     /**
-     * Creates a Scene for the test stage acoording to the {@link StageStyle}
+     * Creates a Scene for the test stage according to the {@link StageStyle}
      * @param stageStyle {@link StageStyle} of the Stage
      * @return a {@link Scene}
      */

@@ -74,6 +74,7 @@ import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -560,6 +561,90 @@ public class TestStage extends Application {
         }
     }
 
+    private void createFileOpenMultiple() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Multiple Files");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        List<File> files = fileChooser.showOpenMultipleDialog(currentStage);
+        if (files != null && !files.isEmpty()) {
+            new Alert(Alert.AlertType.INFORMATION, "Files selected: " + files.size()).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "No files selected").showAndWait();
+        }
+    }
+
+    private void createFileSave() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save File");
+        fileChooser.setInitialFileName("test.txt");
+
+        File file = fileChooser.showSaveDialog(currentStage);
+        if (file != null) {
+            new Alert(Alert.AlertType.INFORMATION, "Save target: " + file.getAbsolutePath()).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "Save cancelled").showAndWait();
+        }
+    }
+
+    private void createFileOpenWithFilters() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open File (Filtered)");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Text Files", "*.txt", "*.md"),
+                new FileChooser.ExtensionFilter("Java Files", "*.java"),
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        fileChooser.setSelectedExtensionFilter(fileChooser.getExtensionFilters().getFirst());
+
+        File file = fileChooser.showOpenDialog(currentStage);
+        if (file != null) {
+            FileChooser.ExtensionFilter selected = fileChooser.getSelectedExtensionFilter();
+            String filterName = selected == null ? "none" : selected.getDescription();
+            new Alert(Alert.AlertType.INFORMATION,
+                    "File selected: " + file.getAbsolutePath() + "\nFilter: " + filterName).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "No file selected").showAndWait();
+        }
+    }
+
+    private void createFileSaveWithFilters() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save File (Filtered)");
+        fileChooser.setInitialFileName("output.txt");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Text Files", "*.txt"),
+                new FileChooser.ExtensionFilter("Java Files", "*.java"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        fileChooser.setSelectedExtensionFilter(fileChooser.getExtensionFilters().getFirst());
+
+        File file = fileChooser.showSaveDialog(currentStage);
+        if (file != null) {
+            FileChooser.ExtensionFilter selected = fileChooser.getSelectedExtensionFilter();
+            String filterName = selected == null ? "none" : selected.getDescription();
+            new Alert(Alert.AlertType.INFORMATION,
+                    "Save target: " + file.getAbsolutePath() + "\nFilter: " + filterName).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "Save cancelled").showAndWait();
+        }
+    }
+
+    private void createDirectoryOpen() {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Select Folder");
+
+        File directory = directoryChooser.showDialog(currentStage);
+        if (directory != null) {
+            new Alert(Alert.AlertType.INFORMATION, "Folder selected: " + directory.getAbsolutePath()).showAndWait();
+        } else {
+            new Alert(Alert.AlertType.WARNING, "No folder selected").showAndWait();
+        }
+    }
+
     private void setStageIcon() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose Icon Image");
@@ -590,11 +675,24 @@ public class TestStage extends Application {
         alertWindowModalMenuItem.setOnAction(e -> createAlert(true));
         MenuItem fileOpenMenuItem = new MenuItem("File Open");
         fileOpenMenuItem.setOnAction(e -> createFileOpen());
+        MenuItem fileOpenMultipleMenuItem = new MenuItem("File Open Multiple");
+        fileOpenMultipleMenuItem.setOnAction(e -> createFileOpenMultiple());
+        MenuItem fileSaveMenuItem = new MenuItem("File Save");
+        fileSaveMenuItem.setOnAction(e -> createFileSave());
+        MenuItem fileOpenFilteredMenuItem = new MenuItem("File Open (Filtered)");
+        fileOpenFilteredMenuItem.setOnAction(e -> createFileOpenWithFilters());
+        MenuItem fileSaveFilteredMenuItem = new MenuItem("File Save (Filtered)");
+        fileSaveFilteredMenuItem.setOnAction(e -> createFileSaveWithFilters());
+        MenuItem directoryOpenMenuItem = new MenuItem("Directory Open");
+        directoryOpenMenuItem.setOnAction(e -> createDirectoryOpen());
         MenuItem iconMenuItem = new MenuItem("Set Stage Icon");
         iconMenuItem.setOnAction(e -> setStageIcon());
 
         contextMenu.getItems().addAll(defaultSceneMenuItem, textFieldMenuItem, tooltipBoxMenuItem,
-                alertMenuItem, alertWindowModalMenuItem, fileOpenMenuItem, iconMenuItem);
+                alertMenuItem, alertWindowModalMenuItem,
+                fileOpenMenuItem, fileOpenMultipleMenuItem, fileSaveMenuItem,
+                fileOpenFilteredMenuItem, fileSaveFilteredMenuItem,
+                directoryOpenMenuItem, iconMenuItem);
         root.setOnContextMenuRequested(e -> contextMenu.show(root, e.getScreenX(), e.getScreenY()));
 
         root.setOnMousePressed(e -> {

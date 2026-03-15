@@ -43,6 +43,8 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
@@ -56,7 +58,6 @@ class StageLocationTest extends VisualTestBase {
     private static final int TO_Y = 500;
     private static final Color COLOR = Color.RED;
     private static final double TOLERANCE = 0.07;
-    private static final int WAIT = 300;
 
     private Stage createStage(StageStyle stageStyle) {
         Stage s = getStage(true);
@@ -85,93 +86,97 @@ class StageLocationTest extends VisualTestBase {
 
     private Stage stage;
 
+    private void showStageAndWait(Stage stage) {
+        CountDownLatch latch = new CountDownLatch(1);
+        runAndWait(() -> {
+            stage.setOnShown(e -> Platform.runLater(latch::countDown));
+            stage.show();
+        });
+        try {
+            assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS),
+                    "Timeout waiting for stage to be shown");
+        } catch (InterruptedException e) {
+            fail(e);
+        }
+    }
+
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED",  "EXTENDED", "UTILITY"})
     void moveXY(StageStyle stageStyle) {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage = createStage(stageStyle);
             stage.setX(X);
             stage.setY(Y);
-            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage.show();
         });
+        showStageAndWait(stage);
+        Util.waitForIdle(stage.getScene());
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT);
+        runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
-        Util.doTimeLine(WAIT,
-                () -> assertColorEquals(COLOR, X + 100, Y + 100),
-                () -> {
-                    stage.setX(TO_X);
-                    stage.setY(TO_Y);
-                },
-                () -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
+        runAndWait(() -> {
+            stage.setX(TO_X);
+            stage.setY(TO_Y);
+        });
+        Util.waitForIdle(stage.getScene());
+
+        runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
     void moveX(StageStyle stageStyle) {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage = createStage(stageStyle);
             stage.setX(X);
             stage.setY(Y);
-            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage.show();
         });
+        showStageAndWait(stage);
+        Util.waitForIdle(stage.getScene());
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT);
+        runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
-        Util.doTimeLine(WAIT,
-                () -> assertColorEquals(COLOR, X + 100, Y + 100),
-                () -> stage.setX(TO_X),
-                () -> assertColorEquals(COLOR, TO_X + 100, Y + 100));
+        runAndWait(() -> stage.setX(TO_X));
+        Util.waitForIdle(stage.getScene());
+
+        runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, Y + 100));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
     void moveY(StageStyle stageStyle) {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage = createStage(stageStyle);
             stage.setX(X);
             stage.setY(Y);
-            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage.show();
         });
+        showStageAndWait(stage);
+        Util.waitForIdle(stage.getScene());
 
+        runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT);
+        runAndWait(() -> stage.setY(TO_Y));
+        Util.waitForIdle(stage.getScene());
 
-        Util.doTimeLine(WAIT,
-                () -> assertColorEquals(COLOR, X + 100, Y + 100),
-                () -> stage.setY(TO_Y),
-                () -> assertColorEquals(COLOR, X + 100, TO_Y + 100));
+        runAndWait(() -> assertColorEquals(COLOR, X + 100, TO_Y + 100));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "UTILITY"})
     void moveAfterShow(StageStyle stageStyle) {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage = createStage(stageStyle);
             stage.setX(X);
             stage.setY(Y);
-            stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage.show();
         });
+        showStageAndWait(stage);
+        Util.waitForIdle(stage.getScene());
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT);
+        runAndWait(() -> {
+            stage.setX(TO_X);
+            stage.setY(TO_Y);
+        });
+        Util.waitForIdle(stage.getScene());
 
-        Util.doTimeLine(WAIT,
-                () -> {
-                    stage.setX(TO_X);
-                    stage.setY(TO_Y);
-                },
-                () -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
+        runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
     }
 }

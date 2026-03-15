@@ -344,9 +344,6 @@ glass_pixbuf_from_window(GdkWindow *window,
     gint srcx, gint srcy,
     gint width, gint height);
 
-void
-glass_window_apply_shape_mask(GdkWindow *window,
-    void* data, uint width, uint height);
 
 GdkWindow *
 glass_gdk_drag_context_get_dest_window (GdkDragContext * context);

@@ -31,9 +31,6 @@
 //  Native Windows wider or taller than 32767 pixels are not supported
 #define MAX_WINDOW_SIZE 32767
 
-#define GETTER(type, name) \
-    type get_##name() const { return name; }
-
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
 
@@ -54,11 +51,13 @@ class Observable {
 private:
     T value;
     std::function<void(const T&)> onChange;
+    bool assigned_since_init{false};
 
 public:
     Observable(const T& initialValue = T()) : value(initialValue) {}
 
     void set(const T& newValue) {
+        assigned_since_init = true;
         if (value != newValue) {
             value = newValue;
             invalidate();
@@ -73,11 +72,16 @@ public:
 
     // This resets the value without notifying
     void reset(const T& newValue) {
+        assigned_since_init = true;
         value = newValue;
     }
 
     const T& get() const {
         return value;
+    }
+
+    bool was_assigned() const {
+        return assigned_since_init;
     }
 
     operator T() const {
@@ -235,6 +239,7 @@ private:
     WindowFrameType frame_type;
     WindowType window_type;
 
+    GtkWidget *gtk_widget{};
     GdkWindow *gdk_window{};
 
     GdkWMFunction initial_wmf;
@@ -285,10 +290,10 @@ public:
     WindowContext(jobject, WindowContext* _owner, long _screen,
                   WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf);
 
-    GETTER(jobject, jwindow)
-    GETTER(jobject, jview)
-    GETTER(WindowFrameType, frame_type);
-    GETTER(WindowType, window_type);
+    jobject get_jwindow() const { return jwindow; }
+    jobject get_jview() const { return jview; }
+    WindowFrameType get_frame_type() const { return frame_type; }
+    WindowType get_window_type() const { return window_type; }
 
     Size get_view_size();
     Point get_view_position();
@@ -304,6 +309,7 @@ public:
 
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
+    GtkWindow *get_gtk_window();
     XID get_native_window();
 
     void add_child(WindowContext*);
@@ -318,11 +324,13 @@ public:
     bool set_view(jobject);
     bool grab_focus();
     void ungrab_focus();
+    static void ungrab_if_grabbed();
     void set_cursor(GdkCursor*);
     void set_cursor_override(GdkCursor*);
     void set_background(float, float, float);
 
     void process_map();
+    void process_realize();
     void process_expose(GdkEventExpose*);
     void process_focus(GdkEventFocus*);
     virtual void process_mouse_button(GdkEventButton*, bool synthesized = false);

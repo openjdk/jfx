@@ -47,16 +47,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
+import static test.util.Util.waitForBoolean;
 
 @Timeout(value = TIMEOUT, unit = TimeUnit.MILLISECONDS)
 class StageOwnershipTest extends VisualTestBase {
@@ -75,8 +76,6 @@ class StageOwnershipTest extends VisualTestBase {
     private static final int Y_DELTA = 75; // shadows + decoration
 
     private static final double TOLERANCE = 0.07;
-    private static final int WAIT_TIME = 500;
-    private static final int LONG_WAIT_TIME = 1000;
 
     @Override
     protected Stage getStage(boolean alwaysOnTop) {
@@ -86,9 +85,7 @@ class StageOwnershipTest extends VisualTestBase {
         return stage;
     }
 
-    private void setupBottomStage() throws InterruptedException {
-        final CountDownLatch shownLatch = new CountDownLatch(1);
-
+    private void setupBottomStage() {
         runAndWait(() -> {
             bottomStage = getStage(false);
             bottomStage.initStyle(StageStyle.DECORATED);
@@ -97,13 +94,9 @@ class StageOwnershipTest extends VisualTestBase {
             bottomStage.setScene(bottomScene);
             bottomStage.setX(0);
             bottomStage.setY(0);
-            bottomStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            bottomStage.show();
         });
-        assertTrue(shownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),
-                "Timeout waiting for bottom stage to be shown");
-
-        sleep(WAIT_TIME);
+        showStageAndWait(bottomStage);
+        Util.waitForIdle(bottomStage.getScene());
     }
 
     private void setupTopStage(Stage owner, StageStyle stageStyle, Modality modality) {
@@ -155,7 +148,9 @@ class StageOwnershipTest extends VisualTestBase {
         if (owner != null) {
             stage.initOwner(owner);
         }
-        stage.initModality(modality);
+        if (modality != null) {
+            stage.initModality(modality);
+        }
         return stage;
     }
 
@@ -184,6 +179,22 @@ class StageOwnershipTest extends VisualTestBase {
         assertColorEquals(expected, color, TOLERANCE);
     }
 
+    private void showStageAndWait(Stage... stages) {
+        CountDownLatch latch = new CountDownLatch(stages.length);
+        runAndWait(() -> {
+            for (Stage stage : stages) {
+                stage.setOnShown(e -> Platform.runLater(latch::countDown));
+                stage.show();
+            }
+        });
+        try {
+            assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS),
+                    "Timeout waiting for stage(s) to be shown");
+        } catch (InterruptedException e) {
+            fail(e);
+        }
+    }
+
     private static Stream<Arguments> getTestsParams() {
         return Stream.of(StageStyle.DECORATED, StageStyle.UNDECORATED, StageStyle.EXTENDED)
                 .flatMap(stageStyle -> Stream.of(Modality.APPLICATION_MODAL, Modality.WINDOW_MODAL)
@@ -192,44 +203,48 @@ class StageOwnershipTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void openingModalChildStageWhileMaximizedShouldNotUnmaximize(StageStyle stageStyle, Modality modality)
-            throws InterruptedException {
+    void openingModalChildStageWhileMaximizedShouldNotUnmaximize(StageStyle stageStyle, Modality modality) {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
 
-        Util.doTimeLine(WAIT_TIME,
-            () -> bottomStage.setMaximized(true),
-            topStage::show,
-            () -> {
-                assertTrue(bottomStage.isMaximized());
-                // Make sure state is still maximized
-                assertColorEqualsVisualBounds(BOTTOM_COLOR);
+        runAndWait(() -> bottomStage.setMaximized(true));
+        waitForBoolean(bottomStage.maximizedProperty(), true, "bottom stage to be maximized");
+        Util.waitForIdle(bottomStage.getScene());
 
-                Color color = getColor(100, 100);
-                assertColorEquals(TOP_COLOR, color, TOLERANCE);
-            });
+        showStageAndWait(topStage);
+        Util.waitForIdle(topStage.getScene());
+
+        runAndWait(() -> {
+            assertTrue(bottomStage.isMaximized());
+            assertColorEqualsVisualBounds(BOTTOM_COLOR);
+
+            Color color = getColor(100, 100);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
+        });
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
     // This test causes BEEP on macOS
-    void openingModalChildStageWhileFullScreenShouldHaveFocus(StageStyle stageStyle, Modality modality)
-            throws InterruptedException {
+    void openingModalChildStageWhileFullScreenShouldHaveFocus(StageStyle stageStyle, Modality modality) {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
 
-        Util.doTimeLine(LONG_WAIT_TIME,
-                () -> bottomStage.setFullScreen(true),
-                topStage::show,
-                () -> {
-                    assertTrue(bottomStage.isFullScreen());
+        runAndWait(() -> bottomStage.setFullScreen(true));
+        waitForBoolean(bottomStage.fullScreenProperty(), true, "bottom stage to be fullscreen");
+        Util.waitForIdle(bottomStage.getScene());
 
-                    // Make sure state is still fullscreen
-                    assertColorEqualsVisualBounds(BOTTOM_COLOR);
+        showStageAndWait(topStage);
+        Util.waitForIdle(topStage.getScene());
 
-                    Color color = getColor(100, 100);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
+        runAndWait(() -> {
+            assertTrue(bottomStage.isFullScreen());
+
+            assertColorEqualsVisualBounds(BOTTOM_COLOR);
+
+            Color color = getColor(100, 100);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
+        });
     }
 
     private Stage stage0;
@@ -240,80 +255,227 @@ class StageOwnershipTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
     void closingModalWindowShouldFocusParent(StageStyle style, Modality modality) {
-        CountDownLatch shownLatch = new CountDownLatch(1);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage0 = createStage(style, COLOR0, null, null, 100, 100);
             stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
             stage2 = createStage(style, COLOR2, stage1, modality, 200, 200);
-
-            stage0.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-            stage0.show();
         });
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT_TIME);
+        showStageAndWait(stage0);
+        showStageAndWait(stage1);
+        showStageAndWait(stage2);
+        Util.waitForIdle(stage2.getScene());
 
-        Util.doTimeLine(WAIT_TIME,
-            stage1::show,
-            stage2::show,
-            () -> {
-                assertTrue(stage2.isFocused());
-                assertColorEquals(COLOR2, stage2);
-                assertFalse(stage1.isFocused());
-                assertFalse(stage0.isFocused());
-            },
-            stage2::close,
-            () -> {
-                assertTrue(stage1.isFocused());
-                assertColorEquals(COLOR1, stage1);
-                assertFalse(stage0.isFocused());
-            },
-            stage1::close,
-            () -> {
-                assertTrue(stage0.isFocused());
-                assertColorEquals(COLOR0, stage0);
-            });
+        runAndWait(() -> {
+            assertTrue(stage2.isFocused());
+            assertColorEquals(COLOR2, stage2);
+            assertFalse(stage1.isFocused());
+            assertFalse(stage0.isFocused());
+        });
+
+        runAndWait(stage2::close);
+        waitForBoolean(stage1.focusedProperty(), true, "stage1 to receive focus after closing modal stage2");
+        Util.waitForIdle(stage1.getScene());
+
+        runAndWait(() -> {
+            assertTrue(stage1.isFocused());
+            assertColorEquals(COLOR1, stage1);
+            assertFalse(stage0.isFocused());
+        });
+
+        runAndWait(stage1::close);
+        waitForBoolean(stage0.focusedProperty(), true, "stage0 to receive focus after closing stage1");
+        Util.waitForIdle(stage0.getScene());
+
+        runAndWait(() -> {
+            assertTrue(stage0.isFocused());
+            assertColorEquals(COLOR0, stage0);
+        });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingOwnerShouldCloseOwnedChildren(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+            stage2 = createStage(style, COLOR2, stage1, null, 200, 200);
+        });
+
+        showStageAndWait(stage0, stage1, stage2);
+        Util.waitForIdle(stage2.getScene());
+
+        runAndWait(() -> {
+            assertTrue(stage0.isShowing());
+            assertTrue(stage1.isShowing());
+            assertTrue(stage2.isShowing());
+        });
+
+        runAndWait(stage0::close);
+        waitForBoolean(stage0.showingProperty(), false, "stage0 to be hidden");
+
+        runAndWait(() -> {
+            assertFalse(stage0.isShowing());
+            assertFalse(stage1.isShowing());
+            assertFalse(stage2.isShowing());
+        });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingMiddleStageInChainShouldCloseDescendants(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+            stage2 = createStage(style, COLOR2, stage1, null, 200, 200);
+        });
+
+        showStageAndWait(stage0, stage1, stage2);
+        Util.waitForIdle(stage2.getScene());
+
+        runAndWait(() -> {
+            assertTrue(stage0.isShowing());
+            assertTrue(stage1.isShowing());
+            assertTrue(stage2.isShowing());
+        });
+
+        runAndWait(stage1::close);
+        waitForBoolean(stage1.showingProperty(), false, "stage1 to be hidden");
+
+        runAndWait(() -> {
+            assertTrue(stage0.isShowing(), "Owner (stage0) should still be showing");
+            assertFalse(stage1.isShowing(), "Closed stage (stage1) should not be showing");
+            assertFalse(stage2.isShowing(), "Descendant (stage2) should be closed");
+        });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void ownedStageShouldAlwaysBeOnTopOfOwner(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 0, 0);
+            stage1 = createStage(style, COLOR1, stage0, null, 0, 0);
+        });
+
+        showStageAndWait(stage0, stage1);
+        Util.waitForIdle(stage1.getScene());
+
+        runAndWait(() -> {
+            assertColorEquals(COLOR1, stage1);
+        });
+
+        runAndWait(stage0::toFront);
+        Util.waitForIdle(stage0.getScene());
+
+        runAndWait(() -> assertColorEquals(COLOR1, stage1));
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void multipleChildrenOfSameOwner(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 0, 0);
+            stage0.setMaximized(true);
+            stage1 = createStage(style, COLOR1, stage0, null, 100, 100);
+            stage2 = createStage(style, COLOR2, stage0, null, 350, 100);
+        });
+
+        showStageAndWait(stage0, stage1, stage2);
+        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
+        Util.waitForIdle(stage0.getScene());
+
+        runAndWait(() -> {
+            assertColorEquals(COLOR1, stage1);
+            assertColorEquals(COLOR2, stage2);
+        });
+
+        runAndWait(stage1::close);
+        waitForBoolean(stage1.showingProperty(), false, "stage1 to be hidden");
+
+        runAndWait(() -> {
+            assertFalse(stage1.isShowing());
+            assertTrue(stage2.isShowing());
+            assertColorEquals(COLOR2, stage2);
+        });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingNonModalChildShouldFocusOwner(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+        });
+
+        showStageAndWait(stage0, stage1);
+        waitForBoolean(stage1.focusedProperty(), true, "stage1 to receive focus after closing non-modal child");
+        Util.waitForIdle(stage1.getScene());
+
+        runAndWait(stage1::close);
+        waitForBoolean(stage0.focusedProperty(), true, "stage0 to receive focus after closing non-modal child");
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void maximizingOwnerShouldNotHideOwnedChildren(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+        });
+
+        showStageAndWait(stage0, stage1);
+        Util.waitForIdle(stage1.getScene());
+
+        runAndWait(() -> stage0.setMaximized(true));
+        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
+        Util.waitForIdle(stage0.getScene());
+
+        runAndWait(() -> {
+            assertTrue(stage0.isMaximized());
+            assertTrue(stage1.isShowing());
+            assertColorEquals(COLOR1, stage1);
+        });
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
     void iconifyParentShouldHideChildren(StageStyle style) {
         if (style == StageStyle.EXTENDED || style == StageStyle.DECORATED) {
-            // Windows just hides the first-level ownership (bug?)
             assumeTrue(!PlatformUtil.isWindows());
         }
 
-        CountDownLatch shownLatch = new CountDownLatch(4);
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             stage0 = createStage(StageStyle.UNDECORATED, COLOR0, null, null, 0, 0);
             stage0.setMaximized(true);
             stage1 = createStage(style, COLOR1, null, null, 100, 100);
             stage2 = createStage(style, COLOR2, stage1, null, 200, 150);
             stage3 = createStage(style, COLOR3, stage2, null, 300, 200);
-
-            List.of(stage0, stage1, stage2, stage3).forEach(stage -> {
-                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-                stage.show();
-            });
         });
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT_TIME);
+        showStageAndWait(stage0, stage1, stage2, stage3);
+        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
+        Util.waitForIdle(stage0.getScene());
 
-        Util.doTimeLine(WAIT_TIME,
-            () -> stage1.setIconified(true),
-            () -> {
-                assertTrue(stage1.isIconified());
-                assertColorEquals(COLOR0, stage1);
-                assertColorEquals(COLOR0, stage2);
-                assertColorEquals(COLOR0, stage3);
-            },
-            () -> stage1.setIconified(false),
-            () -> {
-                assertFalse(stage1.isIconified());
-                assertColorEquals(COLOR1, stage1);
-                assertColorEquals(COLOR2, stage2);
-                assertColorEquals(COLOR3, stage3);
-            });
+        runAndWait(() -> stage1.setIconified(true));
+        waitForBoolean(stage1.iconifiedProperty(), true, "stage1 to be iconified");
+        Util.sleep(300);
+
+        runAndWait(() -> {
+            assertTrue(stage1.isIconified());
+            assertColorEquals(COLOR0, stage1);
+            assertColorEquals(COLOR0, stage2);
+            assertColorEquals(COLOR0, stage3);
+        });
+
+        runAndWait(() -> stage1.setIconified(false));
+        waitForBoolean(stage1.iconifiedProperty(), false, "stage1 to be de-iconified");
+        Util.sleep(300);
+
+        runAndWait(() -> {
+            assertFalse(stage1.isIconified());
+            assertColorEquals(COLOR1, stage1);
+            assertColorEquals(COLOR2, stage2);
+            assertColorEquals(COLOR3, stage3);
+        });
     }
 }

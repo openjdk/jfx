@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.waitForBoolean;
 
 class MaximizeTest extends StageTestBase {
     private static final int WIDTH = 300;
@@ -55,19 +56,12 @@ class MaximizeTest extends StageTestBase {
     void maximizeUndecorated(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(MEDIUM_WAIT,
-                () -> getStage().setMaximized(true),
-                () ->  {
-                    assertTrue(getStage().isMaximized());
-                    assertNotEquals(POS_X, getStage().getX());
-                    assertNotEquals(POS_Y, getStage().getY());
-                },
-                () -> getStage().setMaximized(false));
+        setMaximized(true);
+        assertNotEquals(POS_X, getStage().getX());
+        assertNotEquals(POS_Y, getStage().getY());
 
-        Util.sleep(MEDIUM_WAIT);
-
-        assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage maximized position changed");
-        assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage maximized position changed");
+        setMaximized(false);
+        assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -75,12 +69,9 @@ class MaximizeTest extends StageTestBase {
     void maximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        Util.doTimeLine(MEDIUM_WAIT,
-                () -> getStage().setMaximized(true),
-                () -> assertTrue(getStage().isMaximized()),
-                () -> getStage().setMaximized(false));
+        setMaximized(true);
+        setMaximized(false);
 
-        Util.sleep(MEDIUM_WAIT);
         assertSizePosition();
     }
 
@@ -88,17 +79,49 @@ class MaximizeTest extends StageTestBase {
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
     void maximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
-        Util.sleep(MEDIUM_WAIT);
 
-        Util.runAndWait(() -> {
-            assertTrue(getStage().isMaximized());
-            getStage().setMaximized(false);
-        });
-        Util.sleep(MEDIUM_WAIT);
+        waitForBoolean(getStage().maximizedProperty(), true, "stage to be maximized");
+        setMaximized(false);
+
         assertSizePosition();
     }
 
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeShouldIncreaseSize(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, TEST_SETTINGS);
+
+        setMaximized(true);
+
+        assertTrue(getStage().getWidth() > WIDTH,
+                "Maximized stage width should be larger than original width");
+        assertTrue(getStage().getHeight() > HEIGHT,
+                "Maximized stage height should be larger than original height");
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeRestoreMaximizeCycle(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, TEST_SETTINGS);
+
+        setMaximized(true);
+        setMaximized(false);
+        assertSizePosition();
+
+        setMaximized(true);
+        setMaximized(false);
+        assertSizePosition();
+    }
+
+    private void setMaximized(boolean value) {
+        Util.runAndWait(() -> getStage().setMaximized(value));
+        waitForBoolean(getStage().maximizedProperty(), value,
+                "stage to " + (value ? "maximize" : "restore"));
+        Util.waitForIdle(getScene());
+    }
+
     private void assertSizePosition() {
+        Util.waitForIdle(getScene());
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
         assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage's X position should have remained");
