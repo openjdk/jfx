@@ -36,6 +36,44 @@ public final class CssNumberParser {
     private static final int EXP_LIMIT = 10000;
 
     /**
+     * Parses a number as an integer. If successful, returns the integer as a long value; otherwise
+     * returns a long value less than {@link Integer#MIN_VALUE} to indicate failure.
+     */
+    public static long tryParseInt(String s, int start, int end, int radix) {
+        if (s == null
+                || start < 0 || start >= end || end > s.length()
+                || radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
+            return Long.MIN_VALUE;
+        }
+
+        int digit = ~0xFF;
+        int i = start;
+        char firstChar = s.charAt(i++);
+        if (firstChar != '-' && firstChar != '+') {
+            digit = Character.digit(firstChar, radix);
+        }
+
+        if (digit >= 0 || digit == ~0xFF && end - start > 1) {
+            int limit = firstChar != '-' ? Integer.MIN_VALUE + 1 : Integer.MIN_VALUE;
+            int multmin = limit / radix;
+            int result = -(digit & 0xFF);
+            boolean inRange = true;
+
+            while (i < end && (digit = Character.digit(s.charAt(i++), radix)) >= 0
+                    && (inRange = result > multmin
+                    || result == multmin && digit <= radix * multmin - limit)) {
+                result = radix * result - digit;
+            }
+
+            if (inRange && i == end && digit >= 0) {
+                return firstChar != '-' ? -result : result;
+            }
+        }
+
+        return Long.MIN_VALUE;
+    }
+
+    /**
      * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
      * and fractional parts, and it supports E notation (exponential).
      *
@@ -49,6 +87,22 @@ public final class CssNumberParser {
     /**
      * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
      * and fractional parts, and it supports E notation (exponential).
+     *
+     * @throws NumberFormatException if the substring does not consist entirely of a valid number representation
+     * @see <a href="https://www.w3.org/TR/css-syntax-3/#consume-number">Consume a number</a>
+     */
+    public static double parseDouble(String s, int start, int end) {
+        double result = tryParseDouble(s, start, end);
+        if (Double.isNaN(result)) {
+            throw new NumberFormatException("Invalid number: " + s.substring(start, end));
+        }
+
+        return result;
+    }
+
+    /**
+     * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
+     * and fractional parts, and it supports E notation (exponential).
      * <p>
      * This method operates on the substring {@code [start, end)} of {@code s}, which is expected to
      * contain the string representation of a number without leading or trailing whitespace.
@@ -56,10 +110,10 @@ public final class CssNumberParser {
      * This implementation is allocation-free for significands with less than 20 digits and returns
      * the nearest representable double value of the input string, with ties rounding to even.
      *
-     * @throws NumberFormatException if the substring does not consist entirely of a valid number representation
+     * @return the number, or NaN if the substring does not consist entirely of a valid number representation
      * @see <a href="https://www.w3.org/TR/css-syntax-3/#consume-number">Consume a number</a>
      */
-    public static double parseDouble(String s, int start, int end) {
+    public static double tryParseDouble(String s, int start, int end) {
         int p = start;
         boolean negative = false;
 
@@ -182,7 +236,7 @@ public final class CssNumberParser {
 
         // At least one digit must have been consumed from either the integer or fractional part.
         if (digitsConsumed == 0 || p != end) {
-            throw new NumberFormatException("Invalid number: " + s.substring(start, end));
+            return Double.NaN;
         }
 
         // If the numeric value is zero, preserve the sign.
@@ -196,7 +250,11 @@ public final class CssNumberParser {
             return negative ? -value : value;
         }
 
-        return Double.parseDouble(s.substring(start, end));
+        try {
+            return Double.parseDouble(s.substring(start, end));
+        } catch (NumberFormatException _) {
+            return Double.NaN;
+        }
     }
 
     /**
