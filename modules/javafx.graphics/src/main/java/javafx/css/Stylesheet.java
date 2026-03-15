@@ -296,10 +296,7 @@ public class Stylesheet {
         os.writeInt(stylesheetImports.size());
 
         for (StylesheetImport stylesheetImport : stylesheetImports) {
-            os.writeInt(stylesheetImport.importConditions().size());
-            for (MediaQuery query : stylesheetImport.importConditions()) {
-                MediaQuerySerializer.writeBinary(query, os, stringStore);
-            }
+            stylesheetImport.importConditions().writeBinary(os, stringStore);
 
             try (var byteStream = new ByteArrayOutputStream();
                  var importOut = new DataOutputStream(byteStream)) {
@@ -312,20 +309,16 @@ public class Stylesheet {
 
     private void readBinaryImports(int bssVersion, DataInputStream is, String[] strings) throws IOException {
         for (int i = 0, max = is.readInt(); i < max; i++) {
-            int queryCount = is.readInt();
-            var importConditions = new MediaQueryList(queryCount);
-            for (int j = 0; j < queryCount; j++) {
-                importConditions.add(MediaQuerySerializer.readBinary(is, strings));
-            }
+            var importConditions = MediaQueryList.readBinary(is, strings);
+            int stylesheetSizeInBytes = is.readInt();
 
             // Skip referenced stylesheets whose media query list can never match.
-            int stylesheetSizeInBytes = is.readInt();
-            if (importConditions.evaluate() != TriState.FALSE) {
+            if (importConditions.evaluate() == TriState.FALSE) {
+                is.skipNBytes(stylesheetSizeInBytes);
+            } else {
                 var stylesheet = new Stylesheet();
                 stylesheet.readBinary(bssVersion, is, strings);
                 addStylesheetImport(new StylesheetImport(stylesheet, importConditions));
-            } else if (is.skip(stylesheetSizeInBytes) != stylesheetSizeInBytes) {
-                throw new EOFException();
             }
         }
 
