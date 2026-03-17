@@ -33,9 +33,7 @@ import javafx.collections.ObservableList;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.RuleHelper;
-import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryList;
-import com.sun.javafx.css.media.MediaQuerySerializer;
 import com.sun.javafx.css.media.MediaRule;
 import com.sun.javafx.css.media.TriState;
 
@@ -43,7 +41,6 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;

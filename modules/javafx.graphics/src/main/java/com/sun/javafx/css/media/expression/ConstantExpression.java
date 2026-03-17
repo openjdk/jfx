@@ -58,7 +58,7 @@ public final class ConstantExpression implements MediaQuery {
 
     @Override
     public TriState evaluate() {
-        return value ?  TriState.TRUE : TriState.FALSE;
+        return value ? TriState.TRUE : TriState.FALSE;
     }
 
     @Override
