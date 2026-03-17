@@ -752,6 +752,12 @@ void WindowContext::ungrab_focus() {
     }
 }
 
+void WindowContext::ungrab_if_grabbed() {
+    if (WindowContext::sm_grab_window) {
+        WindowContext::sm_grab_window->ungrab_focus();
+    }
+}
+
 void WindowContext::set_cursor(GdkCursor* cursor) {
     if (!is_in_drag()) {
         if (WindowContext::sm_mouse_drag_window) {

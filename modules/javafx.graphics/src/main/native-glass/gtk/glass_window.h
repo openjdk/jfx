@@ -318,6 +318,7 @@ public:
     bool set_view(jobject);
     bool grab_focus();
     void ungrab_focus();
+    static void ungrab_if_grabbed();
     void set_cursor(GdkCursor*);
     void set_cursor_override(GdkCursor*);
     void set_background(float, float, float);

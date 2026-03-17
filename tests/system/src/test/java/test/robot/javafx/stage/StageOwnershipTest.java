@@ -277,6 +277,224 @@ class StageOwnershipTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingOwnerShouldCloseOwnedChildren(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(3);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+            stage2 = createStage(style, COLOR2, stage1, null, 200, 200);
+
+            List.of(stage0, stage1, stage2).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                assertTrue(stage0.isShowing());
+                assertTrue(stage1.isShowing());
+                assertTrue(stage2.isShowing());
+            },
+            stage0::close,
+            () -> {
+                assertFalse(stage0.isShowing());
+                assertFalse(stage1.isShowing());
+                assertFalse(stage2.isShowing());
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingMiddleStageInChainShouldCloseDescendants(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(3);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+            stage2 = createStage(style, COLOR2, stage1, null, 200, 200);
+
+            List.of(stage0, stage1, stage2).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                assertTrue(stage0.isShowing());
+                assertTrue(stage1.isShowing());
+                assertTrue(stage2.isShowing());
+            },
+            stage1::close,
+            () -> {
+                assertTrue(stage0.isShowing(), "Owner (stage0) should still be showing");
+                assertFalse(stage1.isShowing(), "Closed stage (stage1) should not be showing");
+                assertFalse(stage2.isShowing(), "Descendant (stage2) should be closed");
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void ownedStageShouldAlwaysBeOnTopOfOwner(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(2);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 0, 0);
+            stage1 = createStage(style, COLOR1, stage0, null, 0, 0);
+
+            List.of(stage0, stage1).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                // Owned stage (stage1) should be visible on top of owner (stage0)
+                assertColorEquals(COLOR1, stage1);
+            },
+            stage0::toFront,
+            () -> {
+                // Even after bringing owner to front, owned stage should remain on top
+                assertColorEquals(COLOR1, stage1);
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void multipleChildrenOfSameOwner(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(3);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 0, 0);
+            stage0.setMaximized(true);
+            stage1 = createStage(style, COLOR1, stage0, null, 100, 100);
+            stage2 = createStage(style, COLOR2, stage0, null, 350, 100);
+
+            List.of(stage0, stage1, stage2).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                // Both children should be visible on top of the owner
+                assertColorEquals(COLOR1, stage1);
+                assertColorEquals(COLOR2, stage2);
+            },
+            stage1::close,
+            () -> {
+                // After closing one child, the other should still be visible
+                assertFalse(stage1.isShowing());
+                assertTrue(stage2.isShowing());
+                assertColorEquals(COLOR2, stage2);
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingNonModalChildShouldFocusOwner(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(2);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+
+            List.of(stage0, stage1).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                assertTrue(stage1.isFocused());
+                assertFalse(stage0.isFocused());
+            },
+            stage1::close,
+            () -> {
+                assertFalse(stage1.isShowing());
+                assertTrue(stage0.isFocused(), "Owner should receive focus after non-modal child is closed");
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void maximizingOwnerShouldNotHideOwnedChildren(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(2);
+        Util.runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 150, 150);
+
+            List.of(stage0, stage1).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> stage0.setMaximized(true),
+            () -> {
+                assertTrue(stage0.isMaximized());
+                assertTrue(stage1.isShowing());
+                // Owned child should still be visible on top of maximized owner
+                assertColorEquals(COLOR1, stage1);
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void toFrontOnOwnerShouldAlsoBringOwnedChildrenToFront(StageStyle style) {
+        CountDownLatch shownLatch = new CountDownLatch(3);
+        Util.runAndWait(() -> {
+            // stage0 is an unrelated window that will be used to push others back
+            stage0 = createStage(StageStyle.UNDECORATED, COLOR0, null, null, 0, 0);
+            stage0.setMaximized(true);
+
+            // stage1 is the owner, stage2 is its child
+            stage1 = createStage(style, COLOR1, null, null, 100, 100);
+            stage2 = createStage(style, COLOR2, stage1, null, 100, 100);
+
+            List.of(stage1, stage2, stage0).forEach(stage -> {
+                stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                stage.show();
+            });
+        });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT_TIME);
+
+        Util.doTimeLine(WAIT_TIME,
+            () -> {
+                // Unrelated stage0 should be on top, hiding stage1/stage2
+                assertColorEquals(COLOR0, stage1);
+            },
+            stage1::toFront,
+            () -> {
+                // After toFront on owner, the owned child should also come to front
+                assertTrue(stage2.isShowing());
+                assertColorEquals(COLOR2, stage2);
+            });
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
     void iconifyParentShouldHideChildren(StageStyle style) {
         if (style == StageStyle.EXTENDED || style == StageStyle.DECORATED) {
             // Windows just hides the first-level ownership (bug?)

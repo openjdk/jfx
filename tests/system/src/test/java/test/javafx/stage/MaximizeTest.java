@@ -98,6 +98,42 @@ class MaximizeTest extends StageTestBase {
         assertSizePosition();
     }
 
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeShouldIncreaseSize(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, TEST_SETTINGS);
+
+        Util.sleep(MEDIUM_WAIT);
+
+        Util.runAndWait(() -> getStage().setMaximized(true));
+
+        Util.sleep(MEDIUM_WAIT);
+
+        assertTrue(getStage().isMaximized(), "Stage should be maximized");
+        assertTrue(getStage().getWidth() > WIDTH,
+                "Maximized stage width should be larger than original width");
+        assertTrue(getStage().getHeight() > HEIGHT,
+                "Maximized stage height should be larger than original height");
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
+    void maximizeRestoreMaximizeCycle(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, TEST_SETTINGS);
+
+        Util.doTimeLine(MEDIUM_WAIT,
+                () -> getStage().setMaximized(true),
+                () -> assertTrue(getStage().isMaximized(), "Stage should be maximized after first toggle"),
+                () -> getStage().setMaximized(false),
+                () -> assertSizePosition(),
+                () -> getStage().setMaximized(true),
+                () -> assertTrue(getStage().isMaximized(), "Stage should be maximized after second toggle"),
+                () -> getStage().setMaximized(false));
+
+        Util.sleep(MEDIUM_WAIT);
+        assertSizePosition();
+    }
+
     private void assertSizePosition() {
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
