@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,30 +40,31 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:22];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:23];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
-    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
-    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
-    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
-    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"RADIO_BUTTON"];
-    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
-    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
-    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
-    [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
-    [rolesMap setObject:@"JFXStepperAccessibility" forKey:@"SPINNER"];
-    [rolesMap setObject:@"JFXSliderAccessibility" forKey:@"SLIDER"];
-    [rolesMap setObject:@"JFXProgressIndicatorAccessibility" forKey:@"PROGRESS_INDICATOR"];
+    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"CHECK_MENU_ITEM"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXLinkAccessibility" forKey:@"HYPERLINK"];
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE"];
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE_VIEW"];
-    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"TAB_PANE"];
-    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"PAGINATION"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU"];
-    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
-    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"RADIO_MENU_ITEM"];
-    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"CHECK_MENU_ITEM"];
     [rolesMap setObject:@"JFXMenuBarAccessibility" forKey:@"MENU_BAR"];
+    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
+    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"PAGINATION"];
+    [rolesMap setObject:@"JFXProgressIndicatorAccessibility" forKey:@"PROGRESS_INDICATOR"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"RADIO_BUTTON"];
+    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"RADIO_MENU_ITEM"];
+    [rolesMap setObject:@"JFXSliderAccessibility" forKey:@"SLIDER"];
+    [rolesMap setObject:@"JFXStepperAccessibility" forKey:@"SPINNER"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
+    [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"TAB_PANE"];
+    [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
+    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
 
 }
 
