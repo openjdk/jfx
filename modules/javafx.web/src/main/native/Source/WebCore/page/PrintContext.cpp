@@ -83,8 +83,8 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
     outPageHeight = pageHeight; // this is the height of the page adjusted by margins
     pageHeight -= headerHeight + footerHeight;
 
-    if (pageHeight <= 0) {
-        LOG_ERROR("pageHeight has bad value %.2f", pageHeight);
+    if (pageWidth <= 0 || pageHeight <= 0) {
+        LOG_ERROR("pageSize has bad values: width=%.2f height=%.2f", pageWidth, pageHeight);
         return;
     }
 

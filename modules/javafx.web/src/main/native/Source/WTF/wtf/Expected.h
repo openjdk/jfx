@@ -324,7 +324,7 @@ public:
     constexpr const value_type& operator*() const & { return std::get<0>(base::s); }
     value_type& operator*() & { return std::get<0>(base::s); }
     constexpr const value_type&& operator*() const && { return WTFMove(std::get<0>(base::s)); }
-    constexpr value_type&& operator*() && { return std::get<0>(base::s); }
+    constexpr value_type&& operator*() && { return WTFMove(std::get<0>(base::s)); }
     constexpr explicit operator bool() const { return has_value(); }
     constexpr bool has_value() const { return !base::s.index(); }
     constexpr const value_type& value() const & { return std::get<0>(base::s); }

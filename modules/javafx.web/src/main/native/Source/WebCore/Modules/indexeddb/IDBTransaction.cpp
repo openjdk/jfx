@@ -278,7 +278,7 @@ void IDBTransaction::abortInProgressOperations(const IDBError& error)
     m_transactionOperationsInProgressQueue.clear();
 
     for (auto& operation : inProgressAbortVector) {
-        m_transactionOperationsInProgressQueue.append(operation.get());
+        m_transactionOperationsInProgressQueue.append(operation);
         m_currentlyCompletingRequest = nullptr;
         operation->doComplete(IDBResultData::error(operation->identifier(), error));
     }

@@ -399,6 +399,7 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         m_seekTargetPromise->reject(PlatformMediaError::Cancelled);
     }
     m_seekTargetPromise.emplace(PlatformMediaError::SourceRemoved);
+    Ref promise = m_seekTargetPromise->promise();
     m_pendingSeekTarget = target;
 
     // Run the following steps as part of the "Wait until the user agent has established whether or not the
@@ -416,11 +417,10 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         // than HAVE_METADATA.
         monitorSourceBuffers();
 
-        return m_seekTargetPromise->promise();
+        return promise;
     }
     // ↳ Otherwise
     // Continue
-    auto promise = m_seekTargetPromise->promise();
     completeSeek();
     return promise;
 }
@@ -1262,6 +1262,10 @@ void MediaSource::detachFromElement()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
+    if (!m_isAttached) {
+        ASSERT(isClosed());
+        return;
+    }
     // 2.4.2 Detaching from a media element
     // https://rawgit.com/w3c/media-source/45627646344eea0170dd1cbc5a3d508ca751abb8/media-source-respec.html#mediasource-detach
 

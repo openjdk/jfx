@@ -193,14 +193,8 @@ public final class TextCell extends BorderPane {
      */
     public PathElement[] getCaretShape(Region target, int charIndex, boolean leading) {
         PathElement[] p;
-        double dx;
-        double dy;
         if (content instanceof TextFlow f) {
-            dx = f.snappedLeftInset(); // TODO RTL?
-            dy = f.snappedTopInset();
-
-            p = f.caretShape(charIndex, leading);
-
+            p = f.getCaretShape(charIndex, leading);
             if (p.length == 2) {
                 PathElement p0 = p[0];
                 PathElement p1 = p[1];
@@ -215,14 +209,12 @@ public final class TextCell extends BorderPane {
                 }
             }
         } else {
-            dx = 0.0;
-            dy = 0.0;
             p = new PathElement[] {
                 new MoveTo(0.0, 0.0),
                 new LineTo(0.0, content.getHeight())
             };
         }
-        return RichUtils.translatePath(target, content, p, dx, dy);
+        return RichUtils.translatePath(target, content, p);
     }
 
     /**
@@ -236,16 +228,9 @@ public final class TextCell extends BorderPane {
      */
     public PathElement[] getUnderlineShape(Region target, int start, int end) {
         PathElement[] p;
-        double dx;
-        double dy;
         if (content instanceof TextFlow f) {
-            dx = f.snappedLeftInset(); // TODO RTL?
-            dy = f.snappedTopInset();
-
             p = f.getUnderlineShape(start, end);
         } else {
-            dx = 0.0;
-            dy = 0.0;
             double w = getWidth();
             double h = getHeight();
 
@@ -254,7 +239,7 @@ public final class TextCell extends BorderPane {
                 new LineTo(w, h)
             };
         }
-        return RichUtils.translatePath(target, content, p, dx, dy);
+        return RichUtils.translatePath(target, content, p);
     }
 
     /**
@@ -268,23 +253,15 @@ public final class TextCell extends BorderPane {
      */
     public PathElement[] getRangeShape(Region target, int start, int end) {
         PathElement[] p;
-        double dx;
-        double dy;
         if (content instanceof TextFlow f) {
-            dx = f.snappedLeftInset(); // TODO RTL?
-            dy = f.snappedTopInset();
-
-            p = f.rangeShape(start, end); // TODO new api, no null
-
-            if ((p == null) || (p.length == 0)) {
+            p = f.getRangeShape(start, end, true);
+            if (p.length == 0) {
                 p = new PathElement[] {
                     new MoveTo(0.0, 0.0),
                     new LineTo(0.0, f.getHeight())
                 };
             }
         } else {
-            dx = 0.0;
-            dy = 0.0;
             double w = getWidth();
             double h = getHeight();
 
@@ -296,7 +273,7 @@ public final class TextCell extends BorderPane {
                 new LineTo(0.0, 0.0)
             };
         }
-        return RichUtils.translatePath(target, content, p, dx, dy);
+        return RichUtils.translatePath(target, content, p);
     }
 
     /**
@@ -410,7 +387,7 @@ public final class TextCell extends BorderPane {
     private RangeInfo getTextRange() {
         if (content instanceof TextFlow f) {
             int len = getTextLength();
-            PathElement[] pe = f.rangeShape(0, len); // TODO new api
+            PathElement[] pe = f.getRangeShape(0, len, true);
             if (pe.length > 0) {
                 double sp = f.getLineSpacing();
                 return RangeInfo.of(pe, sp);
