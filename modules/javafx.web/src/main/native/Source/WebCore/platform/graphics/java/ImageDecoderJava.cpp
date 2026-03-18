@@ -238,13 +238,18 @@ WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 EncodedDataStatus ImageDecoderJava::encodedDataStatus() const
 {
     if (m_encodedDataStatus == EncodedDataStatus::Complete)
+    {
         return m_encodedDataStatus;
+    }
 
     if (m_isAllDataReceived)
+    {
         m_encodedDataStatus = EncodedDataStatus::Complete;
-
+    }
     else if (isSizeAvailable())
+    {
         m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
+    }
 
     return m_encodedDataStatus;
 }
