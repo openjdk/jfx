@@ -53,9 +53,6 @@ public class TreeTableViewInitialFocusTest {
     private static final int SCENE_HEIGHT = 500;
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
-
-    static volatile Stage stage;
-    static volatile Scene scene;
     static volatile TreeTableView<Object> treeTableView;
 
     @BeforeAll
@@ -70,7 +67,6 @@ public class TreeTableViewInitialFocusTest {
 
     @Test
     public void testInitialFocusClearedWhenHiddenRootChildrenAreReplaced() {
-        Util.waitForLatch(startupLatch, 10, "Timeout waiting for test application to start");
         Util.sleep(300);
 
         AtomicInteger focusedIndex = new AtomicInteger(Integer.MIN_VALUE);
@@ -89,7 +85,6 @@ public class TreeTableViewInitialFocusTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
-            stage = primaryStage;
             treeTableView = new TreeTableView<>();
             TreeItem<Object> root = new TreeItem<>("Root");
             treeTableView.setRoot(root);
@@ -112,14 +107,14 @@ public class TreeTableViewInitialFocusTest {
             root.getChildren().add(new TreeItem<>("Bar"));
             root.getChildren().add(new TreeItem<>("Baz"));
 
-            scene = new Scene(new StackPane(treeTableView), SCENE_WIDTH, SCENE_HEIGHT);
+            Scene scene = new Scene(new StackPane(treeTableView), SCENE_WIDTH, SCENE_HEIGHT);
 
-            stage.setScene(scene);
-            stage.initStyle(StageStyle.UNDECORATED);
-            stage.setAlwaysOnTop(true);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN,
+            primaryStage.setScene(scene);
+            primaryStage.initStyle(StageStyle.UNDECORATED);
+            primaryStage.setAlwaysOnTop(true);
+            primaryStage.addEventHandler(WindowEvent.WINDOW_SHOWN,
                     e -> Platform.runLater(startupLatch::countDown));
-            stage.show();
+            primaryStage.show();
         }
     }
 }
