@@ -72,7 +72,7 @@ typedef enum  {
 } CallbackType;
 
 class UIScriptContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(UIScriptContext);
     WTF_MAKE_NONCOPYABLE(UIScriptContext);
 public:
     using UIScriptControllerFactory = Ref<UIScriptController> (*)(UIScriptContext&);

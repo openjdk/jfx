@@ -34,7 +34,8 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RoundedRect.h"
+#include "LayoutRoundedRect.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -145,10 +146,10 @@ RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundConten
     // - We add extra margin of \xi_8
     // Then for example the top space is \sqrt{2}contentHeight/2 - contentHeight/2 + \xi_8/2 + \xi_8.
     if (hasNotation(MathMLMencloseElement::Circle)) {
-        LayoutUnit extraSpace { (contentWidth * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2 };
+        LayoutUnit extraSpace { (contentWidth * (std::numbers::sqrt2_v<float> - 1) + 3 * thickness) / 2 };
         space.left = std::max(space.left, extraSpace);
         space.right = std::max(space.right, extraSpace);
-        extraSpace = (contentHeight * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2;
+        extraSpace = (contentHeight * (std::numbers::sqrt2_v<float> - 1) + 3 * thickness) / 2;
         space.top = std::max(space.top, extraSpace);
         space.bottom = std::max(space.bottom, extraSpace);
     }
@@ -160,7 +161,7 @@ RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundConten
 
 void RenderMathMLMenclose::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     LayoutUnit preferredWidth = preferredLogicalWidthOfRowItems();
     SpaceAroundContent space = spaceAroundContent(preferredWidth, 0);
@@ -172,7 +173,7 @@ void RenderMathMLMenclose::computePreferredLogicalWidths()
 
     adjustPreferredLogicalWidthsForBorderAndPadding();
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderMathMLMenclose::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
@@ -208,7 +209,7 @@ void RenderMathMLMenclose::layoutBlock(RelayoutChildren relayoutChildren, Layout
     adjustLayoutForBorderAndPadding();
     m_contentRect.moveBy(LayoutPoint(borderLeft() + paddingLeft(), borderAndPaddingBefore()));
 
-    layoutPositionedObjects(relayoutChildren);
+    layoutOutOfFlowBoxes(relayoutChildren);
 
     updateScrollInfoAfterLayout();
 
@@ -316,8 +317,8 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     // by inflating the content box by 3\xi_8 + \xi_8/2 = 7\xi_8/2
     if (hasNotation(MathMLMencloseElement::RoundedBox)) {
         LayoutSize radiiSize(3 * thickness, 3 * thickness);
-        RoundedRect::Radii radii(radiiSize, radiiSize, radiiSize, radiiSize);
-        RoundedRect roundedRect(m_contentRect, radii);
+        LayoutRoundedRect::Radii radii(radiiSize, radiiSize, radiiSize, radiiSize);
+        LayoutRoundedRect roundedRect(m_contentRect, radii);
         roundedRect.inflate(7 * thickness / 2);
         Path path;
         path.addRoundedRect(roundedRect);
@@ -356,8 +357,8 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     // - The height is \xi_8/2 + contentHeight * \sqrt{2} + \xi_8/2
     if (hasNotation(MathMLMencloseElement::Circle)) {
         LayoutRect ellipseRect;
-        ellipseRect.setWidth(m_contentRect.width() * sqrtOfTwoFloat + thickness);
-        ellipseRect.setHeight(m_contentRect.height() * sqrtOfTwoFloat + thickness);
+        ellipseRect.setWidth(m_contentRect.width() * std::numbers::sqrt2_v<float> + thickness);
+        ellipseRect.setHeight(m_contentRect.height() * std::numbers::sqrt2_v<float> + thickness);
         ellipseRect.setX(m_contentRect.x() - (ellipseRect.width() - m_contentRect.width()) / 2);
         ellipseRect.setY(m_contentRect.y() - (ellipseRect.height() - m_contentRect.height()) / 2);
         Path path;

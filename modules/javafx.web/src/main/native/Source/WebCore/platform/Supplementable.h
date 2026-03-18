@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,13 +72,28 @@ namespace WebCore {
 //         return reinterpret_cast<MyClass*>(Supplement<MySupplementable>::from(host, supplementName()));
 //     }
 
+class SupplementBase {
+public:
+    virtual ~SupplementBase() = default;
+
+    // To allow a downcast from Supplement<Foo> to a subclass Bar, we require
+    // a TypeCastTraits specialization. The isBar() function needed for this
+    // specialization can be implemented here and overridden in the base class.
+
+    virtual bool isDOMWindowCaches() const { return false; }
+    virtual bool isNavigatorClipboard() const { return false; }
+    virtual bool isNavigatorCookieConsent() const { return false; }
+    virtual bool isNavigatorGamepad() const { return false; }
+    virtual bool isUserMediaController() const { return false; }
+    virtual bool isWorkerGlobalScopeCaches() const { return false; }
+};
+
 template<typename T>
 class Supplementable;
 
 template<typename T>
-class Supplement {
+class Supplement : public SupplementBase {
 public:
-    virtual ~Supplement() = default;
 #if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     virtual bool isRefCountedWrapper() const { return false; }
 #endif
@@ -116,10 +131,10 @@ protected:
 #endif
 
 private:
-    using SupplementMap = UncheckedKeyHashMap<ASCIILiteral, std::unique_ptr<Supplement<T>>>;
+    using SupplementMap = HashMap<ASCIILiteral, std::unique_ptr<Supplement<T>>>;
     SupplementMap m_supplements;
 #if ASSERT_ENABLED
-    Ref<Thread> m_thread { Thread::current() };
+    const Ref<Thread> m_thread { Thread::currentSingleton() };
 #endif
 };
 

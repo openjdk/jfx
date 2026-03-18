@@ -26,6 +26,7 @@
 #include "config.h"
 #include "TrustedTypePolicy.h"
 
+#include "ExceptionOr.h"
 #include "TrustedHTML.h"
 #include "TrustedScript.h"
 #include "TrustedScriptURL.h"
@@ -90,7 +91,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateHTML = m_options.createHTML;
         }
         if (protectedCreateHTML && protectedCreateHTML->hasCallback())
-            policyValue = protectedCreateHTML->handleEventRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateHTML->invokeRethrowingException(input, WTFMove(arguments));
     } else if (trustedTypeName == TrustedType::TrustedScript) {
         RefPtr<CreateScriptCallback> protectedCreateScript;
         {
@@ -98,7 +99,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateScript = m_options.createScript;
         }
         if (protectedCreateScript && protectedCreateScript->hasCallback())
-            policyValue = protectedCreateScript->handleEventRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateScript->invokeRethrowingException(input, WTFMove(arguments));
     } else if (trustedTypeName == TrustedType::TrustedScriptURL) {
         RefPtr<CreateScriptURLCallback> protectedCreateScriptURL;
         {
@@ -106,7 +107,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateScriptURL = m_options.createScriptURL;
         }
         if (protectedCreateScriptURL && protectedCreateScriptURL->hasCallback())
-            policyValue = protectedCreateScriptURL->handleEventRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateScriptURL->invokeRethrowingException(input, WTFMove(arguments));
     } else {
         ASSERT_NOT_REACHED();
         return Exception { ExceptionCode::TypeError };

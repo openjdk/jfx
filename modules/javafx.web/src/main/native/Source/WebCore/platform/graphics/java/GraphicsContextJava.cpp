@@ -333,10 +333,10 @@ void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float of
                 needAdd = false;
                 break;
             } else if (focusRect.contains(rect)) {
-                toDraw.remove(j);
+                toDraw.removeAt(j);
             } else if (rect.intersects(focusRect)) {
                 focusRect.unite(rect);
-                toDraw.remove(j);
+                toDraw.removeAt(j);
             }
         }
         if (needAdd) {

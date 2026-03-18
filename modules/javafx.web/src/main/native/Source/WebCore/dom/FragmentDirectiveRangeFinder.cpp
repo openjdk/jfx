@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@
 #include "HTMLScriptElement.h"
 #include "HTMLStyleElement.h"
 #include "HTMLVideoElement.h"
+#include "NodeInlines.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "Position.h"
@@ -123,7 +124,9 @@ static bool indexIsAtWordBoundary(const String& string, unsigned index)
 // https://wicg.github.io/scroll-to-text-fragment/#visible-text-node
 static bool isVisibleTextNode(const Node& node)
 {
-    return node.isTextNode() && node.renderer() && node.renderer()->style().visibility() == Visibility::Visible;
+    if (CheckedPtr renderText = dynamicDowncast<RenderText>(node.renderer()))
+        return renderText->style().visibility() == Visibility::Visible;
+    return false;
 }
 
 static bool isVisibleTextNode(const Text& node)
@@ -211,10 +214,10 @@ static std::optional<SimpleRange> findRangeFromNodeList(const String& query, con
 static std::optional<SimpleRange> rangeOfStringInRange(const String& query, SimpleRange& searchRange, WordBounded wordStartBounded, WordBounded wordEndBounded)
 {
     while (!searchRange.collapsed()) {
-        RefPtr<Node> currentNode = &searchRange.startContainer();
+        RefPtr currentNode = searchRange.startContainer();
 
         if (isNonSearchableSubtree(*currentNode)) {
-            if (auto newStart = NodeTraversal::nextSkippingChildren(*currentNode))
+            if (RefPtr newStart = NodeTraversal::nextSkippingChildren(*currentNode))
                 searchRange.start = { *newStart, 0 };
             else
         return std::nullopt;
@@ -223,7 +226,7 @@ static std::optional<SimpleRange> rangeOfStringInRange(const String& query, Simp
 
         if (!isVisibleTextNode(*currentNode)) {
             do {
-                if (auto newStart = NodeTraversal::next(*currentNode)) {
+                if (RefPtr newStart = NodeTraversal::next(*currentNode)) {
                     searchRange.start = { *newStart, 0 };
                     currentNode = newStart;
                 } else
@@ -236,14 +239,14 @@ static std::optional<SimpleRange> rangeOfStringInRange(const String& query, Simp
         Vector<Ref<Text>> textNodeList;
         // FIXME: this is O^2 since treeOrder will also do traversal, optimize.
         while (currentNode && currentNode->isDescendantOf(blockAncestor) && is_lteq(treeOrder(BoundaryPoint(*currentNode, 0), searchRange.end))) {
-            if (currentNode->renderer() && is<Element>(currentNode) && currentNode->renderer()->style().isDisplayBlockLevel())
+            if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(currentNode->renderer()); renderElement && renderElement->style().isDisplayBlockLevel())
                 break;
 
             if (isSearchInvisible(*currentNode)) {
                 currentNode = NodeTraversal::nextSkippingChildren(*currentNode);
                 continue;
             }
-            auto* textNode = dynamicDowncast<Text>(*currentNode);
+            RefPtr textNode = dynamicDowncast<Text>(*currentNode);
             if (textNode && isVisibleTextNode(*textNode))
                 textNodeList.append(*textNode);
             currentNode = NodeTraversal::next(*currentNode);
@@ -277,7 +280,7 @@ static std::optional<SimpleRange> advanceRangeStartToNextNonWhitespace(SimpleRan
         // I believe there is an error in the spec which I have filed an issue for
         // https://github.com/WICG/scroll-to-text-fragment/issues/189
         if (offset == node->length()) {
-            if (auto newStart = NodeTraversal::next(node)) {
+            if (RefPtr newStart = NodeTraversal::next(node)) {
                 newRange.start = { *newStart, 0 };
                 continue;
             }
@@ -285,7 +288,7 @@ static std::optional<SimpleRange> advanceRangeStartToNextNonWhitespace(SimpleRan
         }
 
         if (isNonSearchableSubtree(node)) {
-            if (auto newStart = NodeTraversal::next(node))
+            if (RefPtr newStart = NodeTraversal::next(node))
                 newRange.start = { *newStart, 0 };
             else
                 return newRange;
@@ -293,7 +296,7 @@ static std::optional<SimpleRange> advanceRangeStartToNextNonWhitespace(SimpleRan
         }
 
         if (!isVisibleTextNode(node)) {
-            if (auto newStart = NodeTraversal::next(node))
+            if (RefPtr newStart = NodeTraversal::next(node))
                 newRange.start = { *newStart, 0 };
             else
                 return newRange;
@@ -313,7 +316,7 @@ static std::optional<SimpleRange> advanceRangeStartToNextNonWhitespace(SimpleRan
         offset++;
 
         if (offset >= node->length()) {
-            if (auto newStart = NodeTraversal::next(node))
+            if (RefPtr newStart = NodeTraversal::next(node))
                 newRange.start = { *newStart, 0 };
             else
                 return newRange;

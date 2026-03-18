@@ -81,7 +81,7 @@ private:
     static DebugPageOverlays* sharedDebugOverlays;
 };
 
-#define FAST_RETURN_IF_NO_OVERLAYS(page) if (LIKELY(!page || !hasOverlays(*page))) return;
+#define FAST_RETURN_IF_NO_OVERLAYS(page) if (!page || !hasOverlays(*page)) [[likely]] return;
 
 inline bool DebugPageOverlays::hasOverlays(Page& page)
 {
@@ -113,7 +113,7 @@ inline void DebugPageOverlays::didChangeEventHandlers(LocalFrame& frame)
 
 inline void DebugPageOverlays::doAfterUpdateRendering(Page& page)
 {
-    if (LIKELY(!hasOverlays(page)))
+    if (!hasOverlays(page)) [[likely]]
         return;
 
     sharedDebugOverlays->updateRegionIfNecessary(page, RegionType::WheelEventHandlers);
@@ -124,7 +124,7 @@ inline void DebugPageOverlays::doAfterUpdateRendering(Page& page)
 
 inline bool DebugPageOverlays::shouldPaintOverlayIntoLayerForRegionType(Page& page, RegionType regionType)
 {
-    if (LIKELY(!hasOverlays(page)))
+    if (!hasOverlays(page)) [[likely]]
         return false;
     return sharedDebugOverlays->shouldPaintOverlayIntoLayer(page, regionType);
 }

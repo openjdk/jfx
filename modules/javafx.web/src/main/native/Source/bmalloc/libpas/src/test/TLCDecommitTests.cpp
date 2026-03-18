@@ -68,7 +68,7 @@ void testTLCDecommit(unsigned numHeaps,
 
     pas_heap_ref* heaps = new pas_heap_ref[numHeaps];
     for (size_t index = numHeaps; index--;)
-        heaps[index] = BMALLOC_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(42, 2, "test")));
+        heaps[index] = BMALLOC_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(42, 2, "test")), pas_bmalloc_heap_ref_kind_non_compact);
 
     vector<void*> objects;
     for (size_t index = 0; index < numHeaps; ++index) {
@@ -191,7 +191,8 @@ void testChaosThenDecommit(unsigned numHeaps, unsigned typeSize, unsigned maxObj
     pas_heap_ref* heapRefs = new pas_heap_ref[numHeaps];
     for (unsigned index = numHeaps; index--;) {
         heapRefs[index] = BMALLOC_HEAP_REF_INITIALIZER(
-            new bmalloc_type(BMALLOC_TYPE_INITIALIZER(typeSize, 1, "test")));
+            new bmalloc_type(BMALLOC_TYPE_INITIALIZER(typeSize, 1, "test")),
+            pas_bmalloc_heap_ref_kind_non_compact);
     }
 
     vector<vector<void*>> objects;
@@ -261,7 +262,8 @@ vector<void*> prepareToTestDLCDecommitThenStuff(unsigned numHeaps)
     pas_heap_ref* heaps = new pas_heap_ref[numHeaps];
     for (size_t index = numHeaps; index--;)
         heaps[index] = BMALLOC_HEAP_REF_INITIALIZER(
-            new bmalloc_type(BMALLOC_TYPE_INITIALIZER(512, 512, "test")));
+            new bmalloc_type(BMALLOC_TYPE_INITIALIZER(512, 512, "test")),
+            pas_bmalloc_heap_ref_kind_non_compact);
 
     vector<void*> objects;
     for (size_t index = 0; index < numHeaps; ++index) {
@@ -361,7 +363,8 @@ void testAllocateFromStoppedBaselineImpl()
     }
 
     pas_heap_ref heapRef = BMALLOC_HEAP_REF_INITIALIZER(
-        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(32, 1, "test")));
+        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(32, 1, "test")),
+        pas_bmalloc_heap_ref_kind_non_compact);
 
     void* ptr = bmalloc_iso_allocate(&heapRef, pas_non_compact_allocation_mode);
     CHECK(ptr);

@@ -312,6 +312,7 @@ public:
     virtual void initialize(Type) { }
 
     virtual std::optional<PlatformLayerIdentifier> primaryLayerID() const { return std::nullopt; }
+    virtual std::optional<PlatformLayerIdentifier> layerIDIgnoringStructuralLayer() const { return primaryLayerID(); }
 
     GraphicsLayerClient& client() const { return *m_client; }
 
@@ -320,7 +321,8 @@ public:
     virtual void setName(const String& name) { m_name = name; }
     WEBCORE_EXPORT virtual String debugName() const;
 
-    GraphicsLayer* parent() const { return m_parent; };
+    GraphicsLayer* parent() const { return m_parent; }
+    RefPtr<GraphicsLayer> protectedParent() const { return m_parent; }
     void setParent(GraphicsLayer*); // Internal use only.
 
     // Returns true if the layer has the given layer as an ancestor (excluding self).
@@ -389,7 +391,7 @@ public:
     virtual void setApproximatePosition(const FloatPoint& p) { m_approximatePosition = p; }
 
     // For platforms that move underlying platform layers on a different thread for scrolling; just update the GraphicsLayer state.
-    virtual void syncPosition(const FloatPoint& p) { m_position = p; }
+    virtual void syncPosition(const FloatPoint& p) { m_approximatePosition = std::nullopt; m_position = p; }
 
     // Anchor point: (0, 0) is top left, (1, 1) is bottom right. The anchor point
     // affects the origin of the transforms.
@@ -427,6 +429,11 @@ public:
 #if HAVE(SUPPORT_HDR_DISPLAY)
     bool drawsHDRContent() const { return m_drawsHDRContent; }
     WEBCORE_EXPORT virtual void setDrawsHDRContent(bool);
+
+    bool tonemappingEnabled() const { return m_tonemappingEnabled; }
+    WEBCORE_EXPORT virtual void setTonemappingEnabled(bool);
+
+    WEBCORE_EXPORT virtual void setNeedsDisplayIfEDRHeadroomExceeds(float);
 #endif
 
     bool contentsAreVisible() const { return m_contentsVisible; }
@@ -618,6 +625,9 @@ public:
     virtual void setShowRepaintCounter(bool show) { m_showRepaintCounter = show; }
     bool isShowingRepaintCounter() const { return m_showRepaintCounter; }
 
+    virtual void setShowFrameProcessBorders(bool show) { m_showFrameProcessBorders = show; }
+    bool isShowingFrameProcessBorders() const { return m_showFrameProcessBorders; }
+
     // FIXME: this is really a paint count.
     int repaintCount() const { return m_repaintCount; }
     int incrementRepaintCount() { return ++m_repaintCount; }
@@ -693,6 +703,7 @@ public:
     virtual bool backingStoreAttachedForTesting() const { return backingStoreAttached(); }
 
     virtual TiledBacking* tiledBacking() const { return 0; }
+    CheckedPtr<TiledBacking> checkedTiledBacking() const { return tiledBacking(); }
     WEBCORE_EXPORT virtual void setTileCoverage(TileCoverage);
 
     void resetTrackedRepaints();
@@ -824,6 +835,7 @@ protected:
     bool m_drawsContent : 1;
 #if HAVE(SUPPORT_HDR_DISPLAY)
     bool m_drawsHDRContent : 1 { false };
+    bool m_tonemappingEnabled : 1 { false };
 #endif
     bool m_contentsVisible : 1;
     bool m_contentsRectClipsDescendants : 1;
@@ -834,6 +846,7 @@ protected:
     bool m_appliesDeviceScale : 1;
     bool m_showDebugBorder : 1;
     bool m_showRepaintCounter : 1;
+    bool m_showFrameProcessBorders : 1;
     bool m_isMaskLayer : 1;
     bool m_isBackdropRoot : 1;
     bool m_isTrackingDisplayListReplay : 1;

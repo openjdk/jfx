@@ -33,10 +33,12 @@ class CSSGridLineNamesValue;
 class CSSParserTokenRange;
 class CSSValue;
 
-struct CSSParserContext;
-struct NamedGridAreaMap;
-
 enum CSSValueID : uint16_t;
+
+namespace CSS {
+struct PropertyParserState;
+using GridNamedAreaMapRow = Vector<String, 8>;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -46,15 +48,17 @@ enum class AllowEmpty : bool { No, Yes };
 enum TrackListType : uint8_t { GridTemplate, GridTemplateNoRepeat, GridAuto };
 
 bool isGridBreadthIdent(CSSValueID);
-bool parseGridTemplateAreasRow(StringView gridRowNames, NamedGridAreaMap&, const size_t rowCount, size_t& columnCount);
-RefPtr<CSSGridLineNamesValue> consumeGridLineNames(CSSParserTokenRange&, const CSSParserContext&, AllowEmpty = AllowEmpty::No);
-RefPtr<CSSValue> consumeGridLine(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeGridTrackSize(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeGridTrackList(CSSParserTokenRange&, const CSSParserContext&, TrackListType);
-RefPtr<CSSValue> consumeGridTemplatesRowsOrColumns(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeGridTemplateAreas(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeGridAutoFlow(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeMasonryAutoFlow(CSSParserTokenRange&, const CSSParserContext&);
+
+// Parses a single <string> token from a <'grid-template-areas'> production.
+std::optional<CSS::GridNamedAreaMapRow> consumeUnresolvedGridTemplateAreasRow(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+RefPtr<CSSGridLineNamesValue> consumeGridLineNames(CSSParserTokenRange&, CSS::PropertyParserState&, AllowEmpty = AllowEmpty::No);
+RefPtr<CSSValue> consumeGridLine(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeGridTrackSize(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeGridTrackList(CSSParserTokenRange&, CSS::PropertyParserState&, TrackListType = TrackListType::GridAuto);
+RefPtr<CSSValue> consumeGridTemplatesRowsOrColumns(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeGridTemplateAreas(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeGridAutoFlow(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

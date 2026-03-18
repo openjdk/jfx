@@ -199,10 +199,10 @@ Ref<ArrayBufferView> ImageDataArray::extractBufferViewWithStorageFormat(std::opt
     RELEASE_ASSERT_NOT_REACHED("Unexpected ImageDataStorageFormat value");
 }
 
-ImageDataArray::operator Variant() const
+ImageDataArray::operator DataVariant() const
 {
     return visitArrayBufferView(m_arrayBufferView.get(), [](auto& a) {
-        return Variant(RefPtr(&a));
+        return DataVariant(RefPtr(&a));
     });
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,11 @@
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomString.h>
 
+namespace JSC {
+class JSGlobalObject;
+class JSValue;
+}
+
 namespace WebCore {
 
 class DOMWrapperWorld;
@@ -46,11 +51,11 @@ public:
     WEBCORE_EXPORT DOMWrapperWorld& world();
     WEBCORE_EXPORT const DOMWrapperWorld& world() const;
 
-    virtual void didPostMessage(UserMessageHandler&, SerializedScriptValue*, Function<void(SerializedScriptValue*, const String&)>&&) = 0;
+    virtual void didPostMessage(UserMessageHandler&, JSC::JSGlobalObject&, JSC::JSValue, Function<void(JSC::JSValue, const String&)>&&) = 0;
 
 private:
     AtomString m_name;
-    Ref<DOMWrapperWorld> m_world;
+    const Ref<DOMWrapperWorld> m_world;
 };
 
 } // namespace WebCore

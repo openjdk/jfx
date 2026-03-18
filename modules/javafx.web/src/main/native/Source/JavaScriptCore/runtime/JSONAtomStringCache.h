@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <unicode/umachine.h>
 #include <wtf/text/AtomStringImpl.h>
 
 namespace JSC {
@@ -37,8 +38,8 @@ public:
     static constexpr auto capacity = 256;
 
     struct Slot {
-        UChar m_buffer[maxStringLengthForCache] { };
-        UChar m_length { 0 };
+        char16_t m_buffer[maxStringLengthForCache] { };
+        char16_t m_length { 0 };
         RefPtr<AtomStringImpl> m_impl;
     };
     static_assert(sizeof(Slot) <= 64);
@@ -46,10 +47,10 @@ public:
     using Cache = std::array<Slot, capacity>;
 
     template<typename CharacterType>
-    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(std::span<const CharacterType> characters)
-    {
-        return make(characters);
-    }
+    ALWAYS_INLINE Ref<AtomStringImpl> makeIdentifier(std::span<const CharacterType> characters);
+
+    template<typename CharacterType>
+    ALWAYS_INLINE AtomStringImpl* existingIdentifier(std::span<const CharacterType> characters);
 
     ALWAYS_INLINE void clear()
     {
@@ -59,10 +60,7 @@ public:
     VM& vm() const;
 
 private:
-    template<typename CharacterType>
-    Ref<AtomStringImpl> make(std::span<const CharacterType>);
-
-    ALWAYS_INLINE Slot& cacheSlot(UChar firstCharacter, UChar lastCharacter, UChar length)
+    ALWAYS_INLINE Slot& cacheSlot(char16_t firstCharacter, char16_t lastCharacter, char16_t length)
     {
         unsigned hash = (firstCharacter << 6) ^ ((lastCharacter << 14) ^ firstCharacter);
         hash += (hash >> 14) + (length << 14);

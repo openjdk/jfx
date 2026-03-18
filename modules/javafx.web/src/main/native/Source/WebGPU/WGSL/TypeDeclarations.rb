@@ -206,12 +206,11 @@ end
 
 # 8.13. Address-Of Expression (https://www.w3.org/TR/WGSL/#address-of-expr)
 # 8.14. Indirection Expression (https://www.w3.org/TR/WGSL/#indirection-expr)
-# FIXME: these are implemented together with the logical and arithmetic operators
-# and need to be moved inline into the type checker
+# Implemented inline in the type checker
 
-# 16.1. Constructor Built-in Functions
+# 17.1. Constructor Built-in Functions
 
-# 16.1.1. Zero Value Built-in Functions
+# 17.1.1. Zero Value Built-in Functions
 constructor :bool, {
     must_use: true,
     const: true,
@@ -279,12 +278,12 @@ constructor :vec4, {
     end
 end
 
-# 16.1.2. Value Constructor Built-in Functions
+# 17.1.2. Value Constructor Built-in Functions
 
-# 16.1.2.1. array
+# 17.1.2.1. array
 # Implemented inline in the type checker
 
-# 16.1.2.2.
+# 17.1.2.2.
 constructor :bool, {
     must_use: true,
     const: true,
@@ -292,7 +291,7 @@ constructor :bool, {
     [T < Scalar].(T) => bool,
 }
 
-# 16.1.2.3.
+# 17.1.2.3.
 constructor :f16, {
     must_use: true,
     const: true,
@@ -300,7 +299,7 @@ constructor :f16, {
     [T < Scalar].(T) => f16,
 }
 
-# 16.1.2.4.
+# 17.1.2.4.
 constructor :f32, {
     must_use: true,
     const: true,
@@ -308,7 +307,7 @@ constructor :f32, {
     [T < Scalar].(T) => f32,
 }
 
-# 16.1.2.5.
+# 17.1.2.5.
 constructor :i32, {
     must_use: true,
     const: true,
@@ -316,7 +315,7 @@ constructor :i32, {
     [T < Scalar].(T) => i32,
 }
 
-# 16.1.2.6 - 14: matCxR
+# 17.1.2.6 - 14: matCxR
 (2..4).each do |columns|
     (2..4).each do |rows|
         constructor :"mat#{columns}x#{rows}", {
@@ -331,10 +330,10 @@ constructor :i32, {
     end
 end
 
-# 16.1.2.15. Structures
+# 17.1.2.15. Structures
 # Implemented inline in the type checker
 
-# 16.1.2.16.
+# 17.1.2.17.
 constructor :u32, {
     must_use: true,
     const: true,
@@ -342,7 +341,7 @@ constructor :u32, {
     [T < Scalar].(T) => u32,
 }
 
-# 16.1.2.17.
+# 17.1.2.17.
 constructor :vec2, {
     must_use: true,
     const: true,
@@ -354,7 +353,7 @@ constructor :vec2, {
     [].() => vec2[abstract_int],
 }
 
-# 16.1.2.18.
+# 17.1.2.18.
 constructor :vec3, {
     must_use: true,
     const: true,
@@ -368,7 +367,7 @@ constructor :vec3, {
     [].() => vec3[abstract_int],
 }
 
-# 16.1.2.19.
+# 17.1.2.19.
 constructor :vec4, {
     must_use: true,
     const: true,
@@ -386,16 +385,16 @@ constructor :vec4, {
     [].() => vec4[abstract_int],
 }
 
-# 16.2. Bit Reinterpretation Built-in Functions (https://www.w3.org/TR/WGSL/#bitcast-builtin)
+# 17.2. Bit Reinterpretation Built-in Functions (https://www.w3.org/TR/WGSL/#bitcast-builtin)
 
 # NOTE: Our overload resolution/constraints aren't expressive enough to support
 # some of the bitcast overloads. They require a constraint on the type variable
 # to constrain it to a vector type, which we cannot express here, so it's implemented
 # inline in the type checker
 
-# 16.3. Logical Built-in Functions (https://www.w3.org/TR/WGSL/#logical-builtin-functions)
+# 17.3. Logical Built-in Functions (https://www.w3.org/TR/WGSL/#logical-builtin-functions)
 
-# 16.3.1 & 16.3.2
+# 17.3.1 & 17.3.2
 ["all", "any"].each do |op|
     function :"#{op}", {
         must_use: true,
@@ -406,7 +405,7 @@ constructor :vec4, {
     }
 end
 
-# 16.3.3
+# 17.3.3
 function :select, {
     must_use: true,
     const: true,
@@ -416,9 +415,9 @@ function :select, {
     [T < Scalar, N].(vec[N][T], vec[N][T], vec[N][bool]) => vec[N][T],
 }
 
-# 16.4. Array Built-in Functions
+# 17.4. Array Built-in Functions
 
-# 16.4.1.
+# 17.4.1.
 function :arrayLength, {
     must_use: true,
 
@@ -426,7 +425,7 @@ function :arrayLength, {
     [T].(ptr[storage, array[T], read_write]) => u32,
 }
 
-# 16.5. Numeric Built-in Functions (https://www.w3.org/TR/WGSL/#numeric-builtin-functions)
+# 17.5. Numeric Built-in Functions (https://www.w3.org/TR/WGSL/#numeric-builtin-functions)
 
 # Trigonometric
 ["acos", "asin", "atan", "cos", "sin", "tan",
@@ -440,7 +439,7 @@ function :arrayLength, {
     }
 end
 
-# 16.5.1
+# 17.5.1
 function :abs, {
     must_use: true,
     const: true,
@@ -449,15 +448,15 @@ function :abs, {
     [T < Number, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.2. acos
-# 16.5.3. acosh
-# 16.5.4. asin
-# 16.5.5. asinh
-# 16.5.6. atan
-# 16.5.7. atanh
+# 17.5.2. acos
+# 17.5.3. acosh
+# 17.5.4. asin
+# 17.5.5. asinh
+# 17.5.6. atan
+# 17.5.7. atanh
 # Defined in [Trigonometric]
 
-# 16.5.8
+# 17.5.8
 function :atan2, {
     must_use: true,
     const: true,
@@ -466,7 +465,7 @@ function :atan2, {
     [T < Float, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.9
+# 17.5.9
 function :ceil, {
     must_use: true,
     const: true,
@@ -475,7 +474,7 @@ function :ceil, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.10
+# 17.5.10
 function :clamp, {
     must_use: true,
     const: true,
@@ -484,11 +483,11 @@ function :clamp, {
     [T < Number, N].(vec[N][T], vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.11. cos
-# 16.5.12. cosh
+# 17.5.11. cos
+# 17.5.12. cosh
 # Defined in [Trigonometric]
 
-# 16.5.13-15 (Bit counting)
+# 17.5.13-15 (Bit counting)
 ["countLeadingZeros", "countOneBits", "countTrailingZeros"].each do |op|
     function :"#{op}", {
         must_use: true,
@@ -499,7 +498,7 @@ function :clamp, {
     }
 end
 
-# 16.5.16
+# 17.5.16
 function :cross, {
     must_use: true,
     const: true,
@@ -507,7 +506,7 @@ function :cross, {
     [T < Float].(vec3[T], vec3[T]) => vec3[T],
 }
 
-# 16.5.17
+# 17.5.17
 function :degrees, {
     must_use: true,
     const: true,
@@ -516,7 +515,7 @@ function :degrees, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.18
+# 17.5.18
 function :determinant, {
     must_use: true,
     const: true,
@@ -524,7 +523,7 @@ function :determinant, {
     [T < Float, C].(mat[C,C][T]) => T,
 }
 
-# 16.5.19
+# 17.5.19
 function :distance, {
     must_use: true,
     const: true,
@@ -533,7 +532,7 @@ function :distance, {
     [T < Float, N].(vec[N][T], vec[N][T]) => T,
 }
 
-# 16.5.20
+# 17.5.20
 function :dot, {
     must_use: true,
     const: true,
@@ -541,8 +540,7 @@ function :dot, {
     [T < Number, N].(vec[N][T], vec[N][T]) => T
 }
 
-# FIXME: new functions were added so the spec numbers changed
-# 16.5.21
+# 17.5.21
 function :dot4U8Packed, {
     must_use: true,
     const: true,
@@ -550,7 +548,7 @@ function :dot4U8Packed, {
     [].(u32, u32) => u32
 }
 
-# 16.5.22
+# 17.5.22
 function :dot4I8Packed, {
     must_use: true,
     const: true,
@@ -558,7 +556,7 @@ function :dot4I8Packed, {
     [].(u32, u32) => i32
 }
 
-# 16.5.21 & 16.5.22
+# 17.5.21 & 17.5.22
 ["exp", "exp2"].each do |op|
     function :"#{op}", {
         must_use: true,
@@ -569,7 +567,7 @@ function :dot4I8Packed, {
     }
 end
 
-# 16.5.23 & 16.5.24
+# 17.5.23 & 17.5.24
 function :extractBits, {
     must_use: true,
     const: true,
@@ -583,7 +581,7 @@ function :extractBits, {
     [N].(vec[N][u32], u32, u32) => vec[N][u32],
 }
 
-# 16.5.25
+# 17.5.25
 function :faceForward, {
     must_use: true,
     const: true,
@@ -591,7 +589,7 @@ function :faceForward, {
     [T < Float, N].(vec[N][T], vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.26 & 16.5.27
+# 17.5.26 & 17.5.27
 function :firstLeadingBit, {
     must_use: true,
     const: true,
@@ -605,7 +603,7 @@ function :firstLeadingBit, {
     [N].(vec[N][u32]) => vec[N][u32],
 }
 
-# 16.5.28
+# 17.5.28
 function :firstTrailingBit, {
     must_use: true,
     const: true,
@@ -614,7 +612,7 @@ function :firstTrailingBit, {
     [T < ConcreteInteger, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.29
+# 17.5.29
 function :floor, {
     must_use: true,
     const: true,
@@ -623,7 +621,7 @@ function :floor, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.30
+# 17.5.30
 function :fma, {
     must_use: true,
     const: true,
@@ -632,7 +630,7 @@ function :fma, {
     [T < Float, N].(vec[N][T], vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.31
+# 17.5.31
 function :fract, {
     must_use: true,
     const: true,
@@ -641,7 +639,7 @@ function :fract, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.32
+# 17.5.32
 function :frexp, {
     must_use: true,
     const: true,
@@ -663,7 +661,7 @@ function :frexp, {
     [].(vec4[abstract_float]) => __frexp_result_vec4_abstract,
 }
 
-# 16.5.33
+# 17.5.33
 function :insertBits, {
     must_use: true,
     const: true,
@@ -672,7 +670,7 @@ function :insertBits, {
     [T < ConcreteInteger, N].(vec[N][T], vec[N][T], u32, u32) => vec[N][T],
 }
 
-# 16.5.34
+# 17.5.34
 function :inverseSqrt, {
     must_use: true,
     const: true,
@@ -681,7 +679,7 @@ function :inverseSqrt, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.35
+# 17.5.35
 function :ldexp, {
     must_use: true,
     const: true,
@@ -692,7 +690,7 @@ function :ldexp, {
     [N].(vec[N][abstract_float], vec[N][abstract_int]) => vec[N][abstract_float],
 }
 
-# 16.5.36
+# 17.5.36
 function :length, {
     must_use: true,
     const: true,
@@ -701,7 +699,7 @@ function :length, {
     [T < Float, N].(vec[N][T]) => T,
 }
 
-# 16.5.37 & 16.5.38
+# 17.5.37 & 17.5.38
 ["log", "log2"].each do |op|
     function :"#{op}", {
         must_use: true,
@@ -712,7 +710,7 @@ function :length, {
     }
 end
 
-# 16.5.39
+# 17.5.39
 function :max, {
     must_use: true,
     const: true,
@@ -721,7 +719,7 @@ function :max, {
     [T < Number, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.40
+# 17.5.40
 function :min, {
     must_use: true,
     const: true,
@@ -730,7 +728,7 @@ function :min, {
     [T < Number, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.41
+# 17.5.41
 function :mix, {
     must_use: true,
     const: true,
@@ -740,7 +738,7 @@ function :mix, {
     [T < Float, N].(vec[N][T], vec[N][T], T) => vec[N][T],
 }
 
-# 16.5.42
+# 17.5.42
 function :modf, {
     must_use: true,
     const: true,
@@ -762,7 +760,7 @@ function :modf, {
     [].(vec4[abstract_float]) => __modf_result_vec4_abstract,
 }
 
-# 16.5.43
+# 17.5.43
 function :normalize, {
     must_use: true,
     const: true,
@@ -770,7 +768,7 @@ function :normalize, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.44
+# 17.5.44
 function :pow, {
     must_use: true,
     const: true,
@@ -779,7 +777,7 @@ function :pow, {
     [T < Float, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.45
+# 17.5.45
 function :quantizeToF16, {
     must_use: true,
     const: true,
@@ -788,7 +786,7 @@ function :quantizeToF16, {
     [N].(vec[N][f32]) => vec[N][f32],
 }
 
-# 16.5.46
+# 17.5.46
 function :radians, {
     must_use: true,
     const: true,
@@ -797,7 +795,7 @@ function :radians, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.47
+# 17.5.47
 function :reflect, {
     must_use: true,
     const: true,
@@ -805,7 +803,7 @@ function :reflect, {
     [T < Float, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.48
+# 17.5.48
 function :refract, {
     must_use: true,
     const: true,
@@ -813,7 +811,7 @@ function :refract, {
     [T < Float, N].(vec[N][T], vec[N][T], T) => vec[N][T],
 }
 
-# 16.5.49
+# 17.5.49
 function :reverseBits, {
     must_use: true,
     const: true,
@@ -822,7 +820,7 @@ function :reverseBits, {
     [T < ConcreteInteger, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.50
+# 17.5.50
 function :round, {
     must_use: true,
     const: true,
@@ -831,7 +829,7 @@ function :round, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.51
+# 17.5.51
 function :saturate, {
     must_use: true,
     const: true,
@@ -840,7 +838,7 @@ function :saturate, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.52
+# 17.5.52
 function :sign, {
     must_use: true,
     const: true,
@@ -849,11 +847,11 @@ function :sign, {
     [T < SignedNumber, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.53. sin
-# 16.5.54. sinh
+# 17.5.53. sin
+# 17.5.54. sinh
 # Defined in [Trigonometric]
 
-# 16.5.55
+# 17.5.55
 function :smoothstep, {
     must_use: true,
     const: true,
@@ -862,7 +860,7 @@ function :smoothstep, {
     [T < Float, N].(vec[N][T], vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.56
+# 17.5.56
 function :sqrt, {
     must_use: true,
     const: true,
@@ -871,7 +869,7 @@ function :sqrt, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.5.57
+# 17.5.57
 function :step, {
     must_use: true,
     const: true,
@@ -880,11 +878,11 @@ function :step, {
     [T < Float, N].(vec[N][T], vec[N][T]) => vec[N][T],
 }
 
-# 16.5.58. tan
-# 16.5.59. tanh
+# 17.5.58. tan
+# 17.5.59. tanh
 # Defined in [Trigonometric]
 
-# 16.5.60
+# 17.5.60
 function :transpose, {
     must_use: true,
     const: true,
@@ -892,7 +890,7 @@ function :transpose, {
     [T < Float, C, R].(mat[C,R][T]) => mat[R,C][T],
 }
 
-# 16.5.61
+# 17.5.61
 function :trunc, {
     must_use: true,
     const: true,
@@ -901,25 +899,25 @@ function :trunc, {
     [T < Float, N].(vec[N][T]) => vec[N][T],
 }
 
-# 16.6. Derivative Built-in Functions (https://www.w3.org/TR/WGSL/#derivative-builtin-functions)
+# 17.6. Derivative Built-in Functions (https://www.w3.org/TR/WGSL/#derivative-builtin-functions)
 [
-    # 16.6.1
+    # 17.6.1
     :dpdx,
-    # 16.6.2
+    # 17.6.2
     :dpdxCoarse,
-    # 16.6.3
+    # 17.6.3
     :dpdxFine,
-    # 16.6.4
+    # 17.6.4
     :dpdy,
-    # 16.6.5
+    # 17.6.5
     :dpdyCoarse,
-    # 16.6.6
+    # 17.6.6
     :dpdyFine,
-    # 16.6.7
+    # 17.6.7
     :fwidth,
-    # 16.6.8
+    # 17.6.8
     :fwidthCoarse,
-    # 16.6.9
+    # 17.6.9
     :fwidthFine,
 ]. each do |op|
     function op, {
@@ -931,9 +929,9 @@ function :trunc, {
     }
 end
 
-# 16.7. Texture Built-in Functions (https://gpuweb.github.io/gpuweb/wgsl/#texture-builtin-functions)
+# 17.7. Texture Built-in Functions (https://gpuweb.github.io/gpuweb/wgsl/#texture-builtin-functions)
 
-# 16.7.1
+# 17.7.1
 function :textureDimensions, {
     must_use: true,
 
@@ -998,7 +996,7 @@ function :textureDimensions, {
     [S < Concrete32BitNumber, T < ConcreteInteger].(texture_3d[S], T) => vec3[u32],
 }
 
-# 16.7.2
+# 17.7.2
 function :textureGather, {
     must_use: true,
 
@@ -1036,7 +1034,7 @@ function :textureGather, {
     [U < ConcreteInteger].(texture_depth_cube_array, sampler, vec3[f32], U) => vec4[f32],
 }
 
-# 16.7.3
+# 17.7.3
 function :textureGatherCompare, {
     must_use: true,
 
@@ -1062,7 +1060,7 @@ function :textureGatherCompare, {
     [T < ConcreteInteger].(texture_depth_cube_array, sampler_comparison, vec3[f32], T, f32) => vec4[f32],
 }
 
-# 16.7.4
+# 17.7.4
 function :textureLoad, {
     must_use: true,
 
@@ -1122,7 +1120,7 @@ function :textureLoad, {
     [F, AM, T < ConcreteInteger].(texture_storage_3d[F, AM], vec3[T]) => vec4[ChannelFormat[F]],
 }
 
-# 16.7.5
+# 17.7.5
 function :textureNumLayers, {
     must_use: true,
 
@@ -1138,7 +1136,7 @@ function :textureNumLayers, {
     [F, AM].(texture_storage_2d_array[F, AM]) => u32,
 }
 
-# 16.7.6
+# 17.7.6
 function :textureNumLevels, {
     must_use: true,
 
@@ -1157,7 +1155,7 @@ function :textureNumLevels, {
     [].(texture_depth_cube_array) => u32,
 }
 
-# 16.7.7
+# 17.7.7
 function :textureNumSamples, {
     must_use: true,
 
@@ -1168,7 +1166,7 @@ function :textureNumSamples, {
     [].(texture_depth_multisampled_2d) => u32,
 }
 
-# 16.7.8
+# 17.7.8
 function :textureSample, {
     must_use: true,
     stage: :fragment,
@@ -1212,7 +1210,7 @@ function :textureSample, {
     [T < ConcreteInteger].(texture_depth_cube_array, sampler, vec3[f32], T) => f32,
 }
 
-# 16.7.9
+# 17.7.9
 function :textureSampleBias, {
     must_use: true,
     stage: :fragment,
@@ -1233,7 +1231,7 @@ function :textureSampleBias, {
     [T < ConcreteInteger].(texture_cube_array[f32], sampler, vec3[f32], T, f32) => vec4[f32],
 }
 
-# 16.7.10
+# 17.7.10
 function :textureSampleCompare, {
     must_use: true,
     stage: :fragment,
@@ -1260,7 +1258,7 @@ function :textureSampleCompare, {
     [T < ConcreteInteger].(texture_depth_cube_array, sampler_comparison, vec3[f32], T, f32) => f32,
 }
 
-# 16.7.11
+# 17.7.11
 function :textureSampleCompareLevel, {
     must_use: true,
 
@@ -1286,7 +1284,7 @@ function :textureSampleCompareLevel, {
     [T < ConcreteInteger].(texture_depth_cube_array, sampler_comparison, vec3[f32], T, f32) => f32,
 }
 
-# 16.7.12
+# 17.7.12
 function :textureSampleGrad, {
     must_use: true,
 
@@ -1306,7 +1304,7 @@ function :textureSampleGrad, {
     [T < ConcreteInteger].(texture_cube_array[f32], sampler, vec3[f32], T, vec3[f32], vec3[f32]) => vec4[f32],
 }
 
-# 16.7.13
+# 17.7.13
 function :textureSampleLevel, {
     must_use: true,
 
@@ -1353,7 +1351,7 @@ function :textureSampleLevel, {
     [S < ConcreteInteger, T < ConcreteInteger].(texture_depth_cube_array, sampler, vec3[f32], S, T) => f32,
 }
 
-# 16.7.14
+# 17.7.14
 function :textureSampleBaseClampToEdge, {
     must_use: true,
 
@@ -1361,7 +1359,7 @@ function :textureSampleBaseClampToEdge, {
     [].(texture_2d[f32], sampler, vec2[f32]) => vec4[f32],
 }
 
-# 16.7.15 textureStore
+# 17.7.15 textureStore
 function :textureStore, {
     # F is a texel format
     # C is i32, or u32
@@ -1393,9 +1391,9 @@ function :textureStore, {
     [F, T < ConcreteInteger].(texture_storage_3d[F, read_write], vec3[T], vec4[ChannelFormat[F]]) => void,
 }
 
-# 16.8. Atomic Built-in Functions (https://www.w3.org/TR/WGSL/#atomic-builtin-functions)
+# 17.8. Atomic Built-in Functions (https://www.w3.org/TR/WGSL/#atomic-builtin-functions)
 
-# 16.8.1
+# 17.8.1
 function :atomicLoad, {
     stage: [:fragment, :compute],
 
@@ -1404,7 +1402,7 @@ function :atomicLoad, {
 }
 
 
-# 16.8.2
+# 17.8.2
 function :atomicStore, {
     stage: [:fragment, :compute],
 
@@ -1412,7 +1410,7 @@ function :atomicStore, {
     [AS, T].(ptr[AS, atomic[T], read_write], T) => void,
 }
 
-# 16.8.3. Atomic Read-modify-write (this spec entry contains several functions)
+# 17.8.3. Atomic Read-modify-write (this spec entry contains several functions)
 [
     :atomicAdd,
     :atomicSub,
@@ -1436,9 +1434,9 @@ function :atomicCompareExchangeWeak, {
     [AS].(ptr[AS, atomic[u32], read_write], u32, u32) => __atomic_compare_exchange_result_u32,
 }
 
-# 16.9. Data Packing Built-in Functions (https://www.w3.org/TR/WGSL/#pack-builtin-functions)
+# 17.9. Data Packing Built-in Functions (https://www.w3.org/TR/WGSL/#pack-builtin-functions)
 
-# 16.9.1
+# 17.9.1
 function :pack4x8snorm, {
     # @const @must_use fn pack4x8snorm(e: vec4<f32>) -> u32
     const: true,
@@ -1446,7 +1444,7 @@ function :pack4x8snorm, {
     [].(vec4[f32]) => u32,
 }
 
-# 16.9.2
+# 17.9.2
 function :pack4x8unorm, {
     # @const @must_use fn pack4x8unorm(e: vec4<f32>) -> u32
     const: true,
@@ -1454,7 +1452,7 @@ function :pack4x8unorm, {
     [].(vec4[f32]) => u32,
 }
 
-# 16.9.3
+# 17.9.3
 function :pack4xI8, {
     # @const @must_use fn pack4xI8(e: vec4<i32>) -> u32
     const: true,
@@ -1462,7 +1460,7 @@ function :pack4xI8, {
     [].(vec4[i32]) => u32,
 }
 
-# 16.9.4
+# 17.9.4
 function :pack4xU8, {
     # @const @must_use fn pack4xu8(e: vec4<i32>) -> u32
     const: true,
@@ -1470,7 +1468,7 @@ function :pack4xU8, {
     [].(vec4[u32]) => u32,
 }
 
-# 16.9.5
+# 17.9.5
 function :pack4xI8Clamp, {
     # @const @must_use fn pack4xI8Clamp(e: vec4<i32>) -> u32
     const: true,
@@ -1478,7 +1476,7 @@ function :pack4xI8Clamp, {
     [].(vec4[i32]) => u32,
 }
 
-# 16.9.6
+# 17.9.6
 function :pack4xU8Clamp, {
     # @const @must_use fn pack4xU8Clamp(e: vec4<i32>) -> u32
     const: true,
@@ -1486,7 +1484,7 @@ function :pack4xU8Clamp, {
     [].(vec4[u32]) => u32,
 }
 
-# 16.9.7
+# 17.9.7
 function :pack2x16snorm, {
     # @const @must_use fn pack2x16snorm(e: vec2<f32>) -> u32
     const: true,
@@ -1494,7 +1492,7 @@ function :pack2x16snorm, {
     [].(vec2[f32]) => u32,
 }
 
-# 16.9.8
+# 17.9.8
 function :pack2x16unorm, {
     # @const @must_use fn pack2x16unorm(e: vec2<f32>) -> u32
     const: true,
@@ -1502,7 +1500,7 @@ function :pack2x16unorm, {
     [].(vec2[f32]) => u32,
 }
 
-# 16.9.9
+# 17.9.9
 function :pack2x16float, {
     # @const @must_use fn pack2x16float(e: vec2<f32>) -> u32
     const: true,
@@ -1510,9 +1508,9 @@ function :pack2x16float, {
     [].(vec2[f32]) => u32,
 }
 
-# 16.10. Data Unpacking Built-in Functions (https://www.w3.org/TR/WGSL/#unpack-builtin-functions)
+# 17.10. Data Unpacking Built-in Functions (https://www.w3.org/TR/WGSL/#unpack-builtin-functions)
 
-# 16.10.1
+# 17.10.1
 function :unpack4x8snorm, {
     # @const @must_use fn unpack4x8snorm(e: u32) -> vec4<f32>
     const: true,
@@ -1520,7 +1518,7 @@ function :unpack4x8snorm, {
     [].(u32) => vec4[f32],
 }
 
-# 16.10.2
+# 17.10.2
 function :unpack4x8unorm, {
     # @const @must_use fn unpack4x8unorm(e: u32) -> vec4<f32>
     const: true,
@@ -1528,7 +1526,7 @@ function :unpack4x8unorm, {
     [].(u32) => vec4[f32],
 }
 
-# 16.10.3
+# 17.10.3
 function :unpack4xI8, {
     # @const @must_use fn unpack4xI8(e: u32) -> vec4<i32>
     const: true,
@@ -1536,7 +1534,7 @@ function :unpack4xI8, {
     [].(u32) => vec4[i32],
 }
 
-# 16.10.4
+# 17.10.4
 function :unpack4xU8, {
     # @const @must_use fn unpack4xU8(e: u32) -> vec4<u32>
     const: true,
@@ -1544,7 +1542,7 @@ function :unpack4xU8, {
     [].(u32) => vec4[u32],
 }
 
-# 16.10.5
+# 17.10.5
 function :unpack2x16snorm, {
     # @const @must_use fn unpack2x16snorm(e: u32) -> vec2<f32>
     const: true,
@@ -1552,7 +1550,7 @@ function :unpack2x16snorm, {
     [].(u32) => vec2[f32],
 }
 
-# 16.10.6
+# 17.10.6
 function :unpack2x16unorm, {
     # @const @must_use fn unpack2x16unorm(e: u32) -> vec2<f32>
     const: true,
@@ -1560,7 +1558,7 @@ function :unpack2x16unorm, {
     [].(u32) => vec2[f32],
 }
 
-# 16.10.7
+# 17.10.7
 function :unpack2x16float, {
     # @const @must_use fn unpack2x16float(e: u32) -> vec2<f32>
     const: true,
@@ -1568,9 +1566,9 @@ function :unpack2x16float, {
     [].(u32) => vec2[f32],
 }
 
-# 16.11. Synchronization Built-in Functions (https://www.w3.org/TR/WGSL/#sync-builtin-functions)
+# 17.11. Synchronization Built-in Functions (https://www.w3.org/TR/WGSL/#sync-builtin-functions)
 
-# 16.11.1.
+# 17.11.1.
 function :storageBarrier, {
     stage: :compute,
 
@@ -1578,7 +1576,7 @@ function :storageBarrier, {
     [].() => void,
 }
 
-# 16.11.2.
+# 17.11.2.
 function :textureBarrier, {
     stage: :compute,
 
@@ -1586,7 +1584,7 @@ function :textureBarrier, {
     [].() => void,
 }
 
-# 16.11.3.
+# 17.11.3.
 function :workgroupBarrier, {
     stage: :compute,
 
@@ -1594,7 +1592,7 @@ function :workgroupBarrier, {
     [].() => void,
 }
 
-# 16.11.4.
+# 17.11.4.
 function :workgroupUniformLoad, {
     must_use: true,
     stage: :compute,

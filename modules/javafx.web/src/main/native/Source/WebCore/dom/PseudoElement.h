@@ -41,6 +41,8 @@ public:
     Element* hostElement() const { return m_hostElement.get(); }
     void clearHostElement();
 
+    PseudoId pseudoId() const { return m_pseudoId; }
+
     bool rendererIsNeeded(const RenderStyle&) override;
 
     bool canStartSelection() const override { return false; }
@@ -48,8 +50,6 @@ public:
 
 private:
     PseudoElement(Element&, PseudoId);
-
-    PseudoId customPseudoId() const override { return m_pseudoId; }
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_hostElement;
     PseudoId m_pseudoId;

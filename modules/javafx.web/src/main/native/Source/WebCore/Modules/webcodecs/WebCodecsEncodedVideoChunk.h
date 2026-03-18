@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,12 @@
 #if ENABLE(WEB_CODECS)
 
 #include "BufferSource.h"
-#include "ExceptionOr.h"
 #include "WebCodecsEncodedVideoChunkData.h"
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class WebCodecsEncodedVideoChunkStorage : public ThreadSafeRefCounted<WebCodecsEncodedVideoChunkStorage> {
 public:
@@ -69,14 +70,14 @@ public:
 
     ExceptionOr<void> copyTo(BufferSource&&);
 
-    std::span<const uint8_t> span() const { return m_storage->data().buffer.span(); }
-    WebCodecsEncodedVideoChunkStorage& storage() { return m_storage.get(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_storage->data().buffer.span(); }
+    WebCodecsEncodedVideoChunkStorage& storage() LIFETIME_BOUND { return m_storage.get(); }
 
 private:
     explicit WebCodecsEncodedVideoChunk(Init&&);
     explicit WebCodecsEncodedVideoChunk(Ref<WebCodecsEncodedVideoChunkStorage>&&);
 
-    Ref<WebCodecsEncodedVideoChunkStorage> m_storage;
+    const Ref<WebCodecsEncodedVideoChunkStorage> m_storage;
 };
 
 inline WebCodecsEncodedVideoChunkStorage::WebCodecsEncodedVideoChunkStorage(WebCodecsEncodedVideoChunkData&& data)

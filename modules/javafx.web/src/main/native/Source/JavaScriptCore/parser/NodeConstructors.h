@@ -823,9 +823,10 @@ namespace JSC {
     {
     }
 
-    inline AssignErrorNode::AssignErrorNode(const JSTokenLocation& location, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd)
+    inline AssignErrorNode::AssignErrorNode(const JSTokenLocation& location, ExpressionNode* left, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd)
         : ExpressionNode(location)
         , ThrowableExpressionData(divot, divotStart, divotEnd)
+        , m_left(left)
     {
     }
 

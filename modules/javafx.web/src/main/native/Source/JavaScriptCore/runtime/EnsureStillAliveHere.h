@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace JSC {
 
 ALWAYS_INLINE void ensureStillAliveHere(uint64_t value)

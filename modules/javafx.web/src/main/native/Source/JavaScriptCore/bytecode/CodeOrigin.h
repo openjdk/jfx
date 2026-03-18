@@ -84,10 +84,10 @@ public:
     CodeOrigin& operator=(const CodeOrigin& other)
     {
         if (this != &other) {
-            if (UNLIKELY(isOutOfLine()))
+            if (isOutOfLine()) [[unlikely]]
                 delete outOfLineCodeOrigin();
 
-            if (UNLIKELY(other.isOutOfLine()))
+            if (other.isOutOfLine()) [[unlikely]]
                 m_compositeValue = buildCompositeValue(other.inlineCallFrame(), other.bytecodeIndex());
             else
                 m_compositeValue = other.m_compositeValue;
@@ -97,7 +97,7 @@ public:
     CodeOrigin& operator=(CodeOrigin&& other)
     {
         if (this != &other) {
-            if (UNLIKELY(isOutOfLine()))
+            if (isOutOfLine()) [[unlikely]]
                 delete outOfLineCodeOrigin();
 
             m_compositeValue = std::exchange(other.m_compositeValue, 0);
@@ -109,7 +109,7 @@ public:
     {
         // We don't use the member initializer list because it would not let us optimize the common case where there is no out-of-line storage
         // (in which case we don't have to extract the components of the composite value just to reassemble it).
-        if (UNLIKELY(other.isOutOfLine()))
+        if (other.isOutOfLine()) [[unlikely]]
             m_compositeValue = buildCompositeValue(other.inlineCallFrame(), other.bytecodeIndex());
         else
             m_compositeValue = other.m_compositeValue;
@@ -121,7 +121,7 @@ public:
 
     ~CodeOrigin()
     {
-        if (UNLIKELY(isOutOfLine()))
+        if (isOutOfLine()) [[unlikely]]
             delete outOfLineCodeOrigin();
     }
 #endif
@@ -180,7 +180,7 @@ public:
 #if CPU(ADDRESS64)
         if (!isSet())
             return BytecodeIndex();
-        if (UNLIKELY(isOutOfLine()))
+        if (isOutOfLine()) [[unlikely]]
             return outOfLineCodeOrigin()->bytecodeIndex;
         return BytecodeIndex::fromBits(m_compositeValue >> (64 - s_freeBitsAtTop));
 #else
@@ -191,7 +191,7 @@ public:
     InlineCallFrame* inlineCallFrame() const
     {
 #if CPU(ADDRESS64)
-        if (UNLIKELY(isOutOfLine()))
+        if (isOutOfLine()) [[unlikely]]
             return outOfLineCodeOrigin()->inlineCallFrame;
         return std::bit_cast<InlineCallFrame*>(m_compositeValue & s_maskCompositeValueForPointer);
 #else
@@ -247,7 +247,7 @@ private:
         if (!bytecodeIndex)
             return std::bit_cast<uintptr_t>(inlineCallFrame) | s_maskIsBytecodeIndexInvalid;
 
-        if (UNLIKELY(bytecodeIndex.asBits() >= 1 << s_freeBitsAtTop)) {
+        if (bytecodeIndex.asBits() >= 1 << s_freeBitsAtTop) [[unlikely]] {
             auto* outOfLine = new OutOfLineCodeOrigin(inlineCallFrame, bytecodeIndex);
             return std::bit_cast<uintptr_t>(outOfLine) | s_maskIsOutOfLine;
         }

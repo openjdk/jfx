@@ -57,6 +57,11 @@ bool StyleBackgroundData::operator==(const StyleBackgroundData& other) const
 
 bool StyleBackgroundData::isEquivalentForPainting(const StyleBackgroundData& other, bool currentColorDiffers) const
 {
+    if (this == &other) {
+        ASSERT(currentColorDiffers);
+        return !containsCurrentColor();
+    }
+
     if (background != other.background || color != other.color)
         return false;
     if (currentColorDiffers && color.containsCurrentColor())
@@ -68,14 +73,20 @@ bool StyleBackgroundData::isEquivalentForPainting(const StyleBackgroundData& oth
     return outline == other.outline;
 }
 
+bool StyleBackgroundData::containsCurrentColor() const
+{
+    return color.containsCurrentColor()
+        || outline.color().containsCurrentColor();
+}
+
 void StyleBackgroundData::dump(TextStream& ts, DumpStyleValues behavior) const
 {
     if (behavior == DumpStyleValues::All || *background != FillLayer::create(FillLayerType::Background).get())
-        ts.dumpProperty("background-image", background);
+        ts.dumpProperty("background-image"_s, background);
     if (behavior == DumpStyleValues::All || color != RenderStyle::initialBackgroundColor())
-        ts.dumpProperty("background-color", color);
+        ts.dumpProperty("background-color"_s, color);
     if (behavior == DumpStyleValues::All || outline != OutlineValue())
-        ts.dumpProperty("outline", outline);
+        ts.dumpProperty("outline"_s, outline);
 }
 
 #if !LOG_DISABLED

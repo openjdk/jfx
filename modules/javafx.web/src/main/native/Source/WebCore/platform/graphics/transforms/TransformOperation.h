@@ -72,7 +72,7 @@ public:
     virtual ~TransformOperation() = default;
 
     virtual Ref<TransformOperation> clone() const = 0;
-    virtual Ref<TransformOperation> selfOrCopyWithResolvedCalculatedValues(const FloatSize&) { return *this; }
+    virtual Ref<TransformOperation> selfOrCopyWithResolvedCalculatedValues(const FloatSize&) const { return const_cast<TransformOperation&>(*this); }
 
     virtual bool operator==(const TransformOperation&) const = 0;
 

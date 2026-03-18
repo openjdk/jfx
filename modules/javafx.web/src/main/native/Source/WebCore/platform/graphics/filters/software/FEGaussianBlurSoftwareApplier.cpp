@@ -386,8 +386,8 @@ inline void FEGaussianBlurSoftwareApplier::applyPlatform(PixelBuffer& ioBuffer, 
                 IntSize blockSize = { paintSize.width(), endY - startY };
 
                 if (!job) {
-                    params.ioBuffer = &ioBuffer;
-                    params.tempBuffer = &tempBuffer;
+                    params.ioBuffer = ioBuffer;
+                    params.tempBuffer = tempBuffer;
                 } else {
                     params.ioBuffer = ioBuffer.createScratchPixelBuffer(blockSize);
                     params.tempBuffer = tempBuffer.createScratchPixelBuffer(blockSize);
@@ -430,16 +430,16 @@ inline void FEGaussianBlurSoftwareApplier::applyPlatform(PixelBuffer& ioBuffer, 
     boxBlurGeneric(ioBuffer, tempBuffer, kernelSizeX, kernelSizeY, paintSize, isAlphaImage, edgeMode);
 }
 
-bool FEGaussianBlurSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEGaussianBlurSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
+    auto& input = inputs[0].get();
 
-    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
+    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    input->copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
+    input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
     if (!m_effect->stdDeviationX() && !m_effect->stdDeviationY())
         return true;
 

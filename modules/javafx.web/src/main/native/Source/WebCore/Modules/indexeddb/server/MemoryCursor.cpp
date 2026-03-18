@@ -27,18 +27,12 @@
 #include "MemoryCursor.h"
 
 #include "IDBResourceIdentifier.h"
+#include "MemoryBackingStoreTransaction.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 namespace IDBServer {
-
-static Lock cursorMapLock;
-static HashMap<IDBResourceIdentifier, MemoryCursor*>& cursorMap() WTF_REQUIRES_LOCK(cursorMapLock)
-{
-    static NeverDestroyed<HashMap<IDBResourceIdentifier, MemoryCursor*>> map;
-    return map;
-}
 
 MemoryCursor::MemoryCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
     : m_info(info)
@@ -46,26 +40,17 @@ MemoryCursor::MemoryCursor(const IDBCursorInfo& info, MemoryBackingStoreTransact
 {
     ASSERT(!isMainThread());
 
-    Locker locker { cursorMapLock };
-    ASSERT(!cursorMap().contains(m_info.identifier()));
-    cursorMap().set(m_info.identifier(), this);
+    transaction.addCursor(*this);
 }
 
 MemoryCursor::~MemoryCursor()
 {
     ASSERT(!isMainThread());
-
-    Locker locker { cursorMapLock };
-    ASSERT(cursorMap().contains(m_info.identifier()));
-    cursorMap().remove(m_info.identifier());
 }
 
-MemoryCursor* MemoryCursor::cursorForIdentifier(const IDBResourceIdentifier& identifier)
+MemoryBackingStoreTransaction* MemoryCursor::transaction() const
 {
-    ASSERT(!isMainThread());
-
-    Locker locker { cursorMapLock };
-    return cursorMap().get(identifier);
+    return m_transaction.get();
 }
 
 } // namespace IDBServer

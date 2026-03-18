@@ -26,6 +26,8 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <numbers>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if ENABLE(B3_JIT)
@@ -2757,7 +2759,7 @@ void testDoubleToFloatThroughPhi(float value)
     UpsilonValue* thenValue = thenCase->appendNew<UpsilonValue>(proc, Origin(), thenAdd);
     thenCase->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(tail));
 
-    Value* elseConst = elseCase->appendNew<ConstDoubleValue>(proc, Origin(), M_PI);
+    Value* elseConst = elseCase->appendNew<ConstDoubleValue>(proc, Origin(), std::numbers::pi);
     UpsilonValue* elseValue = elseCase->appendNew<UpsilonValue>(proc, Origin(), elseConst);
     elseCase->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(tail));
 
@@ -2769,7 +2771,7 @@ void testDoubleToFloatThroughPhi(float value)
 
     auto code = compileProc(proc);
     CHECK(isIdentical(invoke<float>(*code, 1L, std::bit_cast<int32_t>(value)), value + 42.5f));
-    CHECK(isIdentical(invoke<float>(*code, 0L, std::bit_cast<int32_t>(value)), static_cast<float>(M_PI)));
+    CHECK(isIdentical(invoke<float>(*code, 0L, std::bit_cast<int32_t>(value)), std::numbers::pi_v<float>));
 }
 
 void testReduceFloatToDoubleValidates()
@@ -3403,6 +3405,34 @@ void testIToF32Arg()
         CHECK(isIdentical(invoke<float>(*code, testValue.value), static_cast<float>(testValue.value)));
 }
 
+void testIToDU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<double>(*code, static_cast<uint32_t>(testValue.value)), static_cast<double>(static_cast<uint32_t>(testValue.value))));
+}
+
+void testIToFU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<float>(*code, static_cast<uint32_t>(testValue.value)), static_cast<float>(static_cast<uint32_t>(testValue.value))));
+}
+
 void testIToD64Mem()
 {
     Procedure proc;
@@ -4029,26 +4059,26 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testAddLoadTwice());
     RUN_TERNARY(testAddMulMulArgs, int64Operands(), int64Operands(), int64Operands());
 
-    RUN(testAddArgDouble(M_PI));
-    RUN(testAddArgsDouble(M_PI, 1));
-    RUN(testAddArgsDouble(M_PI, -M_PI));
-    RUN(testAddArgImmDouble(M_PI, 1));
-    RUN(testAddArgImmDouble(M_PI, 0));
-    RUN(testAddArgImmDouble(M_PI, negativeZero()));
+    RUN(testAddArgDouble(std::numbers::pi));
+    RUN(testAddArgsDouble(std::numbers::pi, 1));
+    RUN(testAddArgsDouble(std::numbers::pi, -std::numbers::pi));
+    RUN(testAddArgImmDouble(std::numbers::pi, 1));
+    RUN(testAddArgImmDouble(std::numbers::pi, 0));
+    RUN(testAddArgImmDouble(std::numbers::pi, negativeZero()));
     RUN(testAddArgImmDouble(0, 0));
     RUN(testAddArgImmDouble(0, negativeZero()));
     RUN(testAddArgImmDouble(negativeZero(), 0));
     RUN(testAddArgImmDouble(negativeZero(), negativeZero()));
-    RUN(testAddImmArgDouble(M_PI, 1));
-    RUN(testAddImmArgDouble(M_PI, 0));
-    RUN(testAddImmArgDouble(M_PI, negativeZero()));
+    RUN(testAddImmArgDouble(std::numbers::pi, 1));
+    RUN(testAddImmArgDouble(std::numbers::pi, 0));
+    RUN(testAddImmArgDouble(std::numbers::pi, negativeZero()));
     RUN(testAddImmArgDouble(0, 0));
     RUN(testAddImmArgDouble(0, negativeZero()));
     RUN(testAddImmArgDouble(negativeZero(), 0));
     RUN(testAddImmArgDouble(negativeZero(), negativeZero()));
-    RUN(testAddImmsDouble(M_PI, 1));
-    RUN(testAddImmsDouble(M_PI, 0));
-    RUN(testAddImmsDouble(M_PI, negativeZero()));
+    RUN(testAddImmsDouble(std::numbers::pi, 1));
+    RUN(testAddImmsDouble(std::numbers::pi, 0));
+    RUN(testAddImmsDouble(std::numbers::pi, negativeZero()));
     RUN(testAddImmsDouble(0, 0));
     RUN(testAddImmsDouble(0, negativeZero()));
     RUN(testAddImmsDouble(negativeZero(), negativeZero()));
@@ -4151,26 +4181,26 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN_BINARY(testMulArgsFloatWithUselessDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testMulArgsFloatWithEffectfulDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
 
-    RUN(testDivArgDouble(M_PI));
-    RUN(testDivArgsDouble(M_PI, 1));
-    RUN(testDivArgsDouble(M_PI, -M_PI));
-    RUN(testDivArgImmDouble(M_PI, 1));
-    RUN(testDivArgImmDouble(M_PI, 0));
-    RUN(testDivArgImmDouble(M_PI, negativeZero()));
+    RUN(testDivArgDouble(std::numbers::pi));
+    RUN(testDivArgsDouble(std::numbers::pi, 1));
+    RUN(testDivArgsDouble(std::numbers::pi, -std::numbers::pi));
+    RUN(testDivArgImmDouble(std::numbers::pi, 1));
+    RUN(testDivArgImmDouble(std::numbers::pi, 0));
+    RUN(testDivArgImmDouble(std::numbers::pi, negativeZero()));
     RUN(testDivArgImmDouble(0, 0));
     RUN(testDivArgImmDouble(0, negativeZero()));
     RUN(testDivArgImmDouble(negativeZero(), 0));
     RUN(testDivArgImmDouble(negativeZero(), negativeZero()));
-    RUN(testDivImmArgDouble(M_PI, 1));
-    RUN(testDivImmArgDouble(M_PI, 0));
-    RUN(testDivImmArgDouble(M_PI, negativeZero()));
+    RUN(testDivImmArgDouble(std::numbers::pi, 1));
+    RUN(testDivImmArgDouble(std::numbers::pi, 0));
+    RUN(testDivImmArgDouble(std::numbers::pi, negativeZero()));
     RUN(testDivImmArgDouble(0, 0));
     RUN(testDivImmArgDouble(0, negativeZero()));
     RUN(testDivImmArgDouble(negativeZero(), 0));
     RUN(testDivImmArgDouble(negativeZero(), negativeZero()));
-    RUN(testDivImmsDouble(M_PI, 1));
-    RUN(testDivImmsDouble(M_PI, 0));
-    RUN(testDivImmsDouble(M_PI, negativeZero()));
+    RUN(testDivImmsDouble(std::numbers::pi, 1));
+    RUN(testDivImmsDouble(std::numbers::pi, 0));
+    RUN(testDivImmsDouble(std::numbers::pi, negativeZero()));
     RUN(testDivImmsDouble(0, 0));
     RUN(testDivImmsDouble(0, negativeZero()));
     RUN(testDivImmsDouble(negativeZero(), negativeZero()));

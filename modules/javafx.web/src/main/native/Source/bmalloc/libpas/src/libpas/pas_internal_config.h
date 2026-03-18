@@ -28,8 +28,6 @@
 
 #include "pas_config.h"
 
-#define PAS_SUBPAGE_SIZE                 4096
-
 #define PAS_USE_SMALL_SEGREGATED_OVERRIDE     true
 #define PAS_USE_MEDIUM_SEGREGATED_OVERRIDE    true
 #define PAS_USE_SMALL_BITFIT_OVERRIDE         true
@@ -68,18 +66,16 @@
 /* Use VA-based memory zeroing when the allocation size exceeds this threshold. */
 #define PAS_VA_BASED_ZERO_MEMORY_SHIFT   24
 
+/* Default amount of padding between backing allocations of different partial views within a
+ * single segregated shared page. Most useful for heaps which allocate user-facing objects. */
+#define PAS_SMALL_PARTIAL_VIEW_PADDING   16
+#define PAS_MEDIUM_PARTIAL_VIEW_PADDING  0
+#define PAS_PARTIAL_VIEW_PADDING_ALIGN   16
+
 /* This is the same as PAS_BITVECTOR_WORD_SHIFT, which is a nice performance optimization but
    isn't necessary. It's a performance optimization because there are specialized fast code
    paths for sharing_shift == PAS_BITVECTOR_WORD_SHIFT. */
 #define PAS_SMALL_SHARING_SHIFT          5
-
-#define PAS_APPROXIMATE_LARGE_SIZE_SHIFT 10
-#define PAS_APPROXIMATE_LARGE_SIZE       ((size_t)1 << PAS_APPROXIMATE_LARGE_SIZE_SHIFT)
-
-/* This is the minimum object size in small allocators and we rely on this to lay out alloc
-   bits. */
-#define PAS_MIN_OBJECT_SIZE_SHIFT        4
-#define PAS_MIN_OBJECT_SIZE              ((size_t)1 << PAS_MIN_OBJECT_SIZE_SHIFT)
 
 #define PAS_MIN_MEDIUM_ALIGN_SHIFT       9
 #define PAS_MIN_MEDIUM_ALIGN             ((size_t)1 << PAS_MIN_MEDIUM_ALIGN_SHIFT)
@@ -89,16 +85,13 @@
 
 #define PAS_MEDIUM_SHARING_SHIFT         3
 
-#define PAS_MIN_OBJECTS_PER_PAGE         6
-
-/* Expresses the probability using integers in the range 0..UINT_MAX (inclusive) */
-#define PAS_PROBABILITY_OF_SHARED_PAGE_INELIGIBILITY 0x1fffffff
+#define PAS_MIN_OBJECTS_PER_PAGE         10
 
 #ifdef PAS_LIBMALLOC
 #define PAS_DEALLOCATION_LOG_SIZE        10
 #define PAS_DEALLOCATION_LOG_MAX_BYTES   1000
 #else
-#define PAS_DEALLOCATION_LOG_SIZE        1000
+#define PAS_DEALLOCATION_LOG_SIZE        100
 #define PAS_DEALLOCATION_LOG_MAX_BYTES   50000
 #endif
 
@@ -180,7 +173,7 @@
    The alignment requirement is taken together with the minalign argument (the allocator uses
    whichever is bigger), but it's a bit more optimal to convey alignment using the alignment part
    of the type than by passing it to minalign. */
-#define PAS_TYPED_BOUND_FOR_PARTIAL_VIEWS                       10
+#define PAS_TYPED_BOUND_FOR_PARTIAL_VIEWS                       0
 #define PAS_TYPED_BOUND_FOR_BASELINE_ALLOCATORS                 0
 #define PAS_TYPED_BOUND_FOR_NO_VIEW_CACHE                       UINT_MAX
 #define PAS_TYPED_MAX_SEGREGATED_OBJECT_SIZE                    UINT_MAX
@@ -191,7 +184,7 @@
    Implementing these as segregated heaps is valid since sizes get segregated and different-sized
    objects will only overlap at the header. However, FIXME: we need flex heaps to use a large heap
    that won't overlap objects in these heaps as if they were arrays. */
-#define PAS_FLEX_BOUND_FOR_PARTIAL_VIEWS                        10
+#define PAS_FLEX_BOUND_FOR_PARTIAL_VIEWS                        0
 #define PAS_FLEX_BOUND_FOR_BASELINE_ALLOCATORS                  0
 #define PAS_FLEX_BOUND_FOR_NO_VIEW_CACHE                        UINT_MAX
 #define PAS_FLEX_MAX_SEGREGATED_OBJECT_SIZE                     UINT_MAX

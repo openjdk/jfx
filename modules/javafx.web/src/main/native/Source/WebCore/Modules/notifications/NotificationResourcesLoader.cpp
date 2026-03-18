@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +30,7 @@
 #if ENABLE(NOTIFICATIONS)
 
 #include "BitmapImage.h"
+#include "EventTargetInlines.h"
 #include "GraphicsContext.h"
 #include "NotificationResources.h"
 #include "ResourceRequest.h"
@@ -76,7 +78,7 @@ void NotificationResourcesLoader::start(CompletionHandler<void(RefPtr<Notificati
     if (resourceIsSupportedInPlatform(Resource::Icon)) {
         const URL& iconURL = m_notification.icon();
         if (!iconURL.isEmpty()) {
-            auto loader = makeUnique<ResourceLoader>(*m_notification.scriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
+            auto loader = makeUnique<ResourceLoader>(*m_notification.protectedScriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
                 if (m_stopped)
                     return;
 
@@ -135,7 +137,7 @@ NotificationResourcesLoader::ResourceLoader::ResourceLoader(ScriptExecutionConte
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
     options.contentSecurityPolicyEnforcement = context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
-    m_loader = ThreadableLoader::create(context, *this, ResourceRequest(url), options);
+    m_loader = ThreadableLoader::create(context, *this, ResourceRequest(URL { url }), options);
 }
 
 NotificationResourcesLoader::ResourceLoader::~ResourceLoader()
@@ -145,7 +147,7 @@ NotificationResourcesLoader::ResourceLoader::~ResourceLoader()
 void NotificationResourcesLoader::ResourceLoader::cancel()
 {
     auto completionHandler = std::exchange(m_completionHandler, nullptr);
-    m_loader->cancel();
+    Ref { *m_loader }->cancel();
     m_loader = nullptr;
     if (completionHandler)
         completionHandler(this, nullptr);
@@ -160,9 +162,9 @@ void NotificationResourcesLoader::ResourceLoader::didReceiveResponse(ScriptExecu
 
 void NotificationResourcesLoader::ResourceLoader::didReceiveData(const SharedBuffer& buffer)
 {
-    if (m_image) {
+    if (RefPtr image = m_image) {
         m_buffer.append(buffer);
-        m_image->setData(m_buffer.get(), false);
+        image->setData(m_buffer.get(), false);
     }
 }
 
@@ -170,8 +172,8 @@ void NotificationResourcesLoader::ResourceLoader::didFinishLoading(ScriptExecuti
 {
     m_finished = true;
 
-    if (m_image)
-        m_image->setData(m_buffer.take(), true);
+    if (RefPtr image = m_image)
+        image->setData(m_buffer.take(), true);
 
     if (m_completionHandler)
         m_completionHandler(this, WTFMove(m_image));

@@ -27,6 +27,7 @@
 
 #include "GlobalFrameIdentifier.h"
 #include "PolicyContainer.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "SecurityOrigin.h"
 

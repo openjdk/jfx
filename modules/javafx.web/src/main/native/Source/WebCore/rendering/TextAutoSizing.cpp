@@ -40,7 +40,7 @@
 #include "RenderTreeBuilder.h"
 #include "Settings.h"
 #include "StyleResolver.h"
-#include "TextSizeAdjustment.h"
+#include "StyleTextSizeAdjust.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -178,11 +178,9 @@ auto TextAutoSizingValue::adjustTextNodeSizes() -> StillHasNodes
         if (!block)
             continue;
 
-        RenderObject* firstLetterRenderer;
-        RenderElement* dummy;
-        block->getFirstLetter(firstLetterRenderer, dummy);
-        if (firstLetterRenderer && firstLetterRenderer->parent() && firstLetterRenderer->parent()->parent()) {
-            auto& parentStyle = firstLetterRenderer->parent()->parent()->style();
+        auto [firstLetter, firstLetterContainer] = block->firstLetterAndContainer();
+        if (firstLetter && firstLetter->parent() && firstLetter->parent()->parent()) {
+            auto& parentStyle = firstLetter->parent()->parent()->style();
             auto* firstLetterStyle = parentStyle.getCachedPseudoStyle({ PseudoId::FirstLetter });
             if (!firstLetterStyle)
                 continue;

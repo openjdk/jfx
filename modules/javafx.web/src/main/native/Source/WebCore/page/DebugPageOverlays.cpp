@@ -44,6 +44,7 @@
 #include "RemoteFrame.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
@@ -120,7 +121,7 @@ bool MouseWheelRegionOverlay::updateRegion()
 #else
     auto region = makeUnique<Region>();
 
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -128,7 +129,7 @@ bool MouseWheelRegionOverlay::updateRegion()
             continue;
 
         Ref document = *localFrame->document();
-        auto frameRegion = document->absoluteRegionForEventTargets(document->wheelEventTargets());
+        auto frameRegion = document->absoluteRegionForWheelEventTargets();
         frameRegion.first.translate(toIntSize(localFrame->protectedView()->contentsToRootView(IntPoint())));
         region->unite(frameRegion.first);
     }
@@ -549,8 +550,32 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         bool shouldClip = valueForSetting("clip"_s);
         Vector<Path> clipPaths;
 
-        if (shouldClip)
-            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->cornerRadius);
+        if (shouldClip) {
+            const auto rectInLayerCoordinates = region->rectInLayerCoordinates;
+
+            if (auto clipPath = region->clipPath) {
+                Path existingClip = *clipPath;
+                AffineTransform transform;
+
+                transform.translate(rectInLayerCoordinates.location());
+                if (RefPtr page = m_page.get())
+                    transform.scale(page->pageScaleFactor());
+
+                existingClip.transform(transform);
+                clipPaths.append(existingClip);
+            } else {
+                auto scaleFactor = 1.f;
+                if (RefPtr page = m_page.get())
+                    scaleFactor = page->pageScaleFactor();
+
+                if (region->useContinuousCorners) {
+                    Path path;
+                    path.addContinuousRoundedRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+                    clipPaths.append(path);
+                } else
+                    clipPaths = pathsForRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+            }
+        }
 
         bool shouldUseBackdropGradient = !shouldClip || !region || (!valueForSetting("wash"_s) && valueForSetting("clip"_s));
 
@@ -691,11 +716,11 @@ void SiteIsolationOverlay::drawRect(PageOverlay&, GraphicsContext& context, cons
     FontCascade font(WTFMove(fontDescription));
     font.update(nullptr);
 
-    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->virtualView())
             continue;
         auto frameView = frame->virtualView();
-        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toString(), ')');
+        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toUInt64(), ')');
         TextRun textRun = TextRun(debugStr);
         context.setFillColor(Color::black);
 

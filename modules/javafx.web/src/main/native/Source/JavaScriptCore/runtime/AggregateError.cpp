@@ -50,7 +50,7 @@ ErrorInstance* createAggregateError(JSGlobalObject* globalObject, VM& vm, Struct
     MarkedArgumentBuffer errorsList;
     forEachInIterable(globalObject, errors, [&] (VM&, JSGlobalObject*, JSValue nextValue) {
         errorsList.append(nextValue);
-        if (UNLIKELY(errorsList.hasOverflowed()))
+        if (errorsList.hasOverflowed()) [[unlikely]]
             throwOutOfMemoryError(globalObject, scope);
     });
     RETURN_IF_EXCEPTION(scope, nullptr);

@@ -28,12 +28,6 @@
 
 namespace WebCore {
 
-SourceBrush::SourceBrush(const Color& color, OptionalPatternGradient&& patternGradient)
-    : m_color(color)
-    , m_patternGradient(WTFMove(patternGradient))
-{
-}
-
 const AffineTransform& SourceBrush::gradientSpaceTransform() const
 {
     if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
@@ -43,29 +37,9 @@ const AffineTransform& SourceBrush::gradientSpaceTransform() const
 
 Gradient* SourceBrush::gradient() const
 {
-    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient)) {
-        if (auto* gradient = std::get_if<Ref<Gradient>>(&logicalGradient->gradient))
-            return gradient->ptr();
-    }
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
+        return logicalGradient->gradient.ptr();
     return nullptr;
-}
-
-std::optional<RenderingResourceIdentifier> SourceBrush::gradientIdentifier() const
-{
-    auto* gradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient);
-    if (!gradient)
-        return std::nullopt;
-
-    return WTF::switchOn(gradient->gradient,
-        [] (const Ref<Gradient>& gradient) -> std::optional<RenderingResourceIdentifier> {
-            if (!gradient->hasValidRenderingResourceIdentifier())
-                return std::nullopt;
-            return gradient->renderingResourceIdentifier();
-        },
-        [] (RenderingResourceIdentifier renderingResourceIdentifier) -> std::optional<RenderingResourceIdentifier> {
-            return renderingResourceIdentifier;
-        }
-    );
 }
 
 Pattern* SourceBrush::pattern() const
@@ -87,15 +61,15 @@ void SourceBrush::setPattern(Ref<Pattern>&& pattern)
 
 WTF::TextStream& operator<<(TextStream& ts, const SourceBrush& brush)
 {
-    ts.dumpProperty("color", brush.color());
+    ts.dumpProperty("color"_s, brush.color());
 
     if (auto gradient = brush.gradient()) {
-        ts.dumpProperty("gradient", *gradient);
-        ts.dumpProperty("gradient-space-transform", brush.gradientSpaceTransform());
+        ts.dumpProperty("gradient"_s, *gradient);
+        ts.dumpProperty("gradient-space-transform"_s, brush.gradientSpaceTransform());
     }
 
     if (auto pattern = brush.pattern())
-        ts.dumpProperty("pattern", pattern);
+        ts.dumpProperty("pattern"_s, pattern);
 
     return ts;
 }

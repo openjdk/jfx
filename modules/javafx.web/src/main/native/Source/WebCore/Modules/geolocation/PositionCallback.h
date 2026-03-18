@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,8 +37,8 @@ class PositionCallback : public RefCounted<PositionCallback>, public ActiveDOMCa
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(GeolocationPosition*) = 0;
-    virtual CallbackResult<void> handleEventRethrowingException(GeolocationPosition*) = 0;
+    virtual CallbackResult<void> invoke(GeolocationPosition*) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(GeolocationPosition*) = 0;
 
 private:
     virtual bool hasCallback() const = 0;

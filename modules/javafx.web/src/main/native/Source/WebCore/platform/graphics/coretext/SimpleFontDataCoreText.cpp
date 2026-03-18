@@ -37,7 +37,7 @@ static CTParagraphStyleRef paragraphStyleWithCompositionLanguageNone()
     static LazyNeverDestroyed<RetainPtr<CTParagraphStyleRef>> paragraphStyle;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [&] {
-        paragraphStyle.construct(CTParagraphStyleCreate(nullptr, 0));
+        paragraphStyle.construct(adoptCF(CTParagraphStyleCreate(nullptr, 0)));
         CTParagraphStyleSetCompositionLanguage(paragraphStyle.get().get(), kCTCompositionLanguageNone);
     });
     return paragraphStyle.get().get();

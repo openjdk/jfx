@@ -39,6 +39,7 @@
 #include "PushSubscriptionOwner.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerRegistration.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>

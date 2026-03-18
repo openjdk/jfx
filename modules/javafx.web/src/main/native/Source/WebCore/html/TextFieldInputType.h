@@ -79,13 +79,13 @@ protected:
     void handleBlurEvent() final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) override;
     void updateInnerTextValue() final;
-    String sanitizeValue(const String&) const override;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const override;
 
     virtual String convertFromVisibleValue(const String&) const;
     virtual void didSetValueByUserEdit();
 
 private:
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isEmptyValue() const final;
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) final;

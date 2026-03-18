@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +99,7 @@ protected:
     Lock m_lock;
     Condition m_completed;
 
-    Ref<ModuleInformation> m_moduleInformation;
+    Ref<ModuleInformation> m_moduleInformation; // noconst
 
     Vector<std::pair<VM*, CompletionTask>, 1> m_completionTasks;
 

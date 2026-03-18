@@ -29,12 +29,14 @@
 #include "CSSEasingFunctionValue.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+MetaConsumer.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "StyleEasingFunction.h"
 #include "TimingFunction.h"
@@ -44,7 +46,7 @@ namespace CSSPropertyParserHelpers {
 
 // MARK: - <steps()>
 
-static std::optional<CSS::EasingFunction> consumeUnresolvedStepsEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::EasingFunction> consumeUnresolvedStepsEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <steps-easing-function> = steps( <integer>, <steps-easing-function-position>? )
     // <steps-easing-function-position> = jump-start | jump-end | jump-none | jump-both | start | end
@@ -66,7 +68,7 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedStepsEasingFunction(C
     // Stash args so we can re-parse if we get `jump-none`.
     auto stashedArgs = args;
 
-    auto steps = MetaConsumer<CSS::Integer<CSS::Range{1,CSS::Range::infinity}>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto steps = MetaConsumer<CSS::Integer<CSS::Range{1,CSS::Range::infinity}>>::consume(args, state);
     if (!steps)
         return { };
 
@@ -86,7 +88,7 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedStepsEasingFunction(C
             //  case it must be a positive integer greater than 1."
 
             // Re-parse `steps` to account for different type requirement.
-            auto stepsJumpNone = MetaConsumer<CSS::Integer<CSS::Range{2,CSS::Range::infinity}>>::consume(stashedArgs, context, { }, { .parserMode = context.mode });
+            auto stepsJumpNone = MetaConsumer<CSS::Integer<CSS::Range{2,CSS::Range::infinity}>>::consume(stashedArgs, state);
             if (!stepsJumpNone)
                 return { };
 
@@ -123,14 +125,14 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedStepsEasingFunction(C
 
 // MARK: - <linear()>
 
-static std::optional<CSS::LinearEasingParameters::Stop::Length> consumeUnresolvedLinearEasingFunctionStopLength(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::LinearEasingParameters::Stop::Length> consumeUnresolvedLinearEasingFunctionStopLength(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <linear-easing-function-stop-length> = <percentage>{0,2}
 
-    auto input = MetaConsumer<CSS::Percentage<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto input = MetaConsumer<CSS::Percentage<>>::consume(args, state);
     if (!input)
         return { };
-    auto extra = MetaConsumer<CSS::Percentage<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto extra = MetaConsumer<CSS::Percentage<>>::consume(args, state);
 
     return CSS::LinearEasingParameters::Stop::Length {
         .input = WTFMove(*input),
@@ -138,14 +140,14 @@ static std::optional<CSS::LinearEasingParameters::Stop::Length> consumeUnresolve
     };
 }
 
-static std::optional<CSS::LinearEasingParameters::Stop> consumeUnresolvedLinearEasingFunctionStop(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::LinearEasingParameters::Stop> consumeUnresolvedLinearEasingFunctionStop(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <linear-easing-function-stop> = <number> && <percentage>{0,2}
 
-    auto output = MetaConsumer<CSS::Number<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto output = MetaConsumer<CSS::Number<>>::consume(args, state);
     if (!output)
         return { };
-    auto input = consumeUnresolvedLinearEasingFunctionStopLength(args, context);
+    auto input = consumeUnresolvedLinearEasingFunctionStopLength(args, state);
 
     return CSS::LinearEasingParameters::Stop {
         .output = WTFMove(*output),
@@ -153,7 +155,7 @@ static std::optional<CSS::LinearEasingParameters::Stop> consumeUnresolvedLinearE
     };
 }
 
-static std::optional<CSS::EasingFunction> consumeUnresolvedLinearEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::EasingFunction> consumeUnresolvedLinearEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <linear()> = linear( [ <number> && <percentage>{0,2} ]# )
     // https://drafts.csswg.org/css-easing-2/#funcdef-linear
@@ -165,7 +167,7 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedLinearEasingFunction(
     Vector<CSS::LinearEasingParameters::Stop> stops;
 
     while (true) {
-        auto stop = consumeUnresolvedLinearEasingFunctionStop(args, context);
+        auto stop = consumeUnresolvedLinearEasingFunctionStop(args, state);
         if (!stop)
             break;
 
@@ -191,7 +193,7 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedLinearEasingFunction(
 
 // MARK: - <cubic-bezier()>
 
-static std::optional<CSS::EasingFunction> consumeUnresolvedCubicBezierEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::EasingFunction> consumeUnresolvedCubicBezierEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <cubic-bezier()> = cubic-bezier( [ <number [0,1]>, <number> ]#{2} )
     // https://drafts.csswg.org/css-easing-2/#funcdef-cubic-bezier
@@ -200,22 +202,22 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedCubicBezierEasingFunc
     auto rangeCopy = range;
     auto args = consumeFunction(rangeCopy);
 
-    auto x1 = MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto x1 = MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(args, state);
     if (!x1)
         return { };
     if (!consumeCommaIncludingWhitespace(args))
         return { };
-    auto y1 = MetaConsumer<CSS::Number<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto y1 = MetaConsumer<CSS::Number<>>::consume(args, state);
     if (!y1)
         return { };
     if (!consumeCommaIncludingWhitespace(args))
         return { };
-    auto x2 = MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto x2 = MetaConsumer<CSS::Number<CSS::ClosedUnitRange>>::consume(args, state);
     if (!x2)
         return { };
     if (!consumeCommaIncludingWhitespace(args))
         return { };
-    auto y2 = MetaConsumer<CSS::Number<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto y2 = MetaConsumer<CSS::Number<>>::consume(args, state);
     if (!y2)
         return { };
 
@@ -238,29 +240,29 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedCubicBezierEasingFunc
 
 // MARK: - <spring()>
 
-static std::optional<CSS::EasingFunction> consumeUnresolvedSpringEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::EasingFunction> consumeUnresolvedSpringEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <spring()> = spring( <number [>0,∞]> <number [>0,∞]> <number [0,∞]> <number> )
     // Non-standard
 
     ASSERT(range.peek().functionId() == CSSValueSpring);
 
-    if (!context.springTimingFunctionEnabled)
+    if (!state.context.springTimingFunctionEnabled)
         return { };
 
     auto rangeCopy = range;
     auto args = consumeFunction(rangeCopy);
 
-    auto mass = MetaConsumer<CSS::Number<CSS::SpringEasingParameters::Positive>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto mass = MetaConsumer<CSS::Number<CSS::SpringEasingParameters::Positive>>::consume(args, state);
     if (!mass)
         return { };
-    auto stiffness = MetaConsumer<CSS::Number<CSS::SpringEasingParameters::Positive>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto stiffness = MetaConsumer<CSS::Number<CSS::SpringEasingParameters::Positive>>::consume(args, state);
     if (!stiffness)
         return { };
-    auto damping = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto damping = MetaConsumer<CSS::Number<CSS::Nonnegative>>::consume(args, state);
     if (!damping)
         return { };
-    auto initialVelocity = MetaConsumer<CSS::Number<>>::consume(args, context, { }, { .parserMode = context.mode });
+    auto initialVelocity = MetaConsumer<CSS::Number<>>::consume(args, state);
     if (!initialVelocity)
         return { };
 
@@ -283,7 +285,7 @@ static std::optional<CSS::EasingFunction> consumeUnresolvedSpringEasingFunction(
 
 // MARK: - <easing-function>
 
-std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <easing-function> = linear | ease | ease-in | ease-out | ease-in-out | step-start | step-end | <linear()> | <cubic-bezier()> | <steps()>
     // NOTE: also includes non-standard <spring()>.
@@ -328,16 +330,16 @@ std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserToke
 
     switch (range.peek().functionId()) {
     case CSSValueLinear:
-        return consumeUnresolvedLinearEasingFunction(range, context);
+        return consumeUnresolvedLinearEasingFunction(range, state);
 
     case CSSValueCubicBezier:
-        return consumeUnresolvedCubicBezierEasingFunction(range, context);
+        return consumeUnresolvedCubicBezierEasingFunction(range, state);
 
     case CSSValueSteps:
-        return consumeUnresolvedStepsEasingFunction(range, context);
+        return consumeUnresolvedStepsEasingFunction(range, state);
 
     case CSSValueSpring:
-        return consumeUnresolvedSpringEasingFunction(range, context);
+        return consumeUnresolvedSpringEasingFunction(range, state);
 
     default:
         break;
@@ -346,7 +348,7 @@ std::optional<CSS::EasingFunction> consumeUnresolvedEasingFunction(CSSParserToke
     return { };
 }
 
-RefPtr<CSSValue> consumeEasingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeEasingFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // Avoid allocation of a CSSEasingFunctionValue when the result is a just a value ID.
     switch (range.peek().id()) {
@@ -360,20 +362,21 @@ RefPtr<CSSValue> consumeEasingFunction(CSSParserTokenRange& range, const CSSPars
         break;
     }
 
-    if (auto value = consumeUnresolvedEasingFunction(range, context))
+    if (auto value = consumeUnresolvedEasingFunction(range, state))
         return CSSEasingFunctionValue::create(WTFMove(*value));
     return { };
 }
 
 RefPtr<TimingFunction> parseEasingFunctionDeprecated(const String& string, const CSSParserContext& context)
 {
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
+    auto tokenizer = CSSTokenizer(string);
+    auto range = tokenizer.tokenRange();
 
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto result = consumeUnresolvedEasingFunction(range, context);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedEasingFunction(range, state);
     if (!result)
         return { };
 
@@ -388,13 +391,14 @@ RefPtr<TimingFunction> parseEasingFunctionDeprecated(const String& string, const
 
 RefPtr<TimingFunction> parseEasingFunction(const String& string, const CSSParserContext& context, const CSSToLengthConversionData& conversionData)
 {
-    CSSTokenizer tokenizer(string);
-    CSSParserTokenRange range(tokenizer.tokenRange());
+    auto tokenizer = CSSTokenizer(string);
+    auto range = tokenizer.tokenRange();
 
     // Handle leading whitespace.
     range.consumeWhitespace();
 
-    auto result = consumeUnresolvedEasingFunction(range, context);
+    auto state = CSS::PropertyParserState { .context = context };
+    auto result = consumeUnresolvedEasingFunction(range, state);
     if (!result)
         return { };
 

@@ -66,7 +66,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ArithBitXor:
     case ArithBitRShift:
     case ArithBitLShift:
-    case BitURShift:
+    case ArithBitURShift:
     case CheckStructure:
     case CheckStructureOrEmpty:
     case DoubleAsInt32:
@@ -78,6 +78,7 @@ inline CapabilityLevel canCompile(Node* node)
     case NewGenerator:
     case NewAsyncGenerator:
     case NewStringObject:
+    case NewRegExpUntyped:
     case NewSymbol:
     case NewArray:
     case NewArrayWithSpread:
@@ -85,6 +86,7 @@ inline CapabilityLevel canCompile(Node* node)
     case Spread:
     case NewArrayBuffer:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case GetByOffset:
     case GetGetterSetterByOffset:
     case GetGetter:
@@ -99,6 +101,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueBitNot:
     case ValueBitLShift:
     case ValueBitRShift:
+    case ValueBitURShift:
     case ValueNegate:
     case ValueAdd:
     case ValueSub:
@@ -223,6 +226,7 @@ inline CapabilityLevel canCompile(Node* node)
     case SuperSamplerEnd:
     case GetExecutable:
     case GetScope:
+    case GetEvalScope:
     case GetCallee:
     case SetCallee:
     case GetArgumentCountIncludingThis:
@@ -307,6 +311,9 @@ inline CapabilityLevel canCompile(Node* node)
     case NumberIsInteger:
     case GlobalIsNaN:
     case NumberIsNaN:
+    case GlobalIsFinite:
+    case NumberIsFinite:
+    case NumberIsSafeInteger:
     case IsObject:
     case IsCallable:
     case IsConstructor:
@@ -343,7 +350,7 @@ inline CapabilityLevel canCompile(Node* node)
     case PhantomNewAsyncFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeNewObject:
@@ -382,10 +389,12 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
-    case NewRegexp:
+    case RegExpSearch:
+    case NewRegExp:
     case NewMap:
     case NewSet:
     case StringReplace:
+    case StringReplaceAll:
     case StringReplaceRegExp:
     case StringReplaceString:
     case GetRegExpObjectLastIndex:
@@ -449,6 +458,8 @@ inline CapabilityLevel canCompile(Node* node)
     case GetByValMegamorphic:
     case GetByValWithThis:
     case GetByValWithThisMegamorphic:
+    case MultiGetByVal:
+    case MultiPutByVal:
     case PutByVal:
     case PutByValAlias:
     case PutByValMegamorphic:
@@ -472,6 +483,8 @@ inline CapabilityLevel canCompile(Node* node)
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52:
     case DataViewGetInt:
     case DataViewGetFloat:
     case DataViewSet:
@@ -509,7 +522,7 @@ CapabilityLevel canCompile(Graph& graph)
         return CannotCompile;
     }
 
-    if (UNLIKELY(graph.m_codeBlock->ownerExecutable()->neverFTLOptimize())) {
+    if (graph.m_codeBlock->ownerExecutable()->neverFTLOptimize()) [[unlikely]] {
         dataLogLnIf(verboseCapabilities(), "FTL rejecting ", *graph.m_codeBlock, " because it is marked as never FTL compile.");
         return CannotCompile;
     }
@@ -591,7 +604,7 @@ CapabilityLevel canCompile(Graph& graph)
                     break;
                 default:
                     // Don't know how to handle anything else.
-                    if (UNLIKELY(verboseCapabilities())) {
+                    if (verboseCapabilities()) [[unlikely]] {
                         WTF::dataFile().atomically([&](auto&) {
                             dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, " because of bad use kind: ", edge.useKind(), " in node:");
                         graph.dump(WTF::dataFile(), "    ", node);
@@ -603,7 +616,7 @@ CapabilityLevel canCompile(Graph& graph)
 
             switch (canCompile(node)) {
             case CannotCompile:
-                if (UNLIKELY(verboseCapabilities())) {
+                if (verboseCapabilities()) [[unlikely]] {
                     WTF::dataFile().atomically([&](auto&) {
                         dataLogLn("FTL rejecting node in ", *graph.m_codeBlock, ":");
                     graph.dump(WTF::dataFile(), "    ", node);
@@ -612,7 +625,7 @@ CapabilityLevel canCompile(Graph& graph)
                 return CannotCompile;
 
             case CanCompile:
-                if (UNLIKELY(result == CanCompileAndOSREnter && verboseCompilationEnabled())) {
+                if (result == CanCompileAndOSREnter && verboseCompilationEnabled()) [[unlikely]] {
                     WTF::dataFile().atomically([&](auto&) {
                         dataLogLn("FTL disabling OSR entry because of node:");
                     graph.dump(WTF::dataFile(), "    ", node);

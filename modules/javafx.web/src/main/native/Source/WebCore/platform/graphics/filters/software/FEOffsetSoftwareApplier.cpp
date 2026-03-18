@@ -35,16 +35,16 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEOffsetSoftwareApplier);
 
-bool FEOffsetSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FEOffsetSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
+    auto& input = inputs[0].get();
 
     RefPtr resultImage = result.imageBuffer();
-    RefPtr inputImage = input->imageBuffer();
+    RefPtr inputImage = input.imageBuffer();
     if (!resultImage || !inputImage)
         return false;
 
-    FloatRect inputImageRect = input->absoluteImageRectRelativeTo(result);
+    FloatRect inputImageRect = input.absoluteImageRectRelativeTo(result);
 
     auto offset = filter.resolvedSize({ m_effect->dx(), m_effect->dy() });
     auto absoluteOffset = filter.scaledByFilterScale(offset);

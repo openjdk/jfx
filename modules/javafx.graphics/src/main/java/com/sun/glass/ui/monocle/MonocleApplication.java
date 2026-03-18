@@ -277,6 +277,11 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
+    protected void _showDocument(String uri) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     protected long staticView_getMultiClickTime() {
         return MonocleView._getMultiClickTime();
     }

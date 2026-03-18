@@ -96,8 +96,15 @@ Win32Handle::IPCData Win32Handle::toIPCData()
 
 Win32Handle Win32Handle::createFromIPCData(IPCData&& data)
 {
+    auto isValidHandle = [] (HANDLE h) {
+        // Checking for INVALID_HANDLE_VALUE is insufficient because values like -2 also have meaning as a HANDLE.
+        constexpr int32_t minimumKnownPseudoHandleValue = -12;
+        int32_t valueAsInt = static_cast<int32_t>(reinterpret_cast<uintptr_t>(h));
+        return valueAsInt >= 0 || valueAsInt < minimumKnownPseudoHandleValue;
+    };
+
     auto handle = reinterpret_cast<HANDLE>(data.handle);
-    if (handle == INVALID_HANDLE_VALUE)
+    if (!isValidHandle(handle))
         return { };
     auto sourceProcess = Win32Handle::adopt(OpenProcess(PROCESS_DUP_HANDLE, FALSE, data.processID));
     if (!sourceProcess)

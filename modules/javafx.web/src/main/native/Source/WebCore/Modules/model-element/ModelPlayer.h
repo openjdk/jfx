@@ -44,7 +44,10 @@
 namespace WebCore {
 
 class Color;
+class FloatPoint3D;
 class Model;
+class ModelPlayerAnimationState;
+class ModelPlayerTransformState;
 class SharedBuffer;
 class TransformationMatrix;
 
@@ -57,10 +60,20 @@ public:
     virtual ModelPlayerIdentifier identifier() const = 0;
 #endif
 
+    virtual bool isPlaceholder() const;
+    virtual std::optional<ModelPlayerAnimationState> currentAnimationState() const;
+    virtual std::optional<std::unique_ptr<ModelPlayerTransformState>> currentTransformState() const;
+
     virtual void load(Model&, LayoutSize) = 0;
+    virtual void reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&);
+    virtual void visibilityStateDidChange();
+
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
+    virtual std::optional<FloatPoint3D> boundingBoxCenter() const;
+    virtual std::optional<FloatPoint3D> boundingBoxExtents() const;
+    virtual std::optional<TransformationMatrix> entityTransform() const;
     virtual void setEntityTransform(TransformationMatrix);
     virtual void enterFullscreen() = 0;
     virtual bool supportsMouseInteraction();
@@ -101,6 +114,8 @@ public:
     virtual void beginStageModeTransform(const TransformationMatrix&);
     virtual void updateStageModeTransform(const TransformationMatrix&);
     virtual void endStageModeInteraction();
+    virtual void animateModelToFitPortal(CompletionHandler<void(bool)>&&);
+    virtual void resetModelTransformAfterDrag();
 #endif
 };
 

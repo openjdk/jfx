@@ -36,7 +36,7 @@ class NativeCallee;
 
 class CalleeBits {
 public:
-    CalleeBits() = default;
+    constexpr CalleeBits() = default;
     CalleeBits(int64_t value)
 #if USE(JSVALUE64)
         : m_ptr { reinterpret_cast<void*>(value) }
@@ -68,38 +68,48 @@ public:
     }
 
 #if USE(JSVALUE32_64)
-    static EncodedJSValue encodeNullCallee()
+    static constexpr CalleeBits nullCallee()
     {
-        return JSValue::encode(jsNull());
+        CalleeBits result;
+        result.m_tag = JSValue::NullTag;
+        return result;
     }
 
     static EncodedJSValue encodeJSCallee(const JSCell* cell)
     {
         if (!cell)
-            return encodeNullCallee();
+            return nullCallee().encodedBits();
         return JSValue::encode(JSValue(cell));
     }
 
     static EncodedJSValue encodeBoxedNativeCallee(void* boxedCallee)
     {
         if (!boxedCallee)
-            return encodeNullCallee();
+            return nullCallee().encodedBits();
         EncodedValueDescriptor ret;
         ret.asBits.tag = JSValue::NativeCalleeTag;
         ret.asBits.payload = reinterpret_cast<intptr_t>(boxedCallee);
         return std::bit_cast<EncodedJSValue>(ret);
     }
 
-#elif USE(JSVALUE64)
-    static EncodedJSValue encodeNullCallee()
+    EncodedJSValue encodedBits() const
     {
-        return reinterpret_cast<EncodedJSValue>(nullptr);
+        EncodedValueDescriptor result;
+        result.asBits.tag = m_tag;
+        result.asBits.payload = reinterpret_cast<intptr_t>(m_ptr);
+        return std::bit_cast<EncodedJSValue>(result);
+    }
+
+#elif USE(JSVALUE64)
+    static constexpr CalleeBits nullCallee()
+    {
+        return CalleeBits();
     }
 
     static EncodedJSValue encodeJSCallee(const JSCell* cell)
     {
         if (!cell)
-            return encodeNullCallee();
+            return nullCallee().encodedBits();
         return reinterpret_cast<EncodedJSValue>(cell);
     }
 
@@ -107,6 +117,8 @@ public:
     {
         return reinterpret_cast<EncodedJSValue>(boxedCallee);
     }
+
+    EncodedJSValue encodedBits() const { return reinterpret_cast<EncodedJSValue>(m_ptr); }
 #else
 #error "Unsupported configuration"
 #endif
@@ -114,7 +126,7 @@ public:
     static EncodedJSValue encodeNativeCallee(NativeCallee* callee)
     {
         if (!callee)
-            return encodeNullCallee();
+            return nullCallee().encodedBits();
         return encodeBoxedNativeCallee(boxNativeCallee(callee));
     }
 
@@ -174,6 +186,7 @@ public:
     void* rawPtr() const { return m_ptr; }
     // For Ref/RefPtr support.
     explicit operator bool() const { return m_ptr; }
+    bool operator==(const CalleeBits&) const = default;
 
 private:
     void* m_ptr { nullptr };

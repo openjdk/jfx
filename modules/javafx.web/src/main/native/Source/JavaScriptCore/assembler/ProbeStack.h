@@ -151,7 +151,7 @@ class Stack {
     WTF_MAKE_TZONE_ALLOCATED(Stack);
 public:
     Stack()
-        : m_stackBounds(Thread::current().stack())
+        : m_stackBounds(Thread::currentSingleton().stack())
     { }
     Stack(Stack&& other);
 
@@ -202,7 +202,7 @@ public:
 private:
     Page* pageFor(void* address)
     {
-        if (LIKELY(Page::baseAddressFor(address) == m_lastAccessedPageBaseAddress))
+        if (Page::baseAddressFor(address) == m_lastAccessedPageBaseAddress) [[likely]]
             return m_lastAccessedPage;
         return ensurePageFor(address);
     }

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "OfflineAudioCompletionEvent.h"
 #include "OfflineAudioContextOptions.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -145,15 +146,15 @@ void OfflineAudioContext::startRendering(Ref<DeferredPromise>&& promise)
 
     lazyInitialize();
 
-    destination().startRendering([this, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->startRendering([promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise->reject(WTFMove(*exception));
             return;
         }
 
-        m_pendingRenderingPromise = WTFMove(promise);
-        m_didStartRendering = true;
-        setState(State::Running);
+        pendingActivity->object().m_pendingRenderingPromise = WTFMove(promise);
+        pendingActivity->object().m_didStartRendering = true;
+        pendingActivity->object().setState(State::Running);
     });
 }
 
@@ -206,13 +207,13 @@ void OfflineAudioContext::resumeRendering(Ref<DeferredPromise>&& promise)
     }
     ASSERT(state() == AudioContextState::Suspended);
 
-    destination().startRendering([this, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->startRendering([promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
         if (exception) {
             promise->reject(WTFMove(*exception));
             return;
         }
 
-        setState(State::Running);
+        pendingActivity->object().setState(State::Running);
         promise->resolve();
     });
 }

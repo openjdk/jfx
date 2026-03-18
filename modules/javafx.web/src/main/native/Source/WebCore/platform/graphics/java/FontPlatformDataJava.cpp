@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "FontPlatformData.h"
+#include "FontCustomPlatformData.h"
 #include "FontDescription.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"

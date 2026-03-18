@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaEndpointConfiguration.h"
 #include "MediaStream.h"
 #include "PeerConnectionBackend.h"
@@ -108,7 +109,7 @@ public:
         std::optional<double> expires;
     };
 
-    using AlgorithmIdentifier = std::variant<JSC::Strong<JSC::JSObject>, String>;
+    using AlgorithmIdentifier = Variant<JSC::Strong<JSC::JSObject>, String>;
     static void generateCertificate(JSC::JSGlobalObject&, AlgorithmIdentifier&&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
 
     // 4.3.2 RTCPeerConnection Interface
@@ -125,7 +126,7 @@ public:
     RTCSessionDescription* currentRemoteDescription() const { return m_currentRemoteDescription.get(); }
     RTCSessionDescription* pendingRemoteDescription() const { return m_pendingRemoteDescription.get(); }
 
-    using Candidate = std::optional<std::variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
+    using Candidate = std::optional<Variant<RTCIceCandidateInit, RefPtr<RTCIceCandidate>>>;
     void addIceCandidate(Candidate&&, Ref<DeferredPromise>&&);
 
     RTCSignalingState signalingState() const { return m_signalingState; }
@@ -154,7 +155,7 @@ public:
     ExceptionOr<Ref<RTCRtpSender>> addTrack(Ref<MediaStreamTrack>&&, const FixedVector<std::reference_wrapper<MediaStream>>&);
     ExceptionOr<void> removeTrack(RTCRtpSender&);
 
-    using AddTransceiverTrackOrKind = std::variant<RefPtr<MediaStreamTrack>, String>;
+    using AddTransceiverTrackOrKind = Variant<RefPtr<MediaStreamTrack>, String>;
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, RTCRtpTransceiverInit&&);
 
     // 6.1 Peer-to-peer data API
@@ -213,6 +214,8 @@ public:
     void startGatheringStatLogs(Function<void(String&&)>&&);
     void stopGatheringStatLogs();
 
+    void clearTransports();
+
 private:
     RTCPeerConnection(Document&);
 
@@ -266,13 +269,13 @@ private:
     RTCPeerConnectionState m_connectionState { RTCPeerConnectionState::New };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 
     RtpTransceiverSet m_transceiverSet;
 
-    std::unique_ptr<PeerConnectionBackend> m_backend;
+    const std::unique_ptr<PeerConnectionBackend> m_backend;
 
     RTCConfiguration m_configuration;
     RTCController* m_controller { nullptr };

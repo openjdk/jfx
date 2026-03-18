@@ -32,6 +32,7 @@
 #include "Exception.h"
 #include "HTTPParsers.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -98,7 +99,7 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
     varyValue.split(',', [&](StringView view) {
         if (isVarying)
             return;
-        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        auto nameView = view.trim(isASCIIWhitespaceWithoutFF<char16_t>);
         if (nameView == "*"_s) {
             isVarying = true;
             return;

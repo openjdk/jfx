@@ -91,7 +91,7 @@ void RunLoop::run()
 
 void RunLoop::setWakeUpCallback(WTF::Function<void()>&& function)
 {
-    RunLoop::current().m_wakeUpCallback = WTFMove(function);
+    RunLoop::currentSingleton().m_wakeUpCallback = WTFMove(function);
 }
 
 void RunLoop::stop()
@@ -168,8 +168,9 @@ void RunLoop::TimerBase::timerFired()
     fired();
 }
 
-RunLoop::TimerBase::TimerBase(Ref<RunLoop>&& runLoop)
+RunLoop::TimerBase::TimerBase(Ref<RunLoop>&& runLoop, ASCIILiteral description)
     : m_runLoop(WTFMove(runLoop))
+    , m_description(description)
 {
 }
 

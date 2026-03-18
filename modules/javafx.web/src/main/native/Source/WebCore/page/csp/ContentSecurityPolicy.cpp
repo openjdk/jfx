@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google, Inc. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,8 +57,10 @@
 #include "SubresourceIntegrity.h"
 #include "ViolationReportType.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
+#include <algorithm>
 #include <pal/crypto/CryptoDigest.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/JSONValues.h>
@@ -191,7 +193,18 @@ void ContentSecurityPolicy::didCreateWindowProxy(JSWindowProxy& windowProxy) con
     }
     window->setEvalEnabled(m_lastPolicyEvalDisabledErrorMessage.isNull(), m_lastPolicyEvalDisabledErrorMessage);
     window->setWebAssemblyEnabled(m_lastPolicyWebAssemblyDisabledErrorMessage.isNull(), m_lastPolicyWebAssemblyDisabledErrorMessage);
-    window->setRequiresTrustedTypes(requireTrustedTypesForSinkGroup("script"_s));
+
+    auto requiresTrustedTypesForScript = requireTrustedTypesForSinkGroup("script"_s);
+    auto requiresTrustedTypesForScriptEnforced = requireTrustedTypesForSinkGroup("script"_s, IncludeReportOnlyPolicies::No);
+
+    if (requiresTrustedTypesForScript && requiresTrustedTypesForScriptEnforced && m_trustedEvalEnabled)
+        window->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::EnforcedWithEvalEnabled);
+    else if (requiresTrustedTypesForScript && requiresTrustedTypesForScriptEnforced)
+        window->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::Enforced);
+    else if (requiresTrustedTypesForScript)
+        window->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::ReportOnly);
+    else
+        window->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::None);
 }
 
 ContentSecurityPolicyResponseHeaders ContentSecurityPolicy::responseHeaders() const
@@ -235,7 +248,7 @@ void ContentSecurityPolicy::didReceiveHeaders(const ContentSecurityPolicy& other
     m_referrer = other.m_referrer;
     m_httpStatusCode = other.m_httpStatusCode;
     m_upgradeInsecureRequests = other.m_upgradeInsecureRequests;
-    m_insecureNavigationRequestsToUpgrade.add(other.m_insecureNavigationRequestsToUpgrade.begin(), other.m_insecureNavigationRequestsToUpgrade.end());
+    m_insecureNavigationRequestsToUpgrade.addAll(other.m_insecureNavigationRequestsToUpgrade);
 }
 
 void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecurityPolicyHeaderType type, ContentSecurityPolicy::PolicyFrom policyFrom, String&& referrer, int httpStatusCode)
@@ -299,6 +312,7 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
 
     bool enableStrictMixedContentMode = false;
     bool requiresTrustedTypesForScript = false;
+    bool requiresTrustedTypesForScriptEnforced = false;
     for (auto& policy : m_policies) {
         const ContentSecurityPolicyDirective* violatedDirective = policy->violatedDirectiveForUnsafeEval();
         if (violatedDirective && !violatedDirective->directiveList().isReportOnly()) {
@@ -308,9 +322,13 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
         if (policy->hasBlockAllMixedContentDirective() && !policy->isReportOnly())
             enableStrictMixedContentMode = true;
 
-        // Intentionally doesn't check for report only, this boolean is used for performance purposes, rather than CSP enforcement.
-        if (policy->requiresTrustedTypesForScript())
+        if (policy->requiresTrustedTypesForScript()) {
             requiresTrustedTypesForScript = true;
+            requiresTrustedTypesForScriptEnforced = !policy->isReportOnly();
+    }
+
+        if (!policy->trustedEvalEnabled())
+            m_trustedEvalEnabled = false;
     }
 
     if (!m_lastPolicyEvalDisabledErrorMessage.isNull())
@@ -321,7 +339,14 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
         scriptExecutionContext->enforceSandboxFlags(m_sandboxFlags, SecurityContext::SandboxFlagsSource::CSP);
     if (enableStrictMixedContentMode)
         scriptExecutionContext->setStrictMixedContentMode(true);
-    scriptExecutionContext->setRequiresTrustedTypes(requiresTrustedTypesForScript);
+    if (requiresTrustedTypesForScript && requiresTrustedTypesForScriptEnforced && m_trustedEvalEnabled)
+        scriptExecutionContext->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::EnforcedWithEvalEnabled);
+    else if (requiresTrustedTypesForScript && requiresTrustedTypesForScriptEnforced)
+        scriptExecutionContext->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::Enforced);
+    else if (requiresTrustedTypesForScript)
+        scriptExecutionContext->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::ReportOnly);
+    else
+        scriptExecutionContext->setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement::None);
 }
 
 void ContentSecurityPolicy::setOverrideAllowInlineStyle(bool value)
@@ -346,7 +371,8 @@ bool ContentSecurityPolicy::allowContentSecurityPolicySourceStarToMatchAnyProtoc
 }
 
 template<typename Predicate, typename... Args>
-typename std::enable_if<!std::is_convertible<Predicate, ContentSecurityPolicy::ViolatedDirectiveCallback>::value, bool>::type ContentSecurityPolicy::allPoliciesWithDispositionAllow(Disposition disposition, Predicate&& predicate, Args&&... args) const
+bool ContentSecurityPolicy::allPoliciesWithDispositionAllow(Disposition disposition, Predicate&& predicate, Args&&... args) const
+    requires (!std::is_convertible_v<Predicate, ContentSecurityPolicy::ViolatedDirectiveCallback>)
 {
     bool isReportOnly = disposition == ContentSecurityPolicy::Disposition::ReportOnly;
     for (auto& policy : m_policies) {
@@ -542,9 +568,11 @@ bool ContentSecurityPolicy::allowEval(JSC::JSGlobalObject* state, LogToConsole s
 {
     if (m_policies.isEmpty() || overrideContentSecurityPolicy)
         return true;
+    if (m_trustedEvalEnabled && requireTrustedTypesForSinkGroup("script"_s, IncludeReportOnlyPolicies::No))
+        return true;
     bool didNotifyInspector = false;
     auto handleViolatedDirective = [&] (const ContentSecurityPolicyDirective& violatedDirective) {
-        String consoleMessage = shouldLogToConsole == LogToConsole::Yes ? consoleMessageForViolation(violatedDirective, URL(), "Refused to execute a script"_s, "'unsafe-eval'"_s) : String();
+        String consoleMessage = shouldLogToConsole == LogToConsole::Yes ? consoleMessageForViolation(violatedDirective, URL(), "Refused to execute a script"_s, "'unsafe-eval' and 'trusted-types-eval'"_s) : String();
         reportViolation(violatedDirective, "eval"_s, consoleMessage, state, codeContent);
         if (!didNotifyInspector && !violatedDirective.directiveList().isReportOnly()) {
             reportBlockedScriptExecutionToInspector(violatedDirective.text());
@@ -800,22 +828,23 @@ AllowTrustedTypePolicy ContentSecurityPolicy::allowTrustedTypesPolicy(const Stri
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#does-sink-require-trusted-types
-bool ContentSecurityPolicy::requireTrustedTypesForSinkGroup(const String& sinkGroup) const
+bool ContentSecurityPolicy::requireTrustedTypesForSinkGroup(const String& sinkGroup, IncludeReportOnlyPolicies includeReportOnlyPolicies) const
 {
-    bool required = false;
     for (auto& policy : m_policies) {
         if (policy->requiresTrustedTypesForScript() && sinkGroup == "script"_s) {
-            required = true;
-            break;
+            if (!policy->isReportOnly())
+                return true;
+            if (includeReportOnlyPolicies == IncludeReportOnlyPolicies::Yes)
+                return true;
         }
     }
-    return required;
+    return false;
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#should-block-sink-type-mismatch
 bool ContentSecurityPolicy::allowMissingTrustedTypesForSinkGroup(const String& stringContext, const String& sink, const String& sinkGroup, StringView source) const
 {
-    return allOf(m_policies, [&](auto& policy) {
+    return std::ranges::all_of(m_policies, [&](auto& policy) {
         bool isAllowed = true;
         if (policy->requiresTrustedTypesForScript() && sinkGroup == "script"_s) {
             if (!policy->isReportOnly())
@@ -1117,7 +1146,7 @@ void ContentSecurityPolicy::logToConsole(const String& message, const String& co
     if (message.isEmpty())
         return;
 
-    if (!m_isReportingEnabled)
+    if (!m_isReportingEnabled || !m_isReportingToConsoleEnabled)
         return;
 
     if (m_client)
@@ -1136,7 +1165,7 @@ void ContentSecurityPolicy::upgradeInsecureRequestIfNeeded(ResourceRequest& requ
 {
     URL url = request.url();
     upgradeInsecureRequestIfNeeded(url, requestType, alwaysUpgradeRequest);
-    request.setURL(url);
+    request.setURL(WTFMove(url));
 }
 
 void ContentSecurityPolicy::upgradeInsecureRequestIfNeeded(URL& url, InsecureRequestType requestType, AlwaysUpgradeRequest alwaysUpgradeRequest) const
@@ -1191,15 +1220,15 @@ void ContentSecurityPolicy::setUpgradeInsecureRequests(bool upgradeInsecureReque
 
 void ContentSecurityPolicy::inheritInsecureNavigationRequestsToUpgradeFromOpener(const ContentSecurityPolicy& other)
 {
-    m_insecureNavigationRequestsToUpgrade.add(other.m_insecureNavigationRequestsToUpgrade.begin(), other.m_insecureNavigationRequestsToUpgrade.end());
+    m_insecureNavigationRequestsToUpgrade.addAll(other.m_insecureNavigationRequestsToUpgrade);
 }
 
-UncheckedKeyHashSet<SecurityOriginData> ContentSecurityPolicy::takeNavigationRequestsToUpgrade()
+HashSet<SecurityOriginData> ContentSecurityPolicy::takeNavigationRequestsToUpgrade()
 {
     return WTFMove(m_insecureNavigationRequestsToUpgrade);
 }
 
-void ContentSecurityPolicy::setInsecureNavigationRequestsToUpgrade(UncheckedKeyHashSet<SecurityOriginData>&& insecureNavigationRequests)
+void ContentSecurityPolicy::setInsecureNavigationRequestsToUpgrade(HashSet<SecurityOriginData>&& insecureNavigationRequests)
 {
     m_insecureNavigationRequestsToUpgrade = WTFMove(insecureNavigationRequests);
 }

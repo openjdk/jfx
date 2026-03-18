@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,7 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 #if PLATFORM(IOS_FAMILY)
-    virtual void relayAccessibilityNotification(const String&, const RetainPtr<NSData>&) const = 0;
+    virtual void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const = 0;
 #endif
 
     // Method for retrieving the native client of the page.

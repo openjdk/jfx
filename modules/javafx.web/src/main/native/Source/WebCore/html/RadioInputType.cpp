@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,6 +22,7 @@
 #include "config.h"
 #include "RadioInputType.h"
 
+#include "ContainerNodeInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
@@ -32,7 +33,6 @@
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "NodeTraversal.h"
-#include "SpatialNavigation.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -63,7 +63,7 @@ bool RadioInputType::valueMissing(const String&) const
 
     bool isRequired = false;
     bool foundCheckedRadio = false;
-    forEachButtonInDetachedGroup(element->rootNode(), name, [&](auto& input) {
+    forEachButtonInDetachedGroup(element->protectedRootNode(), name, [&](auto& input) {
         if (input.checked()) {
             foundCheckedRadio = true;
             return false;
@@ -79,20 +79,23 @@ void RadioInputType::forEachButtonInDetachedGroup(ContainerNode& rootNode, const
 {
     ASSERT(!groupName.isEmpty());
 
-    for (auto* descendant = Traversal<HTMLElement>::inclusiveFirstWithin(rootNode); descendant;) {
-        if (is<HTMLFormElement>(*descendant)) {
+    auto next = [&](auto& current) {
+        if (is<HTMLFormElement>(current)) {
             // No need to consider the descendants of a <form> since they will have a form owner and we're only
             // interested in <input> elements without a form owner.
-            descendant = Traversal<HTMLElement>::nextSkippingChildren(*descendant, &rootNode);
-            continue;
+            return Traversal<HTMLElement>::nextSkippingChildren(current, &rootNode);
         }
+        return Traversal<HTMLElement>::next(current, &rootNode);
+    };
+    for (RefPtr descendant = Traversal<HTMLElement>::inclusiveFirstWithin(rootNode); descendant; descendant = next(*descendant)) {
+        if (is<HTMLFormElement>(*descendant))
+            continue;
         auto* input = dynamicDowncast<HTMLInputElement>(*descendant);
         if (input && input->isRadioButton() && !input->form() && input->name() == groupName) {
             bool shouldContinue = apply(*input);
             if (!shouldContinue)
                 return;
         }
-        descendant = Traversal<HTMLElement>::next(*descendant, &rootNode);
     }
 }
 
@@ -100,12 +103,12 @@ void RadioInputType::willUpdateCheckedness(bool nowChecked, WasSetByJavaScript)
 {
     if (!nowChecked)
         return;
-    RefPtr element = protectedElement();
+    Ref element = *this->element();
     if (element->radioButtonGroups()) {
         // Buttons in RadioButtonGroups are handled in HTMLInputElement::setChecked().
         return;
     }
-    if (auto input = element->checkedRadioButtonForGroup())
+    if (RefPtr input = element->checkedRadioButtonForGroup())
         input->setChecked(false);
 }
 
@@ -136,7 +139,7 @@ auto RadioInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
     // Tested in WinIE, and even for RTL, left still means previous radio button (and so moves
     // to the right).  Seems strange, but we'll match it.
     // However, when using Spatial Navigation, we need to be able to navigate without changing the selection.
-    if (isSpatialNavigationEnabled(element->document().frame()))
+    if (element->document().settings().spatialNavigationEnabled())
         return ShouldCallBaseEventHandler::Yes;
     bool forward = (key == "Down"_s || key == "Right"_s);
 
@@ -182,21 +185,20 @@ void RadioInputType::handleKeyupEvent(KeyboardEvent& event)
     dispatchSimulatedClickIfActive(event);
 }
 
-bool RadioInputType::isKeyboardFocusable(KeyboardEvent* event) const
+bool RadioInputType::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
-    if (!InputType::isKeyboardFocusable(event))
+    if (!InputType::isKeyboardFocusable(focusEventData))
         return false;
 
     RefPtr element = this->element();
     ASSERT(element);
     // When using Spatial Navigation, every radio button should be focusable.
-    if (isSpatialNavigationEnabled(element->document().frame()))
+    if (element->document().settings().spatialNavigationEnabled())
         return true;
 
     // Never allow keyboard tabbing to leave you in the same radio group.  Always
     // skip any other elements in the group.
-    RefPtr currentFocusedNode = element->document().focusedElement();
-    if (auto* focusedInput = dynamicDowncast<HTMLInputElement>(currentFocusedNode.get())) {
+    if (RefPtr focusedInput = dynamicDowncast<HTMLInputElement>(element->document().focusedElement())) {
         if (focusedInput->isRadioButton() && focusedInput->form() == element->form() && focusedInput->name() == element->name())
             return false;
     }

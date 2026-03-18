@@ -61,14 +61,14 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorTimelineAgent);
 
 InspectorTimelineAgent::InspectorTimelineAgent(WebAgentContext& context)
     : InspectorAgentBase("Timeline"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::TimelineFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::TimelineFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::TimelineBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
 InspectorTimelineAgent::~InspectorTimelineAgent() = default;
 
-void InspectorTimelineAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorTimelineAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -247,7 +247,7 @@ void InspectorTimelineAgent::stopFromConsole(const String& title)
         auto recordTitle = record.data->getString("title"_s);
         if (title.isEmpty() || recordTitle == title) {
             didCompleteRecordEntry(record);
-            m_pendingConsoleProfileRecords.remove(i);
+            m_pendingConsoleProfileRecords.removeAt(i);
 
             if (!m_trackingFromFrontend && m_pendingConsoleProfileRecords.isEmpty())
                 stopProgrammaticCapture();

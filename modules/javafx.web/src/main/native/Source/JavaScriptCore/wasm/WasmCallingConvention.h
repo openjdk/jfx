@@ -41,7 +41,11 @@
 namespace JSC { namespace Wasm {
 
 constexpr unsigned numberOfLLIntCalleeSaveRegisters = 2;
+#if CPU(ARM)
+constexpr unsigned numberOfIPIntCalleeSaveRegisters = 2;
+#else
 constexpr unsigned numberOfIPIntCalleeSaveRegisters = 3;
+#endif
 constexpr unsigned numberOfLLIntInternalRegisters = 2;
 constexpr unsigned numberOfIPIntInternalRegisters = 2;
 constexpr ptrdiff_t WasmToJSScratchSpaceSize = 0x8 * 1 + 0x8; // Needs to be aligned to 0x10.

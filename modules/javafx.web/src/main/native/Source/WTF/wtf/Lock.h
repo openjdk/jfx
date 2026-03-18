@@ -60,13 +60,13 @@ typedef LockAlgorithm<uint8_t, 1, 2> DefaultLockAlgorithm;
 // use lock capability annotations defined in ThreadSafetyAnalysis.h.
 class WTF_CAPABILITY_LOCK Lock {
     WTF_MAKE_NONCOPYABLE(Lock);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Lock);
 public:
     constexpr Lock() = default;
 
     void lock() WTF_ACQUIRES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)) [[unlikely]]
             lockSlow();
     }
 
@@ -93,7 +93,7 @@ public:
     // guarantees that long critical sections always get a fair lock.
     void unlock() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockSlow();
     }
 
@@ -104,13 +104,13 @@ public:
     // want.
     void unlockFairly() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockFairlySlow();
     }
 
     void safepoint()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::safepointFast(m_byte)))
+        if (!DefaultLockAlgorithm::safepointFast(m_byte)) [[unlikely]]
             safepointSlow();
     }
 

@@ -48,14 +48,18 @@
 #include "CSSTokenizer.h"
 #include "CSSTransformListValue.h"
 #include "CSSTransformValue.h"
+#include "CSSURLValue.h"
 #include "CSSUnitValue.h"
 #include "CSSUnparsedValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
+#include "ExceptionOr.h"
+#include "RenderStyle.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
+#include "StyleURL.h"
 #include <wtf/FixedVector.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -65,7 +69,7 @@
 
 namespace WebCore {
 
-RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForShorthandSerialization(const String& serialization, const CSSParserContext& parserContext)
+RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForShorthandSerialization(Document& document, const String& serialization)
 {
     if (serialization.isNull())
         return nullptr;
@@ -73,14 +77,13 @@ RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForShorthandSeria
     CSSTokenizer tokenizer(serialization);
     if (serialization.contains("var("_s))
         return CSSUnparsedValue::create(tokenizer.tokenRange());
-    return CSSStyleValue::create(CSSVariableReferenceValue::create(tokenizer.tokenRange(), parserContext));
+    return CSSStyleValue::create(CSSVariableReferenceValue::create(tokenizer.tokenRange(), { document }));
 }
 
-ExceptionOr<RefPtr<CSSValue>> CSSStyleValueFactory::extractCSSValue(const CSSPropertyID& propertyID, const String& cssText, const CSSParserContext& parserContext)
+ExceptionOr<RefPtr<CSSValue>> CSSStyleValueFactory::extractCSSValue(Document& document, const CSSPropertyID& propertyID, const String& cssText)
 {
     auto styleDeclaration = MutableStyleProperties::create();
-
-    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, parserContext);
+    auto parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, { document });
 
     if (parseResult == CSSParser::ParseResult::Error)
         return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed."_s) };
@@ -88,30 +91,29 @@ ExceptionOr<RefPtr<CSSValue>> CSSStyleValueFactory::extractCSSValue(const CSSPro
     return styleDeclaration->getPropertyCSSValue(propertyID);
 }
 
-ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValues(const CSSPropertyID& propertyID, const String& cssText, const CSSParserContext& parserContext)
+ExceptionOr<RefPtr<CSSStyleValue>> CSSStyleValueFactory::extractShorthandCSSValues(Document& document, const CSSPropertyID& propertyID, const String& cssText)
 {
     auto styleDeclaration = MutableStyleProperties::create();
-
-    CSSParser::ParseResult parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, parserContext);
+    auto parseResult = CSSParser::parseValue(styleDeclaration, propertyID, cssText, IsImportant::Yes, { document });
 
     if (parseResult == CSSParser::ParseResult::Error)
         return Exception { ExceptionCode::TypeError, makeString(cssText, " cannot be parsed."_s) };
 
-    return constructStyleValueForShorthandSerialization(styleDeclaration->getPropertyValue(propertyID), parserContext);
+    return constructStyleValueForShorthandSerialization(document, styleDeclaration->getPropertyValue(propertyID));
 }
 
 ExceptionOr<Ref<CSSUnparsedValue>> CSSStyleValueFactory::extractCustomCSSValues(const String& cssText)
 {
-    if (cssText.isEmpty())
-        return Exception { ExceptionCode::TypeError, "Value cannot be parsed"_s };
-
     CSSTokenizer tokenizer(cssText);
     return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
 }
 
 // https://www.w3.org/TR/css-typed-om-1/#cssstylevalue
-ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(const AtomString& cssProperty, const String& cssText, bool parseMultiple, const CSSParserContext& parserContext)
+ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(Document& document, const AtomString& cssProperty, const String& cssText, bool parseMultiple)
 {
+    if (cssText.isEmpty())
+        return Exception { ExceptionCode::TypeError, "Value cannot be parsed."_s };
+
     // Extract the CSSValue from cssText given cssProperty
     if (isCustomPropertyName(cssProperty)) {
         auto result = extractCustomCSSValues(cssText);
@@ -127,7 +129,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
         return Exception { ExceptionCode::TypeError, "Property String is not a valid CSS property."_s };
 
     if (isShorthand(propertyID)) {
-        auto result = extractShorthandCSSValues(propertyID, cssText, parserContext);
+        auto result = extractShorthandCSSValues(document, propertyID, cssText);
             if (result.hasException())
                 return result.releaseException();
         auto cssValue = result.releaseReturnValue();
@@ -136,7 +138,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
         return Vector { cssValue.releaseNonNull() };
     }
 
-    auto result = extractCSSValue(propertyID, cssText, parserContext);
+    auto result = extractCSSValue(document, propertyID, cssText);
             if (result.hasException())
                 return result.releaseException();
 
@@ -156,7 +158,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::parseStyleValue(co
     Vector<Ref<CSSStyleValue>> results;
 
     for (auto& cssValue : cssValues) {
-        auto reifiedValue = reifyValue(WTFMove(cssValue), propertyID);
+        auto reifiedValue = reifyValue(document, WTFMove(cssValue), propertyID);
         if (reifiedValue.hasException())
             return reifiedValue.releaseException();
 
@@ -182,7 +184,7 @@ static bool mayConvertCSSValueListToSingleValue(std::optional<CSSPropertyID> pro
         && *propertyID != CSSPropertyGridColumnEnd;
 }
 
-ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue& cssValue, std::optional<CSSPropertyID> propertyID, Document* document)
+ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(Document& document, const CSSValue& cssValue, std::optional<CSSPropertyID> propertyID)
 {
     if (auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(cssValue)) {
         if (primitiveValue->isCalculated()) {
@@ -295,30 +297,19 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue&
         return Ref<CSSStyleValue> { CSSUnparsedValue::create(substitutionValue->shorthandValue().data().tokenRange()) };
     } else if (auto* customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(cssValue)) {
         // FIXME: remove CSSStyleValue::create(WTFMove(cssValue)), add reification control flow
-        return WTF::switchOn(customPropertyValue->value(), [&](const std::monostate&) {
+        return WTF::switchOn(customPropertyValue->value(),
+            [&](const Ref<CSSVariableReferenceValue>& value) {
+                return reifyValue(document, value, propertyID);
+            },
+            [&](const Ref<CSSVariableData>& value) {
+                return reifyValue(document, CSSVariableReferenceValue::create(value.copyRef()), propertyID);
+            },
+            [&](const CSSWideKeyword&) {
             return ExceptionOr<Ref<CSSStyleValue>> { CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue))) };
-        }, [&](const Ref<CSSVariableReferenceValue>& value) {
-            return reifyValue(value, propertyID, document);
-        }, [&](Ref<CSSVariableData>& value) {
-            return reifyValue(CSSVariableReferenceValue::create(WTFMove(value)), propertyID);
-        }, [&](const CSSValueID&) {
-            return ExceptionOr<Ref<CSSStyleValue>> { CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue))) };
-        }, [&](const CSSCustomPropertyValue::SyntaxValue& syntaxValue) -> ExceptionOr<Ref<CSSStyleValue>> {
-            if (auto styleValue = constructStyleValueForCustomPropertySyntaxValue(syntaxValue))
-                return { *styleValue };
-            CSSTokenizer tokenizer(customPropertyValue->customCSSText(CSS::defaultSerializationContext()));
-            return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
-        }, [&](const CSSCustomPropertyValue::SyntaxValueList& syntaxValueList) -> ExceptionOr<Ref<CSSStyleValue>> {
-            if (auto styleValue = constructStyleValueForCustomPropertySyntaxValue(syntaxValueList.values[0]))
-                return { *styleValue };
-            CSSTokenizer tokenizer(customPropertyValue->customCSSText(CSS::defaultSerializationContext()));
-            return { CSSUnparsedValue::create(tokenizer.tokenRange()) };
-        }, [&](auto&) {
-            CSSTokenizer tokenizer(customPropertyValue->customCSSText(CSS::defaultSerializationContext()));
-            return ExceptionOr<Ref<CSSStyleValue>> { CSSUnparsedValue::create(tokenizer.tokenRange()) };
-        });
+            }
+        );
     } else if (RefPtr transformList = dynamicDowncast<CSSTransformListValue>(cssValue)) {
-        auto transformValue = CSSTransformValue::create(transformList.releaseNonNull());
+        auto transformValue = CSSTransformValue::create(transformList.releaseNonNull(), document);
         if (transformValue.hasException())
             return transformValue.releaseException();
         return Ref<CSSStyleValue> { transformValue.releaseReturnValue() };
@@ -374,41 +365,13 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValueFactory::reifyValue(const CSSValue&
         if (!valueList->length())
             return Exception { ExceptionCode::TypeError, "The CSSValueList should not be empty."_s };
         if ((valueList->length() == 1 && mayConvertCSSValueListToSingleValue(propertyID)) || (propertyID && CSSProperty::isListValuedProperty(*propertyID)))
-            return reifyValue((*valueList)[0], propertyID, document);
+            return reifyValue(document, (*valueList)[0], propertyID);
     }
 
     return CSSStyleValue::create(Ref(const_cast<CSSValue&>(cssValue)));
 }
 
-RefPtr<CSSStyleValue> CSSStyleValueFactory::constructStyleValueForCustomPropertySyntaxValue(const CSSCustomPropertyValue::SyntaxValue& syntaxValue)
-{
-    return WTF::switchOn(syntaxValue, [&](const Length& length) -> RefPtr<CSSStyleValue> {
-        if (length.isFixed())
-            return CSSUnitValue::create(length.value(), CSSUnitType::CSS_PX);
-        if (length.isPercent())
-            return CSSUnitValue::create(length.percent(), CSSUnitType::CSS_PERCENTAGE);
-        // FIXME: Calc.
-        return nullptr;
-    }, [&](const CSSCustomPropertyValue::NumericSyntaxValue& numericValue) -> RefPtr<CSSStyleValue>  {
-        return CSSUnitValue::create(numericValue.value, numericValue.unitType);
-    }, [&](const Style::Color& colorValue) -> RefPtr<CSSStyleValue> {
-        if (colorValue.isCurrentColor())
-            return CSSKeywordValue::rectifyKeywordish(nameLiteral(CSSValueCurrentcolor));
-        return CSSStyleValue::create(CSSValuePool::singleton().createColorValue(colorValue.resolvedColor()));
-    }, [&](const URL& urlValue) -> RefPtr<CSSStyleValue> {
-        return CSSStyleValue::create(CSSPrimitiveValue::createURI(urlValue.string()));
-    }, [&](const String& identValue) -> RefPtr<CSSStyleValue> {
-        return CSSKeywordValue::rectifyKeywordish(identValue);
-    }, [&](const RefPtr<StyleImage>&) -> RefPtr<CSSStyleValue>  {
-        // FIXME: <image>.
-        return nullptr;
-    }, [&](const CSSCustomPropertyValue::TransformSyntaxValue&) -> RefPtr<CSSStyleValue>  {
-        // FIXME: <transform>, <transform-list>.
-        return nullptr;
-    });
-}
-
-ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleValuesOrStrings(const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values, const CSSParserContext& parserContext)
+ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleValuesOrStrings(Document& document, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values)
 {
     Vector<Ref<CSSStyleValue>> styleValues;
     for (auto&& value : WTFMove(values)) {
@@ -418,7 +381,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValueFactory::vectorFromStyleVal
             styleValues.append(styleValue.releaseNonNull());
         }, [&](String&& string) {
             constexpr bool parseMultiple = true;
-            auto result = CSSStyleValueFactory::parseStyleValue(property, string, parseMultiple, parserContext);
+            auto result = CSSStyleValueFactory::parseStyleValue(document, property, string, parseMultiple);
             if (result.hasException()) {
                 exception = result.releaseException();
                 return;

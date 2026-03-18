@@ -39,6 +39,7 @@
 #include "JSInterfaceJIT.h"
 #include "LLIntData.h"
 #include "PCToCodeOriginMap.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
@@ -204,6 +205,9 @@ namespace JSC {
         {
             call(function, OperationPtrTag);
         }
+
+        template<size_t minAlign, typename Bytecode>
+        Address computeBaseAddressForMetadata(const Bytecode&, GPRReg);
 
         template <typename Bytecode>
         void loadPtrFromMetadata(const Bytecode&, size_t offset, GPRReg);
@@ -420,7 +424,7 @@ namespace JSC {
 #if USE(BIGINT32)
         void emit_op_is_big_int(const JSInstruction*);
 #else
-        NO_RETURN void emit_op_is_big_int(const JSInstruction*);
+        [[noreturn]] void emit_op_is_big_int(const JSInstruction*);
 #endif
         void emit_op_is_object(const JSInstruction*);
         void emit_op_is_cell_with_type(const JSInstruction*);
@@ -476,7 +480,7 @@ namespace JSC {
         void emit_op_new_async_generator_func(const JSInstruction*);
         void emit_op_new_async_generator_func_exp(const JSInstruction*);
         void emit_op_new_object(const JSInstruction*);
-        void emit_op_new_regexp(const JSInstruction*);
+        void emit_op_new_reg_exp(const JSInstruction*);
         void emit_op_create_lexical_environment(const JSInstruction*);
         void emit_op_create_direct_arguments(const JSInstruction*);
         void emit_op_create_scoped_arguments(const JSInstruction*);
@@ -900,8 +904,8 @@ namespace JSC {
         MathICHolder m_mathICs;
 
         Vector<JITConstantPool::Value> m_constantPool;
-        SegmentedVector<BaselineUnlinkedCallLinkInfo> m_unlinkedCalls;
-        SegmentedVector<BaselineUnlinkedStructureStubInfo> m_unlinkedStubInfos;
+        SaSegmentedVector<BaselineUnlinkedCallLinkInfo> m_unlinkedCalls;
+        SaSegmentedVector<BaselineUnlinkedStructureStubInfo> m_unlinkedStubInfos;
         FixedVector<SimpleJumpTable> m_switchJumpTables;
         FixedVector<StringJumpTable> m_stringSwitchJumpTables;
 

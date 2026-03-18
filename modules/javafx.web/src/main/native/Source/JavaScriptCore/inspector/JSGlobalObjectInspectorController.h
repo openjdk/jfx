@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -113,9 +113,9 @@ private:
     void createLazyAgents();
 
     JSC::JSGlobalObject& m_globalObject;
-    std::unique_ptr<InjectedScriptManager> m_injectedScriptManager;
+    const UniqueRef<InjectedScriptManager> m_injectedScriptManager;
     std::unique_ptr<JSGlobalObjectConsoleClient> m_consoleClient;
-    Ref<WTF::Stopwatch> m_executionStopwatch;
+    const Ref<WTF::Stopwatch> m_executionStopwatch;
     std::unique_ptr<JSGlobalObjectDebugger> m_debugger;
 
     AgentRegistry m_agents;
@@ -125,8 +125,8 @@ private:
     InspectorAgent* m_inspectorAgent { nullptr };
     InspectorDebuggerAgent* m_debuggerAgent { nullptr };
 
-    Ref<FrontendRouter> m_frontendRouter;
-    Ref<BackendDispatcher> m_backendDispatcher;
+    const Ref<FrontendRouter> m_frontendRouter;
+    const Ref<BackendDispatcher> m_backendDispatcher;
 
     // Used to keep the JSGlobalObject and VM alive while we are debugging it.
     JSC::Strong<JSC::JSGlobalObject> m_strongGlobalObject;

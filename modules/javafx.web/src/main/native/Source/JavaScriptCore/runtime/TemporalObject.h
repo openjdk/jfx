@@ -22,7 +22,6 @@
 #pragma once
 
 #include "JSObject.h"
-#include <variant>
 #include <wtf/Int128.h>
 
 namespace JSC {

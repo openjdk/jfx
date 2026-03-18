@@ -27,6 +27,7 @@
 
 #include "CellContainer.h"
 #include "WeakImpl.h"
+#include <wtf/DebugHeap.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/StdLibExtras.h>
 

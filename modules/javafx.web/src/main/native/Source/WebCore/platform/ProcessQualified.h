@@ -26,8 +26,10 @@
 #pragma once
 
 #include "ProcessIdentifier.h"
+#include <wtf/GetPtr.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
+#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
@@ -115,11 +117,6 @@ public:
         return object() >= other.object();
     }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const ProcessQualified& identifier) { return T::MarkableTraits::isEmptyValue(identifier.object()); }
-        static constexpr ProcessQualified emptyValue() { return { T::MarkableTraits::emptyValue(), ProcessIdentifier::MarkableTraits::emptyValue() }; }
-    };
-
 private:
     T m_object;
     ProcessIdentifier m_processIdentifier;
@@ -137,7 +134,7 @@ bool operator<=(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete
 template <typename T>
 inline TextStream& operator<<(TextStream& ts, const ProcessQualified<T>& processQualified)
 {
-    ts << "ProcessQualified(" << processQualified.object() << ", " << processQualified.processIdentifier() << ')';
+    ts << "ProcessQualified("_s << processQualified.object() << ", "_s << processQualified.processIdentifier() << ')';
     return ts;
 }
 
@@ -199,6 +196,12 @@ class StringTypeAdapter<WebCore::ProcessQualified<T>, void> : public ProcessQual
 public:
     explicit StringTypeAdapter(const WebCore::ProcessQualified<T>& processQualified)
         : ProcessQualifiedStringTypeAdapter(processQualified.processIdentifier().toUInt64(), processQualified.object().toUInt64()) { }
+};
+
+template<typename T>
+struct MarkableTraits<WebCore::ProcessQualified<T>> {
+    static bool isEmptyValue(const WebCore::ProcessQualified<T>& identifier) { return MarkableTraits<T>::isEmptyValue(identifier.object()); }
+    static constexpr WebCore::ProcessQualified<T> emptyValue() { return { MarkableTraits<T>::emptyValue(), MarkableTraits<WebCore::ProcessIdentifier>::emptyValue() }; }
 };
 
 } // namespace WTF

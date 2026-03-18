@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,12 @@
 #include "config.h"
 #include "ProxyObject.h"
 
-#include <algorithm>
+#include "GetterSetter.h"
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
 #include "ObjectConstructor.h"
 #include "VMInlines.h"
+#include <algorithm>
 #include <wtf/NoTailCalls.h>
 #include <wtf/text/MakeString.h>
 
@@ -155,7 +156,7 @@ static JSValue performProxyGet(JSGlobalObject* globalObject, ProxyObject* proxyO
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return { };
     }
@@ -267,7 +268,7 @@ bool ProxyObject::performInternalMethodGetOwnProperty(JSGlobalObject* globalObje
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -373,7 +374,7 @@ bool ProxyObject::performHasProperty(JSGlobalObject* globalObject, PropertyName 
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -454,7 +455,7 @@ bool ProxyObject::getOwnPropertySlotCommon(JSGlobalObject* globalObject, Propert
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -494,7 +495,7 @@ bool ProxyObject::performPut(JSGlobalObject* globalObject, JSValue putValue, JSV
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -604,7 +605,7 @@ JSC_DEFINE_HOST_FUNCTION(performProxyCall, (JSGlobalObject* globalObject, CallFr
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return encodedJSValue();
     }
@@ -653,7 +654,7 @@ JSC_DEFINE_HOST_FUNCTION(performProxyConstruct, (JSGlobalObject* globalObject, C
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return encodedJSValue();
     }
@@ -707,7 +708,7 @@ bool ProxyObject::performDelete(JSGlobalObject* globalObject, PropertyName prope
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -794,7 +795,7 @@ bool ProxyObject::performPreventExtensions(JSGlobalObject* globalObject)
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -845,7 +846,7 @@ bool ProxyObject::performIsExtensible(JSGlobalObject* globalObject)
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -902,7 +903,7 @@ bool ProxyObject::performDefineOwnProperty(JSGlobalObject* globalObject, Propert
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -1030,7 +1031,7 @@ void ProxyObject::performGetOwnPropertyNames(JSGlobalObject* globalObject, Prope
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return;
     }
@@ -1163,7 +1164,7 @@ bool ProxyObject::performSetPrototype(JSGlobalObject* globalObject, JSValue prot
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return false;
     }
@@ -1204,7 +1205,7 @@ bool ProxyObject::performSetPrototype(JSGlobalObject* globalObject, JSValue prot
     if (targetIsExtensible)
         return true;
 
-    JSValue targetPrototype = target->getPrototype(vm, globalObject);
+    JSValue targetPrototype = target->getPrototype(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
     bool isSame = sameValue(globalObject, prototype, targetPrototype);
     RETURN_IF_EXCEPTION(scope, false);
@@ -1227,7 +1228,7 @@ JSValue ProxyObject::performGetPrototype(JSGlobalObject* globalObject)
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return { };
     }
@@ -1245,7 +1246,7 @@ JSValue ProxyObject::performGetPrototype(JSGlobalObject* globalObject)
 
     JSObject* target = this->target();
     if (getPrototypeOfMethod.isUndefined())
-        RELEASE_AND_RETURN(scope, target->getPrototype(vm, globalObject));
+        RELEASE_AND_RETURN(scope, target->getPrototype(globalObject));
 
     MarkedArgumentBuffer arguments;
     arguments.append(target);
@@ -1263,7 +1264,7 @@ JSValue ProxyObject::performGetPrototype(JSGlobalObject* globalObject)
     if (targetIsExtensible)
         return trapResult;
 
-    JSValue targetPrototype = target->getPrototype(vm, globalObject);
+    JSValue targetPrototype = target->getPrototype(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     bool isSame = sameValue(globalObject, targetPrototype, trapResult);
     RETURN_IF_EXCEPTION(scope, { });

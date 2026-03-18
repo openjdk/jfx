@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,11 +44,39 @@ bool isCenterPosition(const Position& position)
     };
 
     return WTF::switchOn(position,
-        [&](const TwoComponentPosition& twoComponent) {
-            return isCenter(get<0>(twoComponent)) && isCenter(get<1>(twoComponent));
+        [&](const TwoComponentPositionHorizontalVertical& components) {
+            return isCenter(get<0>(components)) && isCenter(get<1>(components));
         },
-        [&](const FourComponentPosition&) {
+        [&](const auto&) {
             return false;
+        }
+    );
+}
+
+static auto toTwoComponent(const ThreeComponentPositionHorizontal& component) -> TwoComponentPositionHorizontal
+{
+    return WTF::switchOn(component.offset, [](auto keyword) -> TwoComponentPositionHorizontal { return { keyword }; });
+}
+
+static auto toTwoComponent(const ThreeComponentPositionVertical& component) -> TwoComponentPositionVertical
+{
+    return WTF::switchOn(component.offset, [](auto keyword) -> TwoComponentPositionVertical { return { keyword }; });
+}
+
+std::pair<CSS::PositionX, CSS::PositionY> split(CSS::Position&& position)
+{
+    // CSS::PositionX and CSS::PositionY don't utilize the three component variants, so the
+    // non-length containing item must be converted to its two component variant.
+
+    return WTF::switchOn(WTFMove(position),
+        [&](const auto& components) -> std::pair<CSS::PositionX, CSS::PositionY> {
+            return { CSS::PositionX(get<0>(components)), CSS::PositionY(get<1>(components)) };
+        },
+        [&](const ThreeComponentPositionHorizontalVerticalLengthFirst& components) -> std::pair<CSS::PositionX, CSS::PositionY> {
+            return { CSS::PositionX(get<0>(components)), CSS::PositionY(toTwoComponent(get<1>(components))) };
+        },
+        [&](const ThreeComponentPositionHorizontalVerticalLengthSecond& components) -> std::pair<CSS::PositionX, CSS::PositionY> {
+            return { CSS::PositionX(toTwoComponent(get<0>(components))), CSS::PositionY(get<1>(components)) };
         }
     );
 }

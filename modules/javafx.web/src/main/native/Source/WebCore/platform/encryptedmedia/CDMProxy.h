@@ -59,7 +59,7 @@ class MediaPlayer;
 class SharedBuffer;
 
 using KeyIDType = Vector<uint8_t>;
-using KeyHandleValueVariant = std::variant<
+using KeyHandleValueVariant = Variant<
     Vector<uint8_t>
 #if ENABLE(THUNDER)
     , BoxPtr<OpenCDMSession>
@@ -96,7 +96,6 @@ public:
     // Two keys are equal if they have the same ID, ignoring key value and status.
     friend bool operator==(const KeyHandle &k1, const KeyHandle &k2) { return k1.m_id == k2.m_id; }
     friend bool operator==(const KeyHandle &k, const KeyIDType& keyID) { return k.m_id == keyID; }
-    friend bool operator==(const KeyIDType& keyID, const KeyHandle &k) { return k == keyID; }
 
 protected:
 
@@ -185,13 +184,13 @@ public:
     auto values() const { return m_keys.values(); }
     KeyStoreIDType id() const { return m_id; }
 
-    auto begin() { return m_keys.begin(); }
-    auto begin() const { return m_keys.begin(); }
-    auto end() { return m_keys.end(); }
-    auto end() const { return m_keys.end(); }
+    auto begin() LIFETIME_BOUND { return m_keys.begin(); }
+    auto begin() const LIFETIME_BOUND { return m_keys.begin(); }
+    auto end() LIFETIME_BOUND { return m_keys.end(); }
+    auto end() const LIFETIME_BOUND { return m_keys.end(); }
 
 protected:
-    UncheckedKeyHashMap<KeyIDType, RefPtr<T>> m_keys;
+    HashMap<KeyIDType, RefPtr<T>> m_keys;
 
 private:
     KeyStoreIDType m_id;
@@ -232,7 +231,7 @@ private:
         m_references.remove(id);
     }
 
-    UncheckedKeyHashSet<KeyStoreIDType> m_references;
+    HashSet<KeyStoreIDType> m_references;
 };
 
 class ReferenceAwareKeyStore : public KeyStoreBase<ReferenceAwareKeyHandle> {

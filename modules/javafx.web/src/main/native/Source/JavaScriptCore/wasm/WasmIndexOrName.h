@@ -105,6 +105,11 @@ public:
         return m_indexName.name;
     }
 
+    const std::span<const char8_t> moduleName() const
+    {
+        return nameSection()->moduleName.size() ? nameSection()->moduleName.span() : nameSection()->moduleHash.span();
+    }
+
     NameSection* nameSection() const { return m_nameSection.get(); }
     void dump(PrintStream&) const;
 

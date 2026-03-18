@@ -33,13 +33,14 @@
 #include "CSSPropertyParser.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'will-change'> = auto | <animateable-feature>#
     // https://drafts.csswg.org/css-will-change/#propdef-will-change
@@ -66,7 +67,7 @@ RefPtr<CSSValue> consumeWillChange(CSSParserTokenRange& range, const CSSParserCo
             CSSPropertyID propertyID = cssPropertyID(range.peek().value());
             if (propertyID == CSSPropertyWillChange)
                 return nullptr;
-            if (!isExposed(propertyID, &context.propertySettings))
+            if (!isExposed(propertyID, &state.context.propertySettings))
                 propertyID = CSSPropertyInvalid;
             if (propertyID != CSSPropertyInvalid) {
                 values.append(CSSPrimitiveValue::create(propertyID));

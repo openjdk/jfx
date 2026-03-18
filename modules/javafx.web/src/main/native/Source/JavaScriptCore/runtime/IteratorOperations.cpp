@@ -92,13 +92,19 @@ void iteratorClose(JSGlobalObject* globalObject, JSValue iterator)
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     Exception* exception = nullptr;
-    if (UNLIKELY(catchScope.exception())) {
+    if (catchScope.exception()) [[unlikely]] {
         exception = catchScope.exception();
         catchScope.clearException();
     }
 
     JSValue returnFunction = iterator.get(globalObject, vm.propertyNames->returnKeyword);
-    if (UNLIKELY(throwScope.exception()) || returnFunction.isUndefinedOrNull()) {
+    if (throwScope.exception()) [[unlikely]] {
+        if (exception)
+            throwException(globalObject, throwScope, exception);
+        return;
+    }
+
+    if (returnFunction.isUndefinedOrNull()) {
         if (exception)
             throwException(globalObject, throwScope, exception);
         return;

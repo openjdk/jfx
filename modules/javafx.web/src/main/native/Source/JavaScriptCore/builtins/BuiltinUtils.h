@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "CommonIdentifiers.h"
 #include "ConstructAbility.h"
 #include "ConstructorKind.h"
 #include "ImplementationVisibility.h"

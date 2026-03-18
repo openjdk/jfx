@@ -27,6 +27,7 @@
 
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include "FloatSize.h"
 
 #include "PlatformJavaClasses.h"
 #include "RenderingQueue.h"

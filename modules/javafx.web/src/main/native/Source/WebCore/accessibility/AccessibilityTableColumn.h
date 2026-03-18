@@ -36,7 +36,7 @@ class RenderTableSection;
 
 class AccessibilityTableColumn final : public AccessibilityMockObject {
 public:
-    static Ref<AccessibilityTableColumn> create(AXID);
+    static Ref<AccessibilityTableColumn> create(AXID, AXObjectCache&);
     virtual ~AccessibilityTableColumn();
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Column; }
@@ -50,7 +50,7 @@ public:
     LayoutRect elementRect() const final;
 
 private:
-    explicit AccessibilityTableColumn(AXID);
+    explicit AccessibilityTableColumn(AXID, AXObjectCache&);
 
     bool computeIsIgnored() const final;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,8 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include <wtf/Atomics.h>
 #include <wtf/MainThread.h>
@@ -512,7 +514,7 @@ void AudioNode::pullInputs(size_t framesToProcess)
 bool AudioNode::inputsAreSilent()
 {
     for (auto& input : m_inputs) {
-        if (!input->bus()->isSilent())
+        if (!input->bus().isSilent())
             return false;
     }
     return true;
@@ -521,7 +523,7 @@ bool AudioNode::inputsAreSilent()
 void AudioNode::silenceOutputs()
 {
     for (auto& output : m_outputs)
-        output->bus()->zero();
+        output->bus().zero();
 }
 
 void AudioNode::enableOutputsIfNecessary()

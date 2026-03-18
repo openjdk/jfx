@@ -39,6 +39,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGStringList.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -63,7 +64,7 @@ static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
     Vector<float> result;
 
     for (auto keyTime : keyTimes) {
-        keyTime = keyTime.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+        keyTime = keyTime.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
 
         bool ok;
         float time = keyTime.toFloat(ok);
@@ -75,6 +76,11 @@ static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
             return { };
 
         result.append(time);
+    }
+
+    if (verifyOrder && !result.isEmpty() && !result.last()) {
+        ASSERT(!std::accumulate(result.begin(), result.end(), 0));
+        return { };
     }
 
     return result;
@@ -90,9 +96,7 @@ static std::optional<Vector<UnitBezier>> parseKeySplines(StringView string)
 
         Vector<UnitBezier> result;
 
-        bool delimParsed = false;
         while (buffer.hasCharactersRemaining()) {
-            delimParsed = false;
             auto posA = parseNumber(buffer);
             if (!posA || !isInRange<float>(*posA, 0, 1))
                 return std::nullopt;
@@ -111,16 +115,12 @@ static std::optional<Vector<UnitBezier>> parseKeySplines(StringView string)
 
             skipOptionalSVGSpaces(buffer);
 
-            if (skipExactly(buffer, ';'))
-                delimParsed = true;
+            skipExactly(buffer, ';');
 
             skipOptionalSVGSpaces(buffer);
 
             result.append(UnitBezier { *posA, *posB, *posC, *posD });
         }
-
-        if (!(buffer.atEnd() && !delimParsed))
-            return std::nullopt;
 
         return result;
     });
@@ -164,6 +164,8 @@ bool SVGAnimationElement::attributeContainsJavaScriptURL(const Attribute& attrib
 
 void SVGAnimationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    auto parseError = SVGParsingError::ParsingFailed;
+
     switch (name.nodeName()) {
     case AttributeNames::valuesAttr:
         // Per the SMIL specification, leading and trailing white space,
@@ -171,7 +173,7 @@ void SVGAnimationElement::attributeChanged(const QualifiedName& name, const Atom
         // http://www.w3.org/TR/SVG11/animate.html#ValuesAttribute
         m_values.clear();
         newValue.string().split(';', [this](StringView innerValue) {
-            m_values.append(innerValue.trim(isASCIIWhitespace<UChar>).toString());
+            m_values.append(innerValue.trim(isASCIIWhitespace<char16_t>).toString());
         });
         updateAnimationMode();
         break;
@@ -188,8 +190,10 @@ void SVGAnimationElement::attributeChanged(const QualifiedName& name, const Atom
     case AttributeNames::keySplinesAttr:
         if (auto keySplines = parseKeySplines(newValue))
             m_keySplines = WTFMove(*keySplines);
-        else
+        else {
             m_keySplines.clear();
+            reportAttributeParsingError(parseError, name, newValue);
+        }
         break;
     case AttributeNames::attributeTypeAttr:
         setAttributeType(newValue);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,13 +45,6 @@ RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& sty
     setHasShadowControls(true);
 }
 
-RenderMedia::RenderMedia(Type type, HTMLMediaElement& element, RenderStyle&& style, const IntSize& intrinsicSize)
-    : RenderImage(type, element, WTFMove(style), ReplacedFlag::IsMedia)
-{
-    setIntrinsicSize(intrinsicSize);
-    setHasShadowControls(true);
-}
-
 RenderMedia::~RenderMedia() = default;
 
 void RenderMedia::paintReplaced(PaintInfo&, const LayoutPoint&)
@@ -63,14 +56,17 @@ void RenderMedia::layout()
     LayoutSize oldSize = size();
     RenderImage::layout();
     if (oldSize != size())
-        mediaElement().layoutSizeChanged();
+        protectedMediaElement()->layoutSizeChanged();
 }
 
 void RenderMedia::styleDidChange(StyleDifference difference, const RenderStyle* oldStyle)
 {
     RenderImage::styleDidChange(difference, oldStyle);
     if (!oldStyle || style().usedVisibility() != oldStyle->usedVisibility())
-        mediaElement().visibilityDidChange();
+        protectedMediaElement()->visibilityDidChange();
+
+    if (!oldStyle || style().dynamicRangeLimit() != oldStyle->dynamicRangeLimit())
+        protectedMediaElement()->dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
 }
 
 } // namespace WebCore

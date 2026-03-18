@@ -36,10 +36,16 @@ enum class DecodingMode : uint8_t {
     Asynchronous
 };
 
+enum class ShouldDecodeToHDR : bool {
+    No,
+    Yes
+};
+
 class DecodingOptions {
 public:
-    DecodingOptions(DecodingMode decodingMode = DecodingMode::Synchronous, const std::optional<IntSize>& sizeForDrawing = std::nullopt)
+    DecodingOptions(DecodingMode decodingMode = DecodingMode::Synchronous, ShouldDecodeToHDR shouldDecodeToHDR = ShouldDecodeToHDR::No, const std::optional<IntSize>& sizeForDrawing = std::nullopt)
         : m_decodingMode(decodingMode)
+        , m_shouldDecodeToHDR(shouldDecodeToHDR)
         , m_sizeForDrawing(sizeForDrawing)
     {
     }
@@ -51,12 +57,17 @@ public:
     bool isSynchronous() const { return m_decodingMode == DecodingMode::Synchronous; }
     bool isAsynchronous() const { return m_decodingMode == DecodingMode::Asynchronous; }
 
+    ShouldDecodeToHDR shouldDecodeToHDR() const { return m_shouldDecodeToHDR; }
+
     std::optional<IntSize> sizeForDrawing() const { return m_sizeForDrawing; }
     bool hasFullSize() const { return !m_sizeForDrawing; }
     bool hasSizeForDrawing() const { return !!m_sizeForDrawing; }
 
     bool isCompatibleWith(const DecodingOptions& other) const
     {
+        if (shouldDecodeToHDR() != other.shouldDecodeToHDR())
+            return false;
+
         if (isAuto() || other.isAuto())
             return false;
 
@@ -71,6 +82,7 @@ public:
 
 private:
     DecodingMode m_decodingMode;
+    ShouldDecodeToHDR m_shouldDecodeToHDR;
     std::optional<IntSize> m_sizeForDrawing;
 };
 

@@ -50,6 +50,7 @@ public:
     virtual void audioTrackKindChanged(AudioTrack&) { }
     virtual void audioTrackLabelChanged(AudioTrack&) { }
     virtual void audioTrackLanguageChanged(AudioTrack&) { }
+    virtual void audioTrackConfigurationChanged(AudioTrack&) { }
     virtual void willRemoveAudioTrack(AudioTrack&) { }
 };
 

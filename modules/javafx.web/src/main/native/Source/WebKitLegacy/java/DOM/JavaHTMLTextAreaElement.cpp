@@ -294,12 +294,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAut
     return JavaReturn<String>(env, IMPL->autocomplete());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString{String(env, value)});
-}
-
 
 // Functions
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_checkValidityImpl(JNIEnv*, jclass, jlong peer)

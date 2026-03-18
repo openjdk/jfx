@@ -304,9 +304,14 @@ void PageOverlay::clear()
         pageOverlayController->clearPageOverlay(*this);
 }
 
-GraphicsLayer& PageOverlay::layer()
+GraphicsLayer& PageOverlay::layer() const
 {
     return controller()->layerForOverlay(*this);
+}
+
+Ref<GraphicsLayer> PageOverlay::protectedLayer() const
+{
+    return layer();
 }
 
 } // namespace WebKit

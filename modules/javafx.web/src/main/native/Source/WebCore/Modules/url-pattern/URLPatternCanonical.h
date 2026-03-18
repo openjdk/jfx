@@ -25,9 +25,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/text/StringView.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class BaseURLStringType : bool;
 enum class EncodingCallbackType : uint8_t { Protocol, Username, Password, Host, IPv6Host, Port, Path, OpaquePath, Search, Hash };
@@ -38,7 +41,7 @@ String canonicalizeUsername(StringView value, BaseURLStringType valueType);
 String canonicalizePassword(StringView value, BaseURLStringType valueType);
 ExceptionOr<String> canonicalizeHostname(StringView value, BaseURLStringType valueType);
 ExceptionOr<String> canonicalizeIPv6Hostname(StringView value, BaseURLStringType valueType);
-ExceptionOr<String> canonicalizePort(StringView portValue, const std::optional<StringView> protocolValue, BaseURLStringType portValueType);
+ExceptionOr<String> canonicalizePort(StringView portValue, StringView protocolValue, BaseURLStringType portValueType);
 ExceptionOr<String> processPathname(StringView pathnameValue, const StringView protocolValue, BaseURLStringType pathnameValueType);
 ExceptionOr<String> canonicalizePathname(StringView pathnameValue);
 ExceptionOr<String> canonicalizeOpaquePathname(StringView value);

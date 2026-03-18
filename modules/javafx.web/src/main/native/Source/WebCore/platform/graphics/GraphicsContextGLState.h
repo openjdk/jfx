@@ -39,7 +39,7 @@ struct GraphicsContextGLState {
     GCGLuint boundDrawFBO { 0 };
     GCGLenum activeTextureUnit { GraphicsContextGL::TEXTURE0 };
 
-    using BoundTextureMap = UncheckedKeyHashMap<GCGLenum,
+    using BoundTextureMap = HashMap<GCGLenum,
         std::pair<GCGLuint, GCGLenum>,
         IntHash<GCGLenum>,
         WTF::UnsignedWithZeroKeyHashTraits<GCGLuint>,

@@ -34,11 +34,7 @@ SVGTextMetrics::SVGTextMetrics(const RenderSVGInlineText& textRenderer, const Te
 
     // Calculate width/height using the scaled font, divide this result by the scalingFactor afterwards.
     m_width = scaledFont.width(run) / scalingFactor;
-    m_glyph.name = emptyString();
     m_height = scaledFont.metricsOfPrimaryFont().height() / scalingFactor;
-
-    m_glyph.unicodeString = run.text().toString();
-    m_glyph.isValid = true;
 
     m_length = static_cast<unsigned>(run.length());
 }

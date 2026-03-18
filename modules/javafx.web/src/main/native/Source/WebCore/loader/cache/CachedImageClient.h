@@ -35,7 +35,7 @@ class IntRect;
 enum class VisibleInViewportState { Unknown, Yes, No };
 
 class CachedImageClient : public CachedResourceClient, public CanMakeCheckedPtr<CachedImageClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CachedImageClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CachedImageClient);
 public:
     virtual ~CachedImageClient() = default;
@@ -53,7 +53,7 @@ public:
     virtual VisibleInViewportState imageVisibleInViewport(const Document&) const { return VisibleInViewportState::No; }
 
     virtual void didRemoveCachedImageClient(CachedImage&) { }
-
+    virtual void imageContentChanged(CachedImage&) { }
     virtual void scheduleRenderingUpdateForImage(CachedImage&) { }
 
     virtual bool allowsAnimation() const { return true; }

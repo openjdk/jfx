@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@ class LocalDOMWindowProperty {
 public:
     WEBCORE_EXPORT LocalFrame* frame() const;
     LocalDOMWindow* window() const;
+    RefPtr<LocalDOMWindow> protectedWindow() const { return window(); }
 
 protected:
     explicit LocalDOMWindowProperty(LocalDOMWindow*);

@@ -40,7 +40,7 @@ namespace JSC {
 
     DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(IdentifierArena);
     class IdentifierArena {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena, IdentifierArena);
     public:
         IdentifierArena()
         {
@@ -50,7 +50,7 @@ namespace JSC {
         template <typename T>
         ALWAYS_INLINE const Identifier& makeIdentifier(VM&, std::span<const T> characters);
         ALWAYS_INLINE const Identifier& makeEmptyIdentifier(VM&);
-        ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM&, std::span<const UChar> characters);
+        ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM&, std::span<const char16_t> characters);
         ALWAYS_INLINE const Identifier& makeIdentifier(VM&, SymbolImpl*);
 
         const Identifier* makeBigIntDecimalIdentifier(VM&, const Identifier&, uint8_t radix);
@@ -111,7 +111,7 @@ namespace JSC {
         return vm.propertyNames->emptyIdentifier;
     }
 
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM& vm, std::span<const UChar> characters)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM& vm, std::span<const char16_t> characters)
     {
         if (characters.empty())
             return vm.propertyNames->emptyIdentifier;
@@ -169,7 +169,7 @@ namespace JSC {
             ASSERT(size <= freeablePoolSize);
             size_t alignedSize = alignSize(size);
             ASSERT(alignedSize <= freeablePoolSize);
-            if (UNLIKELY(static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize))
+            if (static_cast<size_t>(m_freeablePoolEnd - m_freeableMemory) < alignedSize) [[unlikely]]
                 allocateFreeablePool();
             void* block = m_freeableMemory;
             m_freeableMemory += alignedSize;
@@ -191,7 +191,7 @@ namespace JSC {
 
         IdentifierArena& identifierArena()
         {
-            if (UNLIKELY (!m_identifierArena))
+            if (!m_identifierArena) [[unlikely]]
                 m_identifierArena = makeUnique<IdentifierArena>();
             return *m_identifierArena;
         }

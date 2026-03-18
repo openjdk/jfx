@@ -29,6 +29,7 @@
 #include "LocalDOMWindowProperty.h"
 #include "NavigationHistoryEntry.h"
 #include "ScriptWrappable.h"
+#include "SerializedScriptValue.h"
 
 namespace JSC {
 class JSValue;

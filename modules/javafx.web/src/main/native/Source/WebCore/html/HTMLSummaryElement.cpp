@@ -23,6 +23,7 @@
 
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLSlotElement.h"
@@ -57,7 +58,7 @@ RefPtr<HTMLDetailsElement> HTMLSummaryElement::detailsElement() const
     if (auto* parent = dynamicDowncast<HTMLDetailsElement>(parentElement()))
         return parent;
     // Fallback summary element is in the shadow tree.
-    if (auto* details = dynamicDowncast<HTMLDetailsElement>(shadowHost()))
+    if (RefPtr details = dynamicDowncast<HTMLDetailsElement>(shadowHost()))
         return details;
     return nullptr;
 }
@@ -94,7 +95,7 @@ void HTMLSummaryElement::defaultEventHandler(Event& event)
 {
     if (isActiveSummary()) {
         auto& eventNames = WebCore::eventNames();
-        if (event.type() == eventNames.DOMActivateEvent && !isInSummaryInteractiveContent(event.target())) {
+        if (event.type() == eventNames.DOMActivateEvent && !isInSummaryInteractiveContent(event.protectedTarget().get())) {
             if (RefPtr<HTMLDetailsElement> details = detailsElement())
                 details->toggleOpen();
             event.setDefaultHandled();

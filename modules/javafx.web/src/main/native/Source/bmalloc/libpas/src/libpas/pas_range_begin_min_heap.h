@@ -49,7 +49,7 @@ static inline int pas_range_begin_min_heap_compare(pas_range* left_ptr, pas_rang
 static inline size_t pas_range_begin_min_heap_get_index(pas_range* element_ptr)
 {
     PAS_UNUSED_PARAM(element_ptr);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

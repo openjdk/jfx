@@ -57,13 +57,12 @@ ALWAYS_INLINE static JSWeakSet* getWeakSet(JSGlobalObject* globalObject, JSValue
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!value.isObject())) {
+    if (!value.isObject()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Called WeakSet function on non-object"_s);
         return nullptr;
     }
 
-    auto* set = jsDynamicCast<JSWeakSet*>(asObject(value));
-    if (LIKELY(set))
+    if (auto* set = jsDynamicCast<JSWeakSet*>(asObject(value))) [[likely]]
         return set;
 
     throwTypeError(globalObject, scope, "Called WeakSet function on a non-WeakSet object"_s);
@@ -76,7 +75,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetDelete, (JSGlobalObject* globalObject, 
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (UNLIKELY(!key.isCell()))
+    if (!key.isCell()) [[unlikely]]
         return JSValue::encode(jsBoolean(false));
     return JSValue::encode(jsBoolean(set->remove(key.asCell())));
 }
@@ -87,7 +86,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetHas, (JSGlobalObject* globalObject, Cal
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (UNLIKELY(!key.isCell()))
+    if (!key.isCell()) [[unlikely]]
         return JSValue::encode(jsBoolean(false));
     return JSValue::encode(jsBoolean(set->has(key.asCell())));
 }
@@ -102,7 +101,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetAdd, (JSGlobalObject* globalObject, Cal
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (UNLIKELY(!canBeHeldWeakly(key)))
+    if (!canBeHeldWeakly(key)) [[unlikely]]
         return throwVMTypeError(globalObject, scope, WeakSetInvalidValueError);
     set->add(vm, key.asCell());
     return JSValue::encode(callFrame->thisValue());

@@ -39,6 +39,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     enum class Field : uint8_t {
         Entry = 0,
         IteratedObject,
@@ -146,7 +148,6 @@ private:
 
     JS_EXPORT_PRIVATE void finishCreation(JSGlobalObject*, JSSet*, IterationKind);
     void finishCreation(VM&);
-    DECLARE_VISIT_CHILDREN;
 };
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSSetIterator);
 

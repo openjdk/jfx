@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "HTMLDocumentParser.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
@@ -63,7 +64,7 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document, OptionSet<ParserC
     , m_options(document)
     , m_tokenizer(m_options)
     , m_scriptRunner(makeUnique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
-    , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
+    , m_treeBuilder(makeUniqueRef<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
     , m_parserScheduler(HTMLParserScheduler::create(*this))
     , m_preloader(makeUnique<HTMLResourcePreloader>(document))
     , m_shouldEmitTracePoints(isMainDocumentLoadingFromHTTP(document))
@@ -79,7 +80,7 @@ inline HTMLDocumentParser::HTMLDocumentParser(DocumentFragment& fragment, Elemen
     : ScriptableDocumentParser(fragment.document(), rawPolicy)
     , m_options(fragment.document())
     , m_tokenizer(m_options)
-    , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options, registry))
+    , m_treeBuilder(makeUniqueRef<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options, registry))
     , m_shouldEmitTracePoints(false) // Avoid emitting trace points when parsing fragments like outerHTML.
 {
     // https://html.spec.whatwg.org/multipage/syntax.html#parsing-html-fragments
@@ -268,7 +269,7 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
 {
     RefPtr parserScheduler = m_parserScheduler;
     do {
-        if (UNLIKELY(isWaitingForScripts())) {
+        if (isWaitingForScripts()) [[unlikely]] {
             if (mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeExecutingScript(m_treeBuilder->protectedScriptToProcess().get(), session))
                 return true;
 
@@ -282,10 +283,10 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
         // how the parser has always handled stopping when the page assigns window.location. What should
         // happen instead is that assigning window.location causes the parser to stop parsing cleanly.
         // The problem is we're not prepared to do that at every point where we run JavaScript.
-        if (UNLIKELY(!parsingFragment && document()->frame() && document()->protectedFrame()->protectedNavigationScheduler()->locationChangePending()))
+        if (!parsingFragment && document()->frame() && document()->protectedFrame()->protectedNavigationScheduler()->locationChangePending()) [[unlikely]]
             return false;
 
-        if (UNLIKELY(mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeToken(session)))
+        if (mode == SynchronousMode::AllowYield && parserScheduler->shouldYieldBeforeToken(session)) [[unlikely]]
             return true;
 
         auto token = m_tokenizer.nextToken(m_input.current());

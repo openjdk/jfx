@@ -47,7 +47,7 @@ static RefPtr<CSSValue> consumeSingleTransitionPropertyIdent(CSSParserTokenRange
     return consumeCustomIdent(range);
 }
 
-RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // This variant of consumeSingleTransitionProperty is used for the slightly different
     // parse rules used for the 'transition' shorthand which allows 'none':
@@ -64,7 +64,7 @@ RefPtr<CSSValue> consumeSingleTransitionPropertyOrNone(CSSParserTokenRange& rang
     return consumeSingleTransitionPropertyIdent(range, token);
 }
 
-RefPtr<CSSValue> consumeSingleTransitionProperty(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeSingleTransitionProperty(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // "The <custom-ident> production in <single-transition-property> also excludes the keyword
     //  none, in addition to the keywords always excluded from <custom-ident>."

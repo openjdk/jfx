@@ -40,8 +40,12 @@ public:
     ~PageHeapAgent();
 
     // HeapBackendDispatcherHandler
-    Inspector::Protocol::ErrorStringOr<void> enable();
-    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> enable() override;
+    Inspector::Protocol::ErrorStringOr<void> disable() override;
+
+    // JSC::HeapSnapshotBuilder::Client
+    String heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuilder&, JSC::JSCell*, const String& currentClassName) override;
+    bool heapSnapshotBuilderIsElement(JSC::HeapSnapshotBuilder&, JSC::JSCell*) override;
 
     // InspectorInstrumentation
     void mainFrameNavigated();

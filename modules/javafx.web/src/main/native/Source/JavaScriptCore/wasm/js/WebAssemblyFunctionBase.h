@@ -38,6 +38,8 @@ using Wasm::WasmToWasmImportableFunction;
 using Wasm::WasmOrJSImportableFunctionCallLinkInfo;
 
 class WebAssemblyFunctionBase : public JSFunction {
+    friend JSC::LLIntOffsetsExtractor;
+
 public:
     using Base = JSFunction;
 
@@ -45,12 +47,14 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     JSWebAssemblyInstance* instance() const { return m_instance.get(); }
 
     Wasm::TypeIndex typeIndex() const { return m_importableFunction.typeIndex; }
     Wasm::Type type() const { return { Wasm::TypeKind::Ref, typeIndex() }; }
     WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation() const { return m_importableFunction.entrypointLoadLocation; }
-    const uintptr_t* boxedWasmCalleeLoadLocation() const { return m_importableFunction.boxedWasmCalleeLoadLocation; }
+    const CalleeBits* boxedWasmCalleeLoadLocation() const { return m_importableFunction.boxedWasmCalleeLoadLocation; }
     const Wasm::WasmOrJSImportableFunction& importableFunction() const { return m_importableFunction; }
     const Wasm::RTT* rtt() const { return m_importableFunction.rtt; }
     const Wasm::FunctionSignature& signature() const;
@@ -66,7 +70,6 @@ public:
     static constexpr ptrdiff_t offsetOfRTT() { return OBJECT_OFFSETOF(WebAssemblyFunctionBase, m_importableFunction) + WasmToWasmImportableFunction::offsetOfRTT(); }
 
 protected:
-    DECLARE_VISIT_CHILDREN;
     void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name);
     WebAssemblyFunctionBase(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, Wasm::WasmOrJSImportableFunction&&, Wasm::WasmOrJSImportableFunctionCallLinkInfo*);
 

@@ -31,12 +31,13 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserState.h"
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext& context)
+RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, CSS::PropertyParserState& state)
 {
     // Standard says this should be:
     //
@@ -54,7 +55,7 @@ RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext& c
     CSSParserToken token = args.consumeIncludingWhitespace();
 
     AtomString attrName;
-    if (context.isHTMLDocument)
+    if (state.context.isHTMLDocument)
         attrName = token.value().convertToASCIILowercaseAtom();
     else
         attrName = token.value().toAtomString();

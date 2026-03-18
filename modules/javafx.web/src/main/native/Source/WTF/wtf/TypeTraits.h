@@ -97,6 +97,9 @@ struct RemoveSmartPointerHelper<T, Ref<Pointee>> {
 template<typename T>
 struct RemoveSmartPointer : detail::RemoveSmartPointerHelper<T, std::remove_cv_t<T>> { };
 
+template<typename T>
+using RemoveCVSmartPointer = std::remove_cvref_t<typename RemoveSmartPointer<T>::type>;
+
 // HasRefPtrMemberFunctions implementation
 namespace detail {
 

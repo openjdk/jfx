@@ -35,7 +35,9 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 
 #if PAS_X86_64
 

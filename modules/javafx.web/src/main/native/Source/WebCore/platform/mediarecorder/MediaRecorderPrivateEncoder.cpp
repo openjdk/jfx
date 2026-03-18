@@ -42,6 +42,7 @@
 #include <CoreAudio/CoreAudioTypes.h>
 #include <CoreMedia/CMTime.h>
 #include <mutex>
+#include <numbers>
 #include <wtf/Locker.h>
 #include <wtf/MediaTime.h>
 
@@ -144,7 +145,7 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
 {
     assertIsMainThread();
 
-    m_writer = writer.moveToUniquePtr();
+    lazyInitialize(m_writer, writer.moveToUniquePtr());
 
     ContentType mimeType(options.mimeType);
     auto containerType = mimeType.containerType();
@@ -188,6 +189,8 @@ bool MediaRecorderPrivateEncoder::initialize(const MediaRecorderPrivateOptions& 
         else
             return false; // unsupported codec.
     }
+
+    RELEASE_LOG(WebRTC, "MediaRecorderPrivateEncoder::initialize isWebM=%d, audioCodec=%d, videCodec=%d", isWebM, hasAudio() ? (int)m_audioCodec : -1, hasVideo() ? (int)m_videoCodec : -1);
 
     m_audioBitsPerSecond = options.audioBitsPerSecond.value_or(0);
     m_videoBitsPerSecond = options.videoBitsPerSecond.value_or(0);
@@ -290,7 +293,8 @@ void MediaRecorderPrivateEncoder::appendAudioSampleBuffer(const PlatformAudioDat
         m_currentStreamDescription = toCAAudioStreamDescription(description);
         addRingBuffer(description);
         m_currentAudioSampleCount = 0;
-    }
+    } else
+        clearRingBuffersIfPossible();
 
     auto currentAudioTime = m_currentAudioTime;
     m_lastEnqueuedAudioTimeUs = m_currentAudioTime.toMicroseconds();
@@ -308,10 +312,14 @@ void MediaRecorderPrivateEncoder::appendAudioSampleBuffer(const PlatformAudioDat
     m_currentAudioSampleCount += sampleCount;
 }
 
-void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStreamBasicDescription& description)
+void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStreamBasicDescription& description, InProcessCARingBuffer* newRingBuffer, size_t ringBufferId)
 {
     assertIsCurrent(queueSingleton());
 
+    if (!newRingBuffer) {
+        m_hadError = true;
+        return;
+    }
     if (!m_originalOutputDescription) {
         if (m_audioCodec != kAudioFormatLinearPCM) {
             AudioStreamBasicDescription outputDescription = { };
@@ -349,42 +357,39 @@ void MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged(const AudioStre
         return;
     }
 
-    updateCurrentRingBufferIfNeeded();
+    m_currentRingBuffer = newRingBuffer;
+    m_currentRingBufferId = ringBufferId;
 }
 
 void MediaRecorderPrivateEncoder::addRingBuffer(const AudioStreamDescription& description)
 {
     auto asbd = *std::get<const AudioStreamBasicDescription*>(description.platformDescription().description);
-    Locker locker { m_ringBuffersLock };
-    m_ringBuffers.append(InProcessCARingBuffer::allocate(asbd, description.sampleRate() * 2)); // allocate 2s of buffer.
-    queueSingleton().dispatch([weakThis = ThreadSafeWeakPtr { *this }, description = asbd] {
+    m_ringBuffers.append(std::make_pair(InProcessCARingBuffer::allocate(asbd, description.sampleRate() * 2), ++m_lastRingBufferId)); // allocate 2s of buffer.
+    queueSingleton().dispatch([weakThis = ThreadSafeWeakPtr { *this }, description = asbd, newRingBuffer = m_ringBuffers.last().first.get(), lastRingBufferId = m_lastRingBufferId] {
         if (RefPtr protectedThis = weakThis.get())
-            protectedThis->audioSamplesDescriptionChanged(description);
+            protectedThis->audioSamplesDescriptionChanged(description, newRingBuffer, lastRingBufferId);
     });
 }
 
 void MediaRecorderPrivateEncoder::writeDataToRingBuffer(AudioBufferList* list, size_t sampleCount, size_t totalSampleCount)
 {
-    Locker locker { m_ringBuffersLock };
-    if (m_ringBuffers.isEmpty() || !m_ringBuffers.last())
+    ASSERT(!m_ringBuffers.isEmpty());
+    if (!m_ringBuffers.last().first)
         return;
-    m_ringBuffers.last()->store(list, sampleCount, totalSampleCount);
+    m_ringBuffers.last().first->store(list, sampleCount, totalSampleCount);
 }
 
-void MediaRecorderPrivateEncoder::updateCurrentRingBufferIfNeeded()
+void MediaRecorderPrivateEncoder::clearRingBuffersIfPossible()
 {
-    assertIsCurrent(queueSingleton());
-
-    Locker locker { m_ringBuffersLock };
-    if (m_currentRingBuffer) {
-        ASSERT(m_ringBuffers.size() > 1);
+    if (m_ringBuffers.size() == 1)
+        return;
+    size_t currentRingBufferId = m_currentRingBufferId;
+    while (m_ringBuffers.size() > 1) {
+        if (m_ringBuffers.first().second < currentRingBufferId)
         m_ringBuffers.removeFirst();
-    }
-    m_currentRingBuffer = m_ringBuffers.first().get();
-    if (!m_currentRingBuffer) {
-        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateEncoder::audioSamplesDescriptionChanged: out of memory error occurred");
-        m_hadError = true;
-    }
+        else
+            break;
+    };
 }
 
 void MediaRecorderPrivateEncoder::audioSamplesAvailable(const MediaTime& time, size_t sampleCount, size_t totalSampleCount)
@@ -456,7 +461,7 @@ void MediaRecorderPrivateEncoder::appendVideoFrame(MediaTime sampleTime, Ref<Vid
         m_firstVideoFrameProcessed = true;
 
         if (frame->rotation() != VideoFrame::Rotation::None || frame->isMirrored()) {
-            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * M_PI / 180);
+            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame->rotation()) * std::numbers::pi / 180);
             if (frame->isMirrored())
                 m_videoTransform = CGAffineTransformScale(*m_videoTransform, -1, 1);
         }
@@ -884,11 +889,6 @@ void MediaRecorderPrivateEncoder::stopRecording()
 
         m_isPaused = false;
 
-        {
-            Locker locker { m_ringBuffersLock };
-            m_ringBuffers.clear();
-        }
-
         RefPtr converter = audioConverter();
         if (!converter)
             return;
@@ -923,7 +923,7 @@ void MediaRecorderPrivateEncoder::stopRecording()
     });
 }
 
-void MediaRecorderPrivateEncoder::fetchData(CompletionHandler<void(RefPtr<FragmentedSharedBuffer>&&, double)>&& completionHandler)
+void MediaRecorderPrivateEncoder::fetchData(CompletionHandler<void(Ref<FragmentedSharedBuffer>&&, double)>&& completionHandler)
 {
     assertIsMainThread();
 

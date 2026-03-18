@@ -256,6 +256,7 @@ enum class ScrollingStateNodeProperty : uint64_t {
     LayoutConstraintData                        = 1LLU << 2, // Same value as TotalContentsSize
         // ScrollingStateFixedNode, ScrollingStateStickyNode
     ViewportConstraints                         = 1LLU << 1, // Same value as ScrollableAreaSize, RelatedOverflowScrollingNodes and OverflowScrollingNode
+    ViewportAnchorLayer                         = 1LLU << 2, // Same value as TotalContentsSize
         // ScrollingStateOverflowScrollProxyNode
     OverflowScrollingNode                       = 1LLU << 1, // Same value as ScrollableAreaSize, ViewportConstraints and RelatedOverflowScrollingNodes
     // ScrollingStateFrameHostingNode

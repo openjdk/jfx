@@ -26,8 +26,16 @@
 #include "config.h"
 #include "JSCSSStyleDeclaration.h"
 
+#include "CSSFontFaceDescriptors.h"
+#include "CSSPageDescriptors.h"
+#include "CSSPositionTryDescriptors.h"
+#include "CSSStyleProperties.h"
 #include "DOMWrapperWorld.h"
+#include "JSCSSFontFaceDescriptors.h"
+#include "JSCSSPageDescriptors.h"
+#include "JSCSSPositionTryDescriptors.h"
 #include "JSCSSRuleCustom.h"
+#include "JSCSSStyleProperties.h"
 #include "JSDOMConvertInterface.h"
 #include "JSDOMConvertStrings.h"
 #include "JSDeprecatedCSSOMValue.h"
@@ -35,7 +43,6 @@
 #include "JSStyleSheetCustom.h"
 #include "StyledElement.h"
 #include "WebCoreOpaqueRootInlines.h"
-
 
 namespace WebCore {
 using namespace JSC;
@@ -59,5 +66,25 @@ void JSCSSStyleDeclaration::visitAdditionalChildren(Visitor& visitor)
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSCSSStyleDeclaration);
+
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<CSSStyleDeclaration>&& declaration)
+{
+    switch (declaration->styleDeclarationType()) {
+    case StyleDeclarationType::Style:
+        return createWrapper<CSSStyleProperties>(globalObject, WTFMove(declaration));
+    case StyleDeclarationType::FontFace:
+        return createWrapper<CSSFontFaceDescriptors>(globalObject, WTFMove(declaration));
+    case StyleDeclarationType::Page:
+        return createWrapper<CSSPageDescriptors>(globalObject, WTFMove(declaration));
+    case StyleDeclarationType::PositionTry:
+        return createWrapper<CSSPositionTryDescriptors>(globalObject, WTFMove(declaration));
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, CSSStyleDeclaration& object)
+{
+    return wrap(lexicalGlobalObject, globalObject, object);
+}
 
 } // namespace WebCore

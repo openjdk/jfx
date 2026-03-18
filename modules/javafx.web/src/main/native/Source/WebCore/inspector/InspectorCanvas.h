@@ -30,7 +30,6 @@
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
-#include <variant>
 #include <wtf/HashSet.h>
 #include <wtf/WeakRef.h>
 
@@ -61,7 +60,7 @@ public:
 
     JSC::JSValue resolveContext(JSC::JSGlobalObject*);
 
-    UncheckedKeyHashSet<Element*> clientNodes() const;
+    HashSet<Element*> clientNodes() const;
 
     void canvasChanged();
 
@@ -102,7 +101,7 @@ private:
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = std::variant<
+    using DuplicateDataVariant = Variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,

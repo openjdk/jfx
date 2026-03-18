@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2007, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,10 +49,19 @@ public:
     bool isStringClass() const;
 
 private:
+#if !PLATFORM(JAVA)
+    PlatformDisplayLibWPE(Ref<GLDisplay>&&, struct wpe_renderer_backend_egl*);
+
+    Type type() const override { return PlatformDisplay::Type::WPE; }
+
+    struct wpe_renderer_backend_egl* m_backend { nullptr };
+#endif
+#if PLATFORM(JAVA)
     jobject createDummyObject();
     const char* m_name;
-    mutable FieldMap m_fields;
-    mutable MethodListMap m_methods;
+        mutable FieldMap m_fields;
+        mutable MethodListMap m_methods;
+#endif
 };
 
 } // namespace Bindings

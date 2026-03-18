@@ -86,6 +86,7 @@
     || OS(FREEBSD)             \
     || OS(FUCHSIA)             \
     || OS(OPENBSD)             \
+    || OS(HAIKU)               \
     || OS(HURD)                \
     || OS(NETBSD)              \
     || OS(QNX)                 \

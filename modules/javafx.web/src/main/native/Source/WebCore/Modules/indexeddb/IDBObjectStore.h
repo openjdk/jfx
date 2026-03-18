@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "IDBCursorDirection.h"
 #include "IDBIndexIdentifier.h"
 #include "IDBKeyPath.h"
@@ -57,6 +56,8 @@ class WeakPtrImplWithEventTargetData;
 class WebCoreOpaqueRoot;
 
 struct IDBKeyRangeData;
+
+template<typename> class ExceptionOr;
 
 namespace IndexedDB {
 enum class ObjectStoreOverwriteMode : uint8_t;
@@ -126,11 +127,11 @@ private:
     enum class InlineKeyCheck { Perform, DoNotPerform };
     ExceptionOr<Ref<IDBRequest>> putOrAdd(JSC::JSGlobalObject&, JSC::JSValue, RefPtr<IDBKey>, IndexedDB::ObjectStoreOverwriteMode, InlineKeyCheck, RefPtr<SerializedScriptValue>&& = nullptr);
     ExceptionOr<Ref<IDBRequest>> doCount(const IDBKeyRangeData&);
-    ExceptionOr<Ref<IDBRequest>> doDelete(Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doDelete(NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
+    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&);
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;

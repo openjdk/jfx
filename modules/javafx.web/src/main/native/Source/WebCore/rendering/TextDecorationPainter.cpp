@@ -30,9 +30,9 @@
 #include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
+#include "RenderElementInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
-#include "ShadowData.h"
 #include "TextBoxPainter.h"
 #include "TextRun.h"
 
@@ -141,7 +141,7 @@ bool TextDecorationPainter::Styles::operator==(const Styles& other) const
         && underline.decorationStyle == other.underline.decorationStyle && overline.decorationStyle == other.overline.decorationStyle && linethrough.decorationStyle == other.linethrough.decorationStyle;
 }
 
-TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const FontCascade& font, const ShadowData* shadow, const FilterOperations* colorFilter, bool isPrinting, WritingMode writingMode)
+TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const FontCascade& font, const Style::TextShadows& shadow, const FilterOperations* colorFilter, bool isPrinting, WritingMode writingMode)
     : m_context(context)
     , m_isPrinting(isPrinting)
     , m_writingMode(writingMode)
@@ -190,14 +190,14 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
 
     float extraOffset = 0.f;
     auto boxOrigin = decorationGeometry.boxOrigin;
-    bool clipping = m_shadow && m_shadow->next() && !areLinesOpaque;
+    bool clipping = m_shadow.size() > 1 && !areLinesOpaque;
     if (clipping) {
         auto clipRect = FloatRect { boxOrigin, FloatSize { decorationGeometry.textBoxWidth, decorationGeometry.clippingOffset } };
-        for (const ShadowData* shadow = m_shadow; shadow; shadow = shadow->next()) {
-            auto shadowExtent = shadow->paintingExtent();
+        for (const auto& shadow : m_shadow) {
+            auto shadowExtent = Style::paintingExtent(shadow);
             auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow.location, m_writingMode);
             shadowRect.move(shadowOffset);
             clipRect.unite(shadowRect);
             extraOffset = std::max(extraOffset, std::max(0.f, shadowOffset.height()) + shadowExtent);
@@ -216,27 +216,7 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
     if (decorationType.contains(TextDecorationLine::Overline))
         overlineRect.move(0.f, decorationGeometry.overlineOffset);
 
-    auto* shadow = m_shadow;
-    do {
-        auto applyShadowIfNeeded = [&] {
-            if (!shadow)
-                return;
-            if (!shadow->next()) {
-                // The last set of lines paints normally inside the clip.
-                boxOrigin.move(0, -extraOffset);
-                extraOffset = 0;
-            }
-            auto shadowColor = style.colorResolvingCurrentColor(shadow->color());
-            if (m_shadowColorFilter)
-                m_shadowColorFilter->transformColor(shadowColor);
-
-            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
-            shadowOffset.expand(0, -extraOffset);
-            m_context.setDropShadow({ shadowOffset, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
-            shadow = shadow->next();
-        };
-        applyShadowIfNeeded();
-
+    auto draw = [&](const Style::TextShadow* shadow) {
         if (decorationType.contains(TextDecorationLine::Underline) && !underlineRect.isEmpty())
             paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
         if (decorationType.contains(TextDecorationLine::Overline) && !overlineRect.isEmpty())
@@ -245,11 +225,32 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
         // which will be painted in paintForegroundDecorations().
         if (shadow && decorationType.contains(TextDecorationLine::LineThrough))
             paintLineThrough({ boxOrigin, decorationGeometry.textBoxWidth, decorationGeometry.textDecorationThickness, decorationGeometry.linethroughCenter, decorationGeometry.wavyStrokeParameters }, Color::transparentBlack, decorationStyle);
-    } while (shadow);
+    };
+
+    if (m_shadow.isNone())
+        draw(nullptr);
+    else {
+        for (const auto& shadow : m_shadow) {
+            if (&shadow == &m_shadow.last()) {
+                // The last set of lines paints normally inside the clip.
+                boxOrigin.move(0, -extraOffset);
+                extraOffset = 0;
+            }
+            auto shadowColor = style.colorResolvingCurrentColor(shadow.color);
+            if (m_shadowColorFilter)
+                m_shadowColorFilter->transformColor(shadowColor);
+
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow.location, m_writingMode);
+            shadowOffset.expand(0, -extraOffset);
+            m_context.setDropShadow({ shadowOffset, shadow.blur.value, shadowColor, ShadowRadiusMode::Default });
+
+            draw(&shadow);
+        }
+    }
 
     if (clipping)
         m_context.restore();
-    else if (m_shadow)
+    else if (!m_shadow.isNone())
         m_context.clearDropShadow();
 }
 
@@ -318,9 +319,8 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
             return;
 
         current = current->parent();
-        if (current && current->isAnonymousBlock()) {
-            auto& currentBlock = downcast<RenderBlock>(*current);
-            if (auto* continuation = currentBlock.continuation())
+        if (CheckedPtr currentBlock = dynamicDowncast<RenderBlock>(current); currentBlock && currentBlock->isAnonymousBlock()) {
+            if (auto* continuation = currentBlock->continuation())
                 current = continuation;
         }
 

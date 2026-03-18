@@ -50,11 +50,6 @@ CodeBlockHash InlineCallFrame::hash() const
     return baselineCodeBlock->hash();
 }
 
-CString InlineCallFrame::hashAsStringIfPossible() const
-{
-    return baselineCodeBlock->hashAsStringIfPossible();
-}
-
 CString InlineCallFrame::inferredName() const
 {
     return jsCast<FunctionExecutable*>(baselineCodeBlock->ownerExecutable())->ecmaName().utf8();
@@ -62,7 +57,7 @@ CString InlineCallFrame::inferredName() const
 
 void InlineCallFrame::dumpBriefFunctionInformation(PrintStream& out) const
 {
-    out.print(inferredName(), "#", hashAsStringIfPossible());
+    out.print(inferredName(), "#", hash());
 }
 
 void InlineCallFrame::dumpInContext(PrintStream& out, DumpContext* context) const

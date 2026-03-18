@@ -255,7 +255,7 @@ template<typename To, typename From>
 To jsDynamicCast(From* from)
 {
     using Dispatcher = JSCastingHelpers::InheritsTraits<typename std::remove_cv<typename std::remove_pointer<To>::type>::type>;
-    if (LIKELY(Dispatcher::template inherits<>(from)))
+    if (Dispatcher::template inherits<>(from)) [[likely]]
         return static_cast<To>(from);
     return nullptr;
 }
@@ -263,7 +263,7 @@ To jsDynamicCast(From* from)
 template<typename To>
 To jsDynamicCast(JSValue from)
 {
-    if (UNLIKELY(!from.isCell()))
+    if (!from.isCell()) [[unlikely]]
         return nullptr;
     return jsDynamicCast<To>(from.asCell());
 }

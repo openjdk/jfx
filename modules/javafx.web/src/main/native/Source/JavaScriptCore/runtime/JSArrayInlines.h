@@ -79,10 +79,9 @@ inline IndexingType JSArray::mergeIndexingTypeForCopying(IndexingType other, boo
 ALWAYS_INLINE bool JSArray::holesMustForwardToPrototype() const
 {
     Structure* structure = this->structure();
-    if (LIKELY(type() == ArrayType)) {
-        ASSERT(!structure->mayInterceptIndexedAccesses());
+    if (type() == ArrayType) [[likely]] {
         JSGlobalObject* globalObject = structure->globalObject();
-        if (LIKELY(structure->hasMonoProto() && structure->storedPrototype() == globalObject->arrayPrototype() && globalObject->arrayPrototypeChainIsSane()))
+        if (structure->hasMonoProto() && structure->storedPrototype() == globalObject->arrayPrototype() && globalObject->arrayPrototypeChainIsSane()) [[likely]]
         return false;
     }
     return structure->holesMustForwardToPrototype(const_cast<JSArray*>(this));
@@ -153,7 +152,7 @@ ALWAYS_INLINE uint64_t toLength(JSGlobalObject* globalObject, JSObject* object)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (LIKELY(isJSArray(object)))
+    if (isJSArray(object)) [[likely]]
         return jsCast<JSArray*>(object)->length();
 
     switch (object->type()) {
@@ -183,7 +182,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
     switch (indexingMode()) {
     case ArrayClass: {
         createInitialUndecided(vm, 0);
-        FALLTHROUGH;
+        [[fallthrough]];
     }
 
     case ArrayWithUndecided: {
@@ -209,7 +208,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
@@ -231,7 +230,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
@@ -267,7 +266,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             return;
         }
 
-        if (UNLIKELY(length > MAX_ARRAY_INDEX)) {
+        if (length > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, length, value, true);
             if (!scope.exception())
                 throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
@@ -291,7 +290,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
             }
             return;
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
 
     case ArrayWithArrayStorage: {
@@ -307,7 +306,7 @@ ALWAYS_INLINE void JSArray::pushInline(JSGlobalObject* globalObject, JSValue val
         }
 
         // Pushing to an array of invalid length (2^31-1) stores the property, but throws a range error.
-        if (UNLIKELY(storage->length() > MAX_ARRAY_INDEX)) {
+        if (storage->length() > MAX_ARRAY_INDEX) [[unlikely]] {
             methodTable()->putByIndex(this, globalObject, storage->length(), value, true);
             // Per ES5.1 15.4.4.7 step 6 & 15.4.5.1 step 3.d.
             if (!scope.exception())
@@ -340,19 +339,17 @@ ALWAYS_INLINE bool isHole(double value)
     return std::isnan(value);
 }
 
-ALWAYS_INLINE bool isHole(const WriteBarrier<Unknown>& value)
-{
-    return !value;
-}
-
 template<typename T>
 ALWAYS_INLINE bool containsHole(const T* data, unsigned length)
 {
+    if constexpr (std::is_same_v<T, double>) {
     for (unsigned i = 0; i < length; ++i) {
         if (isHole(data[i]))
             return true;
     }
     return false;
+    } else
+        return WTF::find64(std::bit_cast<const uint64_t*>(data), JSValue::encode(JSValue()), length);
 }
 
 } // namespace JSC

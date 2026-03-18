@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "WebXRFrame.h"
 #include "WebXRInputSource.h"
 #include <wtf/TZoneMallocInlines.h>

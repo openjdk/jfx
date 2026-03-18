@@ -25,59 +25,22 @@
  */
 
 #pragma once
-#if PLATFORM(JAVA)
-#include "BitmapTexture.h"
-#include <wtf/CheckedPtr.h>
-#include "TextureMapperContextAttributes.h"
-#include <wtf/RunLoop.h>
 
-namespace WebCore {
-
-class IntSize;
-
-class BitmapTexturePool: public RefCounted<BitmapTexturePool> {
-    WTF_MAKE_NONCOPYABLE(BitmapTexturePool);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-#if USE(TEXTURE_MAPPER_GL)
-    explicit BitmapTexturePool(const TextureMapperContextAttributes&);
-#else
-    BitmapTexturePool();
-#endif
-
-    RefPtr<BitmapTexture> acquireTexture(const IntSize&, const BitmapTexture::Flags);
-    void releaseUnusedTexturesTimerFired();
-
-private:
-    struct Entry {
-        explicit Entry(RefPtr<BitmapTexture>&& texture)
-            : m_texture(WTFMove(texture))
-        { }
-
-        void markIsInUse() { m_lastUsedTime = MonotonicTime::now(); }
-        bool canBeReleased (MonotonicTime minUsedTime) const { return m_lastUsedTime < minUsedTime && m_texture->refCount() == 1; }
-
-        RefPtr<BitmapTexture> m_texture;
-        MonotonicTime m_lastUsedTime;
-    };
-
-    void scheduleReleaseUnusedTextures();
-    RefPtr<BitmapTexture> createTexture(const BitmapTexture::Flags);
-
-#if USE(TEXTURE_MAPPER_GL)
-    TextureMapperContextAttributes m_contextAttributes;
-#endif
-
-    Vector<Entry> m_textures;
-    RunLoop::Timer m_releaseUnusedTexturesTimer;
-};
-
-} // namespace WebCore
-#else
 #if USE(TEXTURE_MAPPER)
 
 #include "BitmapTexture.h"
 #include <wtf/RunLoop.h>
+
+typedef void *EGLImage;
+
+namespace WebCore {
+class BitmapTexturePool;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedTimerSmartPointerException;
+template<> struct IsDeprecatedTimerSmartPointerException<WebCore::BitmapTexturePool> : std::true_type { };
+}
 
 namespace WebCore {
 
@@ -85,22 +48,26 @@ class IntSize;
 
 class BitmapTexturePool {
     WTF_MAKE_NONCOPYABLE(BitmapTexturePool);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED();
 public:
     BitmapTexturePool();
 
-    RefPtr<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
+    Ref<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
+#if USE(GBM)
+    Ref<BitmapTexture> createTextureForImage(EGLImage, OptionSet<BitmapTexture::Flags>);
+#endif
     void releaseUnusedTexturesTimerFired();
 
 private:
     struct Entry {
-        explicit Entry(RefPtr<BitmapTexture>&& texture)
+        explicit Entry(Ref<BitmapTexture>&& texture)
             : m_texture(WTFMove(texture))
         { }
 
         void markIsInUse() { m_lastUsedTime = MonotonicTime::now(); }
         bool canBeReleased (MonotonicTime minUsedTime) const { return m_lastUsedTime < minUsedTime && m_texture->refCount() == 1; }
 
-        RefPtr<BitmapTexture> m_texture;
+        const Ref<BitmapTexture> m_texture;
         MonotonicTime m_lastUsedTime;
     };
 
@@ -109,6 +76,9 @@ private:
     void exitLimitExceededModeIfNeeded();
 
     Vector<Entry> m_textures;
+#if USE(GBM)
+    Vector<Ref<BitmapTexture>> m_imageTextures;
+#endif
     RunLoop::Timer m_releaseUnusedTexturesTimer;
     uint64_t m_poolSize { 0 };
     bool m_onLimitExceededMode { false };
@@ -119,4 +89,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#endif

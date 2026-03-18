@@ -53,8 +53,6 @@ public:
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    struct MarkableTraits;
-
 private:
     friend class GenericTimeMixin<WallTime>;
     constexpr WallTime(double rawValue)
@@ -64,7 +62,8 @@ private:
 };
 static_assert(sizeof(WallTime) == sizeof(double));
 
-struct WallTime::MarkableTraits {
+template<>
+struct MarkableTraits<WallTime> {
     static bool isEmptyValue(WallTime time)
     {
         return time.isNaN();

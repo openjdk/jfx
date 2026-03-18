@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,15 +31,18 @@
 #include "BitmapImage.h"
 #include "DeprecatedGlobalSettings.h"
 #include "GraphicsContext.h"
+#include "ImageAdapter.h"
 #include "ImageObserver.h"
 #include "Length.h"
 #include "MIMETypeRegistry.h"
+#include "NativeImage.h"
 #include "SVGImage.h"
 #if !PLATFORM(JAVA)
 #include "ShareableBitmap.h"
 #endif
 #include "SharedBuffer.h"
 #include <math.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
@@ -137,6 +140,16 @@ bool Image::supportsType(const String& type)
     return MIMETypeRegistry::isSupportedImageMIMEType(type);
 }
 
+void Image::subresourcesAreFinished(Document*, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+RefPtr<FragmentedSharedBuffer> Image::protectedData() const
+{
+    return m_encodedImageData;
+}
+
 EncodedDataStatus Image::setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived)
 {
     m_encodedImageData = WTFMove(data);
@@ -172,6 +185,26 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
     ctxt.setCompositeOperation(color.isOpaque() && op == CompositeOperator::SourceOver ? CompositeOperator::Copy : op);
     ctxt.fillRect(dstRect, color);
     ctxt.setCompositeOperation(previousOperator);
+}
+
+RefPtr<NativeImage> Image::nativeImage(const DestinationColorSpace&)
+{
+    return nullptr;
+}
+
+RefPtr<NativeImage> Image::nativeImageAtIndex(unsigned)
+{
+    return nativeImage();
+}
+
+RefPtr<NativeImage> Image::currentNativeImage()
+{
+    return nativeImage();
+}
+
+RefPtr<NativeImage> Image::currentPreTransformedNativeImage(ImageOrientation)
+{
+    return currentNativeImage();
 }
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions options)
@@ -376,6 +409,11 @@ void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsic
     intrinsicHeight = Length(intrinsicRatio.height(), LengthType::Fixed);
 }
 
+FloatSize Image::sourceSize(ImageOrientation orientation) const
+{
+    return size(orientation);
+}
+
 void Image::startAnimationAsynchronously()
 {
     if (!m_animationStartTimer)
@@ -405,12 +443,12 @@ RefPtr<ShareableBitmap> Image::toShareableBitmap() const
 void Image::dump(TextStream& ts) const
 {
     if (isAnimated())
-        ts.dumpProperty("animated", isAnimated());
+        ts.dumpProperty("animated"_s, isAnimated());
 
     if (isNull())
-        ts.dumpProperty("is-null-image", true);
+        ts.dumpProperty("is-null-image"_s, true);
 
-    ts.dumpProperty("size", size());
+    ts.dumpProperty("size"_s, size());
 }
 
 TextStream& operator<<(TextStream& ts, const Image& image)
@@ -418,24 +456,29 @@ TextStream& operator<<(TextStream& ts, const Image& image)
     TextStream::GroupScope scope(ts);
 
     if (image.isBitmapImage())
-        ts << "bitmap image";
+        ts << "bitmap image"_s;
     else if (image.isCrossfadeGeneratedImage())
-        ts << "crossfade image";
+        ts << "crossfade image"_s;
     else if (image.isNamedImageGeneratedImage())
-        ts << "named image";
+        ts << "named image"_s;
     else if (image.isGradientImage())
-        ts << "gradient image";
+        ts << "gradient image"_s;
     else if (image.isSVGImage())
-        ts << "svg image";
+        ts << "svg image"_s;
     else if (image.isSVGResourceImage())
-        ts << "svg resource image";
+        ts << "svg resource image"_s;
     else if (image.isSVGImageForContainer())
-        ts << "svg image for container";
+        ts << "svg image for container"_s;
     else if (image.isPDFDocumentImage())
-        ts << "pdf image";
+        ts << "pdf image"_s;
 
     image.dump(ts);
     return ts;
+}
+
+bool Image::animationPending() const
+{
+    return m_animationStartTimer && m_animationStartTimer->isActive();
 }
 
 bool Image::gSystemAllowsAnimationControls = false;
@@ -443,6 +486,11 @@ bool Image::gSystemAllowsAnimationControls = false;
 void Image::setSystemAllowsAnimationControls(bool allowsControls)
 {
     gSystemAllowsAnimationControls = allowsControls;
+}
+
+std::optional<Color> Image::singlePixelSolidColor() const
+{
+    return std::nullopt;
 }
 
 } // namespace WebCore

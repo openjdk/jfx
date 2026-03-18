@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include "PositionedGlyphs.h"
+#include "FloatPoint.h"
+#include "GlyphBufferMembers.h"
 #include "RenderingResource.h"
+#include "TextFlags.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -34,17 +36,22 @@ namespace WebCore {
 class DecomposedGlyphs final : public RenderingResource {
     WTF_MAKE_TZONE_ALLOCATED(DecomposedGlyphs);
 public:
-    static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
-    static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(PositionedGlyphs&&, RenderingResourceIdentifier);
+    static WEBCORE_EXPORT Ref<DecomposedGlyphs> create(Vector<GlyphBufferGlyph>&&, Vector<GlyphBufferAdvance>&&, const FloatPoint& localAnchor, FontSmoothingMode, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
+    ~DecomposedGlyphs();
 
-    const PositionedGlyphs& positionedGlyphs() const { return m_positionedGlyphs; }
-
+    std::span<const GlyphBufferGlyph> glyphs() const LIFETIME_BOUND { return m_glyphs.span(); }
+    std::span<const GlyphBufferAdvance> advances() const LIFETIME_BOUND { return m_advances.span(); }
+    const FloatPoint& localAnchor() const { return m_localAnchor; }
+    FontSmoothingMode fontSmoothingMode() const { return m_fontSmoothingMode; }
 private:
-    DecomposedGlyphs(PositionedGlyphs&&, RenderingResourceIdentifier);
+    DecomposedGlyphs(Vector<GlyphBufferGlyph>&&, Vector<GlyphBufferAdvance>&&, const FloatPoint& localAnchor, FontSmoothingMode, RenderingResourceIdentifier);
 
     bool isDecomposedGlyphs() const final { return true; }
 
-    PositionedGlyphs m_positionedGlyphs;
+    Vector<GlyphBufferGlyph> m_glyphs;
+    Vector<GlyphBufferAdvance> m_advances;
+    FloatPoint m_localAnchor;
+    FontSmoothingMode m_fontSmoothingMode;
 };
 
 } // namespace WebCore

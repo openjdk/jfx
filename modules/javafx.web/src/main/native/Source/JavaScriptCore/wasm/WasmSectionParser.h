@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,7 @@ private:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
     {
         using namespace FailureHelper; // See ADL comment in namespace above.
-        if (UNLIKELY(ASSERT_ENABLED && Options::crashOnFailedWasmValidate()))
+        if (ASSERT_ENABLED && Options::crashOnFailedWasmValidate()) [[unlikely]]
             CRASH();
 
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, String::number(m_offset + m_offsetInSource), ": "_s, makeString(args)...));
@@ -91,7 +91,7 @@ private:
     PartialResult WARN_UNUSED_RETURN checkSubtypeValidity(const TypeDefinition&);
 
     size_t m_offsetInSource;
-    Ref<ModuleInformation> m_info;
+    const Ref<ModuleInformation> m_info;
 };
 
 } } // namespace JSC::Wasm

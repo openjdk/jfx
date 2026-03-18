@@ -136,7 +136,7 @@ ALWAYS_INLINE void ObjectAllocationProfileBase<Derived>::initializeProfile(VM& v
     WTF::storeStoreFence();
 
     // The watchpoint should have been fired already but it's prudent to be safe here.
-    if (UNLIKELY(functionRareData && m_structure && m_structure.get() != structure)) {
+    if (functionRareData && m_structure && m_structure.get() != structure) [[unlikely]] {
         ASSERT(functionRareData->allocationProfileWatchpointSet().hasBeenInvalidated());
         functionRareData->allocationProfileWatchpointSet().fireAll(vm, "Clearing to be safe because structure has changed");
     }

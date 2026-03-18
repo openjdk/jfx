@@ -197,6 +197,8 @@ editing/cocoa/FontAttributeChangesCocoa.mm
 editing/cocoa/FontAttributesCocoa.mm
 editing/cocoa/FontShadowCocoa.mm
 editing/cocoa/HTMLConverter.mm @no-unify
+editing/cocoa/NodeHTMLConverter.mm @no-unify
+editing/cocoa/EditingHTMLConverter.mm @no-unify
 editing/cocoa/WebArchiveResourceFromNSAttributedString.mm
 editing/cocoa/WebArchiveResourceWebResourceHandler.mm
 editing/cocoa/WebContentReaderCocoa.mm
@@ -244,7 +246,6 @@ page/mac/DragControllerMac.mm
 page/mac/EventHandlerMac.mm
 page/mac/ImageOverlayControllerMac.mm
 page/mac/ServicesOverlayController.mm
-page/mac/TextIndicatorWindow.mm
 page/mac/WheelEventDeltaFilterMac.mm
 page/scrolling/cocoa/ScrollingStateNode.mm
 page/scrolling/cocoa/ScrollingTreeFixedNodeCocoa.mm
@@ -278,6 +279,7 @@ platform/audio/cocoa/CAAudioStreamDescription.cpp
 platform/audio/cocoa/CARingBuffer.cpp
 platform/audio/cocoa/MediaSessionManagerCocoa.mm
 platform/audio/cocoa/PlatformRawAudioDataCocoa.cpp
+platform/audio/cocoa/SpatialAudioExperienceHelper.mm
 platform/audio/cocoa/WebAudioBufferList.cpp
 platform/audio/ios/AudioOutputUnitAdaptorIOS.cpp @no-unify
 platform/audio/ios/AudioSessionIOS.mm @no-unify
@@ -311,6 +313,7 @@ platform/cocoa/MediaUtilities.cpp
 platform/cocoa/NetworkExtensionContentFilter.mm
 platform/cocoa/NSURLUtilities.mm
 platform/cocoa/ParentalControlsContentFilter.mm
+platform/cocoa/ParentalControlsURLFilter.mm
 platform/cocoa/PasteboardCocoa.mm
 platform/cocoa/PasteboardCustomDataCocoa.mm
 platform/cocoa/PhotosFormatSoftLink.mm
@@ -403,6 +406,7 @@ platform/graphics/ca/cocoa/PlatformCAAnimationCocoa.mm
 platform/graphics/ca/cocoa/PlatformCAFiltersCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerCocoa.mm
 platform/graphics/ca/cocoa/PlatformCALayerContentsDelayedReleaser.mm
+platform/graphics/ca/cocoa/PlatformDynamicRangeLimitCocoa.mm
 platform/graphics/ca/cocoa/WebSystemBackdropLayer.mm
 platform/graphics/ca/cocoa/WebTiledBackingLayer.mm
 platform/graphics/ca/cocoa/WebVideoContainerLayer.mm
@@ -443,7 +447,6 @@ platform/graphics/cocoa/ColorCocoa.mm
 platform/graphics/cocoa/FloatRectCocoa.mm
 platform/graphics/cocoa/FontCacheCocoa.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
-platform/graphics/cocoa/FontCascadeCocoa.cpp
 platform/graphics/cocoa/FontCocoa.cpp
 platform/graphics/cocoa/FontDatabase.cpp
 platform/graphics/cocoa/FontDescriptionCocoa.cpp
@@ -482,7 +485,7 @@ platform/graphics/cocoa/WebLayer.mm
 platform/graphics/cocoa/controls/ApplePayButtonCocoa.mm
 platform/graphics/cocoa/controls/ControlFactoryCocoa.mm
 platform/graphics/coretext/ComplexTextControllerCoreText.mm
-platform/graphics/coretext/DrawGlyphsRecorderCoreText.cpp
+platform/graphics/coretext/DrawGlyphsRecorder.cpp
 platform/graphics/coretext/FontCascadeCoreText.cpp
 platform/graphics/coretext/FontCoreText.cpp
 platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
@@ -497,18 +500,13 @@ platform/graphics/coreimage/FEColorMatrixCoreImageApplier.mm
 platform/graphics/coreimage/FEComponentTransferCoreImageApplier.mm
 platform/graphics/coreimage/FilterImageCoreImage.mm
 platform/graphics/coreimage/SourceGraphicCoreImageApplier.mm
-platform/graphics/gpu/cocoa/GPUPrewarmingMetal.mm
 platform/graphics/ios/DisplayRefreshMonitorIOS.mm
 platform/graphics/ios/IconIOS.mm
 platform/graphics/ios/controls/ControlFactoryIOS.mm
 platform/graphics/mac/AppKitControlSystemImage.mm
 platform/graphics/mac/ColorMac.mm
-platform/graphics/mac/FloatPointMac.mm
-platform/graphics/mac/FloatSizeMac.mm
 platform/graphics/mac/GraphicsChecksMac.cpp
 platform/graphics/mac/IconMac.mm
-platform/graphics/mac/IntPointMac.mm
-platform/graphics/mac/IntSizeMac.mm
 platform/graphics/mac/LegacyDisplayRefreshMonitorMac.cpp
 platform/graphics/mac/PDFDocumentImageMac.mm
 platform/graphics/mac/ScrollbarTrackCornerSystemImageMac.mm

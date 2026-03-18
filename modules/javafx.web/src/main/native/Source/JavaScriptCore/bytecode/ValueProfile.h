@@ -203,12 +203,12 @@ public:
     }
 
     unsigned size() const { return m_size; }
-    ValueProfileAndVirtualRegister* data() const
+    ValueProfileAndVirtualRegister* data() const LIFETIME_BOUND
     {
         return std::bit_cast<ValueProfileAndVirtualRegister*>(this + 1);
     }
 
-    std::span<ValueProfileAndVirtualRegister> span() { return { data(), size() }; }
+    std::span<ValueProfileAndVirtualRegister> span() LIFETIME_BOUND { return { data(), size() }; }
 
 private:
 

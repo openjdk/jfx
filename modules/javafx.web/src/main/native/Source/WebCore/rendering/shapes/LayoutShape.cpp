@@ -92,7 +92,7 @@ static inline FloatSize physicalSizeToLogical(const FloatSize& size, WritingMode
     return size.transposedSize();
 }
 
-Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicShape, const LayoutPoint& borderBoxOffset, const LayoutSize& logicalBoxSize, WritingMode writingMode, float margin)
+Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicShape, const LayoutPoint& borderBoxOffset, const LayoutSize& logicalBoxSize, WritingMode writingMode, float logicalMargin)
 {
     bool horizontalWritingMode = writingMode.isHorizontal();
     float boxWidth = horizontalWritingMode ? logicalBoxSize.width() : logicalBoxSize.height();
@@ -137,12 +137,12 @@ Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicSh
 
             auto boxSize = FloatSize(boxWidth, boxHeight);
             auto isBlockLeftToRight = writingMode.isBlockLeftToRight();
-            auto topLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode || isBlockLeftToRight ? inset->radii.topLeft : inset->radii.topRight, boxSize), writingMode);
-            auto topRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.topRight : isBlockLeftToRight ? inset->radii.bottomLeft : inset->radii.bottomRight, boxSize), writingMode);
-            auto bottomLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomLeft : isBlockLeftToRight ? inset->radii.topRight : inset->radii.topLeft, boxSize), writingMode);
-            auto bottomRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomRight : isBlockLeftToRight ? inset->radii.bottomRight : inset->radii.bottomLeft, boxSize), writingMode);
+            auto topLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode || isBlockLeftToRight ? inset->radii.topLeft() : inset->radii.topRight(), boxSize), writingMode);
+            auto topRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.topRight() : isBlockLeftToRight ? inset->radii.bottomLeft() : inset->radii.bottomRight(), boxSize), writingMode);
+            auto bottomLeftRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomLeft() : isBlockLeftToRight ? inset->radii.topRight() : inset->radii.topLeft(), boxSize), writingMode);
+            auto bottomRightRadius = physicalSizeToLogical(Style::evaluate(horizontalWritingMode ? inset->radii.bottomRight() : isBlockLeftToRight ? inset->radii.bottomRight() : inset->radii.bottomLeft(), boxSize), writingMode);
             auto cornerRadii = FloatRoundedRect::Radii(topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
-            if (writingMode.isBidiRTL())
+            if (shouldFlipStartAndEndPoints(writingMode))
                 cornerRadii = { cornerRadii.topRight(), cornerRadii.topLeft(), cornerRadii.bottomRight(), cornerRadii.bottomLeft() };
 
             cornerRadii.scale(calcBorderRadiiConstraintScaleFor(logicalRect, cornerRadii));
@@ -166,25 +166,26 @@ Ref<const LayoutShape> LayoutShape::createShape(const Style::BasicShape& basicSh
     );
 
     shape->m_writingMode = writingMode;
-    shape->m_margin = margin;
+    shape->m_margin = logicalMargin;
 
     return shape;
 }
 
-Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float threshold, const LayoutRect& imageR, const LayoutRect& marginR, WritingMode writingMode, float margin)
+Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float threshold, const LayoutRect& logicalImageRect, const LayoutRect& logicalMarginRect, WritingMode writingMode, float logicalMargin)
 {
-    ASSERT(marginR.height() >= 0);
+    ASSERT(logicalMarginRect.height() >= 0);
 
-    IntRect imageRect = snappedIntRect(imageR);
-    IntRect marginRect = snappedIntRect(marginR);
-    auto intervals = makeUnique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
+    auto snappedLogicalImageRect = snappedIntRect(logicalImageRect);
+    auto snappedPhysicalImageSize = writingMode.isHorizontal() ? snappedLogicalImageRect.size() : snappedLogicalImageRect.size().transposedSize();
+    auto snappedLogicalMarginRect = snappedIntRect(logicalMarginRect);
+    auto intervals = makeUnique<RasterShapeIntervals>(snappedLogicalMarginRect.height(), -snappedLogicalMarginRect.y());
     // FIXME (149420): This buffer should not be unconditionally unaccelerated.
-    auto imageBuffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto imageBuffer = ImageBuffer::create(snappedPhysicalImageSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
 
     auto createShape = [&]() {
-        auto rasterShape = adoptRef(*new RasterLayoutShape(WTFMove(intervals), marginRect.size()));
+        auto rasterShape = adoptRef(*new RasterLayoutShape(WTFMove(intervals), snappedLogicalMarginRect.size()));
         rasterShape->m_writingMode = writingMode;
-        rasterShape->m_margin = margin;
+        rasterShape->m_margin = logicalMargin;
         return rasterShape;
     };
 
@@ -193,36 +194,40 @@ Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float thresh
 
     GraphicsContext& graphicsContext = imageBuffer->context();
     if (image)
-        graphicsContext.drawImage(*image, IntRect(IntPoint(), imageRect.size()));
+        graphicsContext.drawImage(*image, IntRect({ }, snappedPhysicalImageSize));
 
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
-    auto pixelBuffer = imageBuffer->getPixelBuffer(format, { IntPoint(), imageRect.size() });
+    auto pixelBuffer = imageBuffer->getPixelBuffer(format, { { }, snappedPhysicalImageSize });
 
-    // We could get to a value where PixelBuffer could be nullptr because ImageRect.size()
+    // We could get to a value where PixelBuffer could be nullptr because snappedPhysicalImageSize
     // is huge and the data size overflows. Refer rdar://problem/61793884.
     if (!pixelBuffer)
         return createShape();
 
-    if (imageRect.area() * 4 == pixelBuffer->bytes().size()) {
-        unsigned pixelArrayOffset = 3; // Each pixel is four bytes: RGBA.
+    constexpr unsigned pixelArraySize = 4; // Each pixel is four bytes: RGBA.
+    constexpr unsigned alphaBitOffset = 3;
+
+    if (snappedLogicalImageRect.area() * pixelArraySize == pixelBuffer->bytes().size()) {
         uint8_t alphaPixelThreshold = static_cast<uint8_t>(lroundf(clampTo<float>(threshold, 0, 1) * 255.0f));
 
-        int minBufferY = std::max(0, marginRect.y() - imageRect.y());
-        int maxBufferY = std::min(imageRect.height(), marginRect.maxY() - imageRect.y());
+        int minBufferY = std::max(0, snappedLogicalMarginRect.y() - snappedLogicalImageRect.y());
+        int maxBufferY = std::min(snappedLogicalImageRect.height(), snappedLogicalMarginRect.maxY() - snappedLogicalImageRect.y());
 
         for (int y = minBufferY; y < maxBufferY; ++y) {
             int startX = -1;
-            for (int x = 0; x < imageRect.width(); ++x, pixelArrayOffset += 4) {
-                uint8_t alpha = pixelBuffer->item(pixelArrayOffset);
+            for (int x = 0; x < snappedLogicalImageRect.width(); ++x) {
+                size_t pixelPosition = writingMode.isHorizontal() ? snappedLogicalImageRect.width() * y + x : snappedLogicalImageRect.height() * (x + 1) - (y + 1);
+                uint8_t alpha = pixelBuffer->item(pixelPosition * pixelArraySize + alphaBitOffset);
+
                 bool alphaAboveThreshold = alpha > alphaPixelThreshold;
                 if (startX == -1 && alphaAboveThreshold) {
                     startX = x;
-                } else if (startX != -1 && (!alphaAboveThreshold || x == imageRect.width() - 1)) {
+                } else if (startX != -1 && (!alphaAboveThreshold || x == snappedLogicalImageRect.width() - 1)) {
                     // We're creating "end-point exclusive" intervals here. The value of an interval's x1 is
                     // the first index of an above-threshold pixel for y, and the value of x2 is 1+ the index
                     // of the last above-threshold pixel.
                     int endX = alphaAboveThreshold ? x + 1 : x;
-                    intervals->intervalAt(y + imageRect.y()).unite(IntShapeInterval(startX + imageRect.x(), endX + imageRect.x()));
+                    intervals->intervalAt(y + snappedLogicalImageRect.y()).unite(IntShapeInterval(startX + snappedLogicalImageRect.x(), endX + snappedLogicalImageRect.x()));
                     startX = -1;
                 }
             }
@@ -232,16 +237,23 @@ Ref<const LayoutShape> LayoutShape::createRasterShape(Image* image, float thresh
     return createShape();
 }
 
-Ref<const LayoutShape> LayoutShape::createBoxShape(const RoundedRect& roundedRect, WritingMode writingMode, float margin)
+Ref<const LayoutShape> LayoutShape::createBoxShape(const LayoutRoundedRect& roundedRect, WritingMode writingMode, float logicalMargin)
 {
     ASSERT(roundedRect.rect().width() >= 0 && roundedRect.rect().height() >= 0);
 
     FloatRoundedRect bounds { roundedRect };
     auto shape = adoptRef(*new BoxLayoutShape(bounds));
     shape->m_writingMode = writingMode;
-    shape->m_margin = margin;
+    shape->m_margin = logicalMargin;
 
     return shape;
+}
+
+bool LayoutShape::shouldFlipStartAndEndPoints(WritingMode writingMode)
+{
+    // Start and end flip in horizontal/vertical/sideways-rl with RTL and sideways-lr with LTR (line is either right to left or bottom to top).
+    // (see https://www.w3.org/TR/css-writing-modes-4/#line-directions)
+    return (writingMode.isHorizontal() && !writingMode.isInlineLeftToRight()) || (!writingMode.isHorizontal() && !writingMode.isInlineTopToBottom());
 }
 
 } // namespace WebCore

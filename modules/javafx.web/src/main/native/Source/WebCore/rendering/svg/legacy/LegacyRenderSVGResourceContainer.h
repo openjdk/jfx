@@ -40,6 +40,9 @@ public:
     static float computeTextPaintingScale(const RenderElement&);
     static AffineTransform transformOnNonScalingStroke(RenderObject*, const AffineTransform& resourceTransform);
 
+    void removeClientFromCacheAndMarkForInvalidation(RenderElement&, bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
+
     void idChanged();
     void markAllClientsForRepaint();
     void addClientRenderLayer(RenderLayer&);

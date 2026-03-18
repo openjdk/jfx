@@ -26,6 +26,7 @@
 #include "RenderTextControl.h"
 
 namespace WebCore {
+class RenderTextControlInnerBlock;
 
 class RenderTextControlSingleLine : public RenderTextControl {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlSingleLine);
@@ -33,6 +34,8 @@ class RenderTextControlSingleLine : public RenderTextControl {
 public:
     RenderTextControlSingleLine(Type, HTMLInputElement&, RenderStyle&&);
     virtual ~RenderTextControlSingleLine();
+
+    RenderTextControlInnerBlock* innerTextRenderer() const;
 
 protected:
     HTMLElement* containerElement() const;
@@ -93,12 +96,7 @@ public:
 
 private:
     bool hasLineIfEmpty() const override { return true; }
-    bool canBeProgramaticallyScrolled() const override
-    {
-        if (auto* shadowHost = dynamicDowncast<HTMLInputElement>(element()->shadowHost()))
-            return !shadowHost->hasAutofillStrongPasswordButton();
-        return true;
-    }
+    bool canBeProgramaticallyScrolled() const override;
 };
 
 } // namespace WebCore

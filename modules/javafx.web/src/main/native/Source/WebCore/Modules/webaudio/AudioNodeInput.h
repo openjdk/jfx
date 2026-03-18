@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,11 +68,11 @@ public:
     // In the single connection case, it allows in-place processing where possible using inPlaceBus.
     // It returns the bus which it rendered into, returning inPlaceBus if in-place processing was performed.
     // Called from context's audio thread.
-    AudioBus* pull(AudioBus* inPlaceBus, size_t framesToProcess);
+    AudioBus& pull(AudioBus* inPlaceBus, size_t framesToProcess);
 
     // bus() contains the rendered audio after pull() has been called for each time quantum.
     // Called from context's audio thread.
-    AudioBus* bus();
+    AudioBus& bus();
 
     // updateInternalBus() updates m_internalSummingBus appropriately for the number of channels.
     // This must be called when we own the context's graph lock in the audio thread at the very start or end of the render quantum.
@@ -90,10 +90,10 @@ private:
     HashSet<AudioNodeOutput*> m_disabledOutputs;
 
     // Called from context's audio thread.
-    AudioBus* internalSummingBus();
-    void sumAllConnections(AudioBus* summingBus, size_t framesToProcess);
+    AudioBus& internalSummingBus();
+    void sumAllConnections(AudioBus& summingBus, size_t framesToProcess);
 
-    RefPtr<AudioBus> m_internalSummingBus;
+    Ref<AudioBus> m_internalSummingBus;
 };
 
 } // namespace WebCore

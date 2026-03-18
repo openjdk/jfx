@@ -27,10 +27,10 @@
 #include "CSSKeyframeRule.h"
 
 #include "CSSKeyframesRule.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
 #include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "MutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
 #include <wtf/text/MakeString.h>
@@ -107,7 +107,7 @@ String StyleRuleKeyframe::keyText() const
 bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
-    auto keys = CSSParser::parseKeyframeKeyList(keyText, strictCSSParserContext());
+    auto keys = CSSPropertyParserHelpers::parseKeyframeKeyList(keyText, strictCSSParserContext());
     if (keys.isEmpty())
         return false;
     m_keys = keys.map([](auto& pair) -> Key {
@@ -136,10 +136,10 @@ CSSKeyframeRule::~CSSKeyframeRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSKeyframeRule::style()
+CSSStyleProperties& CSSKeyframeRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_keyframe->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleProperties::create(m_keyframe->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 

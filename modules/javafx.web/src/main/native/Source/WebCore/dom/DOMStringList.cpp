@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #include "config.h"
 #include "DOMStringList.h"
 
+#include <ranges>
+
 namespace WebCore {
 
 String DOMStringList::item(unsigned index) const
@@ -47,7 +49,7 @@ bool DOMStringList::contains(const String& string) const
 
 void DOMStringList::sort()
 {
-    std::sort(m_strings.begin(), m_strings.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(m_strings, WTF::codePointCompareLessThan);
 }
 
 } // namespace WebCore

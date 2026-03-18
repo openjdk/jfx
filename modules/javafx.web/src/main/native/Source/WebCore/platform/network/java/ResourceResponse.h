@@ -39,7 +39,7 @@ public:
     }
 
     ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
+        : ResourceResponseBase(URL(url), String(mimeType), expectedLength, String(textEncodingName))
     {
     }
 

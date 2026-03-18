@@ -27,6 +27,10 @@
 
 namespace WebCore {
 
+namespace Style {
+struct PreferredSize;
+}
+
 class RenderTable;
 
 class FixedTableLayout final : public TableLayout {
@@ -40,7 +44,7 @@ public:
 private:
     float calcWidthArray();
 
-    Vector<Length> m_width;
+    Vector<Style::PreferredSize> m_width;
 };
 
 } // namespace WebCore

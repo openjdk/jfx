@@ -25,10 +25,8 @@
 #pragma once
 
 #include "CalculationOperator.h"
-#include "CalculationRandomKeyMap.h"
 #include <optional>
 #include <tuple>
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -125,17 +123,17 @@ template<typename Op> struct IndirectNode {
     UniqueRef<Op> op;
 
     // Forward * and -> to the operation for convenience.
-    const Op& operator*() const { return *op; }
-    Op& operator*() { return *op; }
+    const Op& operator*() const { return op.get(); }
+    Op& operator*() { return op.get(); }
     const Op* operator->() const { return op.ptr(); }
     Op* operator->() { return op.ptr(); }
-    operator const Op&() const { return *op; }
-    operator Op&() { return *op; }
+    operator const Op&() const { return op.get(); }
+    operator Op&() { return op.get(); }
 
     bool operator==(const IndirectNode<Op>& other) const { return op.get() == other.op.get(); }
 };
 
-using Node = std::variant<
+using Node = Variant<
     Number,
     Percentage,
     Dimension,
@@ -184,7 +182,7 @@ struct Child {
 };
 
 struct ChildOrNone {
-    std::variant<Child, None> value;
+    Variant<Child, None> value;
 
     ChildOrNone(Child&&);
     ChildOrNone(None);
@@ -513,15 +511,13 @@ struct Random {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(Random);
     static constexpr auto op = Operator::Random;
 
-    struct CachingOptions {
-        AtomString identifier;
-        bool perElement { false };
-        Ref<RandomKeyMap> keyMap;
+    struct Fixed {
+        double baseValue;
 
-        bool operator==(const CachingOptions&) const = default;
+        bool operator==(const Fixed&) const = default;
     };
 
-    CachingOptions cachingOptions;
+    Fixed fixed;
     Child min;
     Child max;
     std::optional<Child> step;
@@ -818,7 +814,7 @@ template<size_t I> const auto& get(const Progress& root)
 template<size_t I> const auto& get(const Random& root)
 {
     if constexpr (!I)
-        return root.cachingOptions;
+        return root.fixed;
     else if constexpr (I == 1)
         return root.min;
     else if constexpr (I == 2)

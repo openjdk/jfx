@@ -27,9 +27,9 @@
 #import "com_sun_glass_ui_mac_MacApplication.h"
 #import "com_sun_glass_events_KeyEvent.h"
 
-
 #import "GlassMacros.h"
 #import "GlassApplication.h"
+#import "GlassAccessible.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
 #import "GlassScreen.h"
@@ -1330,4 +1330,52 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getPlatform
     return appDelegate
         ? [(GlassApplication*)appDelegate getPlatformPreferences]
         : nil;
+}
+
+/*
+ * Class:       com_sun_glass_ui_mac_MacApplication
+ * Method:      _openURI
+ * Signature:   (java/lang/String;)I;
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1openURI
+(JNIEnv *env, jclass jClass, jstring uri)
+{
+    __block OSStatus status = noErr;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+
+    NSURL *url = [NSURL URLWithString:jStringToNSString(env, uri)];
+
+    NSURL *httpsURL = [NSURL URLWithString:@"https://"];
+    NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
+    NSURL *defaultBrowser = [workspace URLForApplicationToOpenURL:httpsURL];
+    if (defaultBrowser == nil) {
+        NSLog(@"Default browser not set");
+        return -1;
+    }
+    NSArray<NSURL *> *urls = @[url];
+    NSWorkspaceOpenConfiguration *configuration = [NSWorkspaceOpenConfiguration configuration];
+    configuration.activates = YES;
+    configuration.promptsUserIfNeeded = YES;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(NSEC_PER_SEC)); // 1 second timeout
+
+    [workspace     openURLs:urls
+       withApplicationAtURL:defaultBrowser
+              configuration:configuration
+           completionHandler:^(NSRunningApplication *app, NSError *error) {
+               if (error) {
+                   NSLog(@"Error opening URI %@ : %@", url, error.localizedDescription);
+                   status = (OSStatus) error.code;
+               }
+               dispatch_semaphore_signal(semaphore);
+           }];
+
+    dispatch_semaphore_wait(semaphore, timeout);
+
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return status;
 }

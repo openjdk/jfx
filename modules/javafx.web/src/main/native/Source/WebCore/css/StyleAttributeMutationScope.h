@@ -58,7 +58,7 @@ public:
         if (m_mutationRecipients && m_mutationRecipients->isOldValueRequested())
             shouldReadOldValue = true;
 
-        if (UNLIKELY(m_element->isDefinedCustomElement())) {
+        if (m_element->isDefinedCustomElement()) [[unlikely]] {
             auto* reactionQueue = m_element->reactionQueue();
             if (reactionQueue && reactionQueue->observesStyleAttribute()) {
                 m_isCustomElement = true;

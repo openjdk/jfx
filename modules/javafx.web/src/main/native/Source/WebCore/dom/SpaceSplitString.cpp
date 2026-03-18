@@ -86,7 +86,7 @@ struct SpaceSplitStringTableKeyTraits : public HashTraits<AtomString>
     static const int minimumTableSize = WTF::HashTableCapacityForSize<typicalNumberOfSpaceSplitString>::value;
 };
 
-typedef UncheckedKeyHashMap<AtomString, SpaceSplitStringData*, AtomStringHash, SpaceSplitStringTableKeyTraits> SpaceSplitStringTable;
+typedef HashMap<AtomString, SpaceSplitStringData*, AtomStringHash, SpaceSplitStringTableKeyTraits> SpaceSplitStringTable;
 
 static SpaceSplitStringTable& spaceSplitStringTable()
 {
@@ -145,7 +145,7 @@ bool SpaceSplitString::spaceSplitStringContainsValue(StringView spaceSplitString
 
     if (value.is8Bit())
         return spaceSplitStringContainsValueInternal<LChar>(shouldFoldCase == ShouldFoldCase::Yes ? StringView { spaceSplitString.convertToASCIILowercase() } : spaceSplitString, value);
-    return spaceSplitStringContainsValueInternal<UChar>(shouldFoldCase == ShouldFoldCase::Yes ? StringView { spaceSplitString.convertToASCIILowercase() } : spaceSplitString, value);
+    return spaceSplitStringContainsValueInternal<char16_t>(shouldFoldCase == ShouldFoldCase::Yes ? StringView { spaceSplitString.convertToASCIILowercase() } : spaceSplitString, value);
 }
 
 class TokenCounter {
@@ -195,7 +195,7 @@ inline Ref<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& 
     ASSERT(tokenCount);
 
     RELEASE_ASSERT(tokenCount < (std::numeric_limits<unsigned>::max() - sizeof(SpaceSplitStringData)) / sizeof(AtomString));
-    unsigned sizeToAllocate = sizeof(SpaceSplitStringData) + tokenCount * sizeof(AtomString);
+    size_t sizeToAllocate = sizeof(SpaceSplitStringData) + tokenCount * sizeof(AtomString);
     SpaceSplitStringData* spaceSplitStringData = static_cast<SpaceSplitStringData*>(fastMalloc(sizeToAllocate));
 
     new (NotNull, spaceSplitStringData) SpaceSplitStringData(keyString, tokenCount);
@@ -203,7 +203,7 @@ inline Ref<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& 
     TokenAtomStringInitializer tokenInitializer(keyString, tokenArray);
     tokenizeSpaceSplitString(tokenInitializer, keyString);
     ASSERT(static_cast<unsigned>(tokenInitializer.nextMemoryBucket() - tokenArray.data()) == tokenCount);
-    ASSERT(reinterpret_cast<const char*>(tokenInitializer.nextMemoryBucket()) - reinterpret_cast<const char*>(spaceSplitStringData) == sizeToAllocate);
+    ASSERT(reinterpret_cast<const char*>(tokenInitializer.nextMemoryBucket()) - reinterpret_cast<const char*>(spaceSplitStringData) == static_cast<ptrdiff_t>(sizeToAllocate));
 
     return adoptRef(*spaceSplitStringData);
 }

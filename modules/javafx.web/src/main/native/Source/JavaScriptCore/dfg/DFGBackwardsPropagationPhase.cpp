@@ -120,12 +120,13 @@ private:
         case ValueBitXor:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ArithBitAnd:
         case ArithBitOr:
         case ArithBitXor:
         case ArithBitLShift:
         case ArithBitRShift:
-        case BitURShift: {
+        case ArithBitURShift: {
             return true;
         }
 
@@ -135,6 +136,10 @@ private:
                 return true;
             return false;
         }
+
+        case Int52Rep:
+            // Do not decrease timeToLive since it is just propagating to the caller (not increasing the leaves of the tree).
+            return isNotNegZero(node->child1().node(), timeToLive);
 
         default:
             return false;
@@ -198,7 +203,8 @@ private:
 
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift: {
+        case ArithBitURShift:
+        case ValueBitURShift: {
             if (power > 31)
                 return true;
 
@@ -324,7 +330,8 @@ private:
         case ArithBitLShift:
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift:
+        case ArithBitURShift:
+        case ValueBitURShift:
         case ArithIMul: {
             flags |= NodeBytecodeUsesAsInt;
             flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsOther);
@@ -506,6 +513,7 @@ private:
             break;
         }
 
+        case MultiGetByVal:
         case EnumeratorGetByVal:
         case GetByVal:
         case GetByValMegamorphic: {
@@ -515,6 +523,7 @@ private:
         }
 
         case NewTypedArray:
+        case NewTypedArrayBuffer:
         case NewArrayWithSize:
         case NewArrayWithConstantSize:
         case NewArrayWithSpecies:
@@ -602,18 +611,34 @@ private:
             node->child1()->mergeFlags(flags);
             break;
 
-        case ValueRep:
+        case Int52Rep: {
             ASSERT(m_graph.afterFixup());
-            // ValueRep is used to box a double or int52 to a JSValue. So, we shouldn't propagate any node flags to its child.
+            auto& edge = node->child1();
+            if (edge->hasDoubleResult()) {
+                if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                    edge.setUseKind(DoubleRepRealUse);
+                else
+                    edge.setUseKind(DoubleRepAnyIntUse);
+            } else if (!edge->shouldSpeculateInt32ForArithmetic()) {
+                if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                    edge.setUseKind(RealNumberUse);
+                else
+                    edge.setUseKind(AnyIntUse);
+            }
+            // The results of these nodes are pure unboxed integers. Then, we
+            // should definitely tell their children that you will be used as an integer.
+            flags |= NodeBytecodeUsesAsInt;
+            node->child1()->mergeFlags(flags);
             break;
+        }
 
-        case Int52Rep:
         case ValueToInt32:
         case DoubleAsInt32:
             ASSERT(m_graph.afterFixup());
             // The results of these nodes are pure unboxed integers. Then, we
             // should definitely tell their children that you will be used as an integer.
-            node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
+            flags |= NodeBytecodeUsesAsInt;
+            node->child1()->mergeFlags(flags);
             break;
 
         case DoubleRep:
@@ -628,20 +653,6 @@ private:
             // The result of BooleanToNumber can be either an unboxed integer or a JSValue.
             if (node->child1().useKind() == BooleanUse)
                 node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
-            break;
-
-        case CheckStructureOrEmpty:
-        case CheckArrayOrEmpty:
-        case Arrayify:
-        case ArrayifyToStructure:
-        case GetIndexedPropertyStorage:
-        case ResolveRope:
-        case MakeRope:
-        case GetRegExpObjectLastIndex:
-        case HasIndexedProperty:
-        case CallDOM:
-            // Not interested so far.
-            ASSERT(m_graph.afterFixup());
             break;
 
         // Note: ArithSqrt, ArithUnary and other math intrinsics don't have special

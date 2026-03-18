@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 #if ENABLE(WEB_RTC)
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "RTCRtpTransformBackend.h"
 #include <JavaScriptCore/JSCJSValue.h>
@@ -50,6 +49,8 @@ class WritableStream;
 
 struct MessageWithMessagePorts;
 
+template<typename> class ExceptionOr;
+
 enum class RTCRtpScriptTransformerIdentifierType { };
 using RTCRtpScriptTransformerIdentifier = AtomicObjectIdentifier<RTCRtpScriptTransformerIdentifierType>;
 
@@ -64,11 +65,11 @@ public:
     static ExceptionOr<Ref<RTCRtpScriptTransformer>> create(ScriptExecutionContext&, MessageWithMessagePorts&&);
     ~RTCRtpScriptTransformer();
 
-    ReadableStream& readable();
+    ReadableStream& readable() { return m_readable; }
     ExceptionOr<Ref<WritableStream>> writable();
     JSC::JSValue options(JSC::JSGlobalObject&);
 
-    void generateKeyFrame(Ref<DeferredPromise>&&);
+    void generateKeyFrame(const String&, Ref<DeferredPromise>&&);
     void sendKeyFrameRequest(Ref<DeferredPromise>&&);
 
     void startPendingActivity() { m_pendingActivity = makePendingActivity(*this); }
@@ -87,17 +88,19 @@ private:
 
     void enqueueFrame(ScriptExecutionContext&, Ref<RTCRtpTransformableFrame>&&);
 
-    Ref<SerializedScriptValue> m_options;
+    const Ref<SerializedScriptValue> m_options;
     Vector<Ref<MessagePort>> m_ports;
 
-    Ref<SimpleReadableStreamSource> m_readableSource;
-    Ref<ReadableStream> m_readable;
+    const Ref<SimpleReadableStreamSource> m_readableSource;
+    const Ref<ReadableStream> m_readable;
     RefPtr<WritableStream> m_writable;
 
     RefPtr<RTCRtpTransformBackend> m_backend;
     RefPtr<PendingActivity<RTCRtpScriptTransformer>> m_pendingActivity;
 
     Deque<Ref<DeferredPromise>> m_pendingKeyFramePromises;
+    bool m_isVideo { false };
+    bool m_isSender { false };
 
 #if !RELEASE_LOG_DISABLED
     bool m_enableAdditionalLogging { false };

@@ -40,11 +40,13 @@ class String;
 
 namespace WebCore {
 
+class Document;
 class NavigatorBase;
 class PermissionStatus;
 class ScriptExecutionContext;
 enum class PermissionName : uint8_t;
 enum class PermissionQuerySource : uint8_t;
+enum class PermissionState : uint8_t;
 
 template<typename IDLType> class DOMPromiseDeferred;
 

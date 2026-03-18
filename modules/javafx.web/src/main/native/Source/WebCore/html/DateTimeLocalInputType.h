@@ -57,7 +57,7 @@ private:
     StepRange createStepRange(AnyStepHandling) const final;
     std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;

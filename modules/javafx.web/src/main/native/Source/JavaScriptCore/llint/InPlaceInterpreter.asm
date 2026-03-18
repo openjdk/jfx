@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Apple Inc. All rights reserved.
+# Copyright (C) 2023-2025 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -49,17 +49,11 @@
 # - PC: (Program Counter) IPInt's program counter. This records the interpreter's position in Wasm bytecode.
 # - MC: (Metadata Counter) IPInt's metadata pointer. This records the corresponding position in generated metadata.
 # - WI: (Wasm Instance) pointer to the current JSWebAssemblyInstance object. This is used for accessing
-#       function-specific data.
+#       function-specific data (callee-save).
 # - PL: (Pointer to Locals) pointer to the address of local 0 in the current function. This is used for accessing
 #       locals quickly.
-# - MB: (Memory Base) pointer to the current Wasm memory base address.
-# - BC: (Bounds Check) the size of the current Wasm memory region, for bounds checking.
-#
-# Additionally, there are a few registers that are optionally supported for optimization:
-# - IB: (Instruction Base) pointer to the address of the `unreachable` (0x00) label, removing the need to reload
-#       this address at every dispatch.
-# - HR: (Hoist Register) used for hoisting the load of the next opcode in Wasm instructions with low register
-#       pressure, helping reduce the impact of load misses.
+# - MB: (Memory Base) pointer to the current Wasm memory base address (callee-save).
+# - BC: (Bounds Check) the size of the current Wasm memory region, for bounds checking (callee-save).
 #
 # Finally, we provide four "sc" (safe for call) registers which are guaranteed to not overlap with argument
 # registers (sc0, sc1, sc2, sc3)
@@ -71,9 +65,6 @@ if ARM64 or ARM64E
     const PL = t6
     const MB = csr3
     const BC = csr4
-
-    const IB = t7
-    const HR = t3
 
     const sc0 = ws0
     const sc1 = ws1
@@ -87,9 +78,6 @@ elsif X86_64
     const MB = csr3
     const BC = csr4
 
-    const IB = t7
-    const HR = t3
-
     const sc0 = ws0
     const sc1 = ws1
     const sc2 = csr3
@@ -101,9 +89,6 @@ elsif RISCV64
     const PL = csr10
     const MB = csr3
     const BC = csr4
-
-    const IB = invalidGPR
-    const HR = invalidGPR
 
     const sc0 = ws0
     const sc1 = ws1
@@ -117,12 +102,9 @@ elsif ARMv7
     const MB = invalidGPR
     const BC = invalidGPR
 
-    const IB = invalidGPR
-    const HR = invalidGPR
-
     const sc0 = t4
     const sc1 = t5
-    const sc2 = t6
+    const sc2 = csr0
     const sc3 = t7
 else
     const PC = invalidGPR
@@ -131,9 +113,6 @@ else
     const PL = invalidGPR
     const MB = invalidGPR
     const BC = invalidGPR
-
-    const IB = invalidGPR
-    const HR = invalidGPR
 
     const sc0 = invalidGPR
     const sc1 = invalidGPR
@@ -150,14 +129,17 @@ const MachineRegisterSize = constexpr (sizeof(CPURegister))
 const SlotSize = constexpr (sizeof(Register))
 
 # amount of memory a local takes up on the stack (16 bytes for a v128)
-const LocalSize = 16
-const StackValueSize = 16
-const StackValueShift = 4
+const V128ISize = 16
+const LocalSize = V128ISize
+const StackValueSize = V128ISize
 
 const wasmInstance = csr0
 if X86_64 or ARM64 or ARM64E or RISCV64
     const memoryBase = csr3
     const boundsCheckingSize = csr4
+elsif ARMv7
+    const memoryBase = t2
+    const boundsCheckingSize = t3
 else
     const memoryBase = invalidGPR
     const boundsCheckingSize = invalidGPR
@@ -170,33 +152,14 @@ const IPIntCalleeSaveSpaceAsVirtualRegisters = constexpr Wasm::numberOfIPIntCall
 const IPIntCalleeSaveSpaceStackAligned = (IPIntCalleeSaveSpaceAsVirtualRegisters * SlotSize + StackAlignment - 1) & ~StackAlignmentMask
 const IPIntCalleeSaveSpaceStackAligned = 2*IPIntCalleeSaveSpaceStackAligned
 
-# ---------------------------
-# 1.2: Optional optimizations
-# ---------------------------
-
-macro IfIPIntUsesIB(m)
-    if ARM64 or ARM64E or X86_64
-        m()
-    end
-end
-
-macro IfIPIntUsesHR(m, m2)
-    if ARM64 or ARM64E
-        m()
-    else
-        m2()
-    end
-end
-
-macro HoistNextOpcode(offset)
-    IfIPIntUsesHR(macro()
-        loadb offset[PC], HR
-    end, macro() end)
-end
-
 ##############################
 # 2. Core interpreter macros #
 ##############################
+
+macro ipintOp(name, impl)
+    instructionLabel(name)
+    impl()
+end
 
 # -----------------------------------
 # 2.1: Core interpreter functionality
@@ -231,39 +194,6 @@ macro advanceMCByReg(amount)
     addp amount, MC
 end
 
-# Typed push/pop to make code pretty
-macro pushFloat32FT0()
-    pushFPR()
-end
-
-macro pushFloat32FT1()
-    pushFPR1()
-end
-
-macro popFloat32FT0()
-    popFPR()
-end
-
-macro popFloat32FT1()
-    popFPR1()
-end
-
-macro pushFloat64FT0()
-    pushFPR()
-end
-
-macro pushFloat64FT1()
-    pushFPR1()
-end
-
-macro popFloat64FT0()
-    popFPR()
-end
-
-macro popFloat64FT1()
-    popFPR1()
-end
-
 macro decodeLEBVarUInt32(offset, dst, scratch1, scratch2, scratch3, scratch4)
     # if it's a single byte, fastpath it
     const tempPC = scratch4
@@ -293,7 +223,7 @@ end
 
 macro checkStackOverflow(callee, scratch)
     loadi Wasm::IPIntCallee::m_maxFrameSizeInV128[callee], scratch
-    lshiftp 4, scratch
+    mulp V128ISize, scratch
     subp cfr, scratch, scratch
 
 if not ADDRESS64
@@ -354,6 +284,18 @@ macro ipintReloadMemory()
     end
 end
 
+# Call site tracking
+
+macro saveCallSiteIndex()
+if X86_64
+    loadp UnboxedWasmCalleeStackSlot[cfr], ws0
+end
+    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
+    negp t0
+    addp PC, t0
+    storei t0, CallSiteIndex[cfr]
+end
+
 # Operation Calls
 
 macro operationCall(fn)
@@ -362,47 +304,44 @@ macro operationCall(fn)
     if ARM64 or ARM64E
     push PL, ws0
     elsif X86_64
-        push PL, IB
+        push PL
+        # preserve 16 byte alignment.
+        subq MachineRegisterSize, sp
     end
     fn()
     if ARM64 or ARM64E
     pop ws0, PL
     elsif X86_64
-        pop IB, PL
+        addq MachineRegisterSize, sp
+        pop PL
     end
     pop MC, PC
-    if ARM64 or ARM64E
-        pcrtoaddr _ipint_unreachable, IB
-    end
 end
 
 macro operationCallMayThrow(fn)
-    loadp Wasm::IPIntCallee::m_bytecode[ws0], t0
-    negq t0
-    addq PC, t0
-    storei t0, CallSiteIndex[cfr]
+    saveCallSiteIndex()
 
     move wasmInstance, a0
     push PC, MC
     if ARM64 or ARM64E
     push PL, ws0
     elsif X86_64
-        push PL, IB
+        push PL
+        # preserve 16 byte alignment.
+        subq MachineRegisterSize, sp
     end
     fn()
-    bqneq r0, 1, .continuation
-    storei r1, ArgumentCountIncludingThis + PayloadOffset[cfr]
+    bpneq r1, (constexpr JSC::IPInt::SlowPathExceptionTag), .continuation
+    storei r0, ArgumentCountIncludingThis + PayloadOffset[cfr]
     jmp _wasm_throw_from_slow_path_trampoline
 .continuation:
     if ARM64 or ARM64E
     pop ws0, PL
     elsif X86_64
-        pop IB, PL
+        addq MachineRegisterSize, sp
+        pop PL
     end
     pop MC, PC
-    if ARM64 or ARM64E
-        pcrtoaddr _ipint_unreachable, IB
-    end
 end
 
 # Exception handling
@@ -568,7 +507,9 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     getIPIntCallee()
 
     # on x86, PL will hold the PC relative offset for argumINT, then IB will take over
+    if X86_64
     initPCRelative(ipint_entry, PL)
+    end
     ipintEntry()
 else
     break
@@ -587,13 +528,6 @@ if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     # OSR Check
     ipintPrologueOSR(5)
 
-    IfIPIntUsesIB(macro ()
-if ARM64 or ARM64E
-        pcrtoaddr _ipint_unreachable, IB
-elsif X86_64
-        leap (_ipint_unreachable - _ipint_entry_relativePCBase)[PL], IB
-end
-    end)
     move sp, PL
 
     loadp Wasm::IPIntCallee::m_bytecode[ws0], PC
@@ -626,12 +560,15 @@ macro ipintCatchCommon()
     loadp VM::targetInterpreterPCForThrow[t3], PC
     loadp VM::targetInterpreterMetadataPCForThrow[t3], MC
 
+if ARMv7
+    push MC
+end
     getIPIntCallee()
+if ARMv7
+    pop MC
+end
 
     loadp CodeBlock[cfr], wasmInstance
-    if ARM64 or ARM64E
-        pcrtoaddr _ipint_unreachable, IB
-    end
     loadp Wasm::IPIntCallee::m_bytecode[ws0], t1
     addp t1, PC
     loadp Wasm::IPIntCallee::m_metadata[ws0], t1
@@ -644,30 +581,30 @@ macro ipintCatchCommon()
         loadi Wasm::IPIntCallee::m_numRethrowSlotsToAlloc[ws0], t1
         loadi Wasm::IPIntCallee::m_localSizeToAlloc[ws0], t0
     end
-    addq t1, t0
-    mulq LocalSize, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
-    subq cfr, t0, PL
+    addp t1, t0
+    mulp LocalSize, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+    subp cfr, t0, PL
 
     loadi [MC], t0
     addp t1, t0
-    lshiftq StackValueShift, t0
-    addq IPIntCalleeSaveSpaceStackAligned, t0
+    mulp StackValueSize, t0
+    addp IPIntCalleeSaveSpaceStackAligned, t0
+if ARMv7
+    move cfr, sp
+    subp sp, t0, sp
+else
     subp cfr, t0, sp
+end
 
 if X86_64
     loadp UnboxedWasmCalleeStackSlot[cfr], ws0
 end
 end
 
-global _ipint_catch_entry
-_ipint_catch_entry:
+op(ipint_catch_entry, macro()
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_catch_entry, IB)
-    leap (_ipint_unreachable - _ipint_catch_entry_relativePCBase)[IB], IB
-end
 
     move cfr, a1
     move sp, a2
@@ -680,15 +617,11 @@ end
 else
     break
 end
+end)
 
-global _ipint_catch_all_entry
-_ipint_catch_all_entry:
+op(ipint_catch_all_entry, macro()
 if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_catch_all_entry, IB)
-    leap (_ipint_unreachable - _ipint_catch_all_entry_relativePCBase)[IB], IB
-end
 
     move cfr, a1
     move 0, a2
@@ -701,15 +634,11 @@ end
 else
     break
 end
+end)
 
-global _ipint_table_catch_entry
-_ipint_table_catch_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+op(ipint_table_catch_entry, macro()
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_table_catch_entry, IB)
-    leap (_ipint_unreachable - _ipint_table_catch_entry_relativePCBase)[IB], IB
-end
 
     # push arguments but no ref: sp in a2, call normal operation
 
@@ -724,15 +653,11 @@ end
 else
     break
 end
+end)
 
-global _ipint_table_catch_ref_entry
-_ipint_table_catch_ref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+op(ipint_table_catch_ref_entry, macro()
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_table_catch_ref_entry, IB)
-    leap (_ipint_unreachable - _ipint_table_catch_ref_entry_relativePCBase)[IB], IB
-end
 
     # push both arguments and ref
 
@@ -747,20 +672,16 @@ end
 else
     break
 end
+end)
 
-global _ipint_table_catch_all_entry
-_ipint_table_catch_all_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+op(ipint_table_catch_all_entry, macro()
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_table_catch_all_entry, IB)
-    leap (_ipint_unreachable - _ipint_table_catch_all_entry_relativePCBase)[IB], IB
-end
 
     # do nothing: 0 in sp for no arguments, call normal operation
 
     move cfr, a1
-    move sp, a2
+    move 0, a2
     move PL, a3
     operationCall(macro() cCall4(_ipint_extern_retrieve_and_clear_exception) end)
 
@@ -770,15 +691,11 @@ end
 else
     break
 end
+end)
 
-global _ipint_table_catch_allref_entry
-_ipint_table_catch_allref_entry:
-if WEBASSEMBLY and (ARM64 or ARM64E or X86_64)
+op(ipint_table_catch_allref_entry, macro()
+if WEBASSEMBLY and (ARM64 or ARM64E or X86_64 or ARMv7)
     ipintCatchCommon()
-if X86_64
-    initPCRelative(ipint_table_catch_allref_entry, IB)
-    leap (_ipint_unreachable - _ipint_table_catch_allref_entry_relativePCBase)[IB], IB
-end
 
     # push only the ref
 
@@ -793,6 +710,7 @@ end
 else
     break
 end
+end)
 
 # Trampoline entrypoints
 
@@ -811,6 +729,7 @@ elsif ARMv7
     include InPlaceInterpreter32_64
 else
 # For unimplemented architectures: make sure that the assertions can still find the labels
+# See https://webassembly.github.io/spec/core/appendix/index-instructions.html for the list of instructions.
 
 unimplementedInstruction(_unreachable)
 unimplementedInstruction(_nop)

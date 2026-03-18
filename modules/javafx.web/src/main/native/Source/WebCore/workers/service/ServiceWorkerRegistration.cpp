@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSNotification.h"
@@ -60,12 +62,12 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ServiceWorkerRegistration);
 
 Ref<ServiceWorkerRegistration> ServiceWorkerRegistration::getOrCreate(ScriptExecutionContext& context, Ref<ServiceWorkerContainer>&& container, ServiceWorkerRegistrationData&& data)
 {
-    if (auto* registration = container->registration(data.identifier)) {
+    if (RefPtr registration = container->registration(data.identifier)) {
         ASSERT(!registration->isContextStopped());
-        return *registration;
+        return registration.releaseNonNull();
     }
 
-    auto registration = adoptRef(*new ServiceWorkerRegistration(context, WTFMove(container), WTFMove(data)));
+    Ref registration = adoptRef(*new ServiceWorkerRegistration(context, WTFMove(container), WTFMove(data)));
     registration->suspendIfNeeded();
     return registration;
 }
@@ -155,13 +157,13 @@ void ServiceWorkerRegistration::update(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    auto* newestWorker = getNewestWorker();
+    RefPtr newestWorker = getNewestWorker();
     if (!newestWorker) {
         promise->reject(Exception(ExceptionCode::InvalidStateError, "newestWorker is null"_s));
         return;
     }
 
-    if (auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext()); serviceWorkerGlobalScope && serviceWorkerGlobalScope->serviceWorker().state() == ServiceWorkerState::Installing) {
+    if (RefPtr serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(scriptExecutionContext()); serviceWorkerGlobalScope && serviceWorkerGlobalScope->serviceWorker().state() == ServiceWorkerState::Installing) {
         promise->reject(Exception(ExceptionCode::InvalidStateError, "service worker is installing"_s));
         return;
     }
@@ -317,7 +319,7 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
         if (RefPtr declarativePushEvent = serviceWorkerGlobalScope->declarativePushEvent()) {
             auto notification = notificationResult.releaseReturnValue();
             if (!notification->navigate().isValid()) {
-                promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `pushnotification` event did not include NotificationOptions that specify a valid defaultAction url"_s });
+                promise->reject(Exception { ExceptionCode::TypeError, "Call to showNotification() while handling a `push` event did not include NotificationOptions that specify a valid defaultAction url"_s });
                 return;
             }
 
@@ -327,7 +329,7 @@ void ServiceWorkerRegistration::showNotification(ScriptExecutionContext& context
         }
 #endif
 
-        if (auto* pushEvent = serviceWorkerGlobalScope->pushEvent()) {
+        if (RefPtr pushEvent = serviceWorkerGlobalScope->pushEvent()) {
             auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(promise->globalObject());
             auto& jsPromise = *JSC::jsCast<JSC::JSPromise*>(promise->promise());
             pushEvent->waitUntil(DOMPromise::create(globalObject, jsPromise));
@@ -384,7 +386,7 @@ void ServiceWorkerRegistration::addCookieChangeSubscriptions(Vector<CookieStoreG
         cookieChangeSubscriptions.append({ WTFMove(subscription.name), WTFMove(url) });
     }
 
-    protectedContainer()->addCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
+    m_container->addCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
 }
 
 void ServiceWorkerRegistration::removeCookieChangeSubscriptions(Vector<CookieStoreGetOptions>&& subscriptions, Ref<DeferredPromise>&& promise)
@@ -412,7 +414,7 @@ void ServiceWorkerRegistration::removeCookieChangeSubscriptions(Vector<CookieSto
         cookieChangeSubscriptions.append({ WTFMove(subscription.name), WTFMove(url) });
     }
 
-    protectedContainer()->removeCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
+    m_container->removeCookieChangeSubscriptions(identifier(), WTFMove(cookieChangeSubscriptions), WTFMove(promise));
 }
 
 void ServiceWorkerRegistration::cookieChangeSubscriptions(Ref<DeferredPromise>&& promise)
@@ -422,12 +424,7 @@ void ServiceWorkerRegistration::cookieChangeSubscriptions(Ref<DeferredPromise>&&
         return;
     }
 
-    protectedContainer()->cookieChangeSubscriptions(identifier(), WTFMove(promise));
-}
-
-Ref<ServiceWorkerContainer> ServiceWorkerRegistration::protectedContainer() const
-{
-    return m_container;
+    m_container->cookieChangeSubscriptions(identifier(), WTFMove(promise));
 }
 
 } // namespace WebCore

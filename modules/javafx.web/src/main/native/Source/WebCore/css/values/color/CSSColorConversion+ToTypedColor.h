@@ -32,7 +32,7 @@
 namespace WebCore {
 
 // This file implements support for converting style resolved parsed values (e.g. tuple
-// of `std::variant<Style::Number<>, Style::Percentage<>, ...>`) into typed colors (e.g. `SRGBA<float>`).
+// of `Variant<Style::Number<>, Style::Percentage<>, ...>`) into typed colors (e.g. `SRGBA<float>`).
 
 template<typename Descriptor, unsigned Index> float convertToTypeColorComponent(Style::Number<> number)
 {
@@ -83,7 +83,7 @@ template<typename Descriptor, unsigned Index> float convertToTypeColorComponent(
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-template<typename Descriptor, unsigned Index, typename... Ts> float convertToTypeColorComponent(const std::variant<Ts...>& variant)
+template<typename Descriptor, unsigned Index, typename... Ts> float convertToTypeColorComponent(const Variant<Ts...>& variant)
 {
     return WTF::switchOn(variant, [](auto value) { return convertToTypeColorComponent<Descriptor, Index>(value); });
 }

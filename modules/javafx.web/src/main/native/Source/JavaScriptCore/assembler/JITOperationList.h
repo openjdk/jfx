@@ -28,6 +28,7 @@
 #include "Options.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Platform.h>
 #include <wtf/PtrTag.h>
 
 namespace JSC {
@@ -122,13 +123,13 @@ inline JITOperationList& JITOperationList::singleton()
 
 ALWAYS_INLINE void JITOperationList::populatePointersInJavaScriptCore()
 {
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabelsInJavaScriptCore();
 }
 
 ALWAYS_INLINE void JITOperationList::populatePointersInJavaScriptCoreForLLInt()
 {
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         populateDisassemblyLabelsInJavaScriptCoreForLLInt();
 }
 

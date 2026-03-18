@@ -31,7 +31,6 @@
 #include "MessagePort.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerClient.h"
-#include <variant>
 
 namespace JSC {
 class CallFrame;
@@ -44,7 +43,7 @@ class MessagePort;
 class ServiceWorker;
 class ServiceWorkerClient;
 
-using ExtendableMessageEventSource = std::variant<RefPtr<ServiceWorkerClient>, RefPtr<ServiceWorker>, RefPtr<MessagePort>>;
+using ExtendableMessageEventSource = Variant<RefPtr<ServiceWorkerClient>, RefPtr<ServiceWorker>, RefPtr<MessagePort>>;
 
 class ExtendableMessageEvent final : public ExtendableEvent {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ExtendableMessageEvent);

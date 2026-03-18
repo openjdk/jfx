@@ -55,7 +55,7 @@ void JITBitAndGenerator::generateFastPath(CCallHelpers& jit)
 #if USE(JSVALUE64)
             jit.and64(CCallHelpers::Imm32(constOpr.asConstInt32()), var.payloadGPR(), m_result.payloadGPR());
             if (constOpr.asConstInt32() >= 0)
-                jit.or64(GPRInfo::numberTagRegister, m_result.payloadGPR());
+                jit.boxInt32(m_result.payloadGPR(), m_result);
 #else
             jit.moveValueRegs(var, m_result);
             jit.and32(CCallHelpers::Imm32(constOpr.asConstInt32()), m_result.payloadGPR());
@@ -69,7 +69,7 @@ void JITBitAndGenerator::generateFastPath(CCallHelpers& jit)
     if (m_leftOperand.definitelyIsBoolean() && m_rightOperand.definitelyIsBoolean()) {
         jit.and32(m_left.payloadGPR(), m_right.payloadGPR(), m_result.payloadGPR());
         jit.and32(CCallHelpers::TrustedImm32(1), m_result.payloadGPR());
-        jit.or64(GPRInfo::numberTagRegister, m_result.payloadGPR());
+        jit.boxInt32(m_result.payloadGPR(), m_result);
         return;
     }
 #endif

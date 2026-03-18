@@ -45,7 +45,7 @@ static inline const char* pas_race_test_hook_kind_get_string(pas_race_test_hook_
     case pas_race_test_hook_local_allocator_stop_before_unlock:
         return "local_allocator_stop_before_unlock";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

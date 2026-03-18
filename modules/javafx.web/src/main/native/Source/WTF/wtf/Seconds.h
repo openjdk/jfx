@@ -41,7 +41,7 @@ class TimeWithDynamicClockType;
 class WallTime;
 
 class Seconds final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Seconds);
 public:
     constexpr Seconds() { }
 
@@ -203,27 +203,7 @@ public:
     WTF_EXPORT_PRIVATE ContinuousApproximateTime operator-(ContinuousApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator-(const TimeWithDynamicClockType&) const;
 
-    friend constexpr bool operator==(Seconds, Seconds) = default;
-
-    constexpr bool operator<(Seconds other) const
-    {
-        return m_value < other.m_value;
-    }
-
-    constexpr bool operator>(Seconds other) const
-    {
-        return m_value > other.m_value;
-    }
-
-    constexpr bool operator<=(Seconds other) const
-    {
-        return m_value <= other.m_value;
-    }
-
-    constexpr bool operator>=(Seconds other) const
-    {
-        return m_value >= other.m_value;
-    }
+    friend constexpr auto operator<=>(Seconds, Seconds) = default;
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
@@ -238,15 +218,14 @@ public:
         return Seconds(reduced);
     }
 
-    struct MarkableTraits;
-
 private:
     double m_value { 0 };
 };
 
 WTF_EXPORT_PRIVATE void sleep(Seconds);
 
-struct Seconds::MarkableTraits {
+template<>
+struct MarkableTraits<Seconds> {
     static bool isEmptyValue(Seconds seconds)
     {
         return seconds.isNaN();

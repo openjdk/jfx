@@ -27,6 +27,7 @@
 #include "IDBKeyData.h"
 
 #include "KeyedCoding.h"
+#include <algorithm>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -249,69 +250,53 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-int IDBKeyData::compare(const IDBKeyData& other) const
+std::weak_ordering operator<=>(const IDBKeyData& a, const IDBKeyData& b)
 {
-    auto type = this->type();
-    auto otherType = other.type();
+    auto aType = a.type();
+    auto bType = b.type();
 
-    if (type == IndexedDB::KeyType::Invalid) {
-        if (otherType != IndexedDB::KeyType::Invalid)
-            return -1;
-        if (otherType == IndexedDB::KeyType::Invalid)
-            return 0;
-    } else if (otherType == IndexedDB::KeyType::Invalid)
-        return 1;
+    if (aType == IndexedDB::KeyType::Invalid) {
+        if (bType != IndexedDB::KeyType::Invalid)
+            return std::weak_ordering::less;
+        if (bType == IndexedDB::KeyType::Invalid)
+            return std::weak_ordering::equivalent;
+    } else if (bType == IndexedDB::KeyType::Invalid)
+        return std::weak_ordering::greater;
 
     // The IDBKey::type() enum is in reverse sort order.
-    if (type != otherType)
-        return type < otherType ? 1 : -1;
+    if (aType != bType)
+        return bType <=> aType;
 
     // The types are the same, so handle actual value comparison.
-    switch (type) {
+    switch (aType) {
     case IndexedDB::KeyType::Invalid:
         // Invalid type should have been fully handled above
         ASSERT_NOT_REACHED();
-        return 0;
+        return std::weak_ordering::equivalent;
     case IndexedDB::KeyType::Array: {
-        auto& array = std::get<Vector<IDBKeyData>>(m_value);
-        auto& otherArray = std::get<Vector<IDBKeyData>>(other.m_value);
-        for (size_t i = 0; i < array.size() && i < otherArray.size(); ++i) {
-            if (int result = array[i].compare(otherArray[i]))
+        auto& aArray = std::get<Vector<IDBKeyData>>(a.m_value);
+        auto& bArray = std::get<Vector<IDBKeyData>>(b.m_value);
+        for (size_t i = 0; i < aArray.size() && i < bArray.size(); ++i) {
+            if (auto result = aArray[i] <=> bArray[i]; is_neq(result))
                 return result;
         }
-        if (array.size() < otherArray.size())
-            return -1;
-        if (array.size() > otherArray.size())
-            return 1;
-        return 0;
+        return aArray.size() <=> bArray.size();
     }
     case IndexedDB::KeyType::Binary:
-        return compareBinaryKeyData(std::get<ThreadSafeDataBuffer>(m_value), std::get<ThreadSafeDataBuffer>(other.m_value));
+        return compareBinaryKeyData(std::get<ThreadSafeDataBuffer>(a.m_value), std::get<ThreadSafeDataBuffer>(b.m_value));
     case IndexedDB::KeyType::String:
-        return codePointCompare(std::get<String>(m_value), std::get<String>(other.m_value));
-    case IndexedDB::KeyType::Date: {
-        auto number = std::get<Date>(m_value).value;
-        auto otherNumber = std::get<Date>(other.m_value).value;
-
-        if (number == otherNumber)
-            return 0;
-        return number > otherNumber ? 1 : -1;
-    }
-    case IndexedDB::KeyType::Number: {
-        auto number = std::get<double>(m_value);
-        auto otherNumber = std::get<double>(other.m_value);
-
-        if (number == otherNumber)
-            return 0;
-        return number > otherNumber ? 1 : -1;
-    }
+        return codePointCompare(std::get<String>(a.m_value), std::get<String>(b.m_value));
+    case IndexedDB::KeyType::Date:
+        return weakOrderingCast(std::get<IDBKeyData::Date>(a.m_value).value <=> std::get<IDBKeyData::Date>(b.m_value).value);
+    case IndexedDB::KeyType::Number:
+        return weakOrderingCast(std::get<double>(a.m_value) <=> std::get<double>(b.m_value));
     case IndexedDB::KeyType::Max:
     case IndexedDB::KeyType::Min:
-        return 0;
+        return std::weak_ordering::equivalent;
     }
 
     ASSERT_NOT_REACHED();
-    return 0;
+    return std::weak_ordering::equivalent;
 }
 
 String IDBKeyData::loggingString() const
@@ -411,9 +396,18 @@ bool IDBKeyData::isValid() const
     return true;
 }
 
-bool IDBKeyData::operator<(const IDBKeyData& rhs) const
+// See NOTE in https://www.w3.org/TR/IndexedDB/#key-construct.
+bool IDBKeyData::isValidValue(const ValueVariant& variant)
 {
-    return compare(rhs) < 0;
+    return WTF::switchOn(variant, [&](double value) {
+        return !std::isnan(value);
+    }, [&](const Date& date) {
+        return !std::isnan(date.value);
+    }, [&](const Vector<IDBKeyData>& keys) {
+        return std::ranges::all_of(keys, IDBKeyData::isValidValue, &IDBKeyData::value);
+    }, [&](const auto&) {
+        return true;
+    });
 }
 
 bool IDBKeyData::operator==(const IDBKeyData& other) const

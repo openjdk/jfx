@@ -273,7 +273,7 @@ static PAS_ALWAYS_INLINE bool pas_segregated_page_switch_lock_with_mode(
         pas_segregated_page_switch_lock_impl(page, held_lock);
         return true;
     } }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return true;
 }
 
@@ -366,6 +366,7 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
 
     word = page->alloc_bits[word_index];
 
+    // FIXME: Try removing this guard and unconditionally checking for double frees https://bugs.webkit.org/show_bug.cgi?id=295638
     if (page_config.check_deallocation) {
 #if !PAS_ARM && !PAS_RISCV
         new_word = word;
@@ -485,6 +486,10 @@ pas_segregated_page_deallocate_with_page(pas_segregated_page* page,
     }
 
     if (!new_word) {
+        /* Double check we didn't somehow double free this allocation. */
+        if (PAS_UNLIKELY(!word))
+             pas_segregated_page_deallocation_did_fail(begin);
+
         PAS_TESTING_ASSERT(page->emptiness.num_non_empty_words);
         uintptr_t num_non_empty_words = page->emptiness.num_non_empty_words;
         if (!--num_non_empty_words) {
@@ -538,7 +543,7 @@ pas_segregated_page_get_directory_for_address_in_page(pas_segregated_page* page,
                 pas_segregated_view_get_shared_handle(owning_view), begin, page_config)->directory);
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -578,7 +583,7 @@ pas_segregated_page_get_object_size_for_address_in_page(pas_segregated_page* pag
                 begin, page_config)->directory)->object_size;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

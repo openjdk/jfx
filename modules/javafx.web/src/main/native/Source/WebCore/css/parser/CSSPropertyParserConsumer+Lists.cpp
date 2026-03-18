@@ -29,10 +29,12 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
 #include "CSSPropertyParserConsumer+String.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "CSSValuePair.h"
@@ -40,7 +42,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-static RefPtr<CSSValue> consumeCounter(CSSParserTokenRange& range, const CSSParserContext& context, int defaultValue)
+static RefPtr<CSSValue> consumeCounter(CSSParserTokenRange& range, CSS::PropertyParserState& state, int defaultValue)
 {
     if (range.peek().id() == CSSValueNone)
         return consumeIdent(range);
@@ -50,7 +52,7 @@ static RefPtr<CSSValue> consumeCounter(CSSParserTokenRange& range, const CSSPars
         auto counterName = consumeCustomIdent(range);
         if (!counterName)
             return nullptr;
-        if (auto counterValue = consumeInteger(range, context))
+        if (auto counterValue = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, state))
             list.append(CSSValuePair::create(counterName.releaseNonNull(), counterValue.releaseNonNull()));
         else
             list.append(CSSValuePair::create(counterName.releaseNonNull(), CSSPrimitiveValue::createInteger(defaultValue)));
@@ -58,42 +60,30 @@ static RefPtr<CSSValue> consumeCounter(CSSParserTokenRange& range, const CSSPars
     return CSSValueList::createSpaceSeparated(WTFMove(list));
 }
 
-RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeCounterReset(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'counter-reset'> = [ <counter-name> <integer>? | <reversed-counter-name> <integer>? ]+ | none
     // https://drafts.csswg.org/css-lists/#propdef-counter-reset
 
     // FIXME: Implement support for `reversed-counter-name`.
 
-    return consumeCounter(range, context, 0);
+    return consumeCounter(range, state, 0);
 }
 
-RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeCounterIncrement(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'counter-increment'> = [ <counter-name> <integer>? ]+ | none
     // https://drafts.csswg.org/css-lists/#propdef-counter-increment
 
-    return consumeCounter(range, context, 1);
+    return consumeCounter(range, state, 1);
 }
 
-RefPtr<CSSValue> consumeCounterSet(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeCounterSet(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'counter-set'> = [ <counter-name> <integer>? ]+ | none
     // https://drafts.csswg.org/css-lists/#propdef-counter-set
 
-    return consumeCounter(range, context, 0);
-}
-
-RefPtr<CSSValue> consumeListStyleType(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'list-style-type'> = <counter-style> | <string> | none
-    // https://drafts.csswg.org/css-lists/#propdef-list-style-type
-
-    if (range.peek().id() == CSSValueNone)
-        return consumeIdent(range);
-    if (range.peek().type() == StringToken)
-        return consumeString(range);
-    return consumeCounterStyle(range, context);
+    return consumeCounter(range, state, 0);
 }
 
 } // namespace CSSPropertyParserHelpers

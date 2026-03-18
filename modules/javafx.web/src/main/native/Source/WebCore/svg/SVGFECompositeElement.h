@@ -22,6 +22,7 @@
 #pragma once
 
 #include "FEComposite.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include <wtf/SortedArrayMap.h>
 #include <wtf/TZoneMalloc.h>

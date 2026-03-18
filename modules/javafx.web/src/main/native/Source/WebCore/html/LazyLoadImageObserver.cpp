@@ -53,7 +53,7 @@ private:
 
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
+    CallbackResult<void> invoke(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
 
@@ -68,9 +68,9 @@ private:
         return { };
     }
 
-    CallbackResult<void> handleEventRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
+    CallbackResult<void> invokeRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
     {
-        return handleEvent(thisObserver, entries, observer);
+        return invoke(thisObserver, entries, observer);
     }
 };
 
@@ -93,8 +93,8 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
 {
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
-        static NeverDestroyed<const String> lazyLoadingRootMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
-        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, { } };
+        static NeverDestroyed<const String> lazyLoadingScrollMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
+        IntersectionObserver::Init options { std::nullopt, { }, lazyLoadingScrollMarginFallback, { } };
         auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
         if (observer.hasException())
             return nullptr;

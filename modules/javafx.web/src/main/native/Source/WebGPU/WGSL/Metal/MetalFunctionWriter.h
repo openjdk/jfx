@@ -31,11 +31,12 @@ namespace WGSL {
 
 class ShaderModule;
 struct ConstantValue;
+struct DeviceState;
 struct PrepareResult;
 
 namespace Metal {
 
-void emitMetalFunctions(StringBuilder&, ShaderModule&, PrepareResult&, const HashMap<String, ConstantValue>&);
+void emitMetalFunctions(StringBuilder&, ShaderModule&, PrepareResult&, const HashMap<String, ConstantValue>&, DeviceState&&);
 
 } // namespace Metal
 } // namespace WGSL

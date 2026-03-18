@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015 Roopesh Chander (roop@roopc.net)
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -71,18 +71,19 @@ static bool processContentRuleListsForLoad(const LocalFrame& frame, ResourceRequ
     RefPtr documentLoader = frame.loader().documentLoader();
     if (!documentLoader)
         return false;
+
     RefPtr page = frame.page();
     if (!page)
         return false;
+
     auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), resourceType, *documentLoader);
-    bool result = results.summary.blockedLoad;
     ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
-    return result;
+    return results.shouldBlock();
 }
 
 #endif
 
-void PingLoader::loadImage(LocalFrame& frame, const URL& url)
+void PingLoader::loadImage(LocalFrame& frame, URL&& url)
 {
     ASSERT(frame.document());
     Ref document = *frame.document();
@@ -97,7 +98,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
         return;
     }
 
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
 #if ENABLE(CONTENT_EXTENSIONS)
     if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::Image))
         return;
@@ -112,20 +113,21 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
     String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), request.url(), frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
-    frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+    frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::EmptyString);
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/links.html#hyperlink-auditing
-void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& destinationURL)
+void PingLoader::sendPing(LocalFrame& frame, URL&& sendPingURL, const URL& destinationURL)
 {
     ASSERT(frame.document());
 
-    if (!pingURL.protocolIsInHTTPFamily())
+    if (!sendPingURL.protocolIsInHTTPFamily())
         return;
 
-    ResourceRequest request(pingURL);
+    ResourceRequest request(WTFMove(sendPingURL));
+    const auto& pingURL = request.url();
     request.setRequester(ResourceRequestRequester::Ping);
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -148,7 +150,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     Ref sourceOrigin = document->securityOrigin();
     FrameLoader::addHTTPOriginIfNeeded(request, SecurityPolicy::generateOriginHeader(document->referrerPolicy(), request.url(), sourceOrigin, OriginAccessPatternsForWebProcess::singleton()));
 
-    frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+    frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     // https://html.spec.whatwg.org/multipage/links.html#hyperlink-auditing
     if (document->protectedSecurityOrigin()->isSameOriginAs(SecurityOrigin::create(pingURL).get())
@@ -159,7 +161,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::NoReferrer);
 }
 
-void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Ref<FormData>&& report, ViolationReportType reportType)
+void PingLoader::sendViolationReport(LocalFrame& frame, URL&& violationReportURL, Ref<FormData>&& report, ViolationReportType reportType)
 {
     ASSERT(frame.document());
 
@@ -168,7 +170,8 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     if (reportType == ViolationReportType::CrossOriginOpenerPolicy && Page::nonUtilityPageCount() <= 1)
         return;
 
-    ResourceRequest request(reportURL);
+    ResourceRequest request(WTFMove(violationReportURL));
+    const auto& reportURL = request.url();
 #if ENABLE(CONTENT_EXTENSIONS)
     if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::CSPReport))
         return;
@@ -190,6 +193,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     case ViolationReportType::Deprecation:
     case ViolationReportType::StandardReportingAPIViolation:
     case ViolationReportType::Test:
+    case ViolationReportType::IntegrityPolicy:
         request.setHTTPContentType("application/reports+json"_s);
         break;
     }
@@ -203,7 +207,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
     if (reportType == ViolationReportType::ContentSecurityPolicy)
-        frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+        frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), reportURL, frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
@@ -220,7 +224,7 @@ void PingLoader::startPingLoad(LocalFrame& frame, ResourceRequest& request, HTTP
     // Document in the Frame, but the activeDocumentLoader will be associated
     // with the provisional DocumentLoader if there is a provisional
     // DocumentLoader.
-    bool shouldUseCredentialStorage = frame.protectedLoader()->client().shouldUseCredentialStorage(frame.loader().activeDocumentLoader(), identifier);
+    bool shouldUseCredentialStorage = frame.loader().client().shouldUseCredentialStorage(frame.loader().protectedActiveDocumentLoader().get(), identifier);
     ResourceLoaderOptions options;
     options.credentials = shouldUseCredentialStorage ? FetchOptions::Credentials::Include : FetchOptions::Credentials::Omit;
     options.redirect = shouldFollowRedirects == ShouldFollowRedirects::Yes ? FetchOptions::Redirect::Follow : FetchOptions::Redirect::Error;
@@ -255,7 +259,7 @@ void PingLoader::startPingLoad(LocalFrame& frame, ResourceRequest& request, HTTP
     }
 
     CachedResourceRequest cachedResourceRequest { ResourceRequest { request }, options };
-    frame.document()->protectedCachedResourceLoader()->requestPingResource(WTFMove(cachedResourceRequest));
+    frame.protectedDocument()->protectedCachedResourceLoader()->requestPingResource(WTFMove(cachedResourceRequest));
 }
 
 // // https://html.spec.whatwg.org/multipage/origin.html#sanitize-url-report

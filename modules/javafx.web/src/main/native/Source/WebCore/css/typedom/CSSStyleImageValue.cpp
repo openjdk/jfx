@@ -39,9 +39,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSStyleImageValue);
 
-CSSStyleImageValue::CSSStyleImageValue(Ref<CSSImageValue>&& cssValue, Document* document)
+CSSStyleImageValue::CSSStyleImageValue(Ref<CSSImageValue>&& cssValue, Document& document)
     : m_cssValue(WTFMove(cssValue))
-    , m_document(document)
+    , m_document(&document)
 {
 }
 
@@ -54,7 +54,6 @@ Document* CSSStyleImageValue::document() const
 {
     return m_document.get();
 }
-
 
 RefPtr<CSSValue> CSSStyleImageValue::toCSSValue() const
 {

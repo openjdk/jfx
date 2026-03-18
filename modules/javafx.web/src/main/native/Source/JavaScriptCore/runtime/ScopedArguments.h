@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CommonIdentifiers.h"
 #include "GenericArgumentsImpl.h"
 #include "JSLexicalEnvironment.h"
 #include "Watchpoint.h"
@@ -77,7 +78,7 @@ public:
     {
         VM& vm = getVM(globalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
-        if (UNLIKELY(m_overrodeThings)) {
+        if (m_overrodeThings) [[unlikely]] {
             auto value = get(globalObject, vm.propertyNames->length);
             RETURN_IF_EXCEPTION(scope, 0);
             RELEASE_AND_RETURN(scope, value.toUInt32(globalObject));

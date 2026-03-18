@@ -30,14 +30,23 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "DocumentParser.h"
+#include "DocumentSyncData.h"
 #include "Element.h"
+#include "EventLoop.h"
 #include "ExtensionStyleSheets.h"
 #include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
+#include "FrameSelection.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrameInlines.h"
+#include "LocalFrameView.h"
 #include "NodeIterator.h"
+#include "NodeInlines.h"
+#include "PageInlines.h"
 #include "ReportingScope.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "TextResourceDecoder.h"
 #include "UndoManager.h"
 #include "WebCoreOpaqueRoot.h"
@@ -108,14 +117,19 @@ inline ScriptModuleLoader& Document::moduleLoader()
     return *m_moduleLoader;
 }
 
-CSSFontSelector& Document::fontSelector()
+inline CheckedRef<EventLoopTaskGroup> Document::checkedEventLoop()
+{
+    return eventLoop();
+}
+
+inline CSSFontSelector& Document::fontSelector()
 {
     if (!m_fontSelector)
         return ensureFontSelector();
     return *m_fontSelector;
 }
 
-const CSSFontSelector& Document::fontSelector() const
+inline const CSSFontSelector& Document::fontSelector() const
 {
     if (!m_fontSelector)
         return const_cast<Document&>(*this).ensureFontSelector();
@@ -148,7 +162,7 @@ bool Document::hasNodeIterators() const
 
 inline void Document::invalidateAccessKeyCache()
 {
-    if (UNLIKELY(m_accessKeyCache))
+    if (m_accessKeyCache) [[unlikely]]
         invalidateAccessKeyCacheSlowCase();
 }
 
@@ -159,32 +173,20 @@ inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type
 
 inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
 
-inline bool Document::isSameOriginAsTopDocument() const { return protectedSecurityOrigin()->isSameOriginAs(topOrigin()); }
+inline bool Document::isSameOriginAsTopDocument() const { return protectedSecurityOrigin()->isSameOriginAs(protectedTopOrigin()); }
 
 inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
 {
-    if (LIKELY(urlToMask.protocolIsInHTTPFamily()))
+    if (urlToMask.protocolIsInHTTPFamily()) [[likely]]
         return false;
     return shouldMaskURLForBindingsInternal(urlToMask);
 }
 
 inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
 {
-    if (UNLIKELY(shouldMaskURLForBindings(url)))
+    if (shouldMaskURLForBindings(url)) [[unlikely]]
         return maskedURLForBindings();
     return url;
-}
-
-// These functions are here because they require the Document class definition and we want to inline them.
-
-inline ScriptExecutionContext* Node::scriptExecutionContext() const
-{
-    return &document().contextDocument();
-}
-
-inline RefPtr<ScriptExecutionContext> Node::protectedScriptExecutionContext() const
-{
-    return scriptExecutionContext();
 }
 
 inline bool Document::hasBrowsingContext() const
@@ -192,21 +194,7 @@ inline bool Document::hasBrowsingContext() const
     return !!frame();
 }
 
-inline WebCoreOpaqueRoot Node::opaqueRoot() const
-{
-    // FIXME: Possible race?
-    // https://bugs.webkit.org/show_bug.cgi?id=165713
-    if (isConnected())
-        return WebCoreOpaqueRoot { &document() };
-    return traverseToOpaqueRoot();
-}
-
 inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
-
-inline Ref<Document> Node::protectedDocument() const
-{
-    return document();
-}
 
 inline RefPtr<LocalDOMWindow> Document::protectedWindow() const
 {
@@ -223,6 +211,11 @@ inline CachedResourceLoader& Document::cachedResourceLoader()
 inline Ref<CachedResourceLoader> Document::protectedCachedResourceLoader() const
 {
     return const_cast<Document&>(*this).cachedResourceLoader();
+}
+
+inline const SettingsValues& Document::settingsValues() const
+{
+    return settings().values();
 }
 
 inline RefPtr<DocumentParser> Document::protectedParser() const
@@ -296,6 +289,37 @@ inline CheckedRef<const DocumentMarkerController> Document::checkedMarkers() con
 inline Ref<SecurityOrigin> Document::protectedSecurityOrigin() const
 {
     return SecurityContext::protectedSecurityOrigin().releaseNonNull();
+}
+
+inline Ref<DocumentSyncData> Document::syncData()
+{
+    return m_syncData.get();
+}
+
+inline LocalFrameView* Document::view() const
+{
+    return m_frame ? m_frame->view() : nullptr;
+}
+
+inline RefPtr<LocalFrameView> Document::protectedView() const
+{
+    return view();
+}
+
+inline Page* Document::page() const
+{
+    return m_frame ? m_frame->page() : nullptr;
+}
+
+inline RefPtr<Page> Document::protectedPage() const
+{
+    return page();
+}
+
+// FIXME: Move to FrameSelectionInlines.h
+RefPtr<Document> FrameSelection::protectedDocument() const
+{
+    return m_document.get();
 }
 
 } // namespace WebCore

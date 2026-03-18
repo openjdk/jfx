@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,10 +78,10 @@ public:
         if (WebThreadShouldYield())
             return true;
 #endif
-        if (UNLIKELY(m_documentHasActiveParserYieldTokens))
+        if (m_documentHasActiveParserYieldTokens) [[unlikely]]
             return true;
 
-        if (UNLIKELY(session.processedTokens > session.processedTokensOnLastCheck + numberOfTokensBeforeCheckingForYield || session.didSeeScript))
+        if (session.processedTokens > session.processedTokensOnLastCheck + numberOfTokensBeforeCheckingForYield || session.didSeeScript) [[unlikely]]
             return checkForYield(session);
 
         ++session.processedTokens;

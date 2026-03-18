@@ -27,47 +27,24 @@
 #include "ASTBuilder.h"
 
 #include "ASTNode.h"
-#include <wtf/FixedVector.h>
 
 namespace WGSL::AST {
 
 Builder::Builder(Builder&& other)
 {
-    m_arena = std::exchange(other.m_arena, { });
-    m_arenas = WTFMove(other.m_arenas);
     m_nodes = WTFMove(other.m_nodes);
-}
-
-Builder::~Builder()
-{
-    size_t size = m_nodes.size();
-    for (size_t i = 0; i < size; ++i)
-        m_nodes[i]->~Node();
-}
-
-void Builder::allocateArena()
-{
-    m_arenas.append(FixedVector<uint8_t>(arenaSize));
-    m_arena = m_arenas.last().mutableSpan();
 }
 
 auto Builder::saveCurrentState() -> State
 {
     State state;
-    state.m_arena = m_arena;
-    state.m_numberOfArenas = m_arenas.size();
     state.m_numberOfNodes = m_nodes.size();
-    allocateArena();
     return state;
 }
 
 void Builder::restore(State&& state)
 {
-    for (size_t i = state.m_numberOfNodes; i < m_nodes.size(); ++i)
-        m_nodes[i]->~Node();
     m_nodes.shrink(state.m_numberOfNodes);
-    m_arena = state.m_arena;
-    m_arenas.shrink(state.m_numberOfArenas);
 }
 
 } // namespace WGSL::AST

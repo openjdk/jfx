@@ -20,6 +20,7 @@
 #include "config.h"
 #include "RenderSVGGradientStop.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "LegacyRenderSVGResourceContainer.h"
 #include "RenderSVGGradientStopInlines.h"
@@ -66,7 +67,7 @@ void RenderSVGGradientStop::styleDidChange(StyleDifference diff, const RenderSty
         return;
     }
 
-    downcast<LegacyRenderSVGResourceContainer>(*renderer).removeAllClientsFromCache();
+    downcast<LegacyRenderSVGResourceContainer>(*renderer).removeAllClientsFromCacheAndMarkForInvalidation();
 }
 
 void RenderSVGGradientStop::layout()

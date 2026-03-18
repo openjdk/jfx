@@ -65,7 +65,7 @@ PlatformTimeRanges MediaSourceInterfaceMainThread::buffered() const
     return m_mediaSource->buffered();
 }
 
-Ref<TimeRanges> MediaSourceInterfaceMainThread::seekable() const
+PlatformTimeRanges MediaSourceInterfaceMainThread::seekable() const
 {
     return m_mediaSource->seekable();
 }
@@ -116,6 +116,13 @@ void MediaSourceInterfaceMainThread::memoryPressure()
 bool MediaSourceInterfaceMainThread::detachable() const
 {
     return m_mediaSource->detachable();
+}
+
+void MediaSourceInterfaceMainThread::setLogIdentifier([[maybe_unused]] uint64_t identifier)
+{
+#if !RELEASE_LOG_DISABLED
+    m_mediaSource->setLogIdentifier(identifier);
+#endif
 }
 
 } // namespace WebCore

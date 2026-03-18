@@ -33,19 +33,18 @@
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "WindowProxy.h"
-#include <variant>
 
 namespace WebCore {
 
 class Blob;
 
-using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
+using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
 
 class MessageEvent final : public Event {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MessageEvent);
 public:
     struct JSValueTag { };
-    using DataType = std::variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
+    using DataType = Variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
     static Ref<MessageEvent> create(const AtomString& type, DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<Ref<MessagePort>>&& = { });
     static Ref<MessageEvent> create(DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<Ref<MessagePort>>&& = { });
     static Ref<MessageEvent> createForBindings();

@@ -204,13 +204,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutoc
     return JavaReturn<String>(env, IMPL->autocomplete());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString{String(env, value)});
-}
-
-
 // Functions
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_itemImpl(JNIEnv* env, jclass, jlong peer
     , jint index)

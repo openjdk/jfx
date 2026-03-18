@@ -41,19 +41,14 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceOrientationClient);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceOrientationController);
 
 DeviceOrientationController::DeviceOrientationController(DeviceOrientationClient& client)
-    : DeviceController(client)
+    : m_client(client)
 {
-    deviceOrientationClient().setController(this);
+    client.setController(this);
 }
 
 void DeviceOrientationController::didChangeDeviceOrientation(DeviceOrientationData* orientation)
 {
     dispatchDeviceEvent(DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation));
-}
-
-DeviceOrientationClient& DeviceOrientationController::deviceOrientationClient()
-{
-    return static_cast<DeviceOrientationClient&>(m_client.get());
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -68,7 +63,7 @@ void DeviceOrientationController::suspendUpdates()
 
 void DeviceOrientationController::resumeUpdates()
 {
-    if (!m_listeners.isEmpty())
+    if (hasListeners())
         m_client->startUpdating();
 }
 
@@ -76,12 +71,12 @@ void DeviceOrientationController::resumeUpdates()
 
 bool DeviceOrientationController::hasLastData()
 {
-    return deviceOrientationClient().lastOrientation();
+    return m_client->lastOrientation();
 }
 
 RefPtr<Event> DeviceOrientationController::getLastEvent()
 {
-    RefPtr orientation = deviceOrientationClient().lastOrientation();
+    RefPtr orientation = m_client->lastOrientation();
     return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation.get());
 }
 
@@ -102,6 +97,11 @@ bool DeviceOrientationController::isActiveAt(Page* page)
     if (DeviceOrientationController* self = DeviceOrientationController::from(page))
         return self->isActive();
     return false;
+}
+
+DeviceClient& DeviceOrientationController::client()
+{
+    return m_client.get();
 }
 
 } // namespace WebCore

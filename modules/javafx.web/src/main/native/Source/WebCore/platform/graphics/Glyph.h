@@ -27,8 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Glyph_h
-#define Glyph_h
+#pragma once
 
 #if PLATFORM(JAVA)
 #include "jni.h"
@@ -43,5 +42,3 @@ typedef unsigned short Glyph;
 #endif
 
 } // namespace WebCore
-
-#endif // Glyph_h

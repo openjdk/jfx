@@ -180,15 +180,6 @@ template<> bool isValidEnum<WebCore::AV1ConfigurationMatrixCoefficients>(std::un
 
 namespace WebCore {
 
-template<typename E>
-std::optional<E> parseEnumFromStringView(StringView stringView)
-{
-    auto value = parseInteger<std::underlying_type_t<E>>(stringView);
-    if (!value || !isValidEnum<E>(*value))
-        return std::nullopt;
-    return static_cast<E>(*value);
-}
-
 std::optional<AV1CodecConfigurationRecord> parseAV1CodecParameters(StringView codecView)
 {
     // Ref: https://aomediacodec.github.io/av1-isobmff/#codecsparam
@@ -448,7 +439,7 @@ struct AV1PerLevelConstraints {
 
 // Derived from "AV1 Bitstream & Decoding Process Specification", Version 1.0.0 with Errata 1
 // Annex A: Profiles and levels
-using AV1PerLevelConstraintsMap = UncheckedKeyHashMap<AV1ConfigurationLevel, AV1PerLevelConstraints, WTF::IntHash<AV1ConfigurationLevel>, WTF::StrongEnumHashTraits<AV1ConfigurationLevel>>;
+using AV1PerLevelConstraintsMap = HashMap<AV1ConfigurationLevel, AV1PerLevelConstraints, WTF::IntHash<AV1ConfigurationLevel>, WTF::StrongEnumHashTraits<AV1ConfigurationLevel>>;
 static const AV1PerLevelConstraintsMap& perLevelConstraints()
 {
     static NeverDestroyed<AV1PerLevelConstraintsMap> perLevelConstraints = AV1PerLevelConstraintsMap {

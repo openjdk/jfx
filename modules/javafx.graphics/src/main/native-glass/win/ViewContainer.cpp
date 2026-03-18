@@ -714,7 +714,6 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         DWORD msgPos = ::GetMessagePos(); // screen coordinates
         pt.x = GET_X_LPARAM(msgPos);
         pt.y = GET_Y_LPARAM(msgPos);
-        RECT windowRect;
 
         // If the cursor is not over our window, we reset mouse tracking and emit an EXIT event.
         if (::ChildWindowFromPointEx(::GetDesktopWindow(), pt, CWP_SKIPINVISIBLE) != hwnd) {

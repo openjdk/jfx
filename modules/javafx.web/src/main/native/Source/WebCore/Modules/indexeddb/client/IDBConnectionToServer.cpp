@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,7 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate, PAL::SessionID sessionID)
     : m_delegate(delegate)
-    , m_proxy(makeUniqueWithoutRefCountedCheck<IDBConnectionProxy>(*this, sessionID))
+    , m_proxy(makeUniqueRefWithoutRefCountedCheck<IDBConnectionProxy>(*this, sessionID))
 {
 }
 
@@ -62,12 +62,6 @@ IDBConnectionToServer::~IDBConnectionToServer() = default;
 IDBConnectionIdentifier IDBConnectionToServer::identifier() const
 {
     return *m_delegate->identifier();
-}
-
-IDBConnectionProxy& IDBConnectionToServer::proxy()
-{
-    ASSERT(m_proxy);
-    return *m_proxy;
 }
 
 void IDBConnectionToServer::callResultFunctionWithErrorLater(ResultFunction function, const IDBResourceIdentifier& requestIdentifier)
@@ -427,6 +421,21 @@ void IDBConnectionToServer::didFireVersionChangeEvent(IDBDatabaseConnectionIdent
 
     if (m_serverConnectionIsValid)
         m_delegate->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, connectionClosed);
+}
+
+void IDBConnectionToServer::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    ASSERT(isMainThread());
+
+    m_proxy->generateIndexKeyForRecord(requestIdentifier, indexInfo, keyPath, key, value, recordID);
+}
+
+void IDBConnectionToServer::didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    ASSERT(isMainThread());
+
+    if (m_serverConnectionIsValid)
+        m_delegate->didGenerateIndexKeyForRecord(transactionIdentifier, requestIdentifier, indexInfo, key, indexKey, recordID);
 }
 
 void IDBConnectionToServer::didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError& error)

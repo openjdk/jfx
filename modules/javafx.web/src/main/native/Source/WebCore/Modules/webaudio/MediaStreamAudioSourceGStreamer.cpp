@@ -26,6 +26,7 @@
 #include "GStreamerAudioData.h"
 #include "GStreamerAudioStreamDescription.h"
 #include "Logging.h"
+#include <wtf/MediaTime.h>
 
 namespace WebCore {
 
@@ -36,7 +37,7 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
         return;
     }
 
-    MediaTime mediaTime((m_numberOfFrames * G_USEC_PER_SEC) / m_currentSettings.sampleRate(), G_USEC_PER_SEC);
+    WTF::MediaTime mediaTime((m_numberOfFrames * G_USEC_PER_SEC) / m_currentSettings.sampleRate(), G_USEC_PER_SEC);
     m_numberOfFrames += numberOfFrames;
 
     // Lazily initialize caps, the settings don't change so this is OK.

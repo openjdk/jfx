@@ -33,7 +33,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEFloodSoftwareApplier);
 
-bool FEFloodSoftwareApplier::apply(const Filter&, const FilterImageVector&, FilterImage& result) const
+bool FEFloodSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>>, FilterImage& result) const
 {
     RefPtr resultImage = result.imageBuffer();
     if (!resultImage)

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2015 Google Inc. All rights reserved.
  * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +33,11 @@
 #include "config.h"
 #include "StyleColor.h"
 
+#include "AnimationUtilities.h"
+#include "CSSColorValue.h"
 #include "CSSKeywordColor.h"
+#include "CSSValuePool.h"
+#include "ColorBlending.h"
 #include "Document.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
@@ -277,18 +282,6 @@ template<typename T> Color::ColorKind Color::makeIndirectColor(T&& colorType)
     return { makeUniqueRef<T>(WTFMove(colorType)) };
 }
 
-// MARK: - MarkableTraits
-
-bool Color::MarkableTraits::isEmptyValue(const Color& color)
-{
-    return std::holds_alternative<EmptyToken>(color.value);
-}
-
-Color Color::MarkableTraits::emptyValue()
-{
-    return Color(EmptyToken());
-}
-
 WebCore::Color resolveColor(const Color& value, const WebCore::Color& currentColor)
 {
     return value.resolveColor(currentColor);
@@ -301,23 +294,29 @@ bool containsCurrentColor(const Color& value)
 
 // MARK: - Serialization
 
-String serializationForCSS(const CSS::SerializationContext& context, const Color& value)
+String serializationForCSSTokenization(const CSS::SerializationContext& context, const Color& value)
 {
-    return WTF::switchOn(value, [&](const auto& kind) { return WebCore::Style::serializationForCSS(context, kind); });
+    return WTF::switchOn(value, [&](const auto& kind) { return WebCore::Style::serializationForCSSTokenization(context, kind); });
 }
 
-void serializationForCSS(StringBuilder& builder, const CSS::SerializationContext& context, const Color& value)
+void serializationForCSSTokenization(StringBuilder& builder, const CSS::SerializationContext& context, const Color& value)
 {
-    return WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSS(builder, context, kind); });
+    WTF::switchOn(value, [&](const auto& kind) { WebCore::Style::serializationForCSSTokenization(builder, context, kind); });
+}
+
+void Serialize<Color>::operator()(StringBuilder& builder, const CSS::SerializationContext&, const RenderStyle& style, const Color& value)
+{
+    // NOTE: The specialization of Style::Serialize is used for computed value serialization, so the resolved "used" value is used.
+    builder.append(WebCore::serializationForCSS(style.colorResolvingCurrentColor(value)));
 }
 
 // MARK: - TextStream.
 
 TextStream& operator<<(TextStream& ts, const Color& value)
 {
-    ts << "Style::Color[";
+    ts << "Style::Color["_s;
     WTF::switchOn(value, [&](const auto& kind) { ts << kind; });
-    ts << "]";
+    ts << ']';
 
     return ts;
 }
@@ -340,18 +339,6 @@ Color toStyleColor(const CSS::Color& value, Ref<const Document> document, const 
     return toStyleColor(value, resolutionState);
 }
 
-Color toStyleColorWithResolvedCurrentColor(const CSS::Color& value, Ref<const Document> document, RenderStyle& style, const CSSToLengthConversionData& conversionData, ForVisitedLink forVisitedLink)
-{
-    // FIXME: 'currentcolor' should be resolved at use time to make it inherit correctly. https://bugs.webkit.org/show_bug.cgi?id=210005
-    if (CSS::containsCurrentColor(value)) {
-        // Color is an inherited property so depending on it effectively makes the property inherited.
-        style.setHasExplicitlyInheritedProperties();
-        style.setDisallowsFastPathInheritance();
-    }
-
-    return toStyleColor(value, document, style, conversionData, forVisitedLink);
-}
-
 auto ToCSS<Color>::operator()(const Color& value, const RenderStyle& style) -> CSS::Color
 {
     return CSS::Color { CSS::ResolvedColor { style.colorResolvingCurrentColor(value) } };
@@ -365,6 +352,46 @@ auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState
 auto ToStyle<CSS::Color>::operator()(const CSS::Color& value, const BuilderState& builderState) -> Color
 {
     return toStyle(value, builderState, ForVisitedLink::No);
+}
+
+auto CSSValueConversion<Color>::operator()(BuilderState& builderState, const CSSValue& value, ForVisitedLink forVisitedLink) -> Color
+{
+    if (!builderState.element() || !builderState.element()->isLink())
+        forVisitedLink = ForVisitedLink::No;
+
+    if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
+        return toStyle(color->color(), builderState, forVisitedLink);
+    return toStyle(CSS::Color { CSS::KeywordColor { value.valueID() } }, builderState, forVisitedLink);
+}
+
+Ref<CSSValue> CSSValueCreation<Color>::operator()(CSSValuePool& pool, const RenderStyle& style, const Color& value)
+{
+    return pool.createColorValue(style.colorResolvingCurrentColor(value));
+}
+
+// MARK: - Blending
+
+auto Blending<Color>::equals(const Color& a, const Color& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
+{
+    if (a.isCurrentColor() && b.isCurrentColor())
+        return true;
+
+    if (a.isResolvedColor() && b.isResolvedColor())
+        return a.resolvedColor() == b.resolvedColor();
+
+    return aStyle.colorResolvingCurrentColor(a) == bStyle.colorResolvingCurrentColor(b);
+}
+
+auto Blending<Color>::canBlend(const Color& a, const Color& b) -> bool
+{
+    // We don't animate on currentcolor-only transition.
+    // https://github.com/WebKit/WebKit/blob/main/LayoutTests/imported/w3c/web-platform-tests/css/css-transitions/currentcolor-animation-001.html#L27
+    return !(a.isCurrentColor() && b.isCurrentColor());
+}
+
+auto Blending<Color>::blend(const Color& a, const Color& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> Color
+{
+    return WebCore::blend(aStyle.colorResolvingCurrentColor(a), bStyle.colorResolvingCurrentColor(b), context);
 }
 
 } // namespace Style

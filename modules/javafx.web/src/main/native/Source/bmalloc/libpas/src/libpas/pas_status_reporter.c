@@ -61,8 +61,10 @@
 #include "pas_thread_local_cache_layout.h"
 #include "pas_thread_local_cache_node.h"
 #include "pas_utility_heap.h"
-#include <pthread.h>
+#include "pas_thread.h"
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 
 unsigned pas_status_reporter_enabled = 0;
 unsigned pas_status_reporter_period_in_microseconds = 10 * 1000 * 1000;
@@ -92,7 +94,7 @@ static void dump_ratio_initial(
         return;
     }
 
-    pas_stream_printf(stream, "%lu", value);
+    pas_stream_printf(stream, "%zu", value);
 }
 
 static void dump_occupancy_initial(pas_stream* stream, pas_heap_summary summary)
@@ -1023,7 +1025,7 @@ void pas_status_reporter_dump_configuration(pas_stream* stream)
 
 void pas_status_reporter_dump_physical_page_sharing_pool(pas_stream* stream)
 {
-    pas_stream_printf(stream, "    Physical Page Sharing Pool Balance: %ld\n",
+    pas_stream_printf(stream, "    Physical Page Sharing Pool Balance: %zd\n",
                       pas_physical_page_sharing_pool_balance);
 }
 
@@ -1135,7 +1137,24 @@ void pas_status_reporter_dump_everything(pas_stream* stream)
     pas_status_reporter_dump_expendable_memories(stream);
 }
 
+static void pas_sleep(unsigned microseconds)
+{
+#if PAS_OS(WINDOWS)
+    Sleep(microseconds);
+#else
+    usleep(microseconds);
+#endif
+}
+
+#if PAS_OS(WINDOWS)
+#define R_NULL 0
+
+static unsigned status_reporter_thread_main(void* arg)
+#else
+#define R_NULL NULL
+
 static void* status_reporter_thread_main(void* arg)
+#endif
 {
     pas_fd_stream fd_stream;
 
@@ -1144,7 +1163,7 @@ static void* status_reporter_thread_main(void* arg)
     pas_fd_stream_construct(&fd_stream, PAS_LOG_DEFAULT_FD);
 
     for (;;) {
-        usleep(pas_status_reporter_period_in_microseconds);
+        pas_sleep(pas_status_reporter_period_in_microseconds);
 
         PAS_ASSERT(pas_status_reporter_enabled);
 
@@ -1158,8 +1177,8 @@ static void* status_reporter_thread_main(void* arg)
         pas_heap_lock_unlock();
     }
 
-    PAS_ASSERT(!"Should not be reached");
-    return NULL;
+    PAS_ASSERT_NOT_REACHED();
+    return R_NULL;
 }
 
 static void start_reporter(void)

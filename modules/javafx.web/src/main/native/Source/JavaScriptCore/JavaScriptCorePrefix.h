@@ -67,6 +67,8 @@
 #include <string>
 #include <typeinfo>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Variant.h>
 #endif
 
 #ifdef __cplusplus

@@ -45,7 +45,6 @@ public:
     virtual ~DeviceOrientationController() = default;
 
     void didChangeDeviceOrientation(DeviceOrientationData*);
-    DeviceOrientationClient& deviceOrientationClient();
 
 #if PLATFORM(IOS_FAMILY)
     // FIXME: We should look to reconcile the iOS and OpenSource differences with this class
@@ -56,10 +55,14 @@ public:
     bool hasLastData() override;
     RefPtr<Event> getLastEvent() override;
 #endif
+    DeviceClient& client() final;
 
     static ASCIILiteral supplementName();
     static DeviceOrientationController* from(Page*);
     static bool isActiveAt(Page*);
+
+private:
+    WeakRef<DeviceOrientationClient> m_client;
 };
 
 } // namespace WebCore

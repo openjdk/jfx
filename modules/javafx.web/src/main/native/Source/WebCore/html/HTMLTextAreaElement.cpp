@@ -44,6 +44,7 @@
 #include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "NodeName.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControlMultiLine.h"
 #include "ShadowRoot.h"
 #include "Text.h"
@@ -115,7 +116,7 @@ void HTMLTextAreaElement::childrenChanged(const ChildChange& change)
     HTMLElement::childrenChanged(change);
     setLastChangeWasNotUserEdit();
     if (m_isDirty)
-        setInnerTextValue(value());
+        setInnerTextValue(String { value() });
     else
         setNonDirtyValue(defaultValue(), TextControlSetValueSelection::Clamp);
 }
@@ -158,7 +159,7 @@ void HTMLTextAreaElement::attributeChanged(const QualifiedName& name, const Atom
         if (m_rows != rows) {
             m_rows = rows;
             if (renderer())
-                renderer()->setNeedsLayoutAndPrefWidthsRecalc();
+                renderer()->setNeedsLayoutAndPreferredWidthsUpdate();
         }
         break;
     }
@@ -167,7 +168,7 @@ void HTMLTextAreaElement::attributeChanged(const QualifiedName& name, const Atom
         if (m_cols != cols) {
             m_cols = cols;
             if (renderer())
-                renderer()->setNeedsLayoutAndPrefWidthsRecalc();
+                renderer()->setNeedsLayoutAndPreferredWidthsUpdate();
         }
         break;
     }
@@ -184,7 +185,7 @@ void HTMLTextAreaElement::attributeChanged(const QualifiedName& name, const Atom
         if (wrap != m_wrap) {
             m_wrap = wrap;
             if (renderer())
-                renderer()->setNeedsLayoutAndPrefWidthsRecalc();
+                renderer()->setNeedsLayoutAndPreferredWidthsUpdate();
         }
         break;
     }
@@ -214,7 +215,7 @@ bool HTMLTextAreaElement::appendFormData(DOMFormData& formData)
     Ref protectedThis(*this);
     document().updateLayout();
 
-    formData.append(name(), m_wrap == HardWrap ? valueWithHardLineBreaks() : value());
+    formData.append(name(), m_wrap == HardWrap ? valueWithHardLineBreaks() : value().get());
     if (auto& dirname = attributeWithoutSynchronization(dirnameAttr); !dirname.isNull())
         formData.append(dirname, directionForFormData());
     return true;
@@ -338,9 +339,9 @@ void HTMLTextAreaElement::updateValue() const
     const_cast<HTMLTextAreaElement*>(this)->updatePlaceholderVisibility();
 }
 
-String HTMLTextAreaElement::value() const
+ValueOrReference<String> HTMLTextAreaElement::value() const
 {
-    if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
+    if (protectedDocument()->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::FormControls))
         return emptyString();
     updateValue();
     return m_value;
@@ -399,7 +400,7 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
     } else if (shouldClamp)
         cacheSelection(std::min(endOfString, selectionStartValue), std::min(endOfString, selectionEndValue), SelectionHasNoDirection);
 
-    setTextAsOfLastFormControlChangeEvent(normalizedValue);
+    setTextAsOfLastFormControlChangeEvent(String(normalizedValue));
 
     if (CheckedPtr cache = document().existingAXObjectCache())
         cache->valueChanged(*this);
@@ -432,10 +433,10 @@ String HTMLTextAreaElement::validationMessage() const
         return validationMessageValueMissingText();
 
     if (tooShort())
-        return validationMessageTooShortText(value().length(), minLength());
+        return validationMessageTooShortText(value()->length(), minLength());
 
     if (tooLong())
-        return validationMessageTooLongText(value().length(), maxLength());
+        return validationMessageTooLongText(value()->length(), maxLength());
 
     return String();
 }
@@ -465,7 +466,7 @@ bool HTMLTextAreaElement::valueMissing(StringView value) const
     if (!(isRequired() && isMutable()))
         return false;
     if (value.isNull())
-        value = this->value();
+        return this->value()->isEmpty();
     return value.isEmpty();
 }
 
@@ -485,11 +486,8 @@ bool HTMLTextAreaElement::tooShort(StringView value, NeedsToCheckDirtyFlag check
     if (min <= 0)
         return false;
 
-    if (value.isNull())
-        value = this->value();
-
     // The empty string is excluded from tooShort validation.
-    unsigned length = value.isNull() ? this->value().length() : computeLengthForAPIValue(value);
+    unsigned length = value.isNull() ? this->value()->length() : computeLengthForAPIValue(value);
     return length > 0 && length < static_cast<unsigned>(min);
 }
 
@@ -504,7 +502,7 @@ bool HTMLTextAreaElement::tooLong(StringView value, NeedsToCheckDirtyFlag check)
     if (max < 0)
         return false;
 
-    unsigned length = value.isNull() ? this->value().length() : computeLengthForAPIValue(value);
+    unsigned length = value.isNull() ? this->value()->length() : computeLengthForAPIValue(value);
     return length > static_cast<unsigned>(max);
 }
 

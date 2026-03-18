@@ -26,6 +26,7 @@
 
 #include "BridgeJSC.h"
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventHandler.h"
@@ -216,9 +217,9 @@ void HTMLPlugInElement::defaultEventHandler(Event& event)
     HTMLFrameOwnerElement::defaultEventHandler(event);
 }
 
-bool HTMLPlugInElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool HTMLPlugInElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
-    if (HTMLFrameOwnerElement::isKeyboardFocusable(event))
+    if (HTMLFrameOwnerElement::isKeyboardFocusable(focusEventData))
         return true;
     return false;
 }
@@ -242,13 +243,17 @@ bool HTMLPlugInElement::supportsFocus() const
 
 RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    if (m_pluginReplacement && m_pluginReplacement->willCreateRenderer())
-        return m_pluginReplacement->createElementRenderer(*this, WTFMove(style), insertionPosition);
+    if (m_pluginReplacement && m_pluginReplacement->willCreateRenderer()) {
+        RenderPtr<RenderElement> renderer = m_pluginReplacement->createElementRenderer(*this, WTFMove(style), insertionPosition);
+        if (renderer)
+            renderer->markIsYouTubeReplacement();
+        return renderer;
+    }
 
     return createRenderer<RenderEmbeddedObject>(*this, WTFMove(style));
 }
 
-bool HTMLPlugInElement::isReplaced(const RenderStyle&) const
+bool HTMLPlugInElement::isReplaced(const RenderStyle*) const
 {
     return !m_pluginReplacement || !m_pluginReplacement->willCreateRenderer();
 }

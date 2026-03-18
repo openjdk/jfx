@@ -24,6 +24,8 @@
 #pragma once
 
 #include "HTMLElement.h"
+#include "Length.h"
+#include "StylePrimitiveNumericTypes.h"
 #include <wtf/UniqueArray.h>
 
 namespace WebCore {
@@ -66,7 +68,7 @@ private:
 
     void defaultEventHandler(Event&) final;
 
-    void willRecalcStyle(Style::Change) final;
+    void willRecalcStyle(OptionSet<Style::Change>) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;

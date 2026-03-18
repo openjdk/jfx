@@ -21,12 +21,14 @@
 #include "config.h"
 #include "SVGFEDropShadowElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "NodeName.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "SVGFilter.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGRenderStyle.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -99,7 +101,7 @@ void SVGFEDropShadowElement::svgAttributeChanged(const QualifiedName& attrName)
         markFilterEffectForRebuild();
         return;
     }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case AttributeNames::dxAttr:
     case AttributeNames::dyAttr: {
@@ -128,7 +130,7 @@ bool SVGFEDropShadowElement::setFilterEffectAttribute(FilterEffect& filterEffect
         return effect.setShadowColor(style.colorResolvingCurrentColor(style.svgStyle().floodColor()));
     }
     case AttributeNames::flood_opacityAttr:
-        return effect.setShadowOpacity(renderer()->style().svgStyle().floodOpacity());
+        return effect.setShadowOpacity(renderer()->style().svgStyle().floodOpacity().value.value);
     default:
         break;
     }
@@ -161,7 +163,7 @@ RefPtr<FilterEffect> SVGFEDropShadowElement::createFilterEffect(const FilterEffe
     const SVGRenderStyle& svgStyle = style.svgStyle();
 
     Color color = style.colorWithColorFilter(svgStyle.floodColor());
-    float opacity = svgStyle.floodOpacity();
+    float opacity = svgStyle.floodOpacity().value.value;
 
     return FEDropShadow::create(stdDeviationX(), stdDeviationY(), dx(), dy(), color, opacity);
 }

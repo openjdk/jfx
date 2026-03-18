@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CSSTextShadow.h"
 #include "StyleColor.h"
 #include "StylePrimitiveNumericTypes.h"
+#include "StyleShadow.h"
 
 namespace WebCore {
 namespace Style {
@@ -49,15 +50,51 @@ template<size_t I> const auto& get(const TextShadow& value)
         return value.blur;
 }
 
+// <text-shadow-list> = <single-text-shadow>#
+using TextShadowList = ShadowList<TextShadow>;
+
+// <'text-shadow'> = none | <text-list>
+// https://www.w3.org/TR/css-text-decor-3/#propdef-text-shadow
+using TextShadows = Shadows<TextShadow>;
+
+// MARK: - Conversions
+
 template<> struct ToCSS<TextShadow> { auto operator()(const TextShadow&, const RenderStyle&) -> CSS::TextShadow; };
 template<> struct ToStyle<CSS::TextShadow> { auto operator()(const CSS::TextShadow&, const BuilderState&) -> TextShadow; };
 
+// `TextShadowList` is special-cased to return a `CSSTextShadowPropertyValue`.
+template<> struct CSSValueCreation<TextShadowList> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const TextShadowList&); };
+template<> struct CSSValueConversion<TextShadows> { auto operator()(BuilderState&, const CSSValue&) -> TextShadows; };
+
+// MARK: - Serialization
+
+template<> struct Serialize<TextShadowList> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const TextShadowList&); };
+
+// MARK: - Blending
+
 template<> struct Blending<TextShadow> {
-    auto canBlend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&) -> bool;
     auto blend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> TextShadow;
 };
+
+// MARK: - Shadow-specific Interfaces
+
+constexpr ShadowStyle shadowStyle(const TextShadow&)
+{
+    return ShadowStyle::Normal;
+}
+
+constexpr bool isInset(const TextShadow&)
+{
+    return false;
+}
+
+constexpr LayoutUnit paintingSpread(const TextShadow&)
+{
+    return LayoutUnit();
+}
 
 } // namespace Style
 } // namespace WebCore
 
 DEFINE_SPACE_SEPARATED_TUPLE_LIKE_CONFORMANCE(WebCore::Style::TextShadow, 3)
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::TextShadows)

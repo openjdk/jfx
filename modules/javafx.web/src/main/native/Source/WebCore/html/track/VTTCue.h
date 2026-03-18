@@ -33,6 +33,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "CSSValueKeywords.h"
 #include "HTMLElement.h"
 #include "SpeechSynthesisUtterance.h"
 #include "TextTrackCue.h"
@@ -123,7 +124,7 @@ public:
     virtual ~VTTCue();
 
     enum AutoKeyword { Auto };
-    using LineAndPositionSetting = std::variant<double, AutoKeyword>;
+    using LineAndPositionSetting = Variant<double, AutoKeyword>;
 
     using DirectionSetting = VTTDirectionSetting;
     static constexpr size_t DirectionSettingCount = static_cast<size_t>(DirectionSetting::VerticalGrowingRight) + 1;
@@ -259,6 +260,8 @@ private:
     void pauseSpeaking() final;
     void cancelSpeaking() final;
 
+    RefPtr<DocumentFragment> protectedWebVTTNodeTree() const { return m_webVTTNodeTree.get(); }
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return *m_logger; }
     uint64_t logIdentifier() const final;
@@ -280,8 +283,8 @@ private:
     String m_parsedRegionId;
 
     RefPtr<DocumentFragment> m_webVTTNodeTree;
-    Ref<HTMLSpanElement> m_cueHighlightBox;
-    Ref<HTMLDivElement> m_cueBackdropBox;
+    const Ref<HTMLSpanElement> m_cueHighlightBox;
+    const Ref<HTMLDivElement> m_cueBackdropBox;
     RefPtr<VTTCueBox> m_displayTree;
 #if ENABLE(SPEECH_SYNTHESIS)
     RefPtr<SpeechSynthesis> m_speechSynthesis;

@@ -39,11 +39,20 @@ namespace JSC {
 
     class DirectEvalCodeCache {
     public:
+        enum class RopeSuffix : uint8_t {
+            None,
+            FunctionCall
+        };
+
+        class CacheLookupKey;
+
         class CacheKey {
+            friend class CacheLookupKey;
         public:
-            CacheKey(const String& source, BytecodeIndex bytecodeIndex)
-                : m_source(source.impl())
+            CacheKey(StringImpl* source, BytecodeIndex bytecodeIndex, RopeSuffix ropeSuffix)
+                : m_source(source)
                 , m_bytecodeIndex(bytecodeIndex)
+                , m_ropeSuffix(ropeSuffix)
             {
             }
 
@@ -54,13 +63,13 @@ namespace JSC {
 
             CacheKey() = default;
 
-            unsigned hash() const { return m_source->hash() ^ m_bytecodeIndex.asBits(); }
+            unsigned hash() const { return m_source->hash() + m_bytecodeIndex.asBits() + enumToUnderlyingType(m_ropeSuffix); }
 
             bool isEmptyValue() const { return !m_source; }
 
             bool operator==(const CacheKey& other) const
             {
-                return m_bytecodeIndex == other.m_bytecodeIndex && WTF::equal(m_source.get(), other.m_source.get());
+                return m_bytecodeIndex == other.m_bytecodeIndex && m_ropeSuffix == other.m_ropeSuffix && WTF::equal(m_source.get(), other.m_source.get());
             }
 
             bool isHashTableDeletedValue() const { return m_source.isHashTableDeletedValue(); }
@@ -82,17 +91,61 @@ namespace JSC {
         private:
             RefPtr<StringImpl> m_source;
             BytecodeIndex m_bytecodeIndex;
+            RopeSuffix m_ropeSuffix;
         };
 
-        DirectEvalExecutable* tryGet(const String& evalSource, BytecodeIndex bytecodeIndex)
+        class CacheLookupKey {
+            void* operator new(size_t) = delete;
+
+        public:
+            CacheLookupKey(StringImpl* source, BytecodeIndex bytecodeIndex, RopeSuffix ropeSuffix)
+                : m_source(source)
+                , m_bytecodeIndex(bytecodeIndex)
+                , m_ropeSuffix(ropeSuffix)
         {
-            return m_cacheMap.inlineGet(CacheKey(evalSource, bytecodeIndex)).get();
         }
 
-        void set(JSGlobalObject* globalObject, JSCell* owner, const String& evalSource, BytecodeIndex bytecodeIndex, DirectEvalExecutable* evalExecutable)
+            CacheLookupKey() = default;
+
+            unsigned hash() const { return m_source->hash() + m_bytecodeIndex.asBits() + enumToUnderlyingType(m_ropeSuffix); }
+
+            bool operator==(const CacheKey& other) const
+        {
+                return m_bytecodeIndex == other.m_bytecodeIndex && m_ropeSuffix == other.m_ropeSuffix && WTF::equal(m_source, other.m_source.get());
+            }
+
+            operator CacheKey() const
+            {
+                return CacheKey(m_source, m_bytecodeIndex, m_ropeSuffix);
+            }
+
+        private:
+            SUPPRESS_UNCOUNTED_MEMBER StringImpl* m_source;
+            BytecodeIndex m_bytecodeIndex;
+            RopeSuffix m_ropeSuffix;
+        };
+
+        struct CacheLookupKeyHashTranslator {
+            static unsigned hash(const CacheLookupKey& key)
+            {
+                return key.hash();
+            }
+
+            static bool equal(const CacheKey& a, const CacheLookupKey& b)
+            {
+                return b == a;
+            }
+        };
+
+        DirectEvalExecutable* get(const CacheLookupKey& cacheKey)
+        {
+            return m_cacheMap.inlineGet<CacheLookupKeyHashTranslator>(cacheKey).get();
+        }
+
+        void set(JSGlobalObject* globalObject, JSCell* owner, const CacheLookupKey& cacheKey, DirectEvalExecutable* evalExecutable)
         {
             if (m_cacheMap.size() < maxCacheEntries)
-                setSlow(globalObject, owner, evalSource, bytecodeIndex, evalExecutable);
+                setSlow(globalObject, owner, cacheKey, evalExecutable);
         }
 
         bool isEmpty() const { return m_cacheMap.isEmpty(); }
@@ -104,7 +157,7 @@ namespace JSC {
     private:
         static constexpr int maxCacheEntries = 64;
 
-        void setSlow(JSGlobalObject*, JSCell* owner, const String& evalSource, BytecodeIndex, DirectEvalExecutable*);
+        void setSlow(JSGlobalObject*, JSCell* owner, const CacheLookupKey& cacheKey, DirectEvalExecutable*);
 
         typedef UncheckedKeyHashMap<CacheKey, WriteBarrier<DirectEvalExecutable>, CacheKey::Hash, CacheKey::HashTraits> EvalCacheMap;
         EvalCacheMap m_cacheMap;

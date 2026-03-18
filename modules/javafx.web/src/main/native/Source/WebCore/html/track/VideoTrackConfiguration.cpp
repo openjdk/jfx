@@ -35,6 +35,95 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoTrackConfiguration);
 
+void VideoTrackConfiguration::setState(const VideoTrackConfigurationInit& state)
+{
+    if (m_state == state && m_colorSpace->state() == m_state.colorSpace)
+        return;
+
+    m_state = state;
+    m_colorSpace->setState(m_state.colorSpace);
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setCodec(String codec)
+{
+    if (m_state.codec == codec)
+        return;
+
+    m_state.codec = codec;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setWidth(uint32_t width)
+{
+    if (m_state.width == width)
+        return;
+
+    m_state.width = width;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setHeight(uint32_t height)
+{
+    if (m_state.height == height)
+        return;
+
+    m_state.height = height;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setColorSpace(Ref<VideoColorSpace>&& colorSpace)
+{
+    if (m_colorSpace == colorSpace)
+        return;
+
+    m_colorSpace = WTFMove(colorSpace);
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setFramerate(double framerate)
+{
+    if (m_state.framerate == framerate)
+        return;
+
+    m_state.framerate = framerate;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setBitrate(uint64_t bitrate)
+{
+    if (m_state.bitrate == bitrate)
+        return;
+
+    m_state.bitrate = bitrate;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setSpatialVideoMetadata(std::optional<SpatialVideoMetadata> metadata)
+{
+    if (m_state.spatialVideoMetadata == metadata)
+        return;
+
+    m_state.spatialVideoMetadata = metadata;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::setVideoProjectionMetadata(std::optional<VideoProjectionMetadata> metadata)
+{
+    if (m_state.videoProjectionMetadata == metadata)
+        return;
+
+    m_state.videoProjectionMetadata = metadata;
+    notifyObservers();
+}
+
+void VideoTrackConfiguration::notifyObservers()
+{
+    m_observers.forEach([] (auto& observer) {
+        observer();
+    });
+}
+
 Ref<JSON::Object> VideoTrackConfiguration::toJSON() const
 {
     Ref json = JSON::Object::create();
@@ -45,7 +134,7 @@ Ref<JSON::Object> VideoTrackConfiguration::toJSON() const
     json->setDouble("framerate"_s, framerate());
     json->setInteger("bitrate"_s, bitrate());
     json->setBoolean("isSpatial"_s, !!spatialVideoMetadata());
-    json->setBoolean("isImmersive"_s, isImmersiveVideo());
+    json->setBoolean("isImmersive"_s, !!videoProjectionMetadata());
     return json;
 }
 

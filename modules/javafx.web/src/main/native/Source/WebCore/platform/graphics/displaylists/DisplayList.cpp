@@ -27,7 +27,6 @@
 #include "DisplayList.h"
 
 #include "DecomposedGlyphs.h"
-#include "DisplayListResourceHeap.h"
 #include "Filter.h"
 #include "Font.h"
 #include "ImageBuffer.h"
@@ -41,56 +40,12 @@ namespace DisplayList {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(DisplayList);
 
-void DisplayList::append(Item&& item)
+DisplayList::DisplayList(Vector<Item>&& items)
+    : m_items(WTFMove(items))
 {
-    m_items.append(WTFMove(item));
 }
 
-void DisplayList::shrinkToFit()
-{
-    m_items.shrinkToFit();
-}
-
-void DisplayList::clear()
-{
-    m_items.clear();
-    m_resourceHeap.clearAllResources();
-}
-
-bool DisplayList::isEmpty() const
-{
-    return m_items.isEmpty();
-}
-
-void DisplayList::cacheImageBuffer(ImageBuffer& imageBuffer)
-{
-    m_resourceHeap.add(Ref { imageBuffer });
-}
-
-void DisplayList::cacheNativeImage(NativeImage& image)
-{
-    m_resourceHeap.add(Ref { image });
-}
-
-void DisplayList::cacheFont(Font& font)
-{
-    m_resourceHeap.add(Ref { font });
-}
-
-void DisplayList::cacheDecomposedGlyphs(DecomposedGlyphs& decomposedGlyphs)
-{
-    m_resourceHeap.add(Ref { decomposedGlyphs });
-}
-
-void DisplayList::cacheGradient(Gradient& gradient)
-{
-    m_resourceHeap.add(Ref { gradient });
-}
-
-void DisplayList::cacheFilter(Filter& filter)
-{
-    m_resourceHeap.add(Ref { filter });
-}
+DisplayList::~DisplayList() = default;
 
 String DisplayList::asText(OptionSet<AsTextFlag> flags) const
 {
@@ -108,7 +63,7 @@ String DisplayList::asText(OptionSet<AsTextFlag> flags) const
 void DisplayList::dump(TextStream& ts) const
 {
     TextStream::GroupScope group(ts);
-    ts << "display list";
+    ts << "display list"_s;
 
     for (const auto& item : m_items) {
         TextStream::GroupScope group(ts);

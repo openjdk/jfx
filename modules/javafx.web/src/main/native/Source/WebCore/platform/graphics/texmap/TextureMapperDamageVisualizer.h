@@ -43,7 +43,7 @@ public:
     explicit TextureMapperDamageVisualizer(unsigned margin)
         : m_margin(margin) { }
 
-    void paintDamage(TextureMapper&, const Damage&) const;
+    void paintDamage(TextureMapper&, const std::optional<Damage>&) const;
 
 private:
     FloatBoxExtent m_margin;

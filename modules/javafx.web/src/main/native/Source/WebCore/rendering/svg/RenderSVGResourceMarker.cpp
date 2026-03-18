@@ -148,7 +148,7 @@ AffineTransform RenderSVGResourceMarker::markerTransformation(const FloatPoint& 
     // The 'referencePoint()' coordinate maps to SVGs refX/refY, given in coordinates relative to the viewport established by the marker
     auto mappedOrigin = m_supplementalLayerTransform.mapPoint(referencePoint());
 
-    if (markerUnits() == SVGMarkerUnitsStrokeWidth)
+    if (markerUnits() == SVGMarkerUnitsType::StrokeWidth)
         transform.scaleNonUniform(strokeWidth, strokeWidth);
 
     transform.translate(-mappedOrigin);

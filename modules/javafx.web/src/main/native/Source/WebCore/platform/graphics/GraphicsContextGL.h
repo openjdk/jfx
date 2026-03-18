@@ -46,6 +46,10 @@
 #include <wtf/MachSendRight.h>
 #endif
 
+#if USE(UNIX_DOMAIN_SOCKETS)
+#include <wtf/unix/UnixFileDescriptor.h>
+#endif
+
 #if OS(WINDOWS)
 // Defined in winerror.h
 #ifdef NO_ERROR
@@ -77,11 +81,23 @@ struct GraphicsContextGLExternalImageSourceIOSurfaceHandle {
 struct GraphicsContextGLExternalImageSourceMTLSharedTextureHandle {
     MachSendRight handle;
 };
-using GraphicsContextGLExternalImageSource = std::variant<
+using GraphicsContextGLExternalImageSource = Variant<
     GraphicsContextGLExternalImageSourceIOSurfaceHandle,
     GraphicsContextGLExternalImageSourceMTLSharedTextureHandle
     >;
 using GraphicsContextGLExternalSyncSource = std::tuple<MachSendRight, uint64_t>;
+
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+
+struct GraphicsContextGLExternalImageSource {
+    Vector<WTF::UnixFileDescriptor> fds;
+    Vector<uint32_t> strides;
+    Vector<uint32_t> offsets;
+    uint32_t fourcc;
+    uint64_t modifier;
+    WebCore::IntSize size;
+};
+using GraphicsContextGLExternalSyncSource = int;
 
 #else
 
@@ -1549,8 +1565,11 @@ public:
     using ExternalSyncSource = GraphicsContextGLExternalSyncSource;
 #if ENABLE(WEBXR)
     virtual GCGLExternalSync createExternalSync(ExternalSyncSource&&) = 0;
-#endif
     virtual void deleteExternalSync(GCGLExternalSync) = 0;
+#if USE(OPENXR)
+    virtual WTF::UnixFileDescriptor exportExternalSync(GCGLExternalSync) { return { }; }
+#endif
+#endif
 
     // ========== Extension related entry points.
 

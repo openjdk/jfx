@@ -62,7 +62,6 @@ struct WGPURenderBundleEncoderImpl {
 @property (readonly, nonatomic) id<MTLBuffer> fragmentDynamicOffsetsBuffer;
 @property (readonly, nonatomic) WeakPtr<WebGPU::RenderPipeline> pipeline;
 
-- (Vector<WebGPU::BindableResources>*)resources;
 - (WebGPU::RenderBundle::MinVertexCountsContainer*)minVertexCountForDrawCommand;
 @end
 
@@ -99,7 +98,7 @@ public:
     void insertDebugMarker(String&& markerLabel);
     void popDebugGroup();
     void pushDebugGroup(String&& groupLabel);
-    void setBindGroup(uint32_t groupIndex, const BindGroup&, std::optional<Vector<uint32_t>>&& dynamicOffsets);
+    void setBindGroup(uint32_t groupIndex, const BindGroup*, std::optional<Vector<uint32_t>>&& dynamicOffsets);
     void setIndexBuffer(Buffer&, WGPUIndexFormat, uint64_t offset, uint64_t size);
     void setPipeline(const RenderPipeline&);
     void setVertexBuffer(uint32_t slot, Buffer*, uint64_t offset, uint64_t size);
@@ -121,6 +120,7 @@ private:
 
     bool validatePopDebugGroup() const;
     id<MTLIndirectRenderCommand> currentRenderCommand();
+    bool replayingCommands() const;
 
     void makeInvalid(NSString* = nil);
     bool executePreDrawCommands(bool needsValidationLayerWorkaround, bool passWasSplit, uint32_t firstInstance = 0, uint32_t instanceCount = 0);
@@ -140,9 +140,12 @@ private:
     uint32_t maxVertexBufferIndex() const;
     uint32_t maxBindGroupIndex() const;
     void recordCommand(WTF::Function<bool(void)>&&);
-    void storeVertexBufferCountsForValidation(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes);
+    bool storeVertexBufferCountsForValidation(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes);
     std::pair<uint32_t, uint32_t> computeMininumVertexInstanceCount(bool& needsValidationLayerWorkaround) const;
     void resetIndexBuffer();
+    void splitICB(bool needsPipelineReset = true);
+    id<MTLIndirectCommandBuffer> makeICB(uint64_t);
+    void cleanup(bool resetPipeline);
 
     const Ref<Device> m_device;
     RefPtr<Buffer> m_indexBuffer;
@@ -160,6 +163,7 @@ private:
 
     uint64_t m_debugGroupStackSize { 0 };
     uint64_t m_currentCommandIndex { 0 };
+    uint64_t m_previousCommandCount { 0 };
     id<MTLRenderPipelineState> m_currentPipelineState { nil };
     id<MTLDepthStencilState> m_depthStencilState { nil };
     MTLCullMode m_cullMode { MTLCullModeNone };
@@ -195,7 +199,7 @@ private:
     WeakPtr<RenderPassEncoder> m_renderPassEncoder;
     id<MTLIndirectRenderCommand> m_currentCommand { nil };
     WGPURenderBundleEncoderDescriptor m_descriptor;
-    Vector<WGPUTextureFormat> m_descriptorColorFormats;
+    const Vector<WGPUTextureFormat> m_descriptorColorFormats;
     NSString* m_lastErrorString { nil };
     bool m_requiresCommandReplay { false };
     bool m_finished { false };

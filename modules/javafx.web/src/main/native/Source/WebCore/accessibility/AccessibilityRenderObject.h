@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-class AccessibilitySVGRoot;
+class AccessibilitySVGObject;
 class AXObjectCache;
 class Element;
 class HTMLAreaElement;
@@ -54,7 +54,7 @@ class VisibleSelection;
 
 class AccessibilityRenderObject : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityRenderObject> create(AXID, RenderObject&);
+    static Ref<AccessibilityRenderObject> create(AXID, RenderObject&, AXObjectCache&);
     virtual ~AccessibilityRenderObject();
 
     FloatRect frameRect() const final;
@@ -138,8 +138,8 @@ public:
     String secureFieldValue() const final;
     void labelText(Vector<AccessibilityText>&) const override;
 protected:
-    explicit AccessibilityRenderObject(AXID, RenderObject&);
-    explicit AccessibilityRenderObject(AXID, Node&);
+    explicit AccessibilityRenderObject(AXID, RenderObject&, AXObjectCache&);
+    explicit AccessibilityRenderObject(AXID, Node&, AXObjectCache&);
     void detachRemoteParts(AccessibilityDetachmentType) final;
     ScrollableArea* getScrollableAreaIfScrollable() const final;
     void scrollTo(const IntPoint&) const final;
@@ -147,6 +147,7 @@ protected:
     bool shouldIgnoreAttributeRole() const override;
     AccessibilityRole determineAccessibilityRole() override;
     bool computeIsIgnored() const override;
+    std::optional<AccessibilityChildrenVector> imageOverlayElements() final;
 
 #if ENABLE(MATHML)
     virtual bool isIgnoredElementWithinMathTree() const;
@@ -163,7 +164,7 @@ private:
     Path elementPath() const final;
 
     AccessibilityObject* accessibilityImageMapHitTest(HTMLAreaElement&, const IntPoint&) const;
-    AccessibilityObject* associatedAXImage(HTMLMapElement&) const;
+    AccessibilityObject* associatedImageObject(HTMLMapElement&) const;
     AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     bool renderObjectIsObservable(RenderObject&) const;
@@ -172,8 +173,8 @@ private:
 
     bool isSVGImage() const;
     void detachRemoteSVGRoot();
-    enum CreationChoice { Create, Retrieve };
-    AccessibilitySVGRoot* remoteSVGRootElement(CreationChoice createIfNecessary) const;
+    enum class CreateIfNecessary : bool { No, Yes };
+    AccessibilitySVGObject* remoteSVGRootElement(CreateIfNecessary) const;
     AccessibilityObject* remoteSVGElementHitTest(const IntPoint&) const;
     void offsetBoundingBoxForRemoteSVGElement(LayoutRect&) const;
     bool supportsPath() const final;
@@ -186,8 +187,7 @@ private:
     void addImageMapChildren();
     void addAttachmentChildren();
     void addRemoteSVGChildren();
-    void addListItemMarker();
-#if PLATFORM(COCOA)
+#if PLATFORM(MAC)
     void updateAttachmentViewParents();
 #endif
     String expandedTextValue() const override;

@@ -64,7 +64,7 @@ template<typename Visitor> constexpr decltype(auto) Table::visitDerived(Visitor&
 
 uint32_t Table::allocatedLength(uint32_t length)
 {
-    return WTF::roundUpToPowerOfTwo(length);
+    return roundUpToPowerOfTwo(length);
 }
 
 void Table::setLength(uint32_t length)
@@ -85,6 +85,7 @@ Table::Table(uint32_t initial, std::optional<uint32_t> maximum, Type wasmType, T
     : m_maximum(maximum)
     , m_type(type)
     , m_wasmType(wasmType)
+    , m_wasmTypeDefinition(TypeInformation::getRef(wasmType.index))
     , m_isFixedSized(maximum && maximum.value() == initial)
     , m_owner(nullptr)
 {
@@ -152,7 +153,7 @@ std::optional<uint32_t> Table::grow(uint32_t delta, JSValue defaultValue)
         bool success = checkedGrow(static_cast<ExternOrAnyRefTable*>(this)->m_jsValues, [&](auto& slot) {
             slot.set(vm, m_owner, defaultValue);
         });
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return std::nullopt;
         break;
     }
@@ -160,7 +161,7 @@ std::optional<uint32_t> Table::grow(uint32_t delta, JSValue defaultValue)
         bool success = checkedGrow(static_cast<FuncRefTable*>(this)->m_importableFunctions, [&](auto& slot) {
             slot.m_value.set(vm, m_owner, defaultValue);
         });
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
         return std::nullopt;
         break;
     }

@@ -208,7 +208,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithBitXor:
     case ArithBitLShift:
     case ArithBitRShift:
-    case BitURShift:
+    case ArithBitURShift:
     case ValueToInt32:
     case UInt32ToNumber:
     case DoubleAsInt32:
@@ -239,6 +239,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CheckArray:
     case CheckArrayOrEmpty:
     case GetScope:
+    case GetEvalScope:
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
@@ -340,11 +341,14 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DataViewGetFloat:
     case ResolveRope:
     case NumberIsNaN:
+    case NumberIsFinite:
+    case NumberIsSafeInteger:
     case StringIndexOf:
         return true;
 
+    case GlobalIsFinite:
     case GlobalIsNaN:
-        return node->child1().useKind() == DoubleRepUse;
+        return false;
 
     case GetButterfly:
         return state.forNode(node->child1()).isType(SpecObject);
@@ -411,10 +415,21 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringCodePointAt:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.child(node, 0)));
 
+    // We can make them non conservative by checking the condition safely.
+    case MultiGetByVal:
+    case MultiPutByVal:
+        return false;
+
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52:
+        return !(state.forNode(node->child1()).m_type & ~(SpecDataViewObject));
+
     case CheckDetached:
+        return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView | SpecDataViewObject));
+
     case GetTypedArrayByteOffset:
     case GetTypedArrayByteOffsetAsInt52:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
@@ -612,6 +627,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
+    case RegExpSearch:
     case Call:
     case DirectCall:
     case TailCallInlinedCaller:
@@ -642,7 +658,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewArrayWithSpread:
     case NewInternalFieldObject:
     case Spread:
-    case NewRegexp:
+    case NewRegExp:
     case NewMap:
     case NewSet:
     case NewSymbol:
@@ -662,6 +678,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NumberToStringWithRadix:
     case SetFunctionName:
     case NewStringObject:
+    case NewRegExpUntyped:
     case InByVal:
     case InByValMegamorphic:
     case InById:
@@ -702,6 +719,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case LogShadowChickenPrologue:
     case LogShadowChickenTail:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case Unreachable:
     case ClearCatchLocals:
     case CheckTierUpInLoop:
@@ -721,7 +739,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PhantomNewAsyncFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case MaterializeNewObject:
     case MaterializeNewArrayWithConstantSize:
@@ -762,6 +780,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MapSet:
     case MapOrSetDelete:
     case StringReplace:
+    case StringReplaceAll:
     case StringReplaceRegExp:
     case ArithRandom:
     case ArithIMul:
@@ -784,6 +803,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ValueBitOr:
     case ValueBitLShift:
     case ValueBitRShift:
+    case ValueBitURShift:
     case ValueAdd:
     case ValueSub:
     case ValueMul:

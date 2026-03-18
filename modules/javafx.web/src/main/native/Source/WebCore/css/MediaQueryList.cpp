@@ -24,6 +24,7 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryListEvent.h"

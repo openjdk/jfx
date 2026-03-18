@@ -83,7 +83,7 @@ void pas_utility_heap_config_dump_shared_page_directory_arg(
 {
     PAS_UNUSED_PARAM(stream);
     PAS_UNUSED_PARAM(directory);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 PAS_END_EXTERN_C;

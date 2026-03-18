@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include "ContainerNodeInlines.h"
 #include "EventNames.h"
 #include "FocusController.h"
 #include "FrameView.h"

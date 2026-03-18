@@ -114,7 +114,7 @@ struct FontDescriptionKey {
         : m_size(description.computedSize())
         , m_fontSelectionRequest(description.fontSelectionRequest())
         , m_flags(makeFlagsKey(description))
-        , m_locale(description.specifiedLocale())
+        , m_locale(description.computedLocale())
     {
         auto featureSettings = description.featureSettings();
         auto variationSettings = description.variationSettings();
@@ -229,6 +229,8 @@ struct FontCascadeCacheKey {
     Vector<FontFamilyName, 3> families;
     unsigned fontSelectorId;
     unsigned fontSelectorVersion;
+    bool hasComplexFontSelector { true };
+
 
     friend bool operator==(const FontCascadeCacheKey&, const FontCascadeCacheKey&) = default;
 };
@@ -239,7 +241,7 @@ inline void add(Hasher& hasher, const FontCascadeCacheKey& key)
 }
 
 struct FontCascadeCacheEntry {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FontCascadeCacheEntry);
 
     FontCascadeCacheKey key;
     Ref<FontCascadeFonts> fonts;
@@ -269,10 +271,10 @@ public:
     void clearWidthCaches();
     void pruneUnreferencedEntries();
     void pruneSystemFallbackFonts();
-    Ref<FontCascadeFonts> retrieveOrAddCachedFonts(const FontCascadeDescription&, RefPtr<FontSelector>&&);
+    Ref<FontCascadeFonts> retrieveOrAddCachedFonts(const FontCascadeDescription&, FontSelector*);
 
 private:
-    UncheckedKeyHashMap<FontCascadeCacheKey, std::unique_ptr<FontCascadeCacheEntry>, FontCascadeCacheKeyHash, FontCascadeCacheKeyHashTraits> m_entries;
+    HashMap<FontCascadeCacheKey, std::unique_ptr<FontCascadeCacheEntry>, FontCascadeCacheKeyHash, FontCascadeCacheKeyHashTraits> m_entries;
 };
 
 } // namespace WebCore

@@ -53,6 +53,7 @@ public:
 
     bool allowInline() const { return m_allowInline && m_hashes.isEmpty() && m_nonces.isEmpty(); }
     bool allowEval() const { return m_allowEval; }
+    bool allowTrustedEval() const { return m_allowTrustedEval; }
     bool allowWasmEval() const { return m_allowWasmEval; }
     bool allowSelf() const { return m_allowSelf; }
     bool isNone() const { return m_isNone; }
@@ -89,10 +90,10 @@ private:
     template<typename CharacterType> bool parseNonceSource(StringParsingBuffer<CharacterType>);
     template<typename CharacterType> bool parseHashSource(StringParsingBuffer<CharacterType>);
 
-    const ContentSecurityPolicy& m_policy;
+    const CheckedRef<const ContentSecurityPolicy> m_policy;
     Vector<ContentSecurityPolicySource> m_list;
     MemoryCompactLookupOnlyRobinHoodHashSet<String> m_nonces;
-    UncheckedKeyHashSet<ContentSecurityPolicyHash> m_hashes;
+    HashSet<ContentSecurityPolicyHash> m_hashes;
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsUsed;
     String m_directiveName;
     ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
@@ -100,6 +101,7 @@ private:
     bool m_allowStar { false };
     bool m_allowInline { false };
     bool m_allowEval { false };
+    bool m_allowTrustedEval { false };
     bool m_allowWasmEval { false };
     bool m_isNone { false };
     bool m_allowNonParserInsertedScripts { false };

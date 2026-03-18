@@ -26,6 +26,8 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <wtf/StdLibExtras.h>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if ENABLE(B3_JIT)
@@ -1779,17 +1781,13 @@ InputType modelCompare(B3::Opcode opcode, InputType left, InputType right)
     case GreaterEqual:
         return left >= right;
     case Above:
-        return static_cast<typename std::make_unsigned<InputType>::type>(left) >
-            static_cast<typename std::make_unsigned<InputType>::type>(right);
+        return unsignedCast(left) > unsignedCast(right);
     case Below:
-        return static_cast<typename std::make_unsigned<InputType>::type>(left) <
-            static_cast<typename std::make_unsigned<InputType>::type>(right);
+        return unsignedCast(left) < unsignedCast(right);
     case AboveEqual:
-        return static_cast<typename std::make_unsigned<InputType>::type>(left) >=
-            static_cast<typename std::make_unsigned<InputType>::type>(right);
+        return unsignedCast(left) >= unsignedCast(right);
     case BelowEqual:
-        return static_cast<typename std::make_unsigned<InputType>::type>(left) <=
-            static_cast<typename std::make_unsigned<InputType>::type>(right);
+        return unsignedCast(left) <= unsignedCast(right);
     case BitAnd:
         return !!(left & right);
     default:

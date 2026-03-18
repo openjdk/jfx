@@ -29,6 +29,7 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
+#include "Document.h"
 #include "EventNames.h"
 #include "HTMLVideoElement.h"
 #include "JSDOMPromiseDeferred.h"
@@ -37,6 +38,7 @@
 #include "PictureInPictureEvent.h"
 #include "PictureInPictureSupport.h"
 #include "PictureInPictureWindow.h"
+#include "UserGestureIndicator.h"
 #include "VideoTrackList.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -53,13 +55,14 @@ HTMLVideoElementPictureInPicture::HTMLVideoElementPictureInPicture(HTMLVideoElem
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement->setPictureInPictureObserver(this);
+    videoElement.setPictureInPictureObserver(this);
 }
 
 HTMLVideoElementPictureInPicture::~HTMLVideoElementPictureInPicture()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_videoElement->setPictureInPictureObserver(nullptr);
+    if (RefPtr videoElement = m_videoElement.ptr())
+        videoElement->setPictureInPictureObserver(nullptr);
 }
 
 HTMLVideoElementPictureInPicture* HTMLVideoElementPictureInPicture::from(HTMLVideoElement& videoElement)
@@ -142,25 +145,30 @@ void HTMLVideoElementPictureInPicture::setDisablePictureInPicture(HTMLVideoEleme
 void HTMLVideoElementPictureInPicture::exitPictureInPicture(Ref<DeferredPromise>&& promise)
 {
     INFO_LOG(LOGIDENTIFIER);
-    if (m_enterPictureInPicturePromise || m_exitPictureInPicturePromise) {
+    RefPtr videoElement = m_videoElement.ptr();
+    if (m_enterPictureInPicturePromise || m_exitPictureInPicturePromise || !videoElement) {
         promise->reject(ExceptionCode::NotAllowedError);
         return;
     }
 
     m_exitPictureInPicturePromise = WTFMove(promise);
-    m_videoElement->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
+    videoElement->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
 }
 
 void HTMLVideoElementPictureInPicture::didEnterPictureInPicture(const IntSize& windowSize)
 {
+    RefPtr videoElement = m_videoElement.ptr();
+    if (!videoElement)
+        return;
+
     INFO_LOG(LOGIDENTIFIER);
-    m_videoElement->document().setPictureInPictureElement(m_videoElement.ptr());
+    videoElement->document().setPictureInPictureElement(videoElement.get());
     m_pictureInPictureWindow->setSize(windowSize);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
+    videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().enterpictureinpictureEvent, WTFMove(initializer)));
 
     if (m_enterPictureInPicturePromise) {
         m_enterPictureInPicturePromise->resolve<IDLInterface<PictureInPictureWindow>>(*m_pictureInPictureWindow);
@@ -170,14 +178,18 @@ void HTMLVideoElementPictureInPicture::didEnterPictureInPicture(const IntSize& w
 
 void HTMLVideoElementPictureInPicture::didExitPictureInPicture()
 {
+    RefPtr videoElement = m_videoElement.ptr();
+    if (!videoElement)
+        return;
+
     INFO_LOG(LOGIDENTIFIER);
     m_pictureInPictureWindow->close();
-    m_videoElement->document().setPictureInPictureElement(nullptr);
+    videoElement->document().setPictureInPictureElement(nullptr);
 
     PictureInPictureEvent::Init initializer;
     initializer.bubbles = true;
     initializer.pictureInPictureWindow = m_pictureInPictureWindow;
-    m_videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
+    videoElement->scheduleEvent(PictureInPictureEvent::create(eventNames().leavepictureinpictureEvent, WTFMove(initializer)));
 
     if (m_exitPictureInPicturePromise) {
         m_exitPictureInPicturePromise->resolve();

@@ -27,6 +27,7 @@
 
 #include "ConcurrentJSLock.h"
 #include "Structure.h"
+#include <wtf/OptionSet.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 

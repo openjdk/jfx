@@ -45,11 +45,11 @@ public:
     RenderMultiColumnSet* firstMultiColumnSet() const;
     RenderMultiColumnSet* lastMultiColumnSet() const;
     RenderBox* firstColumnSetOrSpanner() const;
-    bool hasColumnSpanner() const { return !m_spannerMap.isEmpty(); }
+    bool hasColumnSpanner() const { return !m_spannerMap.isEmptyIgnoringNullReferences(); }
     static RenderBox* nextColumnSetOrSpannerSiblingOf(const RenderBox*);
     static RenderBox* previousColumnSetOrSpannerSiblingOf(const RenderBox*);
 
-    RenderMultiColumnSpannerPlaceholder* findColumnSpannerPlaceholder(const RenderBox* spanner) const;
+    RenderMultiColumnSpannerPlaceholder* findColumnSpannerPlaceholder(const RenderBox& spanner) const;
 
     void layout() override;
 
@@ -91,12 +91,12 @@ public:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     // FIXME: Eventually as column and fragment flow threads start nesting, this will end up changing.
     bool shouldCheckColumnBreaks() const override;
 
-    using SpannerMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBox>, SingleThreadWeakPtr<RenderMultiColumnSpannerPlaceholder>>;
+    using SpannerMap = SingleThreadWeakHashMap<const RenderBox, SingleThreadWeakPtr<RenderMultiColumnSpannerPlaceholder>>;
     SpannerMap& spannerMap() { return m_spannerMap; }
 
 private:

@@ -75,7 +75,7 @@ void lowerMacros(Code& code)
                 }
                 ASSERT(offset = inst.args.size());
 
-                if (UNLIKELY(hasRegisterSource))
+                if (hasRegisterSource) [[unlikely]]
                     insertionSet.insertInst(instIndex, createShuffle(inst.origin, Vector<ShufflePair>(shufflePairs)));
                 else {
                     // If none of the inputs are registers, then we can efficiently lower this

@@ -31,6 +31,7 @@
 #include "BarcodeFormatInterface.h"
 #include "FaceDetectorInterface.h"
 #include "FaceDetectorOptionsInterface.h"
+#include "PointerLockController.h"
 #include "ScrollbarsController.h"
 #include "ScrollingCoordinator.h"
 #include "TextDetectorInterface.h"
@@ -95,5 +96,27 @@ RefPtr<ShapeDetection::TextDetector> ChromeClient::createTextDetector() const
 {
     return nullptr;
 }
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> ChromeClient::validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&)
+{
+    return Exception { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s };
+};
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+void ChromeClient::enterFullScreenForElement(Element&, HTMLMediaElementEnums::VideoFullscreenMode, CompletionHandler<void(ExceptionOr<void>)>&& willEnterFullscreen, CompletionHandler<bool(bool)>&& didEnterFullscreen)
+{
+    willEnterFullscreen({ });
+    didEnterFullscreen(false);
+}
+#endif
+
+#if ENABLE(POINTER_LOCK)
+void ChromeClient::requestPointerLock(CompletionHandler<void(PointerLockRequestResult)>&& completionHandler)
+{
+    completionHandler(PointerLockRequestResult::Unsupported);
+}
+#endif
 
 } // namespace WebCore

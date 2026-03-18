@@ -26,7 +26,6 @@
 
 namespace WebCore {
 
-class DropShadowFilterOperation;
 class CSSToLengthConversionData;
 class Document;
 class FilterOperation;
@@ -37,8 +36,9 @@ struct DropShadow;
 }
 
 namespace Style {
+class DropShadowFilterOperationWithStyleColor;
 
-CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperation>, const RenderStyle&);
+CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperationWithStyleColor>, const RenderStyle&);
 Ref<FilterOperation> createFilterOperation(const CSS::DropShadow&, const Document&, RenderStyle&, const CSSToLengthConversionData&);
 
 } // namespace Style

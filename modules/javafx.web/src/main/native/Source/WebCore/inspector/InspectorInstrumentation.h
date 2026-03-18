@@ -34,6 +34,7 @@
 #include "CSSSelector.h"
 #include "CanvasBase.h"
 #include "CanvasRenderingContext.h"
+#include "DocumentInlines.h"
 #include "DocumentThreadableLoader.h"
 #include "Element.h"
 #include "Event.h"
@@ -140,6 +141,8 @@ public:
     static void activeStyleSheetsUpdated(Document&);
     static void didPushShadowRoot(Element& host, ShadowRoot&);
     static void willPopShadowRoot(Element& host, ShadowRoot&);
+    static void didChangeAssignedSlot(Node&);
+    static void didChangeAssignedNodes(Element& slotElement);
     static void didChangeCustomElementState(Element&);
     static void pseudoElementCreated(Page*, PseudoElement&);
     static void pseudoElementDestroyed(Page*, PseudoElement&);
@@ -185,7 +188,7 @@ public:
     static void didFireTimer(ScriptExecutionContext&, int timerId, bool oneShot);
     static void didInvalidateLayout(LocalFrame&);
     static void willLayout(LocalFrame&);
-    static void didLayout(LocalFrame&, RenderObject&);
+    static void didLayout(LocalFrame&, const Vector<FloatQuad>&);
     static void didScroll(Page&);
     static void willComposite(LocalFrame&);
     static void didComposite(LocalFrame&);
@@ -260,6 +263,7 @@ public:
     static void consoleCountReset(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
 
     static void takeHeapSnapshot(Frame&, const String& title);
+    static void takeHeapSnapshot(WorkerOrWorkletGlobalScope&, const String& title);
     static void startConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
     static void startConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
     static void logConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label, Ref<Inspector::ScriptArguments>&&);
@@ -267,8 +271,11 @@ public:
     static void stopConsoleTiming(Frame&, JSC::JSGlobalObject*, const String& label);
     static void stopConsoleTiming(WorkerOrWorkletGlobalScope&, JSC::JSGlobalObject*, const String& label);
     static void consoleTimeStamp(Frame&, Ref<Inspector::ScriptArguments>&&);
+    static void consoleTimeStamp(WorkerOrWorkletGlobalScope&, Ref<Inspector::ScriptArguments>&&);
     static void startProfiling(Page&, const String& title);
+    static void startProfiling(WorkerOrWorkletGlobalScope&, const String& title);
     static void stopProfiling(Page&, const String& title);
+    static void stopProfiling(WorkerOrWorkletGlobalScope&, const String& title);
     static void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::JSGlobalObject&, JSC::JSObject* options);
     static void consoleStopRecordingCanvas(CanvasRenderingContext&);
 
@@ -366,6 +373,8 @@ private:
     static void activeStyleSheetsUpdatedImpl(InstrumentingAgents&, Document&);
     static void didPushShadowRootImpl(InstrumentingAgents&, Element& host, ShadowRoot&);
     static void willPopShadowRootImpl(InstrumentingAgents&, Element& host, ShadowRoot&);
+    static void didChangeAssignedSlotImpl(InstrumentingAgents&, Node&);
+    static void didChangeAssignedNodesImpl(InstrumentingAgents&, Element& slotElement);
     static void didChangeCustomElementStateImpl(InstrumentingAgents&, Element&);
     static void pseudoElementCreatedImpl(InstrumentingAgents&, PseudoElement&);
     static void pseudoElementDestroyedImpl(InstrumentingAgents&, PseudoElement&);
@@ -409,7 +418,7 @@ private:
     static void didFireTimerImpl(InstrumentingAgents&, int timerId, bool oneShot);
     static void didInvalidateLayoutImpl(InstrumentingAgents&);
     static void willLayoutImpl(InstrumentingAgents&);
-    static void didLayoutImpl(InstrumentingAgents&, RenderObject&);
+    static void didLayoutImpl(InstrumentingAgents&, const Vector<FloatQuad>&);
     static void didScrollImpl(InstrumentingAgents&);
     static void willCompositeImpl(InstrumentingAgents&);
     static void didCompositeImpl(InstrumentingAgents&);
@@ -700,6 +709,20 @@ inline void InspectorInstrumentation::willPopShadowRoot(Element& host, ShadowRoo
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(host.document()))
         willPopShadowRootImpl(*agents, host, root);
+}
+
+inline void InspectorInstrumentation::didChangeAssignedSlot(Node& slotable)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (auto* agents = instrumentingAgents(slotable.document()))
+        didChangeAssignedSlotImpl(*agents, slotable);
+}
+
+inline void InspectorInstrumentation::didChangeAssignedNodes(Element& slotElement)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (auto* agents = instrumentingAgents(slotElement.document()))
+        didChangeAssignedNodesImpl(*agents, slotElement);
 }
 
 inline void InspectorInstrumentation::didChangeCustomElementState(Element& element)
@@ -1003,11 +1026,11 @@ inline void InspectorInstrumentation::willLayout(LocalFrame& frame)
         willLayoutImpl(*agents);
 }
 
-inline void InspectorInstrumentation::didLayout(LocalFrame& frame, RenderObject& root)
+inline void InspectorInstrumentation::didLayout(LocalFrame& frame, const Vector<FloatQuad>& layoutAreas)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(frame))
-        didLayoutImpl(*agents, root);
+        didLayoutImpl(*agents, layoutAreas);
 }
 
 inline void InspectorInstrumentation::didScroll(Page& page)
@@ -1609,6 +1632,12 @@ inline void InspectorInstrumentation::takeHeapSnapshot(Frame& frame, const Strin
         takeHeapSnapshotImpl(*agents, title);
 }
 
+inline void InspectorInstrumentation::takeHeapSnapshot(WorkerOrWorkletGlobalScope& globalScope, const String& title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    takeHeapSnapshotImpl(instrumentingAgents(globalScope), title);
+}
+
 inline void InspectorInstrumentation::startConsoleTiming(Frame& frame, JSC::JSGlobalObject* exec, const String& label)
 {
     if (auto* agents = instrumentingAgents(frame))
@@ -1649,16 +1678,34 @@ inline void InspectorInstrumentation::consoleTimeStamp(Frame& frame, Ref<Inspect
         consoleTimeStampImpl(*agents, WTFMove(arguments));
 }
 
+inline void InspectorInstrumentation::consoleTimeStamp(WorkerOrWorkletGlobalScope& globalScope, Ref<Inspector::ScriptArguments>&& arguments)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    consoleTimeStampImpl(instrumentingAgents(globalScope), WTFMove(arguments));
+}
+
 inline void InspectorInstrumentation::startProfiling(Page& page, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     startProfilingImpl(instrumentingAgents(page), title);
 }
 
+inline void InspectorInstrumentation::startProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    startProfilingImpl(instrumentingAgents(globalScope), title);
+}
+
 inline void InspectorInstrumentation::stopProfiling(Page& page, const String &title)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     stopProfilingImpl(instrumentingAgents(page), title);
+}
+
+inline void InspectorInstrumentation::stopProfiling(WorkerOrWorkletGlobalScope& globalScope, const String &title)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    stopProfilingImpl(instrumentingAgents(globalScope), title);
 }
 
 inline void InspectorInstrumentation::consoleStartRecordingCanvas(CanvasRenderingContext& context, JSC::JSGlobalObject& exec, JSC::JSObject* options)

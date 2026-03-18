@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/CheckedRef.h>
+#include <wtf/RawPtrTraits.h>
 
 namespace WTF {
 
@@ -39,7 +40,7 @@ namespace WTF {
 
 template<typename T, typename PtrTraits>
 class CheckedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CheckedPtr);
 public:
 
     constexpr CheckedPtr()
@@ -175,13 +176,13 @@ private:
 
     ALWAYS_INLINE void refIfNotNull()
     {
-        if (T* ptr = PtrTraits::unwrap(m_ptr); LIKELY(ptr))
+        if (T* ptr = PtrTraits::unwrap(m_ptr); ptr) [[likely]]
             ptr->incrementCheckedPtrCount();
     }
 
     ALWAYS_INLINE void derefIfNotNull()
     {
-        if (T* ptr = PtrTraits::unwrap(m_ptr); LIKELY(ptr))
+        if (T* ptr = PtrTraits::unwrap(m_ptr); ptr) [[likely]]
             ptr->decrementCheckedPtrCount();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,6 @@
 #include "ChannelCountMode.h"
 #include "ChannelInterpretation.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 
@@ -38,10 +36,11 @@
 namespace WebCore {
 
 class AudioNodeInput;
-struct AudioNodeOptions;
 class AudioNodeOutput;
 class AudioParam;
 class BaseAudioContext;
+struct AudioNodeOptions;
+template<typename> class ExceptionOr;
 
 enum class NoiseInjectionPolicy : uint8_t;
 
@@ -237,7 +236,7 @@ protected:
     virtual void updatePullStatus() { }
 
 private:
-    using WeakOrStrongContext = std::variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>>;
+    using WeakOrStrongContext = Variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>>;
     static WeakOrStrongContext toWeakOrStrongContext(BaseAudioContext&, NodeType);
 
     // EventTarget
@@ -286,14 +285,14 @@ private:
 template<typename T> struct AudioNodeConnectionRefDerefTraits {
     static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->incrementConnectionCount();
         return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr))
+        if (ptr) [[likely]]
             ptr->decrementConnectionCount();
     }
 };

@@ -31,10 +31,10 @@
 
 namespace WebCore {
 
-enum SVGMarkerUnitsType {
-    SVGMarkerUnitsUnknown = 0,
-    SVGMarkerUnitsUserSpaceOnUse,
-    SVGMarkerUnitsStrokeWidth
+enum class SVGMarkerUnitsType : uint8_t {
+    Unknown = 0,
+    UserSpaceOnUse,
+    StrokeWidth,
 };
 
 enum SVGMarkerOrientType {
@@ -49,15 +49,15 @@ enum SVGMarkerOrientType {
 
 template<>
 struct SVGPropertyTraits<SVGMarkerUnitsType> {
-    static unsigned highestEnumValue() { return SVGMarkerUnitsStrokeWidth; }
+    static unsigned highestEnumValue() { return std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::StrokeWidth); }
     static String toString(SVGMarkerUnitsType type)
     {
         switch (type) {
-        case SVGMarkerUnitsUnknown:
+        case SVGMarkerUnitsType::Unknown:
             return emptyString();
-        case SVGMarkerUnitsUserSpaceOnUse:
+        case SVGMarkerUnitsType::UserSpaceOnUse:
             return "userSpaceOnUse"_s;
-        case SVGMarkerUnitsStrokeWidth:
+        case SVGMarkerUnitsType::StrokeWidth:
             return "strokeWidth"_s;
         }
 
@@ -67,10 +67,10 @@ struct SVGPropertyTraits<SVGMarkerUnitsType> {
     static SVGMarkerUnitsType fromString(const String& value)
     {
         if (value == "userSpaceOnUse"_s)
-            return SVGMarkerUnitsUserSpaceOnUse;
+            return SVGMarkerUnitsType::UserSpaceOnUse;
         if (value == "strokeWidth"_s)
-            return SVGMarkerUnitsStrokeWidth;
-        return SVGMarkerUnitsUnknown;
+            return SVGMarkerUnitsType::StrokeWidth;
+        return SVGMarkerUnitsType::Unknown;
     }
 };
 

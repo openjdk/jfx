@@ -47,14 +47,14 @@ JSStringRef JSStringCreateWithCFString(CFStringRef string)
 
     Vector<LChar, 1024> lcharBuffer(length);
     CFIndex usedBufferLength;
-    CFIndex convertedSize = CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), length, &usedBufferLength);
+    CFIndex convertedSize = CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.mutableSpan().data(), length, &usedBufferLength);
     if (static_cast<size_t>(convertedSize) == length && static_cast<size_t>(usedBufferLength) == length)
         return &OpaqueJSString::create(lcharBuffer.span()).leakRef();
 
     Vector<UniChar> buffer(length);
-    CFStringGetCharacters(string, CFRangeMake(0, length), buffer.data());
-    static_assert(sizeof(UniChar) == sizeof(UChar), "UniChar and UChar must be same size");
-    return &OpaqueJSString::create({ reinterpret_cast<UChar*>(buffer.data()), length }).leakRef();
+    CFStringGetCharacters(string, CFRangeMake(0, length), buffer.mutableSpan().data());
+    static_assert(sizeof(UniChar) == sizeof(char16_t), "UniChar and char16_t must be same size");
+    return &OpaqueJSString::create({ reinterpret_cast<const char16_t*>(buffer.span().data()), length }).leakRef();
 }
 
 CFStringRef JSStringCopyCFString(CFAllocatorRef allocator, JSStringRef string)

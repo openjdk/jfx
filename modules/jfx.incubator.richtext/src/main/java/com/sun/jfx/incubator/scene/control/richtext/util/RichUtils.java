@@ -180,21 +180,24 @@ public final class RichUtils {
         return len;
     }
 
-    // TODO javadoc
-    // translates path elements from src frame of reference to target, with additional shift by dx, dy
-    // only MoveTo, LineTo are supported
-    // may return null
-    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements, double deltax, double deltay) {
-        //System.out.println("translatePath from=" + dump(elements) + " dx=" + deltax + " dy=" + deltay); // FIX
+    /**
+     * Translates path (which must contain only LineTo and MoveTo elements) from src frame of reference
+     * to the target frame of reference.
+     * @param tgt the target Region
+     * @param src the source Region
+     * @param elements the path elements
+     * @return translated path array, or null
+     * @throws RuntimeException if path elements contain something other than LineTo or MoveTo
+     */
+    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements) {
         Point2D ps = src.localToScreen(0.0, 0.0);
         if (ps == null) {
             return null;
         }
 
         Point2D pt = tgt.localToScreen(tgt.snappedLeftInset(), tgt.snappedTopInset());
-        double dx = ps.getX() - pt.getX() + deltax;
-        double dy = ps.getY() - pt.getY() + deltay;
-        //System.out.println("dx=" + dx + " dy=" + dy); // FIX
+        double dx = ps.getX() - pt.getX();
+        double dy = ps.getY() - pt.getY();
 
         for (int i = 0; i < elements.length; i++) {
             PathElement em = elements[i];
@@ -208,7 +211,6 @@ public final class RichUtils {
 
             elements[i] = em;
         }
-        //System.out.println("translatePath to=" + dump(elements)); // FIX
         return elements;
     }
 

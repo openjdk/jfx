@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ public:
 
     void notifyLoadCompleted(UniquedStringImpl& moduleKey)
     {
-        m_moduleKey = &moduleKey;
+        m_moduleKey = moduleKey;
         m_isLoaded = true;
     }
 
@@ -92,7 +92,7 @@ private:
     FetchOptions::Destination m_destination;
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
     RefPtr<UniquedStringImpl> m_moduleKey;
-    Ref<ModuleFetchParameters> m_parameters;
+    const Ref<ModuleFetchParameters> m_parameters;
     std::optional<LoadableScript::Error> m_error;
     bool m_wasCanceled { false };
     bool m_isLoaded { false };

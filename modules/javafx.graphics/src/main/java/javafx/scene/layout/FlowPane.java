@@ -673,7 +673,7 @@ public class FlowPane extends Pane {
                     nodeRect.node = child;
                     Insets margin = getMargin(child);
                     nodeRect.width = computeChildPrefAreaWidth(child, margin);
-                    nodeRect.height = computeChildPrefAreaHeight(child, margin);
+                    nodeRect.height = computeChildPrefAreaHeight(child, -1, margin, nodeRect.width, false);
                     double nodeLength = getOrientation() == HORIZONTAL ? nodeRect.width : nodeRect.height;
                     if (runLength + nodeLength > maxRunLength && runLength > 0) {
                         // wrap to next run *unless* its the only node in the run
@@ -721,7 +721,7 @@ public class FlowPane extends Pane {
                 run.width += lrect.width;
                 lrect.y = runOffset;
             }
-            run.height = computeMaxPrefAreaHeight(rownodes, marginAccessor, getRowValignment());
+            run.height = computeMaxPrefAreaHeight(rownodes, marginAccessor, run.width, false, getRowValignment());
             run.baselineOffset = getRowValignment() == VPos.BASELINE?
                     getAreaBaselineOffset(rownodes, marginAccessor, i -> run.rects.get(i).width, run.height, true) : 0;
 

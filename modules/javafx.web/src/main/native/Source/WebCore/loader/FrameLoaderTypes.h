@@ -28,8 +28,6 @@
 
 #pragma once
 
-#include "ElementContext.h"
-#include "IntRect.h"
 #include "ProcessIdentifier.h"
 
 namespace WebCore {
@@ -48,6 +46,22 @@ enum class PolicyAction : uint8_t {
     Ignore,
     LoadWillContinueInAnotherProcess
 };
+
+inline ASCIILiteral toString(PolicyAction action)
+{
+    switch (action) {
+    using enum PolicyAction;
+    case Download:
+        return "Download"_s;
+    case Ignore:
+        return "Ignore"_s;
+    case LoadWillContinueInAnotherProcess:
+        return "LoadWillContinueInAnotherProcess"_s;
+    case Use:
+        break;
+    }
+    return "Use"_s;
+}
 
 enum class ReloadOption : uint8_t {
     ExpiredOnly = 1 << 0,
@@ -147,14 +161,6 @@ enum class LockBackForwardList : bool { No, Yes };
 enum class AllowNavigationToInvalidURL : bool { No, Yes };
 enum class HasInsecureContent : bool { No, Yes };
 enum class LoadWillContinueInAnotherProcess : bool { No, Yes };
-
-// FIXME: This should move to somewhere else. It no longer is related to frame loading.
-struct SystemPreviewInfo {
-    ElementContext element;
-
-    IntRect previewRect;
-    bool isPreview { false };
-};
 
 enum class LoadCompletionType : bool {
     Finish,
