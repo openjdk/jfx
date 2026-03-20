@@ -36,7 +36,6 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -94,14 +93,6 @@ public class TreeTableViewInitialFocusTest {
             c1.setCellValueFactory(param ->
                     new SimpleStringProperty(String.valueOf(param.getValue().getValue())));
             c1.setPrefWidth(300);
-            treeTableView.getColumns().add(c1);
-
-            TreeItem<Object> temp = new TreeItem<>("Covfefe");
-            root.getChildren().add(temp);
-
-            treeTableView.getSelectionModel().select(0);
-
-            root.getChildren().clear();
 
             root.getChildren().add(new TreeItem<>("Foo"));
             root.getChildren().add(new TreeItem<>("Bar"));
@@ -112,8 +103,7 @@ public class TreeTableViewInitialFocusTest {
             primaryStage.setScene(scene);
             primaryStage.initStyle(StageStyle.UNDECORATED);
             primaryStage.setAlwaysOnTop(true);
-            primaryStage.addEventHandler(WindowEvent.WINDOW_SHOWN,
-                    e -> Platform.runLater(startupLatch::countDown));
+            primaryStage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
             primaryStage.show();
         }
     }
