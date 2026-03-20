@@ -179,9 +179,7 @@ public class MouseEventFirerTest {
         assertEquals(screenP.getY(), mouse.getScreenY(), EPS, "screenY of " + text);
     }
 
- // ------------- parameterized in not/alternative mouseEvent creation
-
- // ------------ setup/cleanup/intial
+// ------------ setup/cleanup/intial
 
     @Test
     public void testFirer() {
