@@ -68,7 +68,7 @@ public class WebViewApp extends Application {
         WebView webView = new WebView();
 
         final WebEngine webEngine = webView.getEngine();
-        final String DEFAULT_URL = "http://www.oracle.com/us/index.html";
+        final String DEFAULT_URL = "https://www.oracle.com/us/index.html";
         final String[] allowedPrefixes = {"http://", "https://"};
         webEngine.load(DEFAULT_URL);
 
@@ -90,7 +90,7 @@ public class WebViewApp extends Application {
             }
             webEngine.load(hasSupportedPrefix
                     ? address
-                    : "http://" + address);
+                    : "https://" + address);
         };
         locationField.setOnAction(goAction);
 
