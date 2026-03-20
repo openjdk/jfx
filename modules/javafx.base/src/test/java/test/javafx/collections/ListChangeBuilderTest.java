@@ -570,8 +570,10 @@ public class ListChangeBuilderTest {
 
         list.addListener((ListChangeListener<? super Integer>) change -> {
             change.next();
-            assertEquals(1, change.getRemovedSize());
             assertEquals(1, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(2), change.getRemoved());
+
             assertFalse(change.wasAdded());
             assertFalse(change.next());
         });
@@ -604,8 +606,10 @@ public class ListChangeBuilderTest {
 
         list.addListener((ListChangeListener<? super Integer>) change -> {
             change.next();
-            assertEquals(1, change.getAddedSize());
             assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(3), change.getAddedSubList());
+
             assertFalse(change.wasRemoved());
             assertFalse(change.next());
         });
@@ -639,13 +643,17 @@ public class ListChangeBuilderTest {
 
         list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
             change.next();
-            assertEquals(1, change.getRemovedSize());
             assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
             assertFalse(change.wasAdded());
 
             change.next();
-            assertEquals(1, change.getRemovedSize());
             assertEquals(2, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(4), change.getRemoved());
+
             assertFalse(change.wasAdded());
 
             assertFalse(change.next());
@@ -682,13 +690,17 @@ public class ListChangeBuilderTest {
 
         list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
             change.next();
-            assertEquals(1, change.getRemovedSize());
             assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
             assertFalse(change.wasAdded());
 
             change.next();
-            assertEquals(1, change.getAddedSize());
             assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(5), change.getAddedSubList());
+
             assertFalse(change.wasRemoved());
 
             assertFalse(change.next());
@@ -719,5 +731,4 @@ public class ListChangeBuilderTest {
             endChange();
         }
     }
-
 }
