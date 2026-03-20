@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,11 +63,9 @@ public class GifImageTestApp extends Application {
         });
 
         WebView webView = new WebView();
-        WebEngine webEngine = webView.getEngine();
 
         loadButton.setOnAction(e -> {
             URL url = this.getClass().getResource("giftest.html");
-            System.out.println(url);
             webView.getEngine().load(url.toString());
         });
 
