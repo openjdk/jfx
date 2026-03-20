@@ -81,16 +81,16 @@ public class WebViewApp extends Application {
         webEngine.locationProperty().addListener(changeListener);
         EventHandler<ActionEvent> goAction = (ActionEvent event) -> {
             String address = locationField.getText().trim();
-            boolean valid = false;
+            boolean hasSupportedPrefix = false;
             for (String prefix : allowedPrefixes) {
                 if (address.regionMatches(true, 0, prefix, 0, prefix.length())) {
-                    valid = true;
+                    hasSupportedPrefix = true;
                     break;
                 }
             }
-            webEngine.load(valid
-                    ? locationField.getText()
-                    : "http://" + locationField.getText());
+            webEngine.load(hasSupportedPrefix
+                    ? address
+                    : "http://" + address);
         };
         locationField.setOnAction(goAction);
 
