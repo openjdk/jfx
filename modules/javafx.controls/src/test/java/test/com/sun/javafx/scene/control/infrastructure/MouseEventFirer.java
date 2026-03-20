@@ -50,7 +50,6 @@ import java.util.List;
 public final class MouseEventFirer {
     private final EventTarget target;
 
-    private final Scene scene;
     private final Bounds targetBounds;
     private StageLoader sl;
 
@@ -58,21 +57,17 @@ public final class MouseEventFirer {
         this.target = target;
 
         // Force the target node onto a stage so that it is accessible
-        if (target instanceof Node) {
-            Node n = (Node)target;
+        if (target instanceof Node n) {
             Scene s = n.getScene();
             Window w = s == null ? null : s.getWindow();
 
             if (w == null || w.getScene() == null) {
                 sl = new StageLoader(n);
-                scene = n.getScene();
                 targetBounds = n.getLayoutBounds();
             } else {
-                scene = w.getScene();
                 targetBounds = n.getLayoutBounds();
             }
-        } else if (target instanceof Scene) {
-            scene = (Scene)target;
+        } else if (target instanceof Scene scene) {
             sl = new StageLoader(scene);
             targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
         } else {
