@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ChoiceBoxShim;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.Separator;
@@ -59,6 +61,8 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
+
+import java.util.stream.IntStream;
 
 public class ChoiceBoxTest {
     private final ChoiceBox<String> box = new ChoiceBox<>();
@@ -601,5 +605,59 @@ public class ChoiceBoxTest {
         assertTrue(onShownPass, "onShown event not received");
         assertTrue(onHidingPass, "onHiding event not received");
         assertTrue(onHiddenPass, "onHidden event not received");
+    }
+
+    @Test
+    void testAddChoiceItemIsReflectedInPopup() {
+        startApp(box);
+
+        ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
+
+        for (int i = 0; i < 10; i++) {
+            box.getItems().add("Item " + i);
+        }
+
+        assertEquals(10, choiceBoxPopup.getItems().size());
+
+        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
+            MenuItem item = choiceBoxPopup.getItems().get(i);
+            assertEquals(this.box.getItems().get(i), item.getText());
+        }
+    }
+
+    @Test
+    void testRemoveChoiceItemIsReflectedInPopup() {
+        startApp(box);
+
+        ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
+
+        box.getItems().addAll(IntStream.range(0, 15).boxed().map(integer -> "Item " + integer).toList());
+        for (int i = 0; i < 10; i++) {
+            box.getItems().removeFirst();
+        }
+
+        assertEquals(5, choiceBoxPopup.getItems().size());
+
+        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
+            MenuItem item = choiceBoxPopup.getItems().get(i);
+            assertEquals(this.box.getItems().get(i), item.getText());
+        }
+    }
+
+    @Test
+    void testReplaceChoiceItemsIsReflectedInPopup() {
+        startApp(box);
+
+        ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
+
+        box.getItems().addAll(IntStream.range(0, 15).boxed().map(integer -> "Item " + integer).toList());
+        box.getItems().setAll(IntStream.range(10, 20).boxed().map(integer -> "Item " + integer).toList());
+
+        assertEquals(10, choiceBoxPopup.getItems().size());
+
+        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
+            MenuItem item = choiceBoxPopup.getItems().get(i);
+            assertEquals(this.box.getItems().get(i), item.getText());
+        }
     }
 }

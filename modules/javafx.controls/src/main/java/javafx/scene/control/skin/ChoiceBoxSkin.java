@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,10 @@ import javafx.scene.text.Text;
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
 import javafx.collections.WeakListChangeListener;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 
 /**
  * Default skin implementation for the {@link ChoiceBox} control.
@@ -99,16 +103,9 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
                 if (c.getRemovedSize() > 0 || c.wasPermutated()) {
                     toggleGroup.getToggles().clear();
                     popup.getItems().clear();
-                    int i = 0;
-                    for (T obj : c.getList()) {
-                        addPopupItem(obj, i);
-                        i++;
-                    }
+                    addPopupItem(0, c.getList());
                 } else {
-                    for (int i = c.getFrom(); i < c.getTo(); i++) {
-                        final T obj = c.getList().get(i);
-                        addPopupItem(obj, i);
-                    }
+                    addPopupItem(c.getFrom(), c.getAddedSubList());
                 }
             }
             updateSelection();
@@ -372,27 +369,31 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         return popup;
     }
 
-    private void addPopupItem(final T o, int i) {
-        MenuItem popupItem = null;
-        if (o instanceof Separator) {
-            // We translate the Separator into a SeparatorMenuItem...
-            popupItem = new SeparatorMenuItem();
-        } else if (o instanceof SeparatorMenuItem) {
-            popupItem = (SeparatorMenuItem) o;
-        } else {
-            final RadioMenuItem item = new RadioMenuItem(getDisplayText(o));
-            item.setId("choice-box-menu-item");
-            item.setToggleGroup(toggleGroup);
-            item.setOnAction(e -> {
-                if (selectionModel == null) return;
-                int index = getSkinnable().getItems().indexOf(o);
-                selectionModel.select(index);
-                item.setSelected(true);
-            });
-            popupItem = item;
+    private void addPopupItem(int i, final Collection<? extends T> col) {
+        List<MenuItem> toAdd = new ArrayList<>(col.size());
+        for (T o : col) {
+            MenuItem popupItem;
+            if (o instanceof Separator) {
+                // We translate the Separator into a SeparatorMenuItem...
+                popupItem = new SeparatorMenuItem();
+            } else if (o instanceof SeparatorMenuItem) {
+                popupItem = (SeparatorMenuItem) o;
+            } else {
+                final RadioMenuItem item = new RadioMenuItem(getDisplayText(o));
+                item.setId("choice-box-menu-item");
+                item.setToggleGroup(toggleGroup);
+                item.setOnAction(e -> {
+                    if (selectionModel == null) return;
+                    int index = getSkinnable().getItems().indexOf(o);
+                    selectionModel.select(index);
+                    item.setSelected(true);
+                });
+                popupItem = item;
+            }
+            popupItem.setMnemonicParsing(false);   // ChoiceBox doesn't do Mnemonics
+            toAdd.add(popupItem);
         }
-        popupItem.setMnemonicParsing(false);   // ChoiceBox doesn't do Mnemonics
-        popup.getItems().add(i, popupItem);
+        popup.getItems().addAll(i, toAdd);
     }
 
     private void updatePopupItems() {
@@ -400,10 +401,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         popup.getItems().clear();
         toggleGroup.selectToggle(null);
 
-        for (int i = 0; i < choiceBoxItems.size(); i++) {
-            T o = choiceBoxItems.get(i);
-            addPopupItem(o, i);
-        }
+        addPopupItem(0, choiceBoxItems);
     }
 
     private void updateSelectionModel() {
