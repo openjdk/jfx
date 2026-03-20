@@ -176,7 +176,7 @@ public class TreeTableViewDisclosureNodeTest {
         TreeTableRow<?> grandChildTableRow = getTableRow(rowIndex);
         // single column == single child cell
         TreeTableCell<?, ?> cell = (TreeTableCell<?, ?>) grandChildTableRow.lookup(".tree-table-cell");
-        MouseEventFirer mouse = new MouseEventFirer(cell, true);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
         // target to hit disclosure
         double targetX = - cell.getWidth() / 2; // compensate default center offset to zero
         mouse.fireMousePressAndRelease(1, targetX, 0);

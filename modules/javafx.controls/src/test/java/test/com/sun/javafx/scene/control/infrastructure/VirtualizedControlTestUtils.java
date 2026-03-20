@@ -53,7 +53,7 @@ public class VirtualizedControlTestUtils {
     public static void fireMouseOnVerticalTrack(Control control) {
         ScrollBar scrollBar = getVerticalScrollBar(control);
         Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
+        MouseEventFirer firer = new MouseEventFirer(track);
         firer.fireMousePressAndRelease();
         Toolkit.getToolkit().firePulse();
     }
@@ -65,7 +65,7 @@ public class VirtualizedControlTestUtils {
     public static void fireMouseOnHorizontalTrack(Control control) {
         ScrollBar scrollBar = getHorizontalScrollBar(control);
         Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
+        MouseEventFirer firer = new MouseEventFirer(track);
         firer.fireMousePressAndRelease();
         Toolkit.getToolkit().firePulse();
     }
