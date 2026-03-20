@@ -34,7 +34,6 @@ import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.scene.robot.Robot;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,7 +51,6 @@ public class TreeViewInitialFocusTest {
     private static final int SCENE_HEIGHT = 500;
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
-    static Robot robot;
     static volatile TreeView<String> treeView;
 
     @BeforeAll
@@ -86,7 +84,6 @@ public class TreeViewInitialFocusTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
-            robot = new Robot();
             treeView = new TreeView<>();
 
             TreeItem<String> root = new TreeItem<>("Root");
