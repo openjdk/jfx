@@ -203,8 +203,8 @@ static jobject portal_show_file_chooser(JNIEnv *env, jlong parent,
                                       const char *folder, const char *name, const char *title,
                                       jint type, jboolean multiple,
                                       jobjectArray jFilters, jint default_filter_index,
-                                      jboolean usePortal) {
-    if (!usePortal) {
+                                      jboolean disablePortal) {
+    if (disablePortal) {
         LOG0("Portal file chooser disabled via glass.gtk.disablePortalFileChooser=true\n")
         return NULL;
     }
@@ -240,8 +240,8 @@ static jobject portal_show_file_chooser(JNIEnv *env, jlong parent,
 
 static jstring portal_show_folder_chooser(JNIEnv *env, jlong parent,
                                         const char *folder, const char *title,
-                                        jboolean usePortal) {
-    if (!usePortal) {
+                                        jboolean disablePortal) {
+    if (disablePortal) {
         LOG0("Portal folder chooser disabled via glass.gtk.disablePortalFileChooser=true\n")
         return PORTAL_FOLDER_UNAVAILABLE;
     }
@@ -276,7 +276,7 @@ extern "C" {
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring name, jstring title,
    jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index,
-   jboolean usePortal) {
+   jboolean disablePortal) {
     (void)clazz;
 
     jobjectArray jFileNames = NULL;
@@ -306,7 +306,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     // Try portal first
     jobject portalResult = portal_show_file_chooser(env, parent,
             chooser_folder, chooser_filename, chooser_title,
-            type, multiple, jFilters, default_filter_index, usePortal);
+            type, multiple, jFilters, default_filter_index, disablePortal);
 
     if (portalResult != NULL) {
         jstring_to_utf_release(env, folder, chooser_folder);
@@ -398,7 +398,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolderChooser
-  (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title, jboolean usePortal) {
+  (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title, jboolean disablePortal) {
     (void)clazz;
 
     jstring jfilename = NULL;
@@ -415,7 +415,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
     }
 
     // Try portal first
-    jstring portalResult = portal_show_folder_chooser(env, parent, chooser_folder, chooser_title, usePortal);
+    jstring portalResult = portal_show_folder_chooser(env, parent, chooser_folder, chooser_title, disablePortal);
 
     if (portalResult != PORTAL_FOLDER_UNAVAILABLE) {
         jstring_to_utf_release(env, folder, chooser_folder);

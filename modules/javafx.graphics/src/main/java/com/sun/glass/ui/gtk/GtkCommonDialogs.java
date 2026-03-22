@@ -32,7 +32,7 @@ import java.io.File;
 
 final class GtkCommonDialogs {
 
-    private static final boolean USE_PORTAL_FILE_CHOOSER =
+    private static final boolean DISABLE_PORTAL_FILE_CHOOSER =
             Boolean.parseBoolean(System.getProperty("glass.gtk.disablePortalFileChooser", "false"));
 
     private static native FileChooserResult _showFileChooser(
@@ -62,7 +62,7 @@ final class GtkCommonDialogs {
         if (owner != null) owner.setEnabled(false);
         FileChooserResult result = _showFileChooser(owner == null? 0L : owner.getNativeHandle(),
                 folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex,
-                USE_PORTAL_FILE_CHOOSER);
+                DISABLE_PORTAL_FILE_CHOOSER);
         if (owner != null) owner.setEnabled(true);
         return result;
     }
@@ -74,7 +74,7 @@ final class GtkCommonDialogs {
         try {
             String filename = _showFolderChooser(
                     (owner != null) ? owner.getNativeHandle() : 0, folder, title,
-                    USE_PORTAL_FILE_CHOOSER);
+                    DISABLE_PORTAL_FILE_CHOOSER);
             return filename != null ? new File(filename) : null;
 
         } finally {
