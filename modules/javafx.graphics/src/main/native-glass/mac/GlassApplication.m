@@ -1375,6 +1375,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1openURI
            }];
 
     dispatch_semaphore_wait(semaphore, timeout);
+    dispatch_release(semaphore);
 
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
