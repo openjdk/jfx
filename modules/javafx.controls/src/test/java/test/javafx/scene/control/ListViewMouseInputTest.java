@@ -424,7 +424,9 @@ public class ListViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
         assertTrue(isSelected(2, 3, 4), debug());
         assertTrue(isNotSelected(5, 6), debug());
+    }
 
+    @Test public void testShiftClickToAnchor() {
         sm.clearAndSelect(4);
 
         // extend selection from anchor (4) to row 7
