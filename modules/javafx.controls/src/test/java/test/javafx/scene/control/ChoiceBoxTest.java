@@ -627,10 +627,7 @@ public class ChoiceBoxTest {
 
         assertEquals(10, choiceBoxPopup.getItems().size());
 
-        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
-            MenuItem item = choiceBoxPopup.getItems().get(i);
-            assertEquals(this.box.getItems().get(i), item.getText());
-        }
+        assertChoiceBoxEqualPopupItems(choiceBoxPopup);
     }
 
     @Test
@@ -655,10 +652,7 @@ public class ChoiceBoxTest {
 
         assertEquals(5, choiceBoxPopup.getItems().size());
 
-        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
-            MenuItem item = choiceBoxPopup.getItems().get(i);
-            assertEquals(this.box.getItems().get(i), item.getText());
-        }
+        assertChoiceBoxEqualPopupItems(choiceBoxPopup);
     }
 
     @Test
@@ -678,10 +672,7 @@ public class ChoiceBoxTest {
 
         assertEquals(10, choiceBoxPopup.getItems().size());
 
-        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
-            MenuItem item = choiceBoxPopup.getItems().get(i);
-            assertEquals(this.box.getItems().get(i), item.getText());
-        }
+        assertChoiceBoxEqualPopupItems(choiceBoxPopup);
     }
 
     @Test
@@ -701,9 +692,13 @@ public class ChoiceBoxTest {
 
         assertEquals(20, choiceBoxPopup.getItems().size());
 
+        assertChoiceBoxEqualPopupItems(choiceBoxPopup);
+    }
+
+    private void assertChoiceBoxEqualPopupItems(ContextMenu choiceBoxPopup) {
         for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
             MenuItem item = choiceBoxPopup.getItems().get(i);
-            assertEquals(this.box.getItems().get(i), item.getText());
+            assertEquals(box.getItems().get(i), item.getText());
         }
     }
 }

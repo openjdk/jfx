@@ -368,8 +368,8 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         return popup;
     }
 
-    private void addPopupItems(int i, final Collection<? extends T> col) {
-        popup.getItems().addAll(i, createMenuItems(col));
+    private void addPopupItems(int index, final Collection<? extends T> col) {
+        popup.getItems().addAll(index, createMenuItems(col));
     }
 
     private void setPopupItems(final Collection<? extends T> col) {
