@@ -734,7 +734,7 @@ public:
         // OpInfo/children shouldn't change and are needed for OSR exit.
         ASSERT(child1().useKind() == Int32Use);
     }
-    
+
     void convertToPhantomNewButterflyWithSize()
     {
         ASSERT(m_op == NewButterflyWithSize);

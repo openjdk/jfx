@@ -2928,7 +2928,7 @@ bool LocalFrameView::scrollToTextFragment(IsRetry isRetry)
         return false;
 
     document->fragmentHighlightRegistry().clear();
-    
+
     auto fragmentDirective = document->fragmentDirective();
     if (fragmentDirective.isEmpty())
         return false;
@@ -2976,7 +2976,7 @@ bool LocalFrameView::scrollToTextFragment(IsRetry isRetry)
                     m_delayedTextFragmentIndicatorTimer.startOneShot(100_ms);
 
                 maintainScrollPositionAtScrollToTextFragmentRange(range);
-    
+
                 return true;
 }
 
