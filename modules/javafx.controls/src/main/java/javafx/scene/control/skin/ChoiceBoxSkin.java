@@ -102,10 +102,9 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             while (c.next()) {
                 if (c.getRemovedSize() > 0 || c.wasPermutated()) {
                     toggleGroup.getToggles().clear();
-                    popup.getItems().clear();
-                    addPopupItem(0, c.getList());
+                    setPopupItems(c.getList());
                 } else {
-                    addPopupItem(c.getFrom(), c.getAddedSubList());
+                    addPopupItems(c.getFrom(), c.getAddedSubList());
                 }
             }
             updateSelection();
@@ -369,7 +368,15 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         return popup;
     }
 
-    private void addPopupItem(int i, final Collection<? extends T> col) {
+    private void addPopupItems(int i, final Collection<? extends T> col) {
+        popup.getItems().addAll(i, createMenuItems(col));
+    }
+
+    private void setPopupItems(final Collection<? extends T> col) {
+        popup.getItems().setAll(createMenuItems(col));
+    }
+
+    private Collection<MenuItem> createMenuItems(final Collection<? extends T> col) {
         List<MenuItem> toAdd = new ArrayList<>(col.size());
         for (T o : col) {
             MenuItem popupItem;
@@ -393,15 +400,14 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             popupItem.setMnemonicParsing(false);   // ChoiceBox doesn't do Mnemonics
             toAdd.add(popupItem);
         }
-        popup.getItems().addAll(i, toAdd);
+        return toAdd;
     }
 
     private void updatePopupItems() {
         toggleGroup.getToggles().clear();
-        popup.getItems().clear();
         toggleGroup.selectToggle(null);
 
-        addPopupItem(0, choiceBoxItems);
+        setPopupItems(choiceBoxItems);
     }
 
     private void updateSelectionModel() {

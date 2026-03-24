@@ -40,6 +40,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -62,6 +63,7 @@ import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public class ChoiceBoxTest {
@@ -613,9 +615,15 @@ public class ChoiceBoxTest {
 
         ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
 
+        AtomicInteger changeCount = new AtomicInteger();
+        choiceBoxPopup.getItems()
+                .addListener((ListChangeListener.Change<? extends MenuItem> _) -> changeCount.incrementAndGet());
+
         for (int i = 0; i < 10; i++) {
             box.getItems().add("Item " + i);
         }
+
+        assertEquals(10, changeCount.get());
 
         assertEquals(10, choiceBoxPopup.getItems().size());
 
@@ -631,10 +639,19 @@ public class ChoiceBoxTest {
 
         ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
 
+        AtomicInteger changeCount = new AtomicInteger();
+        choiceBoxPopup.getItems()
+                .addListener((ListChangeListener.Change<? extends MenuItem> _) -> changeCount.incrementAndGet());
+
         box.getItems().addAll(IntStream.range(0, 15).boxed().map(integer -> "Item " + integer).toList());
+
+        assertEquals(1, changeCount.get());
+
         for (int i = 0; i < 10; i++) {
             box.getItems().removeFirst();
         }
+
+        assertEquals(11, changeCount.get());
 
         assertEquals(5, choiceBoxPopup.getItems().size());
 
@@ -650,10 +667,39 @@ public class ChoiceBoxTest {
 
         ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
 
+        AtomicInteger changeCount = new AtomicInteger();
+        choiceBoxPopup.getItems()
+                .addListener((ListChangeListener.Change<? extends MenuItem> _) -> changeCount.incrementAndGet());
+
         box.getItems().addAll(IntStream.range(0, 15).boxed().map(integer -> "Item " + integer).toList());
+        assertEquals(1, changeCount.get());
         box.getItems().setAll(IntStream.range(10, 20).boxed().map(integer -> "Item " + integer).toList());
+        assertEquals(2, changeCount.get());
 
         assertEquals(10, choiceBoxPopup.getItems().size());
+
+        for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
+            MenuItem item = choiceBoxPopup.getItems().get(i);
+            assertEquals(this.box.getItems().get(i), item.getText());
+        }
+    }
+
+    @Test
+    void testAddChoiceItemsIsReflectedInPopup() {
+        startApp(box);
+
+        ContextMenu choiceBoxPopup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) box.getSkin());
+
+        AtomicInteger changeCount = new AtomicInteger();
+        choiceBoxPopup.getItems()
+                .addListener((ListChangeListener.Change<? extends MenuItem> _) -> changeCount.incrementAndGet());
+
+        box.getItems().addAll(IntStream.range(0, 10).boxed().map(integer -> "Item " + integer).toList());
+        assertEquals(1, changeCount.get());
+        box.getItems().addAll(5, IntStream.range(10, 20).boxed().map(integer -> "Item " + integer).toList());
+        assertEquals(2, changeCount.get());
+
+        assertEquals(20, choiceBoxPopup.getItems().size());
 
         for (int i = 0; i < choiceBoxPopup.getItems().size(); i++) {
             MenuItem item = choiceBoxPopup.getItems().get(i);
