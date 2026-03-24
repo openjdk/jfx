@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -6517,14 +6518,17 @@ public class TableViewTest {
 
         sm1.selectRange(3, 7);
         sm2.selectIndices(3, 4, 5, 6);
+        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6));
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
 
         sm1.selectRange(5, 9);
         sm2.selectIndices(5, 6, 7, 8);
+        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8));
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
 
         sm1.selectRange(17, 19);
         sm2.selectIndices(17, 18);
+        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8, 17, 18));
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
 
         // selectRange(ra, ca, rb, cb) selects the rows in the closed interval [ra, rb]
@@ -6534,18 +6538,21 @@ public class TableViewTest {
         sm2.select(14, c1);
         sm2.select(15, c1);
         sm2.select(16, c1);
+        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18));
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
 
         sm1.clearSelection();
         for (int i = 0; i < size; i++) {
             sm2.clearSelection(i);
         }
+        assertEquals(sm1.getSelectedIndices(), List.of());
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
 
         sm1.selectAll();
         for (int i = 0; i < size; i++) {
             sm2.select(i);
         }
+        assertEquals(sm1.getSelectedIndices(), IntStream.range(0, size).boxed().toList());
         assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
     }
 }
