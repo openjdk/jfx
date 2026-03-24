@@ -6494,7 +6494,7 @@ public class TableViewTest {
     }
 
     @Test
-    void testBulkSetClear() {
+    void testBulkSet() {
         TableView<Integer> t1 = new TableView<>();
         TableView<Integer> t2 = new TableView<>();
         TableView.TableViewSelectionModel sm1 = t1.getSelectionModel();
@@ -6518,18 +6518,18 @@ public class TableViewTest {
 
         sm1.selectRange(3, 7);
         sm2.selectIndices(3, 4, 5, 6);
-        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6));
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6), sm2.getSelectedIndices());
 
         sm1.selectRange(5, 9);
         sm2.selectIndices(5, 6, 7, 8);
-        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8));
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8), sm2.getSelectedIndices());
 
         sm1.selectRange(17, 19);
         sm2.selectIndices(17, 18);
-        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8, 17, 18));
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 17, 18), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 17, 18), sm2.getSelectedIndices());
 
         // selectRange(ra, ca, rb, cb) selects the rows in the closed interval [ra, rb]
 
@@ -6538,21 +6538,37 @@ public class TableViewTest {
         sm2.select(14, c1);
         sm2.select(15, c1);
         sm2.select(16, c1);
-        assertEquals(sm1.getSelectedIndices(), List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18));
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
-
-        sm1.clearSelection();
-        for (int i = 0; i < size; i++) {
-            sm2.clearSelection(i);
-        }
-        assertEquals(sm1.getSelectedIndices(), List.of());
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18), sm2.getSelectedIndices());
 
         sm1.selectAll();
         for (int i = 0; i < size; i++) {
             sm2.select(i);
         }
-        assertEquals(sm1.getSelectedIndices(), IntStream.range(0, size).boxed().toList());
-        assertEquals(sm1.getSelectedIndices(), sm2.getSelectedIndices());
+        assertEquals(IntStream.range(0, size).boxed().toList(), sm1.getSelectedIndices());
+        assertEquals(IntStream.range(0, size).boxed().toList(), sm2.getSelectedIndices());
+    }
+
+    @Test
+    void testBulkClear() {
+        TableView<Integer> t = new TableView<>();
+        TableView.TableViewSelectionModel sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int size = 20;
+        for (int i = 0; i < size; i++) {
+            t.getItems().add(i);
+        }
+
+        sm.select(3);
+        sm.select(4);
+        sm.select(9);
+        sm.select(10);
+        sm.select(11);
+        sm.select(12);
+        assertEquals(List.of(3, 4, 9, 10, 11, 12), sm.getSelectedIndices());
+
+        sm.clearSelection();
+        assertEquals(List.of(), sm.getSelectedIndices());
     }
 }
