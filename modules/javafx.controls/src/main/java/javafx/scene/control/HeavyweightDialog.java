@@ -315,7 +315,7 @@ class HeavyweightDialog extends FXDialog {
             stage.renderScaleYProperty().unbind();
 
             Scene oldScene = oldStage.getScene();
-            if (oldScene != null && scene != null && dialogScene != null) {
+            if (oldScene != null && dialogScene != null) {
                 Bindings.unbindContent(dialogScene.getStylesheets(), oldScene.getStylesheets());
             }
         }
@@ -327,7 +327,7 @@ class HeavyweightDialog extends FXDialog {
             stage.renderScaleYProperty().bind(newStage.renderScaleYProperty());
 
             Scene newScene = newStage.getScene();
-            if (newScene != null && scene != null && dialogScene != null) {
+            if (newScene != null && dialogScene != null) {
                 Bindings.bindContent(dialogScene.getStylesheets(), newScene.getStylesheets());
             }
         }
