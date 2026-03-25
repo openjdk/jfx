@@ -327,4 +327,12 @@ public class AlertTest {
         assertEquals("Cancel", englishStr);
         assertEquals("Avbryt", swedishStr);
     }
+
+    @Test public void alert_owner_noScene() {
+        dialog = new Alert(Alert.AlertType.NONE, "Hello World!");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
+        dialog.initOwner(new Stage());
+        assertResultValue(ButtonType.CANCEL, dialog, true);
+        assertCloseRequestAccepted(dialog, true);
+    }
 }
