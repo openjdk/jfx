@@ -41,6 +41,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
@@ -48,7 +50,6 @@ import static test.util.Util.TIMEOUT;
 class StageMixedSizeTest extends VisualTestBase {
     private static final Color BACKGROUND_COLOR = Color.YELLOW;
     private static final double TOLERANCE = 0.07;
-    private static final int WAIT = 300;
     private Stage testStage;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -59,11 +60,14 @@ class StageMixedSizeTest extends VisualTestBase {
 
         setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
 
-        Util.doTimeLine(WAIT,
-                () -> testStage.setWidth(finalWidth),
-                () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
-                        getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE),
-                () -> assertEquals(finalWidth, testStage.getWidth(), "Window width should be " + finalWidth));
+        runAndWait(() -> testStage.setWidth(finalWidth));
+        Util.waitForIdle(testStage.getScene());
+
+        runAndWait(() -> {
+            assertColorDoesNotEqual(BACKGROUND_COLOR,
+                    getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE);
+            assertEquals(finalWidth, testStage.getWidth(), "Window width should be " + finalWidth);
+        });
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -74,28 +78,37 @@ class StageMixedSizeTest extends VisualTestBase {
 
         setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
 
-        Util.doTimeLine(WAIT,
-                () -> testStage.setHeight(finalHeight),
-                () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
-                        getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE),
-                () -> assertEquals(finalHeight, testStage.getHeight(), "Window height should be " + finalHeight));
+        runAndWait(() -> testStage.setHeight(finalHeight));
+        Util.waitForIdle(testStage.getScene());
+
+        runAndWait(() -> {
+            assertColorDoesNotEqual(BACKGROUND_COLOR,
+                    getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE);
+            assertEquals(finalHeight, testStage.getHeight(), "Window height should be " + finalHeight);
+        });
     }
 
     private void setupContentSizeTestStage(StageStyle stageStyle, int width, int height) {
         CountDownLatch shownLatch = new CountDownLatch(1);
 
-        Util.runAndWait(() -> {
-                    testStage = getStage(true);
-                    testStage.initStyle(stageStyle);
-                    Scene scene = new Scene(new StackPane(), width, height, BACKGROUND_COLOR);
-                    testStage.setScene(scene);
-                    testStage.setX(0);
-                    testStage.setY(0);
-                    testStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
-                    testStage.show();
-                });
+        runAndWait(() -> {
+            testStage = getStage(true);
+            testStage.initStyle(stageStyle);
+            Scene scene = new Scene(new StackPane(), width, height, BACKGROUND_COLOR);
+            testStage.setScene(scene);
+            testStage.setX(0);
+            testStage.setY(0);
+            testStage.setOnShown(_ -> Platform.runLater(shownLatch::countDown));
+            testStage.show();
+        });
 
-        Util.await(shownLatch);
-        Util.sleep(WAIT);
+        try {
+            assertTrue(shownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),
+                    "Timeout waiting for stage to be shown");
+        } catch (InterruptedException e) {
+            fail(e);
+        }
+
+        Util.waitForIdle(testStage.getScene());
     }
 }

@@ -286,7 +286,9 @@ void WindowContext::process_map() {
     Point loc = window_location.get();
     Size size = view_size.get();
 
-    move_resize(loc.x, loc.y, true, true, size.width, size.height);
+    LOG("Size = %d, %d\n", size.width, size.height);
+
+    move_resize(loc.x, loc.y, (loc.x >= 0), (loc.y >= 0), size.width, size.height);
     mapped = true;
 
     if (initial_state_mask != 0) {
@@ -1267,7 +1269,7 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
         newH = std::clamp(h - window_extents.get().height, 1, MAX_WINDOW_SIZE);
     } else if (ch > 0) {
         // once set to window, stick with it
-        if (width_type == BOUNDSTYPE_UNKNOWN) {
+        if (height_type == BOUNDSTYPE_UNKNOWN) {
             height_type = BOUNDSTYPE_VIEW;
         }
         newH = ch;
@@ -1474,7 +1476,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     }
 
     if (max_size.width > 0 && newW > max_size.width) {
-        boundsW = max_size.height - extents.width;
+        boundsW = max_size.width - extents.width;
     }
 
     if (min_size.height > 0 && newH < min_size.height) {
@@ -1493,7 +1495,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     // Need to force notify back to java, because it probably
     // has wrong sizes
     if ((newW != boundsW && current_size.width == boundsW)
-            || newH != boundsH && current_size.height == boundsH) {
+            || (newH != boundsH && current_size.height == boundsH)) {
         view_size.invalidate();
         window_size.invalidate();
     }
@@ -1658,12 +1660,12 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
             (edge != GDK_WINDOW_EDGE_NORTH || hitTestResult != com_sun_glass_ui_gtk_GtkWindow_HT_CLIENT);
 
         // Clicking on a window edge starts a move-resize operation.
-        if (hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CAPTION) {
+        if (shouldStartResizeDrag) {
             mainEnv->CallVoidMethod(get_jwindow(), jWindowNotifyFocusUngrab);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
-            gdk_window_begin_move_drag(get_gdk_window(), 1, rx, ry, event->time);
+            gdk_window_begin_resize_drag(get_gdk_window(), edge, 1, rx, ry, event->time);
             return;
         }
 
@@ -1686,7 +1688,7 @@ void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
     // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
     // from the client area to the resize border. This is indicated by is_mouse_entered
     // being false at this point.
-    if (is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
+    if (get_jview() && is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
         is_mouse_entered = false;
         mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
             com_sun_glass_events_MouseEvent_EXIT,
@@ -1709,9 +1711,7 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
     GdkWindowEdge edge;
 
     // Call the base implementation for client area events.
-    if (!is_floating()
-            || !is_resizable()
-            || !get_window_edge(event->x, event->y, &edge)) {
+    if (get_jview() && (!is_floating() || !is_resizable() || !get_window_edge(event->x, event->y, &edge))) {
         // If is_mouse_entered is false at this point, the cursor was on the resize border just a moment
         // ago (which doesn't count as a client area, even though it is on the window). Since the cursor
         // has now entered the client area, we need to send MouseEvent.ENTER to FX.
