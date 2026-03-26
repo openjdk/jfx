@@ -53,16 +53,16 @@
 
 void destroy_and_delete_ctx(WindowContext* ctx) {
     LOG("destroy_and_delete_ctx\n");
-    if (ctx) {
-        ctx->process_destroy();
+    if (!ctx) return;
 
-        if (!ctx->get_events_count()) {
-            LOG("delete ctx\n");
-            delete ctx;
-        }
-        // else: ctx will be deleted in EventsCounterHelper after completing
-        // an event processing
+    ctx->process_destroy();
+
+    if (!ctx->get_events_count()) {
+        LOG("delete ctx\n");
+        delete ctx;
     }
+    // else: ctx will be deleted in EventsCounterHelper after completing
+    // an event processing
 }
 
 static bool gdk_visual_is_rgba(GdkVisual *visual) {
@@ -264,13 +264,11 @@ XID WindowContext::get_native_window() {
 }
 
 bool WindowContext::isEnabled() {
-    if (jwindow) {
-        bool result = (JNI_TRUE == mainEnv->CallBooleanMethod(jwindow, jWindowIsEnabled));
-        LOG_EXCEPTION(mainEnv)
-        return result;
-    } else {
-        return false;
-    }
+    if (!jwindow) return false;
+
+    bool result = (JNI_TRUE == mainEnv->CallBooleanMethod(jwindow, jWindowIsEnabled));
+    LOG_EXCEPTION(mainEnv)
+    return result;
 }
 
 void WindowContext::process_expose(GdkEventExpose* event) {
@@ -286,14 +284,12 @@ void WindowContext::process_map() {
     Point loc = window_location.get();
     Size size = view_size.get();
 
-    LOG("Size = %d, %d\n", size.width, size.height);
-
     move_resize(loc.x, loc.y, (loc.x >= 0), (loc.y >= 0), size.width, size.height);
     mapped = true;
 
-    if (initial_state_mask != 0) {
-        update_initial_state();
-    }
+    if (initial_state_mask == 0) return;
+
+    update_initial_state();
 }
 
 void WindowContext::process_focus(GdkEventFocus *event) {
@@ -310,21 +306,21 @@ void WindowContext::process_focus(GdkEventFocus *event) {
         }
     }
 
-    if (jwindow) {
-        if (event->in && !isEnabled()) {
-            // when the user tries to activate a disabled window, send FOCUS_DISABLED
-            LOG("jWindowNotifyFocusDisabled");
-            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        } else {
-            LOG("%s\n", (event->in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
-                                  : "com_sun_glass_events_WindowEvent_FOCUS_LOST");
+    if (!jwindow) return;
 
-            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
-                    event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
-                             : com_sun_glass_events_WindowEvent_FOCUS_LOST);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    if (event->in && !isEnabled()) {
+        // when the user tries to activate a disabled window, send FOCUS_DISABLED
+        LOG("jWindowNotifyFocusDisabled");
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    } else {
+        LOG("%s\n", (event->in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
+                              : "com_sun_glass_events_WindowEvent_FOCUS_LOST");
+
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
+                event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
+                         : com_sun_glass_events_WindowEvent_FOCUS_LOST);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -385,11 +381,11 @@ void WindowContext::process_destroy() {
 
 void WindowContext::process_delete() {
     LOG("process_delete\n");
-    if (jwindow && isEnabled()) {
-        LOG("jWindowNotifyClose\n");
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jwindow || !isEnabled()) return;
+
+    LOG("jWindowNotifyClose\n");
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::notify_repaint() {
@@ -398,10 +394,10 @@ void WindowContext::notify_repaint() {
 }
 
 void WindowContext::notify_repaint(Rectangle rect) {
-    if (jview) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, rect.x, rect.y, rect.width, rect.height);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jview) return;
+
+    mainEnv->CallVoidMethod(jview, jViewNotifyRepaint, rect.x, rect.y, rect.width, rect.height);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_mouse_button(GdkEventButton* event, bool synthesized) {
@@ -467,24 +463,24 @@ void WindowContext::process_mouse_button(GdkEventButton* event, bool synthesized
 
     jint button = gdk_button_number_to_mouse_button(event->button);
 
-    if (jview && button != com_sun_glass_events_MouseEvent_BUTTON_NONE) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-                press ? com_sun_glass_events_MouseEvent_DOWN : com_sun_glass_events_MouseEvent_UP,
-                button,
-                (jint) event->x, (jint) event->y,
-                (jint) event->x_root, (jint) event->y_root,
-                gdk_modifier_mask_to_glass(state),
-                (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
-                synthesized);
-        CHECK_JNI_EXCEPTION(mainEnv)
+    if (!jview || button == com_sun_glass_events_MouseEvent_BUTTON_NONE) return;
 
-        if (jview && event->button == 3 && press) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyMenu,
-                    (jint)event->x, (jint)event->y,
-                    (jint)event->x_root, (jint)event->y_root,
-                    JNI_FALSE);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+            press ? com_sun_glass_events_MouseEvent_DOWN : com_sun_glass_events_MouseEvent_UP,
+            button,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(state),
+            (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
+            synthesized);
+    CHECK_JNI_EXCEPTION(mainEnv)
+
+    if (jview && event->button == 3 && press) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyMenu,
+                (jint)event->x, (jint)event->y,
+                (jint)event->x_root, (jint)event->y_root,
+                JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
@@ -518,17 +514,17 @@ void WindowContext::process_mouse_motion(GdkEventMotion *event) {
         button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
     }
 
-    if (jview) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-                isDrag ? com_sun_glass_events_MouseEvent_DRAG : com_sun_glass_events_MouseEvent_MOVE,
-                button,
-                (jint) event->x, (jint) event->y,
-                (jint) event->x_root, (jint) event->y_root,
-                glass_modifier,
-                JNI_FALSE,
-                JNI_FALSE);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jview) return;
+
+    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+            isDrag ? com_sun_glass_events_MouseEvent_DRAG : com_sun_glass_events_MouseEvent_MOVE,
+            button,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            glass_modifier,
+            JNI_FALSE,
+            JNI_FALSE);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
@@ -560,40 +556,40 @@ void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
         dy = dx;
         dx = t;
     }
-    if (jview) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
-                (jint) event->x, (jint) event->y,
-                (jint) event->x_root, (jint) event->y_root,
-                dx, dy,
-                gdk_modifier_mask_to_glass(event->state),
-                (jint) 0, (jint) 0,
-                (jint) 0, (jint) 0,
-                (jdouble) 40.0, (jdouble) 40.0);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jview) return;
+
+    mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            dx, dy,
+            gdk_modifier_mask_to_glass(event->state),
+            (jint) 0, (jint) 0,
+            (jint) 0, (jint) 0,
+            (jdouble) 40.0, (jdouble) 40.0);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_mouse_cross(GdkEventCrossing *event) {
     bool enter = event->type == GDK_ENTER_NOTIFY;
-    if (jview) {
-        guint state = event->state;
-        if (enter) { // workaround for JDK-8126843
-            state &= ~MOUSE_BUTTONS_MASK;
-        }
+    if (!jview) return;
 
-        if (enter != is_mouse_entered) {
-            is_mouse_entered = enter;
-            mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-                    enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
-                    com_sun_glass_events_MouseEvent_BUTTON_NONE,
-                    (jint) event->x, (jint) event->y,
-                    (jint) event->x_root, (jint) event->y_root,
-                    gdk_modifier_mask_to_glass(state),
-                    JNI_FALSE,
-                    JNI_FALSE);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    guint state = event->state;
+    if (enter) { // workaround for JDK-8126843
+        state &= ~MOUSE_BUTTONS_MASK;
     }
+
+    if (enter == is_mouse_entered) return;
+
+    is_mouse_entered = enter;
+    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+            enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(state),
+            JNI_FALSE,
+            JNI_FALSE);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_key(GdkEventKey *event) {
@@ -635,14 +631,14 @@ void WindowContext::process_key(GdkEventKey *event) {
 
     // TYPED events should only be sent for printable characters.
     // jview is checked again because previous call might be an exit key
-    if (press && key > 0 && jview) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                com_sun_glass_events_KeyEvent_TYPED,
-                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                jChars,
-                glassModifier);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!press || key <= 0 || !jview) return;
+
+    mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            com_sun_glass_events_KeyEvent_TYPED,
+            com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+            jChars,
+            glassModifier);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::paint(void* data, jint width, jint height) {
@@ -693,6 +689,7 @@ bool WindowContext::set_view(jobject view) {
                 0,
                 JNI_FALSE,
                 JNI_FALSE);
+        CHECK_JNI_EXCEPTION_RET(mainEnv, false)
         mainEnv->DeleteGlobalRef(jview);
     }
 
@@ -747,17 +744,17 @@ void WindowContext::ungrab_focus() {
 
     WindowContext::sm_grab_window = nullptr;
 
-    if (jwindow) {
-        LOG("jWindowNotifyFocusUngrab\n");
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jwindow) return;
+
+    LOG("jWindowNotifyFocusUngrab\n");
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::ungrab_if_grabbed() {
-    if (WindowContext::sm_grab_window) {
-        WindowContext::sm_grab_window->ungrab_focus();
-    }
+    if (!WindowContext::sm_grab_window) return;
+
+    WindowContext::sm_grab_window->ungrab_focus();
 }
 
 void WindowContext::set_cursor(GdkCursor* cursor) {
@@ -809,20 +806,20 @@ void WindowContext::request_frame_extents() {
     Display *display = GDK_DISPLAY_XDISPLAY(gdk_window_get_display(gdk_window));
     static Atom rfeAtom = XInternAtom(display, "_NET_REQUEST_FRAME_EXTENTS", False);
 
-    if (rfeAtom != None) {
-        XClientMessageEvent clientMessage;
-        memset(&clientMessage, 0, sizeof(clientMessage));
+    if (rfeAtom == None) return;
 
-        clientMessage.type = ClientMessage;
-        clientMessage.window = GDK_WINDOW_XID(gdk_window);
-        clientMessage.message_type = rfeAtom;
-        clientMessage.format = 32;
+    XClientMessageEvent clientMessage;
+    memset(&clientMessage, 0, sizeof(clientMessage));
 
-        XSendEvent(display, XDefaultRootWindow(display), False,
-                   SubstructureRedirectMask | SubstructureNotifyMask,
-                   (XEvent *) &clientMessage);
-        XFlush(display);
-    }
+    clientMessage.type = ClientMessage;
+    clientMessage.window = GDK_WINDOW_XID(gdk_window);
+    clientMessage.message_type = rfeAtom;
+    clientMessage.format = 32;
+
+    XSendEvent(display, XDefaultRootWindow(display), False,
+               SubstructureRedirectMask | SubstructureNotifyMask,
+               (XEvent *) &clientMessage);
+    XFlush(display);
 }
 
 void WindowContext::update_initial_state() {
@@ -855,66 +852,65 @@ void WindowContext::update_frame_extents() {
 
     int top, left, bottom, right;
 
-    if (get_frame_extents_property(&top, &left, &bottom, &right)) {
-        if (top > 0 || right > 0 || bottom > 0 || left > 0) {
-            Rectangle old_extents = window_extents.get();
-            Rectangle new_extents = { left, top, (left + right), (top + bottom) };
-            bool changed = old_extents != new_extents;
+    if (!get_frame_extents_property(&top, &left, &bottom, &right)) return;
+    if (top <= 0 && right <= 0 && bottom <= 0 && left <= 0) return;
 
-            LOG("------------------------------------------- frame extents - changed: %d\n", changed);
+    Rectangle old_extents = window_extents.get();
+    Rectangle new_extents = { left, top, (left + right), (top + bottom) };
+    bool changed = old_extents != new_extents;
 
-            if (!changed) return;
+    LOG("------------------------------------------- frame extents - changed: %d\n", changed);
 
-            set_cached_extents(new_extents);
+    if (!changed) return;
 
-            if (!is_floating()) {
-                // Delay for then window is restored
-                needs_to_update_frame_extents = true;
-                LOG("Frame extents will be updated on restore");
-                return;
-            }
+    set_cached_extents(new_extents);
 
-            Size size = view_size.get();
-            int newW = size.width;
-            int newH = size.height;
-
-            // Here the user might change the desktop theme and in consequence
-            // change decoration sizes.
-            if (width_type == BOUNDSTYPE_WINDOW) {
-                // Re-add the extents and then subtract the new
-                newW = newW + old_extents.width - new_extents.width;
-            }
-
-            if (height_type == BOUNDSTYPE_WINDOW) {
-                // Re-add the extents and then subtract the new
-                newH = newH + old_extents.height - new_extents.height;
-            }
-
-            newW = std::clamp(newW, 1, MAX_WINDOW_SIZE);
-            newH = std::clamp(newH, 1, MAX_WINDOW_SIZE);
-
-            LOG("extents received -> new view size: %d, %d\n", newW, newH);
-
-            Point loc = window_location.get();
-            int x = loc.x;
-            int y = loc.y;
-
-            // Gravity x, y are used in centerOnScreen(). Here it's used to adjust the position
-            // accounting decorations
-            if (gravity_x > 0 && x > 0) {
-                x -= gravity_x * (float) (new_extents.width);
-            }
-
-            if (gravity_y > 0 && y > 0) {
-                y -= gravity_y  * (float) (new_extents.height);
-            }
-
-            window_extents.set(new_extents);
-            view_size.set({newW, newH});
-            window_location.set({x, y});
-            move_resize(x, y, true, true, newW, newH);
-        }
+    if (!is_floating()) {
+        // Delay for then window is restored
+        needs_to_update_frame_extents = true;
+        LOG("Frame extents will be updated on restore");
+        return;
     }
+
+    Size size = view_size.get();
+    int newW = size.width;
+    int newH = size.height;
+
+    // Here the user might change the desktop theme and in consequence
+    // change decoration sizes.
+    if (width_type == BOUNDSTYPE_WINDOW) {
+        // Re-add the extents and then subtract the new
+        newW = newW + old_extents.width - new_extents.width;
+    }
+
+    if (height_type == BOUNDSTYPE_WINDOW) {
+        // Re-add the extents and then subtract the new
+        newH = newH + old_extents.height - new_extents.height;
+    }
+
+    newW = std::clamp(newW, 1, MAX_WINDOW_SIZE);
+    newH = std::clamp(newH, 1, MAX_WINDOW_SIZE);
+
+    LOG("extents received -> new view size: %d, %d\n", newW, newH);
+
+    Point loc = window_location.get();
+    int x = loc.x;
+    int y = loc.y;
+
+    // Gravity x, y are used in centerOnScreen(). Here it's used to adjust the position
+    // accounting decorations
+    if (gravity_x > 0 && x > 0) {
+        x -= gravity_x * (float) (new_extents.width);
+    }
+
+    if (gravity_y > 0 && y > 0) {
+        y -= gravity_y  * (float) (new_extents.height);
+    }
+
+    window_extents.set(new_extents);
+    view_size.set({newW, newH});
+    window_location.set({x, y});
+    move_resize(x, y, true, true, newW, newH);
 }
 
 bool WindowContext::get_frame_extents_property(int *top, int *left,
@@ -1040,30 +1036,33 @@ void WindowContext::notify_fullscreen(bool enter) {
 }
 
 void WindowContext::notify_window_resize(int state) {
-    if (jwindow) {
-        Size size = window_size.get();
-        LOG("jWindowNotifyResize: %d -> %d, %d\n", state, size.width, size.height);
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize, state, size.width, size.height);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jwindow) return;
+
+    Size size = window_size.get();
+    LOG("jWindowNotifyResize: %d -> %d, %d\n", state, size.width, size.height);
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize, state, size.width, size.height);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::notify_window_move() {
-    if (jwindow) {
-        Point point = window_location.get();
-        LOG("jWindowNotifyMove: %d, %d\n", point.x, point.y);
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove, point.x, point.y);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jwindow) return;
+
+    Point point = window_location.get();
+    LOG("jWindowNotifyMove: %d, %d\n", point.x, point.y);
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove, point.x, point.y);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::notify_view_resize() {
-    if (jview) {
-        Size size = view_size.get();
-        LOG("jViewNotifyResize: %d, %d\n", size.width, size.height);
-        mainEnv->CallVoidMethod(jview, jViewNotifyResize, size.width, size.height);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jview) return;
+
+    Size size = view_size.get();
+
+    if (size.width <= 0 && size.height <= 0) return;
+
+    LOG("jViewNotifyResize: %d, %d\n", size.width, size.height);
+    mainEnv->CallVoidMethod(jview, jViewNotifyResize, size.width, size.height);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::notify_window_size() {
@@ -1077,12 +1076,12 @@ void WindowContext::notify_window_size() {
 }
 
 void WindowContext::notify_view_move() {
-    if (jview) {
-        LOG("com_sun_glass_events_ViewEvent_MOVE\n");
-        mainEnv->CallVoidMethod(jview, jViewNotifyView,
-                com_sun_glass_events_ViewEvent_MOVE);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!jview) return;
+
+    LOG("com_sun_glass_events_ViewEvent_MOVE\n");
+    mainEnv->CallVoidMethod(jview, jViewNotifyView,
+            com_sun_glass_events_ViewEvent_MOVE);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_configure(GdkEventConfigure *event) {
@@ -1110,6 +1109,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         x = root_x;
         y = root_y;
 
+        LOG("view position calculated from root origin: %d, %d\n", view_x, view_y);
         view_position.set({view_x, view_y});
     } else {
         view_position.set({0, 0});
@@ -1138,16 +1138,16 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
     }
 
     glong to_screen = getScreenPtrForLocation(event->x, event->y);
-    if (to_screen != -1 && to_screen != screen) {
-        if (jwindow) {
-            LOG("jWindowNotifyMoveToAnotherScreen\n");
-            //notify screen changed
-            jobject jScreen = createJavaScreen(mainEnv, to_screen);
-            mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
-        screen = to_screen;
+    if (to_screen == -1 || to_screen == screen) return;
+
+    if (jwindow) {
+        LOG("jWindowNotifyMoveToAnotherScreen\n");
+        //notify screen changed
+        jobject jScreen = createJavaScreen(mainEnv, to_screen);
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
+    screen = to_screen;
 }
 
 void WindowContext::update_window_constraints() {
@@ -1521,33 +1521,33 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
 }
 
 void WindowContext::add_wmf(GdkWMFunction wmf) {
-    if ((initial_wmf & wmf) == 0) {
-        current_wmf = (GdkWMFunction)((int)current_wmf | (int)wmf);
-        gdk_window_set_functions(gdk_window, current_wmf);
-    }
+    if (initial_wmf & wmf) return;
+
+    current_wmf = (GdkWMFunction)((int)current_wmf | (int)wmf);
+    gdk_window_set_functions(gdk_window, current_wmf);
 }
 
 void WindowContext::remove_wmf(GdkWMFunction wmf) {
-    if ((initial_wmf & wmf) == 0) {
-        current_wmf = (GdkWMFunction)((int)current_wmf & ~(int)wmf);
-        gdk_window_set_functions(gdk_window, current_wmf);
-    }
+    if (initial_wmf & wmf) return;
+
+    current_wmf = (GdkWMFunction)((int)current_wmf & ~(int)wmf);
+    gdk_window_set_functions(gdk_window, current_wmf);
 }
 
 void WindowContext::notify_on_top(bool top) {
     // Do not report effective (i.e. native) values to the FX, only if the user sets it manually
-    if (top != effective_on_top() && jwindow) {
-        if (on_top_inherited() && !top) {
-            // Disallow user's "on top" handling on windows that inherited the property
-            gdk_window_set_keep_above(gdk_window, true);
-        } else {
-            on_top = top;
-            update_ontop_tree(top);
-            mainEnv->CallVoidMethod(jwindow,
-                    jWindowNotifyLevelChanged,
-                    top ? com_sun_glass_ui_Window_Level_FLOATING :  com_sun_glass_ui_Window_Level_NORMAL);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
+    if (top == effective_on_top() || !jwindow) return;
+
+    if (on_top_inherited() && !top) {
+        // Disallow user's "on top" handling on windows that inherited the property
+        gdk_window_set_keep_above(gdk_window, true);
+    } else {
+        on_top = top;
+        update_ontop_tree(top);
+        mainEnv->CallVoidMethod(jwindow,
+                jWindowNotifyLevelChanged,
+                top ? com_sun_glass_ui_Window_Level_FLOATING :  com_sun_glass_ui_Window_Level_NORMAL);
+        CHECK_JNI_EXCEPTION(mainEnv);
     }
 }
 
@@ -1560,9 +1560,9 @@ void WindowContext::set_level(int level) {
     }
     // We need to emulate always on top behaviour on child windows
 
-    if (!on_top_inherited()) {
-        update_ontop_tree(on_top);
-    }
+    if (on_top_inherited()) return;
+
+    update_ontop_tree(on_top);
 }
 
 void WindowContext::set_owner(WindowContext * owner_ctx) {
@@ -1637,8 +1637,9 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
 
     // Double-clicking on the drag area maximizes the window (or restores its size).
     if (is_resizable() && event->type == GDK_2BUTTON_PRESS) {
-        jint hitTestResult = mainEnv->CallBooleanMethod(
+        jint hitTestResult = mainEnv->CallIntMethod(
             get_jwindow(), jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
+        CHECK_JNI_EXCEPTION(mainEnv)
 
         if (hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CAPTION) {
             set_maximized(!is_maximized());
@@ -1649,8 +1650,9 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
     }
 
     if (event->button == 1 && event->type == GDK_BUTTON_PRESS) {
-        jint hitTestResult = mainEnv->CallBooleanMethod(
+        jint hitTestResult = mainEnv->CallIntMethod(
             get_jwindow(), jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
+        CHECK_JNI_EXCEPTION(mainEnv)
 
         GdkWindowEdge edge;
         bool shouldStartResizeDrag =
@@ -1688,18 +1690,18 @@ void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
     // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
     // from the client area to the resize border. This is indicated by is_mouse_entered
     // being false at this point.
-    if (get_jview() && is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
-        is_mouse_entered = false;
-        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
-            com_sun_glass_events_MouseEvent_EXIT,
-            com_sun_glass_events_MouseEvent_BUTTON_NONE,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            gdk_modifier_mask_to_glass(event->state),
-            JNI_FALSE,
-            JNI_FALSE);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!get_jview() || !is_mouse_entered || event->type == GDK_ENTER_NOTIFY) return;
+
+    is_mouse_entered = false;
+    mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
+        com_sun_glass_events_MouseEvent_EXIT,
+        com_sun_glass_events_MouseEvent_BUTTON_NONE,
+        (jint) event->x, (jint) event->y,
+        (jint) event->x_root, (jint) event->y_root,
+        gdk_modifier_mask_to_glass(event->state),
+        JNI_FALSE,
+        JNI_FALSE);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 /*
@@ -1733,8 +1735,9 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
         return;
     }
 
-    jint hitTestResult = mainEnv->CallBooleanMethod(
+    jint hitTestResult = mainEnv->CallIntMethod(
         get_jwindow(), jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
     if (edge == GDK_WINDOW_EDGE_NORTH && hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CLIENT) {
         set_cursor_override(nullptr);
@@ -1765,18 +1768,18 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
 
     // If the cursor has moved to a resize border, we need to send MouseEvent.EXIT to FX,
     // since from the perspective of FX, resize borders are not a part of client area.
-    if (is_mouse_entered && get_jview()) {
-        is_mouse_entered = false;
-        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
-            com_sun_glass_events_MouseEvent_EXIT,
-            com_sun_glass_events_MouseEvent_BUTTON_NONE,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            gdk_modifier_mask_to_glass(event->state),
-            JNI_FALSE,
-            JNI_FALSE);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    if (!is_mouse_entered || !get_jview()) return;
+
+    is_mouse_entered = false;
+    mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
+        com_sun_glass_events_MouseEvent_EXIT,
+        com_sun_glass_events_MouseEvent_BUTTON_NONE,
+        (jint) event->x, (jint) event->y,
+        (jint) event->x_root, (jint) event->y_root,
+        gdk_modifier_mask_to_glass(event->state),
+        JNI_FALSE,
+        JNI_FALSE);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 /*
