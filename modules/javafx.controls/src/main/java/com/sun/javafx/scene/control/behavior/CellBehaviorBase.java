@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
@@ -35,14 +34,13 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Behaviors for standard cells types. Simply defines methods that subclasses
  * implement so that CellSkinBase has API to call.
+ *
+ * @param <T> the type of the cell
  */
-public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
+public abstract class CellBehaviorBase<T extends IndexedCell<?>> extends BehaviorBase<T> {
 
 
     /***************************************************************************
@@ -139,6 +137,8 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
 
+    /** @return the item count of the {@link #getCellContainer()} */
+    protected abstract int getItemCount();
     protected abstract Control getCellContainer(); // e.g. ListView
     protected abstract MultipleSelectionModel<?> getSelectionModel();
     protected abstract FocusModel<?> getFocusModel();
@@ -164,7 +164,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
     protected int getIndex() {
-        return getNode() instanceof IndexedCell ? ((IndexedCell<?>)getNode()).getIndex() : -1;
+        return getNode() != null ? getNode().getIndex() : -1;
     }
 
     public void mousePressed(MouseEvent e) {
@@ -206,9 +206,12 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         final Control cellContainer = getCellContainer();
 
+        int count = getItemCount();
+        if (cell.getIndex() >= count) return;
+
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.
-        if (cell.isEmpty() || ! cell.contains(x, y)) {
+        if (!cell.contains(x, y)) {
             return;
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,6 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *************************************************************************/
 
     protected abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
-    protected abstract int getItemCount();
     @Override
     protected abstract TableSelectionModel<S> getSelectionModel();
     @Override
@@ -101,15 +100,15 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // for out of bounds indexes. So, need to check
         final C tableCell = getNode();
 
+        int count = getItemCount();
+        if (tableCell.getIndex() >= count) return;
+
         // If the mouse event is not contained within this tableCell, then
         // we don't want to react to it.
         if (! tableCell.contains(x, y)) return;
 
         final Control tableView = getCellContainer();
         if (tableView == null) return;
-
-        int count = getItemCount();
-        if (tableCell.getIndex() >= count) return;
 
         TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
 import javafx.util.Callback;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,6 +92,7 @@ import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
@@ -2784,6 +2784,19 @@ public class ListViewTest {
 
         cell = VirtualFlowTestUtils.getCell(listView, 0);
         assertEquals(newName, cell.getText());
+    }
+
+    @Test
+    void testDoubleClickOnEmptyCell() {
+        ListView<Person> list = new ListView<>();
+
+        list.getItems().add(new Person("John"));
+
+        stageLoader = new StageLoader(list);
+
+        ListCell<Person> cell = (ListCell<Person>) VirtualFlowTestUtils.getCell(list, 1);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2));
     }
 
     private static double toViewportLength(double prefHeight) {
