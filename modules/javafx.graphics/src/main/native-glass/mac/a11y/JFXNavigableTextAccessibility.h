@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,28 +23,21 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "AccessibleBase.h"
+#import <AppKit/NSAccessibility.h>
 
-#define INCREMENT @"AXIncrement"
-#define DECREMENT @"AXDecrement"
+@interface JFXNavigableTextAccessibility : AccessibleBase<NSAccessibilityNavigableStaticText> {
 
-@interface AccessibleBase : NSAccessibilityElement {
-@private
-jobject jAccessible;
-id parent;
-id jRole;
-}
-- (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
-- (jobject)getJAccessible;
-- (NSString *)getJavaRole;
-- (id)requestNodeAttribute:(NSString *)attribute;
-- (id)requestNodeAttribute:(NSString *)attribute forParameter:(id)parameter;
-- (NSRect)accessibilityFrame;
-- (id)accessibilityParent;
-- (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(NSString*)actionId;
-+ (void) initializeRolesMap;
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSAccessibilitySubrole)accessibilitySubrole;
+- (BOOL)isAccessibilityEnabled;
+- (BOOL)isAccessibilityEdited;
+- (NSArray *)accessibilityChildren;
+- (NSString *)accessibilityValue;
+- (NSRange)accessibilitySelectedTextRange;
+- (NSString *)accessibilitySelectedText;
+- (NSRange)accessibilityVisibleCharacterRange;
+- (NSAttributedString *) accessibilityAttributedStringForRange:(NSRange)range;
+- (NSInteger)accessibilityNumberOfCharacters;
 @end
-
-jmethodID jAccessibilityAttributeNames;
