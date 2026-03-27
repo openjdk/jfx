@@ -4054,7 +4054,6 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList("a", "b", "c"));
         table.getColumns().add(col);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        table.getSelectionModel().selectAll();
 
         // custom sort policy: sort (no-op, already sorted), then programmatically
         // deselect row 2, causing newState.size() (2) < prevState.size() (3)
@@ -4063,6 +4062,8 @@ public class TableViewTest {
             tv.getSelectionModel().clearSelection(2);
             return true;
         });
+
+        table.getSelectionModel().selectAll();
 
         List<Integer> froms = new ArrayList<>();
         List<Integer> tos = new ArrayList<>();

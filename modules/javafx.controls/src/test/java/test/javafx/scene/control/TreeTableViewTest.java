@@ -4305,6 +4305,99 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
+    @Test public void testSortFiresTargetedChangeEventsForPartialPermutation() {
+        TreeItem<String> root = new TreeItem<>();
+        root.getChildren().add(new TreeItem<>("b"));
+        root.getChildren().add(new TreeItem<>("c"));
+        root.getChildren().add(new TreeItem<>("a"));
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
+
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.setRoot(root);
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // select rows 0 ("b") and 2 ("a"). After ascending sort to ["a","b","c"]:
+        // "b" moves row 0→1 and "a" moves row 2→0. The selectedCells list goes
+        // from [(row=0),(row=2)] to [(row=0),(row=1)]: position 0 is unchanged
+        // (both have row=0), only position 1 changes.
+        table.getSelectionModel().selectIndices(0, 2);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition<String, ?>>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+            }
+        });
+
+        StageLoader sl = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // only position 1 changed: expect one event covering [1, 2), not [0, 2)
+        assertEquals(1, froms.size());
+        assertEquals(1, (int) froms.get(0));
+        assertEquals(2, (int) tos.get(0));
+
+        sl.dispose();
+    }
+
+    @Test public void testSortFiresRemovalEventForSelectionSizeMismatch() {
+        TreeItem<String> root = new TreeItem<>();
+        root.getChildren().add(new TreeItem<>("a"));
+        root.getChildren().add(new TreeItem<>("b"));
+        root.getChildren().add(new TreeItem<>("c"));
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
+
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.setRoot(root);
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // custom sort policy: sort (no-op, already sorted), then programmatically
+        // deselect row 2, causing newState.size() (2) < prevState.size() (3)
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getRoot().getChildren(), Comparator.comparing(TreeItem::getValue));
+            tv.getSelectionModel().clearSelection(2);
+            return true;
+        });
+
+        table.getSelectionModel().selectAll();
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TreeTablePosition<String, ?>>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition<String, ?>>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        StageLoader sl = new StageLoader(table);
+        table.sort();
+
+        // prevState=[(row=0),(row=1),(row=2)], newState=[(row=0),(row=1)]
+        // positions 0 and 1 match; only the tail removal should fire an event
+        assertEquals(1, froms.size());
+        assertEquals(2, (int) froms.get(0));
+        assertEquals(2, (int) tos.get(0)); // from==to signals a pure removal
+        assertEquals(1, removedLists.get(0).size());
+        assertEquals(2, removedLists.get(0).get(0).getRow());
+
+        sl.dispose();
+    }
+
     private int rt_37538_count = 0;
     @Test public void test_rt_37538_noCNextCall() {
         test_rt_37538(false, false);

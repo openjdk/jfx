@@ -2048,24 +2048,33 @@ public class TreeTableView<S> extends Control {
                 final TreeTableViewArrayListSelectionModel<S> sm = (TreeTableViewArrayListSelectionModel<S>)selectionModel;
                 final ObservableList<TreeTablePosition<S, ?>> newState = sm.getSelectedCells();
 
-                List<TreeTablePosition<S, ?>> removed = new ArrayList<>();
                 if (prevState != null) {
-                    for (TreeTablePosition<S, ?> prevItem: prevState) {
-                        if (!newState.contains(prevItem)) {
-                            removed.add(prevItem);
-                        }
-                    }
-                }
-
-                if (!removed.isEmpty()) {
                     // the sort operation effectively permutates the selectedCells list,
                     // but we cannot fire a permutation event as we are talking about
                     // TreeTablePosition's changing (which may reside in the same list
-                    // position before and after the sort). Therefore, we need to fire
-                    // a single add/remove event to cover the added and removed positions.
-                    int itemCount = prevState == null ? 0 : prevState.size();
-                    ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
-                    sm.fireCustomSelectedCellsListChangeEvent(c);
+                    // position before and after the sort). Therefore, we fire
+                    // add/remove events for each contiguous range of positions that changed.
+                    int prevSize = prevState.size();
+                    int newSize = newState.size();
+                    int size = Math.min(prevSize, newSize);
+                    for (int i = 0; i < size; ) {
+                        while (i < size && prevState.get(i).equals(newState.get(i))) i++;
+                        if (i >= size) break;
+                        int from = i;
+                        while (i < size && !prevState.get(i).equals(newState.get(i))) i++;
+                        int to = i;
+                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(from, to);
+                        ListChangeListener.Change<TreeTablePosition<S, ?>> c =
+                                new NonIterableChange.GenericAddRemoveChange<>(from, to, removed, newState);
+                        sm.fireCustomSelectedCellsListChangeEvent(c);
+                    }
+                    if (prevSize != newSize) {
+                        // tail was purely removed (prevSize > newSize) or purely added (prevSize < newSize)
+                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(size, prevSize);
+                        ListChangeListener.Change<TreeTablePosition<S, ?>> c =
+                                new NonIterableChange.GenericAddRemoveChange<>(size, newSize, removed, newState);
+                        sm.fireCustomSelectedCellsListChangeEvent(c);
+                    }
                 }
             }
 
