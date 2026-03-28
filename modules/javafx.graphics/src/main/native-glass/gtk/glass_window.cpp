@@ -284,7 +284,9 @@ void WindowContext::process_map() {
     Point loc = window_location.get();
     Size size = view_size.get();
 
-    move_resize(loc.x, loc.y, (loc.x >= 0), (loc.y >= 0), size.width, size.height);
+    bool loc_changed = window_location.was_assigned();
+
+    move_resize(loc.x, loc.y, loc_changed, loc_changed, size.width, size.height);
     mapped = true;
 
     if (initial_state_mask == 0) return;

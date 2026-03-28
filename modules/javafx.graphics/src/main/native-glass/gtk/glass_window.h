@@ -54,11 +54,13 @@ class Observable {
 private:
     T value;
     std::function<void(const T&)> onChange;
+    bool assigned_since_init{false};
 
 public:
     Observable(const T& initialValue = T()) : value(initialValue) {}
 
     void set(const T& newValue) {
+        assigned_since_init = true;
         if (value != newValue) {
             value = newValue;
             invalidate();
@@ -73,11 +75,16 @@ public:
 
     // This resets the value without notifying
     void reset(const T& newValue) {
+        assigned_since_init = true;
         value = newValue;
     }
 
     const T& get() const {
         return value;
+    }
+
+    bool was_assigned() const {
+        return assigned_since_init;
     }
 
     operator T() const {
