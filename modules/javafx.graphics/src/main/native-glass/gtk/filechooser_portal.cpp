@@ -27,8 +27,8 @@
 #include "glass_general.h"
 
 #include <gdk/gdkx.h>
-#include <cstdio>
 #include <cstring>
+#include <atomic>
 
 #define PORTAL_DESKTOP_BUS_NAME    "org.freedesktop.portal.Desktop"
 #define PORTAL_DESKTOP_OBJECT_PATH "/org/freedesktop/portal/desktop"
@@ -46,9 +46,14 @@ PortalFileChooser::PortalFileChooser()
 }
 
 PortalFileChooser::~PortalFileChooser() {
+    LOG0("PortalFileChooser: destructor called\n");
     if (senderName) {
         g_free(senderName);
         senderName = nullptr;
+    }
+    if (connection) {
+        g_object_unref(connection);
+        connection = nullptr;
     }
 }
 
@@ -58,6 +63,7 @@ void PortalFileChooser::setParentWindow(GdkWindow *gdkWindow) {
         char buf[64];
         snprintf(buf, sizeof(buf), "x11:%lx", (unsigned long) xid);
         parentWindowHandle = buf;
+        LOG1("PortalFileChooser: Parent window handle: %s\n", parentWindowHandle.c_str());
     } else {
         parentWindowHandle = "";
     }
@@ -65,25 +71,31 @@ void PortalFileChooser::setParentWindow(GdkWindow *gdkWindow) {
 
 void PortalFileChooser::setTitle(const char *title) {
     dialogTitle = title ? title : "";
+    LOG1("PortalFileChooser: Dialog title: %s\n", dialogTitle.c_str());
 }
 
 void PortalFileChooser::setCurrentFolder(const char *folder) {
     currentFolder = folder ? folder : "";
+    LOG1("PortalFileChooser: setCurrentFolder: %s\n", currentFolder.c_str());
 }
 
 void PortalFileChooser::setCurrentName(const char *name) {
+    LOG1("PortalFileChooser: setCurrentName: %s\n", name ? name : "(empty)");
     currentName = name ? name : "";
 }
 
 void PortalFileChooser::setMultiple(bool multiple) {
+    LOG1("PortalFileChooser: setMultiple: %s\n", multiple ? "true" : "false");
     multipleSelection = multiple;
 }
 
 void PortalFileChooser::setFilters(const std::vector<PortalFileFilter> &f) {
+    LOG1("PortalFileChooser: setFilters: %zu filters\n", f.size());
     filters = f;
 }
 
 void PortalFileChooser::setDefaultFilterIndex(int index) {
+    LOG1("PortalFileChooser: setDefaultFilterIndex: %d\n", index);
     defaultFilterIndex = index;
 }
 
@@ -95,14 +107,16 @@ bool PortalFileChooser::initConnection() {
     GError *err = nullptr;
     connection = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &err);
     if (err) {
-        fprintf(stderr, "PortalFileChooser: failed to get session bus: %s\n", err->message);
+        LOG1("PortalFileChooser: failed to get session bus: %s\n", err->message)
         g_error_free(err);
         return false;
     }
 
     const gchar *name = g_dbus_connection_get_unique_name(connection);
     if (!name) {
-        fprintf(stderr, "PortalFileChooser: failed to get unique connection name\n");
+        LOG0("PortalFileChooser: failed to get unique connection name\n")
+        g_object_unref(connection);
+        connection = nullptr;
         return false;
     }
 
@@ -120,11 +134,11 @@ bool PortalFileChooser::initConnection() {
 }
 
 void PortalFileChooser::buildRequestPath(gchar **path, gchar **token) {
-    static uint64_t counter = 0;
-    ++counter;
+    static std::atomic<uint64_t> counter{0};
+    uint64_t current = ++counter;
 
-    *token = g_strdup_printf(PORTAL_FC_TOKEN_TEMPLATE, counter);
-    *path = g_strdup_printf(PORTAL_FC_REQUEST_TEMPLATE, senderName, counter);
+    *token = g_strdup_printf(PORTAL_FC_TOKEN_TEMPLATE, current);
+    *path = g_strdup_printf(PORTAL_FC_REQUEST_TEMPLATE, senderName, current);
 }
 
 GVariant *PortalFileChooser::buildFilterVariant() {
@@ -243,7 +257,7 @@ void PortalFileChooser::callReturned(
     GVariant *ret = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, &err);
 
     if (err) {
-        fprintf(stderr, "PortalFileChooser: DBus call failed: %s\n", err->message);
+        LOG1("PortalFileChooser: DBus call failed: %s\n", err->message)
         g_error_free(err);
 
         data->result.failed = true;

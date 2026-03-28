@@ -93,17 +93,10 @@ static jobject create_empty_result() {
     return jResult;
 }
 
-/**
- * Convert a file:// URI to a local filesystem path.
- * Returns an allocated string that must be freed with g_free(), or NULL on failure.
- */
 static gchar *uri_to_path(const char *uri) {
     return g_filename_from_uri(uri, NULL, NULL);
 }
 
-/**
- * Extract Java ExtensionFilter[] into a vector of PortalFileFilter for the portal API.
- */
 static std::vector<PortalFileFilter> extract_portal_filters(JNIEnv *env, jobjectArray extFilters) {
     std::vector<PortalFileFilter> result;
     if (extFilters == NULL) return result;
@@ -142,9 +135,6 @@ static std::vector<PortalFileFilter> extract_portal_filters(JNIEnv *env, jobject
     return result;
 }
 
-/**
- * Build the Java FileChooserResult from a PortalFileChooserResult.
- */
 static jobject build_portal_file_chooser_result(JNIEnv *env,
                                             const PortalFileChooserResult &portalResult,
                                             jobjectArray jFilters) {
@@ -195,10 +185,6 @@ static jobject build_portal_file_chooser_result(JNIEnv *env,
     return result;
 }
 
-/**
- * Try to show a file chooser via the portal.
- * Returns a valid jobject on success (even if user cancelled), or NULL if the portal is unavailable.
- */
 static jobject portal_show_file_chooser(JNIEnv *env, jlong parent,
                                       const char *folder, const char *name, const char *title,
                                       jint type, jboolean multiple,
@@ -232,18 +218,14 @@ static jobject portal_show_file_chooser(JNIEnv *env, jlong parent,
     return build_portal_file_chooser_result(env, portalResult, jFilters);
 }
 
-/**
- * Try to show a folder chooser via the portal.
- * Returns a jstring path on success, (jstring) -1 as sentinel if portal unavailable, or NULL if user cancelled.
- */
-#define PORTAL_FOLDER_UNAVAILABLE ((jstring)(intptr_t)-1)
+static bool portal_show_folder_chooser(JNIEnv *env, jlong parent,
+                                       const char *folder, const char *title,
+                                       jboolean disablePortal, jstring *outResult) {
+    *outResult = NULL;
 
-static jstring portal_show_folder_chooser(JNIEnv *env, jlong parent,
-                                        const char *folder, const char *title,
-                                        jboolean disablePortal) {
     if (disablePortal) {
         LOG0("Portal folder chooser disabled via glass.gtk.disablePortalFileChooser=true\n")
-        return PORTAL_FOLDER_UNAVAILABLE;
+        return false;
     }
 
     PortalFileChooser portal;
@@ -255,20 +237,23 @@ static jstring portal_show_folder_chooser(JNIEnv *env, jlong parent,
 
     if (portalResult.failed) {
         LOG0("Portal folder chooser failed, falling back to GTK dialog\n")
-        return PORTAL_FOLDER_UNAVAILABLE;
+        return false;
     }
 
     if (portalResult.accepted && !portalResult.uris.empty()) {
         gchar *path = uri_to_path(portalResult.uris[0].c_str());
-        if (path) {
-            jstring jfilename = env->NewStringUTF(path);
-            LOG1("Portal selected folder: %s\n", path);
-            g_free(path);
-            return jfilename;
+        if (!path) {
+            LOG0("Portal folder chooser returned an invalid URI, falling back to GTK dialog\n")
+            return false;
         }
+
+        *outResult = env->NewStringUTF(path);
+        LOG1("Portal selected folder: %s\n", path);
+        g_free(path);
+        return true;
     }
 
-    return NULL;
+    return true;
 }
 
 extern "C" {
@@ -415,9 +400,12 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
     }
 
     // Try portal first
-    jstring portalResult = portal_show_folder_chooser(env, parent, chooser_folder, chooser_title, disablePortal);
+    jstring portalResult = NULL;
+    bool handledByPortal = portal_show_folder_chooser(env, parent, chooser_folder,
+                                                      chooser_title, disablePortal,
+                                                      &portalResult);
 
-    if (portalResult != PORTAL_FOLDER_UNAVAILABLE) {
+    if (handledByPortal) {
         jstring_to_utf_release(env, folder, chooser_folder);
         jstring_to_utf_release(env, title, chooser_title);
         return portalResult;
