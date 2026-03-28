@@ -31,8 +31,7 @@
 //  Native Windows wider or taller than 32767 pixels are not supported
 #define MAX_WINDOW_SIZE 32767
 
-#define GETTER(type, name) \
-    type get_##name() const { return name; }
+
 
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
@@ -292,10 +291,10 @@ public:
     WindowContext(jobject, WindowContext* _owner, long _screen,
                   WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf);
 
-    GETTER(jobject, jwindow)
-    GETTER(jobject, jview)
-    GETTER(WindowFrameType, frame_type);
-    GETTER(WindowType, window_type);
+    jobject get_jwindow() const { return jwindow; }
+    jobject get_jview() const { return jview; }
+    WindowFrameType get_frame_type() const { return frame_type; }
+    WindowType get_window_type() const { return window_type; }
 
     Size get_view_size();
     Point get_view_position();
