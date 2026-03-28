@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -50,6 +51,7 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.beans.value.ChangeListener;
 import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
 
@@ -349,25 +351,38 @@ public class Util {
      */
     public static void waitForBoolean(ReadOnlyBooleanProperty property, boolean expected, String message) {
         CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<ChangeListener<Boolean>> ref = new AtomicReference<>();
+
         runAndWait(() -> {
             if (property.get() == expected) {
                 latch.countDown();
             } else {
-                property.addListener((_, _, val) -> {
-                    if (val == expected) {
+                ChangeListener<Boolean> listener = (_, _, newVal) -> {
+                    if (newVal == expected) {
+                        property.removeListener(ref.get());
                         latch.countDown();
                     }
-                });
+                };
+                ref.set(listener);
+                property.addListener(listener);
             }
         });
+
         try {
-            Assertions.assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS),
-                    "Timeout waiting for: " + message);
-        } catch (InterruptedException e) {
+            boolean ok = latch.await(TIMEOUT, TimeUnit.MILLISECONDS);
+
+            if (!ok) {
+                // remove listener on timeout
+                runAndWait(() -> property.removeListener(ref.get()));
+            }
+
+            Assertions.assertTrue(ok, "Timeout waiting for: " + message);
+
+        } catch (Exception e) {
+            runAndWait(() -> property.removeListener(ref.get()));
             fail(e);
         }
     }
-
 
     /**
      * Makes double click of the mouse left button.

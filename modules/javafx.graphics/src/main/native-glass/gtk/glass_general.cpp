@@ -692,7 +692,7 @@ glass_pixbuf_from_window(GdkWindow *window,
 {
     GdkPixbuf * ret = NULL;
 
-    gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
+    ret = gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
     return ret;
 }
 

@@ -192,7 +192,7 @@ public class StageAttributesTest extends VisualTestBase {
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
 
-            // screen stage should take over the bottom stage
+            // fullscreen stage should take over the bottom stage
             Color color = getColor(200, 200);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
