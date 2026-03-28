@@ -2056,23 +2056,22 @@ public class TreeTableView<S> extends Control {
                     // add/remove events for each contiguous range of positions that changed.
                     int prevSize = prevState.size();
                     int newSize = newState.size();
-                    int size = Math.min(prevSize, newSize);
-                    for (int i = 0; i < size; ) {
-                        while (i < size && prevState.get(i).equals(newState.get(i))) i++;
-                        if (i >= size) break;
+                    int minSize = Math.min(prevSize, newSize);
+                    for (int i = 0; i < minSize; i++) {
+                        while (i < minSize && prevState.get(i).equals(newState.get(i))) i++;
+                        if (i >= minSize) break;
                         int from = i;
-                        while (i < size && !prevState.get(i).equals(newState.get(i))) i++;
-                        int to = i;
-                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(from, to);
+                        while (i < minSize && !prevState.get(i).equals(newState.get(i))) i++;
+                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(from, i);
                         ListChangeListener.Change<TreeTablePosition<S, ?>> c =
-                                new NonIterableChange.GenericAddRemoveChange<>(from, to, removed, newState);
+                                new NonIterableChange.GenericAddRemoveChange<>(from, i, removed, newState);
                         sm.fireCustomSelectedCellsListChangeEvent(c);
                     }
                     if (prevSize != newSize) {
                         // tail was purely removed (prevSize > newSize) or purely added (prevSize < newSize)
-                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(size, prevSize);
+                        List<TreeTablePosition<S, ?>> removed = (List<TreeTablePosition<S, ?>>) (List<?>) prevState.subList(minSize, prevSize);
                         ListChangeListener.Change<TreeTablePosition<S, ?>> c =
-                                new NonIterableChange.GenericAddRemoveChange<>(size, newSize, removed, newState);
+                                new NonIterableChange.GenericAddRemoveChange<>(minSize, newSize, removed, newState);
                         sm.fireCustomSelectedCellsListChangeEvent(c);
                     }
                 }
