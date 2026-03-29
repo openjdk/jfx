@@ -4321,28 +4321,30 @@ public class TreeTableViewTest {
         table.getColumns().add(col);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-        // select rows 0 ("b") and 2 ("a"). After ascending sort to ["a","b","c"]:
-        // "b" moves row 0→1 and "a" moves row 2→0. The selectedCells list goes
-        // from [(row=0),(row=2)] to [(row=0),(row=1)]: position 0 is unchanged
-        // (both have row=0), only position 1 changes.
         table.getSelectionModel().selectIndices(0, 2);
 
         List<Integer> froms = new ArrayList<>();
         List<Integer> tos = new ArrayList<>();
+        List<List<TreeTablePosition>> removedLists = new ArrayList<>();
         table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition<String, ?>>) c -> {
             while (c.next()) {
                 froms.add(c.getFrom());
                 tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
             }
         });
 
         StageLoader sl = new StageLoader(table);
         table.getSortOrder().add(col);
 
-        // only position 1 changed: expect one event covering [1, 2), not [0, 2)
-        assertEquals(1, froms.size());
-        assertEquals(1, (int) froms.get(0));
-        assertEquals(2, (int) tos.get(0));
+        // old state: items ["b", "c", "a"] and selected cells ["0", "2"]
+        // new state: items ["a", "b", "c"] and selected cells ["0", "1"]
+
+        // row 1 was selected
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(2), tos);
+        // row 2 was deselected
+        assertEquals(List.of(2), removedLists.get(0).stream().map(TreeTablePosition::getRow).toList());
 
         sl.dispose();
     }
@@ -4363,10 +4365,10 @@ public class TreeTableViewTest {
         table.getColumns().add(col);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-        // custom sort policy: sort (no-op, already sorted), then programmatically
-        // deselect row 2, causing newState.size() (2) < prevState.size() (3)
+        // custom sort policy: sort and deselect rows 1 and 2
         table.setSortPolicy(tv -> {
             FXCollections.sort(tv.getRoot().getChildren(), Comparator.comparing(TreeItem::getValue));
+            tv.getSelectionModel().clearSelection(1);
             tv.getSelectionModel().clearSelection(2);
             return true;
         });
@@ -4375,8 +4377,8 @@ public class TreeTableViewTest {
 
         List<Integer> froms = new ArrayList<>();
         List<Integer> tos = new ArrayList<>();
-        List<List<TreeTablePosition<String, ?>>> removedLists = new ArrayList<>();
-        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition<String, ?>>) c -> {
+        List<List<TreeTablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition>) c -> {
             while (c.next()) {
                 froms.add(c.getFrom());
                 tos.add(c.getTo());
@@ -4387,13 +4389,14 @@ public class TreeTableViewTest {
         StageLoader sl = new StageLoader(table);
         table.sort();
 
-        // prevState=[(row=0),(row=1),(row=2)], newState=[(row=0),(row=1)]
-        // positions 0 and 1 match; only the tail removal should fire an event
-        assertEquals(1, froms.size());
-        assertEquals(2, (int) froms.get(0));
-        assertEquals(2, (int) tos.get(0)); // from==to signals a pure removal
-        assertEquals(1, removedLists.get(0).size());
-        assertEquals(2, removedLists.get(0).get(0).getRow());
+        // old state: items ["a", "b", "c"] and selected cells ["0", "1", "2"]
+        // new state: items ["a", "b", "c"] and selected cells ["0"]
+
+        // no rows were selected
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(1), tos);
+        // rows 1 and 2 were deselected
+        assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TreeTablePosition::getRow).toList());
 
         sl.dispose();
     }
