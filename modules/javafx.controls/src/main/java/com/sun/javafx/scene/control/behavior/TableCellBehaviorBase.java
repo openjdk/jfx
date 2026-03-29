@@ -96,6 +96,11 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     @Override
     protected void doSelect(final double x, final double y, final MouseButton button,
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
+        final Control tableView = getCellContainer();
+        if (tableView == null) {
+            return;
+        }
+
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
         final C tableCell = getNode();
@@ -106,9 +111,6 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // If the mouse event is not contained within this tableCell, then
         // we don't want to react to it.
         if (! tableCell.contains(x, y)) return;
-
-        final Control tableView = getCellContainer();
-        if (tableView == null) return;
 
         TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;

@@ -201,13 +201,18 @@ public abstract class CellBehaviorBase<T extends IndexedCell<?>> extends Behavio
 
     protected void doSelect(final double x, final double y, final MouseButton button,
                             final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
+        final Control cellContainer = getCellContainer();
+        if (cellContainer == null) {
+            return;
+        }
+
         // we update the cell to point to the new tree node
         final T cell = getNode();
 
-        final Control cellContainer = getCellContainer();
-
         int count = getItemCount();
-        if (cell.getIndex() >= count) return;
+        if (cell.getIndex() >= count) {
+            return;
+        }
 
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.

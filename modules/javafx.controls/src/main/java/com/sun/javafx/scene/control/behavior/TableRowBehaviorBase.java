@@ -83,7 +83,9 @@ public abstract class TableRowBehaviorBase<T extends IndexedCell<?>> extends Cel
         if (table == null) return;
 
         int count = getItemCount();
-        if (getNode().getIndex() >= count) return;
+        if (getNode().getIndex() >= count) {
+            return;
+        }
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
