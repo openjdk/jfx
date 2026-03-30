@@ -72,11 +72,6 @@
     return [super accessibilityValue];
 }
 
-- (NSString *)accessibilityTitle
-{
-    return [self requestNodeAttribute:@"AXTitle"];
-}
-
 - (nullable NSString *)accessibilityStringForRange:(NSRange)range
 {
     id parameter = [NSValue valueWithRange:range];
