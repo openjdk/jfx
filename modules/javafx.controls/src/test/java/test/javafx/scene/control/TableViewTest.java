@@ -4009,16 +4009,16 @@ public class TableViewTest {
         sl.dispose();
     }
 
-    @Test public void testSortFiresTargetedChangeEventsForPartialPermutation() {
+    @Test void testSortFiresTargetedChangeEventsForPartialPermutation() {
         TableColumn<String, String> col = new TableColumn<>("col");
         col.setSortType(ASCENDING);
         col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
 
         TableView<String> table = new TableView<>();
-        table.setItems(FXCollections.observableArrayList("b", "c", "a"));
+        table.setItems(FXCollections.observableArrayList("c", "d", "a", "b", "e", "g", "h", "f", "i", "k", "l", "j"));
         table.getColumns().add(col);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        table.getSelectionModel().selectIndices(0, 2);
+        table.getSelectionModel().selectIndices(0, 1, 4, 5, 6, 8, 9, 10);
 
         List<Integer> froms = new ArrayList<>();
         List<Integer> tos = new ArrayList<>();
@@ -4031,22 +4031,29 @@ public class TableViewTest {
             }
         });
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
         table.getSortOrder().add(col);
 
-        // old state: items ["b", "c", "a"] and selected cells ["0", "2"]
-        // new state: items ["a", "b", "c"] and selected cells ["0", "1"]
+        // item indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11   }
+        // before sort:  { [C], [D],  A,   B,  [E], [G], [H],  F,  [I], [K], [L],  J   }
+        // prevState:    { (0), (1),           (4), (5), (6),      (8), (9), (10)      }
+        // after sort:   {  A,   B,  [C], [D], [E],  F,  [G], [H], [I],  J,  [K], [L]  }
+        // newState:     {           (2), (3), (4),      (6), (7), (8),      (10),(11) }
 
-        // row 1 was selected
-        assertEquals(List.of(1), froms);
-        assertEquals(List.of(2), tos);
-        // row 2 was deselected
-        assertEquals(List.of(2), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+        // pos indices: {  0,   1,   2,   3,   4,   5,   6,   7   }
+        // prevState:   { (0), (1), (4), (5), (6), (8), (9), (10) }
+        // newState:    { (2), (3), (4), (6), (7), (8), (10),(11) }
+        // froms:          *              *              *
+        // tos:                 *              *              *
 
-        sl.dispose();
+        assertEquals(List.of(0, 3, 6), froms);
+        assertEquals(List.of(2, 5, 8), tos);
+        assertEquals(List.of(0, 1),  removedLists.get(0).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(5, 6),  removedLists.get(1).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(9, 10), removedLists.get(2).stream().map(TablePosition::getRow).toList());
     }
 
-    @Test public void testSortFiresRemovalEventForSelectionSizeMismatch() {
+    @Test void testSortFiresRemovalEventForSelectionSizeMismatch() {
         TableColumn<String, String> col = new TableColumn<>("col");
         col.setSortType(ASCENDING);
         col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
@@ -4077,19 +4084,53 @@ public class TableViewTest {
             }
         });
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
         table.sort();
 
-        // old state: items ["a", "b", "c"] and selected cells ["0", "1", "2"]
-        // new state: items ["a", "b", "c"] and selected cells ["0"]
+        // item indices: {  0,   1,   2  }
+        // before sort:  { [A], [B], [C] }
+        // prevState:    { (0), (1), (2) }
+        // after sort:   { [A]           }
+        // newState:     { (0)           }
 
-        // no rows were selected
+        // pos indices:  {  0,   1,   2  }
+        // prevState:    { (0), (1), (2) }
+        // newState:     { (0)           }
+        // froms:                *
+        // tos:                  *
+
         assertEquals(List.of(1), froms);
         assertEquals(List.of(1), tos);
-        // rows 1 and 2 were deselected
         assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TablePosition::getRow).toList());
 
-        sl.dispose();
+        froms.clear();
+        tos.clear();
+        removedLists.clear();
+
+        // custom sort policy: sort and select all
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getItems(), Comparator.naturalOrder());
+            tv.getSelectionModel().selectAll();
+            return true;
+        });
+
+        table.sort();
+
+        // item indices: {  0,   1,   2,   3 }
+        // before sort:  { [A]               }
+        // prevState:    { (0)               }
+        // after sort:   { [A], [B], [C]     }
+        // newState:     { (0), (1), (2)     }
+
+        // pos indices:  {  0,   1,   2,   3 }
+        // prevState:    { (0)               }
+        // newState:     { (0), (1), (2)     }
+        // froms:                *
+        // tos:                            *
+
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(3), tos);
+        assertEquals(List.of(), removedLists.get(0).stream().map(TablePosition::getRow).toList());
     }
 
     private int rt_37538_count = 0;

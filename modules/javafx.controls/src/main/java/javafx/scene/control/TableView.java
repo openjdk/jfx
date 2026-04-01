@@ -1748,18 +1748,24 @@ public class TableView<S> extends Control {
                     int prevSize = prevState.size();
                     int newSize = newState.size();
                     int minSize = Math.min(prevSize, newSize);
-                    for (int i = 0; i < minSize; i++) {
-                        while (i < minSize && prevState.get(i).equals(newState.get(i))) i++;
-                        if (i >= minSize) break;
-                        int from = i;
-                        while (i < minSize && !prevState.get(i).equals(newState.get(i))) i++;
-                        List<TablePosition<S, ?>> removed = (List<TablePosition<S, ?>>) (List<?>) prevState.subList(from, i);
+                    for (int index = 0; index < minSize; index++) {
+                        // Advance to the next position where prevState and newState are not equal.
+                        for (; index < minSize && prevState.get(index).equals(newState.get(index)); index++);
+                        int from = index;
+                        if (from >= minSize) {
+                            break;
+                        }
+                        // Advance to the next position where prevState and newState are equal.
+                        for (index++; index < minSize && !prevState.get(index).equals(newState.get(index)); index++);
+                        // The positions at [from, index) in prevState were replaced by the corresponding positions in newState.
+                        List<TablePosition<S, ?>> removed = (List<TablePosition<S, ?>>) (List<?>) prevState.subList(from, index);
                         ListChangeListener.Change<TablePosition<S, ?>> c =
-                                new NonIterableChange.GenericAddRemoveChange<>(from, i, removed, newState);
+                                new NonIterableChange.GenericAddRemoveChange<>(from, index, removed, newState);
                         sm.fireCustomSelectedCellsListChangeEvent(c);
                     }
                     if (prevSize != newSize) {
-                        // tail was purely removed (prevSize > newSize) or purely added (prevSize < newSize)
+                        // The positions at [minSize, prevSize) in prevState were removed. If prevSize == minSize, the range is empty.
+                        // The positions at [minSize, newSize) in newState were added. If newSize == minSize, the range is empty.
                         List<TablePosition<S, ?>> removed = (List<TablePosition<S, ?>>) (List<?>) prevState.subList(minSize, prevSize);
                         ListChangeListener.Change<TablePosition<S, ?>> c =
                                 new NonIterableChange.GenericAddRemoveChange<>(minSize, newSize, removed, newState);
