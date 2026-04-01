@@ -4342,11 +4342,11 @@ public class TreeTableViewTest {
         // after sort:   {  A,   B,  [C], [D], [E],  F,  [G], [H], [I],  J,  [K], [L]  }
         // newState:     {           (2), (3), (4),      (6), (7), (8),      (10),(11) }
 
-        // pos indices: {  0,   1,   2,   3,   4,   5,   6,   7   }
-        // prevState:   { (0), (1), (4), (5), (6), (8), (9), (10) }
-        // newState:    { (2), (3), (4), (6), (7), (8), (10),(11) }
+        // pos indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8  }
+        // prevState:   { (0), (1), (4), (5), (6), (8), (9), (10)     }
+        // newState:    { (2), (3), (4), (6), (7), (8), (10),(11)     }
         // froms:          *              *              *
-        // tos:                 *              *              *
+        // tos:                      *              *              *
 
         assertEquals(List.of(0, 3, 6), froms);
         assertEquals(List.of(2, 5, 8), tos);
