@@ -97,6 +97,12 @@ void SWServer::close()
     for (auto& callback : std::exchange(m_importCompletedCallbacks, { }))
         callback();
 
+    for (auto& callback : std::exchange(m_clearCompletionCallbacks, { }))
+        callback();
+
+    for (auto& callback : std::exchange(m_getOriginsWithRegistrationsCallbacks, { }))
+        callback({ });
+
     Vector<Ref<SWServerWorker>> runningWorkers;
     for (auto& worker : m_runningOrTerminatingWorkers.values()) {
         if (worker->isRunning())
@@ -1465,7 +1471,7 @@ void SWServer::Connection::resolveRegistrationReadyRequests(SWServerRegistration
     });
 }
 
-void SWServer::getOriginsWithRegistrations(Function<void(const HashSet<SecurityOriginData>&)>&& callback)
+void SWServer::getOriginsWithRegistrations(CompletionHandler<void(const HashSet<SecurityOriginData>&)>&& callback)
 {
     m_getOriginsWithRegistrationsCallbacks.append(WTFMove(callback));
 

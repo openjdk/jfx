@@ -45,7 +45,7 @@ public:
     }
 
     std::unique_ptr<LibWebRTCRtpReceiverBackend> createReceiverBackend();
-    std::unique_ptr<LibWebRTCRtpSenderBackend> createSenderBackend(LibWebRTCPeerConnectionBackend&, LibWebRTCRtpSenderBackend::Source&&);
+    Ref<LibWebRTCRtpSenderBackend> createSenderBackend(LibWebRTCPeerConnectionBackend&, LibWebRTCRtpSenderBackend::Source&&);
 
     webrtc::RtpTransceiverInterface* rtcTransceiver() { return m_rtcTransceiver.ptr(); }
 

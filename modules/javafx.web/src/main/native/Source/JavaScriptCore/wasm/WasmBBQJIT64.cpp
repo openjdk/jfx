@@ -1623,8 +1623,8 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
         JIT_COMMENT(m_jit, "Do array allocation variable sized");
 
         ASSERT(hasOneBitSet(elementSize));
-        m_jit.jitAssertIsInt32(sizeLocation.asGPR());
-        m_jit.lshift64(sizeLocation.asGPR(), TrustedImm32(getLSBSet(elementSize)), scratchGPR);
+        m_jit.zeroExtend32ToWord(sizeLocation.asGPR(), scratchGPR);
+        m_jit.lshift64(scratchGPR, TrustedImm32(getLSBSet(elementSize)), scratchGPR);
         m_jit.add64(TrustedImm64(sizeof(JSWebAssemblyArray)), scratchGPR);
 
         m_jit.emitAllocateVariableSized(resultGPR, JITAllocator::variableNonNull(), allocatorBufferBase, scratchGPR, scratchGPR, scratchGPR2, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
@@ -1983,6 +1983,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArraySet(uint32_t typeIndex, Express
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
 
         LOG_INSTRUCTION("ArraySet", typeIndex, arrayref, index, value);
+        consume(index);
         consume(value);
         emitThrowException(ExceptionType::NullArraySet);
         return { };
@@ -4223,7 +4224,7 @@ void BBQJIT::materializeVectorConstant(v128_t value, Location result)
         m_jit.materializeVector(value, result.asFPR());
 }
 
-ExpressionType WARN_UNUSED_RETURN BBQJIT::addConstant(v128_t value)
+ExpressionType WARN_UNUSED_RETURN BBQJIT::addSIMDConstant(v128_t value)
 {
     // We currently don't track constant Values for V128s, since folding them seems like a lot of work that might not be worth it.
     // Maybe we can look into this eventually?
@@ -4236,7 +4237,7 @@ ExpressionType WARN_UNUSED_RETURN BBQJIT::addConstant(v128_t value)
 
 // SIMD generated
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addExtractLane(SIMDInfo info, uint8_t lane, Value value, Value& result)
+PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDExtractLane(SIMDInfo info, uint8_t lane, Value value, Value& result)
 {
     Location valueLocation = loadIfNecessary(value);
     consume(value);
@@ -4252,7 +4253,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addExtractLane(SIMDInfo info, uint8_t l
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addReplaceLane(SIMDInfo info, uint8_t lane, ExpressionType vector, ExpressionType scalar, ExpressionType& result)
+PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDReplaceLane(SIMDInfo info, uint8_t lane, ExpressionType vector, ExpressionType scalar, ExpressionType& result)
 {
     Location vectorLocation = loadIfNecessary(vector);
     Location scalarLocation;

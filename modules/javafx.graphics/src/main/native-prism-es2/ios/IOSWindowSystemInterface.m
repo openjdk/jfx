@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ void deletePixelFormat(void* pixelFormat) {
 
 void *createContext(void *shareContext, void *view,
                     void *pixelFormat, int *viewNotReady) {
-    fprintf(stderr, "IOSWindowSystemInterface : share %x view %x pf % notready %\n",
+    fprintf(stderr, "IOSWindowSystemInterface : share %p view %p pf %p not ready %p\n",
             shareContext, view, pixelFormat, viewNotReady);
 
     EAGLContext *ctx = NULL;
@@ -60,12 +60,12 @@ void *getCurrentContext() {
     EAGLContext *ctx = [EAGLContext currentContext];
     // fprintf(stderr, "IOSWindowSystemInterface : getCurrentContext %x\n", ctx);
 
-    return ptr_to_jlong(ctx);
+    return ctx;
 }
 
 jboolean makeCurrentContext(void *context) {
     // fprintf(stderr, "IOSWindowSystemInterface : makeCurrentContext %x\n", context);
-    if ([EAGLContext setCurrentContext:jlong_to_ptr(context)] == YES) {
+    if ([EAGLContext setCurrentContext:context] == YES) {
         return JNI_TRUE;
     }
 

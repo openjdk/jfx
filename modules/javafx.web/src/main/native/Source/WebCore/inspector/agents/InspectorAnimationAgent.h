@@ -99,7 +99,7 @@ private:
     Inspector::InjectedScriptManager& m_injectedScriptManager;
     WeakRef<Page> m_inspectedPage;
 
-    MemoryCompactRobinHoodHashMap<Inspector::Protocol::Animation::AnimationId, WebAnimation*> m_animationIdMap;
+    HashMap<Inspector::Protocol::Animation::AnimationId, WeakRef<WebAnimation, WeakPtrImplWithEventTargetData>> m_animationIdMap;
 
     WeakHashMap<WebAnimation, Ref<Inspector::Protocol::Console::StackTrace>, WeakPtrImplWithEventTargetData> m_animationsPendingBinding;
     Timer m_animationBindingTimer;

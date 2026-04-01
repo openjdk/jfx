@@ -90,11 +90,6 @@ private:
 
 } // namespace (anonymous)
 
-static inline bool isColumnSide(GridPositionSide side)
-{
-    return side == GridPositionSide::ColumnStartSide || side == GridPositionSide::ColumnEndSide;
-}
-
 static inline bool isStartSide(GridPositionSide side)
 {
     return side == GridPositionSide::ColumnStartSide || side == GridPositionSide::RowStartSide;

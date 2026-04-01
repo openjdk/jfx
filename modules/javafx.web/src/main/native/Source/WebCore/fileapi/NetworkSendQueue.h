@@ -62,7 +62,7 @@ public:
 private:
     void processMessages();
 
-    using Message = Variant<CString, Ref<FragmentedSharedBuffer>, UniqueRef<BlobLoader>>;
+    using Message = Variant<CString, Ref<FragmentedSharedBuffer>, Ref<BlobLoader>>;
     Deque<Message> m_queue;
 
     WriteString m_writeString;

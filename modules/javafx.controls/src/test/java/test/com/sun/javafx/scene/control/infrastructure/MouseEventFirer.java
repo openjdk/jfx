@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import java.util.Arrays;
-import java.util.List;
-
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -38,65 +35,44 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.PickResult;
 import javafx.stage.Window;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Helper to fire MouseEvents onto a EventTarget which is either Node or Scene.
  * There are methods to configure the event by eventType, clickCount, location (delta from default),
- * mouseButton and keyModifiers.
+ * mouseButton, and keyModifiers.
  * <p>
- * The default local coordinates are the center of the target.
+ * The default local coordinates are at the center of the target.
  */
 public final class MouseEventFirer {
     private final EventTarget target;
 
-    private final Scene scene;
     private final Bounds targetBounds;
     private StageLoader sl;
-
-    private boolean alternative;
 
     public MouseEventFirer(EventTarget target) {
         this.target = target;
 
-        // Use the alternative creation path for MouseEvent by default, see JDK-8253769
-        this.alternative = true;
-
         // Force the target node onto a stage so that it is accessible
-        if (target instanceof Node) {
-            Node n = (Node)target;
+        if (target instanceof Node n) {
             Scene s = n.getScene();
             Window w = s == null ? null : s.getWindow();
 
             if (w == null || w.getScene() == null) {
                 sl = new StageLoader(n);
-                scene = n.getScene();
                 targetBounds = n.getLayoutBounds();
             } else {
-                scene = w.getScene();
                 targetBounds = n.getLayoutBounds();
             }
-        } else if (target instanceof Scene) {
-            scene = (Scene)target;
+        } else if (target instanceof Scene scene) {
             sl = new StageLoader(scene);
             targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
         } else {
             throw new RuntimeException("EventTarget of invalid type (" + target + ")");
         }
-    }
-
-    /**
-     * Instantiates a MouseEventFirer on the given node.
-     * <p>
-     * Note: this was added as hot-fix for JDK-8253769.
-     *
-     * @param target the node to fire on
-     * @param alternative uses alternative creation path for mouseEvent if true.
-     */
-    public MouseEventFirer(Node target, boolean alternative) {
-        this(target);
-        this.alternative = alternative;
     }
 
     public void dispose() {
@@ -184,85 +160,6 @@ public final class MouseEventFirer {
     }
 
     private void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        if (alternative) {
-            fireMouseEventAlternative(evtType, button, clickCount, deltaX, deltaY, modifiers);
-            return;
-        }
-        // TBD: JDK-8253769
-        // the mouseEvent created here seems to be valid (in regard to coordinate transformations
-        // of local/scene/screen) only if the target is glued to the upper leading edge of the scene
-        // and zero deltaX/Y!
-
-        // calculate bounds
-        final Window window = scene.getWindow();
-
-        // width / height of target node
-        final double w = targetBounds.getWidth();
-        final double h = targetBounds.getHeight();
-
-        // x / y click position is centered
-        final double x = w / 2.0 + deltaX;
-        final double y = h / 2.0 + deltaY;
-
-        final double sceneX = x + scene.getX() + deltaX;
-        final double sceneY = y + scene.getY() + deltaY;
-
-        final double screenX = sceneX + window.getX();
-        final double screenY = sceneY + window.getY();
-
-        final List<KeyModifier> ml = Arrays.asList(modifiers);
-
-        final PickResult pickResult = new PickResult(target, sceneX, sceneY);
-
-        MouseEvent evt = new MouseEvent(
-                target,
-                target,
-                evtType,
-                x, y,
-                screenX, screenY,
-                button,
-                clickCount,
-                ml.contains(KeyModifier.SHIFT),    // shiftDown
-                ml.contains(KeyModifier.CTRL),     // ctrlDown
-                ml.contains(KeyModifier.ALT),      // altDown
-                ml.contains(KeyModifier.META),     // metaData
-                button == MouseButton.PRIMARY,     // primary button
-                button == MouseButton.MIDDLE,      // middle button
-                button == MouseButton.SECONDARY,   // secondary button
-                button == MouseButton.BACK,        // back button
-                button == MouseButton.FORWARD,     // forward button
-                false,                             // synthesized
-                button == MouseButton.SECONDARY,   // is popup trigger
-                true,                              // still since pick
-                pickResult);                       // pick result
-
-//        // lets see the click position.
-//        // Unfortunately this doesn't work at present because StubToolkit
-//        // cannot generate snapshots
-//        WritableImage image = target.snapshot(null, null);
-//        Canvas canvas = new Canvas(image.getWidth(), image.getHeight());
-//        GraphicsContext g = canvas.getGraphicsContext2D();
-//        g.drawImage(image, 0, 0);
-//
-//        g.setFill(Color.RED);
-//        g.setStroke(Color.WHITE);
-//        g.fillOval(deltaX - 2, deltaY - 2, 4, 4);
-//        g.strokeOval(deltaX - 2, deltaY - 2, 4, 4);
-//
-//        Stage stage = new Stage();
-//        stage.setScene(new Scene(new Pane(canvas), image.getWidth(), image.getHeight()));
-//        stage.show();
-
-        Event.fireEvent(target, evt);
-    }
-
-    /**
-     * Fires a mouseEvent with the given configuration options onto the target.
-     * Hot-fix for JDK-8253769.
-     * The mouseEvent is created such that coordinate transformation constraints seem to be respected.
-     */
-    private void fireMouseEventAlternative(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-
         // width / height of target node
         final double w = targetBounds.getWidth();
         final double h = targetBounds.getHeight();
@@ -300,37 +197,9 @@ public final class MouseEventFirer {
                 button == MouseButton.SECONDARY,   // is popup trigger
                 true,                              // still since pick
                 null    // default pick (don't care, event constructor will take over)
-                );
+        );
 
         Event.fireEvent(target, evt);
     }
 
-//    public void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-//        List<KeyModifier> ml = Arrays.asList(modifiers);
-//
-//        double screenX = target.getWindow().getX() + target.getX() + deltaX;
-//        double screenY = target.getWindow().getY() + target.getY() + deltaY;
-//
-//        MouseEvent evt = new MouseEvent(
-//                target,
-//                target,
-//                evtType,
-//                deltaX, deltaY,
-//                screenX, screenY,
-//                button,
-//                clickCount,
-//                ml.contains(KeyModifier.SHIFT),    // shiftDown
-//                ml.contains(KeyModifier.CTRL),     // ctrlDown
-//                ml.contains(KeyModifier.ALT),      // altDown
-//                ml.contains(KeyModifier.META),     // metaData
-//                button == MouseButton.PRIMARY,     // primary button
-//                button == MouseButton.MIDDLE,      // middle button
-//                button == MouseButton.SECONDARY,   // secondary button
-//                true,                              // synthesized
-//                button == MouseButton.SECONDARY,   // is popup trigger
-//                false,                             // still since pick
-//                null);                             // pick result
-//
-//        Event.fireEvent(target, evt);
-//    }
 }

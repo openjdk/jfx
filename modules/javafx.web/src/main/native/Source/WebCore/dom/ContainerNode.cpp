@@ -120,6 +120,8 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
         return { 0, hadElementChild ? DidRemoveElements::Yes : DidRemoveElements::No, CanDelayNodeDeletion::Unknown };
     }
 
+    auto previousTreeVersion = document().domTreeVersion();
+
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*this));
     if (source == ChildChange::Source::API) {
         ChildListMutationScope mutation(*this);
@@ -136,9 +138,16 @@ ALWAYS_INLINE auto ContainerNode::removeAllChildrenWithScriptAssertion(ChildChan
             for (auto& child : children)
                 mutation.willRemoveChild(child.get());
         }
+        ASSERT(previousTreeVersion == document().domTreeVersion());
     }
 
     disconnectSubframesIfNeeded(*this, SubframeDisconnectPolicy::DescendantsOnly);
+
+    if (previousTreeVersion != document().domTreeVersion()) [[unlikely]] {
+        // DOM tree has mutated. Re-collect children as they may have changed.
+        children.clear();
+        collectChildNodes(*this, children);
+    }
 
     ContainerNode::ChildChange childChange { ChildChange::Type::AllChildrenRemoved, nullptr, nullptr, nullptr, source, ContainerNode::ChildChange::AffectsElements::Unknown };
 

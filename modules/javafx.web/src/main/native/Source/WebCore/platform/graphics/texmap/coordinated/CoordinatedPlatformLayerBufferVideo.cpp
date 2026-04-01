@@ -182,14 +182,19 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
         }
         dmabuf = DMABufBuffer::create(size, fourcc, WTFMove(fds), WTFMove(offsets), WTFMove(strides), modifier);
 
-        DMABufBuffer::ColorSpace colorSpace = DMABufBuffer::ColorSpace::BT601;
+        DMABufBuffer::ColorSpace colorSpace = DMABufBuffer::ColorSpace::Bt601;
+        DMABufBuffer::TransferFunction transferFunction = DMABufBuffer::TransferFunction::Bt709;
         if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_BT709))
-            colorSpace = DMABufBuffer::ColorSpace::BT709;
+            colorSpace = DMABufBuffer::ColorSpace::Bt709;
         else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_BT2020))
-            colorSpace = DMABufBuffer::ColorSpace::BT2020;
-        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_SMPTE240M))
-            colorSpace = DMABufBuffer::ColorSpace::SMPTE240M;
+            colorSpace = DMABufBuffer::ColorSpace::Bt2020;
+        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_BT2100_PQ)) {
+            colorSpace = DMABufBuffer::ColorSpace::Bt2020;
+            transferFunction = DMABufBuffer::TransferFunction::Pq;
+        } else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(videoInfo), GST_VIDEO_COLORIMETRY_SMPTE240M))
+            colorSpace = DMABufBuffer::ColorSpace::Smpte240M;
         dmabuf->setColorSpace(colorSpace);
+        dmabuf->setTransferFunction(transferFunction);
 
         dmabuf->ref();
         gst_mini_object_set_qdata(GST_MINI_OBJECT_CAST(memory), dmabufQuark, dmabuf.get(), [](gpointer data) {
@@ -239,15 +244,19 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferVi
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         // Default to bt601. This is the same behaviour as GStreamer's glcolorconvert element.
-        CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT601;
+        CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt601;
+        CoordinatedPlatformLayerBufferYUV::TransferFunction transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Bt709;
         if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(&m_videoFrame.info), GST_VIDEO_COLORIMETRY_BT709))
-            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT709;
+            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt709;
         else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(&m_videoFrame.info), GST_VIDEO_COLORIMETRY_BT2020))
-            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT2020;
-        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(&m_videoFrame.info), GST_VIDEO_COLORIMETRY_SMPTE240M))
-            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::SMPTE240M;
+            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
+        else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(&m_videoFrame.info), GST_VIDEO_COLORIMETRY_BT2100_PQ)) {
+            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
+            transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Pq;
+        } else if (gst_video_colorimetry_matches(&GST_VIDEO_INFO_COLORIMETRY(&m_videoFrame.info), GST_VIDEO_COLORIMETRY_SMPTE240M))
+            yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Smpte240M;
 
-        return CoordinatedPlatformLayerBufferYUV::create(numberOfPlanes, WTFMove(planes), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, m_size, m_flags, nullptr);
+        return CoordinatedPlatformLayerBufferYUV::create(numberOfPlanes, WTFMove(planes), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, transferFunction, m_size, m_flags, nullptr);
     }
 
     return nullptr;

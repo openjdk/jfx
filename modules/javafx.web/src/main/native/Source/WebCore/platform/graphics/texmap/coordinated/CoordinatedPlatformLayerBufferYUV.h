@@ -34,11 +34,12 @@ class BitmapTexture;
 
 class CoordinatedPlatformLayerBufferYUV final : public CoordinatedPlatformLayerBuffer {
 public:
-    enum class YuvToRgbColorSpace : uint8_t { BT601, BT709, BT2020, SMPTE240M };
-    static std::unique_ptr<CoordinatedPlatformLayerBufferYUV> create(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
-    static std::unique_ptr<CoordinatedPlatformLayerBufferYUV> create(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
-    CoordinatedPlatformLayerBufferYUV(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
-    CoordinatedPlatformLayerBufferYUV(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
+    enum class YuvToRgbColorSpace : uint8_t { Bt601, Bt709, Bt2020, Smpte240M };
+    enum class TransferFunction : uint8_t { Bt709, Pq };
+    static std::unique_ptr<CoordinatedPlatformLayerBufferYUV> create(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, TransferFunction, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
+    static std::unique_ptr<CoordinatedPlatformLayerBufferYUV> create(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, TransferFunction, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
+    CoordinatedPlatformLayerBufferYUV(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, TransferFunction, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
+    CoordinatedPlatformLayerBufferYUV(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace, TransferFunction, const IntSize&, OptionSet<TextureMapperFlags>, std::unique_ptr<GLFence>&&);
     virtual ~CoordinatedPlatformLayerBufferYUV();
 
 private:
@@ -49,7 +50,8 @@ private:
     std::array<unsigned, 4> m_planes;
     std::array<unsigned, 4> m_yuvPlane;
     std::array<unsigned, 4> m_yuvPlaneOffset;
-    YuvToRgbColorSpace m_yuvToRgbColorSpace { YuvToRgbColorSpace::BT601 };
+    YuvToRgbColorSpace m_yuvToRgbColorSpace { YuvToRgbColorSpace::Bt601 };
+    TransferFunction m_transferFunction { TransferFunction::Bt709 };
 };
 
 } // namespace WebCore

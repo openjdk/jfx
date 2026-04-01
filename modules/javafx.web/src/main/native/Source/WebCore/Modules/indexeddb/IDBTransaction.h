@@ -252,7 +252,7 @@ private:
     WeakHashSet<IDBRequest, WeakPtrImplWithEventTargetData> m_cursorRequests;
 
     Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
-    Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
+    Deque<RefPtr<IDBClient::TransactionOperation>> m_transactionOperationsInProgressQueue;
     Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
     HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
     HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;

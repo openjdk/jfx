@@ -45,6 +45,7 @@
 #include "CSSValuePool.h"
 #include "DocumentInlines.h"
 #include "Element.h"
+#include "EventLoop.h"
 #include "EventTargetInlines.h"
 #include "FontCascade.h"
 #include "GeometryUtilities.h"
@@ -2282,6 +2283,37 @@ void KeyframeEffect::wasAddedToEffectStack()
 void KeyframeEffect::wasRemovedFromEffectStack()
 {
     m_inTargetEffectStack = false;
+
+    if (!canBeAccelerated())
+        return;
+
+#if ENABLE(THREADED_ANIMATIONS)
+    if (canHaveAcceleratedRepresentation())
+        return;
+#endif
+
+    // If the effect was running accelerated, we need to mark it for removal straight away
+    // since it will not be invalidated by a future call to KeyframeEffectStack::applyPendingAcceleratedActions().
+    ASSERT(animation());
+    if (isRunningAccelerated() || isAboutToRunAccelerated()) {
+        Ref animation = *this->animation();
+        bool isFinishingNaturally = animation->hasPendingFinishNotification() || animation->playState() == WebAnimation::PlayState::Finished;
+
+        m_pendingAcceleratedActions.clear();
+        m_pendingAcceleratedActions.append(AcceleratedAction::Stop);
+
+        if (isFinishingNaturally) {
+            // Don't immediately stop animations that are finishing naturally - delay cleanup via microtask
+            // to allow the finished promise callback to observe the final animation state (e.g., layer tree).
+            // Only immediately stop animations removed mid-flight.
+            if (RefPtr context = animation->scriptExecutionContext()) {
+                context->eventLoop().queueMicrotask([protectedThis = Ref { *this }] {
+                    protectedThis->applyPendingAcceleratedActions();
+                });
+            }
+        } else
+            applyPendingAcceleratedActions();
+    }
 }
 
 void KeyframeEffect::willChangeRenderer()

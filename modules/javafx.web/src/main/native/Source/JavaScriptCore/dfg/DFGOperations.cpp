@@ -2196,9 +2196,10 @@ JSC_DEFINE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject* glob
     }
 
     JSArray* result;
-    if (butterfly)
+    if (butterfly) {
+        ASSERT(butterfly->publicLength() <= butterfly->vectorLength());
         result = JSArray::createWithButterfly(vm, nullptr, arrayStructure, butterfly);
-    else {
+    } else {
         result = JSArray::tryCreate(vm, arrayStructure, size);
         if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
@@ -2566,6 +2567,27 @@ JSC_DEFINE_JIT_OPERATION(operationAllocateComplexPropertyStorage, Butterfly*, (V
     OPERATION_RETURN(scope, object->allocateMoreOutOfLineStorage(vm, object->structure()->outOfLineCapacity(), newSize));
 }
 
+JSC_DEFINE_JIT_OPERATION(operationAllocateUnitializedAuxiliaryBase, void*, (VM* vmPointer, size_t allocationSize))
+{
+    VM& vm = *vmPointer;
+    CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // allocationSize accounts for IndexingHeader already.
+    unsigned indexingPayloadInBytes = allocationSize - sizeof(IndexingHeader);
+    // If we wanted to lift this restriction we'd need to teach DFG's NewArrayWithButterfly and the Phantom/Materialize friends
+    // about converting the new Array's IndexingType / Structure.
+    ASSERT(indexingPayloadInBytes / sizeof(JSValue) < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH);
+    constexpr bool hasIndexingHeader = true;
+    unsigned preCapacity = 0;
+    unsigned propertyCapacity = 0;
+    Butterfly* result = Butterfly::createUninitialized(vm, nullptr, preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadInBytes);
+
+
+    OPERATION_RETURN(scope, result->base(preCapacity, propertyCapacity));
+}
+
 JSC_DEFINE_JIT_OPERATION(operationEnsureInt32, Butterfly*, (VM* vmPointer, JSCell* cell))
 {
     VM& vm = *vmPointer;
@@ -2828,7 +2850,7 @@ JSC_DEFINE_JIT_OPERATION(operationNewRegExpWithLastIndex, JSCell*, (JSGlobalObje
     OPERATION_RETURN(scope, RegExpObject::create(vm, globalObject->regExpStructure(), regexp, JSValue::decode(encodedLastIndex)));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationNewRegExpUntyped, JSObject*, (JSGlobalObject* globalObject, EncodedJSValue encodedContent, EncodedJSValue encodedFlags))
+JSC_DEFINE_JIT_OPERATION(operationNewRegExpUntyped, JSObject*, (JSGlobalObject* globalObject, Structure* structure, EncodedJSValue encodedContent, EncodedJSValue encodedFlags))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -2840,10 +2862,12 @@ JSC_DEFINE_JIT_OPERATION(operationNewRegExpUntyped, JSObject*, (JSGlobalObject* 
         encodedFlags
     };
 
-    OPERATION_RETURN(scope, constructRegExp(globalObject, ArgList { args, 2 }, globalObject->regExpConstructor()));
+    JSGlobalObject* regExpGlobalObject = structure->globalObject();
+    JSObject* regExpConstructor = regExpGlobalObject->regExpConstructor();
+    OPERATION_RETURN(scope, constructRegExp(regExpGlobalObject, ArgList { args, 2 }, regExpConstructor, regExpConstructor));
 }
 
-JSC_DEFINE_JIT_OPERATION(operationNewRegExpString, JSObject*, (JSGlobalObject* globalObject, JSString* content, JSString* flags))
+JSC_DEFINE_JIT_OPERATION(operationNewRegExpString, JSObject*, (JSGlobalObject* globalObject, Structure* structure, JSString* content, JSString* flags))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -2854,7 +2878,8 @@ JSC_DEFINE_JIT_OPERATION(operationNewRegExpString, JSObject*, (JSGlobalObject* g
         JSValue::encode(flags)
     };
 
-    OPERATION_RETURN(scope, constructRegExp(globalObject, ArgList { args, 2 }, globalObject->regExpConstructor()));
+    JSGlobalObject* regExpGlobalObject = structure->globalObject();
+    OPERATION_RETURN(scope, constructRegExp(regExpGlobalObject, ArgList { args, 2 }, regExpGlobalObject->regExpConstructor()));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationStringValueOf, JSString*, (JSGlobalObject* globalObject, EncodedJSValue encodedArgument))
