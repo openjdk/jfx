@@ -725,7 +725,7 @@ macro functionArityCheck(opcodeName, doneLabel)
     addi 1, t2, t3
     andi ~1, t3
     lshiftp 3, t3
-    subp cfr, t3, t5
+    subp sp, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
         bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK

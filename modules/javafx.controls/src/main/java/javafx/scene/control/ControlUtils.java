@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -163,30 +164,33 @@ class ControlUtils {
         };
     }
 
+    private static <S> void processContiguousRanges(MultipleSelectionModelBase<S> sm, BitSet indices, boolean isSet) {
+        int begin = indices.nextSetBit(0);
+        while (begin >= 0) {
+            int end = indices.nextClearBit(begin);
+            sm.selectedIndices.set(begin, end, isSet);
+            begin = indices.nextSetBit(end);
+        }
+    }
+
     public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
             sm.startAtomic();
 
-            final List<Integer> removed = new ArrayList<>(c.getRemovedSize());
-            c.getRemoved().stream()
-                    .mapToInt(TablePositionBase::getRow)
-                    .distinct()
-                    .filter(removeRowFilter)
-                    .forEach(row -> {
-                        removed.add(row);
-                        sm.selectedIndices.clear(row);
-                    });
+            BitSet removed = c.getRemoved().stream()
+                .mapToInt(TablePositionBase::getRow)
+                .filter(removeRowFilter)
+                .collect(BitSet::new, BitSet::set, BitSet::or);
 
-            final int[] addedSize = new int[1];
-            c.getAddedSubList().stream()
-                    .mapToInt(TablePositionBase::getRow)
-                    .distinct()
-                    .forEach(row -> {
-                        addedSize[0]++;
-                        sm.selectedIndices.set(row);
-                    });
+            processContiguousRanges(sm, removed, false);
+
+            BitSet added = c.getAddedSubList().stream()
+                .mapToInt(TablePositionBase::getRow)
+                .collect(BitSet::new, BitSet::set, BitSet::or);
+
+            processContiguousRanges(sm, added, true);
 
             sm.stopAtomic();
 
@@ -197,12 +201,13 @@ class ControlUtils {
                 int tpRow = c.getList().get(from).getRow();
                 from = sm.selectedIndices.indexOf(tpRow);
             }
-            final int to = from + addedSize[0];
+            int to = from + added.cardinality();
 
+            List<Integer> removedIndices = removed.stream().boxed().toList();
             if (c.wasReplaced()) {
-                sm.selectedIndices._nextReplace(from, to, removed);
+                sm.selectedIndices._nextReplace(from, to, removedIndices);
             } else if (c.wasRemoved()) {
-                sm.selectedIndices._nextRemove(from, removed);
+                sm.selectedIndices._nextRemove(from, removedIndices);
             } else if (c.wasAdded()) {
                 sm.selectedIndices._nextAdd(from, to);
             }

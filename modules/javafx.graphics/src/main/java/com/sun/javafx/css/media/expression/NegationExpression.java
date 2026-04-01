@@ -28,6 +28,7 @@ package com.sun.javafx.css.media.expression;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
+import com.sun.javafx.css.media.TriState;
 import java.util.Objects;
 
 /**
@@ -57,6 +58,20 @@ public final class NegationExpression implements MediaQuery {
     }
 
     @Override
+    public TriState evaluate() {
+        return switch (expression.evaluate()) {
+            case TRUE -> TriState.FALSE;
+            case FALSE -> TriState.TRUE;
+            case UNKNOWN -> TriState.UNKNOWN;
+        };
+    }
+
+    @Override
+    public boolean evaluate(MediaQueryContext context) {
+        return !expression.evaluate(context);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         return obj instanceof NegationExpression other && expression.equals(other.expression) ;
     }
@@ -64,11 +79,6 @@ public final class NegationExpression implements MediaQuery {
     @Override
     public int hashCode() {
         return Objects.hash(NegationExpression.class, expression);
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return !expression.evaluate(context);
     }
 
     @Override

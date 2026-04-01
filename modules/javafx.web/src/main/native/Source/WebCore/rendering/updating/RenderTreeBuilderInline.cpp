@@ -217,6 +217,8 @@ void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent,
 
 void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* beforeChild, RenderPtr<RenderBlock> newBlockBox, RenderPtr<RenderObject> child, RenderBoxModelObject* oldCont)
 {
+    RepaintBlocker blocker(parent.document());
+
     ASSERT(newBlockBox);
     auto& addedBlockBox = *newBlockBox;
     RenderBlock* pre = nullptr;
