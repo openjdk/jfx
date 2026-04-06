@@ -302,7 +302,7 @@ void WindowContext::process_map() {
         h = DEFAULT_HEIGHT;
     }
 
-    move_resize(loc.x, loc.y, loc_changed, loc_changed, size.width, size.height);
+    move_resize(loc.x, loc.y, loc_changed, loc_changed, w, h);
     mapped = true;
 
     if (initial_state_mask != 0) {
