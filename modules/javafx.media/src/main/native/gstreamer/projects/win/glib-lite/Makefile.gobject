@@ -61,9 +61,9 @@ CFLAGS =   -DWIN32 \
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
 ifeq ($(BUILD_TYPE), Release)
-    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
+    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -O1 -Oy -MD -Gy -GF
 else # debug
-    CFLAGS += -D_DEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    CFLAGS += -D_DEBUG -DG_DISABLE_ASSERT -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
     LIBFLAGS +=  -libpath:strmiids.lib
 endif
 

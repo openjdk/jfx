@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import static javafx.scene.layout.AnchorPane.setTopAnchor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.Collection;
-import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -46,15 +44,10 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 
 /**
  * Test for MouseEventFirer.
- * <p>
- * The test is parameterized on not/using (old/new) the alternative mouseEvent creation
- * path.
  */
 public class MouseEventFirerTest {
 
@@ -73,66 +66,57 @@ public class MouseEventFirerTest {
 
 //------- standalone node
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocalStandaloneDeltaNegative(boolean useAlternative) {
+    @Test
+    public void testLocalStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
-        assertLocal(useAlternative, button, - 10, - 5);
+        assertLocal(button, - 10, - 5);
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocalStandaloneDelta(boolean useAlternative) {
+    @Test
+    public void testLocalStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
-        assertLocal(useAlternative, button, 10, 5);
+        assertLocal(button, 10, 5);
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocalStandalone(boolean useAlternative) {
+    @Test
+    public void testLocalStandalone() {
         Button button = new Button("standalone button, a bit longish");
-        assertLocal(useAlternative, button, 0, 0);
+        assertLocal(button, 0, 0);
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinatesStandaloneDeltaNegative(boolean useAlternative) {
+    @Test
+    public void testMouseCoordinatesStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
-        assertMouseCoordinatesDelta(useAlternative, button, - 10, - 5);
+        assertMouseCoordinatesDelta(button, - 10, - 5);
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinatesStandaloneDelta(boolean useAlternative) {
+    @Test
+    public void testMouseCoordinatesStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
-        assertMouseCoordinatesDelta(useAlternative, button, 10, 5);
+        assertMouseCoordinatesDelta(button, 10, 5);
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinatesStandalone(boolean useAlternative) {
+    @Test
+    public void testMouseCoordinatesStandalone() {
         Button button = new Button("standalone button, a bit longish");
-        assertMouseCoordinatesDelta(useAlternative, button, 0, 0);
+        assertMouseCoordinatesDelta(button, 0, 0);
     }
 
 // --------- test local coordinates
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocalDeltaNegative(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertLocal(useAlternative, child, - 10, - 5));
+    @Test
+    public void testLocalDeltaNegative() {
+        content.getChildren().forEach(child -> assertLocal(child, - 10, - 5));
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocalDelta(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertLocal(useAlternative, child, 10, 5));
+    @Test
+    public void testLocalDelta() {
+        content.getChildren().forEach(child -> assertLocal(child, 10, 5));
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testLocal(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertLocal(useAlternative, child, 0, 0));
+    @Test
+    public void testLocal() {
+        content.getChildren().forEach(child -> assertLocal(child, 0, 0));
     }
 
     /**
@@ -140,8 +124,8 @@ public class MouseEventFirerTest {
      * and asserts the local mouse coordinates.
      *
      */
-    protected void assertLocal(boolean useAlternative, Node target, double deltaX, double deltaY) {
-        MouseEventFirer firer = new MouseEventFirer(target, useAlternative);
+    protected void assertLocal(Node target, double deltaX, double deltaY) {
+        MouseEventFirer firer = new MouseEventFirer(target);
         String text = target instanceof Labeled ? ((Labeled) target).getText() : target.getId();
         target.setOnMousePressed(e -> {
             double width = target.getLayoutBounds().getWidth();
@@ -154,30 +138,27 @@ public class MouseEventFirerTest {
 
 //------------ test scene/screen coordinates
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinatesDeltaNegative(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(useAlternative, child, - 10, - 5));
+    @Test
+    public void testMouseCoordinatesDeltaNegative() {
+        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(child, - 10, - 5));
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinatesDelta(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(useAlternative, child, 10, 5));
+    @Test
+    public void testMouseCoordinatesDelta() {
+        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(child, 10, 5));
     }
 
-    @ParameterizedTest
-    @MethodSource("data")
-    public void testMouseCoordinates(boolean useAlternative) {
-        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(useAlternative, child, 0, 0));
+    @Test
+    public void testMouseCoordinates() {
+        content.getChildren().forEach(child -> assertMouseCoordinatesDelta(child, 0, 0));
     }
 
     /**
      * Fires a mousePressed with the given x/y location on the given target
      *  and asserts basic mouseEvent constraints.
      */
-    protected void assertMouseCoordinatesDelta(boolean useAlternative, Node target, double deltaX, double deltaY) {
-        MouseEventFirer firer = new MouseEventFirer(target, useAlternative);
+    protected void assertMouseCoordinatesDelta(Node target, double deltaX, double deltaY) {
+        MouseEventFirer firer = new MouseEventFirer(target);
         target.setOnMousePressed(this::assertMouseEventCoordinates);
         firer.fireMousePressed(deltaX, deltaY);
     }
@@ -198,22 +179,11 @@ public class MouseEventFirerTest {
         assertEquals(screenP.getY(), mouse.getScreenY(), EPS, "screenY of " + text);
     }
 
- // ------------- parameterized in not/alternative mouseEvent creation
-
-    private static Collection<Boolean> data() {
-        // current / alternative mouseEvent creation
-        return List.of(
-            // @Ignore("8253769")
-            // false,
-            true
-        );
-    }
-
- // ------------ setup/cleanup/intial
+// ------------ setup/cleanup/intial
 
     @Test
     public void testFirer() {
-        new MouseEventFirer(topLeft, true);
+        new MouseEventFirer(topLeft);
         assertSame(scene, topLeft.getScene(), "sanity: firer must not change hierarchy");
         assertSame(stage, topLeft.getScene().getWindow(), "sanity: firer must not change hierarchy");
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.collections.ObservableListWrapper;
 import javafx.collections.ListChangeBuilderShim;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableListWrapperShim;
@@ -552,4 +554,181 @@ public class ListChangeBuilderTest {
         builder.endChange();
     }
 
+    /**
+     * <ul>
+     *     <li>An element is added on index 0</li>
+     *     <li>An element is removed on index 2</li>
+     *     <li>The element on index 0 is removed again</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the change should have the correct calculated index (from).
+     */
+    @Test
+    public void testAddRemoveOnSameIndexWithRemove() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2)));
+
+        list.addListener((ListChangeListener<? super Integer>) change -> {
+            change.next();
+            assertEquals(1, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(2), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [0, 1, 2]
+        list.addFirst(0);
+        // [0, 1]
+        list.remove(2);
+        // [1]
+        list.remove(0);
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 0</li>
+     *     <li>An element is added on index 3</li>
+     *     <li>The element on index 0 is removed again</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the change should have the correct calculated index (from).
+     */
+    @Test
+    public void testAddRemoveOnSameIndexWithAdd() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2)));
+
+        list.addListener((ListChangeListener<? super Integer>) change -> {
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(3), change.getAddedSubList());
+
+            assertFalse(change.wasRemoved());
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [0, 1, 2]
+        list.addFirst(0);
+        // [0, 1, 2, 3]
+        list.add(3);
+        // [1, 2, 3]
+        list.removeFirst();
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 2</li>
+     *     <li>An element is removed on index 4</li>
+     *     <li>An element is removed on index 0</li>
+     *     <li>The first added element (index 2) is now removed on index 1</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the second change should have the correct calculated index (from).
+     */
+    @Test
+    public void testIndirectAddRemoveOnSameIndexWithRemoved() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2, 3, 4)));
+
+        list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
+            change.next();
+            assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(4), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [1, 2, 6, 3, 4]
+        list.add(2, 6);
+        // [1, 2, 6, 3]
+        list.remove(4);
+        // [2, 6, 3]
+        list.remove(0);
+        // [2, 3]
+        list.remove(1);
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 2</li>
+     *     <li>An element is added on index 4</li>
+     *     <li>An element is removed on index 0</li>
+     *     <li>The first added element (index 2) is now removed on index 1</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the second change should have the correct calculated index (from).
+     */
+    @Test
+    public void testIndirectAddRemoveOnSameIndexWithAdded() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2, 3, 4)));
+
+        list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
+            change.next();
+            assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(5), change.getAddedSubList());
+
+            assertFalse(change.wasRemoved());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [1, 2, 6, 3, 4]
+        list.add(2, 6);
+        // [1, 2, 6, 3, 5, 4]
+        list.add(4, 5);
+        // [2, 6, 3, 5, 4]
+        list.remove(0);
+        // [2, 3, 5, 4]
+        list.remove(1);
+
+        list.doEndChange();
+    }
+
+    private static class ExposedObservableList<E> extends ObservableListWrapper<E> {
+        ExposedObservableList(List<E> list) {
+            super(list);
+        }
+        public void doBeginChange() {
+            beginChange();
+        }
+        public void doEndChange() {
+            endChange();
+        }
+    }
 }

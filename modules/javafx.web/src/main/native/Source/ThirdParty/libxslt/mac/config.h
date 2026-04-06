@@ -107,7 +107,7 @@
 #define PACKAGE_NAME "libxslt"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxslt 1.1.43"
+#define PACKAGE_STRING "libxslt 1.1.45"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxslt"
@@ -116,7 +116,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.1.43"
+#define PACKAGE_VERSION "1.1.45"
 
 /* Define to 1 if all of the C89 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for
@@ -184,15 +184,11 @@
 #ifndef __STDC_WANT_IEC_60559_DFP_EXT__
 # define __STDC_WANT_IEC_60559_DFP_EXT__ 1
 #endif
-/* Enable extensions specified by C23 Annex F.  */
-#ifndef __STDC_WANT_IEC_60559_EXT__
-# define __STDC_WANT_IEC_60559_EXT__ 1
-#endif
 /* Enable extensions specified by ISO/IEC TS 18661-4:2015.  */
 #ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
 # define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
 #endif
-/* Enable extensions specified by C23 Annex H and ISO/IEC TS 18661-3:2015.  */
+/* Enable extensions specified by ISO/IEC TS 18661-3:2015.  */
 #ifndef __STDC_WANT_IEC_60559_TYPES_EXT__
 # define __STDC_WANT_IEC_60559_TYPES_EXT__ 1
 #endif
@@ -216,7 +212,7 @@
 
 
 /* Version number of package */
-#define VERSION "1.1.43"
+#define VERSION "1.1.45"
 
 /* Define if debugging support is enabled */
 /* #undef WITH_DEBUGGER */

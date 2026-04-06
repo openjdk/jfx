@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1361,6 +1361,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1openURI
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(NSEC_PER_SEC)); // 1 second timeout
 
+    dispatch_retain(semaphore);
     [workspace     openURLs:urls
        withApplicationAtURL:defaultBrowser
               configuration:configuration
@@ -1370,9 +1371,11 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1openURI
                    status = (OSStatus) error.code;
                }
                dispatch_semaphore_signal(semaphore);
+               dispatch_release(semaphore);
            }];
 
     dispatch_semaphore_wait(semaphore, timeout);
+    dispatch_release(semaphore);
 
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
