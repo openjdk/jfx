@@ -865,6 +865,7 @@ private:
 
     void unobscuredContentSizeChanged() final;
 
+    void scrollToTextFragmentRetryTimerFired();
     void textFragmentIndicatorTimerFired();
 
     // ScrollableArea interface
@@ -919,11 +920,13 @@ private:
 
     void updateWidgetPositionsTimerFired();
 
-    bool scrollToFragmentInternal(StringView);
+    enum class IsRetry : bool { No, Yes };
+    bool scrollToTextFragment(IsRetry = IsRetry::No);
+    bool scrollToAnchorFragment(StringView);
     void scheduleScrollToAnchorAndTextFragment();
     void scrollToAnchorAndTextFragmentNowIfNeeded();
     void scrollToAnchor();
-    void scrollToTextFragmentRange();
+    void scrollToPendingTextFragmentRange();
     void scrollPositionChanged(const ScrollPosition& oldPosition, const ScrollPosition& newPosition);
     void scrollableAreaSetChanged();
     void scheduleScrollEvent();
@@ -1004,6 +1007,9 @@ private:
     Timer m_delayedScrollToFocusedElementTimer;
     Timer m_speculativeTilingEnableTimer;
     Timer m_delayedTextFragmentIndicatorTimer;
+
+    Timer m_scrollToTextFragmentRetryTimer;
+    std::optional<MonotonicTime> m_scrollToTextFragmentInitialAttemptTime;
 
     MonotonicTime m_lastPaintTime;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,6 +93,7 @@ final class ListChangeBuilder<E> {
 
     private void insertRemoved(int pos, final E removed) {
         int idx = findSubChange(pos, addRemoveChanges);
+        int shiftFrom;
         if (idx < 0) { // Not found
             idx = ~idx;
             SubChange<E> change;
@@ -109,14 +110,18 @@ final class ListChangeBuilder<E> {
                 removedList.add(removed);
                 addRemoveChanges.add(idx, new SubChange<>(pos, pos, removedList, EMPTY_PERM, false));
             }
+            shiftFrom = idx + 1;
         } else {
             SubChange<E> change = addRemoveChanges.get(idx);
             change.to--; // Removed one element from the previously added list
             if (change.from == change.to && (change.removed == null || change.removed.isEmpty())) {
-                    addRemoveChanges.remove(idx);
+                addRemoveChanges.remove(idx);
+                shiftFrom = idx;
+            } else {
+                shiftFrom = idx + 1;
             }
         }
-        for (int i = idx + 1; i < addRemoveChanges.size(); ++i) {
+        for (int i = shiftFrom; i < addRemoveChanges.size(); ++i) {
             SubChange<E> change = addRemoveChanges.get(i);
             change.from--;
             change.to--;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3664,6 +3664,13 @@ public class TreeTableView<S> extends Control {
                         // get the TreeItem the event occurred on - we only need to
                         // shift if the tree item is expanded
                         TreeItem<S> eventTreeItem = e.getTreeItem();
+                        if (!treeTableView.isShowRoot()
+                                && eventTreeItem == treeTableView.getRoot()
+                                && getFocusedIndex() == 0
+                                && getFocusedItem() == treeTableView.getRoot()) {
+                            focus(-1);
+                            return;
+                        }
                         if (ControlUtils.isTreeItemIncludingAncestorsExpanded(eventTreeItem)) {
                             for (int i = 0; i < e.getAddedChildren().size(); i++) {
                                 // get the added item and determine the row it is in
