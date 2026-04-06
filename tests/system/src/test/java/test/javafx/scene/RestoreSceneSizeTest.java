@@ -24,6 +24,9 @@
  */
 package test.javafx.scene;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -36,9 +39,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 public class RestoreSceneSizeTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);

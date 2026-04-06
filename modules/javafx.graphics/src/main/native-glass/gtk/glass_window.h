@@ -31,8 +31,6 @@
 //  Native Windows wider or taller than 32767 pixels are not supported
 #define MAX_WINDOW_SIZE 32767
 
-
-
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
 

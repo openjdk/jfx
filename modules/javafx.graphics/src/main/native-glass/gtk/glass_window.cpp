@@ -286,12 +286,23 @@ void WindowContext::process_map() {
 
     bool loc_changed = window_location.was_assigned();
 
-    move_resize(loc.x, loc.y, loc_changed, loc_changed, size.width, size.height);
+    int w = size.width;
+    int h = size.height;
+
+    if (w <= 0) {
+        w = DEFAULT_WIDTH;;
+    }
+
+    if (h <= 0) {
+        h = DEFAULT_HEIGHT;
+    }
+
+    move_resize(loc.x, loc.y, loc_changed, loc_changed, w, h);
     mapped = true;
 
-    if (initial_state_mask == 0) return;
-
-    update_initial_state();
+    if (initial_state_mask != 0) {
+        update_initial_state();
+    }
 }
 
 void WindowContext::process_focus(GdkEventFocus *event) {
@@ -308,21 +319,20 @@ void WindowContext::process_focus(GdkEventFocus *event) {
         }
     }
 
-    if (!jwindow) return;
-
-    if (event->in && !isEnabled()) {
-        // when the user tries to activate a disabled window, send FOCUS_DISABLED
-        LOG("jWindowNotifyFocusDisabled");
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    } else {
-        LOG("%s\n", (event->in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
-                              : "com_sun_glass_events_WindowEvent_FOCUS_LOST");
-
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
-                event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
-                         : com_sun_glass_events_WindowEvent_FOCUS_LOST);
-        CHECK_JNI_EXCEPTION(mainEnv)
+    if (jwindow) {
+        if (!event->in || isEnabled()) {
+            LOG("jWindowNotifyFocusDisabled");
+            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
+                    event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
+                              : com_sun_glass_events_WindowEvent_FOCUS_LOST);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        } else {
+            LOG("%s\n", (event->in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
+                                  : "com_sun_glass_events_WindowEvent_FOCUS_LOST");
+            // when the user tries to activate a disabled window, send FOCUS_DISABLED
+            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
 }
 
@@ -383,11 +393,10 @@ void WindowContext::process_destroy() {
 
 void WindowContext::process_delete() {
     LOG("process_delete\n");
-    if (!jwindow || !isEnabled()) return;
-
-    LOG("jWindowNotifyClose\n");
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (jwindow && isEnabled()) {
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::notify_repaint() {
@@ -465,24 +474,24 @@ void WindowContext::process_mouse_button(GdkEventButton* event, bool synthesized
 
     jint button = gdk_button_number_to_mouse_button(event->button);
 
-    if (!jview || button == com_sun_glass_events_MouseEvent_BUTTON_NONE) return;
-
-    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-            press ? com_sun_glass_events_MouseEvent_DOWN : com_sun_glass_events_MouseEvent_UP,
-            button,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            gdk_modifier_mask_to_glass(state),
-            (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
-            synthesized);
-    CHECK_JNI_EXCEPTION(mainEnv)
-
-    if (jview && event->button == 3 && press) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyMenu,
-                (jint)event->x, (jint)event->y,
-                (jint)event->x_root, (jint)event->y_root,
-                JNI_FALSE);
+    if (jview && button != com_sun_glass_events_MouseEvent_BUTTON_NONE) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                press ? com_sun_glass_events_MouseEvent_DOWN : com_sun_glass_events_MouseEvent_UP,
+                button,
+                (jint) event->x, (jint) event->y,
+                (jint) event->x_root, (jint) event->y_root,
+                gdk_modifier_mask_to_glass(state),
+                (event->button == 3 && press) ? JNI_TRUE : JNI_FALSE,
+                synthesized);
         CHECK_JNI_EXCEPTION(mainEnv)
+
+        if (jview && event->button == 3 && press) {
+            mainEnv->CallVoidMethod(jview, jViewNotifyMenu,
+                    (jint)event->x, (jint)event->y,
+                    (jint)event->x_root, (jint)event->y_root,
+                    JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
 }
 
@@ -516,17 +525,17 @@ void WindowContext::process_mouse_motion(GdkEventMotion *event) {
         button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
     }
 
-    if (!jview) return;
-
-    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-            isDrag ? com_sun_glass_events_MouseEvent_DRAG : com_sun_glass_events_MouseEvent_MOVE,
-            button,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            glass_modifier,
-            JNI_FALSE,
-            JNI_FALSE);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (jview) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                isDrag ? com_sun_glass_events_MouseEvent_DRAG : com_sun_glass_events_MouseEvent_MOVE,
+                button,
+                (jint) event->x, (jint) event->y,
+                (jint) event->x_root, (jint) event->y_root,
+                glass_modifier,
+                JNI_FALSE,
+                JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
@@ -558,40 +567,40 @@ void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
         dy = dx;
         dx = t;
     }
-    if (!jview) return;
-
-    mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            dx, dy,
-            gdk_modifier_mask_to_glass(event->state),
-            (jint) 0, (jint) 0,
-            (jint) 0, (jint) 0,
-            (jdouble) 40.0, (jdouble) 40.0);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (jview) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
+                (jint) event->x, (jint) event->y,
+                (jint) event->x_root, (jint) event->y_root,
+                dx, dy,
+                gdk_modifier_mask_to_glass(event->state),
+                (jint) 0, (jint) 0,
+                (jint) 0, (jint) 0,
+                (jdouble) 40.0, (jdouble) 40.0);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::process_mouse_cross(GdkEventCrossing *event) {
     bool enter = event->type == GDK_ENTER_NOTIFY;
-    if (!jview) return;
+    if (jview) {
+        guint state = event->state;
+        if (enter) { // workaround for JDK-8126843
+            state &= ~MOUSE_BUTTONS_MASK;
+        }
 
-    guint state = event->state;
-    if (enter) { // workaround for JDK-8126843
-        state &= ~MOUSE_BUTTONS_MASK;
+        if (enter != is_mouse_entered) {
+            is_mouse_entered = enter;
+            mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                    enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
+                    com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                    (jint) event->x, (jint) event->y,
+                    (jint) event->x_root, (jint) event->y_root,
+                    gdk_modifier_mask_to_glass(state),
+                    JNI_FALSE,
+                    JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     }
-
-    if (enter == is_mouse_entered) return;
-
-    is_mouse_entered = enter;
-    mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
-            enter ? com_sun_glass_events_MouseEvent_ENTER : com_sun_glass_events_MouseEvent_EXIT,
-            com_sun_glass_events_MouseEvent_BUTTON_NONE,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            gdk_modifier_mask_to_glass(state),
-            JNI_FALSE,
-            JNI_FALSE);
-    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_key(GdkEventKey *event) {
@@ -633,14 +642,14 @@ void WindowContext::process_key(GdkEventKey *event) {
 
     // TYPED events should only be sent for printable characters.
     // jview is checked again because previous call might be an exit key
-    if (!press || key <= 0 || !jview) return;
-
-    mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-            com_sun_glass_events_KeyEvent_TYPED,
-            com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-            jChars,
-            glassModifier);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (press && key > 0 && jview) { // TYPED events should only be sent for printable characters.
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::paint(void* data, jint width, jint height) {
@@ -746,7 +755,10 @@ void WindowContext::ungrab_focus() {
 
     WindowContext::sm_grab_window = nullptr;
 
-    if (!jwindow) return;
+    if (jwindow) {
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 
     LOG("jWindowNotifyFocusUngrab\n");
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
@@ -808,20 +820,20 @@ void WindowContext::request_frame_extents() {
     Display *display = GDK_DISPLAY_XDISPLAY(gdk_window_get_display(gdk_window));
     static Atom rfeAtom = XInternAtom(display, "_NET_REQUEST_FRAME_EXTENTS", False);
 
-    if (rfeAtom == None) return;
+    if (rfeAtom != None) {
+        XClientMessageEvent clientMessage;
+        memset(&clientMessage, 0, sizeof(clientMessage));
 
-    XClientMessageEvent clientMessage;
-    memset(&clientMessage, 0, sizeof(clientMessage));
+        clientMessage.type = ClientMessage;
+        clientMessage.window = GDK_WINDOW_XID(gdk_window);
+        clientMessage.message_type = rfeAtom;
+        clientMessage.format = 32;
 
-    clientMessage.type = ClientMessage;
-    clientMessage.window = GDK_WINDOW_XID(gdk_window);
-    clientMessage.message_type = rfeAtom;
-    clientMessage.format = 32;
-
-    XSendEvent(display, XDefaultRootWindow(display), False,
-               SubstructureRedirectMask | SubstructureNotifyMask,
-               (XEvent *) &clientMessage);
-    XFlush(display);
+        XSendEvent(display, XDefaultRootWindow(display), False,
+                   SubstructureRedirectMask | SubstructureNotifyMask,
+                   (XEvent *) &clientMessage);
+        XFlush(display);
+    }
 }
 
 void WindowContext::update_initial_state() {
@@ -1139,17 +1151,19 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         window_size.set({ww, wh});
     }
 
-    glong to_screen = getScreenPtrForLocation(event->x, event->y);
-    if (to_screen == -1 || to_screen == screen) return;
 
-    if (jwindow) {
-        LOG("jWindowNotifyMoveToAnotherScreen\n");
-        //notify screen changed
-        jobject jScreen = createJavaScreen(mainEnv, to_screen);
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
-        CHECK_JNI_EXCEPTION(mainEnv)
+    glong to_screen = getScreenPtrForLocation(event->x, event->y);
+    if (to_screen != -1) {
+        if (to_screen != screen) {
+            if (jwindow) {
+                //notify screen changed
+                jobject jScreen = createJavaScreen(mainEnv, to_screen);
+                mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
+                CHECK_JNI_EXCEPTION(mainEnv)
+            }
+            screen = to_screen;
+        }
     }
-    screen = to_screen;
 }
 
 void WindowContext::update_window_constraints() {
@@ -1350,9 +1364,9 @@ void WindowContext::exit_fullscreen() {
 
 void WindowContext::request_focus() {
     LOG("request_focus\n");
-    if (!is_visible()) return;
-
-    gdk_window_focus(gdk_window, GDK_CURRENT_TIME);
+    if (is_visible()) {
+        gdk_window_focus(gdk_window, GDK_CURRENT_TIME);
+    }
 }
 
 void WindowContext::set_focusable(bool focusable) {
@@ -1402,12 +1416,17 @@ void WindowContext::set_icon(GdkPixbuf* icon) {
 
 void WindowContext::to_front() {
     LOG("to_front\n");
-    gdk_window_raise(gdk_window);
+    if (GDK_IS_WINDOW(gdk_window)) {
+        gdk_window_raise(gdk_window);
+    }
 }
 
 void WindowContext::to_back() {
     LOG("to_back\n");
-    gdk_window_lower(gdk_window);
+
+    if (GDK_IS_WINDOW(gdk_window)) {
+        gdk_window_lower(gdk_window);
+    }
 }
 
 void WindowContext::set_modal(bool modal, WindowContext* parent) {
@@ -1538,18 +1557,18 @@ void WindowContext::remove_wmf(GdkWMFunction wmf) {
 
 void WindowContext::notify_on_top(bool top) {
     // Do not report effective (i.e. native) values to the FX, only if the user sets it manually
-    if (top == effective_on_top() || !jwindow) return;
-
-    if (on_top_inherited() && !top) {
-        // Disallow user's "on top" handling on windows that inherited the property
-        gdk_window_set_keep_above(gdk_window, true);
-    } else {
-        on_top = top;
-        update_ontop_tree(top);
-        mainEnv->CallVoidMethod(jwindow,
-                jWindowNotifyLevelChanged,
-                top ? com_sun_glass_ui_Window_Level_FLOATING :  com_sun_glass_ui_Window_Level_NORMAL);
-        CHECK_JNI_EXCEPTION(mainEnv);
+    if (top != effective_on_top() && jwindow) {
+        if (on_top_inherited() && !top) {
+            // Disallow user's "on top" handling on windows that inherited the property
+            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
+        } else {
+            on_top = top;
+            update_ontop_tree(top);
+            mainEnv->CallVoidMethod(jwindow,
+                    jWindowNotifyLevelChanged,
+                    top ? com_sun_glass_ui_Window_Level_FLOATING :  com_sun_glass_ui_Window_Level_NORMAL);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
     }
 }
 
@@ -1692,18 +1711,18 @@ void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
     // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
     // from the client area to the resize border. This is indicated by is_mouse_entered
     // being false at this point.
-    if (!get_jview() || !is_mouse_entered || event->type == GDK_ENTER_NOTIFY) return;
-
-    is_mouse_entered = false;
-    mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
-        com_sun_glass_events_MouseEvent_EXIT,
-        com_sun_glass_events_MouseEvent_BUTTON_NONE,
-        (jint) event->x, (jint) event->y,
-        (jint) event->x_root, (jint) event->y_root,
-        gdk_modifier_mask_to_glass(event->state),
-        JNI_FALSE,
-        JNI_FALSE);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
+        is_mouse_entered = false;
+        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
+            com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(event->state),
+            JNI_FALSE,
+            JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 /*
@@ -1770,18 +1789,18 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
 
     // If the cursor has moved to a resize border, we need to send MouseEvent.EXIT to FX,
     // since from the perspective of FX, resize borders are not a part of client area.
-    if (!is_mouse_entered || !get_jview()) return;
-
-    is_mouse_entered = false;
-    mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
-        com_sun_glass_events_MouseEvent_EXIT,
-        com_sun_glass_events_MouseEvent_BUTTON_NONE,
-        (jint) event->x, (jint) event->y,
-        (jint) event->x_root, (jint) event->y_root,
-        gdk_modifier_mask_to_glass(event->state),
-        JNI_FALSE,
-        JNI_FALSE);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    if (is_mouse_entered && get_jview()) {
+        is_mouse_entered = false;
+        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
+            com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(event->state),
+            JNI_FALSE,
+            JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 /*
