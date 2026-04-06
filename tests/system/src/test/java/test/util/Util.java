@@ -38,8 +38,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.Node;
@@ -47,7 +49,9 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
+import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.beans.value.ChangeListener;
 import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
 
@@ -55,6 +59,8 @@ import com.sun.javafx.PlatformUtil;
  * Utility methods for life-cycle testing
  */
 public class Util {
+    public static final String PARAMETERIZED_TEST_DISPLAY = "{displayName} [{index}] {arguments}";
+
     /** Default startup timeout value in seconds */
     public static final int STARTUP_TIMEOUT = 15;
     /** Test timeout value in milliseconds */
@@ -335,6 +341,50 @@ public class Util {
     }
 
     /**
+     * Waits for a boolean property to reach the expected value.
+     * If the property already has the expected value, returns immediately.
+     * The check and listener registration happen atomically on the FX Application Thread.
+     *
+     * @param property the property to observe
+     * @param expected the expected value
+     * @param message  description used in the timeout failure message
+     */
+    public static void waitForBoolean(ReadOnlyBooleanProperty property, boolean expected, String message) {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<ChangeListener<Boolean>> ref = new AtomicReference<>();
+
+        runAndWait(() -> {
+            if (property.get() == expected) {
+                latch.countDown();
+            } else {
+                ChangeListener<Boolean> listener = (_, _, newVal) -> {
+                    if (newVal == expected) {
+                        property.removeListener(ref.get());
+                        latch.countDown();
+                    }
+                };
+                ref.set(listener);
+                property.addListener(listener);
+            }
+        });
+
+        try {
+            boolean ok = latch.await(TIMEOUT, TimeUnit.MILLISECONDS);
+
+            if (!ok) {
+                // remove listener on timeout
+                runAndWait(() -> property.removeListener(ref.get()));
+            }
+
+            Assertions.assertTrue(ok, "Timeout waiting for: " + message);
+
+        } catch (Exception e) {
+            runAndWait(() -> property.removeListener(ref.get()));
+            fail(e);
+        }
+    }
+
+    /**
      * Makes double click of the mouse left button.
      */
     public static void doubleClick(Robot robot) {
@@ -463,5 +513,23 @@ public class Util {
      */
     public static boolean isNear(double a, double b) {
         return Math.abs(a - b) < 0.1;
+    }
+
+
+    /**
+     * Finds the {@link Screen} where the top-left corner of the given {@link Stage} is located.
+     *
+     * @param stage the {@link Stage} to check
+     * @return the {@link Screen} containing the stage's top-left corner or {@link Screen#getPrimary()}
+     */
+    public static Screen getScreen(Stage stage) {
+        for (Screen screen : Screen.getScreens()) {
+            Rectangle2D bounds = screen.getVisualBounds();
+            if (bounds.contains(stage.getX(), stage.getY())) {
+                return screen;
+            }
+        }
+
+        return Screen.getPrimary();
     }
 }

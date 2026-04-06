@@ -120,7 +120,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnMaximizedThenSizeToScene() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.setMaximized(true);
             stage.sizeToScene();
@@ -132,7 +131,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnFullscreenThenSizeToScene() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.setFullScreen(true);
             stage.sizeToScene();
@@ -144,7 +142,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnSizeToSceneThenMaximized() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.sizeToScene();
             stage.setMaximized(true);
@@ -156,7 +153,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeOnSizeToSceneThenFullscreen() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.sizeToScene();
             stage.setFullScreen(true);
@@ -168,7 +164,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowSizeToSceneThenFullscreen() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -181,7 +176,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowSizeToSceneThenMaximized() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -194,7 +188,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowFullscreenThenSizeToScene() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 
@@ -207,7 +200,6 @@ class SizeToSceneTest {
 
     @Test
     void testInitialSizeAfterShowMaximizedThenSizeToScene() {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8353612
         createAndShowStage(stage -> {
             stage.show();
 

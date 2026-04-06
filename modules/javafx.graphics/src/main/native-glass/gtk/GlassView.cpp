@@ -102,7 +102,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getX
 
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
-        return view->current_window->get_geometry().view_x;
+        return view->current_window->get_view_position().x;
     }
     return 0;
 }
@@ -120,7 +120,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getY
 
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
-        return view->current_window->get_geometry().view_y;
+        return view->current_window->get_view_position().y;
     }
     return 0;
 }
@@ -269,14 +269,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
     }
 }
 
+
 /*
  * Class:     com_sun_glass_ui_gtk_GtkView
  * Method:    _enterFullscreen
  * Signature: (JZZZ)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
-  (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor)
-{
+    (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor) {
+
     (void)animate;
     (void)keepRation;
     (void)hideCursor;
@@ -284,9 +285,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         view->current_window->enter_fullscreen();
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
-        CHECK_JNI_EXCEPTION_RET(env, JNI_FALSE)
     }
+
     return JNI_TRUE;
 }
 
@@ -307,10 +307,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1exitFullscreen
         } else {
             view->current_window->exit_fullscreen();
         }
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
-        CHECK_JNI_EXCEPTION(env)
     }
-
 }
 
 } // extern "C"

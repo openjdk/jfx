@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -52,7 +51,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 // NOTE: This test does NOT extend VisualTestBase, as the focus issues mostly happen
@@ -108,8 +106,6 @@ public class StageFocusTest {
 
     @AfterEach
     public void doTeardownEach() throws InterruptedException {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8367893
-
         hideTestStage(currentTestStage);
         currentTestStage = null;
     }
@@ -181,8 +177,6 @@ public class StageFocusTest {
     @ParameterizedTest
     @FieldSource("testStages")
     public void testStageHasFocusAfterShow(Stage stage) throws InterruptedException {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8367893
-
         // TODO once we upgrade JUnit5 and have parameterized class-level tests
         //      this can be removed and be an actual @BeforeEach
         setupEach(stage);

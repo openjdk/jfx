@@ -87,13 +87,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
 
     WindowContext* parent = JLONG_TO_WINDOW_CTX(owner);
 
-    WindowContext* ctx = new WindowContextTop(obj,
-            parent,
-            screen,
-            glass_mask_to_window_frame_type(mask),
-            glass_mask_to_window_type(mask),
-            glass_mask_to_wm_function(mask)
-            );
+    WindowType type = glass_mask_to_window_type(mask);
+    WindowFrameType frameType = glass_mask_to_window_frame_type(mask);
+    GdkWMFunction wmFunctions = glass_mask_to_wm_function(mask);
+
+    WindowContext* ctx = (frameType == EXTENDED)
+        ? new WindowContextExtended(obj, parent, screen, wmFunctions)
+        : new WindowContext(obj, parent, screen, frameType, type, wmFunctions);
 
     return PTR_TO_JLONG(ctx);
 }
@@ -408,8 +408,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMaximumSize
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     if (w == 0 || h == 0) return JNI_FALSE;
-    if (w == -1) w = G_MAXSHORT;
-    if (h == -1) h = G_MAXSHORT;
 
     ctx->set_maximum_size(w, h);
     return JNI_TRUE;
@@ -535,13 +533,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getNativeWindowImp
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    GdkWindow *win = ctx->get_gdk_window();
-
-    if (win == NULL) {
-        return 0;
-    }
-
-    return GDK_WINDOW_XID(win);
+    return ctx->get_native_window();
 }
 
 } // extern "C"
