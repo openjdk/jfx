@@ -1248,11 +1248,8 @@ bool WindowContext::is_iconified() {
 }
 
 bool WindowContext::is_floating() {
-    if (!GDK_IS_WINDOW(gdk_window)) return false;
-
-    if (is_iconified() || is_maximized() || is_fullscreen()) return false;
-
-    return true;
+    return GDK_IS_WINDOW(gdk_window)
+        && !(is_iconified() || is_maximized() || is_fullscreen());
 }
 
 void WindowContext::set_visible(bool visible) {
