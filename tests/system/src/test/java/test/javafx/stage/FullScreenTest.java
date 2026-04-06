@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.waitForBoolean;
 
 class FullScreenTest extends StageTestBase {
@@ -67,7 +68,7 @@ class FullScreenTest extends StageTestBase {
     void fullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setFullScreen(true)));
 
-        waitForBoolean(getStage().fullScreenProperty(), true, "stage to enter full screen");
+        waitForBoolean(getStage().fullScreenProperty(), true);
         setFullScreen(false);
         assertSizePosition();
     }
@@ -79,7 +80,6 @@ class FullScreenTest extends StageTestBase {
 
         setFullScreen(true);
         assertFullScreenFillsScreen();
-        setFullScreen(false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -101,8 +101,7 @@ class FullScreenTest extends StageTestBase {
      */
     private void setFullScreen(boolean value) {
         Util.runAndWait(() -> getStage().setFullScreen(value));
-        waitForBoolean(getStage().fullScreenProperty(), value,
-                "stage to " + (value ? "enter" : "exit") + " full screen");
+        waitForBoolean(getStage().fullScreenProperty(), value, GEOMETRY_DELAY);
     }
 
     /**
@@ -110,7 +109,7 @@ class FullScreenTest extends StageTestBase {
      * by listening for property changes on the stage's geometry properties.
      */
     private void assertSizePosition() {
-        Util.waitForIdle(getScene());
+        Util.sleep(GEOMETRY_DELAY);
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
         assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage's X position should have remained");
@@ -118,7 +117,7 @@ class FullScreenTest extends StageTestBase {
     }
 
     private void assertFullScreenFillsScreen() {
-        Util.waitForIdle(getScene());
+        Util.sleep(GEOMETRY_DELAY);
         Rectangle2D screenBounds = Screen.getPrimary().getBounds();
         assertEquals(screenBounds.getWidth(), getStage().getWidth(), SIZING_DELTA,
                 "Full screen width should match screen width");

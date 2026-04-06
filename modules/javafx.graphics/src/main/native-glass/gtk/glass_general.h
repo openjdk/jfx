@@ -236,7 +236,82 @@ private:
     extern jclass jColorCls; // javafx.scene.paint.Color
     extern jmethodID jColorRgb; // javafx.scene.paint.Color#rgb(IIID)Ljavafx/scene/paint/Color;
 
+/*
+ * Runtime log categories, enabled via -Djavafx.glass.verbose=size,position,focus,state,lifecycle,input
+ * Multiple categories can be comma-separated. Use "all" to enable everything.
+ * Only available in DebugNative builds (-PCONF=DebugNative).
+ */
 #ifdef VERBOSE
+
+#define GTK_LOG_SIZE      (1u << 0)
+#define GTK_LOG_POSITION  (1u << 1)
+#define GTK_LOG_FOCUS     (1u << 2)
+#define GTK_LOG_STATE     (1u << 3)
+#define GTK_LOG_LIFECYCLE (1u << 4)
+#define GTK_LOG_INPUT     (1u << 5)
+#define GTK_LOG_DIALOG    (1u << 6)
+#define GTK_LOG_ALL       (0xFFFFFFFFu)
+
+extern unsigned int gtk_log_flags;
+
+void gtk_log_init(JNIEnv* env);
+
+#define LOG_SIZE(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_SIZE) { \
+            printf("[SIZE %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_POSITION(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_POSITION) { \
+            printf("[POSITION %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_FOCUS(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_FOCUS) { \
+            printf("[FOCUS %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_STATE(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_STATE) { \
+            printf("[STATE %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_LIFECYCLE(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_LIFECYCLE) { \
+            printf("[LIFECYCLE %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_INPUT(id, fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_INPUT) { \
+            printf("[INPUT %s] " fmt, (id), ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
+#define LOG_DIALOG(fmt, ...) \
+    do { \
+        if (gtk_log_flags & GTK_LOG_DIALOG) { \
+            printf("[DIALOG] " fmt, ##__VA_ARGS__); \
+            fflush(stdout); \
+        } \
+    } while(0)
+
 #define LOG(msg, ...) { printf(msg, ##__VA_ARGS__); fflush(stdout); }
 #define LOG0(msg) {printf(msg);fflush(stdout);}
 #define LOG1(msg, param) {printf(msg, param);fflush(stdout);}
@@ -252,7 +327,19 @@ private:
 #define ERROR2(msg, param1, param2) {fprintf(stderr, msg, param1, param2);fflush(stderr);}
 #define ERROR3(msg, param1, param2, param3) {fprintf(stderr, msg, param1, param2, param3);fflush(stderr);}
 #define ERROR4(msg, param1, param2, param3, param4) {fprintf(stderr, msg, param1, param2, param3, param4);fflush(stderr);}
-#else
+
+#else // !VERBOSE — release build: all logging compiles to nothing
+
+#define LOG_SIZE(id, fmt, ...)
+#define LOG_POSITION(id, fmt, ...)
+#define LOG_FOCUS(id, fmt, ...)
+#define LOG_STATE(id, fmt, ...)
+#define LOG_LIFECYCLE(id, fmt, ...)
+#define LOG_INPUT(id, fmt, ...)
+#define LOG_DIALOG(fmt, ...)
+
+static inline void gtk_log_init(JNIEnv*) {}
+
 #define LOG(msg, ...)
 #define LOG0(msg)
 #define LOG1(msg, param)
@@ -268,7 +355,8 @@ private:
 #define ERROR2(msg, param1, param2)
 #define ERROR3(msg, param1, param2, param3)
 #define ERROR4(msg, param1, param2, param3, param4)
-#endif
+
+#endif // VERBOSE
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 

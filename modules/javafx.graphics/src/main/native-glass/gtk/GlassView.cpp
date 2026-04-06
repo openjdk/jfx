@@ -276,8 +276,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
  * Signature: (JZZZ)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
-    (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor) {
-
+  (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor)
+{
     (void)animate;
     (void)keepRation;
     (void)hideCursor;

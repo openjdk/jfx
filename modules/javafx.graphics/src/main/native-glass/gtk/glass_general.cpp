@@ -30,6 +30,64 @@
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
 
+#ifdef VERBOSE
+
+unsigned int gtk_log_flags = 0;
+
+static const GDebugKey gtk_log_keys[] = {
+    { "size",      GTK_LOG_SIZE },
+    { "position",  GTK_LOG_POSITION },
+    { "focus",     GTK_LOG_FOCUS },
+    { "state",     GTK_LOG_STATE },
+    { "lifecycle", GTK_LOG_LIFECYCLE },
+    { "input",     GTK_LOG_INPUT },
+    { "dialog",    GTK_LOG_DIALOG },
+    { "all",       GTK_LOG_ALL },
+};
+
+void gtk_log_init(JNIEnv* env) {
+    jclass systemClass = env->FindClass("java/lang/System");
+    if (env->ExceptionCheck()) { env->ExceptionClear(); return; }
+
+    jmethodID getPropertyMethod = env->GetStaticMethodID(systemClass, "getProperty",
+        "(Ljava/lang/String;)Ljava/lang/String;");
+    if (env->ExceptionCheck()) { env->ExceptionClear(); return; }
+
+    jstring propName = env->NewStringUTF("javafx.glass.debug");
+    jstring propValue = (jstring)env->CallStaticObjectMethod(systemClass, getPropertyMethod, propName);
+    env->DeleteLocalRef(propName);
+
+    if (env->ExceptionCheck()) { env->ExceptionClear(); return; }
+    if (propValue == nullptr) return;
+
+    const char* value = env->GetStringUTFChars(propValue, nullptr);
+    if (value == nullptr) return;
+
+    gtk_log_flags = g_parse_debug_string(value, gtk_log_keys, G_N_ELEMENTS(gtk_log_keys));
+
+    env->ReleaseStringUTFChars(propValue, value);
+    env->DeleteLocalRef(propValue);
+
+    if (gtk_log_flags) {
+        printf("[GTK LOG] Enabled categories:");
+        if (gtk_log_flags & GTK_LOG_ALL) {
+            printf(" all");
+        } else {
+            if (gtk_log_flags & GTK_LOG_SIZE)      printf(" size");
+            if (gtk_log_flags & GTK_LOG_POSITION)  printf(" position");
+            if (gtk_log_flags & GTK_LOG_FOCUS)     printf(" focus");
+            if (gtk_log_flags & GTK_LOG_STATE)     printf(" state");
+            if (gtk_log_flags & GTK_LOG_LIFECYCLE) printf(" lifecycle");
+            if (gtk_log_flags & GTK_LOG_INPUT)     printf(" input");
+            if (gtk_log_flags & GTK_LOG_DIALOG)    printf(" dialog");
+        }
+        printf("\n");
+        fflush(stdout);
+    }
+}
+
+#endif // VERBOSE
+
 jclass jStringCls;
 jclass jByteBufferCls;
 jmethodID jByteBufferArray;

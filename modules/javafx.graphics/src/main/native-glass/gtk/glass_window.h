@@ -224,21 +224,23 @@ private:
     size_t events_processing_cnt{};
     std::set<WindowContext*> children;
 
-    jobject jwindow;
-    jobject jview{};
-
     struct WindowContext *owner;
     jlong screen;
 
-    bool is_disabled{false};
     bool on_top{false};
     bool can_be_deleted{false};
     bool mapped{false};
+    unsigned long window_id{};
     gint initial_state_mask{0};
 
     WindowFrameType frame_type;
     WindowType window_type;
 
+protected:
+    jobject jwindow;
+    jobject jview{};
+
+private:
     GtkWidget *gtk_widget{};
     GdkWindow *gdk_window{};
 
@@ -282,6 +284,8 @@ private:
      */
     static WindowContext* sm_mouse_drag_window;
 
+    static unsigned long sm_next_window_id;
+
 protected:
     bool is_mouse_entered{false};
 
@@ -290,15 +294,16 @@ public:
     WindowContext(jobject, WindowContext* _owner, long _screen,
                   WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf);
 
-    jobject get_jwindow() const { return jwindow; }
     jobject get_jview() const { return jview; }
     WindowFrameType get_frame_type() const { return frame_type; }
     WindowType get_window_type() const { return window_type; }
 
     Size get_view_size();
     Point get_view_position();
+    const char* get_log_id() const;
 
     bool isEnabled();
+    void notify_focus_disabled();
     bool hasIME();
     bool filterIME(GdkEvent*);
     void enableOrResetIME();
@@ -439,7 +444,7 @@ public:
         if (ctx != nullptr) {
             ctx->decrement_events_counter();
             if (ctx->is_dead() && ctx->get_events_count() == 0) {
-                LOG("EventsCounterHelper: delete ctx\n");
+                LOG_LIFECYCLE(ctx->get_log_id(), "EventsCounterHelper: deleting\n");
                 delete ctx;
             }
             ctx = nullptr;

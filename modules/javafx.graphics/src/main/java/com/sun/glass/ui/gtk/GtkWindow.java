@@ -130,14 +130,14 @@ class GtkWindow extends Window {
     @Override
     protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
-        return isMinimized();
+        return minimize;
     }
 
     @Override
     protected boolean _maximize(long ptr, boolean maximize,
                                 boolean wasMaximized) {
         maximizeImpl(ptr, maximize, wasMaximized);
-        return isMaximized();
+        return maximize;
     }
 
     protected void notifyStateChanged(final int state) {

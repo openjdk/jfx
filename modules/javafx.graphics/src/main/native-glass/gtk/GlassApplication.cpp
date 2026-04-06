@@ -133,6 +133,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
+    gtk_log_init(env);
+
     checkGtkVersion(env, version);
 }
 
@@ -459,7 +461,7 @@ bool is_window_enabled_for_event(GdkWindow * window, WindowContext *ctx, gint ev
             break;
     }//switch
 
-    if (ctx != NULL ) {
+    if (ctx != NULL) {
         return ctx->isEnabled();
     }
     return TRUE;
@@ -484,7 +486,7 @@ static void process_events(GdkEvent* event, gpointer data)
 
     glass_evloop_call_hooks(event);
 
-    if (ctx != NULL) {
+    if (ctx != nullptr) {
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:

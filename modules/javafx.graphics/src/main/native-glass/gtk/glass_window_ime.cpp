@@ -150,9 +150,11 @@ void WindowContext::setOnPreEdit(bool preedit) {
 }
 
 void WindowContext::updateCaretPos() {
+    if (!jview) return;
+
     double *nativePos;
 
-    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
+    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(jview,
                                       jViewNotifyInputMethodCandidateRelativePosRequest,
                                       0);
 
