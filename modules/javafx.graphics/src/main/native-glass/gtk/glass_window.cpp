@@ -1377,7 +1377,6 @@ void WindowContext::set_title(const char* title) {
     gdk_window_set_title(gdk_window, title);
 }
 
-// This only works on Xorg
 void WindowContext::set_alpha(double alpha) {
     gdk_window_set_opacity(gdk_window, (gdouble)alpha);
 }
@@ -1560,7 +1559,7 @@ void WindowContext::notify_on_top(bool top) {
     if (top != effective_on_top() && jwindow) {
         if (on_top_inherited() && !top) {
             // Disallow user's "on top" handling on windows that inherited the property
-            gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
+            gdk_window_set_keep_above(gdk_window, true);
         } else {
             on_top = top;
             update_ontop_tree(top);
