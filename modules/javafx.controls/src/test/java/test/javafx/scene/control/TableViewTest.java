@@ -4048,8 +4048,8 @@ public class TableViewTest {
 
         assertEquals(List.of(0, 3, 6), froms);
         assertEquals(List.of(2, 5, 8), tos);
-        assertEquals(List.of(0, 1),  removedLists.get(0).stream().map(TablePosition::getRow).toList());
-        assertEquals(List.of(5, 6),  removedLists.get(1).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(0, 1), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(5, 6), removedLists.get(1).stream().map(TablePosition::getRow).toList());
         assertEquals(List.of(9, 10), removedLists.get(2).stream().map(TablePosition::getRow).toList());
     }
 
@@ -4085,7 +4085,7 @@ public class TableViewTest {
         });
 
         stageLoader = new StageLoader(table);
-        table.sort();
+        table.getSortOrder().add(col);
 
         // item indices: {  0,   1,   2  }
         // before sort:  { [A], [B], [C] }
@@ -4102,10 +4102,17 @@ public class TableViewTest {
         assertEquals(List.of(1), froms);
         assertEquals(List.of(1), tos);
         assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+    }
 
-        froms.clear();
-        tos.clear();
-        removedLists.clear();
+    @Test void testSortFiresAddedEventForSelectionSizeMismatch() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "b", "c"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         // custom sort policy: sort and select all
         table.setSortPolicy(tv -> {
@@ -4114,7 +4121,21 @@ public class TableViewTest {
             return true;
         });
 
-        table.sort();
+        table.getSelectionModel().clearAndSelect(0);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
 
         // item indices: {  0,   1,   2,   3 }
         // before sort:  { [A]               }

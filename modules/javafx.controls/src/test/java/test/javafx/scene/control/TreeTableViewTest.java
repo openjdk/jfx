@@ -4350,8 +4350,8 @@ public class TreeTableViewTest {
 
         assertEquals(List.of(0, 3, 6), froms);
         assertEquals(List.of(2, 5, 8), tos);
-        assertEquals(List.of(0, 1),  removedLists.get(0).stream().map(TreeTablePosition::getRow).toList());
-        assertEquals(List.of(5, 6),  removedLists.get(1).stream().map(TreeTablePosition::getRow).toList());
+        assertEquals(List.of(0, 1), removedLists.get(0).stream().map(TreeTablePosition::getRow).toList());
+        assertEquals(List.of(5, 6), removedLists.get(1).stream().map(TreeTablePosition::getRow).toList());
         assertEquals(List.of(9, 10), removedLists.get(2).stream().map(TreeTablePosition::getRow).toList());
     }
 
@@ -4393,7 +4393,7 @@ public class TreeTableViewTest {
         });
 
         stageLoader = new StageLoader(table);
-        table.sort();
+        table.getSortOrder().add(col);
 
         // item indices: {  0,   1,   2  }
         // before sort:  { [A], [B], [C] }
@@ -4410,10 +4410,23 @@ public class TreeTableViewTest {
         assertEquals(List.of(1), froms);
         assertEquals(List.of(1), tos);
         assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TreeTablePosition::getRow).toList());
+    }
 
-        froms.clear();
-        tos.clear();
-        removedLists.clear();
+    @Test void testSortFiresAddedEventForSelectionSizeMismatch() {
+        TreeItem<String> root = new TreeItem<>();
+        root.getChildren().add(new TreeItem<>("a"));
+        root.getChildren().add(new TreeItem<>("b"));
+        root.getChildren().add(new TreeItem<>("c"));
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
+
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.setRoot(root);
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         // custom sort policy: sort and select all
         table.setSortPolicy(tv -> {
@@ -4422,7 +4435,21 @@ public class TreeTableViewTest {
             return true;
         });
 
-        table.sort();
+        table.getSelectionModel().clearAndSelect(0);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TreeTablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TreeTablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
 
         // item indices: {  0,   1,   2,   3 }
         // before sort:  { [A]               }
