@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.Function;
@@ -1704,9 +1705,9 @@ public class TableView<S> extends Control {
         }
 
         TableViewSelectionModel<S> selectionModel = getSelectionModel();
-        final List<TablePosition> prevState = selectionModel == null ?
+        final List<TablePosition<S,?>> prevState = selectionModel == null ?
                 null :
-                new ArrayList<>(selectionModel.getSelectedCells());
+                new ArrayList<>((ObservableList<TablePosition<S,?>>)(Object)selectionModel.getSelectedCells());
 
         // we set makeAtomic to true here, so that we don't fire intermediate
         // sort events - instead we send a single permutation event at the end
@@ -1730,7 +1731,7 @@ public class TableView<S> extends Control {
             TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
             setComparator(oldComparator);
             sortLock = false;
-        } else {
+        } else if (prevState != null) {
             // sorting was a success, now we possibly fire an event on the
             // selection model that the items list has 'permutated' to a new ordering
 
@@ -1739,38 +1740,36 @@ public class TableView<S> extends Control {
                 final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>)selectionModel;
                 final ObservableList<TablePosition<S,?>> newState = (ObservableList<TablePosition<S,?>>)(Object)sm.getSelectedCells();
 
-                if (prevState != null) {
-                    // the sort operation effectively permutates the selectedCells list,
-                    // but we cannot fire a permutation event as we are talking about
-                    // TablePosition's changing (which may reside in the same list
-                    // position before and after the sort). Therefore, we fire
-                    // add/remove events for each contiguous range of positions that changed.
-                    int prevSize = prevState.size();
-                    int newSize = newState.size();
-                    int minSize = Math.min(prevSize, newSize);
-                    for (int index = 0; index < minSize; index++) {
-                        // Advance to the next position where prevState and newState are not equal.
-                        for (; index < minSize && prevState.get(index).equals(newState.get(index)); index++);
-                        int from = index;
-                        if (from >= minSize) {
-                            break;
-                        }
-                        // Advance to the next position where prevState and newState are equal.
-                        for (index++; index < minSize && !prevState.get(index).equals(newState.get(index)); index++);
-                        // The positions at [from, index) in prevState were replaced by the corresponding positions in newState.
-                        List<TablePosition<S, ?>> removed = (List<TablePosition<S, ?>>) (List<?>) prevState.subList(from, index);
-                        ListChangeListener.Change<TablePosition<S, ?>> c =
-                                new NonIterableChange.GenericAddRemoveChange<>(from, index, removed, newState);
-                        sm.fireCustomSelectedCellsListChangeEvent(c);
+                // the sort operation effectively permutates the selectedCells list,
+                // but we cannot fire a permutation event as we are talking about
+                // TablePosition's changing (which may reside in the same list
+                // position before and after the sort). Therefore, we fire
+                // add/remove events for each contiguous range of positions that changed.
+                int prevSize = prevState.size();
+                int newSize = newState.size();
+                int minSize = Math.min(prevSize, newSize);
+                for (int index = 0; index < minSize; index++) {
+                    // Advance to the next position where prevState and newState are not equal.
+                    for (; index < minSize && Objects.equals(prevState.get(index), newState.get(index)); index++);
+                    int from = index;
+                    if (from >= minSize) {
+                        break;
                     }
-                    if (prevSize != newSize) {
-                        // The positions at [minSize, prevSize) in prevState were removed. If prevSize == minSize, the range is empty.
-                        // The positions at [minSize, newSize) in newState were added. If newSize == minSize, the range is empty.
-                        List<TablePosition<S, ?>> removed = (List<TablePosition<S, ?>>) (List<?>) prevState.subList(minSize, prevSize);
-                        ListChangeListener.Change<TablePosition<S, ?>> c =
-                                new NonIterableChange.GenericAddRemoveChange<>(minSize, newSize, removed, newState);
-                        sm.fireCustomSelectedCellsListChangeEvent(c);
-                    }
+                    // Advance to the next position where prevState and newState are equal.
+                    for (index++; index < minSize && !Objects.equals(prevState.get(index), newState.get(index)); index++);
+                    // The positions at [from, index) in prevState were replaced by the corresponding positions in newState.
+                    List<TablePosition<S, ?>> removed = prevState.subList(from, index);
+                    ListChangeListener.Change<TablePosition<S, ?>> c =
+                            new NonIterableChange.GenericAddRemoveChange<>(from, index, removed, newState);
+                    sm.fireCustomSelectedCellsListChangeEvent(c);
+                }
+                if (prevSize != newSize) {
+                    // The positions at [minSize, prevSize) in prevState were removed. If prevSize == minSize, the range is empty.
+                    // The positions at [minSize, newSize) in newState were added. If newSize == minSize, the range is empty.
+                    List<TablePosition<S, ?>> removed = prevSize == minSize ? List.of() : prevState.subList(minSize, prevSize);
+                    ListChangeListener.Change<TablePosition<S, ?>> c =
+                            new NonIterableChange.GenericAddRemoveChange<>(minSize, newSize, removed, newState);
+                    sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
             }
         }
