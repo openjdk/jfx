@@ -64,7 +64,6 @@ public class WrongStageFocusWithApplicationModalityTest {
 
     @Test
     public void testWindowFocusByClosingAlerts() throws Exception {
-        assumeTrue(!Util.isOnWayland()); // JDK-8353643
         Thread.sleep(3000);
         mouseClick();
         Thread.sleep(1000);
@@ -88,7 +87,7 @@ public class WrongStageFocusWithApplicationModalityTest {
         Util.runAndWait(() -> {
             robot.mouseMove((int) (alert.getX() + alert.getWidth() / 2),
                     (int) (alert.getY() + alert.getHeight() / 2));
-            Util.sleep(100);
+            Util.sleep(3000);
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         });
@@ -107,7 +106,9 @@ public class WrongStageFocusWithApplicationModalityTest {
             stage.show();
 
             showAlert("Alert 1");
+            Util.sleep(1000);
             showAlert("Alert 2");
+            Util.sleep(1000);
             alert = showAlert("Alert 3");
         }
 

@@ -257,6 +257,13 @@ void WindowContext::process_realize() {
     if (initial_wmf) {
         gdk_window_set_functions(gdk_window, initial_wmf);
     }
+
+    for (auto it = children.begin(); it != children.end(); ++it) {
+        WindowContext* child = *it;
+        if (GDK_IS_WINDOW(child->get_gdk_window()) && GDK_IS_WINDOW(gdk_window)) {
+            gdk_window_set_transient_for(child->get_gdk_window(), gdk_window);
+        }
+    }
 }
 
 // Returns de XWindow ID to be used in rendering
@@ -373,7 +380,6 @@ void WindowContext::process_destroy() {
 
     std::set<WindowContext*>::iterator it;
     for (it = children.begin(); it != children.end(); ++it) {
-        gtk_window_set_transient_for((*it)->get_gtk_window(), nullptr);
         (*it)->set_owner(nullptr);
         destroy_and_delete_ctx(*it);
     }
@@ -684,12 +690,10 @@ void WindowContext::paint(void* data, jint width, jint height) {
 
 void WindowContext::add_child(WindowContext* child) {
     children.insert(child);
-    gtk_window_set_transient_for(child->get_gtk_window(), this->get_gtk_window());
 }
 
 void WindowContext::remove_child(WindowContext* child) {
     children.erase(child);
-    gtk_window_set_transient_for(child->get_gtk_window(), NULL);
 }
 
 bool WindowContext::is_visible() {
