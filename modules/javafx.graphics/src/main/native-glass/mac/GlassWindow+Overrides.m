@@ -37,7 +37,6 @@
 #import "GlassViewDelegate.h"
 #import "GlassApplication.h"
 #import "GlassScreen.h"
-#import "GlassMenu.h"
 
 #import <AppKit/NSGraphics.h> // NSBeep();
 
@@ -124,13 +123,6 @@
 - (void)windowWillClose:(NSNotification *)notification
 {
     //NSLog(@"windowWillClose");
-
-    NSWindow *window = notification.object;
-    BOOL isPopup = ([window styleMask] & NSWindowStyleMaskNonactivatingPanel) != 0;
-    if (isPopup) {
-        // If this window is a popup, remove the menu observer
-        [[NSNotificationCenter defaultCenter] removeObserver:self name:GlassMenuBarWillOpenNotification object:nil];
-    }
 
     // Remove self from list of owner's child windows
     if (self->owner != nil) {
@@ -315,30 +307,6 @@
 
     // it's up to app to decide if the window should be closed
     return FALSE;
-}
-
-- (void)menuWillOpenHandler:(NSNotification *)notification {
-    // This handler is only called for popup windows as the observer
-    // is only registered for popups in _createWindowCommonDo
-
-    // If this popup is not visible or is a non-auto-hide popup, return early, without cancelling the menu event
-    // or hiding the popup.
-    // Note that only auto-hide popups have an active focus grab.
-    if (![self->nsWindow isVisible] || ![GlassWindow _hasGrab]) {
-        return;
-    }
-
-    // When there is a mouse click over the system menu bar, and an auto-hide popup
-    // window is showing, we consume the event by immediately closing the popup
-    // without allowing the menu to appear.
-    NSMenu *menu = notification.object;
-    if (menu != nil) {
-        [menu cancelTrackingWithoutAnimation];
-    }
-
-    // For auto-hide popups, _resetGrab fires FOCUS_UNGRAB on the popup's owner window, which
-    // will trigger doAutoHide() -> hide() on the popup.
-    [GlassWindow _resetGrab];
 }
 
 #pragma mark --- Title Icon

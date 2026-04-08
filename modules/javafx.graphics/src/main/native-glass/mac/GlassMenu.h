@@ -26,9 +26,6 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-// Notification name for when a menu in the menu bar begins opening
-static NSNotificationName const GlassMenuBarWillOpenNotification = @"GlassMenuBarWillOpen";
-
 @interface GlassMenubar : NSObject
 {
 @public

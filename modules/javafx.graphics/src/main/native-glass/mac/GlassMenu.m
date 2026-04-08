@@ -32,6 +32,7 @@
 #import "GlassMenu.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
+#import "GlassWindow+Java.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -180,10 +181,16 @@ static jfieldID  jPixelsScaleYField = 0;
 // changing the menu structure during menuWillOpen...
 - (void)menuWillOpen: (NSMenu *)_menu
 {
-    // Post notification before menu opens so popup windows can be closed
-    [[NSNotificationCenter defaultCenter] postNotificationName:GlassMenuBarWillOpenNotification
-                                                        object:_menu
-                                                      userInfo:nil];
+    if ([GlassWindow _hasGrab]) {
+        // If an auto-hide popup window is showing, it has an active grab.
+        // In this case, we close the popup instead of opening the menu:
+        [_menu cancelTrackingWithoutAnimation];
+
+        // _resetGrab fires FOCUS_UNGRAB on the popup's owner window, which
+        // will trigger doAutoHide() -> hide() on the popup.
+        [GlassWindow _resetGrab];
+        return;
+    }
 
     GET_MAIN_JENV;
     if (env != NULL)
