@@ -4010,6 +4010,151 @@ public class TableViewTest {
         sl.dispose();
     }
 
+    @Test void testSortFiresTargetedChangeEventsForPartialPermutation() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("c", "d", "a", "b", "e", "g", "h", "f", "i", "k", "l", "j"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().selectIndices(0, 1, 4, 5, 6, 8, 9, 10);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11   }
+        // before sort:  { [C], [D],  A,   B,  [E], [G], [H],  F,  [I], [K], [L],  J   }
+        // prevState:    { (0), (1),           (4), (5), (6),      (8), (9), (10)      }
+        // after sort:   {  A,   B,  [C], [D], [E],  F,  [G], [H], [I],  J,  [K], [L]  }
+        // newState:     {           (2), (3), (4),      (6), (7), (8),      (10),(11) }
+
+        // pos indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8  }
+        // prevState:   { (0), (1), (4), (5), (6), (8), (9), (10)     }
+        // newState:    { (2), (3), (4), (6), (7), (8), (10),(11)     }
+        // froms:          *              *              *
+        // tos:                      *              *              *
+
+        assertEquals(List.of(0, 3, 6), froms);
+        assertEquals(List.of(2, 5, 8), tos);
+        assertEquals(List.of(0, 1), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(5, 6), removedLists.get(1).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(9, 10), removedLists.get(2).stream().map(TablePosition::getRow).toList());
+    }
+
+    @Test void testSortFiresRemovalEventForSelectionSizeMismatch() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "b", "c"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // custom sort policy: sort and deselect rows 1 and 2
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getItems(), Comparator.naturalOrder());
+            tv.getSelectionModel().clearSelection(1);
+            tv.getSelectionModel().clearSelection(2);
+            return true;
+        });
+
+        table.getSelectionModel().selectAll();
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2  }
+        // before sort:  { [A], [B], [C] }
+        // prevState:    { (0), (1), (2) }
+        // after sort:   { [A]           }
+        // newState:     { (0)           }
+
+        // pos indices:  {  0,   1,   2  }
+        // prevState:    { (0), (1), (2) }
+        // newState:     { (0)           }
+        // froms:                *
+        // tos:                  *
+
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(1), tos);
+        assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+    }
+
+    @Test void testSortFiresAddedEventForSelectionSizeMismatch() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "b", "c"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // custom sort policy: sort and select all
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getItems(), Comparator.naturalOrder());
+            tv.getSelectionModel().selectAll();
+            return true;
+        });
+
+        table.getSelectionModel().clearAndSelect(0);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2,   3 }
+        // before sort:  { [A]               }
+        // prevState:    { (0)               }
+        // after sort:   { [A], [B], [C]     }
+        // newState:     { (0), (1), (2)     }
+
+        // pos indices:  {  0,   1,   2,   3 }
+        // prevState:    { (0)               }
+        // newState:     { (0), (1), (2)     }
+        // froms:                *
+        // tos:                            *
+
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(3), tos);
+        assertEquals(List.of(), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+    }
+
     private int rt_37538_count = 0;
     @Test public void test_rt_37538_noCNextCall() {
         test_rt_37538(false, false);
