@@ -59,7 +59,6 @@ class FullScreenTest extends StageTestBase {
 
         setFullScreen(true);
         setFullScreen(false);
-        Util.waitForIdle(getScene());
 
         assertSizePosition();
     }
@@ -71,7 +70,6 @@ class FullScreenTest extends StageTestBase {
 
         waitForBoolean(getStage().fullScreenProperty(), true);
         setFullScreen(false);
-        Util.waitForIdle(getScene());
         assertSizePosition();
     }
 
@@ -81,7 +79,6 @@ class FullScreenTest extends StageTestBase {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         setFullScreen(true);
-        Util.waitForIdle(getScene());
         assertFullScreenFillsScreen();
     }
 
@@ -91,15 +88,11 @@ class FullScreenTest extends StageTestBase {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
         setFullScreen(true);
-        Util.waitForIdle(getScene());
         setFullScreen(false);
-        Util.waitForIdle(getScene());
         assertSizePosition();
 
         setFullScreen(true);
-        Util.waitForIdle(getScene());
         setFullScreen(false);
-        Util.waitForIdle(getScene());
         assertSizePosition();
     }
 

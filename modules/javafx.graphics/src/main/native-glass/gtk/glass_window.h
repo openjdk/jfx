@@ -231,7 +231,6 @@ private:
     bool can_be_deleted{false};
     bool mapped{false};
     unsigned long window_id{};
-    mutable gchar* log_id{};
     gint initial_state_mask{0};
 
     WindowFrameType frame_type;

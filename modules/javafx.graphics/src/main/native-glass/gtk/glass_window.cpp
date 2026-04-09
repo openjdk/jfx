@@ -294,21 +294,23 @@ XID WindowContext::get_native_window() {
 }
 
 const char* WindowContext::get_log_id() const {
+    static gchar* log_str = nullptr;
+
     const char* title = nullptr;
     if (gtk_widget && GTK_IS_WINDOW(gtk_widget)) {
         title = gtk_window_get_title(GTK_WINDOW(gtk_widget));
         if (title && !title[0]) title = nullptr;
     }
 
-    g_free(log_id);
+    g_free(log_str);
 
     if (title) {
-        log_id = g_strdup_printf("%lu '%s'", window_id, title);
+        log_str = g_strdup_printf("%lu '%s'", window_id, title);
     } else {
-        log_id = g_strdup_printf("%lu", window_id);
+        log_str = g_strdup_printf("%lu", window_id);
     }
 
-    return log_id;
+    return log_str;
 }
 
 bool WindowContext::isEnabled() {
@@ -1718,7 +1720,6 @@ WindowContext::~WindowContext() {
             frame_type_name(frame_type), window_type_name(window_type));
     disableIME();
     gtk_widget_destroy(gtk_widget);
-    g_free(log_id);
 }
 
 WindowContextExtended::WindowContextExtended(jobject jwin,
