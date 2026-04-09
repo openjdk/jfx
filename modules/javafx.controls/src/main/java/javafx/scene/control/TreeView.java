@@ -1059,7 +1059,7 @@ public class TreeView<T> extends Control {
         }
 
         if (treeItemIterator == null || _row <= treeItemIteratorRow) {
-            treeItemIterator = TreeUtil.visibleItems(getRoot()).iterator();
+            treeItemIterator = TreeUtil.getItems(getRoot()).iterator();
             treeItemIteratorRow = -1;
         }
 
