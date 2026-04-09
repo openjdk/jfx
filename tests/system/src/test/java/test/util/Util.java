@@ -38,11 +38,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.Node;
@@ -52,9 +50,10 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.util.Subscription;
 import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
+
+import javafx.beans.value.ChangeListener;
 
 /**
  * Utility methods for life-cycle testing
@@ -69,8 +68,8 @@ public class Util {
 
     /**
      * Time in milliseconds to wait for window geometry changes (resize, move)
-     * to be processed. On Linux, these operations are asynchronous;
-     * the window manager may adjust values after Glass has applied them on the Java side.
+     * to be processed. On Linux, these operations are asynchronous.
+     * The window manager may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.geometry.delay}.
      */
@@ -79,7 +78,9 @@ public class Util {
 
     /**
      * Time in milliseconds to wait for window state changes
-     * (e.g., iconify, maximize, fullscreen animations) to be processed.
+     * (e.g. iconify, maximize, fullscreen animations) to be processed.
+     * On Linux, these operations are asynchronous.
+     * The window manager may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.state.delay}.
      */
@@ -88,11 +89,13 @@ public class Util {
 
     /**
      * Time in milliseconds to wait for focus changes to be processed.
+     * On Linux, these operations are asynchronous.
+     * The window manager may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.focus.delay}.
      */
     public static final long FOCUS_DELAY =
-            Long.getLong("test.focus.delay", 100);
+            Long.getLong("test.focus.delay", 250);
 
     /**
      * Default timeout in milliseconds for waiting on an observable property
@@ -101,7 +104,7 @@ public class Util {
      * Configurable via system property {@code test.property.value.timeout}.
      */
     public static final long PROPERTY_VALUE_TIMEOUT =
-            Long.getLong("test.property.value.timeout", 500);
+            Long.getLong("test.property.value.timeout", 1000);
 
     private static interface Future {
         public abstract boolean await(long timeout, TimeUnit unit);
@@ -381,56 +384,39 @@ public class Util {
      * Waits for a boolean property to reach the expected value.
      * If the property already has the expected value, returns immediately.
      * <p>
-     * Uses {@link ObservableValue#subscribe(java.util.function.Consumer)}
-     * which fires immediately with the current value, then on each change.
-     * <p>
      * Uses {@link #PROPERTY_VALUE_TIMEOUT} as the default timeout.
      *
      * @param property the property to observe
      * @param expected the expected value
      */
     public static void waitForBoolean(ReadOnlyBooleanProperty property, boolean expected) {
-        waitForBoolean(property, expected, 0);
-    }
+        if (property.get() == expected) {
+            return;
+        }
 
-    /**
-     * Waits for a boolean property to reach the expected value, then sleeps for
-     * the specified settle delay.
-     * <p>
-     * The settle delay is useful for visual teste, because it allows asynchronous
-     * side-effects (geometry changes, animations) to complete after the property has
-     * reached the expected value.
-     *
-     * @param property       the property to observe
-     * @param expected       the expected value
-     * @param settleDelayMs  time to sleep after the property reaches the expected value
-     */
-    public static void waitForBoolean(ReadOnlyBooleanProperty property, boolean expected,
-                                      long settleDelayMs) {
         CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<Subscription> subRef = new AtomicReference<>();
+
+        ChangeListener<Boolean> listener = (_, _, newVal) -> {
+            if (newVal == expected) {
+                latch.countDown();
+            }
+        };
 
         runAndWait(() -> {
-            Subscription sub = property.subscribe(value -> {
-                if (value == expected) {
-                    latch.countDown();
-                }
-            });
-            subRef.set(sub);
+            if (property.get() == expected) {
+                latch.countDown();
+            }
+            property.addListener(listener);
         });
 
         try {
-            boolean ok = latch.await(PROPERTY_VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
-            Assertions.assertTrue(ok,
+            boolean result = latch.await(PROPERTY_VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            Assertions.assertTrue(result,
                     "Timeout waiting for " + property.getName() + " to become " + expected);
         } catch (InterruptedException e) {
             fail(e);
         } finally {
-            runAndWait(() -> subRef.get().unsubscribe());
-        }
-
-        if (settleDelayMs > 0) {
-            sleep(settleDelayMs);
+            runAndWait(() -> property.removeListener(listener));
         }
     }
 

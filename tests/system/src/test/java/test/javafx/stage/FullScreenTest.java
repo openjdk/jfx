@@ -96,18 +96,12 @@ class FullScreenTest extends StageTestBase {
         assertSizePosition();
     }
 
-    /**
-     * Sets the full screen state and waits for the property to reach the expected value.
-     */
     private void setFullScreen(boolean value) {
         Util.runAndWait(() -> getStage().setFullScreen(value));
-        waitForBoolean(getStage().fullScreenProperty(), value, GEOMETRY_DELAY);
+        waitForBoolean(getStage().fullScreenProperty(), value);
+        Util.sleep(GEOMETRY_DELAY);
     }
 
-    /**
-     * Waits until the stage geometry returns to the expected size and position
-     * by listening for property changes on the stage's geometry properties.
-     */
     private void assertSizePosition() {
         Util.sleep(GEOMETRY_DELAY);
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");

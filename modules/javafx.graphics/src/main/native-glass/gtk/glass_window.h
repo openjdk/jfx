@@ -302,7 +302,6 @@ public:
 
     Size get_view_size();
     Point get_view_position();
-    const char* get_log_id() const;
 
     bool isEnabled();
     void notify_focus_disabled();
@@ -444,7 +443,7 @@ public:
         if (ctx != nullptr) {
             ctx->decrement_events_counter();
             if (ctx->is_dead() && ctx->get_events_count() == 0) {
-                LOG_LIFECYCLE(ctx->get_log_id(), "EventsCounterHelper: deleting\n");
+                LOG_LIFECYCLE("EventsCounterHelper: deleting\n");
                 delete ctx;
             }
             ctx = nullptr;

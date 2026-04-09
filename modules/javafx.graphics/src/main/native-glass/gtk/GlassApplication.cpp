@@ -119,7 +119,7 @@ jboolean gtk_verbose = JNI_FALSE;
  * Signature: (IZ)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
-  (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
+  (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale, jstring logCategories)
 {
     (void) clazz;
     (void) version;
@@ -133,7 +133,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    gtk_log_init(env);
+    const char* categories = env->GetStringUTFChars(logCategories, nullptr);
+    glass_gtk_log_init(categories);
+    env->ReleaseStringUTFChars(logCategories, categories);
 
     checkGtkVersion(env, version);
 }

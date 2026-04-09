@@ -53,13 +53,13 @@
 
 
 void destroy_and_delete_ctx(WindowContext* ctx) {
-    LOG_LIFECYCLE(ctx ? ctx->get_log_id() : "0", "destroy_and_delete_ctx\n");
+    LOG_LIFECYCLE("destroy_and_delete_ctx\n");
     if (!ctx) return;
 
     ctx->process_destroy();
 
     if (!ctx->get_events_count()) {
-        LOG_LIFECYCLE(ctx->get_log_id(), "destroy_and_delete_ctx: deleting\n");
+        LOG_LIFECYCLE("destroy_and_delete_ctx: deleting\n");
         delete ctx;
     }
     // else: ctx will be deleted in EventsCounterHelper after completing
@@ -130,8 +130,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     window_id = ++sm_next_window_id;
 
-    LOG_LIFECYCLE(get_log_id(), "WindowContext: created, frame=%s, type=%s\n",
-            frame_type_name(_frame_type), window_type_name(type));
+    LOG_LIFECYCLE("WindowContext: created\n");
 
     if (frame_type != TITLED) {
         initial_wmf = GDK_FUNC_ALL;
@@ -173,50 +172,50 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     update_window_constraints();
 
     window_location.setOnChange([this](const Point& point) {
-        LOG_POSITION(get_log_id(), "onChange: window_location x=%d, y=%d\n", point.x, point.y);
+        LOG_POSITION("onChange: window_location x=%d, y=%d\n", point.x, point.y);
         notify_window_move();
     });
 
     view_position.setOnChange([this](const Point& point) {
-        LOG_POSITION(get_log_id(), "onChange: view_position x=%d, y=%d\n", point.x, point.y);
+        LOG_POSITION("onChange: view_position x=%d, y=%d\n", point.x, point.y);
         notify_view_move();
     });
 
     window_size.setOnChange([this](const Size& size) {
-        LOG_SIZE(get_log_id(), "onChange: window_size w=%d, h=%d\n", size.width, size.height);
+        LOG_SIZE("onChange: window_size w=%d, h=%d\n", size.width, size.height);
         notify_window_size();
     });
 
     view_size.setOnChange([this](const Size& size) {
-        LOG_SIZE(get_log_id(), "onChange: view_size w=%d, h=%d\n", size.width, size.height);
+        LOG_SIZE("onChange: view_size w=%d, h=%d\n", size.width, size.height);
         notify_view_resize();
         update_window_constraints();
     });
 
     window_extents.setOnChange([this](const Rectangle& rect) {
-        LOG_SIZE(get_log_id(), "onChange: window_extents x=%d, y=%d, w=%d, h=%d\n",
+        LOG_SIZE("onChange: window_extents x=%d, y=%d, w=%d, h=%d\n",
                 rect.x, rect.y, rect.width, rect.height);
         update_window_constraints();
         update_window_size();
     });
 
     resizable.setOnChange([this](const bool& resizable) {
-        LOG_SIZE(get_log_id(), "onChange: resizable=%s\n", resizable ? "true" : "false");
+        LOG_SIZE("onChange: resizable=%s\n", resizable ? "true" : "false");
         update_window_constraints();
     });
 
     minimum_size.setOnChange([this](const Size& size) {
-        LOG_SIZE(get_log_id(), "onChange: minimum_size w=%d, h=%d\n", size.width, size.height);
+        LOG_SIZE("onChange: minimum_size w=%d, h=%d\n", size.width, size.height);
         update_window_constraints();
     });
 
     sys_min_size.setOnChange([this](const Size& size) {
-        LOG_SIZE(get_log_id(), "onChange: sys_min_size w=%d, h=%d\n", size.width, size.height);
+        LOG_SIZE("onChange: sys_min_size w=%d, h=%d\n", size.width, size.height);
         update_window_constraints();
     });
 
     maximum_size.setOnChange([this](const Size& size) {
-        LOG_SIZE(get_log_id(), "onChange: maximum_size w=%d, h=%d\n", size.width, size.height);
+        LOG_SIZE("onChange: maximum_size w=%d, h=%d\n", size.width, size.height);
         update_window_constraints();
     });
 
@@ -262,8 +261,7 @@ GtkWindow* WindowContext::get_gtk_window() {
 void WindowContext::process_realize() {
     gdk_window = gtk_widget_get_window(gtk_widget);
 
-    LOG_LIFECYCLE(get_log_id(), "process_realize: frame=%s, type=%s\n",
-            frame_type_name(frame_type), window_type_name(window_type));
+    LOG_LIFECYCLE("process_realize");
 
     if (frame_type == TITLED) {
         request_frame_extents();
@@ -293,25 +291,6 @@ XID WindowContext::get_native_window() {
     return GDK_WINDOW_XID(gdk_window);
 }
 
-const char* WindowContext::get_log_id() const {
-    static gchar* log_str = nullptr;
-
-    const char* title = nullptr;
-    if (gtk_widget && GTK_IS_WINDOW(gtk_widget)) {
-        title = gtk_window_get_title(GTK_WINDOW(gtk_widget));
-        if (title && !title[0]) title = nullptr;
-    }
-
-    g_free(log_str);
-
-    if (title) {
-        log_str = g_strdup_printf("%lu '%s'", window_id, title);
-    } else {
-        log_str = g_strdup_printf("%lu", window_id);
-    }
-
-    return log_str;
-}
 
 bool WindowContext::isEnabled() {
     if (!jwindow) return false;
@@ -323,7 +302,7 @@ bool WindowContext::isEnabled() {
 
 void WindowContext::notify_focus_disabled() {
     if (jwindow) {
-        LOG_FOCUS(get_log_id(), "notify_focus_disabled\n");
+        LOG_FOCUS("notify_focus_disabled\n");
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
@@ -338,8 +317,7 @@ void WindowContext::process_map() {
     // We need only first map
     if (mapped || window_type == POPUP) return;
 
-    LOG_LIFECYCLE(get_log_id(), "process_map: frame=%s, type=%s\n",
-            frame_type_name(frame_type), window_type_name(window_type));
+    LOG_LIFECYCLE("process_map\n");
 
     Point loc = window_location.get();
     Size size = view_size.get();
@@ -366,7 +344,7 @@ void WindowContext::process_map() {
 }
 
 void WindowContext::process_focus(GdkEventFocus *event) {
-    LOG_FOCUS(get_log_id(), "process_focus: %s\n", event->in ? "GAINED" : "LOST");
+    LOG_FOCUS("process_focus: %s\n", event->in ? "GAINED" : "LOST");
     if (!event->in && WindowContext::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -381,7 +359,7 @@ void WindowContext::process_focus(GdkEventFocus *event) {
 
     if (jwindow) {
         if (!event->in || isEnabled()) {
-            LOG_FOCUS(get_log_id(), "process_focus: notify %s\n",
+            LOG_FOCUS("process_focus: notify %s\n",
                     event->in ? "FOCUS_GAINED" : "FOCUS_LOST");
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
@@ -410,7 +388,7 @@ bool WindowContext::is_dead() {
 }
 
 void WindowContext::process_destroy() {
-    LOG_LIFECYCLE(get_log_id(), "process_destroy\n");
+    LOG_LIFECYCLE("process_destroy\n");
     if (owner) {
         owner->remove_child(this);
     }
@@ -449,7 +427,8 @@ void WindowContext::process_destroy() {
 }
 
 void WindowContext::process_delete() {
-    LOG_LIFECYCLE(get_log_id(), "process_delete\n");
+    LOG_LIFECYCLE("process_delete\n");
+
     if (jwindow && isEnabled()) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyClose);
         CHECK_JNI_EXCEPTION(mainEnv)
@@ -475,7 +454,7 @@ void WindowContext::process_mouse_button(GdkEventButton* event, bool synthesized
     }
 
     bool press = event->type == GDK_BUTTON_PRESS;
-    LOG_INPUT(get_log_id(), "mouse_button: %s button=%u at (%d,%d)\n",
+    LOG_INPUT("mouse_button: %s button=%u at (%d,%d)\n",
               press ? "PRESS" : "RELEASE", event->button, (int)event->x, (int)event->y);
     guint state = event->state;
     guint mask = 0;
@@ -597,7 +576,7 @@ void WindowContext::process_mouse_motion(GdkEventMotion *event) {
 }
 
 void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
-    LOG_INPUT(get_log_id(), "mouse_scroll: direction=%d at (%d,%d)\n",
+    LOG_INPUT("mouse_scroll: direction=%d at (%d,%d)\n",
               event->direction, (int)event->x, (int)event->y);
     jdouble dx = 0;
     jdouble dy = 0;
@@ -642,7 +621,7 @@ void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
 
 void WindowContext::process_mouse_cross(GdkEventCrossing *event) {
     bool enter = event->type == GDK_ENTER_NOTIFY;
-    LOG_INPUT(get_log_id(), "mouse_cross: %s at (%d,%d)\n",
+    LOG_INPUT("mouse_cross: %s at (%d,%d)\n",
               enter ? "ENTER" : "EXIT", (int)event->x, (int)event->y);
     if (jview) {
         guint state = event->state;
@@ -667,7 +646,7 @@ void WindowContext::process_mouse_cross(GdkEventCrossing *event) {
 
 void WindowContext::process_key(GdkEventKey *event) {
     bool press = event->type == GDK_KEY_PRESS;
-    LOG_INPUT(get_log_id(), "key: %s keyval=0x%x state=0x%x\n",
+    LOG_INPUT("key: %s keyval=0x%x state=0x%x\n",
               press ? "PRESS" : "RELEASE", event->keyval, event->state);
     jint glassKey = get_glass_key(event);
     jint glassModifier = gdk_modifier_mask_to_glass(event->state);
@@ -753,7 +732,7 @@ bool WindowContext::is_visible() {
 }
 
 bool WindowContext::set_view(jobject view) {
-    LOG_LIFECYCLE(get_log_id(), "set_view: %s\n", view ? "attach" : "detach");
+    LOG_LIFECYCLE("set_view: %s\n", view ? "attach" : "detach");
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
                 com_sun_glass_events_MouseEvent_EXIT,
@@ -776,7 +755,7 @@ bool WindowContext::set_view(jobject view) {
 }
 
 bool WindowContext::grab_mouse_drag_focus() {
-    LOG_FOCUS(get_log_id(), "grab_mouse_drag_focus\n");
+    LOG_FOCUS("grab_mouse_drag_focus\n");
     if (glass_gdk_mouse_devices_grab_with_cursor(
             gdk_window, gdk_window_get_cursor(gdk_window), false)) {
         WindowContext::sm_mouse_drag_window = this;
@@ -791,7 +770,7 @@ void WindowContext::ungrab_mouse_drag_focus() {
         return;
     }
 
-    LOG_FOCUS(get_log_id(), "ungrab_mouse_drag_focus\n");
+    LOG_FOCUS("ungrab_mouse_drag_focus\n");
     WindowContext::sm_mouse_drag_window = nullptr;
     glass_gdk_mouse_devices_ungrab();
     if (WindowContext::sm_grab_window) {
@@ -800,7 +779,7 @@ void WindowContext::ungrab_mouse_drag_focus() {
 }
 
 bool WindowContext::grab_focus() {
-    LOG_FOCUS(get_log_id(), "grab_focus\n");
+    LOG_FOCUS("grab_focus\n");
     if (WindowContext::sm_mouse_drag_window
             || glass_gdk_mouse_devices_grab(gdk_window)) {
         WindowContext::sm_grab_window = this;
@@ -811,7 +790,7 @@ bool WindowContext::grab_focus() {
 }
 
 void WindowContext::ungrab_focus() {
-    LOG_FOCUS(get_log_id(), "ungrab_focus\n");
+    LOG_FOCUS("ungrab_focus\n");
     if (!WindowContext::sm_mouse_drag_window) {
         glass_gdk_mouse_devices_ungrab();
     }
@@ -901,19 +880,19 @@ void WindowContext::update_initial_state() {
     // Java side does set iconified = false when maximized
     if ((initial_state_mask & GDK_WINDOW_STATE_ICONIFIED) != 0
         && (initial_state_mask & GDK_WINDOW_STATE_MAXIMIZED) == 0) {
-        LOG_STATE(get_log_id(), "update_initial_state: iconify\n");
+        LOG_STATE("update_initial_state: iconify\n");
         iconify(true);
     }
 
     // On gnome (probably others) a window can be both maximized and fullscreen.
     // When fullscreen mode is exited it remains maximized.
     if (initial_state_mask & GDK_WINDOW_STATE_MAXIMIZED) {
-        LOG_STATE(get_log_id(), "update_initial_state: maximize\n");
+        LOG_STATE("update_initial_state: maximize\n");
         maximize(true);
     }
 
     if (initial_state_mask & GDK_WINDOW_STATE_FULLSCREEN) {
-        LOG_STATE(get_log_id(), "update_initial_state: fullscreen\n");
+        LOG_STATE("update_initial_state: fullscreen\n");
         enter_fullscreen();
     }
 
@@ -932,7 +911,7 @@ void WindowContext::update_frame_extents() {
     Rectangle new_extents = { left, top, (left + right), (top + bottom) };
     bool changed = old_extents != new_extents;
 
-    LOG_SIZE(get_log_id(), "update_frame_extents: changed=%d, left=%d, top=%d, right=%d, bottom=%d\n",
+    LOG_SIZE("update_frame_extents: changed=%d, left=%d, top=%d, right=%d, bottom=%d\n",
             changed, left, top, right, bottom);
 
     if (!changed) return;
@@ -942,7 +921,7 @@ void WindowContext::update_frame_extents() {
     if (!is_floating()) {
         // Delay for then window is restored
         needs_to_update_frame_extents = true;
-        LOG_SIZE(get_log_id(), "update_frame_extents: deferred (not floating)\n");
+        LOG_SIZE("update_frame_extents: deferred (not floating)\n");
         return;
     }
 
@@ -965,7 +944,7 @@ void WindowContext::update_frame_extents() {
     newW = std::clamp(newW, 1, MAX_WINDOW_SIZE);
     newH = std::clamp(newH, 1, MAX_WINDOW_SIZE);
 
-    LOG_SIZE(get_log_id(), "update_frame_extents: new view size w=%d, h=%d\n", newW, newH);
+    LOG_SIZE("update_frame_extents: new view size w=%d, h=%d\n", newW, newH);
 
     Point loc = window_location.get();
     int x = loc.x;
@@ -1048,7 +1027,7 @@ void WindowContext::process_state(GdkEventWindowState *event) {
         return;
     }
 
-    LOG_STATE(get_log_id(), "process_state: changed_mask=0x%x, new_state=0x%x\n",
+    LOG_STATE("process_state: changed_mask=0x%x, new_state=0x%x\n",
             event->changed_mask, event->new_window_state);
 
     if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
@@ -1059,13 +1038,13 @@ void WindowContext::process_state(GdkEventWindowState *event) {
 
     if ((event->changed_mask & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_ICONIFIED))
         && ((event->new_window_state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_ICONIFIED)) == 0)) {
-        LOG_STATE(get_log_id(), "process_state: RESTORE\n");
+        LOG_STATE("process_state: RESTORE\n");
         notify_window_resize(com_sun_glass_events_WindowEvent_RESTORE);
     } else if (event->new_window_state & (GDK_WINDOW_STATE_ICONIFIED)) {
-        LOG_STATE(get_log_id(), "process_state: MINIMIZE\n");
+        LOG_STATE("process_state: MINIMIZE\n");
         notify_window_resize(com_sun_glass_events_WindowEvent_MINIMIZE);
     } else if (event->new_window_state & (GDK_WINDOW_STATE_MAXIMIZED)) {
-        LOG_STATE(get_log_id(), "process_state: MAXIMIZE\n");
+        LOG_STATE("process_state: MAXIMIZE\n");
         notify_window_resize(com_sun_glass_events_WindowEvent_MAXIMIZE);
     }
 
@@ -1096,14 +1075,14 @@ void WindowContext::process_state(GdkEventWindowState *event) {
                     && ((event->new_window_state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN)) == 0);
 
     if (restored && needs_to_update_frame_extents) {
-        LOG_STATE(get_log_id(), "process_state: restored, updating frame extents\n");
+        LOG_STATE("process_state: restored, updating frame extents\n");
         needs_to_update_frame_extents = false;
         load_cached_extents();
     }
 }
 
 void WindowContext::notify_fullscreen(bool enter) {
-    LOG_STATE(get_log_id(), "notify_fullscreen: %s\n", enter ? "ENTER" : "EXIT");
+    LOG_STATE("notify_fullscreen: %s\n", enter ? "ENTER" : "EXIT");
 
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyView, enter
@@ -1117,7 +1096,7 @@ void WindowContext::notify_window_resize(int state) {
     if (!jwindow) return;
 
     Size size = window_size.get();
-    LOG_SIZE(get_log_id(), "notify_window_resize: state=%d, w=%d, h=%d\n", state, size.width, size.height);
+    LOG_SIZE("notify_window_resize: state=%d, w=%d, h=%d\n", state, size.width, size.height);
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize, state, size.width, size.height);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -1126,7 +1105,7 @@ void WindowContext::notify_window_move() {
     if (!jwindow) return;
 
     Point point = window_location.get();
-    LOG_POSITION(get_log_id(), "notify_window_move: x=%d, y=%d\n", point.x, point.y);
+    LOG_POSITION("notify_window_move: x=%d, y=%d\n", point.x, point.y);
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove, point.x, point.y);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -1138,7 +1117,7 @@ void WindowContext::notify_view_resize() {
 
     if (size.width <= 0 && size.height <= 0) return;
 
-    LOG_SIZE(get_log_id(), "notify_view_resize: w=%d, h=%d\n", size.width, size.height);
+    LOG_SIZE("notify_view_resize: w=%d, h=%d\n", size.width, size.height);
     mainEnv->CallVoidMethod(jview, jViewNotifyResize, size.width, size.height);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -1156,14 +1135,14 @@ void WindowContext::notify_window_size() {
 void WindowContext::notify_view_move() {
     if (!jview) return;
 
-    LOG_POSITION(get_log_id(), "notify_view_move\n");
+    LOG_POSITION("notify_view_move\n");
     mainEnv->CallVoidMethod(jview, jViewNotifyView,
             com_sun_glass_events_ViewEvent_MOVE);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::process_configure(GdkEventConfigure *event) {
-    LOG_SIZE(get_log_id(), "process_configure: send_event=%d, x=%d, y=%d, w=%d, h=%d\n",
+    LOG_SIZE("process_configure: send_event=%d, x=%d, y=%d, w=%d, h=%d\n",
             event->send_event, event->x, event->y, event->width, event->height);
 
     if (mapped && !event->send_event) {
@@ -1187,7 +1166,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
         x = root_x;
         y = root_y;
 
-        LOG_POSITION(get_log_id(), "process_configure: view_position x=%d, y=%d\n", view_x, view_y);
+        LOG_POSITION("process_configure: view_position x=%d, y=%d\n", view_x, view_y);
         view_position.set({view_x, view_y});
     } else {
         view_position.set({0, 0});
@@ -1231,10 +1210,10 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
 }
 
 void WindowContext::update_window_constraints() {
-    LOG_SIZE(get_log_id(), "update_window_constraints\n");
+    LOG_SIZE("update_window_constraints\n");
     // Not ready to re-apply the constraints
     if (!is_floating() || !is_state_floating((GdkWindowState) initial_state_mask)) {
-        LOG_SIZE(get_log_id(), "update_window_constraints: skipped (not floating)\n");
+        LOG_SIZE("update_window_constraints: skipped (not floating)\n");
         return;
     }
 
@@ -1263,7 +1242,7 @@ void WindowContext::update_window_constraints() {
         hints.max_height = h;
     }
 
-    LOG_SIZE(get_log_id(), "update_window_constraints: min_w=%d, min_h=%d, max_w=%d, max_h=%d\n",
+    LOG_SIZE("update_window_constraints: min_w=%d, min_h=%d, max_w=%d, max_h=%d\n",
             hints.min_width, hints.min_height, hints.max_width, hints.max_height);
 
     // GDK_HINT_USER_POS is used for the initial position to work
@@ -1272,7 +1251,7 @@ void WindowContext::update_window_constraints() {
 }
 
 void WindowContext::set_resizable(bool res) {
-    LOG_SIZE(get_log_id(), "set_resizable: %s\n", res ? "true" : "false");
+    LOG_SIZE("set_resizable: %s\n", res ? "true" : "false");
     resizable.set(res);
 }
 
@@ -1310,16 +1289,15 @@ bool WindowContext::is_floating() {
 }
 
 void WindowContext::set_visible(bool visible) {
-    LOG_STATE(get_log_id(), "set_visible: %s\n", visible ? "true" : "false");
-    LOG_LIFECYCLE(get_log_id(), "set_visible: %s, frame=%s, type=%s\n",
-            visible ? "show" : "hide", frame_type_name(frame_type), window_type_name(window_type));
+    LOG_LIFECYCLE("set_visible: %s\n", visible ? "true" : "false");
+
     if (visible) {
         gtk_widget_show(gtk_widget);
 
-        if (jwindow && isEnabled()) {
-            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
+//        if (jwindow && isEnabled()) {
+//            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+//            CHECK_JNI_EXCEPTION(mainEnv);
+//        }
     } else {
         gtk_widget_hide(gtk_widget);
         if (jview && is_mouse_entered) {
@@ -1339,7 +1317,7 @@ void WindowContext::set_visible(bool visible) {
 
 void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
                                float gravity_x, float gravity_y) {
-    LOG_SIZE(get_log_id(), "set_bounds: x=%d, y=%d, xSet=%d, ySet=%d, w=%d, h=%d, cw=%d, ch=%d, gx=%.2f, gy=%.2f\n",
+    LOG_SIZE("set_bounds: x=%d, y=%d, xSet=%d, ySet=%d, w=%d, h=%d, cw=%d, ch=%d, gx=%.2f, gy=%.2f\n",
             x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
     // newW / newH are view/content sizes
     int newW = 0;
@@ -1401,7 +1379,7 @@ void WindowContext::maximize(bool state) {
 }
 
 void WindowContext::set_minimized(bool state) {
-    LOG_STATE(get_log_id(), "set_minimized: %s\n", state ? "true" : "false");
+    LOG_STATE("set_minimized: %s\n", state ? "true" : "false");
     if (mapped) {
         iconify(state);
     } else {
@@ -1412,7 +1390,7 @@ void WindowContext::set_minimized(bool state) {
 }
 
 void WindowContext::set_maximized(bool state) {
-    LOG_STATE(get_log_id(), "set_maximized: %s\n", state ? "true" : "false");
+    LOG_STATE("set_maximized: %s\n", state ? "true" : "false");
     if (mapped) {
         maximize(state);
     } else {
@@ -1423,7 +1401,7 @@ void WindowContext::set_maximized(bool state) {
 }
 
 void WindowContext::enter_fullscreen() {
-    LOG_STATE(get_log_id(), "enter_fullscreen\n");
+    LOG_STATE("enter_fullscreen\n");
     if (mapped) {
         gtk_window_fullscreen(GTK_WINDOW(gtk_widget));
     } else {
@@ -1432,7 +1410,7 @@ void WindowContext::enter_fullscreen() {
 }
 
 void WindowContext::exit_fullscreen() {
-    LOG_STATE(get_log_id(), "exit_fullscreen\n");
+    LOG_STATE("exit_fullscreen\n");
     if (mapped) {
         gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
     } else {
@@ -1441,7 +1419,7 @@ void WindowContext::exit_fullscreen() {
 }
 
 void WindowContext::request_focus() {
-    LOG_FOCUS(get_log_id(), "request_focus\n");
+    LOG_FOCUS("request_focus\n");
     if (is_visible()) {
         gtk_window_present(GTK_WINDOW(gtk_widget));
     }
@@ -1460,22 +1438,22 @@ void WindowContext::set_alpha(double alpha) {
 }
 
 void WindowContext::set_enabled(bool enabled) {
-    LOG_FOCUS(get_log_id(), "set_enabled: %s\n", enabled ? "true" : "false");
+    LOG_FOCUS("set_enabled: %s\n", enabled ? "true" : "false");
     update_window_constraints();
 }
 
 void WindowContext::set_minimum_size(int w, int h) {
-    LOG_SIZE(get_log_id(), "set_minimum_size: w=%d, h=%d\n", w, h);
+    LOG_SIZE("set_minimum_size: w=%d, h=%d\n", w, h);
     minimum_size.set({w, h});
 }
 
 void WindowContext::set_system_minimum_size(int w, int h) {
-    LOG_SIZE(get_log_id(), "set_system_minimum_size: w=%d, h=%d\n", w, h);
+    LOG_SIZE("set_system_minimum_size: w=%d, h=%d\n", w, h);
     sys_min_size.set({w, h});
 }
 
 void WindowContext::set_maximum_size(int w, int h) {
-    LOG_SIZE(get_log_id(), "set_maximum_size: w=%d, h=%d\n", w, h);
+    LOG_SIZE("set_maximum_size: w=%d, h=%d\n", w, h);
     int maxw = (w == -1) ? G_MAXINT : w;
     int maxh = (h == -1) ? G_MAXINT : h;
 
@@ -1489,14 +1467,14 @@ void WindowContext::set_icon(GdkPixbuf* icon) {
 }
 
 void WindowContext::to_front() {
-    LOG_STATE(get_log_id(), "to_front\n");
+    LOG_STATE("to_front\n");
     if (GDK_IS_WINDOW(gdk_window)) {
         gdk_window_raise(gdk_window);
     }
 }
 
 void WindowContext::to_back() {
-    LOG_STATE(get_log_id(), "to_back\n");
+    LOG_STATE("to_back\n");
 
     if (GDK_IS_WINDOW(gdk_window)) {
         gdk_window_lower(gdk_window);
@@ -1542,7 +1520,7 @@ bool WindowContext::effective_on_top() {
 }
 
 void WindowContext::update_window_size() {
-    LOG_SIZE(get_log_id(), "update_window_size\n");
+    LOG_SIZE("update_window_size\n");
     Size size = view_size.get();
 
     if (frame_type == TITLED) {
@@ -1553,7 +1531,7 @@ void WindowContext::update_window_size() {
 }
 
 void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, int height) {
-    LOG_SIZE(get_log_id(), "move_resize: x=%d, y=%d, w=%d, h=%d\n", x, y, width, height);
+    LOG_SIZE("move_resize: x=%d, y=%d, w=%d, h=%d\n", x, y, width, height);
     Size size = view_size.get();
     int newW = (width > 0) ? width : size.width;
     int newH = (height > 0) ? height : size.height;
@@ -1605,7 +1583,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
         window_location.set({newX, newY});
     }
 
-    LOG_SIZE(get_log_id(), "move_resize: applied x=%d, y=%d, w=%d, h=%d\n", newX, newY, boundsW, boundsH);
+    LOG_SIZE("move_resize: applied x=%d, y=%d, w=%d, h=%d\n", newX, newY, boundsW, boundsH);
 
     if (!is_resizable()) {
         view_size.set({boundsW, boundsH});
@@ -1677,7 +1655,7 @@ void WindowContext::set_owner(WindowContext * owner_ctx) {
 }
 
 void WindowContext::update_view_size() {
-    LOG_SIZE(get_log_id(), "update_view_size\n");
+    LOG_SIZE("update_view_size\n");
     notify_view_resize();
 }
 
@@ -1716,8 +1694,7 @@ Point WindowContext::get_view_position() {
 }
 
 WindowContext::~WindowContext() {
-    LOG_LIFECYCLE(get_log_id(), "~WindowContext: frame=%s, type=%s\n",
-            frame_type_name(frame_type), window_type_name(window_type));
+    LOG_LIFECYCLE("~WindowContext\n");
     disableIME();
     gtk_widget_destroy(gtk_widget);
 }
@@ -1735,7 +1712,7 @@ WindowContextExtended::WindowContextExtended(jobject jwin,
  * no non-client regions.
  */
 void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool synthesized) {
-    LOG_INPUT(get_log_id(), "ext_mouse_button: type=%d button=%u at (%d,%d)\n",
+    LOG_INPUT("ext_mouse_button: type=%d button=%u at (%d,%d)\n",
               event->type, event->button, (int)event->x, (int)event->y);
     // Non-EXTENDED or full-screen windows don't have additional behaviors, so we delegate
     // directly to the base implementation.
@@ -1796,7 +1773,7 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
 }
 
 void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
-    LOG_INPUT(get_log_id(), "ext_mouse_cross: %s at (%d,%d)\n",
+    LOG_INPUT("ext_mouse_cross: %s at (%d,%d)\n",
               event->type == GDK_ENTER_NOTIFY ? "ENTER" : "EXIT", (int)event->x, (int)event->y);
     // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
     // from the client area to the resize border. This is indicated by is_mouse_entered
