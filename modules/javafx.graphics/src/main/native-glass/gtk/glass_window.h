@@ -36,6 +36,7 @@
 
 #include <jni.h>
 #include <set>
+#include <string>
 #include <vector>
 #include <optional>
 
@@ -236,11 +237,6 @@ private:
     WindowFrameType frame_type;
     WindowType window_type;
 
-protected:
-    jobject jwindow;
-    jobject jview{};
-
-private:
     GtkWidget *gtk_widget{};
     GdkWindow *gdk_window{};
 
@@ -288,8 +284,9 @@ private:
 
 protected:
     bool is_mouse_entered{false};
-    void add_child(WindowContext*);
-    void remove_child(WindowContext*);
+    jobject jwindow;
+    jobject jview{};
+    std::string log_id;
 
 public:
     WindowContext() = delete;
@@ -304,7 +301,6 @@ public:
     Point get_view_position();
 
     bool isEnabled();
-    void notify_focus_disabled();
     bool hasIME();
     bool filterIME(GdkEvent*);
     void enableOrResetIME();
@@ -409,6 +405,11 @@ private:
     void update_initial_state();
     bool grab_mouse_drag_focus();
     void ungrab_mouse_drag_focus();
+
+    void add_child(WindowContext*);
+    void remove_child(WindowContext*);
+    void notify_focus(int);
+    void notify_focus_disabled();
 };
 
 class WindowContextExtended : public WindowContext {
@@ -443,7 +444,7 @@ public:
         if (ctx != nullptr) {
             ctx->decrement_events_counter();
             if (ctx->is_dead() && ctx->get_events_count() == 0) {
-                LOG_LIFECYCLE("EventsCounterHelper: deleting\n");
+                LOG(LIFECYCLE, "", "EventsCounterHelper: deleting\n");
                 delete ctx;
             }
             ctx = nullptr;

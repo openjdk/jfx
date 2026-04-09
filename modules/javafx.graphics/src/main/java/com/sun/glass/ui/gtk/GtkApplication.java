@@ -165,7 +165,7 @@ final class GtkApplication extends Application implements
         }
 
         _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale,
-                System.getProperty("javafx.glass.gtk.debug", ""));
+                System.getProperty("javafx.glass.gtk.verbose", ""));
 
         // Embedded in SWT, with shared event thread
         boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");

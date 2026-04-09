@@ -35,14 +35,14 @@ char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
 unsigned int glass_log_flags = 0;
 
 static const GDebugKey glass_log_keys[] = {
-    { "size",      GLASS_LOG_SIZE },
-    { "position",  GLASS_LOG_POSITION },
-    { "focus",     GLASS_LOG_FOCUS },
-    { "state",     GLASS_LOG_STATE },
-    { "lifecycle", GLASS_LOG_LIFECYCLE },
-    { "input",     GLASS_LOG_INPUT },
-    { "dialog",    GLASS_LOG_DIALOG },
-    { "all",       GLASS_LOG_ALL },
+    { "size",      SIZE },
+    { "position",  POSITION },
+    { "focus",     FOCUS },
+    { "state",     STATE },
+    { "lifecycle", LIFECYCLE },
+    { "input",     INPUT },
+    { "dialog",    DIALOG },
+    { "all",       ALL },
 };
 
 void glass_gtk_log_init(const char* categories) {

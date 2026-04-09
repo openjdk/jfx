@@ -30,6 +30,9 @@
 #include <stdint.h>
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
+#include <cstdio>
+#include <string>
+
 #include "wrapped.h"
 
 #define GLASS_GTK3
@@ -239,32 +242,38 @@ private:
 
 #ifdef VERBOSE
 
-#define GLASS_LOG_SIZE      (1u << 0)
-#define GLASS_LOG_POSITION  (1u << 1)
-#define GLASS_LOG_FOCUS     (1u << 2)
-#define GLASS_LOG_STATE     (1u << 3)
-#define GLASS_LOG_LIFECYCLE (1u << 4)
-#define GLASS_LOG_INPUT     (1u << 5)
-#define GLASS_LOG_DIALOG    (1u << 6)
-#define GLASS_LOG_ALL       (0xFFFFFFFFu)
+#define SIZE      (1u << 0)
+#define POSITION  (1u << 1)
+#define FOCUS     (1u << 2)
+#define STATE     (1u << 3)
+#define LIFECYCLE (1u << 4)
+#define INPUT     (1u << 5)
+#define DIALOG    (1u << 6)
+#define ALL       (0xFFFFFFFFu)
 
 extern unsigned int glass_log_flags;
 
 void glass_gtk_log_init(const char* categories);
 
-#define LOG(category, fmt, ...) \
-    if (glass_log_flags & GLASS_LOG_##category) { \
-        printf("[" #category "] " fmt, ##__VA_ARGS__); \
-        fflush(stdout); \
+template<typename... Args>
+inline void log(int category,
+                const char* categoryName,
+                const std::string& artifact,
+                const char* fmt,
+                Args... args) {
+    if (glass_log_flags & category) {
+        std::printf("[%s %.30s] ", categoryName, artifact.c_str());
+        if constexpr (sizeof...(args) == 0) {
+            std::fputs(fmt, stdout);
+        } else {
+            std::printf(fmt, args...);
+        }
+        std::fflush(stdout);
     }
+}
 
-#define LOG_SIZE(fmt, ...)      LOG(SIZE, fmt, ##__VA_ARGS__)
-#define LOG_POSITION(fmt, ...)  LOG(POSITION, fmt, ##__VA_ARGS__)
-#define LOG_FOCUS(fmt, ...)     LOG(FOCUS, fmt, ##__VA_ARGS__)
-#define LOG_STATE(fmt, ...)     LOG(STATE, fmt, ##__VA_ARGS__)
-#define LOG_LIFECYCLE(fmt, ...) LOG(LIFECYCLE, fmt, ##__VA_ARGS__)
-#define LOG_INPUT(fmt, ...)     LOG(INPUT, fmt, ##__VA_ARGS__)
-#define LOG_DIALOG(fmt, ...)    LOG(DIALOG, fmt, ##__VA_ARGS__)
+#define LOG(category, artifact, fmt, ...) \
+    log(category, #category, artifact, fmt, ##__VA_ARGS__)
 
 #define LOG0(msg) {printf(msg);fflush(stdout);}
 #define LOG1(msg, param) {printf(msg, param);fflush(stdout);}
@@ -283,14 +292,7 @@ void glass_gtk_log_init(const char* categories);
 
 #else
 
-#define LOG(category, fmt, ...)
-#define LOG_SIZE(fmt, ...)
-#define LOG_POSITION(fmt, ...)
-#define LOG_FOCUS(fmt, ...)
-#define LOG_STATE(fmt, ...)
-#define LOG_LIFECYCLE(fmt, ...)
-#define LOG_INPUT(fmt, ...)
-#define LOG_DIALOG(fmt, ...)
+#define LOG(...) ((void)0)
 
 static inline void glass_gtk_log_init(const char*) {}
 
