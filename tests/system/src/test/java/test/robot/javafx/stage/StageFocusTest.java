@@ -214,6 +214,7 @@ public class StageFocusTest {
         // check if we actually have focus and key presses are registered by the app
         Util.runAndWait(() -> {
             robot.keyPress(KeyCode.A);
+            robot.keyRelease(KeyCode.A);
         });
         assertTrue(
             eventReceivedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),

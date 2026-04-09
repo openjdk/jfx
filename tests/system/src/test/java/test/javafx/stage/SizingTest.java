@@ -113,10 +113,7 @@ class SizingTest extends StageTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
     void maxWidth(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, s -> {
-            s.initStyle(stageStyle);
-            s.setMaxWidth(MAX_WIDTH);
-        });
+        setupStageWithStyle(stageStyle, s -> s.setMaxWidth(MAX_WIDTH));
 
         sleep(GEOMETRY_DELAY);
 

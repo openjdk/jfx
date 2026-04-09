@@ -51,6 +51,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -351,7 +352,6 @@ class StageOwnershipTest extends VisualTestBase {
             stage1 = createStage(style, COLOR1, stage0, null, 100, 100);
             stage2 = createStage(style, COLOR2, stage0, null, 350, 100);
         });
-
         showStageAndWait(stage0, stage1, stage2);
         waitForBoolean(stage0.maximizedProperty(), true, STATE_DELAY);
 

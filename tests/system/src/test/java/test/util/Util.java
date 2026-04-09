@@ -397,7 +397,7 @@ public class Util {
      * Waits for a boolean property to reach the expected value, then sleeps for
      * the specified settle delay.
      * <p>
-     * The settle delay is useful for visualtestes, because it allows asynchronous
+     * The settle delay is useful for visual teste, because it allows asynchronous
      * side-effects (geometry changes, animations) to complete after the property has
      * reached the expected value.
      *

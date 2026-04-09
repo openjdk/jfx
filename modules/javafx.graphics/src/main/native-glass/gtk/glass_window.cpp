@@ -364,7 +364,7 @@ void WindowContext::process_map() {
     int h = size.height;
 
     if (w <= 0) {
-        w = DEFAULT_WIDTH;;
+        w = DEFAULT_WIDTH;
     }
 
     if (h <= 0) {
@@ -836,10 +836,6 @@ void WindowContext::ungrab_focus() {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
-
-    LOG_FOCUS(get_log_id(), "ungrab_focus: notify FOCUS_UNGRAB\n");
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
-    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContext::ungrab_if_grabbed() {
@@ -1122,10 +1118,13 @@ void WindowContext::process_state(GdkEventWindowState *event) {
 
 void WindowContext::notify_fullscreen(bool enter) {
     LOG_STATE(get_log_id(), "notify_fullscreen: %s\n", enter ? "ENTER" : "EXIT");
-    mainEnv->CallVoidMethod(jview, jViewNotifyView, enter
-                                        ? com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER
-                                        : com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
-    CHECK_JNI_EXCEPTION(mainEnv)
+
+    if (jview) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyView, enter
+                                            ? com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER
+                                            : com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 void WindowContext::notify_window_resize(int state) {
@@ -1538,7 +1537,7 @@ void WindowContext::update_ontop_tree(bool on_top) {
 bool WindowContext::on_top_inherited() {
     WindowContext* o = owner;
     while (o) {
-        WindowContext* topO = dynamic_cast<WindowContext*>(o);
+        WindowContext* topO = o;
         if (!topO) break;
         if (topO->on_top) {
             return true;
