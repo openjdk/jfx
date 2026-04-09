@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.*;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
@@ -98,6 +99,8 @@ class StageLocationTest extends VisualTestBase {
         } catch (InterruptedException e) {
             fail(e);
         }
+
+        Util.sleep(FOCUS_DELAY);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -109,7 +112,7 @@ class StageLocationTest extends VisualTestBase {
             stage.setY(Y);
         });
         showStageAndWait(stage);
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
@@ -117,7 +120,7 @@ class StageLocationTest extends VisualTestBase {
             stage.setX(TO_X);
             stage.setY(TO_Y);
         });
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
     }
@@ -131,12 +134,12 @@ class StageLocationTest extends VisualTestBase {
             stage.setY(Y);
         });
         showStageAndWait(stage);
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
         runAndWait(() -> stage.setX(TO_X));
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, Y + 100));
     }
@@ -150,12 +153,12 @@ class StageLocationTest extends VisualTestBase {
             stage.setY(Y);
         });
         showStageAndWait(stage);
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, X + 100, Y + 100));
 
         runAndWait(() -> stage.setY(TO_Y));
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, X + 100, TO_Y + 100));
     }
@@ -169,13 +172,13 @@ class StageLocationTest extends VisualTestBase {
             stage.setY(Y);
         });
         showStageAndWait(stage);
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> {
             stage.setX(TO_X);
             stage.setY(TO_Y);
         });
-        Util.waitForIdle(stage.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR, TO_X + 100, TO_Y + 100));
     }

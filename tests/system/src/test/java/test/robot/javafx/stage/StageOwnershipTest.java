@@ -55,7 +55,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static test.util.Util.FOCUS_DELAY;
+import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.STATE_DELAY;
 import static test.util.Util.TIMEOUT;
 import static test.util.Util.waitForBoolean;
 
@@ -96,7 +99,6 @@ class StageOwnershipTest extends VisualTestBase {
             bottomStage.setY(0);
         });
         showStageAndWait(bottomStage);
-        Util.waitForIdle(bottomStage.getScene());
     }
 
     private void setupTopStage(Stage owner, StageStyle stageStyle, Modality modality) {
@@ -193,6 +195,7 @@ class StageOwnershipTest extends VisualTestBase {
         } catch (InterruptedException e) {
             fail(e);
         }
+        Util.sleep(FOCUS_DELAY);
     }
 
     private static Stream<Arguments> getTestsParams() {
@@ -208,14 +211,11 @@ class StageOwnershipTest extends VisualTestBase {
         setupTopStage(bottomStage, stageStyle, modality);
 
         runAndWait(() -> bottomStage.setMaximized(true));
-        waitForBoolean(bottomStage.maximizedProperty(), true, "bottom stage to be maximized");
-        Util.waitForIdle(bottomStage.getScene());
+        waitForBoolean(bottomStage.maximizedProperty(), true);
 
         showStageAndWait(topStage);
-        Util.waitForIdle(topStage.getScene());
 
         runAndWait(() -> {
-            assertTrue(bottomStage.isMaximized());
             assertColorEqualsVisualBounds(BOTTOM_COLOR);
 
             Color color = getColor(100, 100);
@@ -231,15 +231,11 @@ class StageOwnershipTest extends VisualTestBase {
         setupTopStage(bottomStage, stageStyle, modality);
 
         runAndWait(() -> bottomStage.setFullScreen(true));
-        waitForBoolean(bottomStage.fullScreenProperty(), true, "bottom stage to be fullscreen");
-        Util.waitForIdle(bottomStage.getScene());
+        waitForBoolean(bottomStage.fullScreenProperty(), true, STATE_DELAY);
 
         showStageAndWait(topStage);
-        Util.waitForIdle(topStage.getScene());
 
         runAndWait(() -> {
-            assertTrue(bottomStage.isFullScreen());
-
             assertColorEqualsVisualBounds(BOTTOM_COLOR);
 
             Color color = getColor(100, 100);
@@ -264,33 +260,23 @@ class StageOwnershipTest extends VisualTestBase {
         showStageAndWait(stage0);
         showStageAndWait(stage1);
         showStageAndWait(stage2);
-        Util.waitForIdle(stage2.getScene());
 
-        runAndWait(() -> {
-            assertTrue(stage2.isFocused());
-            assertColorEquals(COLOR2, stage2);
-            assertFalse(stage1.isFocused());
-            assertFalse(stage0.isFocused());
-        });
+        waitForBoolean(stage0.focusedProperty(), false, FOCUS_DELAY);
+        waitForBoolean(stage1.focusedProperty(), false, FOCUS_DELAY);
+        waitForBoolean(stage2.focusedProperty(), true, FOCUS_DELAY);
+
+        runAndWait(() -> assertColorEquals(COLOR2, stage2));
 
         runAndWait(stage2::close);
-        waitForBoolean(stage1.focusedProperty(), true, "stage1 to receive focus after closing modal stage2");
-        Util.waitForIdle(stage1.getScene());
+        waitForBoolean(stage0.focusedProperty(), false);
+        waitForBoolean(stage1.focusedProperty(), true, FOCUS_DELAY);
 
-        runAndWait(() -> {
-            assertTrue(stage1.isFocused());
-            assertColorEquals(COLOR1, stage1);
-            assertFalse(stage0.isFocused());
-        });
+        runAndWait(() -> assertColorEquals(COLOR1, stage1));
 
         runAndWait(stage1::close);
-        waitForBoolean(stage0.focusedProperty(), true, "stage0 to receive focus after closing stage1");
-        Util.waitForIdle(stage0.getScene());
+        waitForBoolean(stage0.focusedProperty(), true,FOCUS_DELAY);
 
-        runAndWait(() -> {
-            assertTrue(stage0.isFocused());
-            assertColorEquals(COLOR0, stage0);
-        });
+        runAndWait(() -> assertColorEquals(COLOR0, stage0));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -303,7 +289,6 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1, stage2);
-        Util.waitForIdle(stage2.getScene());
 
         runAndWait(() -> {
             assertTrue(stage0.isShowing());
@@ -312,13 +297,9 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         runAndWait(stage0::close);
-        waitForBoolean(stage0.showingProperty(), false, "stage0 to be hidden");
-
-        runAndWait(() -> {
-            assertFalse(stage0.isShowing());
-            assertFalse(stage1.isShowing());
-            assertFalse(stage2.isShowing());
-        });
+        waitForBoolean(stage0.showingProperty(), false);
+        waitForBoolean(stage1.showingProperty(), false);
+        waitForBoolean(stage2.showingProperty(), false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -331,7 +312,7 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1, stage2);
-        Util.waitForIdle(stage2.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> {
             assertTrue(stage0.isShowing());
@@ -340,13 +321,9 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         runAndWait(stage1::close);
-        waitForBoolean(stage1.showingProperty(), false, "stage1 to be hidden");
-
-        runAndWait(() -> {
-            assertTrue(stage0.isShowing(), "Owner (stage0) should still be showing");
-            assertFalse(stage1.isShowing(), "Closed stage (stage1) should not be showing");
-            assertFalse(stage2.isShowing(), "Descendant (stage2) should be closed");
-        });
+        waitForBoolean(stage0.showingProperty(), true);
+        waitForBoolean(stage1.showingProperty(), false);
+        waitForBoolean(stage2.showingProperty(), false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -358,14 +335,10 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1);
-        Util.waitForIdle(stage1.getScene());
 
-        runAndWait(() -> {
-            assertColorEquals(COLOR1, stage1);
-        });
-
+        runAndWait(() -> assertColorEquals(COLOR1, stage1));
         runAndWait(stage0::toFront);
-        Util.waitForIdle(stage0.getScene());
+        Util.sleep(GEOMETRY_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR1, stage1));
     }
@@ -379,10 +352,8 @@ class StageOwnershipTest extends VisualTestBase {
             stage1 = createStage(style, COLOR1, stage0, null, 100, 100);
             stage2 = createStage(style, COLOR2, stage0, null, 350, 100);
         });
-
         showStageAndWait(stage0, stage1, stage2);
-        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
-        Util.waitForIdle(stage0.getScene());
+        waitForBoolean(stage0.maximizedProperty(), true, STATE_DELAY);
 
         runAndWait(() -> {
             assertColorEquals(COLOR1, stage1);
@@ -390,10 +361,9 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         runAndWait(stage1::close);
-        waitForBoolean(stage1.showingProperty(), false, "stage1 to be hidden");
+        waitForBoolean(stage1.showingProperty(), false);
 
         runAndWait(() -> {
-            assertFalse(stage1.isShowing());
             assertTrue(stage2.isShowing());
             assertColorEquals(COLOR2, stage2);
         });
@@ -408,11 +378,10 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1);
-        waitForBoolean(stage1.focusedProperty(), true, "stage1 to receive focus after closing non-modal child");
-        Util.waitForIdle(stage1.getScene());
+        waitForBoolean(stage1.focusedProperty(), true, GEOMETRY_DELAY);
 
         runAndWait(stage1::close);
-        waitForBoolean(stage0.focusedProperty(), true, "stage0 to receive focus after closing non-modal child");
+        waitForBoolean(stage0.focusedProperty(), true, FOCUS_DELAY);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -424,17 +393,12 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1);
-        Util.waitForIdle(stage1.getScene());
 
         runAndWait(() -> stage0.setMaximized(true));
-        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
-        Util.waitForIdle(stage0.getScene());
+        waitForBoolean(stage0.maximizedProperty(), true, GEOMETRY_DELAY);
+        waitForBoolean(stage1.showingProperty(), true, FOCUS_DELAY);
 
-        runAndWait(() -> {
-            assertTrue(stage0.isMaximized());
-            assertTrue(stage1.isShowing());
-            assertColorEquals(COLOR1, stage1);
-        });
+        runAndWait(() -> assertColorEquals(COLOR1, stage1));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -453,23 +417,19 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1, stage2, stage3);
-        waitForBoolean(stage0.maximizedProperty(), true, "stage0 to be maximized");
-        Util.waitForIdle(stage0.getScene());
+        waitForBoolean(stage0.maximizedProperty(), true, GEOMETRY_DELAY);
 
         runAndWait(() -> stage1.setIconified(true));
-        waitForBoolean(stage1.iconifiedProperty(), true, "stage1 to be iconified");
-        Util.sleep(300);
+        waitForBoolean(stage1.iconifiedProperty(), true, STATE_DELAY);
 
         runAndWait(() -> {
-            assertTrue(stage1.isIconified());
             assertColorEquals(COLOR0, stage1);
             assertColorEquals(COLOR0, stage2);
             assertColorEquals(COLOR0, stage3);
         });
 
         runAndWait(() -> stage1.setIconified(false));
-        waitForBoolean(stage1.iconifiedProperty(), false, "stage1 to be de-iconified");
-        Util.sleep(300);
+        waitForBoolean(stage1.iconifiedProperty(), false, STATE_DELAY);
 
         runAndWait(() -> {
             assertFalse(stage1.isIconified());

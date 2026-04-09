@@ -40,6 +40,7 @@ import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.util.Util.*;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 
 class SizingTest extends StageTestBase {
@@ -79,14 +80,14 @@ class SizingTest extends StageTestBase {
             s.setMaxHeight(MAX_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MAX_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to max width");
@@ -94,14 +95,14 @@ class SizingTest extends StageTestBase {
                 "Stage height should have been limited to max height");
 
         // Reset it
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setMaxWidth(Double.MAX_VALUE);
             getStage().setMaxHeight(Double.MAX_VALUE);
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been accepted after removing min width");
@@ -112,19 +113,16 @@ class SizingTest extends StageTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
     void maxWidth(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, s -> {
-            s.initStyle(stageStyle);
-            s.setMaxWidth(MAX_WIDTH);
-        });
+        setupStageWithStyle(stageStyle, s -> s.setMaxWidth(MAX_WIDTH));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MAX_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to max width");
@@ -136,14 +134,14 @@ class SizingTest extends StageTestBase {
     void maxHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMaxHeight(MAX_HEIGHT));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA, "Only max height should be limited");
         assertEquals(MAX_HEIGHT, getStage().getHeight(), SIZING_DELTA,
@@ -158,14 +156,14 @@ class SizingTest extends StageTestBase {
             s.setMinHeight(MIN_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MIN_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to min width");
@@ -173,14 +171,14 @@ class SizingTest extends StageTestBase {
                 "Stage height should have been limited to min height");
 
         // Reset it
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setMinWidth(0);
             getStage().setMinHeight(0);
             getStage().setWidth(WIDTH);
             getStage().setHeight(HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been accepted after removing min width");
@@ -193,14 +191,14 @@ class SizingTest extends StageTestBase {
     void minWidth(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMinWidth(MIN_WIDTH));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MIN_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to min width");
@@ -212,14 +210,14 @@ class SizingTest extends StageTestBase {
     void minHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setMinHeight(MIN_HEIGHT));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA, "Only min height should be limited");
         assertEquals(MIN_HEIGHT, getStage().getHeight(), SIZING_DELTA,
@@ -236,15 +234,15 @@ class SizingTest extends StageTestBase {
             s.setMaxHeight(MAX_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         // Try to resize below min
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(100);
             getStage().setHeight(100);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to min width");
@@ -252,12 +250,12 @@ class SizingTest extends StageTestBase {
                 "Stage height should have been limited to min height");
 
         // Try to resize above max
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(MIN_WIDTH);
             getStage().setHeight(MIN_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MAX_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should have been limited to max width");
@@ -273,7 +271,7 @@ class SizingTest extends StageTestBase {
             s.setHeight(HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should match the set width");
@@ -286,7 +284,7 @@ class SizingTest extends StageTestBase {
     void noSize(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, null);
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertTrue(getStage().getWidth() > 1, "Stage width should be greater than 1");
         assertTrue(getStage().getHeight() > 1, "Stage height should be greater than 1");
@@ -297,7 +295,7 @@ class SizingTest extends StageTestBase {
     void noHeight(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setWidth(WIDTH));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage do not match the set width");
         assertTrue(getStage().getHeight() > 1, "Stage height should be greater than 1");
@@ -308,7 +306,7 @@ class SizingTest extends StageTestBase {
     void noWidth(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, s -> s.setHeight(HEIGHT));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertTrue(getStage().getWidth() > 1, "Stage width should be greater than 1");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage do not match the set height");
@@ -322,19 +320,19 @@ class SizingTest extends StageTestBase {
             s.setHeight(HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should match the initial width");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA,
                 "Stage height should match the initial height");
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should match the new width after resize");
@@ -352,15 +350,15 @@ class SizingTest extends StageTestBase {
             s.setMaxHeight(MIN_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         // Set size within the valid range [WIDTH..MIN_WIDTH] = [300..500]
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width within valid range should be accepted");
@@ -378,7 +376,7 @@ class SizingTest extends StageTestBase {
             s.setMaxHeight(MAX_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MAX_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should be clamped to max width when initial size exceeds max");
@@ -396,7 +394,7 @@ class SizingTest extends StageTestBase {
             s.setMinHeight(MIN_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(MIN_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Stage width should be clamped to min width when initial size is below min");
@@ -408,7 +406,7 @@ class SizingTest extends StageTestBase {
     void sceneSizeOnly() {
         setupStageWithStyle(StageStyle.DECORATED, s -> s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getScene().getWidth(), SIZING_DELTA,
                 "Scene width should not be affected by decoration if stage width not set");
@@ -423,7 +421,7 @@ class SizingTest extends StageTestBase {
             s.setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(WIDTH, getScene().getWidth(),
                 "Scene width should not be affected by decoration if stage width not set");
@@ -437,7 +435,7 @@ class SizingTest extends StageTestBase {
             s.setWidth(NEW_WIDTH);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage with should match the set new width");
         assertEquals(HEIGHT, getScene().getHeight(),
@@ -448,23 +446,23 @@ class SizingTest extends StageTestBase {
     void sceneSizeThenStageSize() {
         setupStageWithStyle(StageStyle.DECORATED, s -> s.setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
-        Util.runAndWait(() -> {
+        runAndWait(() -> {
             getStage().setWidth(NEW_WIDTH);
             getStage().setHeight(NEW_HEIGHT);
         });
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Scene width should match the new stage width");
         assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
                 "Scene height should match the new stage height");
 
-        Util.runAndWait(() -> getStage().setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
+        runAndWait(() -> getStage().setScene(new Scene(new StackPane(), WIDTH, HEIGHT)));
 
-        Util.sleep(MEDIUM_WAIT);
+        sleep(GEOMETRY_DELAY);
 
         assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
                 "Scene width should remain unchanged after setting a new scene");

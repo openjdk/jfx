@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.waitForBoolean;
 
@@ -80,7 +81,7 @@ class MaximizeTest extends StageTestBase {
     void maximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
 
-        waitForBoolean(getStage().maximizedProperty(), true, "stage to be maximized");
+        waitForBoolean(getStage().maximizedProperty(), true);
         setMaximized(false);
 
         assertSizePosition();
@@ -115,13 +116,11 @@ class MaximizeTest extends StageTestBase {
 
     private void setMaximized(boolean value) {
         Util.runAndWait(() -> getStage().setMaximized(value));
-        waitForBoolean(getStage().maximizedProperty(), value,
-                "stage to " + (value ? "maximize" : "restore"));
-        Util.waitForIdle(getScene());
+        waitForBoolean(getStage().maximizedProperty(), value);
     }
 
     private void assertSizePosition() {
-        Util.waitForIdle(getScene());
+        Util.sleep(GEOMETRY_DELAY);
         assertEquals(WIDTH, getStage().getWidth(), SIZING_DELTA, "Stage's width should have remained");
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
         assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage's X position should have remained");
