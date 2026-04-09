@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -406,6 +407,9 @@ public class TreeView<T> extends Control {
     // Used in the getTreeItem(int row) method to act as a cache.
     // See JDK-8125681 for the justification and performance gains.
     private Map<Integer, SoftReference<TreeItem<T>>> treeItemCacheMap = new HashMap<>();
+    // Persistent DFS iterator so that sequential access is O(N) instead of O(N^2).
+    private Iterator<TreeItem<T>> treeItemIterator = null;
+    private int treeItemIteratorRow = -1;
 
 
     /* *************************************************************************
@@ -420,20 +424,8 @@ public class TreeView<T> extends Control {
     private final EventHandler<TreeModificationEvent<T>> rootEvent = e -> {
         // this forces layoutChildren at the next pulse, and therefore
         // updates the item count if necessary
-        EventType<?> eventType = e.getEventType();
-        boolean match = false;
-        while (eventType != null) {
-            if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                match = true;
-                break;
-            }
-            eventType = eventType.getSuperType();
-        }
-
-        if (match) {
-            expandedItemCountDirty = true;
-            requestLayout();
-        }
+        expandedItemCountDirty = true;
+        requestLayout();
     };
 
     private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
@@ -498,13 +490,13 @@ public class TreeView<T> extends Control {
         @Override protected void invalidated() {
             TreeItem<T> oldTreeItem = weakOldItem == null ? null : weakOldItem.get();
             if (oldTreeItem != null && weakRootEventListener != null) {
-                oldTreeItem.removeEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
+                oldTreeItem.removeEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakRootEventListener);
             }
 
             TreeItem<T> root = getRoot();
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
-                getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
+                root.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakRootEventListener);
                 weakOldItem = new WeakReference<>(root);
             }
 
@@ -1056,19 +1048,31 @@ public class TreeView<T> extends Control {
 
         if (expandedItemCountDirty) {
             updateExpandedItemCount(getRoot());
-        } else {
-            if (treeItemCacheMap.containsKey(_row)) {
-                SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
-                TreeItem<T> treeItem = treeItemRef.get();
-                if (treeItem != null) {
-                    return treeItem;
-                }
+        }
+
+        SoftReference<TreeItem<T>> ref = treeItemCacheMap.get(_row);
+        if (ref != null) {
+            TreeItem<T> cached = ref.get();
+            if (cached != null) {
+                return cached;
             }
         }
 
-        TreeItem<T> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
-        treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
-        return treeItem;
+        if (treeItemIterator == null || _row <= treeItemIteratorRow) {
+            treeItemIterator = TreeUtil.visibleItems(getRoot()).iterator();
+            treeItemIteratorRow = -1;
+        }
+
+        while (treeItemIterator.hasNext()) {
+            TreeItem<T> item = treeItemIterator.next();
+            treeItemCacheMap.put(++treeItemIteratorRow, new SoftReference<>(item));
+            if (treeItemIteratorRow == _row) {
+                return item;
+            }
+        }
+
+        // Iterator is exhausted before reaching _row. Should not happen in normal use.
+        return TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
     }
 
     /**
@@ -1131,9 +1135,9 @@ public class TreeView<T> extends Control {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
 
         if (expandedItemCountDirty) {
-            // this is a very inefficient thing to do, but for now having a cache
-            // is better than nothing at all...
             treeItemCacheMap.clear();
+            treeItemIterator = null;
+            treeItemIteratorRow = -1;
         }
 
         expandedItemCountDirty = false;
