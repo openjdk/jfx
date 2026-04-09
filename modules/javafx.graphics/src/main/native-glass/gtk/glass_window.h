@@ -231,6 +231,7 @@ private:
     bool can_be_deleted{false};
     bool mapped{false};
     unsigned long window_id{};
+    mutable gchar* log_id{};
     gint initial_state_mask{0};
 
     WindowFrameType frame_type;
@@ -288,6 +289,8 @@ private:
 
 protected:
     bool is_mouse_entered{false};
+    void add_child(WindowContext*);
+    void remove_child(WindowContext*);
 
 public:
     WindowContext() = delete;
@@ -317,8 +320,6 @@ public:
     GtkWindow *get_gtk_window();
     XID get_native_window();
 
-    void add_child(WindowContext*);
-    void remove_child(WindowContext*);
     void set_visible(bool);
     bool is_visible();
     bool is_iconified();

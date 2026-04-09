@@ -114,27 +114,6 @@ unsigned long WindowContext::sm_next_window_id = 0;
 std::optional<Rectangle> WindowContext::normal_extents;
 std::optional<Rectangle> WindowContext::utility_extents;
 
-#ifdef VERBOSE
-static const char* frame_type_name(WindowFrameType ft) {
-    switch (ft) {
-        case TITLED:      return "TITLED";
-        case UNTITLED:    return "UNTITLED";
-        case TRANSPARENT: return "TRANSPARENT";
-        case EXTENDED:    return "EXTENDED";
-        default:          return "UNKNOWN";
-    }
-}
-
-static const char* window_type_name(WindowType wt) {
-    switch (wt) {
-        case NORMAL:  return "NORMAL";
-        case UTILITY: return "UTILITY";
-        case POPUP:   return "POPUP";
-        default:      return "UNKNOWN";
-    }
-}
-#endif // VERBOSE
-
 static void event_realize(GtkWidget* self, gpointer user_data) {
     WindowContext *ctx = ((WindowContext *) user_data);
     ctx->process_realize();
@@ -315,16 +294,21 @@ XID WindowContext::get_native_window() {
 }
 
 const char* WindowContext::get_log_id() const {
-    static thread_local char buf[64];
+    const char* title = nullptr;
     if (gtk_widget && GTK_IS_WINDOW(gtk_widget)) {
-        const char* title = gtk_window_get_title(GTK_WINDOW(gtk_widget));
-        if (title && title[0]) {
-            snprintf(buf, sizeof(buf), "%lu '%.40s'", window_id, title);
-            return buf;
-        }
+        title = gtk_window_get_title(GTK_WINDOW(gtk_widget));
+        if (title && !title[0]) title = nullptr;
     }
-    snprintf(buf, sizeof(buf), "%lu", window_id);
-    return buf;
+
+    g_free(log_id);
+
+    if (title) {
+        log_id = g_strdup_printf("%lu '%s'", window_id, title);
+    } else {
+        log_id = g_strdup_printf("%lu", window_id);
+    }
+
+    return log_id;
 }
 
 bool WindowContext::isEnabled() {
@@ -1734,6 +1718,7 @@ WindowContext::~WindowContext() {
             frame_type_name(frame_type), window_type_name(window_type));
     disableIME();
     gtk_widget_destroy(gtk_widget);
+    g_free(log_id);
 }
 
 WindowContextExtended::WindowContextExtended(jobject jwin,
