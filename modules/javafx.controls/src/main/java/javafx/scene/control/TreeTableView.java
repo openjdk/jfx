@@ -763,7 +763,7 @@ public class TreeTableView<S> extends Control {
     // Used in the getTreeItem(int row) method to act as a cache.
     // See JDK-8125681 for the justification and performance gains.
     private Map<Integer, SoftReference<TreeItem<S>>> treeItemCacheMap = new HashMap<>();
-    // Persistent DFS iterator so that sequential access is O(N) instead of O(N^2).
+    // Persistent depth-first search iterator so that sequential access is O(N) instead of O(N^2).
     private Iterator<TreeItem<S>> treeItemIterator = null;
     private int treeItemIteratorRow = -1;
 
@@ -799,11 +799,11 @@ public class TreeTableView<S> extends Control {
      **************************************************************************/
 
     // we use this to forward events that have bubbled up TreeItem instances
-    // to the TreeTableViewSkin, to force it to recalculate teh item count and redraw
+    // to the TreeTableViewSkin, to force it to recalculate the item count and redraw
     // if necessary
     private final EventHandler<TreeItem.TreeModificationEvent<S>> rootEvent = e -> {
         // this forces layoutChildren at the next pulse, and therefore
-        // updates the item count if necessary
+        // updates the item count
         expandedItemCountDirty = true;
         requestLayout();
     };

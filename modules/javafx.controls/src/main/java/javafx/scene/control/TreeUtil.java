@@ -168,11 +168,13 @@ class TreeUtil {
                 }
             }
 
-            @Override public boolean hasNext() {
+            @Override
+            public boolean hasNext() {
                 return !stack.isEmpty();
             }
 
-            @Override public TreeItem<T> next() {
+            @Override
+            public TreeItem<T> next() {
                 if (stack.isEmpty()) {
                     throw new NoSuchElementException();
                 }
