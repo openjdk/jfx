@@ -162,9 +162,15 @@ class TreeUtil {
         return () -> new Iterator<>() {
             private final Deque<TreeItem<T>> stack = new ArrayDeque<>();
 
-            { if (root != null) stack.push(root); }
+            {
+                if (root != null) {
+                    stack.push(root);
+                }
+            }
 
-            @Override public boolean hasNext() { return !stack.isEmpty(); }
+            @Override public boolean hasNext() {
+                return !stack.isEmpty();
+            }
 
             @Override public TreeItem<T> next() {
                 if (stack.isEmpty()) {
