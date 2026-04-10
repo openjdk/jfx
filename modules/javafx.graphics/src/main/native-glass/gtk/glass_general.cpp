@@ -26,6 +26,7 @@
 
 #include <jni.h>
 #include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
 
