@@ -48,7 +48,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
@@ -98,7 +97,6 @@ public class SystemMenuBarHelpMenuTest {
      * Verifies that after opening, the Help menu includes the Spotlight search field, which is
      * included seamlessly by the system.
      */
-    @Disabled("JDK-8381443")
     @Test
     void testHelpMenuHasSpotlight() {
         Assumptions.assumeTrue(PlatformUtil.isMac(), "System menu bar tests only apply to macOS");
@@ -116,8 +114,8 @@ public class SystemMenuBarHelpMenuTest {
 
         // Step 2: click on About
         Util.runAndWait(() -> {
-            robot.mouseMove(MENU_BAR_X, MENU_ABOUT_Y);
-            robot.mouseClick(MouseButton.PRIMARY);
+            robot.keyType(KeyCode.DOWN);
+            robot.keyType(KeyCode.ENTER);
         });
         Util.waitForLatch(aboutItemLatch, 5, "About menu item action should fire");
 
@@ -133,7 +131,6 @@ public class SystemMenuBarHelpMenuTest {
      * Verifies that after opening the system menu and then showing a modal dialog
      * the menu can still be opened again after the dialog is closed.
      */
-    @Disabled("JDK-8381443")
     @Test
     void testMenuCanBeReopenedAfterDialogClosed() {
         Assumptions.assumeTrue(PlatformUtil.isMac(), "System menu bar tests only apply to macOS");
