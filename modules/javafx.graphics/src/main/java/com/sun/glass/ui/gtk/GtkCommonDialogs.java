@@ -32,9 +32,6 @@ import java.io.File;
 
 final class GtkCommonDialogs {
 
-    private static final boolean DISABLE_PORTAL_FILE_CHOOSER =
-            Boolean.parseBoolean(System.getProperty("glass.gtk.disablePortalFileChooser", "false"));
-
     private static native FileChooserResult _showFileChooser(
                                             long parent,
                                             String folder,
@@ -43,13 +40,11 @@ final class GtkCommonDialogs {
                                             int type,
                                             boolean multipleMode,
                                             ExtensionFilter[] extensionFilters,
-                                            int defaultFilterIndex,
-                                            boolean usePortal);
+                                            int defaultFilterIndex);
 
     private static native String _showFolderChooser(long parent,
                                                     String folder,
-                                                    String title,
-                                                    boolean usePortal);
+                                                    String title);
 
     static FileChooserResult showFileChooser(Window owner,
                                     String folder,
@@ -61,8 +56,7 @@ final class GtkCommonDialogs {
 
         if (owner != null) owner.setEnabled(false);
         FileChooserResult result = _showFileChooser(owner == null? 0L : owner.getNativeHandle(),
-                folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex,
-                DISABLE_PORTAL_FILE_CHOOSER);
+                folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex);
         if (owner != null) owner.setEnabled(true);
         return result;
     }
@@ -72,9 +66,7 @@ final class GtkCommonDialogs {
             owner.setEnabled(false);
         }
         try {
-            String filename = _showFolderChooser(
-                    (owner != null) ? owner.getNativeHandle() : 0, folder, title,
-                    DISABLE_PORTAL_FILE_CHOOSER);
+            String filename = _showFolderChooser((owner != null) ? owner.getNativeHandle() : 0, folder, title);
             return filename != null ? new File(filename) : null;
 
         } finally {

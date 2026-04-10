@@ -25,15 +25,12 @@
 #include <com_sun_glass_ui_gtk_GtkCommonDialogs.h>
 #include "glass_general.h"
 #include "glass_window.h"
-#include "filechooser_portal.h"
 
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 
 #include <cstring>
 #include <cstdlib>
-#include <vector>
-#include <string>
 
 static GSList* setup_GtkFileFilters(GtkFileChooser*, JNIEnv*, jobjectArray, int default_filter_index);
 
@@ -68,19 +65,12 @@ static void jstring_to_utf_release(JNIEnv *env, jstring jstr,
     }
 }
 
-static GdkWindow *get_gdk_window(jlong handle) {
-    return  (handle != 0)
-                ? ((WindowContext*)JLONG_TO_PTR(handle))->get_gdk_window()
-                : NULL;
-}
-
-static void on_dialog_realize_set_parent(GtkWidget *dialog, gpointer user_data) {
-    GdkWindow *parent_gdk_window = (GdkWindow *) user_data;
-    GdkWindow *dialog_gdk_window = gtk_widget_get_window(dialog);
-
-    if (dialog_gdk_window && parent_gdk_window) {
-        gdk_window_set_transient_for(dialog_gdk_window, parent_gdk_window);
-    }
+static GtkWindow *gdk_window_handle_to_gtk(jlong handle) {
+//    return  (handle != 0)
+//                ? ((WindowContext*)JLONG_TO_PTR(handle))->get_gtk_window()
+//                : NULL;
+    //FIXME: gtk_file_chooser_native_new does not accept GdkWindow
+    return NULL;
 }
 
 static jobject create_empty_result() {
@@ -93,175 +83,11 @@ static jobject create_empty_result() {
     return jResult;
 }
 
-static gchar *uri_to_path(const char *uri) {
-    return g_filename_from_uri(uri, NULL, NULL);
-}
-
-static std::vector<PortalFileFilter> extract_portal_filters(JNIEnv *env, jobjectArray extFilters) {
-    std::vector<PortalFileFilter> result;
-    if (extFilters == NULL) return result;
-
-    jclass jcls = env->FindClass("com/sun/glass/ui/CommonDialogs$ExtensionFilter");
-    if (EXCEPTION_OCCURED(env)) return result;
-    jmethodID jgetDescription = env->GetMethodID(jcls, "getDescription", "()Ljava/lang/String;");
-    if (EXCEPTION_OCCURED(env)) return result;
-    jmethodID jextensionsToArray = env->GetMethodID(jcls, "extensionsToArray", "()[Ljava/lang/String;");
-    if (EXCEPTION_OCCURED(env)) return result;
-
-    jsize size = env->GetArrayLength(extFilters);
-    for (jsize i = 0; i < size; i++) {
-        PortalFileFilter filter;
-        jobject jfilter = env->GetObjectArrayElement(extFilters, i);
-        EXCEPTION_OCCURED(env);
-
-        jstring jdesc = (jstring) env->CallObjectMethod(jfilter, jgetDescription);
-        const char *desc = env->GetStringUTFChars(jdesc, NULL);
-        filter.name = desc ? desc : "";
-        env->ReleaseStringUTFChars(jdesc, desc);
-
-        jobjectArray jextensions = (jobjectArray) env->CallObjectMethod(jfilter, jextensionsToArray);
-        jsize extSize = env->GetArrayLength(jextensions);
-        for (jsize j = 0; j < extSize; j++) {
-            jstring jext = (jstring) env->GetObjectArrayElement(jextensions, j);
-            EXCEPTION_OCCURED(env);
-            const char *ext = env->GetStringUTFChars(jext, NULL);
-            filter.patterns.push_back(std::string(ext ? ext : "*"));
-            env->ReleaseStringUTFChars(jext, ext);
-        }
-
-        result.push_back(filter);
-    }
-
-    return result;
-}
-
-static jobject build_portal_file_chooser_result(JNIEnv *env,
-                                            const PortalFileChooserResult &portalResult,
-                                            jobjectArray jFilters) {
-    jobjectArray jFileNames = NULL;
-
-    if (portalResult.accepted && !portalResult.uris.empty()) {
-        jsize count = (jsize) portalResult.uris.size();
-        jFileNames = env->NewObjectArray(count, jStringCls, NULL);
-        EXCEPTION_OCCURED(env);
-        const jmethodID bytesInit = env->GetMethodID(jStringCls, "<init>", "([B)V");
-        EXCEPTION_OCCURED(env);
-
-        for (jsize i = 0; i < count; i++) {
-            gchar *path = uri_to_path(portalResult.uris[i].c_str());
-            if (!path) continue;
-            int len = strlen(path);
-            jbyteArray bytes = env->NewByteArray(len);
-            EXCEPTION_OCCURED(env);
-            env->SetByteArrayRegion(bytes, 0, len, (jbyte *) path);
-            EXCEPTION_OCCURED(env);
-            jstring jfilename = (jstring) env->NewObject(jStringCls, bytesInit, bytes);
-            EXCEPTION_OCCURED(env);
-            env->DeleteLocalRef(bytes);
-            env->SetObjectArrayElement(jFileNames, i, jfilename);
-            EXCEPTION_OCCURED(env);
-            g_free(path);
-        }
-    }
-
-    if (!jFileNames) {
-        jFileNames = env->NewObjectArray(0, jStringCls, NULL);
-        EXCEPTION_OCCURED(env);
-    }
-
-    int index = portalResult.filterIndex;
-
-    jclass jCommonDialogs = (jclass) env->FindClass("com/sun/glass/ui/CommonDialogs");
-    EXCEPTION_OCCURED(env);
-    jmethodID jCreateFileChooserResult = env->GetStaticMethodID(jCommonDialogs,
-            "createFileChooserResult",
-            "([Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;");
-    EXCEPTION_OCCURED(env);
-
-    jobject result = env->CallStaticObjectMethod(jCommonDialogs, jCreateFileChooserResult,
-                                                 jFileNames, jFilters, index);
-    LOG_EXCEPTION(env)
-
-    return result;
-}
-
-static jobject portal_show_file_chooser(JNIEnv *env, jlong parent,
-                                      const char *folder, const char *name, const char *title,
-                                      jint type, jboolean multiple,
-                                      jobjectArray jFilters, jint default_filter_index,
-                                      jboolean disablePortal) {
-    if (disablePortal) {
-        LOG0("Portal file chooser disabled via glass.gtk.disablePortalFileChooser=true\n")
-        return NULL;
-    }
-
-    PortalFileChooser portal;
-    portal.setParentWindow(get_gdk_window(parent));
-    portal.setTitle(title);
-    portal.setCurrentFolder(folder);
-    portal.setCurrentName(name);
-    portal.setMultiple(JNI_TRUE == multiple);
-    portal.setDefaultFilterIndex(default_filter_index);
-
-    std::vector<PortalFileFilter> filters = extract_portal_filters(env, jFilters);
-    portal.setFilters(filters);
-
-    PortalFileChooserResult portalResult = (type == 0)
-            ? portal.openFile()
-            : portal.saveFile();
-
-    if (portalResult.failed) {
-        LOG0("Portal file chooser failed, falling back to GTK dialog\n")
-        return NULL;
-    }
-
-    return build_portal_file_chooser_result(env, portalResult, jFilters);
-}
-
-static bool portal_show_folder_chooser(JNIEnv *env, jlong parent,
-                                       const char *folder, const char *title,
-                                       jboolean disablePortal, jstring *outResult) {
-    *outResult = NULL;
-
-    if (disablePortal) {
-        LOG0("Portal folder chooser disabled via glass.gtk.disablePortalFileChooser=true\n")
-        return false;
-    }
-
-    PortalFileChooser portal;
-    portal.setParentWindow(get_gdk_window(parent));
-    portal.setTitle(title);
-    portal.setCurrentFolder(folder);
-
-    PortalFileChooserResult portalResult = portal.openFolder();
-
-    if (portalResult.failed) {
-        LOG0("Portal folder chooser failed, falling back to GTK dialog\n")
-        return false;
-    }
-
-    if (portalResult.accepted && !portalResult.uris.empty()) {
-        gchar *path = uri_to_path(portalResult.uris[0].c_str());
-        if (!path) {
-            LOG0("Portal folder chooser returned an invalid URI, falling back to GTK dialog\n")
-            return false;
-        }
-
-        *outResult = env->NewStringUTF(path);
-        LOG1("Portal selected folder: %s\n", path);
-        g_free(path);
-        return true;
-    }
-
-    return true;
-}
-
 extern "C" {
 
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring name, jstring title,
-   jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index,
-   jboolean disablePortal) {
+   jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index) {
     (void)clazz;
 
     jobjectArray jFileNames = NULL;
@@ -288,30 +114,10 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
         return create_empty_result();
     }
 
-    // Try portal first
-    jobject portalResult = portal_show_file_chooser(env, parent,
-            chooser_folder, chooser_filename, chooser_title,
-            type, multiple, jFilters, default_filter_index, disablePortal);
-
-    if (portalResult != NULL) {
-        jstring_to_utf_release(env, folder, chooser_folder);
-        jstring_to_utf_release(env, title, chooser_title);
-        jstring_to_utf_release(env, name, chooser_filename);
-        return portalResult;
-    }
-
-    // Fallback to GTK file chooser dialog
-    LOG0("Using GTK file chooser dialog (fallback)\n")
-
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(chooser_title, NULL,
+    GtkFileChooserNative* chooser = gtk_file_chooser_native_new(chooser_title, gdk_window_handle_to_gtk(parent),
             static_cast<GtkFileChooserAction>(chooser_type),
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            (chooser_type == GTK_FILE_CHOOSER_ACTION_OPEN ? GTK_STOCK_OPEN : GTK_STOCK_SAVE),
-            GTK_RESPONSE_ACCEPT,
+            NULL,
             NULL);
-
-    g_signal_connect(chooser, "realize", G_CALLBACK(on_dialog_realize_set_parent), get_gdk_window(parent));
 
     if (chooser_type == GTK_FILE_CHOOSER_ACTION_SAVE) {
         gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(chooser), chooser_filename);
@@ -322,7 +128,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), chooser_folder);
     GSList* filters = setup_GtkFileFilters(GTK_FILE_CHOOSER(chooser), env, jFilters, default_filter_index);
 
-    if (gtk_dialog_run(GTK_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
         GSList* fnames_gslist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(chooser));
         guint fnames_list_len = g_slist_length(fnames_gslist);
         LOG1("FileChooser selected files: %d\n", fnames_list_len)
@@ -372,7 +178,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     LOG_EXCEPTION(env)
 
     g_slist_free(filters);
-    gtk_widget_destroy(chooser);
+    g_object_unref(chooser);
 
     jstring_to_utf_release(env, folder, chooser_folder);
     jstring_to_utf_release(env, title, chooser_title);
@@ -383,7 +189,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolderChooser
-  (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title, jboolean disablePortal) {
+  (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title) {
     (void)clazz;
 
     jstring jfilename = NULL;
@@ -399,39 +205,19 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
         return NULL;
     }
 
-    // Try portal first
-    jstring portalResult = NULL;
-    bool handledByPortal = portal_show_folder_chooser(env, parent, chooser_folder,
-                                                      chooser_title, disablePortal,
-                                                      &portalResult);
-
-    if (handledByPortal) {
-        jstring_to_utf_release(env, folder, chooser_folder);
-        jstring_to_utf_release(env, title, chooser_title);
-        return portalResult;
-    }
-
-    // Fallback to GTK folder chooser dialog
-    LOG0("Using GTK folder chooser dialog (fallback)\n")
-
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(
+    GtkFileChooserNative* chooser = gtk_file_chooser_native_new(
             chooser_title,
-            NULL,
+            gdk_window_handle_to_gtk(parent),
             GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            GTK_STOCK_OPEN,
-            GTK_RESPONSE_ACCEPT,
+            NULL,
             NULL);
-
-    g_signal_connect(chooser, "realize", G_CALLBACK(on_dialog_realize_set_parent), get_gdk_window(parent));
 
     if (chooser_folder != NULL) {
         gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser),
                                             chooser_folder);
     }
 
-    if (gtk_dialog_run(GTK_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
         gchar* filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
         jfilename = env->NewStringUTF(filename);
         LOG1("Selected folder: %s\n", filename);
@@ -441,7 +227,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
     jstring_to_utf_release(env, folder, chooser_folder);
     jstring_to_utf_release(env, title, chooser_title);
 
-    gtk_widget_destroy(chooser);
+    g_object_unref(chooser);
     return jfilename;
 }
 
