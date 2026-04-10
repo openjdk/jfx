@@ -52,7 +52,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
-
 import javafx.beans.value.ChangeListener;
 
 /**
@@ -69,7 +68,7 @@ public class Util {
     /**
      * Time in milliseconds to wait for window geometry changes (resize, move)
      * to be processed. On Linux, these operations are asynchronous.
-     * The window manager may adjust values after Glass has applied them on the Java side.
+     * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.geometry.delay}.
      */
@@ -80,7 +79,7 @@ public class Util {
      * Time in milliseconds to wait for window state changes
      * (e.g. iconify, maximize, fullscreen animations) to be processed.
      * On Linux, these operations are asynchronous.
-     * The window manager may adjust values after Glass has applied them on the Java side.
+     * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.state.delay}.
      */
@@ -90,7 +89,7 @@ public class Util {
     /**
      * Time in milliseconds to wait for focus changes to be processed.
      * On Linux, these operations are asynchronous.
-     * The window manager may adjust values after Glass has applied them on the Java side.
+     * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
      * Configurable via system property {@code test.focus.delay}.
      */

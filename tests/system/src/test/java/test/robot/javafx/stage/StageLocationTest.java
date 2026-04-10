@@ -45,7 +45,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static test.util.Util.*;
+import static test.util.Util.FOCUS_DELAY;
+import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 

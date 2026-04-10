@@ -617,6 +617,7 @@ void WindowContext::process_mouse_scroll(GdkEventScroll *event) {
                 (jdouble) 40.0, (jdouble) 40.0);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
+
 }
 
 void WindowContext::process_mouse_cross(GdkEventCrossing *event) {
