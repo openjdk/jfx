@@ -800,7 +800,6 @@ public class TreeTableView<S> extends Control {
 
     // we use this to forward events that have bubbled up TreeItem instances
     // to the TreeTableViewSkin, to force it to recalculate the item count and redraw
-    // if necessary
     private final EventHandler<TreeItem.TreeModificationEvent<S>> rootEvent = e -> {
         // this forces layoutChildren at the next pulse, and therefore
         // updates the item count
