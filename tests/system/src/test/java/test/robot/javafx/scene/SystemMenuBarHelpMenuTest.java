@@ -75,10 +75,6 @@ public class SystemMenuBarHelpMenuTest {
     private static final int MENU_BAR_X = 120;
     private static final int MENU_BAR_Y = 10;
 
-    // Estimated y offset for the Help -> About menu item, after the Spotlight search field that macOS inserts to
-    // this menu.
-    private static final int MENU_ABOUT_Y = 80;
-
     private static Robot robot;
     private static final AtomicBoolean aboutItemFired = new AtomicBoolean(false);
     private static final CountDownLatch aboutItemLatch = new CountDownLatch(1);
