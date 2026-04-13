@@ -29,6 +29,7 @@ import static javafx.collections.FXCollections.observableArrayList;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -6715,5 +6716,41 @@ public class TableViewTest {
 
         sm.clearSelection();
         assertEquals(List.of(), sm.getSelectedIndices());
+    }
+
+    @Test
+    void testDoubleClickOnEmptyCell() {
+        TableView<Person> table = new TableView<>();
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>();
+        firstNameCol.setCellValueFactory(
+                cellData -> new SimpleStringProperty(cellData.getValue().getFirstName()));
+
+        table.getColumns().add(firstNameCol);
+        table.getItems().add(new Person("John"));
+
+        stageLoader = new StageLoader(table);
+
+        TableCell<Person, String> cell = (TableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 1, 0);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2, 40, 0));
+    }
+
+    @Test
+    void testDoubleClickOnEmptyRow() {
+        TableView<Person> table = new TableView<>();
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>();
+        firstNameCol.setCellValueFactory(
+                cellData -> new SimpleStringProperty(cellData.getValue().getFirstName()));
+
+        table.getColumns().add(firstNameCol);
+        table.getItems().add(new Person("John"));
+
+        stageLoader = new StageLoader(table);
+
+        TableRow<Person> row = (TableRow<Person>) VirtualFlowTestUtils.getCell(table, 1);
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2));
     }
 }
