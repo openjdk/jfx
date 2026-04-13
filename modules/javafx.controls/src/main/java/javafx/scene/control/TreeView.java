@@ -1071,7 +1071,7 @@ public class TreeView<T> extends Control {
         }
 
         // Iterator is exhausted before reaching _row. Should not happen in normal use.
-        return TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
+        return null;
     }
 
     /**
