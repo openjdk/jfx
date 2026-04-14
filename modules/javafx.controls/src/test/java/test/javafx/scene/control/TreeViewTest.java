@@ -4349,7 +4349,7 @@ public class TreeViewTest {
         treeItems.get(16).getChildren().addAll(List.of(treeItems.get(17), treeItems.get(18), treeItems.get(19)));
         treeItems.get(16).setExpanded(true);
 
-        TreeView<String> tv = new TreeView<>(treeItems.get(0));
+        TreeView<String> tv = new TreeView<>(treeItems.getFirst());
 
         List<String> expectedValues, actualValues;
 
