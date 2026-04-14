@@ -4311,7 +4311,6 @@ public class TreeViewTest {
 
     @Test
     public void testGetTreeItem() {
-
         List<TreeItem<String>> treeItems = new ArrayList<>(20);
         for (int i = 0; i < 20; i++) {
             treeItems.add(new TreeItem<>(Integer.toString(i)));
@@ -4408,7 +4407,7 @@ public class TreeViewTest {
         //         └── 19
 
         assertEquals(17, tv.getExpandedItemCount());
-        expectedValues = List.of(0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19).stream().map(String::valueOf).toList();
+        expectedValues = Stream.of(0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
         actualValues = IntStream.range(0, 17).mapToObj(i -> tv.getTreeItem(i).getValue()).toList();
         assertEquals(expectedValues, actualValues);
 
@@ -4437,7 +4436,7 @@ public class TreeViewTest {
         //         └── 19
 
         assertEquals(12, tv.getExpandedItemCount());
-        expectedValues = List.of(0, 1, 2, 11, 12, 13, 14, 15, 16, 17, 18, 19).stream().map(String::valueOf).toList();
+        expectedValues = Stream.of(0, 1, 2, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
         actualValues = IntStream.range(0, 12).mapToObj(i -> tv.getTreeItem(i).getValue()).toList();
         assertEquals(expectedValues, actualValues);
     }
