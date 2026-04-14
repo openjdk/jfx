@@ -1825,7 +1825,6 @@ public class TreeTableView<S> extends Control {
         return null;
     }
 
-
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem,
      * based on how many times getParent() can be recursively called. If the
