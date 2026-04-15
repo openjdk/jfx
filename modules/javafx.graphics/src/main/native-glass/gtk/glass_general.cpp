@@ -891,6 +891,9 @@ guint glass_settings_get_guint_opt (const gchar *schema_name,
 }
 
 /*
+ * Convert from jstring to standard UTF-8 using GLib
+ * utility method g_utf16_to_utf8.
+ *
  * GetStringUTFChars returns a modified UTF-8 string
  * that encodes supplementary characters differently
  * from standard UTF-8, so emojis may not be handled
