@@ -889,3 +889,20 @@ guint glass_settings_get_guint_opt (const gchar *schema_name,
 
     return g_settings_get_uint(gset, key_name);
 }
+
+gchar* jstring_to_utf8(JNIEnv *env, jstring jstr) {
+    if (jstr == nullptr) {
+        return nullptr;
+    }
+
+    const jchar *jchars = env->GetStringChars(jstr, nullptr);
+    if (jchars == nullptr) {
+        return nullptr;
+    }
+
+    jsize len = env->GetStringLength(jstr);
+    gchar *result = g_utf16_to_utf8(jchars, len, nullptr, nullptr, nullptr);
+    env->ReleaseStringChars(jstr, jchars);
+
+    return result;
+}
