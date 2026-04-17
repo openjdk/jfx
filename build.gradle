@@ -2787,6 +2787,7 @@ project(":graphics") {
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-decora").mkdirs()
+            file("$project.buildDir/msl").mkdirs()
         }
     }
     project.processShaders.dependsOn(initShaderDirs)
