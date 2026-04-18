@@ -37,11 +37,9 @@
 #include <jni.h>
 #include <set>
 #include <string>
-#include <vector>
 #include <optional>
 
 #include "DeletedMemDebug.h"
-#include "glass_view.h"
 #include "glass_general.h"
 
 #include <iostream>
@@ -147,7 +145,6 @@ struct Point {
     }
 };
 
-
 enum WindowFrameType {
     TITLED,
     UNTITLED,
@@ -204,20 +201,22 @@ struct EdgeCursors {
     }
 };
 
-static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
+static const guint MOUSE_BUTTONS_MASK = GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK;
 
 
 class WindowContext;
 class WindowContextExtended;
 
 class WindowContext: public DeletedMemDebug<0xCC> {
-private:
     static std::optional<Rectangle> normal_extents;
     static std::optional<Rectangle> utility_extents;
 
     struct _ImContext {
-        _ImContext(): ctx(nullptr), enabled(false), on_preedit(false),
-                     send_keypress(false), on_key_event(false) {}
+        _ImContext() : ctx(nullptr), enabled(false), on_preedit(false),
+                       send_keypress(false), on_key_event(false), in_preedit_window(false)
+        {
+        }
+
         GtkIMContext *ctx;
         bool enabled;
         bool on_preedit;
@@ -229,7 +228,7 @@ private:
     size_t events_processing_cnt{};
     std::set<WindowContext*> children;
 
-    struct WindowContext *owner;
+    WindowContext *owner;
     jlong screen;
 
     bool on_top{false};
@@ -259,11 +258,14 @@ private:
     Observable<Size> window_size = Size{-1, -1};
     Observable<Point> window_location = Point{-1, -1};
     Observable<Rectangle> window_extents = Rectangle{0, 0, 0, 0};
+
     bool needs_to_update_frame_extents{false};
     float gravity_x{0};
     float gravity_y{0};
     BoundsType width_type{BOUNDSTYPE_UNKNOWN};
     BoundsType height_type{BOUNDSTYPE_UNKNOWN};
+    GdkRGBA background_color = {1, 1, 1, 1};
+    bool is_enabled{true};
 
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
@@ -405,6 +407,7 @@ private:
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();
+    void ensure_window_geometry();
 
     void update_initial_state();
     bool grab_mouse_drag_focus();

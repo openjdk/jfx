@@ -344,7 +344,7 @@ class StageOwnershipTest extends VisualTestBase {
 
         runAndWait(() -> assertColorEquals(COLOR1, stage1));
         runAndWait(stage0::toFront);
-        Util.sleep(GEOMETRY_DELAY);
+        Util.sleep(FOCUS_DELAY);
 
         runAndWait(() -> assertColorEquals(COLOR1, stage1));
     }
