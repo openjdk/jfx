@@ -322,7 +322,7 @@ void WindowContext::process_map() {
     // We need only first map
     if (mapped || window_type == POPUP) return;
 
-    LOG(LIFECYCLE, log_id, "process_map\n");
+    LOG(LIFECYCLE, log_id, "process_map -------------------------------------------\n");
 
     Point loc = window_location.get();
     Size size = view_size.get();
@@ -340,8 +340,8 @@ void WindowContext::process_map() {
         h = DEFAULT_HEIGHT;
     }
 
-    move_resize(loc.x, loc.y, loc_changed, loc_changed, w, h);
     mapped = true;
+    move_resize(loc.x, loc.y, loc_changed, loc_changed, w, h);
 
     if (initial_state_mask != 0) {
         update_initial_state();
@@ -966,15 +966,23 @@ void WindowContext::update_frame_extents() {
 
     // Gravity x, y are used in centerOnScreen(). Here it's used to adjust the position
     // accounting decorations
-    if (gravity_x > 0 && x > 0) {
-        x -= gravity_x * (float) (new_extents.width);
-        LOG(POSITION, log_id, "update_frame_extents: gravity_x=%d, adjusted x=%d\n", gravity_x, x);
+    int dx = new_extents.width - old_extents.width;
+    int dy = new_extents.height - old_extents.height;
+
+    if (gravity_x > 0 && dx != 0) {
+        x -= gravity_x * (float) dx;
+        if (x < 0) x = 0;
+        LOG(POSITION, log_id, "update_frame_extents: gravity_x=%.2f, dx=%d, adjusted x=%d\n", gravity_x, dx, x);
     }
 
-    if (gravity_y > 0 && y > 0) {
-        y -= gravity_y  * (float) (new_extents.height);
-        LOG(POSITION, log_id, "update_frame_extents: gravity_y=%d, adjusted y=%d\n", gravity_y, y);
+    if (gravity_y > 0 && dy != 0) {
+        y -= gravity_y * (float) dy;
+        if (y < 0) y = 0;
+        LOG(POSITION, log_id, "update_frame_extents: gravity_y=%.2f, dy=%d, adjusted y=%d\n", gravity_y, dy, y);
     }
+
+    gravity_x = 0;
+    gravity_y = 0;
 
     window_extents.set(new_extents);
     view_size.set({newW, newH});
@@ -1540,8 +1548,13 @@ bool WindowContext::effective_on_top() {
 }
 
 void WindowContext::update_window_size() {
-    LOG(SIZE, log_id, "update_window_size\n");
     Size size = view_size.get();
+
+    LOG(SIZE, log_id, "update_window_size -> is_valid %d\n", size.is_valid());;
+
+    if (!size.is_valid()) {
+        return;
+    }
 
     if (frame_type == TITLED) {
         window_size.set({size.width + window_extents.get().width, size.height + window_extents.get().height});
@@ -1598,6 +1611,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     int newY = (ySet) ? y : loc.y;
 
     if (!mapped) {
+        // When not mapped, set properties directly instead of waiting for process_configure.
         LOG(LIFECYCLE, log_id, "move_resize: not mapped\n");
         view_size.set({boundsW, boundsH});
         update_window_size();
@@ -1610,10 +1624,10 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
         update_window_constraints();
     }
 
-    LOG(POSITION, log_id, "window_move: %d, %d\n", newX, newY);
+    LOG(POSITION, log_id, "move_resize -> window_move: %d, %d\n", newX, newY);
     gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
 
-    LOG(SIZE, log_id, "window_resize: %d, %d\n", boundsW, boundsH);
+    LOG(SIZE, log_id, "move_resize -> window_resize: %d, %d\n", boundsW, boundsH);
     if (is_visible()) {
         gtk_window_resize(GTK_WINDOW(gtk_widget), boundsW, boundsH);
     } else {

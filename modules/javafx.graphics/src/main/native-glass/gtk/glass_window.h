@@ -129,6 +129,10 @@ struct Size {
         int h = std::max(other.height, height);
         return {w, h};
     }
+
+    bool is_valid() const {
+        return width > 0 && height > 0;
+    }
 };
 
 struct Point {
