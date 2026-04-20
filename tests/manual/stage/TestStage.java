@@ -482,6 +482,7 @@ public class TestStage extends Application {
         }
 
         root.getChildren().addAll(createLabel("Focused: ", currentStage.focusedProperty()),
+                            createLabel("Always On Top: ", currentStage.alwaysOnTopProperty()),
                             new Label("Modality: " + currentStage.getModality()),
                             ownerLabel,
                             createLabel("Last Event: ", lastEvent));
@@ -720,12 +721,12 @@ public class TestStage extends Application {
             unbind();
 
             stagePane.addStringProperty("Title", stage.titleProperty(), stage::setTitle);
-            stagePane.addBooleanProperty("Always OnTop", stage.alwaysOnTopProperty(), stage::setAlwaysOnTop);
+            stagePane.addBooleanProperty("Focused", stage.focusedProperty(), null);
+            stagePane.addBooleanProperty("Always On Top", stage.alwaysOnTopProperty(), stage::setAlwaysOnTop);
             stagePane.addBooleanProperty("FullScreen", stage.fullScreenProperty(), stage::setFullScreen);
             stagePane.addBooleanProperty("Maximized", stage.maximizedProperty(), stage::setMaximized);
             stagePane.addBooleanProperty("Iconified", stage.iconifiedProperty(), stage::setIconified);
-            stagePane.addBooleanProperty("Resizeable", stage.resizableProperty(), stage::setResizable);
-            stagePane.addBooleanProperty("Focused", stage.focusedProperty(), null);
+            stagePane.addBooleanProperty("Resizable", stage.resizableProperty(), stage::setResizable);
             stagePane.addDoublePropery("X", stage.xProperty(), stage::setX, 0, MAX_WIDTH * 2, 1.0);
             stagePane.addDoublePropery("Y", stage.yProperty(), stage::setY, 0, MAX_HEIGHT * 2, 1.0);
             stagePane.addDoublePropery("Width", stage.widthProperty(), stage::setWidth, 1, MAX_WIDTH, 1.0);
