@@ -181,6 +181,14 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     view_size.setOnChange([this](const Size& size) {
         LOG(SIZE, log_id, "onChange: view_size w=%d, h=%d\n", size.width, size.height);
         notify_view_resize();
+        update_window_constraints();
+    });
+
+    window_extents.setOnChange([this](const Rectangle& rect) {
+        LOG(SIZE, log_id, "onChange: window_extents x=%d, y=%d, w=%d, h=%d\n",
+                rect.x, rect.y, rect.width, rect.height);
+        update_window_constraints();
+        update_window_size();
     });
 
     resizable.setOnChange([this](const bool& resizable) {
@@ -1547,40 +1555,44 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     LOG(POSITION, log_id, "move_resize: x=%d, y=%d\n", x, y);
 
     Size size = view_size.get();
-
-    // size.width can still be -1 if not set
-    int boundsW = (width > 0) ? width : size.width;
-    int boundsH = (height > 0) ? height : size.height;
+    int newW = (width > 0) ? width : size.width;
+    int newH = (height > 0) ? height : size.height;
 
     Rectangle extents = window_extents.get();
+    int boundsW = newW, boundsH = newH;
 
     Size max_size = maximum_size.get();
     Size min_size = minimum_size.get().max(sys_min_size.get());
 
-    if (boundsW > 0) {
-        // Windows that are undecorated or transparent will not respect
-        // minimum or maximum size constraints
-        if (min_size.width > 0 && boundsW < min_size.width) {
-            boundsW = min_size.width - extents.width;
-        }
-
-        if (max_size.width > 0 && boundsW > max_size.width) {
-            boundsW = max_size.width - extents.width;
-        }
-
-        boundsW = std::clamp(boundsW, 1, MAX_WINDOW_SIZE);
+    // Windows that are undecorated or transparent will not respect
+    // minimum or maximum size constraints
+    if (min_size.width > 0 && newW < min_size.width) {
+        boundsW = min_size.width - extents.width;
     }
 
-    if (boundsH > 0) {
-        if (min_size.height > 0 && boundsH < min_size.height) {
-            boundsH = min_size.height - extents.height;
-        }
+    if (max_size.width > 0 && newW > max_size.width) {
+        boundsW = max_size.width - extents.width;
+    }
 
-        if (max_size.height > 0 && boundsH > max_size.height) {
-            boundsH = max_size.height - extents.height;
-        }
+    if (min_size.height > 0 && newH < min_size.height) {
+        boundsH = min_size.height - extents.height;
+    }
 
-        boundsH = std::clamp(boundsH, 1, MAX_WINDOW_SIZE);
+    if (max_size.height > 0 && newH > max_size.height) {
+        boundsH = max_size.height - extents.height;
+    }
+
+    boundsW = std::clamp(boundsW, 1, MAX_WINDOW_SIZE);
+    boundsH = std::clamp(boundsH, 1, MAX_WINDOW_SIZE);
+
+    Size current_size = view_size.get();
+
+    // Need to force notify back to java, because it probably
+    // has wrong sizes
+    if ((newW != boundsW && current_size.width == boundsW)
+            || (newH != boundsH && current_size.height == boundsH)) {
+        view_size.invalidate();
+        window_size.invalidate();
     }
 
     Point loc = window_location.get();
@@ -1588,6 +1600,7 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
     int newY = (ySet) ? y : loc.y;
 
     if (!mapped) {
+        // When not mapped, set properties directly instead of waiting for process_configure.
         LOG(LIFECYCLE, log_id, "move_resize: not mapped\n");
         view_size.set({boundsW, boundsH});
         update_window_size();
@@ -1600,25 +1613,22 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
         update_window_constraints();
     }
 
-    if (!size.is_valid()) {
-        LOG(SIZE, log_id, "gtk_window_resize: size is not valid yet: %d, %d\n", size.width, size.height);
-        return;
-    }
-
     // The compositor/window manager may adjust the requested size or position.
     // For example, a request to place the window at (0,0) can be offset to account
     // for desktop panels or reserved areas. Because of this, we cannot rely on
     // simple change checks before calling move/resize.
 
-    LOG(POSITION, log_id, "gtk_window_move: %d, %d\n", newX, newY);
-    gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
+    if (xSet || ySet) {
+        LOG(POSITION, log_id, "gtk_window_move: %d, %d\n", newX, newY);
+        gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
+    }
 
     if (is_visible()) {
-        LOG(SIZE, log_id, "gtk_window_resize: %d, %d\n", size.width, size.height);
-        gtk_window_resize(GTK_WINDOW(gtk_widget), size.width, size.height);
+        LOG(SIZE, log_id, "gtk_window_resize: %d, %d\n", boundsW, boundsH);
+        gtk_window_resize(GTK_WINDOW(gtk_widget), boundsW, boundsH);
     } else {
-        LOG(SIZE, log_id, "gtk_window_set_default_size: %d, %d\n", size.width, size.height);
-        gtk_window_set_default_size(GTK_WINDOW(gtk_widget), size.width, size.height);
+        LOG(SIZE, log_id, "gtk_window_set_default_size: %d, %d\n", boundsW, boundsH);
+        gtk_window_set_default_size(GTK_WINDOW(gtk_widget), boundsW, boundsH);
     }
 }
 
