@@ -149,7 +149,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gnulib/printf.c \
             glib/gnulib/vasnprintf.c \
             gobject/gatomicarray.c \
-            gobject/gbinding.c \
             gobject/gboxed.c \
             gobject/gclosure.c \
             gobject/genums.c \

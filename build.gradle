@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2787,6 +2787,7 @@ project(":graphics") {
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-decora").mkdirs()
+            file("$project.buildDir/msl").mkdirs()
         }
     }
     project.processShaders.dependsOn(initShaderDirs)
@@ -3001,6 +3002,7 @@ project(":incubator.input") {
     }
 
     test {
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
     }
 
@@ -3060,6 +3062,7 @@ project(":incubator.richtext") {
     }
 
     test {
+        jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
     }
 
@@ -3287,6 +3290,7 @@ project(":media") {
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
             media name: "ffmpeg-6.0", ext: "tar.gz"
             media name: "ffmpeg-7.0.2", ext: "tar.gz"
+            media name: "ffmpeg-8.1", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -3429,7 +3433,7 @@ project(":media") {
             if (t.name == "linux") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
-                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything"]
+                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything", "--extra-cflags=\"-Wno-error=incompatible-pointer-types\""]
                 def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
@@ -3633,8 +3637,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0", "7.0.2" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60", "7.0.2" : "61" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0", "7.0.2", "8.1" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60", "7.0.2" : "61" , "8.1" : "62" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3714,7 +3718,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60", "61" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60", "61", "62" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
@@ -5485,7 +5489,7 @@ compileTargets { t ->
 
     // Zip module sources for standalone SDK
     //
-    // NOTE: the input is taken from the modular-sdk/modules_src dir
+    // Note: the input is taken from the modular-sdk/modules_src dir
     // so that we don't have to duplicate the logic and create another
     // temporary directory. This is somewhat inelegant, since the bundled sdk
     // and the standalone sdk should be independent of one another, but seems
