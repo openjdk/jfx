@@ -51,6 +51,7 @@ private:
     T value;
     std::function<void(const T&)> onChange;
     bool assigned_since_init{false};
+    bool notifying{false};
 
 public:
     Observable(const T& initialValue = T()) : value(initialValue) {}
@@ -64,9 +65,14 @@ public:
     }
 
     void invalidate() {
-        if (onChange) {
-            onChange(value);
-        }
+        if (!onChange) return;
+        if (notifying) return;
+
+        notifying = true;
+
+        onChange(value);
+
+        notifying = false;
     }
 
     // This resets the value without notifying
@@ -81,10 +87,6 @@ public:
 
     bool was_assigned() const {
         return assigned_since_init;
-    }
-
-    operator T() const {
-        return value;
     }
 
     Observable<T>& operator=(const T& newValue) {
@@ -311,8 +313,6 @@ class WindowContext: public DeletedMemDebug<0xCC> {
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
-
-    static unsigned long sm_next_window_id;
 
 protected:
     bool is_mouse_entered{false};
