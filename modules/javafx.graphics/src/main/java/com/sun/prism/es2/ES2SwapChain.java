@@ -308,7 +308,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
 
         if (drawable != null) {
-        	context.makeCurrent(null); // drawable must not be current when disposed
+            context.makeCurrent(null); // drawable must not be current when disposed
             drawable.dispose();
             drawable = null;
         }
