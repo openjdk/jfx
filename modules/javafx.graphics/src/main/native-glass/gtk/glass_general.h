@@ -292,9 +292,9 @@ inline void log(int category,
 
 #else
 
-#define LOG(...) ((void)0)
+#define LOG(...) do {} while(0)
 
-static inline void glass_gtk_log_init(const char*) {}
+static void glass_gtk_log_init(const char*) {}
 
 #define LOG0(msg)
 #define LOG1(msg, param)
