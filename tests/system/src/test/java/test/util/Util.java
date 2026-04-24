@@ -84,7 +84,7 @@ public class Util {
      * Configurable via system property {@code test.state.delay}.
      */
     public static final long STATE_DELAY =
-            Long.getLong("test.state.delay", 1000);
+            Long.getLong("test.state.delay", 500);
 
     /**
      * Time in milliseconds to wait for focus changes to be processed.
@@ -384,6 +384,11 @@ public class Util {
      * If the property already has the expected value, returns immediately.
      * <p>
      * Uses {@link #PROPERTY_VALUE_TIMEOUT} as the default timeout.
+     *
+     * NOTE: some Stage properties are set immediately, so this method will not work.
+     * For example, {@code Stage#isMaximized()} returns true immediately after
+     * calling {@code Stage#setMaximized(true)}, even though the native side may still be
+     * processing the change.
      *
      * @param property the property to observe
      * @param expected the expected value

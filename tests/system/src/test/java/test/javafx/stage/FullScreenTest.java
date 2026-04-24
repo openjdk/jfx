@@ -37,7 +37,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
-import static test.util.Util.waitForBoolean;
+import static test.util.Util.STATE_DELAY;
 
 class FullScreenTest extends StageTestBase {
     private static final int POS_X = 100;
@@ -68,7 +68,7 @@ class FullScreenTest extends StageTestBase {
     void fullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setFullScreen(true)));
 
-        waitForBoolean(getStage().fullScreenProperty(), true);
+        Util.sleep(STATE_DELAY);
         setFullScreen(false);
         assertSizePosition();
     }
@@ -98,8 +98,7 @@ class FullScreenTest extends StageTestBase {
 
     private void setFullScreen(boolean value) {
         Util.runAndWait(() -> getStage().setFullScreen(value));
-        waitForBoolean(getStage().fullScreenProperty(), value);
-        Util.sleep(GEOMETRY_DELAY);
+        Util.sleep(STATE_DELAY);
     }
 
     private void assertSizePosition() {
@@ -111,7 +110,6 @@ class FullScreenTest extends StageTestBase {
     }
 
     private void assertFullScreenFillsScreen() {
-        Util.sleep(GEOMETRY_DELAY);
         Rectangle2D screenBounds = Screen.getPrimary().getBounds();
         assertEquals(screenBounds.getWidth(), getStage().getWidth(), SIZING_DELTA,
                 "Full screen width should match screen width");
