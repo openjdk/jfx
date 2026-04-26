@@ -49,9 +49,6 @@ abstract class StageTestBase {
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private Stage stage = null;
 
-    protected static final int SHORT_WAIT = 300;
-    protected static final int MEDIUM_WAIT = 500;
-    protected static final int LONG_WAIT = 1000;
     protected static final double SIZING_DELTA = 1.0;
     protected static final double POSITION_DELTA = 1.0;
 

@@ -45,12 +45,15 @@
 #include <iostream>
 #include <functional>
 
+
+// Used for notification triggering and to only notify when
+// the value actually changed
 template<typename T>
 class Observable {
-private:
     T value;
     std::function<void(const T&)> onChange;
     bool assigned_since_init{false};
+    bool notifying{false};
 
 public:
     Observable(const T& initialValue = T()) : value(initialValue) {}
@@ -64,9 +67,17 @@ public:
     }
 
     void invalidate() {
-        if (onChange) {
-            onChange(value);
+        if (!onChange) return;
+        if (notifying) {
+            fprintf(stderr,"WARNING: Re-entrant call to Observable::invalidate() (possible cyclic dependency)\n");
+            return;
         }
+
+        notifying = true;
+
+        onChange(value);
+
+        notifying = false;
     }
 
     // This resets the value without notifying
@@ -81,10 +92,6 @@ public:
 
     bool was_assigned() const {
         return assigned_since_init;
-    }
-
-    operator T() const {
-        return value;
     }
 
     Observable<T>& operator=(const T& newValue) {
@@ -275,10 +282,10 @@ class WindowContext: public DeletedMemDebug<0xCC> {
     GdkCursor* gdk_cursor{};
     GdkCursor* gdk_cursor_override{};
 
-    Observable<Size> minimum_size = Size{1, 1};
-    Observable<Size> maximum_size = Size{G_MAXINT, G_MAXINT};
-    Observable<Size> sys_min_size = Size{1, 1};
-    Observable<bool> resizable{true};
+    Size minimum_size = Size{1, 1};
+    Size maximum_size = Size{G_MAXINT, G_MAXINT};
+    Size sys_min_size = Size{1, 1};
+    bool resizable{true};
     Observable<Point> view_position = Point{0, 0}; //Default for non-titled windows
     Observable<Size> view_size = Size{-1, -1};
     Observable<Size> window_size = Size{-1, -1};
@@ -311,8 +318,6 @@ class WindowContext: public DeletedMemDebug<0xCC> {
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
-
-    static unsigned long sm_next_window_id;
 
 protected:
     bool is_mouse_entered{false};
@@ -420,7 +425,7 @@ private:
     void notify_window_move();
     void notify_view_resize();
     void notify_view_move();
-    void notify_window_size();
+    void notify_window_resize();
     void notify_repaint();
     void notify_repaint(Rectangle);
     GdkAtom get_net_frame_extents_atom();

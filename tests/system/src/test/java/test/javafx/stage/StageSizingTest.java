@@ -38,13 +38,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.runAndWait;
 import static test.util.Util.sleep;
 
-class SizingTest extends StageTestBase {
+class StageSizingTest extends StageTestBase {
     private static final int WIDTH = 300;
     private static final int HEIGHT = 300;
     private static final int MAX_WIDTH = 350;
@@ -469,5 +470,52 @@ class SizingTest extends StageTestBase {
                 "Scene width should remain unchanged after setting a new scene");
         assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
                 "Scene height should remain unchanged after setting a new scene");
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void programaticallyResizeUnresizableBeforeShow(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, s -> {
+            s.setWidth(WIDTH);
+            s.setHeight(HEIGHT);
+            s.setResizable(false);
+            s.setWidth(NEW_WIDTH);
+            s.setHeight(NEW_HEIGHT);
+        });
+
+        sleep(GEOMETRY_DELAY);
+        assertFalse(getStage().isResizable(), "Stage should be unresizable");
+
+        assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
+                "Programatically resizing an unresizable window before show should be allowed");
+        assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
+                "Programatically resizing an unresizable window before show should be allowed");
+
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
+    void programaticallyResizeUnresizableAfterShow(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, s -> {
+            s.setWidth(WIDTH);
+            s.setHeight(HEIGHT);
+            s.setResizable(false);
+        });
+
+        sleep(GEOMETRY_DELAY);
+
+        assertFalse(getStage().isResizable(), "Stage should be unresizable");
+
+        runAndWait(() -> {
+            getStage().setWidth(NEW_WIDTH);
+            getStage().setHeight(NEW_HEIGHT);
+        });
+
+        sleep(GEOMETRY_DELAY);
+
+        assertEquals(NEW_WIDTH, getStage().getWidth(), SIZING_DELTA,
+                "Programatically resizing an unresizable window should be allowed");
+        assertEquals(NEW_HEIGHT, getStage().getHeight(), SIZING_DELTA,
+                "Programatically resizing an unresizable window should be allowed");
     }
 }

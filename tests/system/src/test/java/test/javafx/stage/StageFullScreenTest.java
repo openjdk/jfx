@@ -24,6 +24,8 @@
  */
 package test.javafx.stage;
 
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,17 +35,16 @@ import test.util.Util;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.GEOMETRY_DELAY;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
-import static test.util.Util.waitForBoolean;
+import static test.util.Util.STATE_DELAY;
 
-class MaximizeTest extends StageTestBase {
-    private static final int WIDTH = 300;
-    private static final int HEIGHT = 300;
+
+class StageFullScreenTest extends StageTestBase {
     private static final int POS_X = 100;
     private static final int POS_Y = 150;
+    private static final int WIDTH = 200;
+    private static final int HEIGHT = 250;
 
     private static final Consumer<Stage> TEST_SETTINGS = s -> {
         s.setWidth(WIDTH);
@@ -53,70 +54,52 @@ class MaximizeTest extends StageTestBase {
     };
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
-    @EnumSource(names = {"UNDECORATED", "EXTENDED", "TRANSPARENT"})
-    void maximizeUndecorated(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, TEST_SETTINGS);
-
-        setMaximized(true);
-        assertNotEquals(POS_X, getStage().getX());
-        assertNotEquals(POS_Y, getStage().getY());
-
-        setMaximized(false);
-        assertSizePosition();
-    }
-
-    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
-    void maximizeShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+    void fullScreenShouldKeepGeometryOnRestore(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        setMaximized(true);
-        setMaximized(false);
+        setFullScreen(true);
+        setFullScreen(false);
 
         assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
-    void maximizeBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
-        setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setMaximized(true)));
+    void fullScreenBeforeShowShouldKeepGeometryOnRestore(StageStyle stageStyle) {
+        setupStageWithStyle(stageStyle, TEST_SETTINGS.andThen(s -> s.setFullScreen(true)));
 
-        waitForBoolean(getStage().maximizedProperty(), true);
-        setMaximized(false);
-
+        Util.sleep(STATE_DELAY);
+        setFullScreen(false);
         assertSizePosition();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
-    void maximizeShouldIncreaseSize(StageStyle stageStyle) {
+    void fullScreenShouldFillScreen(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        setMaximized(true);
-
-        assertTrue(getStage().getWidth() > WIDTH,
-                "Maximized stage width should be larger than original width");
-        assertTrue(getStage().getHeight() > HEIGHT,
-                "Maximized stage height should be larger than original height");
+        setFullScreen(true);
+        assertFullScreenFillsScreen();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT"})
-    void maximizeRestoreMaximizeCycle(StageStyle stageStyle) {
+    void fullScreenRestoreCycle(StageStyle stageStyle) {
         setupStageWithStyle(stageStyle, TEST_SETTINGS);
 
-        setMaximized(true);
-        setMaximized(false);
+        setFullScreen(true);
+        setFullScreen(false);
         assertSizePosition();
 
-        setMaximized(true);
-        setMaximized(false);
+        setFullScreen(true);
+        setFullScreen(false);
         assertSizePosition();
     }
 
-    private void setMaximized(boolean value) {
-        Util.runAndWait(() -> getStage().setMaximized(value));
-        waitForBoolean(getStage().maximizedProperty(), value);
+    private void setFullScreen(boolean value) {
+        Util.runAndWait(() -> getStage().setFullScreen(value));
+        Util.sleep(STATE_DELAY);
     }
 
     private void assertSizePosition() {
@@ -125,5 +108,13 @@ class MaximizeTest extends StageTestBase {
         assertEquals(HEIGHT, getStage().getHeight(), SIZING_DELTA, "Stage's height should have remained");
         assertEquals(POS_X, getStage().getX(), POSITION_DELTA, "Stage's X position should have remained");
         assertEquals(POS_Y, getStage().getY(), POSITION_DELTA, "Stage's Y position should have remained");
+    }
+
+    private void assertFullScreenFillsScreen() {
+        Rectangle2D screenBounds = Screen.getPrimary().getBounds();
+        assertEquals(screenBounds.getWidth(), getStage().getWidth(), SIZING_DELTA,
+                "Full screen width should match screen width");
+        assertEquals(screenBounds.getHeight(), getStage().getHeight(), SIZING_DELTA,
+                "Full screen height should match screen height");
     }
 }

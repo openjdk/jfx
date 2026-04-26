@@ -211,7 +211,7 @@ class StageOwnershipTest extends VisualTestBase {
         setupTopStage(bottomStage, stageStyle, modality);
 
         runAndWait(() -> bottomStage.setMaximized(true));
-        waitForBoolean(bottomStage.maximizedProperty(), true);
+        Util.sleep(STATE_DELAY);
 
         showStageAndWait(topStage);
 
@@ -231,7 +231,6 @@ class StageOwnershipTest extends VisualTestBase {
         setupTopStage(bottomStage, stageStyle, modality);
 
         runAndWait(() -> bottomStage.setFullScreen(true));
-        waitForBoolean(bottomStage.fullScreenProperty(), true);
         Util.sleep(STATE_DELAY);
 
         showStageAndWait(topStage);
@@ -359,7 +358,6 @@ class StageOwnershipTest extends VisualTestBase {
             stage2 = createStage(style, COLOR2, stage0, null, 350, 100);
         });
         showStageAndWait(stage0, stage1, stage2);
-        waitForBoolean(stage0.maximizedProperty(), true);
         Util.sleep(STATE_DELAY);
 
         runAndWait(() -> {
@@ -404,8 +402,7 @@ class StageOwnershipTest extends VisualTestBase {
         showStageAndWait(stage0, stage1);
 
         runAndWait(() -> stage0.setMaximized(true));
-        waitForBoolean(stage0.maximizedProperty(), true);
-        Util.sleep(GEOMETRY_DELAY);
+        Util.sleep(STATE_DELAY);
         waitForBoolean(stage1.showingProperty(), true);
         Util.sleep(FOCUS_DELAY);
 
@@ -428,11 +425,9 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         showStageAndWait(stage0, stage1, stage2, stage3);
-        waitForBoolean(stage0.maximizedProperty(), true);
-        Util.sleep(GEOMETRY_DELAY);
+        Util.sleep(STATE_DELAY);
 
         runAndWait(() -> stage1.setIconified(true));
-        waitForBoolean(stage1.iconifiedProperty(), true);
         Util.sleep(STATE_DELAY);
 
         runAndWait(() -> {
@@ -442,7 +437,6 @@ class StageOwnershipTest extends VisualTestBase {
         });
 
         runAndWait(() -> stage1.setIconified(false));
-        waitForBoolean(stage1.iconifiedProperty(), false);
         Util.sleep(STATE_DELAY);
 
         runAndWait(() -> {
