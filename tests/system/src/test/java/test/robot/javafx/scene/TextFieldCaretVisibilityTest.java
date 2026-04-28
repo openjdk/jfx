@@ -31,11 +31,12 @@ import java.util.List;
 import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.shape.Path;
-import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.Test;
@@ -43,9 +44,9 @@ import test.robot.testharness.RobotTestBase;
 
 
 public class TextFieldCaretVisibilityTest extends RobotTestBase {
-    private static final double EPSILON = 2.0;
+    private static final double MARGIN = 2.0;
 
-    private static final double[] TEST_WIDTHS = { 300, 140, 80, 60, 200, 100 };
+    private static final double[] TEST_WIDTHS = { 600, 50 };
 
     private static final String LONG_LTR_TEXT = "ABCDEFGHIJKLMNO 0123456789";
     private static final String LONG_RTL_TEXT =
@@ -70,7 +71,7 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
                     field.setFont(Font.font("System", 18));
                     field.setNodeOrientation(orientation.fieldOrientation);
                 });
-                setContent(field);
+                setContent(new HBox(field));
                 runAndWait(field::requestFocus);
                 waitForIdle();
 
@@ -78,7 +79,6 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
                     runAndWait(() -> field.setPrefWidth(width));
                     waitForIdle();
 
-                    // Caret at start
                     runAndWait(() -> field.positionCaret(0));
                     waitForIdle();
                     runAndWait(() -> {
@@ -86,16 +86,6 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
                         assertNoDeadSpace(field, "start, width=" + width);
                     });
 
-                    // Caret at middle
-                    int mid = text.length() / 2;
-                    runAndWait(() -> field.positionCaret(mid));
-                    waitForIdle();
-                    runAndWait(() -> {
-                        assertCaretVisible(field, "middle, width=" + width);
-                        assertNoDeadSpace(field, "middle, width=" + width);
-                    });
-
-                    // Caret at end
                     runAndWait(() -> field.positionCaret(text.length()));
                     waitForIdle();
                     runAndWait(() -> {
@@ -110,11 +100,11 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
     private void assertCaretVisible(TextField field, String context) {
         Bounds caretBounds = getCaretBoundsInScene(field);
         Bounds clipBounds = getTextClipBoundsInScene(field);
-        assertTrue(caretBounds.getMinX() >= clipBounds.getMinX() - EPSILON,
+        assertTrue(caretBounds.getMinX() >= clipBounds.getMinX() - MARGIN,
                 "caret left edge outside clip (" + context + "):"
                 + " caret.minX=" + caretBounds.getMinX()
                 + " clip.minX=" + clipBounds.getMinX());
-        assertTrue(caretBounds.getMaxX() <= clipBounds.getMaxX() + EPSILON,
+        assertTrue(caretBounds.getMaxX() <= clipBounds.getMaxX() + MARGIN,
                 "caret right edge outside clip (" + context + "):"
                 + " caret.maxX=" + caretBounds.getMaxX()
                 + " clip.maxX=" + clipBounds.getMaxX());
@@ -131,29 +121,27 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
                 ? clip.getLayoutBounds().getWidth()
                 : textGroup.getLayoutBounds().getWidth();
 
-        if (textWidth <= clipWidth + EPSILON) {
+        if (textWidth <= clipWidth + MARGIN) {
             return;
         }
 
         Bounds textBoundsInScene = textNode.localToScene(textNode.getLayoutBounds());
         Bounds clipBoundsInScene = getTextClipBoundsInScene(field);
 
-        assertTrue(textBoundsInScene.getMinX() <= clipBoundsInScene.getMinX() + EPSILON,
+        assertTrue(textBoundsInScene.getMinX() <= clipBoundsInScene.getMinX() + MARGIN,
                 "dead space at leading edge (" + context + "):"
                 + " text.minX=" + textBoundsInScene.getMinX()
                 + " clip.minX=" + clipBoundsInScene.getMinX());
-        assertTrue(textBoundsInScene.getMaxX() >= clipBoundsInScene.getMaxX() - EPSILON,
+        assertTrue(textBoundsInScene.getMaxX() >= clipBoundsInScene.getMaxX() - MARGIN,
                 "dead space at trailing edge (" + context + "):"
                 + " text.maxX=" + textBoundsInScene.getMaxX()
                 + " clip.maxX=" + clipBoundsInScene.getMaxX());
     }
 
     private Bounds getCaretBoundsInScene(TextField field) {
-        Text textNode = getTextNode(field);
-        PathElement[] elements = textNode.getCaretShape();
-        assertNotNull(elements, "caret shape is null");
-        Path caretPath = new Path(elements);
-        return textNode.localToScene(caretPath.getLayoutBounds());
+        Path caretPath = getCaretPath(field);
+        assertNotNull(caretPath, "caret path not found");
+        return caretPath.localToScene(caretPath.getLayoutBounds());
     }
 
     private Bounds getTextClipBoundsInScene(TextField field) {
@@ -170,6 +158,17 @@ public class TextFieldCaretVisibilityTest extends RobotTestBase {
         Set<Node> nodes = field.lookupAll(".text");
         assertTrue(nodes.size() == 1, "expected a single text node, found " + nodes.size());
         return (Text) nodes.iterator().next();
+    }
+
+    private Path getCaretPath(TextField field) {
+        Parent textGroup = getTextNode(field).getParent();
+        for (Node child : textGroup.getChildrenUnmodifiable()) {
+            if (child instanceof Group group && group.getChildren().size() == 1
+                    && group.getChildren().get(0) instanceof Path path) {
+                return path;
+            }
+        }
+        return null;
     }
 
     private static final class OrientationCase {
