@@ -40,6 +40,8 @@ id jRole;
 - (NSString *)getJavaRole;
 - (id)requestNodeAttribute:(NSString *)attribute;
 - (id)requestNodeAttribute:(NSString *)attribute forParameter:(id)parameter;
+- (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute;
+- (NSString *)accessibilityPlaceholderValue;
 - (NSRect)accessibilityFrame;
 - (id)accessibilityParent;
 - (BOOL)isAccessibilityElement;

@@ -23,10 +23,10 @@
  * questions.
  */
 
-#import "AccessibleBase.h"
+#import "JFXStaticTextAccessibility.h"
 #import <AppKit/NSAccessibility.h>
 
-@interface JFXNavigableTextAccessibility : AccessibleBase<NSAccessibilityNavigableStaticText> {
+@interface JFXNavigableTextAccessibility : JFXStaticTextAccessibility<NSAccessibilityNavigableStaticText> {
 
 };
 - (NSAccessibilityRole)accessibilityRole;
@@ -34,9 +34,15 @@
 - (BOOL)isAccessibilityEnabled;
 - (BOOL)isAccessibilityEdited;
 - (NSArray *)accessibilityChildren;
-- (NSString *)accessibilityValue;
+- (NSInteger)accessibilityInsertionPointLineNumber;
+- (NSRange)accessibilityRangeForPosition:(NSPoint)point;
+- (NSRange)accessibilityRangeForIndex:(NSInteger)index;
 - (NSRange)accessibilitySelectedTextRange;
+- (void)setAccessibilitySelectedTextRanges:(NSArray<NSValue *> *)ranges;
+- (void)setAccessibilityValue:(NSString *)value;
+- (void)setAccessibilitySelectedText:(NSString *)selectedText;
 - (NSString *)accessibilitySelectedText;
+- (NSRange)accessibilitySharedCharacterRange;
 - (NSRange)accessibilityVisibleCharacterRange;
 - (NSAttributedString *) accessibilityAttributedStringForRange:(NSRange)range;
 - (NSInteger)accessibilityNumberOfCharacters;

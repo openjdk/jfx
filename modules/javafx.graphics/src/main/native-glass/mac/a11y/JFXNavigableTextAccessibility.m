@@ -25,6 +25,20 @@
 
 #import "JFXNavigableTextAccessibility.h"
 
+static NSRange composedCharacterRangeForIndex(NSString *value, NSInteger index)
+{
+    if (value == nil) {
+        return NSMakeRange(NSNotFound, 0);
+    }
+
+    NSUInteger length = [value length];
+    if (index < 0 || (NSUInteger)index >= length) {
+        return NSMakeRange(NSNotFound, 0);
+    }
+
+    return [value rangeOfComposedCharacterSequenceAtIndex:(NSUInteger)index];
+}
+
 @implementation JFXNavigableTextAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
@@ -43,11 +57,6 @@
     return NSAccessibilitySecureTextFieldSubrole;
 }
 
-- (id)accessibilityParent
-{
-    return [super accessibilityParent];
-}
-
 - (BOOL)isAccessibilityEnabled
 {
     return TRUE;
@@ -62,14 +71,27 @@
     return [super accessibilityChildren];
 }
 
-- (NSRect)accessibilityFrame
+- (NSInteger)accessibilityInsertionPointLineNumber
 {
-    return [super accessibilityFrame];
+    id retVal = [self requestNodeAttribute:@"AXInsertionPointLineNumber"];
+    NSInteger lineNumber = retVal != nil ? [retVal integerValue] : 0;
+    return lineNumber;
 }
 
-- (NSString *)accessibilityValue
+- (NSRange)accessibilityRangeForPosition:(NSPoint)point
 {
-    return [super accessibilityValue];
+    id parameter = [NSValue valueWithPoint:point];
+    NSRange retVal = [[self requestNodeAttribute:@"AXRangeForPosition" forParameter:parameter] rangeValue];
+    if (retVal.location == NSNotFound) {
+        return retVal;
+    }
+
+    return composedCharacterRangeForIndex([self accessibilityValue], retVal.location);
+}
+
+- (NSRange)accessibilityRangeForIndex:(NSInteger)index
+{
+    return composedCharacterRangeForIndex([self accessibilityValue], index);
 }
 
 - (nullable NSString *)accessibilityStringForRange:(NSRange)range
@@ -113,18 +135,53 @@
 }
 
 - (void)setAccessibilitySelectedTextRange:(NSRange)range {
-// We do not need to do anything here. We just have to have it overridden.
+    [self setNodeAttribute:[NSValue valueWithRange:range]
+              forAttribute:@"AXSelectedTextRange"];
 }
 
 - (id)accessibilitySelectedTextRanges
 {
-    return nil; //For now. Once we have multiselection text area we might revisit it.
+    id retVal = [self requestNodeAttribute:@"AXSelectedTextRange"];
+    if (retVal == nil) {
+        return nil;
+    }
+
+    NSRange range = [retVal rangeValue];
+    if (range.location == NSNotFound) {
+        return @[];;
+    }
+
+    NSArray *ranges = @[[NSValue valueWithRange:range]];
+    return ranges;
+}
+
+- (void)setAccessibilitySelectedTextRanges:(NSArray<NSValue *> *)ranges
+{
+    [self setNodeAttribute:ranges forAttribute:@"AXSelectedTextRanges"];
+}
+
+- (void)setAccessibilityValue:(NSString *)value
+{
+    [self setNodeAttribute:value forAttribute:@"AXValue"];
+}
+
+- (void)setAccessibilitySelectedText:(NSString *)selectedText
+{
+    [self setNodeAttribute:selectedText forAttribute:@"AXSelectedText"];
 }
 
 - (NSString *)accessibilitySelectedText
 {
     id parameter = [NSValue valueWithRange:[self accessibilitySelectedTextRange]];
     NSString * retVal = (NSString *)[self requestNodeAttribute:@"AXStringForRange" forParameter:parameter];
+    return retVal;
+}
+
+- (NSRange)accessibilitySharedCharacterRange
+{
+    // JavaFX text controls expose a single text container, so the shared-text
+    // range is the full document range for this accessible element.
+    NSRange retVal = NSMakeRange(0, [self accessibilityNumberOfCharacters]);
     return retVal;
 }
 

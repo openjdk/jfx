@@ -151,6 +151,18 @@ static NSMutableDictionary * rolesMap;
     return variantToID(env, jresult);
 }
 
+/*
+ * Set accessibility attribute by name on the JavaFX Node.
+ */
+- (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return;
+    (*env)->CallVoidMethod(env, [self getJAccessible], jAccessibilitySetValue,
+                           (jlong)value, (jlong)attribute);
+    GLASS_CHECK_EXCEPTION(env);
+}
+
 - (id)accessibilityValue
 {
     return [self requestNodeAttribute:@"AXValue"];
@@ -189,6 +201,11 @@ static NSMutableDictionary * rolesMap;
 - (id)accessibilityTitleUIElement
 {
     return [self requestNodeAttribute:@"AXTitleUIElement"];
+}
+
+- (NSString *)accessibilityPlaceholderValue
+{
+    return [self requestNodeAttribute:@"AXPlaceholderValue"];
 }
 
 - (NSArray *)accessibilityChildren
@@ -254,12 +271,7 @@ static NSMutableDictionary * rolesMap;
 
 - (void)setAccessibilityFocused:(BOOL)value
 {
-    GET_MAIN_JENV;
-    if (env == NULL) return;
-    (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilitySetValue,
-                           (jlong)[NSNumber numberWithBool:value],
-                           (jlong)@"AXFocused");
-    GLASS_CHECK_EXCEPTION(env);
+    [self setNodeAttribute:[NSNumber numberWithBool:value] forAttribute:@"AXFocused"];
 }
 
 @end
