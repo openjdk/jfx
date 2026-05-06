@@ -457,10 +457,13 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     snapPositionY(p.getY()));
 
         popupContent.requestFocus();
-
-        // second call to sizePopup here to enable proper sizing _after_ the popup
-        // has been displayed. See JDK-8095352 for more detail.
+        popupContent.applyCss();
         sizePopup(false);
+        if (popupContent instanceof Parent parent) {
+            parent.layout();
+        }
+        popupNeedsReconfiguring = true;
+        reconfigurePopup();
     }
 
     private void sizePopup(boolean first) {
@@ -599,20 +602,17 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     final void recomputePopupLayout() {
+        popupNeedsReconfiguring = true;
         if (popup == null || !popup.isShowing()) {
-            popupNeedsReconfiguring = true;
             return;
         }
-        Platform.runLater(() -> {
-            final Node popupContent = getPopupContent();
-            if (popupContent instanceof Parent p) {
-                p.applyCss();
-                p.layout();
-            }
-
-            sizePopup(false);
-            reconfigurePopup();
-        });
+        Node popupContent = getPopupContent();
+        popupContent.applyCss();
+        sizePopup(false);
+        if (popupContent instanceof Parent p) {
+            p.layout();
+        }
+        reconfigurePopup();
     }
 
     private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
