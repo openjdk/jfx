@@ -335,6 +335,56 @@ public class ComboBoxTest {
         comboBox.setEditable(false);
     }
 
+    @Test public void testCellUpdateOnStringConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+
+        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getDisplayNode();
+        assertEquals("ITEM1", cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("item1", cell.getText());
+    }
+
+    @Test public void testTextFieldUpdateOnStringConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+
+        TextField field = (TextField) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getDisplayNode();
+        assertEquals("ITEM1", field.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("item1", field.getText());
+    }
+
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
