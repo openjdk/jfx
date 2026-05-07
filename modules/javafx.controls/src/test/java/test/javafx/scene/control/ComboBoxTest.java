@@ -335,7 +335,8 @@ public class ComboBoxTest {
         comboBox.setEditable(false);
     }
 
-    @Test public void testCellUpdateOnStringConverterChange() {
+    @Test
+    public void testCellUpdateOnStringConverterChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
         comboBox.setEditable(false);
         comboBox.setItems(items);
@@ -360,7 +361,8 @@ public class ComboBoxTest {
         assertEquals("item1", cell.getText());
     }
 
-    @Test public void testTextFieldUpdateOnStringConverterChange() {
+    @Test
+    public void testTextFieldUpdateOnStringConverterChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
         comboBox.setEditable(true);
         comboBox.setItems(items);
