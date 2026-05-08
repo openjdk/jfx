@@ -62,8 +62,10 @@ static NSRange composedCharacterRangeForIndex(NSString *value, NSInteger index)
     return TRUE;
 }
 
-- (BOOL)isAccessibilityEdited {
-    return TRUE;
+- (BOOL)isAccessibilityEdited
+{
+    id value = [self requestNodeAttribute:@"AXEdited"];
+    return value != nil ? [value boolValue] : NO;
 }
 
 - (NSArray *)accessibilityChildren
@@ -197,6 +199,25 @@ static NSRange composedCharacterRangeForIndex(NSString *value, NSInteger index)
     NSAttributedString * retVal = (NSAttributedString *)
             [self requestNodeAttribute:@"AXAttributedStringForRange" forParameter:parameter];
     return retVal;
+}
+
+- (BOOL)isAccessibilitySelectorAllowed:(SEL)selector
+{
+    if (selector == @selector(setAccessibilityValue:)) {
+        return [self isNodeAttributeSettable:@"AXValue"];
+    }
+    if (selector == @selector(setAccessibilitySelectedTextRange:)) {
+        return [self isNodeAttributeSettable:@"AXSelectedTextRange"];
+    }
+    if (selector == @selector(setAccessibilitySelectedTextRanges:)) {
+        return [self isNodeAttributeSettable:@"AXSelectedTextRanges"];
+    }
+    return [super isAccessibilitySelectorAllowed:selector];
+}
+
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)attribute
+{
+    return [self isNodeAttributeSettable:attribute];
 }
 
 @end

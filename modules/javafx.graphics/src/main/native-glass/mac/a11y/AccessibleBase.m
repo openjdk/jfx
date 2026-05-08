@@ -152,6 +152,20 @@ static NSMutableDictionary * rolesMap;
 }
 
 /*
+ * Check whether an accessibility attribute on the JavaFX Node can be set.
+ */
+- (BOOL)isNodeAttributeSettable:(NSString *)attribute
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return FALSE;
+    jboolean jresult = (*env)->CallBooleanMethod(env, [self getJAccessible],
+                                                 jAccessibilityIsAttributeSettable,
+                                                 (jlong)attribute);
+    GLASS_CHECK_EXCEPTION(env);
+    return jresult;
+}
+
+/*
  * Set accessibility attribute by name on the JavaFX Node.
  */
 - (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute

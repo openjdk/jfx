@@ -46,4 +46,5 @@
 - (NSRange)accessibilityVisibleCharacterRange;
 - (NSAttributedString *) accessibilityAttributedStringForRange:(NSRange)range;
 - (NSInteger)accessibilityNumberOfCharacters;
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)attribute;
 @end
