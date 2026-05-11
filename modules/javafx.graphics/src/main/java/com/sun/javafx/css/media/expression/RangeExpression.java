@@ -28,6 +28,7 @@ package com.sun.javafx.css.media.expression;
 import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import java.util.Objects;
@@ -91,6 +92,11 @@ public sealed abstract class RangeExpression implements MediaQuery
     @Override
     public final int getContextAwareness() {
         return ContextAwareness.VIEWPORT_SIZE.value();
+    }
+
+    @Override
+    public TriState evaluate() {
+        return TriState.UNKNOWN;
     }
 
     @Override

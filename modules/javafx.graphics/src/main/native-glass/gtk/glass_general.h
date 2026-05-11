@@ -374,6 +374,9 @@ glass_settings_get_guint_opt (const gchar *schema_name,
                     const gchar *key_name,
                     int defval);
 
+
+gchar* jstring_to_utf8(JNIEnv *env, jstring jstr);
+
 #ifdef __cplusplus
 }
 #endif

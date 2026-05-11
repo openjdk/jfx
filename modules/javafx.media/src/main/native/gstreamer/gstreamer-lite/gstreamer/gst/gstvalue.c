@@ -7335,6 +7335,11 @@ gst_value_compare_fraction (const GValue * value1, const GValue * value2)
   gint d1, d2;
   gint ret;
 
+#ifdef GSTREAMER_LITE
+  if (value1 == NULL || value2 == NULL)
+    return GST_VALUE_UNORDERED;
+#endif // GSTREAMER_LITE
+
   n1 = value1->data[0].v_int;
   n2 = value2->data[0].v_int;
   d1 = value1->data[1].v_int;

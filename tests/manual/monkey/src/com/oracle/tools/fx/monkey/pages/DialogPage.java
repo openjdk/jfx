@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
-import com.oracle.tools.fx.monkey.options.GraphicOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -61,7 +60,7 @@ public class DialogPage extends TestPaneBase {
     private final SimpleObjectProperty<StageStyle> stageStyle = new SimpleObjectProperty<>(StageStyle.DECORATED);
     private final SimpleStringProperty title = new SimpleStringProperty();
     // dialog pane
-    private final SimpleBooleanProperty useDialogPane = new SimpleBooleanProperty(true);
+    private final SimpleBooleanProperty setDialogPane = new SimpleBooleanProperty(true);
     private final SimpleObjectProperty<Node> dpContent = new SimpleObjectProperty<>();
     private final SimpleStringProperty dpContentText = new SimpleStringProperty();
     private final SimpleObjectProperty<Node> dpExpandableContent = new SimpleObjectProperty<>();
@@ -92,12 +91,12 @@ public class DialogPage extends TestPaneBase {
 
         // dialog pane
         op.section("DialogPane");
-        op.option(new BooleanOption("set DialogPane", "setDialogPane", useDialogPane));
-        op.option("Content:", new GraphicOption("dpContent", dpContent));
-        op.option("Expandable Content:", new GraphicOption("dpExpandableContent", dpExpandableContent));
+        op.option(new BooleanOption("set DialogPane", "set DialogPane", setDialogPane));
+        op.option("Content:", Options.nodeOption("dpContent", dpContent));
+        op.option("Expandable Content:", Options.nodeOption("dpExpandableContent", dpExpandableContent));
         op.option(new BooleanOption("expanded", "dpExpanded", dpExpanded));
-        op.option("Graphic:", new GraphicOption("dpGraphic", dpGraphic));
-        op.option("Header:", new GraphicOption("dpHeader", dpGHeader));
+        op.option("Graphic:", Options.nodeOption("dpGraphic", dpGraphic));
+        op.option("Header:", Options.nodeOption("dpHeader", dpGHeader));
         op.option("Header Text:", textChoices("dpHeaderText", dpHeaderText));
 
         // dialog
@@ -133,7 +132,7 @@ public class DialogPage extends TestPaneBase {
         d.titleProperty().bindBidirectional(title);
 
         // dialog pane
-        if (useDialogPane.get()) {
+        if (setDialogPane.get()) {
             DialogPane p = new DialogPane();
             p.contentProperty().bindBidirectional(dpContent);
             p.expandableContentProperty().bindBidirectional(dpExpandableContent);

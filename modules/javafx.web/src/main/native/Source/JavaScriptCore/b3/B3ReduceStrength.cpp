@@ -2101,7 +2101,8 @@ private:
                     case Add: {
                         // Turn this: Trunc(SShr(Add(@a, constant), $12))
                         // Into this: Add(Trunc(SShr(@a, $12), converted-constant)
-                        if (sshrArg0->child(1)->hasInt64()) {
+                        if (sshrArg0->child(1)->hasInt64()
+                            && !(sshrArg0->child(1)->asInt64() & ((1LL << JSValue::int52ShiftAmount) - 1))) {
                             auto* shiftAmount = m_value->child(0)->child(1);
                             int64_t constant = sshrArg0->child(1)->asInt64();
                             auto* shifted = m_insertionSet.insert<Value>(m_index, SShr, m_value->child(0)->origin(), sshrArg0->child(0), shiftAmount);
