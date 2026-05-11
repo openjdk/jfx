@@ -179,7 +179,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             listView.requestLayout();
         });
         lh.addChangeListener(control.converterProperty(), e -> {
-            updateCellFactory();
+            listView.refresh();
             updateDisplayNode();
         });
         lh.addChangeListener(control.buttonCellProperty(), e -> {
