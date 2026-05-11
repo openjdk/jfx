@@ -2959,66 +2959,6 @@ project(":controls") {
 //}
 // END: incubator placeholder
 
-<<<<<<< HEAD
-=======
-project(":incubator.input") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "jfx.incubator.input"
-    project.ext.incubating = true
-
-    sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
-    }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
-
-    commonModuleSetup(project, [
-        'base',
-        'graphics',
-        'controls',
-        'incubator.input'
-    ])
-
-    dependencies {
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        implementation project(':base')
-        implementation project(':graphics')
-        implementation project(':controls')
-    }
-
-    test {
-        jvmArgs enableNativeGraphics
-        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
-    }
-
-    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addMavenPublication(project, [ 'controls' ])
-
-    addValidateSourceSets(project, sourceSets)
-}
-
->>>>>>> refs/heads/master
 project(":incubator.richtext") {
     project.ext.buildModule = true
     project.ext.includeSources = true
