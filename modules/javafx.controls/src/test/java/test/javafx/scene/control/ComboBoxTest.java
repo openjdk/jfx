@@ -338,7 +338,7 @@ public class ComboBoxTest {
     }
 
     @Test
-    public void testCellUpdateOnStringConverterChange() {
+    public void testButtonCellUpdateOnStringConverterChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
         comboBox.setEditable(false);
         comboBox.setItems(items);
@@ -370,8 +370,7 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setValue("ITEM1");
 
-        TextField field = (TextField) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getDisplayNode();
+        TextField field = (TextField) getDisplayNode();
         assertEquals("ITEM1", field.getText());
 
         comboBox.setConverter(new StringConverter<>() {
@@ -391,10 +390,17 @@ public class ComboBoxTest {
 
     @Test
     public void testListUpdateOnStringConverterChange() {
+        sl = new StageLoader(comboBox);
+        ListView<String> list = getListView();
+
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
         comboBox.setEditable(false);
         comboBox.setItems(items);
         comboBox.setValue("ITEM1");
+
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "ITEM1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "ITEM2");
+
         comboBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(String object) {
@@ -408,9 +414,6 @@ public class ComboBoxTest {
         });
         comboBox.getItems().add("ITEM3");
 
-        ListView<String> list = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getPopupContent();
-        list.setSkin(new ListViewSkin<>(list));
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "item1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "item2");
         VirtualFlowTestUtils.assertCellTextEquals(list, 2, "item3");
