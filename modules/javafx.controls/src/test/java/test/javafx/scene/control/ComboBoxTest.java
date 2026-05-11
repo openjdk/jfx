@@ -67,6 +67,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
@@ -93,6 +94,7 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 public class ComboBoxTest {
     private ComboBox<String> comboBox;
@@ -385,6 +387,33 @@ public class ComboBoxTest {
         });
 
         assertEquals("item1", field.getText());
+    }
+
+    @Test
+    public void testListUpdateOnStringConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+        comboBox.getItems().add("ITEM3");
+
+        ListView<String> list = (ListView<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getPopupContent();
+        list.setSkin(new ListViewSkin<>(list));
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "item1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "item2");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 2, "item3");
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
