@@ -70,6 +70,7 @@ import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
@@ -89,6 +90,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
+import com.sun.javafx.event.EventUtil;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -2539,5 +2541,19 @@ public class ComboBoxTest {
         assertEquals("B", comboBox.getSelectionModel().getSelectedItem());
         mouse.fireMousePressAndRelease();
         assertEquals("B", comboBox.getSelectionModel().getSelectedItem());
+    }
+
+    // Ensure initial shortcut event is not consumed
+    @Test public void testShortcutNotConsumed() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        sl = new StageLoader(cb);
+        cb.requestFocus();
+
+        var isMac = Utils.isMac();
+        KeyCode code = isMac ? KeyCode.Q : KeyCode.X;
+        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, !isMac, false, isMac);
+        boolean consumed = (EventUtil.fireEvent(cb, event) == null);
+        assertFalse(consumed, "Initial shortcut event was consumed");
     }
 }

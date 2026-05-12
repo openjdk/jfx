@@ -28,6 +28,7 @@ package javafx.scene.control.skin;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
+import javafx.event.EventDispatchChain;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
@@ -47,6 +48,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -170,11 +172,22 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     // Fix for the regression noted in a comment in JDK-8115009.
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
+                    if (forwardToTextField(ke)) {
+                        ke.consume();
+                    }
                 }
             }
         });
+    }
+
+    // Returns 'true' if the event was consumed.
+    private boolean forwardToTextField(KeyEvent event) {
+        var dispatcher = textField.getEventDispatcher();
+        if (dispatcher == null) return false;
+
+        EventDispatchChain chain = new EventDispatchChainImpl();
+        chain.append(textField.getEventDispatcher());
+        return chain.dispatchEvent(event.copyFor(textField, textField)) == null;
     }
 
     @Override
@@ -606,7 +619,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
             } else if (textField != null) {
-                textField.fireEvent(ke);
+                forwardToTextField(ke);
             }
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // JDK-8115456: The TextField fires F10 and ESCAPE key events
