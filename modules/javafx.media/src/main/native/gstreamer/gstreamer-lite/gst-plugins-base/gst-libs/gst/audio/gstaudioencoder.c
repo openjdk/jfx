@@ -248,6 +248,8 @@ struct _GstAudioEncoderPrivate
    * in the adapter. these events shall be sent after negotiation but before
    * we push the following buffer. */
   GList *early_pending_events;
+
+  GstLogContext *input_buffer_disappeared_lctx;
 };
 
 
@@ -467,6 +469,12 @@ gst_audio_encoder_init (GstAudioEncoder * enc, GstAudioEncoderClass * bclass)
   enc->priv->ctx.min_latency = 0;
   enc->priv->ctx.max_latency = 0;
   gst_audio_encoder_reset (enc, TRUE);
+
+  GST_LOG_CONTEXT_INIT (enc->priv->input_buffer_disappeared_lctx,
+      GST_LOG_CONTEXT_FLAG_THROTTLE, {
+        GST_LOG_CONTEXT_BUILDER_SET_INTERVAL (60 * GST_SECOND);
+      });
+
   GST_DEBUG_OBJECT (enc, "init ok");
 }
 
@@ -542,6 +550,8 @@ gst_audio_encoder_finalize (GObject * object)
   GstAudioEncoder *enc = GST_AUDIO_ENCODER (object);
 
   g_object_unref (enc->priv->adapter);
+  g_clear_pointer (&enc->priv->input_buffer_disappeared_lctx,
+      gst_log_context_free);
 
   g_rec_mutex_clear (&enc->stream_lock);
 
@@ -1015,7 +1025,7 @@ gst_audio_encoder_finish_frame (GstAudioEncoder * enc, GstBuffer * buf,
         data.outbuf = buf;
         gst_buffer_foreach_meta (inbuf, foreach_metadata, &data);
       } else {
-        GST_WARNING_OBJECT (enc,
+        GST_CTX_WARNING_OBJECT (enc->priv->input_buffer_disappeared_lctx, enc,
             "Can't copy metadata because input buffer disappeared");
       }
     }

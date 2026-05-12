@@ -28,6 +28,7 @@
 
 #include <gst/glib-compat.h>
 
+#include <gst/gstcpuid.h>
 #include <gst/gstenumtypes.h>
 #include <gst/gstversion.h>
 
@@ -61,6 +62,7 @@
 #include <gst/gstmessage.h>
 #include <gst/gstmemory.h>
 #include <gst/gstmeta.h>
+#include <gst/gstmetafactory.h>
 #include <gst/gstminiobject.h>
 #include <gst/gstobject.h>
 #include <gst/gststreamcollection.h>
@@ -129,6 +131,9 @@ GOptionGroup *  gst_init_get_option_group       (void);
 
 GST_API
 void            gst_deinit                      (void);
+
+GST_API
+gboolean        gst_check_version               (guint major, guint minor, guint micro);
 
 GST_API
 void            gst_version                     (guint *major, guint *minor,

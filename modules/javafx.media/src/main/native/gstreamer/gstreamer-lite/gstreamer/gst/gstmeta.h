@@ -429,6 +429,9 @@ GST_API
 const gchar* const*  gst_meta_api_type_get_tags (GType api);
 
 GST_API
+gboolean             gst_meta_api_type_tags_contain_only (GType api, const gchar ** valid_tags);
+
+GST_API
 guint64              gst_meta_get_seqnum        (const GstMeta * meta);
 
 GST_API

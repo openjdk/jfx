@@ -103,6 +103,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gstcontext.c \
           gstreamer/gst/gstcontrolbinding.c \
           gstreamer/gst/gstcontrolsource.c \
+          gstreamer/gst/gstcpuid.c \
           gstreamer/gst/gstdatetime.c \
           gstreamer/gst/gstdebugutils.c \
           gstreamer/gst/gstdynamictypefactory.c \
@@ -119,6 +120,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gstmemory.c \
           gstreamer/gst/gstmessage.c \
           gstreamer/gst/gstmeta.c \
+          gstreamer/gst/gstmetafactory.c \
           gstreamer/gst/gstminiobject.c \
           gstreamer/gst/gstobject.c \
           gstreamer/gst/gstpad.c \

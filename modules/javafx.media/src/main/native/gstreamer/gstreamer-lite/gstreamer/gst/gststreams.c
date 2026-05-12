@@ -568,8 +568,10 @@ gst_stream_type_get_name (GstStreamType stype)
       return "container";
     case GST_STREAM_TYPE_TEXT:
       return "text";
+    case GST_STREAM_TYPE_METADATA:
+      return "metadata";
     default:{
-      gchar str[32] = { 0, };
+      gchar str[48] = { 0, };
 
 #define _GST_STREAM_TYPE_ALL          \
         (GST_STREAM_TYPE_AUDIO        \
@@ -588,6 +590,8 @@ gst_stream_type_get_name (GstStreamType stype)
         g_strlcat (str, "+audio", sizeof (str));
       if ((stype & GST_STREAM_TYPE_TEXT) != 0)
         g_strlcat (str, "+text", sizeof (str));
+      if ((stype & GST_STREAM_TYPE_METADATA) != 0)
+        g_strlcat (str, "+metadata", sizeof (str));
 
       g_assert (str[0] != '\0');
 

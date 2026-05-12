@@ -52,6 +52,18 @@ G_BEGIN_DECLS
 #  endif
 #endif
 
+#if defined(G_DISABLE_CHECKS)
+#define GST_UNUSED_CHECKS G_GNUC_UNUSED
+#else
+#define GST_UNUSED_CHECKS
+#endif
+
+#if defined(G_DISABLE_ASSERT)
+#define GST_UNUSED_ASSERT G_GNUC_UNUSED
+#else
+#define GST_UNUSED_ASSERT
+#endif
+
 G_END_DECLS
 
 #endif /* __GST_MACROS_H__ */

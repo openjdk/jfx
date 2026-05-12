@@ -143,7 +143,7 @@ GST_BASE_API
 GstDataQueue * gst_data_queue_new            (GstDataQueueCheckFullFunction checkfull,
                 GstDataQueueFullCallback fullcallback,
                 GstDataQueueEmptyCallback emptycallback,
-                gpointer checkdata) G_GNUC_MALLOC;
+                gpointer checkdata) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_BASE_API
 gboolean       gst_data_queue_push           (GstDataQueue * queue, GstDataQueueItem * item);
 

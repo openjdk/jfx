@@ -2407,7 +2407,7 @@ gst_video_converter_init_from_config (GstVideoConverter * convert)
 }
 
 /**
- * gst_video_converter_new_with_pool: (skip)
+ * gst_video_converter_new_with_pool: (constructor) (skip)
  * @in_info: a #GstVideoInfo
  * @out_info: a #GstVideoInfo
  * @config: (transfer full): a #GstStructure with configuration options
@@ -2418,6 +2418,9 @@ gst_video_converter_init_from_config (GstVideoConverter * convert)
  *
  * The optional @pool can be used to spawn threads, this is useful when
  * creating new converters rapidly, for example when updating cropping.
+ *
+ * If @config is not provided, and a @pool is provided, the number of threads for
+ * the converter will be set to the maximum number of threads in the pool.
  *
  * Returns (nullable): a #GstVideoConverter or %NULL if conversion is not possible.
  *
@@ -2452,12 +2455,23 @@ gst_video_converter_new_with_pool (const GstVideoInfo * in_info,
   convert->out_maxheight = GST_VIDEO_INFO_FIELD_HEIGHT (out_info);
 
   convert->config = gst_structure_new_static_str_empty ("GstVideoConverter");
-  if (config)
+  if (config) {
     gst_video_converter_set_config (convert, config);
-  else
+    n_threads = get_opt_uint (convert, GST_VIDEO_CONVERTER_OPT_THREADS, 1);
+  } else {
+    /* No config provided. If a pool is available, use its thread count */
     gst_video_converter_init_from_config (convert);
+    if (pool && GST_IS_SHARED_TASK_POOL (pool)) {
+      n_threads =
+          gst_shared_task_pool_get_max_threads (GST_SHARED_TASK_POOL (pool));
+      GST_LOG ("setting n-threads from max threads %d from provided pool",
+          n_threads);
+      gst_structure_set (convert->config,
+          GST_VIDEO_CONVERTER_OPT_THREADS, G_TYPE_UINT, n_threads, NULL);
+    } else
+      n_threads = get_opt_uint (convert, GST_VIDEO_CONVERTER_OPT_THREADS, 1);
+  }
 
-  n_threads = get_opt_uint (convert, GST_VIDEO_CONVERTER_OPT_THREADS, 1);
   if (n_threads == 0 || n_threads > g_get_num_processors ())
     n_threads = g_get_num_processors ();
   /* Magic number of 200 lines */
@@ -2558,7 +2572,7 @@ no_pack_func:
 }
 
 /**
- * gst_video_converter_new: (skip)
+ * gst_video_converter_new: (constructor) (skip)
  * @in_info: a #GstVideoInfo
  * @out_info: a #GstVideoInfo
  * @config: (transfer full): a #GstStructure with configuration options
@@ -7935,8 +7949,11 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_NV12_10LE32:
     case GST_VIDEO_FORMAT_NV16_10LE32:
     case GST_VIDEO_FORMAT_NV12_10LE40:
+    case GST_VIDEO_FORMAT_NV16_10LE40:
     case GST_VIDEO_FORMAT_BGR10A2_LE:
     case GST_VIDEO_FORMAT_RGB10A2_LE:
+    case GST_VIDEO_FORMAT_BGR10x2_LE:
+    case GST_VIDEO_FORMAT_RGB10x2_LE:
     case GST_VIDEO_FORMAT_Y444_16BE:
     case GST_VIDEO_FORMAT_Y444_16LE:
     case GST_VIDEO_FORMAT_P016_BE:
@@ -8916,3 +8933,76 @@ gst_video_converter_get_out_info (GstVideoConverter * convert)
   return &convert->out_info;
 }
 #endif // GSTREAMER_LITE
+
+/**
+ * gst_video_converter_transform_metas:
+ * @convert: a #GstVideoConverter
+ * @dest: a writable #GstBuffer
+ * @src: a #GstBuffer
+ *
+ * Transform the GstMeta of @src into @dest using @convert.
+ *
+ * Returns: TRUE if any meta was copied
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_converter_transform_metas (GstVideoConverter * convert,
+    GstBuffer * src, GstBuffer * dest)
+{
+  GstMeta *meta;
+  gpointer state = NULL;
+  const gchar *valid_tags[] = {
+    GST_META_TAG_VIDEO_STR,
+    GST_META_TAG_VIDEO_ORIENTATION_STR,
+    GST_META_TAG_VIDEO_SIZE_STR,
+    GST_META_TAG_VIDEO_COLORSPACE_STR,
+    NULL
+  };
+  gboolean ret = FALSE;
+  gboolean crop = convert->in_x || convert->in_y
+      || convert->in_width != convert->in_maxwidth
+      || convert->in_height != convert->in_maxheight;
+  gboolean border = convert->out_x || convert->out_y
+      || convert->out_width != convert->out_maxwidth
+      || convert->out_height != convert->out_maxheight;
+
+  GstVideoMetaTransformMatrix trans_matrix;
+  const GstVideoRectangle in_rectangle = { convert->in_x, convert->in_y,
+    convert->in_width, convert->in_height
+  };
+  const GstVideoRectangle out_rectangle = { convert->out_x, convert->out_y,
+    convert->out_width, convert->out_height
+  };
+  GstVideoMetaTransform trans = {
+    &convert->in_info,
+    &convert->out_info,
+  };
+
+  g_return_val_if_fail (gst_buffer_is_writable (dest), FALSE);
+
+  if (G_UNLIKELY ((convert->out_width <= 0) || (convert->out_height <= 0)))
+    return FALSE;
+
+  gst_video_meta_transform_matrix_init (&trans_matrix, &convert->in_info,
+      &in_rectangle, &convert->out_info, &out_rectangle);
+
+  while ((meta = gst_buffer_iterate_meta (src, &state))) {
+    if (meta->info->transform_func == NULL)
+      continue;
+
+    if (!gst_meta_api_type_tags_contain_only (meta->info->api, valid_tags))
+      continue;
+
+    if (!meta->info->transform_func (dest, meta, src,
+            gst_video_meta_transform_matrix_get_quark (), &trans_matrix)) {
+      if (!crop && !border)
+        ret |= meta->info->transform_func (dest, meta, src,
+            gst_video_meta_transform_scale_get_quark (), &trans);
+    } else {
+      ret = TRUE;
+    }
+  }
+
+  return ret;
+}

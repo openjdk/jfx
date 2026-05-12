@@ -225,6 +225,7 @@ struct _GstBaseParsePrivate
 
   guint min_frame_size;
   gboolean disable_passthrough;
+  gboolean disable_clip;
   gboolean passthrough;
   gboolean pts_interpolate;
   gboolean infer_ts;
@@ -361,11 +362,13 @@ typedef struct _GstBaseParseSeek
 } GstBaseParseSeek;
 
 #define DEFAULT_DISABLE_PASSTHROUGH        FALSE
+#define DEFAULT_DISABLE_CLIP               TRUE
 
 enum
 {
   PROP_0,
   PROP_DISABLE_PASSTHROUGH,
+  PROP_DISABLE_CLIP,
   PROP_LAST
 };
 
@@ -487,7 +490,7 @@ static gboolean gst_base_parse_is_seekable (GstBaseParse * parse);
 static void gst_base_parse_push_pending_events (GstBaseParse * parse);
 
 static void
-gst_base_parse_clear_queues (GstBaseParse * parse)
+gst_base_parse_clear_queues (GstBaseParse * parse, gboolean clear_sticky_events)
 {
   g_slist_foreach (parse->priv->buffers_queued, (GFunc) gst_buffer_unref, NULL);
   g_slist_free (parse->priv->buffers_queued);
@@ -514,9 +517,30 @@ gst_base_parse_clear_queues (GstBaseParse * parse)
 
   gst_buffer_replace (&parse->priv->cache, NULL);
 
-  g_list_foreach (parse->priv->pending_events, (GFunc) gst_event_unref, NULL);
-  g_list_free (parse->priv->pending_events);
-  parse->priv->pending_events = NULL;
+  if (clear_sticky_events) {
+    g_list_foreach (parse->priv->pending_events, (GFunc) gst_event_unref, NULL);
+    g_list_free (parse->priv->pending_events);
+    parse->priv->pending_events = NULL;
+  } else {
+    GList *cur = g_list_first (parse->priv->pending_events);
+    GList *next;
+
+    while (cur != NULL) {
+      GstEvent *event = GST_EVENT (cur->data);
+      GstEventType type = GST_EVENT_TYPE (event);
+
+      next = g_list_next (cur);
+
+      if (!GST_EVENT_IS_STICKY (event) || type == GST_EVENT_EOS
+          || type == GST_EVENT_STREAM_GROUP_DONE || type == GST_EVENT_SEGMENT) {
+        gst_event_unref (event);
+        parse->priv->pending_events =
+            g_list_delete_link (parse->priv->pending_events, cur);
+      }
+
+      cur = next;
+    }
+  }
 
   parse->priv->checked_media = FALSE;
 }
@@ -534,7 +558,7 @@ gst_base_parse_finalize (GObject * object)
   }
   g_mutex_clear (&parse->priv->index_lock);
 
-  gst_base_parse_clear_queues (parse);
+  gst_base_parse_clear_queues (parse, TRUE);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -571,6 +595,18 @@ gst_base_parse_class_init (GstBaseParseClass * klass)
           "Force processing (disables passthrough)",
           DEFAULT_DISABLE_PASSTHROUGH,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstBaseParse:disable-clip:
+   *
+   * Disable dropping buffers that are out of segment
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_DISABLE_CLIP,
+      g_param_spec_boolean ("disable-clip", "Disable Clip",
+          "Disable buffer dropping that are out of segment",
+          DEFAULT_DISABLE_CLIP, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gstelement_class = (GstElementClass *) klass;
   gstelement_class->change_state =
@@ -650,6 +686,7 @@ gst_base_parse_init (GstBaseParse * parse, GstBaseParseClass * bclass)
   parse->priv->parser_tags = NULL;
   parse->priv->parser_tags_merge_mode = GST_TAG_MERGE_APPEND;
   parse->priv->disable_passthrough = DEFAULT_DISABLE_PASSTHROUGH;
+  parse->priv->disable_clip = DEFAULT_DISABLE_CLIP;
 }
 
 static void
@@ -661,6 +698,9 @@ gst_base_parse_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_DISABLE_PASSTHROUGH:
       parse->priv->disable_passthrough = g_value_get_boolean (value);
+      break;
+    case PROP_DISABLE_CLIP:
+      parse->priv->disable_clip = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -677,6 +717,9 @@ gst_base_parse_get_property (GObject * object, guint prop_id, GValue * value,
   switch (prop_id) {
     case PROP_DISABLE_PASSTHROUGH:
       g_value_set_boolean (value, parse->priv->disable_passthrough);
+      break;
+    case PROP_DISABLE_CLIP:
+      g_value_set_boolean (value, parse->priv->disable_clip);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1128,9 +1171,16 @@ update_upstream_provided (const GstIdStr * field, const GValue * value,
     GstStructure *structure = gst_caps_get_structure (default_caps, i);
     if (!gst_structure_has_field (structure, gst_id_str_as_str (field))) {
       gst_structure_id_str_set_value (structure, field, value);
+    } else {
+      const GValue *v = gst_structure_id_str_get_value (structure, field);
+
+      // If a downstream caps field is not fixed and the upstream value is a
+      // subset, take over the value from the upstream caps.
+      // Otherwise let gst_caps_fixate() take care of it later.
+      if (!gst_value_is_fixed (v) && gst_value_is_subset (value, v)) {
+        gst_structure_id_str_set_value (structure, field, value);
+      }
     }
-    /* XXX: maybe try to fixate better than gst_caps_fixate() the
-     * downstream caps based on upstream values if possible */
   }
 
   return TRUE;
@@ -1406,7 +1456,7 @@ gst_base_parse_sink_event_default (GstBaseParse * parse, GstEvent * event)
 
     case GST_EVENT_FLUSH_STOP:
       gst_adapter_clear (parse->priv->adapter);
-      gst_base_parse_clear_queues (parse);
+      gst_base_parse_clear_queues (parse, FALSE);
       parse->priv->flushing = FALSE;
       parse->priv->discont = TRUE;
       parse->priv->last_pts = GST_CLOCK_TIME_NONE;
@@ -2593,7 +2643,8 @@ gst_base_parse_push_frame (GstBaseParse * parse, GstBaseParseFrame * frame)
         parse->segment.stop + parse->priv->lead_out_ts) {
       GST_LOG_OBJECT (parse, "Dropped frame, after segment");
       ret = GST_FLOW_EOS;
-    } else if (GST_BUFFER_TIMESTAMP_IS_VALID (buffer) &&
+    } else if (!parse->priv->disable_clip &&
+        GST_BUFFER_TIMESTAMP_IS_VALID (buffer) &&
         GST_BUFFER_DURATION_IS_VALID (buffer) &&
         GST_CLOCK_TIME_IS_VALID (parse->segment.start) &&
         GST_BUFFER_TIMESTAMP (buffer) + GST_BUFFER_DURATION (buffer) +
@@ -4778,7 +4829,7 @@ gst_base_parse_handle_seek (GstBaseParse * parse, GstEvent * event)
       gst_event_set_seqnum (fevent, seqnum);
       gst_pad_push_event (parse->srcpad, gst_event_ref (fevent));
       gst_pad_push_event (parse->sinkpad, fevent);
-      gst_base_parse_clear_queues (parse);
+      gst_base_parse_clear_queues (parse, FALSE);
     }
 
     memcpy (&parse->segment, &seeksegment, sizeof (GstSegment));

@@ -68,6 +68,9 @@ GST_DEBUG_CATEGORY_STATIC (wavparse_debug);
  * see http://tech.ebu.ch/docs/tech/tech3306-2009.pdf */
 #define GST_RS64_TAG_DS64 GST_MAKE_FOURCC ('d','s','6','4')
 
+/* Maximum valid size is INT32_MAX */
+#define MAX_CHUNK_SIZE ((guint32) G_MAXINT32)
+
 static void gst_wavparse_dispose (GObject * object);
 
 static gboolean gst_wavparse_sink_activate (GstPad * sinkpad,
@@ -712,14 +715,14 @@ gst_wavparse_peek_chunk (GstWavParse * wav, guint32 * tag, guint32 * size)
    * large size -> do not bother trying to squeeze that into adapter,
    * so we throw poor man's exception, which can be caught if caller really
    * wants to handle 0 size chunk */
-  if (!(*size) || (*size) >= (1 << 30)) {
+  if (!(*size) || (*size) > MAX_CHUNK_SIZE) {
     GST_INFO ("Invalid/unexpected chunk size %u for tag %" GST_FOURCC_FORMAT,
         *size, GST_FOURCC_ARGS (*tag));
     /* chain should give up */
     wav->abort_buffering = TRUE;
     return FALSE;
   }
-  peek_size = (*size + 1) & ~1;
+  peek_size = GST_ROUND_UP_2 (*size);
   available = gst_adapter_available (wav->adapter);
 
   if (available >= (8 + peek_size)) {
@@ -775,7 +778,9 @@ gst_waveparse_ignore_chunk (GstWavParse * wav, GstBuffer * buf, guint32 tag,
   }
   GST_DEBUG_OBJECT (wav, "Ignoring tag %" GST_FOURCC_FORMAT,
       GST_FOURCC_ARGS (tag));
-  flush = 8 + ((size + 1) & ~1);
+  /* Checked in all callers */
+  g_assert (size < MAX_CHUNK_SIZE);
+  flush = 8 + GST_ROUND_UP_2 (size);
   wav->offset += flush;
   if (wav->streaming) {
     gst_adapter_flush (wav->adapter, flush);
@@ -955,7 +960,7 @@ gst_wavparse_adtl_chunk (GstWavParse * wav, const guint8 * data, guint32 size)
     ltag = GST_READ_UINT32_LE (data + offset);
     lsize = GST_READ_UINT32_LE (data + offset + 4);
 
-    if (lsize > (G_MAXUINT - 8) || lsize + 8 > size) {
+    if (lsize > MAX_CHUNK_SIZE || GST_ROUND_UP_2 (lsize) + 8 > size) {
       GST_WARNING_OBJECT (wav, "Invalid adtl size: %u + 8 > %u", lsize, size);
       return FALSE;
     }
@@ -973,8 +978,9 @@ gst_wavparse_adtl_chunk (GstWavParse * wav, const guint8 * data, guint32 size)
         GST_MEMDUMP_OBJECT (wav, "Unknowm adtl", &data[offset], lsize);
         break;
     }
-    offset += 8 + GST_ROUND_UP_2 (lsize);
-    size -= 8 + GST_ROUND_UP_2 (lsize);
+    lsize = GST_ROUND_UP_2 (lsize);
+    offset += 8 + lsize;
+    size -= 8 + lsize;
   }
 
   return TRUE;
@@ -1065,7 +1071,7 @@ gst_wavparse_create_toc (GstWavParse * wav)
     id = g_strdup_printf ("%08x", labl->cue_point_id);
     tags = gst_wavparse_get_tags_toc_entry (toc, id);
     g_free (id);
-    if (tags != NULL) {
+    if (tags != NULL && strlen (labl->text) > 0) {
       gst_tag_list_add (tags, GST_TAG_MERGE_APPEND, GST_TAG_TITLE, labl->text,
           NULL);
     }
@@ -1077,7 +1083,7 @@ gst_wavparse_create_toc (GstWavParse * wav)
     id = g_strdup_printf ("%08x", note->cue_point_id);
     tags = gst_wavparse_get_tags_toc_entry (toc, id);
     g_free (id);
-    if (tags != NULL) {
+    if (tags != NULL && strlen (note->text) > 0) {
       gst_tag_list_add (tags, GST_TAG_MERGE_PREPEND, GST_TAG_COMMENT,
           note->text, NULL);
     }
@@ -1361,10 +1367,9 @@ gst_wavparse_stream_headers (GstWavParse * wav)
         "Got TAG: %" GST_FOURCC_FORMAT ", offset %" G_GUINT64_FORMAT ", size %"
         G_GUINT32_FORMAT, GST_FOURCC_ARGS (tag), wav->offset, size);
 
-    /* Maximum valid size is INT_MAX */
-    if (size & 0x80000000) {
-      GST_WARNING_OBJECT (wav, "Invalid size, clipping to 0x7fffffff");
-      size = 0x7fffffff;
+    if (size > MAX_CHUNK_SIZE) {
+      GST_WARNING_OBJECT (wav, "Invalid size, clipping to %u", MAX_CHUNK_SIZE);
+      size = MAX_CHUNK_SIZE;
     }
 
     /* Clip to upstream size if known */
@@ -1574,7 +1579,7 @@ gst_wavparse_stream_headers (GstWavParse * wav)
         }
         switch (ltag) {
           case GST_RIFF_LIST_INFO:{
-            const gint data_size = size - 4;
+            const guint data_size = size - 4;
             GstTagList *new;
 
             GST_INFO_OBJECT (wav, "Have LIST chunk INFO size %u", data_size);
@@ -1624,7 +1629,7 @@ gst_wavparse_stream_headers (GstWavParse * wav)
             break;
           }
           case GST_RIFF_LIST_adtl:{
-            const gint data_size = size - 4;
+            const guint data_size = size - 4;
 
             GST_INFO_OBJECT (wav, "Have 'adtl' LIST, size %u", data_size);
             if (wav->streaming) {
@@ -1709,12 +1714,11 @@ gst_wavparse_stream_headers (GstWavParse * wav)
         } else {
           gst_buffer_unref (buf);
         }
-        size = GST_ROUND_UP_2 (size);
         wav->offset += size;
         break;
       }
       case GST_RIFF_TAG_smpl:{
-        const gint data_size = size;
+        const guint data_size = size;
 
         GST_DEBUG_OBJECT (wav, "Have 'smpl' TAG, size : %u", data_size);
         if (wav->streaming) {
@@ -1755,7 +1759,6 @@ gst_wavparse_stream_headers (GstWavParse * wav)
         } else {
           gst_buffer_unref (buf);
         }
-        size = GST_ROUND_UP_2 (size);
         wav->offset += size;
         break;
       }

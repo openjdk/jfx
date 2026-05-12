@@ -5474,6 +5474,7 @@ sbc_check_header (const guint8 * data, gsize len, guint * rate,
   else if (ch_mode == 3)
     return 4 + (n_subbands * 2) / 2 + (n_subbands + n_blocks * bitpool) / 8;
 
+  g_assert_not_reached ();
   return 0;
 }
 
@@ -6584,7 +6585,7 @@ y4m_typefind (GstTypeFind * tf, gpointer private)
 
   data = gst_type_find_peek (tf, 0, 10);
   if (data != NULL && memcmp (data, "YUV4MPEG2 ", 10) == 0) {
-    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_LIKELY,
+    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MAXIMUM,
         "application/x-yuv4mpeg", "y4mversion", G_TYPE_INT, 2, NULL);
   }
 }
@@ -7131,7 +7132,7 @@ GST_TYPE_FIND_REGISTER_DEFINE (vivo, "video/vivo", GST_RANK_SECONDARY,
 GST_TYPE_FIND_REGISTER_DEFINE (wbmp, "image/vnd.wap.wbmp", GST_RANK_MARGINAL,
     wbmp_typefind, NULL, NULL, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (y4m, "application/x-yuv4mpeg",
-    GST_RANK_SECONDARY, y4m_typefind, NULL, NULL, NULL, NULL);
+    GST_RANK_PRIMARY, y4m_typefind, "y4m", NULL, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (windows_icon, "image/x-icon", GST_RANK_MARGINAL,
     windows_icon_typefind, NULL, NULL, NULL, NULL);
 #ifdef USE_GIO

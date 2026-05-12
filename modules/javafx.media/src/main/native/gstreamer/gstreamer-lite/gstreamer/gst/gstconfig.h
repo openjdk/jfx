@@ -50,6 +50,8 @@
 #ifndef __GST_CONFIG_H__
 #define __GST_CONFIG_H__
 
+#include <glib.h>
+
 /* trick gtk-doc into believing these symbols are defined (yes, it's ugly) */
 
 #if 0
@@ -184,6 +186,18 @@
 #else
 #define GST_DEPRECATED G_DEPRECATED GST_API
 #define GST_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f) GST_API
+#endif
+
+#if defined(GST_DISABLE_DEPRECATED) && \
+    (G_GNUC_CHECK_VERSION(3, 1) ||                 \
+     (defined (__clang_major__) && (__clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 0))))
+#define GST_DEPRECATED_TYPE G_DEPRECATED
+#define GST_DEPRECATED_TYPE_FOR(f) G_DEPRECATED_FOR(f)
+#define GST_UNAVAILABLE_TYPE(maj,min) G_UNAVAILABLE(maj,min)
+#else
+#define GST_DEPRECATED_TYPE
+#define GST_DEPRECATED_TYPE_FOR(f)
+#define GST_UNAVAILABLE_TYPE(maj,min)
 #endif
 
 #endif /* __GST_CONFIG_H__ */

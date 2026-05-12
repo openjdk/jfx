@@ -1051,6 +1051,7 @@ string_utf8_dup (const gchar * start, const guint size)
         utf8 = NULL;
       }
     }
+    g_strfreev (csets);
   }
   /* Try current locale (if not UTF-8) */
   if (!g_get_charset (&env)) {
