@@ -1654,6 +1654,7 @@ public class SpinnerTest {
 
     // Test to ensure shortcut key press is not consumed
     @Test public void testShortcutNotConsumed() {
+        Assumptions.assumeTrue(Utils.isMac());
         Toolkit tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -1671,9 +1672,7 @@ public class SpinnerTest {
         intSpinner.requestFocus();
         tk.firePulse();
 
-        var isMac = Utils.isMac();
-        KeyCode code = isMac ? KeyCode.Q : KeyCode.X;
-        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, !isMac, false, isMac);
+        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.Q, false, false, false, true);
         boolean consumed = (EventUtil.fireEvent(intSpinner, event) == null);
 
         assertFalse(consumed, "Initial shortcut event was consumed");

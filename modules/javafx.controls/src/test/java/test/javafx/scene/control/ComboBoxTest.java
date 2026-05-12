@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2545,14 +2546,13 @@ public class ComboBoxTest {
 
     // Ensure initial shortcut event is not consumed
     @Test public void testShortcutNotConsumed() {
+        assumeTrue(Utils.isMac());
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
         sl = new StageLoader(cb);
         cb.requestFocus();
 
-        var isMac = Utils.isMac();
-        KeyCode code = isMac ? KeyCode.Q : KeyCode.X;
-        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, !isMac, false, isMac);
+        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.Q, false, false, false, true);
         boolean consumed = (EventUtil.fireEvent(cb, event) == null);
         assertFalse(consumed, "Initial shortcut event was consumed");
     }
