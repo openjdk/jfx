@@ -116,6 +116,9 @@ static const URLSchemesMap& builtinLocalURLSchemes() WTF_REQUIRES_LOCK(schemeReg
 #if PLATFORM(COCOA)
         "applewebdata"_s,
 #endif
+#if PLATFORM(JAVA)
+        "jar:file"_s,
+#endif
     };
     return schemes;
 }
