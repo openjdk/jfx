@@ -2231,7 +2231,6 @@ public class TableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
-            mouse.dispose();
         } else {
             table.edit(0,first);
         }

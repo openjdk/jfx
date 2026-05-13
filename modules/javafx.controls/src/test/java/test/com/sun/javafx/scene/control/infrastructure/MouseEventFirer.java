@@ -28,14 +28,10 @@ package test.com.sun.javafx.scene.control.infrastructure;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.stage.Window;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,37 +44,11 @@ import java.util.List;
  * The default local coordinates are at the center of the target.
  */
 public final class MouseEventFirer {
-    private final EventTarget target;
 
-    private final Bounds targetBounds;
-    private StageLoader sl;
+    private final EventTarget target;
 
     public MouseEventFirer(EventTarget target) {
         this.target = target;
-
-        // Force the target node onto a stage so that it is accessible
-        if (target instanceof Node n) {
-            Scene s = n.getScene();
-            Window w = s == null ? null : s.getWindow();
-
-            if (w == null || w.getScene() == null) {
-                sl = new StageLoader(n);
-                targetBounds = n.getLayoutBounds();
-            } else {
-                targetBounds = n.getLayoutBounds();
-            }
-        } else if (target instanceof Scene scene) {
-            sl = new StageLoader(scene);
-            targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
-        } else {
-            throw new RuntimeException("EventTarget of invalid type (" + target + ")");
-        }
-    }
-
-    public void dispose() {
-        if (sl != null) {
-            sl.dispose();
-        }
     }
 
     public void fireMousePressAndRelease(KeyModifier... modifiers) {
@@ -160,15 +130,22 @@ public final class MouseEventFirer {
     }
 
     private void fireMouseEvent(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+        if (!(target instanceof Node node)) {
+            throw new IllegalArgumentException("EventTarget: " + target + " must be a Node or needs special handling.");
+        }
+
+        if (node.getScene() == null || node.getScene().getWindow() == null) {
+            throw new IllegalArgumentException("Node: " + node + " must be in a Scene and Window " +
+                    "so that a correct MouseEvent can be fired.");
+        }
+
         // width / height of target node
-        final double w = targetBounds.getWidth();
-        final double h = targetBounds.getHeight();
+        final double w = node.getLayoutBounds().getWidth();
+        final double h = node.getLayoutBounds().getHeight();
 
         // x / y click position is centered
         final double x = w / 2.0 + deltaX;
         final double y = h / 2.0 + deltaY;
-
-        Node node = (Node) target;
 
         Point2D localP = new Point2D(x, y);
         Point2D sceneP = node.localToScene(localP);
