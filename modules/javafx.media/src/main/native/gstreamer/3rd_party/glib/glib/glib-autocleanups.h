@@ -109,8 +109,8 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GVariantType, g_variant_type_free)
 G_DEFINE_AUTO_CLEANUP_FREE_FUNC(GStrv, g_strfreev, NULL)
 #ifndef GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRefString, g_ref_string_release)
-#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GUri, g_uri_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (GPathBuf, g_path_buf_free)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (GPathBuf, g_path_buf_clear)
 

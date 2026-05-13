@@ -331,6 +331,7 @@ idna_is_prohibited (gunichar ch)
     }
 }
 
+#ifndef GSTREAMER_LITE
 /* RFC 3491 IDN cleanup algorithm. */
 static gchar *
 nameprep (const gchar *hostname,
@@ -909,3 +910,4 @@ g_hostname_is_ip_address (const gchar *hostname)
   /* If there's nothing left to parse, then it's ok. */
   return !*p;
 }
+#endif // GSTREAMER_LITE

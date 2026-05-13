@@ -554,6 +554,7 @@ g_unichar_iswide_cjk (gunichar c)
 }
 
 
+#ifndef GSTREAMER_LITE
 /**
  * g_unichar_toupper:
  * @c: a Unicode character
@@ -593,6 +594,7 @@ g_unichar_toupper (gunichar c)
     }
   return c;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_unichar_tolower:
@@ -635,6 +637,7 @@ g_unichar_tolower (gunichar c)
   return c;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_unichar_totitle:
  * @c: a Unicode character
@@ -667,6 +670,7 @@ g_unichar_totitle (gunichar c)
 
   return c;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_unichar_digit_value:
@@ -820,6 +824,7 @@ output_special_case (gchar *out_buffer,
   return len;
 }
 
+#ifndef GSTREAMER_LITE
 static gsize
 real_toupper (const gchar *str,
         gssize       max_len,
@@ -984,9 +989,11 @@ g_utf8_strup (const gchar *str,
 
   return result;
 }
+#endif // GSTREAMER_LITE
 
 /* traverses the string checking for characters with combining class == 230
  * until a base character is found */
+#ifndef GSTREAMER_LITE
 static gboolean
 has_more_above (const gchar *str)
 {
@@ -1182,6 +1189,7 @@ g_utf8_strdown (const gchar *str,
 
   return result;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_utf8_casefold:
