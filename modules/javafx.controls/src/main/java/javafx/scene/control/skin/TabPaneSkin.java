@@ -288,11 +288,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         return menuGraphicFactory;
     }
 
-    public final Callback<Tab,Node> getMenuGraphicFactory() {
+    public final Callback<Tab, Node> getMenuGraphicFactory() {
         return menuGraphicFactory == null ? null : menuGraphicFactory.get();
     }
 
-    public final void setMenuGraphicFactory(Callback<Tab,Node> f) {
+    public final void setMenuGraphicFactory(Callback<Tab, Node> f) {
         menuGraphicFactoryProperty().set(f);
     }
 
@@ -1994,14 +1994,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
             popup.show(downArrowBtn, Side.BOTTOM, 0, 0);
         }
-
-        private ContextMenu test_getTabsMenu() {
-            if (popup == null) {
-                setupPopupMenu();
-            }
-            return popup;
-        }
-    } /* End TabControlButtons*/
+    }
 
     /** The MenuItem for use in the overflow menu */
     static class TabMenuItem extends RadioMenuItem {
@@ -2386,7 +2379,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     // For testing purpose.
     ContextMenu test_getTabsMenu() {
-        return tabHeaderArea.controlButtons.test_getTabsMenu();
+        if (tabHeaderArea.controlButtons.popup == null) {
+            tabHeaderArea.controlButtons.setupPopupMenu();
+        }
+        return tabHeaderArea.controlButtons.popup;
     }
 
     void test_disableAnimations() {
