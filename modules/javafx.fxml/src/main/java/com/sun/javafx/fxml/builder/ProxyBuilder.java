@@ -180,12 +180,30 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
     }
 
-    // This is used to support read-only collection property.
+    // This is used to support read-only collection/map property.
     private Object getReadOnlyProperty(String propName) {
-        // return ArrayListWrapper now and convert it to proper type later
-        // during the build - once we know which constructor we will use
-        // and what types it accepts
-        return new ArrayListWrapper<>();
+        Method getter = findGetter(propName);
+        if (getter != null) {
+            Class<?> retType = getter.getReturnType();
+            if (Map.class.isAssignableFrom(retType)) {
+                return new LinkedHashMap<>();
+            }
+            if (Collection.class.isAssignableFrom(retType)) {
+                return new ArrayListWrapper<>();
+            }
+        }
+        return null;
+    }
+
+    private Method findGetter(String propName) {
+        String getterName = GETTER_PREFIX
+                + Character.toUpperCase(propName.charAt(0))
+                + propName.substring(1);
+        LinkedList<Method> candidates = getClassMethodCache(type).get(getterName);
+        if (candidates != null && !candidates.isEmpty()) {
+            return candidates.getFirst();
+        }
+        return null;
     }
 
     @Override
@@ -520,6 +538,9 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     Class<?> argType[] = m.getParameterTypes();
                     if (Collection.class.isAssignableFrom(retType) && argType.length == 0) {
                         strsMap.put(propName, new Getter(m, retType));
+                    } else if (Map.class.isAssignableFrom(retType) && argType.length == 0
+                            && !strsMap.containsKey(propName)) {
+                        strsMap.put(propName, new MapGetter(m, retType));
                     }
                 }
             }
@@ -572,6 +593,22 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                 to.addAll(from);
             } else {
                 to.add(argStr);
+            }
+        }
+    }
+
+    private static class MapGetter extends Property {
+
+        public MapGetter(Method m, Class<?> t) {
+            super(m, t);
+        }
+
+        @Override
+        public void invoke(Object obj, Object argStr) throws Exception {
+            // we know that this.method returns a Map otherwise it wouldn't be here
+            Map to = (Map) ModuleHelper.invoke(method, obj, new Object[]{});
+            if (argStr instanceof Map) {
+                to.putAll((Map) argStr);
             }
         }
     }

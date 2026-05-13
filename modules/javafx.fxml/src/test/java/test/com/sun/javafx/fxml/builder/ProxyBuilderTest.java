@@ -27,6 +27,7 @@ package test.com.sun.javafx.fxml.builder;
 import com.sun.javafx.fxml.builder.ProxyBuilder;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import javafx.beans.NamedArg;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -34,6 +35,7 @@ import javafx.stage.StageStyle;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -244,6 +246,57 @@ public class ProxyBuilderTest {
 
         result = (ClassWithReadOnlyCollection) pb.build();
         assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
+    }
+
+    /**
+     * containsKey("properties") must return true when the class has a
+     * no-arg getter that returns Map, and false for a property that has
+     * no getter at all.
+     */
+    @Test
+    public void testContainsKeyForReadOnlyMapProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        assertTrue(pb.containsKey("properties"),
+                "containsKey should be true for a getter-backed Map property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    /**
+     * containsKey("properties") must return false for a class whose
+     * @NamedArg constructor does not expose a 'properties' getter, so
+     * ProxyBuilder does not intercept unrelated property names.
+     */
+    @Test
+    public void testContainsKeyFalseWhenNoMapGetter() {
+        ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
+        assertFalse(pb.containsKey("properties"),
+                "containsKey should be false when the class has no getProperties()");
+    }
+
+    /**
+     * The main regression test: building a @NamedArg class with a
+     * read-only Map property must set the @NamedArg value AND populate
+     * the map with any entries that were added to the container.
+     */
+    @Test
+    public void testReadOnlyMapWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        pb.put("label", "hello");
+
+        // Simulate what FXMLLoader does: obtain the container and add entries.
+        @SuppressWarnings("unchecked")
+        Map<String, Object> container = (Map<String, Object>) pb.get("properties");
+        container.put("myKey", "myValue");
+        container.put("otherKey", 42);
+
+        ClassWithReadOnlyMap result = (ClassWithReadOnlyMap) pb.build();
+
+        assertEquals("hello", result.label, "NamedArg value must be set");
+        assertEquals("myValue", result.getProperties().get("myKey"),
+                "Map entry 'myKey' must be transferred to the built object");
+        assertEquals(42, result.getProperties().get("otherKey"),
+                "Map entry 'otherKey' must be transferred to the built object");
     }
 
     @Test
