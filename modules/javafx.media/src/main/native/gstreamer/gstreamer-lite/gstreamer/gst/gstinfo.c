@@ -3408,6 +3408,17 @@ _gst_debug_dump_mem_id (GstDebugCategory * cat, const gchar * file,
 
 
 #else /* !GST_DISABLE_GST_DEBUG */
+
+void
+gst_log_context_free (GstLogContext * ctx)
+{
+}
+
+void
+gst_log_context_reset (GstLogContext * ctx)
+{
+}
+
 #ifndef GST_REMOVE_DISABLED
 
 GstDebugCategory *
@@ -3641,16 +3652,6 @@ void
 _gst_debug_dump_mem (GstDebugCategory * cat, const gchar * file,
     const gchar * func, gint line, GObject * obj, const gchar * msg,
     const guint8 * data, guint length)
-{
-}
-
-void
-gst_log_context_free (GstLogContext * ctx)
-{
-}
-
-void
-gst_log_context_reset (GstLogContext * ctx)
 {
 }
 

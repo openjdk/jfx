@@ -139,6 +139,7 @@ video_buffer_pool_set_config (GstBufferPool * pool, GstStructure * config)
   if (caps == NULL)
     goto no_caps;
 
+#ifndef GSTREAMER_LITE
   /* now parse the caps from the config */
   if (gst_video_is_dma_drm_caps (caps)) {
     GstVideoInfoDmaDrm drm_info;
@@ -149,7 +150,9 @@ video_buffer_pool_set_config (GstBufferPool * pool, GstStructure * config)
       goto wrong_caps;
 
     info = drm_info.vinfo;
-  } else {
+  } else
+#endif
+  {
     if (!gst_video_info_from_caps (&info, caps))
       goto wrong_caps;
   }

@@ -2647,8 +2647,16 @@ gst_qtdemux_stream_clear (QtDemuxStream * stream)
     gst_buffer_unref (GST_BUFFER_CAST (stream->buffers->data));
     stream->buffers = g_slist_delete_link (stream->buffers, stream->buffers);
   }
+#if defined (GSTREAMER_LITE) && defined(LINUX)
+  // g_queue_clear_full() is available staring with 2.60, but we need
+  // to support older GLib versions.
+  g_queue_foreach (&stream->reorder_queue, (GFunc) gst_mini_object_unref,
+      NULL);
+  g_queue_clear (&stream->reorder_queue);
+#else // GSTREAMER_LITE
   g_queue_clear_full (&stream->reorder_queue,
       (GDestroyNotify) gst_mini_object_unref);
+#endif // GSTREAMER_LITE
   for (i = 0; i < stream->stsd_entries_length; i++) {
     QtDemuxStreamStsdEntry *entry = &stream->stsd_entries[i];
     if (entry->rgb8_palette) {

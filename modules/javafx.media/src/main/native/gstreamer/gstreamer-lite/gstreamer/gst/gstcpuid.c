@@ -21,7 +21,7 @@
 // CPUID init below
 // (simplified form, this is a C file)
 #if !GLIB_CHECK_VERSION (2, 74, 0)
-#if g_macro__has_attribute(__always_inline__)
+#if G_GNUC_CHECK_VERSION(3, 1) || defined(__clang__)
 # define G_ALWAYS_INLINE __attribute__ ((__always_inline__))
 #elif defined (_MSC_VER)
   /* Use MSVC specific syntax.  */

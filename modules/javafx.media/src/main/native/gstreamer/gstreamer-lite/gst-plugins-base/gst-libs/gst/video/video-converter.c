@@ -8932,7 +8932,6 @@ gst_video_converter_get_out_info (GstVideoConverter * convert)
 {
   return &convert->out_info;
 }
-#endif // GSTREAMER_LITE
 
 /**
  * gst_video_converter_transform_metas:
@@ -9006,3 +9005,4 @@ gst_video_converter_transform_metas (GstVideoConverter * convert,
 
   return ret;
 }
+#endif // GSTREAMER_LITE
