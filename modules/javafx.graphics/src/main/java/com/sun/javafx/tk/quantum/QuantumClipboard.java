@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -288,7 +288,13 @@ final class QuantumClipboard implements TKClipboard {
                                     Thread.currentThread().getContextClassLoader());
                         }
                     };
-                    data = in.readObject();
+                    boolean deserializeObjGraphDND = Boolean.parseBoolean(
+                            System.getProperty("javafx.dnd.deserializeObjectGraph", "false"));
+                    if (deserializeObjGraphDND) {
+                        data = in.readObject();
+                    } else {
+                        // ignore , just return the ByteBuffer if not enabled
+                    }
                 } catch (IOException e) {
                     // ignore, just return the ByteBuffer if we cannot parse it
                 } catch (ClassNotFoundException e) {
