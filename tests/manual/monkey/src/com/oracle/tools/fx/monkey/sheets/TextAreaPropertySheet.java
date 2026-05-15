@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,8 +37,8 @@ public class TextAreaPropertySheet {
         op.section("TextArea");
         op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
         op.option("Preferred Row Count:", new IntOption("prefRowCount", -1, Integer.MAX_VALUE, control.prefRowCountProperty()));
-        op.option("Scroll Left: TODO", null); // TODO
-        op.option("Scroll Top: TODO", null); // TODO
+        //op.option("Scroll Left: TODO", null); // TODO
+        //op.option("Scroll Top: TODO", null); // TODO
         op.option(new BooleanOption("wrapText", "wrap text", control.wrapTextProperty()));
 
         TextInputControlPropertySheet.appendTo(op, true, control);

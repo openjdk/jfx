@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,9 +68,9 @@ public class StdoutMouseListener {
         StringBuilder sb = new StringBuilder();
         sb.append(ev.getEventType());
         sb.append(" (");
-        sb.append(Utils.f2(ev.getX())).append(", ").append(Utils.f2(ev.getY()));
+        sb.append(Formats.num2(ev.getX())).append(", ").append(Formats.num2(ev.getY()));
         sb.append(") screen=(");
-        sb.append(Utils.f2(ev.getScreenX())).append(", ").append(Utils.f2(ev.getScreenY()));
+        sb.append(Formats.num2(ev.getScreenX())).append(", ").append(Formats.num2(ev.getScreenY()));
         sb.append(")");
         System.out.println(sb);
     }

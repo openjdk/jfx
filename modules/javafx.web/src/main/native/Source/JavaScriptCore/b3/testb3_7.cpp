@@ -2797,6 +2797,38 @@ void testInt52RoundTripBinary()
     }
 }
 
+// Test that Trunc(SShr(Add(@a, unaligned-constant), $12)) produces the correct
+// result when the constant is not 12-bit aligned. This pattern arises from
+// WebAssembly's i32.wrap_i64(i64.shr_s(i64.add(@a, C), 12)) with arbitrary
+// 64-bit values.
+void testTruncSShrAddUnalignedConstant()
+{
+    // Use constant 2048 which is NOT 12-bit aligned (lower 12 bits are non-zero).
+    int64_t constant = 2048;
+
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argA = arguments[0];
+    Value* node = root->appendNew<Value>(proc, Add, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), constant));
+    Value* shifted = root->appendNew<Value>(proc, SShr, Origin(), node, root->appendNew<Const32Value>(proc, Origin(), 12));
+    Value* result = root->appendNew<Value>(proc, Trunc, Origin(), shifted);
+    root->appendNew<Value>(proc, Return, Origin(), result);
+    auto code = compileProc(proc);
+
+    // a=2048, C=2048: (2048+2048)>>12 = 4096>>12 = 1
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(2048)), static_cast<int32_t>((2048LL + constant) >> 12));
+    // a=0
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(0)), static_cast<int32_t>((0LL + constant) >> 12));
+    // a=4095
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(4095)), static_cast<int32_t>((4095LL + constant) >> 12));
+    // a=4096
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(4096)), static_cast<int32_t>((4096LL + constant) >> 12));
+    // Large values
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(100000)), static_cast<int32_t>((100000LL + constant) >> 12));
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(-2048)), static_cast<int32_t>((-2048LL + constant) >> 12));
+}
+
 #endif // ENABLE(B3_JIT)
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

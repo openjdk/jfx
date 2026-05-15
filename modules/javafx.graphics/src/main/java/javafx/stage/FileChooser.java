@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -205,6 +205,11 @@ public final class FileChooser {
 
     /**
      * The initial directory for the displayed file dialog.
+     * <p>
+     * If this path is not set, does not exist, is not a directory, or is not accessible,
+     * the dialog will fall back to the platform-default location. The default folder may vary
+     * across operating systems.
+     * </p>
      */
     private ObjectProperty<File> initialDirectory;
 

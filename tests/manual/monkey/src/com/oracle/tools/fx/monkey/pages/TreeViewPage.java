@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -153,6 +153,7 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoiceSupplier("1 Row", mk(false, 1));
         s.addChoiceSupplier("10 Rows", mk(false, 10));
         s.addChoiceSupplier("1,000 Rows", mk(false, 1_000));
+        s.addChoiceSupplier("500,000 Rows", mk(false, 500_000));
         s.addChoiceSupplier("null value + 5 Rows", mk(true, 5));
         s.addChoiceSupplier("null value + 15 Rows", mk(true, 15));
         s.addChoice("<null>", null);

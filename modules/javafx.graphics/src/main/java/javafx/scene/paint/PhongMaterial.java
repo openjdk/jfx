@@ -348,7 +348,7 @@ import javafx.scene.shape.TriangleMesh;
  *   <tr>
  *     <td><img style="height:220px" src="doc-files/map_detail/diff/bump.png" alt="Tree trunk with bump map"></td>
  *     <td><img style="height:220px" src="doc-files/map_detail/diff/diff.png" alt="Tree trunk with diffuse map"></td>
- *     <td><img style="height:220px" src="doc-files/map_detail/diff/diff+bump.png" alt="Tree trunk with diffuse and bump maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map_detail/diff/diff_bump.png" alt="Tree trunk with diffuse and bump maps"></td>
  *   </tr>
  *   <tr>
  *     <td>Bump</td>
@@ -379,9 +379,9 @@ import javafx.scene.shape.TriangleMesh;
  *   <caption>Model with maps applied</caption>
  *   <tr>
  *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff.png" alt="Finished wood with diffuse map"></td>
- *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff+spec.png" alt="Finished wood with diffuse and specular maps"></td>
- *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff+bump.png" alt="Finished wood with diffuse and bump maps"></td>
- *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff+spec+bump.png" alt="Finished wood with diffuse, specular, and bump maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff_spec.png" alt="Finished wood with diffuse and specular maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff_bump.png" alt="Finished wood with diffuse and bump maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map_detail/spec/diff_spec_bump.png" alt="Finished wood with diffuse, specular, and bump maps"></td>
  *   </tr>
  *   <tr>
  *     <td>Diffuse</td>

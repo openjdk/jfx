@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.skin.ListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
@@ -93,6 +94,7 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 public class ComboBoxTest {
     private ComboBox<String> comboBox;
@@ -333,6 +335,88 @@ public class ComboBoxTest {
 
         // Should not throw an NPE.
         comboBox.setEditable(false);
+    }
+
+    @Test
+    public void testButtonCellUpdateOnStringConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+
+        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getDisplayNode();
+        assertEquals("ITEM1", cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("item1", cell.getText());
+    }
+
+    @Test
+    public void testTextFieldUpdateOnStringConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+
+        TextField field = (TextField) getDisplayNode();
+        assertEquals("ITEM1", field.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("item1", field.getText());
+    }
+
+    @Test
+    public void testListUpdateOnStringConverterChange() {
+        sl = new StageLoader(comboBox);
+        ListView<String> list = getListView();
+
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue("ITEM1");
+
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "ITEM1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "ITEM2");
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object.toLowerCase();
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+        comboBox.getItems().add("ITEM3");
+
+        VirtualFlowTestUtils.assertCellTextEquals(list, 0, "item1");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 1, "item2");
+        VirtualFlowTestUtils.assertCellTextEquals(list, 2, "item3");
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
@@ -2447,6 +2531,8 @@ public class ComboBoxTest {
                 comboBoxItemsList.setAll(strings1);
             }
         });
+
+        sl = new StageLoader(button);
 
         MouseEventFirer mouse = new MouseEventFirer(button);
         mouse.fireMousePressAndRelease();

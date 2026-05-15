@@ -1427,6 +1427,8 @@ void IDBTransaction::operationCompletedOnClient(IDBClient::TransactionOperation&
     m_transactionOperationsInProgressQueue.removeFirst();
 
     if (m_commitResult && operation.identifier() == *m_lastTransactionOperationBeforeCommit) {
+        // We might end up here during transaction abortion, in which case we shouldn't call didCommit().
+        if (m_state == IndexedDB::TransactionState::Committing)
         didCommit(*m_commitResult);
         return;
     }

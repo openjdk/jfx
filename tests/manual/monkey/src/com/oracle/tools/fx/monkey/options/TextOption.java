@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.options;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.Property;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
@@ -35,37 +33,23 @@ import com.oracle.tools.fx.monkey.util.EnterTextDialog;
 import com.oracle.tools.fx.monkey.util.FX;
 
 /**
- * Simple Text Option Bound to a Property.
+ * Simple Text Option Bound to a Property<String>.
  * Presents a text field with an Edit button for mode complex text.
  */
 // TODO combo box for history?
 // TODO highlight special characters?
 public class TextOption extends BorderPane {
-    private final SimpleStringProperty property = new SimpleStringProperty();
     private final TextField textField;
 
-    public TextOption(String name, StringProperty p) {
-        this(name);
-        property.bindBidirectional(p);
-    }
-
-    public TextOption(String name, ObjectProperty<String> p) {
-        this(name);
-        property.bindBidirectional(p);
-    }
-
-    private TextOption(String name) {
+    public TextOption(String name, Property<String> p) {
         FX.name(this, name);
 
         textField = new TextField();
+        textField.setPrefColumnCount(5);
         textField.setMaxWidth(Double.MAX_VALUE);
-        textField.textProperty().bindBidirectional(property);
-//        setOnAction((ev) -> {
-//            String v = textField.getText();
-//            property.set(v);
-//        });
+        textField.textProperty().bindBidirectional(p);
 
-        Button editButton = FX.button("Edit", EnterTextDialog.getRunnable(this, property));
+        Button editButton = FX.button("Edit", EnterTextDialog.getRunnable(this, p));
 
         setCenter(textField);
         setRight(editButton);

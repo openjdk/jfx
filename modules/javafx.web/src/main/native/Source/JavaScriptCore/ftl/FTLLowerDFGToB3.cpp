@@ -1257,8 +1257,11 @@ private:
         case NewArrayWithSize:
             compileNewArrayWithSize();
             break;
-        case NewArrayWithConstantSize:
-            compileNewArrayWithConstantSize();
+        case NewArrayWithButterfly:
+            compileNewArrayWithButterfly();
+            break;
+        case NewButterflyWithSize:
+            compileNewButterflyWithSize();
             break;
         case NewArrayWithSpecies:
             compileNewArrayWithSpecies();
@@ -1742,8 +1745,8 @@ private:
         case MaterializeNewObject:
             compileMaterializeNewObject();
             break;
-        case MaterializeNewArrayWithConstantSize:
-            compileMaterializeNewArrayWithConstantSize();
+        case MaterializeNewArrayWithButterfly:
+            compileMaterializeNewArrayWithButterfly();
             break;
         case MaterializeCreateActivation:
             compileMaterializeCreateActivation();
@@ -1887,12 +1890,17 @@ private:
             break;
         }
 
+        case PhantomNewArrayWithButterfly: {
+            // It would be very bad to get here in this state and could lead to horrible GC bugs. See ObjectAllocationSinking::handleNode for details.
+            RELEASE_ASSERT(m_node->child2()->op() == PhantomNewButterflyWithSize);
+            [[fallthrough]];
+        }
         case PhantomLocal:
         case MovHint:
         case ZombieHint:
         case ExitOK:
         case PhantomNewObject:
-        case PhantomNewArrayWithConstantSize:
+        case PhantomNewButterflyWithSize:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -10205,23 +10213,29 @@ IGNORE_CLANG_WARNINGS_END
         setJSValue(vmCall(Int64, operationNewArrayWithSize, weakPointer(globalObject), structureValue, publicLength, m_out.intPtrZero));
     }
 
-    LValue compileNewArrayWithConstantSizeImpl()
+    void compileNewButterflyWithSize()
     {
-        LValue publicLength = m_out.constInt32(m_node->newArraySize());
-
-        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
-
         ASSERT(m_graph.isWatchingHavingABadTimeWatchpoint(m_node));
-        ASSERT(!hasAnyArrayStorage(m_node->indexingType()));
-        IndexingType indexingType = m_node->indexingType();
-        LValue result = allocateJSArray(
-            publicLength, publicLength, weakPointer(globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)), m_out.constInt32(indexingType)).array;
-        return result;
+        ASSERT(!isCopyOnWrite(m_node->indexingMode()));
+
+        LValue publicLength = lowInt32(m_node->child1());
+        LValue indexingType = m_out.constInt32(m_node->indexingType());
+
+        LValue butterfly = allocateButterfly(indexingType, m_out.int32Zero, publicLength, publicLength);
+
+        setStorage(butterfly);
+        // No mutator fence is needed. Butterflies are only scanned when the GC discovers them in an object not on the stack.
     }
 
-    void compileNewArrayWithConstantSize()
+    void compileNewArrayWithButterfly()
     {
-        setJSValue(compileNewArrayWithConstantSizeImpl());
+        ASSERT(m_graph.isWatchingHavingABadTimeWatchpoint(m_node));
+        ASSERT(!hasAnyArrayStorage(m_node->indexingType()));
+
+        LValue publicLength = lowInt32(m_node->child1());
+        LValue butterfly = lowStorage(m_node->child2());
+        LValue array = allocateJSArray(m_node->indexingType(), publicLength, butterfly);
+        setJSValue(array);
         mutatorFence();
     }
 
@@ -17239,21 +17253,21 @@ IGNORE_CLANG_WARNINGS_END
             });
     }
 
-    void compileMaterializeNewArrayWithConstantSize()
+    void compileMaterializeNewArrayWithButterfly()
     {
-        // Step 1: Speculate appropriately on all of the children.
         for (unsigned i = 0; i < m_node->numChildren(); ++i)
-            speculate(m_graph.varArgChild(m_node, i));
+            RELEASE_ASSERT(!m_interpreter.needsTypeCheck(m_graph.varArgChild(m_node, i)));
 
-        // Step 2: Create a new array with constant size.
-        LValue result = compileNewArrayWithConstantSizeImpl();
-
-        // Step 3: Get the buttferfly storage and fill the slots.
-        LValue butterfly = m_out.loadPtr(result, m_heaps.JSObject_butterfly);
         IndexingType indexingType = m_node->indexingType();
+        LValue publicLength = lowInt32(m_graph.varArgChild(m_node, 0));
+        // FIXME: we should sort the properties by index then we can shouldInitializeElements = false here but when we do the properties below.
+        LValue butterfly = lowStorage(m_graph.varArgChild(m_node, 1));
+
         ObjectMaterializationData& data = m_node->objectMaterializationData();
+
         for (unsigned i = 0; i < data.m_properties.size(); ++i) {
-            Edge edge = m_graph.varArgChild(m_node, i);
+            // Add two to account for `size` and `butterfly`
+            Edge edge = m_graph.varArgChild(m_node, i + 2);
             unsigned index = data.m_properties[i].info();
             switch (m_node->indexingType()) {
             case ALL_DOUBLE_INDEXING_TYPES:
@@ -17271,7 +17285,8 @@ IGNORE_CLANG_WARNINGS_END
             }
         }
 
-        setJSValue(result);
+        LValue array = allocateJSArray(indexingType, publicLength, butterfly);
+        setJSValue(array);
         mutatorFence();
     }
 
@@ -20688,6 +20703,106 @@ IGNORE_CLANG_WARNINGS_END
         LValue butterfly;
     };
 
+    // FIXME: Reduced version of the JSArray allocation below. We should consolidate them.
+    LValue allocateButterfly(LValue indexingType, LValue preCapacity, LValue publicLength, LValue vectorLength, bool shouldInitializeElements = true)
+    {
+        LBasicBlock slowBlock = m_out.newBlock();
+        LBasicBlock continuation = m_out.newBlock();
+
+        if (preCapacity->hasInt32() && vectorLength->hasInt32()) {
+            unsigned vectorLengthConst = static_cast<unsigned>(vectorLength->asInt32());
+            if (vectorLengthConst <= MAX_STORAGE_VECTOR_LENGTH) {
+                vectorLengthConst = Butterfly::optimalContiguousVectorLength(
+                    preCapacity->asInt32(), vectorLengthConst);
+                vectorLength = m_out.constInt32(vectorLengthConst);
+            }
+        } else {
+            // We don't compute the optimal vector length for new Array(blah) where blah is not
+            // statically known, since the compute effort of doing it here is probably not worth it.
+        }
+
+        static_assert(MarkedSpace::largeCutoff < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH * sizeof(JSValue), "This assumes any butterfly allocation that would be force to change indexing type would hit the slow path anyway.");
+        static_assert(1 << 3 == sizeof(JSValue));
+
+        LValue payloadSizeInBytes =
+            m_out.shl(
+                m_out.zeroExt(
+                    m_out.add(vectorLength, preCapacity),
+                    pointerType()),
+                m_out.constIntPtr(3));
+
+        LValue butterflySize = m_out.add(
+            payloadSizeInBytes, m_out.constIntPtr(sizeof(IndexingHeader)));
+
+        LValue allocator = allocatorForSize(vm().auxiliarySpace(), butterflySize, slowBlock);
+        LValue base = allocateHeapCell(allocator, slowBlock);
+        ValueFromBlock fastBase = m_out.anchor(base);
+        m_out.jump(continuation);
+
+        m_out.appendTo(slowBlock);
+        VM& vm = this->vm();
+        LValue slowButterflyBase = lazySlowPath(
+            [=, &vm] (const Vector<Location>& locations) -> RefPtr<LazySlowPath::Generator> {
+                return createLazyCallGenerator(vm,
+                    operationAllocateUnitializedAuxiliaryBase, locations[0].directGPR(), CCallHelpers::TrustedImmPtr(&vm),
+                    locations[1].directGPR());
+            },
+            payloadSizeInBytes);
+        ValueFromBlock slowBase = m_out.anchor(slowButterflyBase);
+        m_out.jump(continuation);
+
+        m_out.appendTo(continuation);
+        LValue butterflyBase = m_out.phi(pointerType(), fastBase, slowBase);
+        LValue butterfly = m_out.add(
+            butterflyBase,
+            m_out.add(
+                m_out.shl(m_out.zeroExt(preCapacity, pointerType()), m_out.constIntPtr(3)),
+                m_out.constIntPtr(sizeof(IndexingHeader))));
+
+
+        m_out.store32(publicLength, butterfly, m_heaps.Butterfly_publicLength);
+        m_out.store32(vectorLength, butterfly, m_heaps.Butterfly_vectorLength);
+
+        initializeArrayElements(
+            indexingType,
+            shouldInitializeElements ? m_out.int32Zero : publicLength, vectorLength,
+            butterfly);
+
+        return butterfly;
+    }
+
+    LValue allocateJSArray(IndexingType indexingType, LValue publicLength, LValue butterfly)
+    {
+        LBasicBlock slowCase = m_out.newBlock();
+        LBasicBlock continuation = m_out.newBlock();
+
+        VM& vm = this->vm();
+        JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
+        RegisteredStructure structure = m_graph.registerStructure(globalObject->arrayStructureForIndexingTypeDuringAllocation(
+            indexingType));
+
+        LValue structureValue = weakStructure(structure);
+        LValue array = allocateObject<JSArray>(structureValue, butterfly, slowCase);
+        ValueFromBlock fastArray = m_out.anchor(array);
+        m_out.jump(continuation);
+
+        m_out.appendTo(slowCase);
+        LValue slowResult = lazySlowPath(
+            [=, &vm] (const Vector<Location>& locations) -> RefPtr<LazySlowPath::Generator> {
+                return createLazyCallGenerator(vm,
+                    operationNewArrayWithSize, locations[0].directGPR(), CCallHelpers::TrustedImmPtr(globalObject),
+                    locations[1].directGPR(), locations[2].directGPR(), locations[3].directGPR());
+            },
+            structureValue, publicLength, butterfly);
+        ValueFromBlock slowArray = m_out.anchor(slowResult);
+        m_out.jump(continuation);
+
+        m_out.appendTo(continuation);
+        return m_out.phi(pointerType(), fastArray, slowArray);
+    }
+
+    // FIXME: We don't need to handle large array sizes because anything that big has to be precise allocated anyway.
+    // FIXME: We should try replacing this with the two methods above.
     ArrayValues allocateJSArray(LValue publicLength, LValue vectorLength, LValue structure, LValue indexingType, bool shouldInitializeElements = true, bool shouldLargeArraySizeCreateArrayStorage = true)
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
