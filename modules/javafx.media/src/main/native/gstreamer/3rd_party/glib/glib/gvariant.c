@@ -35,6 +35,20 @@
 
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+// Added due to removal of guniprop.c and it is dependency.
+// GStreamer lite might used it for loggin in case of errors, but
+// we only use ascii. So, ok to escape non-ascii characters in log
+// messages.
+static gboolean g_unichar_isprint_ascii_only(gunichar c)
+{
+   if ((c & 0xFFFFFF00) != 0)
+      return FALSE;
+
+  return g_ascii_isprint((guchar)c);
+}
+#endif // GSTREAMER_LITE
+
 /**
  * GVariant: (copy-func g_variant_ref_sink) (free-func g_variant_unref)
  *
@@ -1492,7 +1506,6 @@ g_variant_get_string (GVariant *value,
     {
       switch (g_variant_classify (value))
         {
-#ifndef GSTREAMER_LITE
         case G_VARIANT_CLASS_STRING:
           if (g_variant_serialiser_is_string (data, size))
             break;
@@ -1500,7 +1513,6 @@ g_variant_get_string (GVariant *value,
           data = "";
           size = 1;
           break;
-#endif // GSTREAMER_LITE
 
         case G_VARIANT_CLASS_OBJECT_PATH:
           if (g_variant_serialiser_is_object_path (data, size))
@@ -2470,7 +2482,6 @@ g_variant_print_string (GVariant *value,
         g_string_append (string, "false");
       break;
 
-#ifndef GSTREAMER_LITE
     case G_VARIANT_CLASS_STRING:
       {
         const gchar *str = g_variant_get_string (value, NULL);
@@ -2485,7 +2496,11 @@ g_variant_print_string (GVariant *value,
             if (c == quote || c == '\\')
               g_string_append_c (string, '\\');
 
+#ifndef GSTREAMER_LITE
             if (g_unichar_isprint (c))
+#else // GSTREAMER_LITE
+            if (g_unichar_isprint_ascii_only (c))
+#endif // GSTREAMER_LITE
               g_string_append_unichar (string, c);
 
             else
@@ -2536,7 +2551,6 @@ g_variant_print_string (GVariant *value,
         g_string_append_c (string, quote);
       }
       break;
-#endif // GSTREAMER_LITE
 
     case G_VARIANT_CLASS_BYTE:
       if (type_annotate)
@@ -2691,9 +2705,7 @@ g_variant_hash (gconstpointer value_)
 
   switch (g_variant_classify (value))
     {
-#ifndef GSTREAMER_LITE
     case G_VARIANT_CLASS_STRING:
-#endif // GSTREAMER_LITE
     case G_VARIANT_CLASS_OBJECT_PATH:
     case G_VARIANT_CLASS_SIGNATURE:
       return g_str_hash (g_variant_get_string (value, NULL));
@@ -2922,9 +2934,7 @@ g_variant_compare (gconstpointer one,
         return (a_val == b_val) ? 0 : (a_val > b_val) ? 1 : -1;
       }
 
-#ifndef GSTREAMER_LITE
     case G_VARIANT_CLASS_STRING:
-#endif // GSTREAMER_LITE
     case G_VARIANT_CLASS_OBJECT_PATH:
     case G_VARIANT_CLASS_SIGNATURE:
       return strcmp (g_variant_get_string (a, NULL),
@@ -6120,10 +6130,8 @@ g_variant_deep_copy (GVariant *value,
       else
         return g_variant_new_double (g_variant_get_double (value));
 
-#ifndef GSTREAMER_LITE
     case G_VARIANT_CLASS_STRING:
       return g_variant_new_string (g_variant_get_string (value, NULL));
-#endif // GSTREAMER_LITE
 
     case G_VARIANT_CLASS_OBJECT_PATH:
       return g_variant_new_object_path (g_variant_get_string (value, NULL));
