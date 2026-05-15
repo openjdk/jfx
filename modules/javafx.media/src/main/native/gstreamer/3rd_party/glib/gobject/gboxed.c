@@ -137,7 +137,9 @@ G_DEFINE_BOXED_TYPE (GError, g_error, g_error_copy, g_error_free)
 
 G_DEFINE_BOXED_TYPE (GDateTime, g_date_time, g_date_time_ref, g_date_time_unref)
 G_DEFINE_BOXED_TYPE (GTimeZone, g_time_zone, g_time_zone_ref, g_time_zone_unref)
+#ifndef GSTREAMER_LITE
 G_DEFINE_BOXED_TYPE (GKeyFile, g_key_file, g_key_file_ref, g_key_file_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_BOXED_TYPE (GMappedFile, g_mapped_file, g_mapped_file_ref, g_mapped_file_unref)
 #ifndef GSTREAMER_LITE
 G_DEFINE_BOXED_TYPE (GBookmarkFile, g_bookmark_file, g_bookmark_file_copy, g_bookmark_file_free)

@@ -47,7 +47,9 @@ typedef enum
   G_VARIANT_CLASS_UINT64        = 't',
   G_VARIANT_CLASS_HANDLE        = 'h',
   G_VARIANT_CLASS_DOUBLE        = 'd',
+#ifndef GSTREAMER_LITE
   G_VARIANT_CLASS_STRING        = 's',
+#endif // GSTREAMER_LITE
   G_VARIANT_CLASS_OBJECT_PATH   = 'o',
   G_VARIANT_CLASS_SIGNATURE     = 'g',
   G_VARIANT_CLASS_VARIANT       = 'v',
