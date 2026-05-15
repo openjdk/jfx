@@ -410,7 +410,7 @@ public class TextFieldTableCellTest {
         assertEquals(text, textField.getSelectedText());
 
         MouseEventFirer mouse = new MouseEventFirer(textField);
-        mouse.fireMousePressed(MouseButton.SECONDARY);
+        mouse.fireMouseReleased(MouseButton.SECONDARY);
         assertEquals(text, textField.getSelectedText());
         mouse.fireMouseReleased(MouseButton.SECONDARY);
         assertEquals(text, textField.getSelectedText());

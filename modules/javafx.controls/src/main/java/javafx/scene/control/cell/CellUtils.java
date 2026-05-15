@@ -243,7 +243,7 @@ class CellUtils {
     static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
         final TextField textField = new TextField(getItemText(cell, converter));
         textField.focusedProperty().addListener(_ -> {
-            if (!textField.isFocused() && cell.isEditing()) {
+            if (cell.isEditing() && !textField.isFocused()) {
                 cell.stopEdit();
             }
         });
