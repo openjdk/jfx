@@ -690,14 +690,8 @@ GUnicodeScript g_unicode_script_from_iso15924 (guint32        iso15924);
 #ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isalnum   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isalpha   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_iscntrl   (gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
@@ -706,88 +700,46 @@ GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isgraph   (gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_islower   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isprint   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_ispunct   (gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isspace   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isupper   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isxdigit  (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_istitle   (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isdefined (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_iswide    (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_iswide_cjk(gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_iszerowidth(gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_ismark    (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
 
 /* More <ctype.h> functions.  These convert between the three cases.
  * See the Unicode book to understand title case.  */
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gunichar g_unichar_toupper (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gunichar g_unichar_tolower (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gunichar g_unichar_totitle (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
 
 /* If C is a digit (according to 'g_unichar_isdigit'), then return its
    numeric value.  Otherwise return -1.  */
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gint g_unichar_digit_value (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gint g_unichar_xdigit_value (gunichar c) G_GNUC_CONST;
-#endif // GSTREAMER_LITE
 
 /* Return the Unicode character type of a given character.  */
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 GUnicodeType g_unichar_type (gunichar c) G_GNUC_CONST;
 #endif // GSTREAMER_LITE
@@ -984,15 +936,9 @@ gboolean g_utf8_validate_len (const gchar  *str,
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_strup   (const gchar *str,
                        gssize       len) G_GNUC_MALLOC;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_strdown (const gchar *str,
                        gssize       len) G_GNUC_MALLOC;
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_casefold (const gchar *str,
                         gssize       len) G_GNUC_MALLOC;
