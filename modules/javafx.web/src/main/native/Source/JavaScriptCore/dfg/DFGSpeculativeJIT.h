@@ -1712,7 +1712,6 @@ public:
     void compileSetRegExpObjectLastIndex(Node*);
     void compileLazyJSConstant(Node*);
     void compileMaterializeNewObject(Node*);
-    void compileMaterializeNewArrayWithConstantSize(Node*);
     void compileRecordRegExpCachedResult(Node*);
     void compileToObjectOrCallObjectConstructor(Node*);
     void compileResolveScope(Node*);
@@ -1758,9 +1757,9 @@ public:
     void compileSetArgumentCountIncludingThis(Node*);
     void compileStrCat(Node*);
     void compileNewArrayBuffer(Node*);
+    void compileNewButterflyWithSize(Node*);
     void compileNewArrayWithSize(Node*);
-    void compileNewArrayWithConstantSizeImpl(Node*, GPRReg, GPRReg);
-    void compileNewArrayWithConstantSize(Node*);
+    void compileNewArrayWithButterfly(Node*);
     void compileNewArrayWithSpecies(Node*);
     void compileNewArrayWithSizeAndStructure(Node*);
     void compileNewTypedArray(Node*);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -2230,7 +2231,6 @@ public class TableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
-            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -4007,6 +4007,151 @@ public class TableViewTest {
         assertEquals(3, rt_37429_cells_change_count);
 
         sl.dispose();
+    }
+
+    @Test void testSortFiresTargetedChangeEventsForPartialPermutation() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("c", "d", "a", "b", "e", "g", "h", "f", "i", "k", "l", "j"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().selectIndices(0, 1, 4, 5, 6, 8, 9, 10);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11   }
+        // before sort:  { [C], [D],  A,   B,  [E], [G], [H],  F,  [I], [K], [L],  J   }
+        // prevState:    { (0), (1),           (4), (5), (6),      (8), (9), (10)      }
+        // after sort:   {  A,   B,  [C], [D], [E],  F,  [G], [H], [I],  J,  [K], [L]  }
+        // newState:     {           (2), (3), (4),      (6), (7), (8),      (10),(11) }
+
+        // pos indices: {  0,   1,   2,   3,   4,   5,   6,   7,   8  }
+        // prevState:   { (0), (1), (4), (5), (6), (8), (9), (10)     }
+        // newState:    { (2), (3), (4), (6), (7), (8), (10),(11)     }
+        // froms:          *              *              *
+        // tos:                      *              *              *
+
+        assertEquals(List.of(0, 3, 6), froms);
+        assertEquals(List.of(2, 5, 8), tos);
+        assertEquals(List.of(0, 1), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(5, 6), removedLists.get(1).stream().map(TablePosition::getRow).toList());
+        assertEquals(List.of(9, 10), removedLists.get(2).stream().map(TablePosition::getRow).toList());
+    }
+
+    @Test void testSortFiresRemovalEventForSelectionSizeMismatch() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "b", "c"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // custom sort policy: sort and deselect rows 1 and 2
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getItems(), Comparator.naturalOrder());
+            tv.getSelectionModel().clearSelection(1);
+            tv.getSelectionModel().clearSelection(2);
+            return true;
+        });
+
+        table.getSelectionModel().selectAll();
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2  }
+        // before sort:  { [A], [B], [C] }
+        // prevState:    { (0), (1), (2) }
+        // after sort:   { [A]           }
+        // newState:     { (0)           }
+
+        // pos indices:  {  0,   1,   2  }
+        // prevState:    { (0), (1), (2) }
+        // newState:     { (0)           }
+        // froms:                *
+        // tos:                  *
+
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(1), tos);
+        assertEquals(List.of(1, 2), removedLists.get(0).stream().map(TablePosition::getRow).toList());
+    }
+
+    @Test void testSortFiresAddedEventForSelectionSizeMismatch() {
+        TableColumn<String, String> col = new TableColumn<>("col");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
+
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "b", "c"));
+        table.getColumns().add(col);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // custom sort policy: sort and select all
+        table.setSortPolicy(tv -> {
+            FXCollections.sort(tv.getItems(), Comparator.naturalOrder());
+            tv.getSelectionModel().selectAll();
+            return true;
+        });
+
+        table.getSelectionModel().clearAndSelect(0);
+
+        List<Integer> froms = new ArrayList<>();
+        List<Integer> tos = new ArrayList<>();
+        List<List<TablePosition>> removedLists = new ArrayList<>();
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                froms.add(c.getFrom());
+                tos.add(c.getTo());
+                removedLists.add(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+        table.getSortOrder().add(col);
+
+        // item indices: {  0,   1,   2,   3 }
+        // before sort:  { [A]               }
+        // prevState:    { (0)               }
+        // after sort:   { [A], [B], [C]     }
+        // newState:     { (0), (1), (2)     }
+
+        // pos indices:  {  0,   1,   2,   3 }
+        // prevState:    { (0)               }
+        // newState:     { (0), (1), (2)     }
+        // froms:                *
+        // tos:                            *
+
+        assertEquals(List.of(1), froms);
+        assertEquals(List.of(3), tos);
+        assertEquals(List.of(), removedLists.get(0).stream().map(TablePosition::getRow).toList());
     }
 
     private int rt_37538_count = 0;
@@ -6490,5 +6635,84 @@ public class TableViewTest {
 
         cell = VirtualFlowTestUtils.getCell(table, 0, 0);
         assertEquals(newName, cell.getText());
+    }
+
+    @Test
+    void testBulkSet() {
+        TableView<Integer> t1 = new TableView<>();
+        TableView<Integer> t2 = new TableView<>();
+        TableView.TableViewSelectionModel sm1 = t1.getSelectionModel();
+        TableView.TableViewSelectionModel sm2 = t2.getSelectionModel();
+        TableColumn<Integer, ?> c1 = new TableColumn<>("c1");
+        TableColumn<Integer, ?> c2 = new TableColumn<>("c2");
+        t1.getColumns().add(c1);
+        t2.getColumns().add(c2);
+        sm1.setSelectionMode(SelectionMode.MULTIPLE);
+        sm2.setSelectionMode(SelectionMode.MULTIPLE);
+        sm1.setCellSelectionEnabled(true);
+        sm2.setCellSelectionEnabled(true);
+
+        int size = 20;
+        for (int i = 0; i < size; i++) {
+            t1.getItems().add(i);
+            t2.getItems().add(i);
+        }
+
+        // selectRange(ra, rb) selects the rows in the half-open interval [ra, rb)
+
+        sm1.selectRange(3, 7);
+        sm2.selectIndices(3, 4, 5, 6);
+        assertEquals(List.of(3, 4, 5, 6), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6), sm2.getSelectedIndices());
+
+        sm1.selectRange(5, 9);
+        sm2.selectIndices(5, 6, 7, 8);
+        assertEquals(List.of(3, 4, 5, 6, 7, 8), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8), sm2.getSelectedIndices());
+
+        sm1.selectRange(17, 19);
+        sm2.selectIndices(17, 18);
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 17, 18), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 17, 18), sm2.getSelectedIndices());
+
+        // selectRange(ra, ca, rb, cb) selects the rows in the closed interval [ra, rb]
+
+        sm1.selectRange(13, c1, 16, c1);
+        sm2.select(13, c1);
+        sm2.select(14, c1);
+        sm2.select(15, c1);
+        sm2.select(16, c1);
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18), sm1.getSelectedIndices());
+        assertEquals(List.of(3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18), sm2.getSelectedIndices());
+
+        sm1.selectAll();
+        for (int i = 0; i < size; i++) {
+            sm2.select(i);
+        }
+        assertEquals(IntStream.range(0, size).boxed().toList(), sm1.getSelectedIndices());
+        assertEquals(IntStream.range(0, size).boxed().toList(), sm2.getSelectedIndices());
+    }
+
+    @Test
+    void testBulkClear() {
+        TableView<Integer> t = new TableView<>();
+        TableView.TableViewSelectionModel sm = t.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        int size = 20;
+        for (int i = 0; i < size; i++) {
+            t.getItems().add(i);
+        }
+
+        sm.select(3);
+        sm.select(4);
+        sm.select(9);
+        sm.select(10);
+        sm.select(11);
+        sm.select(12);
+        assertEquals(List.of(3, 4, 9, 10, 11, 12), sm.getSelectedIndices());
+
+        sm.clearSelection();
+        assertEquals(List.of(), sm.getSelectedIndices());
     }
 }

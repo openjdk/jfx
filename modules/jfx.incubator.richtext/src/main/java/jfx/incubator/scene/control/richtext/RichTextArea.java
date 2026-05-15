@@ -344,28 +344,6 @@ public class RichTextArea extends Control {
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
         setAccessibleRoleDescription("Rich Text Area");
-
-        selectionModel.selectionProperty().addListener((s, old, cur) -> {
-            TextPos min0 = old == null ? null : old.getMin();
-            TextPos max0 = old == null ? null : old.getMax();
-            TextPos min2 = cur == null ? null : cur.getMin();
-            TextPos max2 = cur == null ? null : cur.getMax();
-
-            if (accessibilityHelper != null) {
-                if (accessibilityHelper.handleSelectionChange(cur)) {
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                }
-            }
-
-            if (!Objects.equals(min0, min2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
-            }
-
-            if (!Objects.equals(max0, max2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
-            }
-        });
-
         setModel(model);
     }
 
@@ -688,17 +666,6 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
-                // TODO does this create a memory leak?  should we bind or weak listen?
-                private final StyledTextModel.Listener li = (ch) -> {
-                    if (ch.isEdit()) {
-                        if (accessibilityHelper != null) {
-                            if (accessibilityHelper.handleTextUpdate(ch.getStart(), ch.getEnd())) {
-                                // TODO check the timing, may be runLater?
-                                notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                            }
-                        }
-                    }
-                };
                 private StyledTextModel old;
 
                 @Override
@@ -729,18 +696,21 @@ public class RichTextArea extends Control {
                     }
 
                     if (old != null) {
-                        old.removeListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.unregisterModel(old);
+                        }
                     }
                     if (m != null) {
-                        m.addListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.registerModel(m);
+                        }
                     }
                     old = m;
 
+                    selectionModel.clear();
                     if (accessibilityHelper != null) {
                         accessibilityHelper.handleModelChange();
                     }
-                    selectionModel.clear();
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
                 }
             };
         }
@@ -2493,6 +2463,10 @@ public class RichTextArea extends Control {
     private RTAccessibilityHelper accessibilityHelper() {
         if(accessibilityHelper == null) {
             accessibilityHelper = new RTAccessibilityHelper(this);
+            StyledTextModel m = getModel();
+            if (m != null) {
+                accessibilityHelper.registerModel(m);
+            }
         }
         return accessibilityHelper;
     }

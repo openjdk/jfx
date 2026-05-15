@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,30 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.options;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.scene.Node;
-import com.oracle.tools.fx.monkey.util.CustomPane;
-import com.oracle.tools.fx.monkey.util.ImageTools;
+package javafx.css;
 
-/**
- * Graphic Option.
- */
-public class GraphicOption extends ObjectOption<Node> {
-    public GraphicOption(String name, ObjectProperty<Node> p) {
-        super(name, p);
+import com.sun.javafx.css.media.MediaQueryList;
+import java.util.Objects;
 
-        addChoice("<null>", null);
-        addChoice("1x1", ImageTools.createImageView(1, 1));
-        addChoice("Small", ImageTools.createImageView(16, 16));
-        addChoice("Wide", ImageTools.createImageView(128, 16));
-        addChoice("Tall", ImageTools.createImageView(16, 128));
-        addChoice("Large", ImageTools.createImageView(256, 256));
-        addChoiceSupplier("Complex Pane", () -> {
-            return CustomPane.create();
-        });
+record StylesheetImport(Stylesheet stylesheet, MediaQueryList importConditions) {
 
-        selectInitialValue();
+    StylesheetImport {
+        Objects.requireNonNull(stylesheet, "stylesheet cannot be null");
+        Objects.requireNonNull(importConditions, "importConditions cannot be null");
     }
 }

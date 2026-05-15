@@ -331,24 +331,14 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         int minRow = Math.min(focusedIndex, index);
         int maxRow = Math.max(focusedIndex, index);
 
-        // To prevent JDK-8123898, we make a copy of the selected indices
-        // list first, so that we are not iterating and modifying it
-        // concurrently.
-        List<Integer> selectedIndices = new ArrayList<>(getSelectionModel().getSelectedIndices());
-        for (int i = 0, max = selectedIndices.size(); i < max; i++) {
-            int selectedIndex = selectedIndices.get(i);
-            if (selectedIndex < minRow || selectedIndex > maxRow) {
-                getSelectionModel().clearSelection(selectedIndex);
-            }
-        }
-
         if (minRow == maxRow) {
             // JDK-8115366: This prevents the anchor 'sticking' in
             // the wrong place when a range is selected and then
             // selection goes back to the anchor position.
             // (Refer to the video in JDK-8115366 for more detail).
-            getSelectionModel().select(minRow);
+            getSelectionModel().clearAndSelect(minRow);
         } else {
+            getSelectionModel().clearSelection();
             // JDK-8126876: We need to put the range in the correct
             // order or else the last selected row will not be the
             // last item in the selectedItems list of the selection

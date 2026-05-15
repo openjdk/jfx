@@ -89,7 +89,6 @@ CFLAGS =   -DWIN32 \
            -DGST_DISABLE_LOADSAVE \
            -DG_DISABLE_DEPRECATED \
            -DG_DISABLE_ASSERT \
-           -DG_DISABLE_CHECKS \
            -D_WINDLL \
            -D_MBCS \
            -DINITGUID \

@@ -618,7 +618,10 @@ JNIEXPORT jobject JNICALL OS_NATIVE(FT_1Outline_1Decompose)
     data.pointTypes = (jbyte*)malloc(sizeof(jbyte) * DEFAULT_LEN_TYPES);
     data.numTypes = 0;
     data.lenTypes = DEFAULT_LEN_TYPES;
-    if (data.pointTypes == NULL) goto fail;
+    if (data.pointTypes == NULL) {
+        data.pointCoords = NULL;
+        goto fail;
+    }
 
     data.pointCoords = (jfloat*)malloc(sizeof(jfloat) * DEFAULT_LEN_COORDS);
     data.numCoords = 0;
