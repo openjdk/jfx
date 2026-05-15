@@ -937,7 +937,7 @@ fill_planes (GstVideoInfo * info, gsize plane_size[GST_VIDEO_MAX_PLANES])
       info->size = info->stride[0] * height;
       break;
     case GST_VIDEO_FORMAT_UYVP:
-      info->stride[0] = GST_ROUND_UP_4 ((width * 2 * 5 + 3) / 4);
+      info->stride[0] = GST_ROUND_UP_4 ((GST_ROUND_UP_2 (width) * 5) / 2);
       info->offset[0] = 0;
       info->size = info->stride[0] * height;
       break;

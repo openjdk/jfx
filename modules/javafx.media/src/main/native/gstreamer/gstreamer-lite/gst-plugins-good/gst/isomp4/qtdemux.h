@@ -56,7 +56,7 @@ typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
 typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
 typedef struct _QtDemuxGaplessAudioInfo QtDemuxGaplessAudioInfo;
 
-typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf);
+typedef GstBuffer * (*QtDemuxProcessFunc)(GstQTDemux * qtdemux, QtDemuxStream * stream, GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration, gboolean round_up_duration);
 
 enum QtDemuxState
 {
@@ -228,8 +228,8 @@ struct _GstQTDemux {
    * ALL VARIABLES BELOW ARE ONLY USED IN PUSH-BASED MODE
    */
   GstAdapter *adapter;
-  guint neededbytes;
-  guint todrop;
+  guint64 neededbytes;
+  guint64 todrop;
   /* Used to store data if [mdat] is before the headers */
   GstBuffer *mdatbuffer;
   /* Amount of bytes left to read in the current [mdat] */
@@ -425,6 +425,8 @@ struct _QtDemuxStream
                                  * Currently only set for raw audio streams*/
   guint32 max_buffer_size;      /* Maximum allowed size for output buffers.
                                  * Currently only set for raw audio streams*/
+  guint64 trun_next_dts;        /* DTS in track units that would be used by the
+                                 * first sample of the next trun box. */
 
   /* video info */
   GstVideoInfo info;

@@ -41,17 +41,6 @@ G_BEGIN_DECLS
 # undef GST_CAN_INLINE
 #endif
 
-/* MSVC defines 'restrict' as a keyword and not a define */
-#if (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L) && !defined(restrict)
-#  if defined(__GNUC__) && __GNUC__ >= 4
-#    define restrict __restrict__
-#  elif defined(_MSC_VER)
-#    define restrict __restrict
-#  else
-#    define restrict
-#  endif
-#endif
-
 #if defined(G_DISABLE_CHECKS)
 #define GST_UNUSED_CHECKS G_GNUC_UNUSED
 #else

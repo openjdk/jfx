@@ -341,7 +341,11 @@ GST_EXPORT GType _gst_value_list_type;
  */
 #define GST_TYPE_LIST                    (_gst_value_list_type)
 
+#ifndef GSTREAMER_LITE
 GST_API GType _gst_value_unique_list_type;
+#else // GSTREAMER_LITE
+GST_EXPORT GType _gst_value_unique_list_type;
+#endif // GSTREAMER_LITE
 
 /**
  * GstValueUniqueList:

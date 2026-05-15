@@ -1559,8 +1559,7 @@ next:
     GST_QUEUE_MUTEX_LOCK_CHECK (queue, out_flushing);
     /* if we're EOS, return EOS so that the task pauses. */
     if (type == GST_EVENT_EOS) {
-      GST_CAT_LOG_OBJECT (queue_dataflow, queue,
-          "pushed EOS event %" GST_PTR_FORMAT ", return EOS", event);
+      GST_CAT_LOG_OBJECT (queue_dataflow, queue, "pushed EOS event return EOS");
       result = GST_FLOW_EOS;
     }
   } else if (GST_IS_QUERY (data)) {

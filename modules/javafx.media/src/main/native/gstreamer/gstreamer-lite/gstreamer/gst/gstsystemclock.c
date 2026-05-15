@@ -624,7 +624,7 @@ static GstClockReturn gst_system_clock_id_wait_async (GstClock * clock,
     GstClockEntry * entry);
 static void gst_system_clock_id_unschedule (GstClock * clock,
     GstClockEntry * entry);
-static void gst_system_clock_async_thread (GstClock * clock);
+static gpointer gst_system_clock_async_thread (GstClock * clock);
 static gboolean gst_system_clock_start_async (GstSystemClock * clock);
 
 static GMutex _gst_sysclock_mutex;
@@ -871,7 +871,7 @@ gst_system_clock_obtain (void)
  *
  * MT safe.
  */
-static void
+static gpointer
 gst_system_clock_async_thread (GstClock * clock)
 {
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
@@ -1016,6 +1016,8 @@ exit:
   GST_SYSTEM_CLOCK_BROADCAST (clock);
   GST_SYSTEM_CLOCK_UNLOCK (clock);
   GST_CAT_DEBUG_OBJECT (GST_CAT_CLOCK, clock, "exit system clock thread");
+
+  return NULL;
 }
 
 #ifdef HAVE_POSIX_TIMERS

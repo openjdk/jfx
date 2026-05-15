@@ -1891,7 +1891,7 @@ no_function:
  *
  * Gets an iterator for the elements in this bin.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_elements (GstBin * bin)
@@ -1929,7 +1929,7 @@ iterate_child_recurse (GstIterator * it, const GValue * item)
  * Gets an iterator for the elements in this bin.
  * This iterator recurses into GstBin children.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_recurse (GstBin * bin)
@@ -1989,7 +1989,7 @@ sink_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SINK flag set.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sinks (GstBin * bin)
@@ -2047,7 +2047,7 @@ src_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SOURCE flag set.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sources (GstBin * bin)
@@ -2437,7 +2437,7 @@ gst_bin_sort_iterator_new (GstBin * bin)
  * This function is used internally to perform the state changes
  * of the bin elements and for clock selection.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sorted (GstBin * bin)
@@ -4521,7 +4521,7 @@ gst_bin_get_by_interface (GstBin * bin, GType iface)
  * The function recurses inside child bins. The iterator will yield a series
  * of #GstElement.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  *     for all elements in the bin implementing the given interface
  */
 GstIterator *
@@ -4568,7 +4568,7 @@ compare_factory_names (const GValue * velement, GValue * factory_name_val)
  * The function recurses inside child bins. The iterator will yield a series of
  * #GstElement.
  *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
+ * Returns: (transfer full): a #GstIterator of #GstElement
  *     for all elements in the bin with the given element factory name
  *
  * Since: 1.18

@@ -449,7 +449,6 @@ gst_audio_encoder_init (GstAudioEncoder * enc, GstAudioEncoderClass * bclass)
       GST_DEBUG_FUNCPTR (gst_audio_encoder_src_event));
   gst_pad_set_query_function (enc->srcpad,
       GST_DEBUG_FUNCPTR (gst_audio_encoder_src_query));
-  gst_pad_use_fixed_caps (enc->srcpad);
   gst_element_add_pad (GST_ELEMENT (enc), enc->srcpad);
   GST_DEBUG_OBJECT (enc, "src created");
 

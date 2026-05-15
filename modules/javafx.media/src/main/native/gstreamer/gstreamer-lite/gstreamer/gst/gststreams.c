@@ -577,7 +577,8 @@ gst_stream_type_get_name (GstStreamType stype)
         (GST_STREAM_TYPE_AUDIO        \
          | GST_STREAM_TYPE_VIDEO      \
          | GST_STREAM_TYPE_CONTAINER  \
-         | GST_STREAM_TYPE_TEXT)
+         | GST_STREAM_TYPE_TEXT       \
+         | GST_STREAM_TYPE_METADATA)
 
       if ((stype & (~_GST_STREAM_TYPE_ALL)) != 0)
         break;
@@ -593,7 +594,8 @@ gst_stream_type_get_name (GstStreamType stype)
       if ((stype & GST_STREAM_TYPE_METADATA) != 0)
         g_strlcat (str, "+metadata", sizeof (str));
 
-      g_assert (str[0] != '\0');
+      if (str[0] == '\0')
+        break;
 
       return g_intern_string (str + 1);
     }

@@ -2394,9 +2394,11 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
     {
       GstSegment seg;
       GstFormat format;
+      guint32 seqnum;
 
       GST_AUDIO_DECODER_STREAM_LOCK (dec);
       gst_event_copy_segment (event, &seg);
+      seqnum = gst_event_get_seqnum (event);
 
       format = seg.format;
       if (format == GST_FORMAT_TIME) {
@@ -2423,6 +2425,7 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
           /* replace event */
           gst_event_unref (event);
           event = gst_event_new_segment (&seg);
+          gst_event_set_seqnum (event, seqnum);
         } else {
           GST_DEBUG_OBJECT (dec, "unsupported format; ignoring");
           GST_AUDIO_DECODER_STREAM_UNLOCK (dec);

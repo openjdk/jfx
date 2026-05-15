@@ -2582,7 +2582,7 @@ not_started:
 /**
  * gst_app_sink_set_callbacks: (skip)
  * @appsink: a #GstAppSink
- * @callbacks: the callbacks
+ * @callbacks: (nullable): the callbacks
  * @user_data: a user_data argument for the callbacks
  * @notify: a destroy notify function
  *
@@ -2595,6 +2595,8 @@ not_started:
  *
  * Before 1.16.3 it was not possible to change the callbacks in a thread-safe
  * way.
+ *
+ * Since 1.28.3 it is allowed to set the @callbacks to %NULL to unset them.
  *
  * Note that gst_app_sink_set_callbacks() and
  * gst_app_sink_set_simple_callbacks() are mutually exclusive and setting one
@@ -2609,7 +2611,6 @@ gst_app_sink_set_callbacks (GstAppSink * appsink,
   GstAppSinkPrivate *priv;
 
   g_return_if_fail (GST_IS_APP_SINK (appsink));
-  g_return_if_fail (callbacks != NULL);
 
   priv = appsink->priv;
 

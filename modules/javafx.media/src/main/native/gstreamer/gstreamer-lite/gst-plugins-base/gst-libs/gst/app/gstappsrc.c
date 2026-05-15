@@ -2645,7 +2645,7 @@ gst_app_src_push_internal (GstAppSrc * appsrc, GstBuffer * buffer,
         gst_app_src_update_queued_pop (appsrc, item, FALSE);
 
         if (GST_IS_BUFFER_LIST (item))
-          priv->dropped += gst_buffer_list_length (buflist);
+          priv->dropped += gst_buffer_list_length ((GstBufferList *) item);
         else
           priv->dropped += 1;
         gst_mini_object_unref (item);
@@ -3001,7 +3001,7 @@ flushing:
 /**
  * gst_app_src_set_callbacks: (skip)
  * @appsrc: a #GstAppSrc
- * @callbacks: the callbacks
+ * @callbacks: (nullable): the callbacks
  * @user_data: a user_data argument for the callbacks
  * @notify: a destroy notify function
  *
@@ -3015,6 +3015,12 @@ flushing:
  *
  * Before 1.16.3 it was not possible to change the callbacks in a thread-safe
  * way.
+ *
+ * Since 1.28.3 it is allowed to set the @callbacks to %NULL to unset them.
+ *
+ * Note that gst_app_src_set_callbacks() and
+ * gst_app_src_set_simple_callbacks() are mutually exclusive and setting one
+ * will unset the other.
  */
 void
 gst_app_src_set_callbacks (GstAppSrc * appsrc,
@@ -3025,7 +3031,6 @@ gst_app_src_set_callbacks (GstAppSrc * appsrc,
   GstAppSrcPrivate *priv;
 
   g_return_if_fail (GST_IS_APP_SRC (appsrc));
-  g_return_if_fail (callbacks != NULL);
 
   priv = appsrc->priv;
 

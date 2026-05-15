@@ -558,3 +558,9 @@ g_weak_ref_init	@556	NONAME
 g_weak_ref_set	@557	NONAME
 g_win32_error_message	@558	NONAME
 g_win32_get_package_installation_directory_of_module	@559	NONAME
+g_int64_hash      @560    NONAME
+g_double_hash     @561    NONAME
+g_direct_hash     @562    NONAME
+g_hash_table_add  @563    NONAME
+g_strv_contains   @564    NONAME
+g_list_first      @565    NONAME

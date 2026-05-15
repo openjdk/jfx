@@ -28,6 +28,9 @@
 
 G_BEGIN_DECLS
 
+/* Master was renamed to Main in Xcode 13, and Master was deprecated */
+#define kAudioObjectPropertyElementMain 0
+
 typedef struct
 {
   GMutex lock;

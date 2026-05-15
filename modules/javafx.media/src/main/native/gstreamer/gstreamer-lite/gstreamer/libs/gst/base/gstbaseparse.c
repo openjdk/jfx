@@ -744,6 +744,8 @@ gst_base_parse_frame_copy (GstBaseParseFrame * frame)
 
   copy = g_memdup2 (frame, sizeof (GstBaseParseFrame));
   copy->buffer = gst_buffer_ref (frame->buffer);
+  if (copy->out_buffer)
+    gst_buffer_ref (copy->out_buffer);
   copy->_private_flags &= ~GST_BASE_PARSE_FRAME_PRIVATE_FLAG_NOALLOC;
 
   GST_TRACE ("copied frame %p -> %p", frame, copy);
@@ -765,6 +767,11 @@ gst_base_parse_frame_free (GstBaseParseFrame * frame)
   if (frame->buffer) {
     gst_buffer_unref (frame->buffer);
     frame->buffer = NULL;
+  }
+
+  if (frame->out_buffer) {
+    gst_buffer_unref (frame->out_buffer);
+    frame->out_buffer = NULL;
   }
 
   if (!(frame->_private_flags & GST_BASE_PARSE_FRAME_PRIVATE_FLAG_NOALLOC)) {
@@ -3254,6 +3261,7 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
       parse->priv->detect_buffers_size = 0;
 
       if (ret != GST_FLOW_OK) {
+        gst_buffer_unref (buffer);
         return ret;
       }
 
@@ -3263,6 +3271,7 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 
       if (parse->priv->drain) {
         GST_DEBUG_OBJECT (parse, "Draining but did not detect format yet");
+        gst_buffer_unref (buffer);
         return GST_FLOW_ERROR;
       } else if (parse->priv->flushing) {
         g_list_foreach (parse->priv->detect_buffers, (GFunc) gst_buffer_unref,
@@ -3278,6 +3287,12 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
       }
     } else {
       /* Something went wrong, subclass responsible for error reporting */
+      gst_buffer_unref (buffer);
+      g_list_foreach (parse->priv->detect_buffers, (GFunc) gst_buffer_unref,
+          NULL);
+      g_list_free (parse->priv->detect_buffers);
+      parse->priv->detect_buffers = NULL;
+      parse->priv->detect_buffers_size = 0;
       return ret;
     }
 
@@ -3376,10 +3391,21 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
     /* already inform subclass what timestamps we have planned,
      * at least if provided by time-based upstream */
     if (parse->priv->upstream_format == GST_FORMAT_TIME) {
-      tmpbuf = gst_buffer_make_writable (tmpbuf);
-      GST_BUFFER_PTS (tmpbuf) = parse->priv->next_pts;
-      GST_BUFFER_DTS (tmpbuf) = parse->priv->next_dts;
-      GST_BUFFER_DURATION (tmpbuf) = GST_CLOCK_TIME_NONE;
+      gboolean timestamp_updated = FALSE;
+      if (GST_BUFFER_PTS (tmpbuf) != parse->priv->next_pts ||
+          GST_BUFFER_DTS (tmpbuf) != parse->priv->next_dts) {
+        timestamp_updated = TRUE;
+      }
+
+      /* Preserve upstream buffer duration if timestamp is the same as expected
+       * ones already and subclass disabled pts interpolation/inferring */
+      if (timestamp_updated || parse->priv->infer_ts ||
+          parse->priv->pts_interpolate) {
+        tmpbuf = gst_buffer_make_writable (tmpbuf);
+        GST_BUFFER_PTS (tmpbuf) = parse->priv->next_pts;
+        GST_BUFFER_DTS (tmpbuf) = parse->priv->next_dts;
+        GST_BUFFER_DURATION (tmpbuf) = GST_CLOCK_TIME_NONE;
+      }
     }
 
     /* keep the adapter mapped, so keep track of what has to be flushed */

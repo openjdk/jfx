@@ -5172,6 +5172,8 @@ get_range_failed:
     GST_CAT_LEVEL_LOG (GST_CAT_SCHEDULING,
         (ret >= GST_FLOW_EOS) ? GST_LEVEL_INFO : GST_LEVEL_WARNING,
         pad, "getrange failed, flow: %s", gst_flow_get_name (ret));
+    if (*buffer == NULL)
+      gst_clear_buffer (&res_buf);
     return ret;
   }
 }
