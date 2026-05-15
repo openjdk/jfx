@@ -186,7 +186,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (dispatcher == null) return false;
 
         EventDispatchChain chain = new EventDispatchChainImpl();
-        chain.append(textField.getEventDispatcher());
+        chain.append(dispatcher);
         return chain.dispatchEvent(event.copyFor(textField, textField)) == null;
     }
 

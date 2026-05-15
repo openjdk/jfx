@@ -252,7 +252,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         if (dispatcher == null) return false;
 
         EventDispatchChain chain = new EventDispatchChainImpl();
-        chain.append(textField.getEventDispatcher());
+        chain.append(dispatcher);
         return chain.dispatchEvent(event.copyFor(textField, textField)) == null;
     }
 

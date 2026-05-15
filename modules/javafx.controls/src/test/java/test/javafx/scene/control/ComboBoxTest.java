@@ -2545,7 +2545,8 @@ public class ComboBoxTest {
     }
 
     // Ensure initial shortcut event is not consumed
-    @Test public void testShortcutNotConsumed() {
+    @Test
+    public void testShortcutNotConsumed() {
         assumeTrue(Utils.isMac());
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
