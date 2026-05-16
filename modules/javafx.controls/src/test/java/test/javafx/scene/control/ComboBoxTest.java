@@ -389,6 +389,58 @@ public class ComboBoxTest {
     }
 
     @Test
+    public void testButtonCellUpdateOnStringConverterChangeWithContainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getDisplayNode();
+        assertNull(cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", cell.getText());
+    }
+
+    @Test
+    public void testButtonCellUpdateOnStringConverterChangeWithUncontainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
+                .getDisplayNode();
+        assertNull(cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", cell.getText());
+    }
+
+    @Test
     public void testListUpdateOnStringConverterChange() {
         sl = new StageLoader(comboBox);
         ListView<String> list = getListView();
