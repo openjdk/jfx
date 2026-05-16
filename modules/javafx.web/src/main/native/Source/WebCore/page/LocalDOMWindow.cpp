@@ -1509,9 +1509,12 @@ void LocalDOMWindow::setStatus(const String& string)
     Page* page = frame->page();
     if (!page)
         return;
-    ASSERT(frame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
-    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get()))
+
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get())) {
+        // check LocalFrame first, then access document-related state
+        ASSERT(localFrame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
         page->chrome().setStatusbarText(*localFrame, m_status);
+    }
 #endif
 }
 #if PLATFORM(JAVA)
@@ -1527,9 +1530,11 @@ void LocalDOMWindow::setDefaultStatus(const String& string)
     if (!page)
         return;
 
-    ASSERT(frame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
-        if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get()))
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get())) {
+        // check LocalFrame first, then access document-related state
+        ASSERT(localFrame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
         page->chrome().setStatusbarText(*localFrame, m_defaultStatus);
+    }
 }
 #endif
 void LocalDOMWindow::disownOpener()

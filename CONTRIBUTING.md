@@ -236,7 +236,7 @@ New code should be formatted consistently in accordance with the above guideline
 
 ### Building and testing
 
-JDK 24 (at a minimum) is required to build OpenJFX. You must have the JDK
+JDK 25 (at a minimum) is required to build OpenJFX. You must have the JDK
 installed on your system
 with the environment variable `JAVA_HOME` referencing the path to Java home for
 your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.

@@ -43,6 +43,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerOrWorkletGlobalScope);
 
 WorkerOrWorkletGlobalScope::WorkerOrWorkletGlobalScope(WorkerThreadType type, PAL::SessionID sessionID, Ref<JSC::VM>&& vm, ReferrerPolicy referrerPolicy, WorkerOrWorkletThread* thread, std::optional<uint64_t> noiseInjectionHashSalt, OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
     : ScriptExecutionContext(Type::WorkerOrWorkletGlobalScope, contextIdentifier)
+    , m_contextThreadUID(Thread::currentSingleton().uid())
     , m_script(makeUnique<WorkerOrWorkletScriptController>(type, WTFMove(vm), this))
     , m_moduleLoader(makeUniqueRef<ScriptModuleLoader>(this, ScriptModuleLoader::OwnerType::WorkerOrWorklet))
     , m_thread(thread)
@@ -127,8 +128,7 @@ EventLoopTaskGroup& WorkerOrWorkletGlobalScope::eventLoop()
 
 bool WorkerOrWorkletGlobalScope::isContextThread() const
 {
-    RefPtr thread = workerOrWorkletThread();
-    return thread && thread->thread() ? thread->thread() == &Thread::currentSingleton() : isMainThread();
+    return m_contextThreadUID == Thread::currentSingleton().uid();
 }
 
 void WorkerOrWorkletGlobalScope::postTask(Task&& task)

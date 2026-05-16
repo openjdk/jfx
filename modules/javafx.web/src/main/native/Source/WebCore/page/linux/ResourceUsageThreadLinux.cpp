@@ -60,7 +60,9 @@ static float cpuPeriod()
     static const unsigned statMaxLineLength = 512;
     std::array<char, statMaxLineLength + 1> buffer;
     std::span bufferSpan { buffer };
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     char* line = fgets(bufferSpan.data(), statMaxLineLength, file);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (!line) {
         fclose(file);

@@ -1568,6 +1568,12 @@ final class MacAccessible extends Accessible {
                     result = getAttribute(SELECTION_END);
                     if (result == null) return null;
                     end = (Integer)result;
+                } else {
+                    Integer caret = (Integer)getAttribute(CARET_OFFSET);
+                    if (caret != null && caret >= 0) {
+                        start = caret;
+                        end = caret;
+                    }
                 }
                 if (start < 0 || end < 0 || start > end) return null;
                 String string = (String)getAttribute(TEXT);

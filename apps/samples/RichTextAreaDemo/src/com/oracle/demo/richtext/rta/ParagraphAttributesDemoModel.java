@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -56,6 +56,10 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
     private final static StyleAttributeMap FIRST_LINE_INDENT = StyleAttributeMap.builder().
         setFirstLineIndent(100).
         build();
+    private final static StyleAttributeMap HL = StyleAttributeMap.builder().
+        setUnderline(true).
+        setStrikeThrough(true).
+        build();
 
     public ParagraphAttributesDemoModel() {
         registerDataFormatHandler(RtfFormatHandler.getInstance(), true, false, 1000);
@@ -108,7 +112,8 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
 
         // space
 
-        m.addSegment("✓ Space Above");
+        m.addSegment("✓ Space ");
+        m.addSegment("Above", HL);
         m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
@@ -116,7 +121,8 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
             build());
         m.nl();
 
-        m.addSegment("✓ Space Below");
+        m.addSegment("✓ Space ");
+        m.addSegment("Below", HL);
         m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceBelow(20).
             setBackground(Color.gray(0.9, 0.5)).
@@ -124,7 +130,9 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
             build());
         m.nl();
 
-        m.addSegment("✓ Space Left " + words(50));
+        m.addSegment("✓ Space ");
+        m.addSegment("Left", HL);
+        m.addSegment(" " + words(50));
         m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceLeft(20).
             setBackground(Color.gray(0.85, 0.5)).
@@ -132,7 +140,9 @@ public class ParagraphAttributesDemoModel extends SimpleViewOnlyStyledModel {
             build());
         m.nl();
 
-        m.addSegment("✓ Space Right " + words(10));
+        m.addSegment("✓ Space ");
+        m.addSegment("Right", HL);
+        m.addSegment(" " + words(10));
         m.setParagraphAttributes(StyleAttributeMap.builder().
             setSpaceRight(20).
             setBackground(Color.gray(0.8, 0.5)).

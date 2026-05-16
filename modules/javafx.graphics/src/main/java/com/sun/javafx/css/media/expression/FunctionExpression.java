@@ -29,8 +29,10 @@ import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
+import com.sun.javafx.css.media.TriState;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Evaluates to {@code true} if the return value of the specified function is equal to {@code value}.
@@ -39,17 +41,20 @@ public final class FunctionExpression<T> implements MediaQuery {
 
     private final String featureName;
     private final String featureValue;
+    private final Supplier<TriState> contextFreeFunction;
     private final Function<MediaQueryContext, T> function;
     private final int contextAwareness;
     private final T value;
 
     private FunctionExpression(String featureName,
                                String featureValue,
+                               Supplier<TriState> contextFreeFunction,
                                Function<MediaQueryContext, T> function,
                                T value,
                                ContextAwareness... contextAwareness) {
         this.featureName = Objects.requireNonNull(featureName, "featureName cannot be null");
         this.featureValue = featureValue;
+        this.contextFreeFunction = Objects.requireNonNull(contextFreeFunction, "contextFreeFunction cannot be null");
         this.function = Objects.requireNonNull(function, "function cannot be null");
         this.contextAwareness = ContextAwareness.combine(contextAwareness);
         this.value = value;
@@ -69,8 +74,28 @@ public final class FunctionExpression<T> implements MediaQuery {
                                                Function<MediaQueryContext, T> function,
                                                T value,
                                                ContextAwareness... contextAwareness) {
-        return MediaQueryCache.getCachedMediaQuery(
-            new FunctionExpression<>(featureName, featureValue, function, value, contextAwareness));
+        return MediaQueryCache.getCachedMediaQuery(new FunctionExpression<>(
+            featureName, featureValue, () -> TriState.UNKNOWN, function, value, contextAwareness));
+    }
+
+    /**
+     * Returns an interned {@code FunctionExpression}.
+     *
+     * @param featureName the feature name
+     * @param featureValue the feature value, or {@code null} to indicate a boolean context
+     * @param contextFreeFunction the context-free evaluation function, must never return {@code null}
+     * @param function the evaluation function
+     * @param value the expected return value of the function
+     * @param contextAwareness the context awareness of the function, see {@link MediaQuery#getContextAwareness()}
+     */
+    public static <T> FunctionExpression<T> of(String featureName,
+                                               String featureValue,
+                                               Supplier<TriState> contextFreeFunction,
+                                               Function<MediaQueryContext, T> function,
+                                               T value,
+                                               ContextAwareness... contextAwareness) {
+        return MediaQueryCache.getCachedMediaQuery(new FunctionExpression<>(
+            featureName, featureValue, contextFreeFunction, function, value, contextAwareness));
     }
 
     public String getFeatureName() {
@@ -84,6 +109,11 @@ public final class FunctionExpression<T> implements MediaQuery {
     @Override
     public int getContextAwareness() {
         return contextAwareness;
+    }
+
+    @Override
+    public TriState evaluate() {
+        return contextFreeFunction.get();
     }
 
     @Override

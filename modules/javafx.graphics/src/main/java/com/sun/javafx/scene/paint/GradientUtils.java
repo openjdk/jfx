@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.paint;
 
+import com.sun.javafx.css.parser.CssNumberParser;
 import java.util.LinkedList;
 import java.util.List;
 import javafx.scene.paint.Color;
@@ -142,19 +143,15 @@ public class GradientUtils {
         public static double parseAngle(String value) {
             double angle = 0;
             if (value.endsWith("deg")) {
-                value = value.substring(0, value.length() - 3);
-                angle = Double.parseDouble(value);
+                angle = CssNumberParser.parseDouble(value, 0, value.length() - 3);
             } else if (value.endsWith("grad")) {
-                value = value.substring(0, value.length() - 4);
-                angle = Double.parseDouble(value);
+                angle = CssNumberParser.parseDouble(value, 0, value.length() - 4);
                 angle = angle * 9 / 10;
             } else if (value.endsWith("rad")) {
-                value = value.substring(0, value.length() - 3);
-                angle = Double.parseDouble(value);
+                angle = CssNumberParser.parseDouble(value, 0, value.length() - 3);
                 angle = angle * 180 / Math.PI;
             } else if (value.endsWith("turn")) {
-                value = value.substring(0, value.length() - 4);
-                angle = Double.parseDouble(value);
+                angle = CssNumberParser.parseDouble(value, 0, value.length() - 4);
                 angle = angle * 360;
             } else {
                 throw new IllegalArgumentException("Invalid gradient specification:"
@@ -167,8 +164,7 @@ public class GradientUtils {
         public static double parsePercentage(String value) {
             double percentage;
             if (value.endsWith("%")) {
-                value = value.substring(0, value.length() - 1);
-                percentage = Double.parseDouble(value) / 100;
+                percentage = CssNumberParser.parseDouble(value, 0, value.length() - 1) / 100;
             } else {
                 throw new IllegalArgumentException("Invalid gradient specification: "
                         + "focus-distance must be specified as percentage");
@@ -180,11 +176,13 @@ public class GradientUtils {
             Point p = new Point();
             if (value.endsWith("%")) {
                 p.proportional = true;
-                value = value.substring(0, value.length() - 1);
+                p.value = CssNumberParser.parseDouble(value, 0, value.length() - 1);
             } else if (value.endsWith("px")) {
-                value = value.substring(0, value.length() - 2);
+                p.value = CssNumberParser.parseDouble(value, 0, value.length() - 2);
+            } else {
+                p.value = CssNumberParser.parseDouble(value);
             }
-            p.value = Double.parseDouble(value);
+
             if (p.proportional) {
                 p.value /= 100;
             }
@@ -225,13 +223,9 @@ public class GradientUtils {
                     // parsing offset
                     String o = stopTokens[1];
                     if (o.endsWith("%")) {
-                        o = o.substring(0, o.length() - 1);
-                        offset = Double.parseDouble(o) / 100;
+                        offset = CssNumberParser.parseDouble(o, 0, o.length() - 1) / 100;
                     } else if (!proportional) {
-                        if (o.endsWith("px")) {
-                            o = o.substring(0, o.length() - 2);
-                        }
-                        offset = Double.parseDouble(o) / length;
+                        offset = CssNumberParser.parseDouble(o, 0, o.length() - (o.endsWith("px") ? 2 : 0)) / length;
                     } else {
                         throw new IllegalArgumentException("Invalid gradient specification, "
                                 + "non-proportional stops not permited in proportional gradient: " + o);

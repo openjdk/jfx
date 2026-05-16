@@ -83,11 +83,11 @@ public final class MediaQueryParser {
      * }</pre>
      *
      * @param tokens the token stream
-     * @return the expression
+     * @return the media query list
      */
-    public List<MediaQuery> parseMediaQueryList(List<Token> tokens) {
+    public MediaQueryList parseMediaQueryList(List<Token> tokens) {
         var stream = new TokenStream(tokens);
-        var expressions = new ArrayList<MediaQuery>();
+        var expressions = new MediaQueryList();
         boolean lastWasComma = false;
 
         while (stream.consume() != null) {
