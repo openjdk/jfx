@@ -362,9 +362,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
             // JDK-8127575 Show the ComboBox value even though it doesn't
             // exist in the ComboBox items list (part two of fix)
-            if (index > -1) {
-                buttonCell.setItem(null);
-            }
             buttonCell.updateIndex(index);
             boolean empty = updateDisplayText(buttonCell, value, false);
 
