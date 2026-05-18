@@ -134,7 +134,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     static int CLOSE_BTN_SIZE = 16;
 
-
+    /**
+     * This factory provides graphic for the overflow menu items by copying the graphic found
+     * in either {@link ImageView} or a {@link Label}, the latter only if it contains an {@link ImageView}
+     * graphic itself.
+     * @since 27
+     */
+    public static final Callback<Tab, Node> DEFAULT_MENU_GRAPHIC_FACTORY = createDefaultMenuGraphicFactory();
 
     /* *************************************************************************
      *                                                                         *
@@ -163,7 +169,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /**
      * Creates a new TabPaneSkin instance, installing the necessary child
-     * nodes into the Control {@link javafx.scene.control.Control#getChildren() children} list, as
+     * nodes into the Control {@link javafx.scene.Parent#getChildren() children} list, as
      * well as the necessary input mappings for handling key, mouse, etc events.
      *
      * @param control The TabPane that this skin should be installed onto.
@@ -261,19 +267,21 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      * This property allows to control the graphic for the overflow menu items,
      * by generating graphic {@code Node}s when the menu is shown.
      * <p>
-     * When this property is {@code null}, the menu provides only the basic graphic copied from the corresponding
-     * {@link Tab} - either an {@link ImageView} or a {@link Label} with an {@link ImageView} as its graphic.
-     * <p>
      * Changing this property while the menu is shown has no effect.
+     * <p>
+     * This property cannot be {@code null}.
      *
      * @since 27
-     * @defaultValue null
+     * @defaultValue DEFAULT_MENU_GRAPHIC_FACTORY
      */
     private ObjectProperty<Callback<Tab, Node>> menuGraphicFactory;
 
     public final ObjectProperty<Callback<Tab, Node>> menuGraphicFactoryProperty() {
         if (menuGraphicFactory == null) {
-            menuGraphicFactory = new SimpleObjectProperty<>() {
+            menuGraphicFactory = new SimpleObjectProperty<>(DEFAULT_MENU_GRAPHIC_FACTORY) {
+
+                private Callback<Tab, Node> lastValue = DEFAULT_MENU_GRAPHIC_FACTORY;
+
                 @Override
                 public Object getBean() {
                     return TabPaneSkin.this;
@@ -283,13 +291,25 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 public String getName() {
                     return "menuGraphicFactory";
                 }
+
+                @Override
+                protected void invalidated() {
+                    var v = get();
+                    if (v == null) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(lastValue);
+                        throw new NullPointerException("cannot set factory to null");
+                    }
+                }
             };
         }
         return menuGraphicFactory;
     }
 
     public final Callback<Tab, Node> getMenuGraphicFactory() {
-        return menuGraphicFactory == null ? null : menuGraphicFactory.get();
+        return menuGraphicFactory == null ? DEFAULT_MENU_GRAPHIC_FACTORY : menuGraphicFactory.get();
     }
 
     public final void setMenuGraphicFactory(Callback<Tab, Node> f) {
@@ -527,18 +547,20 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private Node createGraphic(Tab t) {
         Callback<Tab, Node> f = getMenuGraphicFactory();
-        if (f != null) {
-            return f.call(t);
-        }
-
-        Node n = t.getGraphic();
-        return copyGraphic(n);
+        return f.call(t);
     }
 
-    private Node copyGraphic(Node n) {
-        if (n instanceof ImageView v) {
+    private static Callback<Tab, Node> createDefaultMenuGraphicFactory() {
+        return (t) -> {
+            Node n = t.getGraphic();
+            return copyGraphic(n);
+        };
+    }
+
+    private static Node copyGraphic(Node n) {
+        if (n instanceof ImageView iv) {
             ImageView imageview = new ImageView();
-            imageview.imageProperty().bind(v.imageProperty());
+            imageview.imageProperty().bind(iv.imageProperty());
             return imageview;
         } else if (n instanceof Label l) {
             Label label = new Label(l.getText(), copyGraphic(l.getGraphic()));

@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
@@ -1384,5 +1385,13 @@ public class TabPaneTest {
 
         assertTrue(mi.isDisable());
         assertEquals("yo", mi.getText());
+    }
+
+    @Test
+    public void menuGraphicFactoryNull() {
+        assertThrows(NullPointerException.class, () -> {
+            TabPaneSkin skin = new TabPaneSkin(tabPane);
+            skin.setMenuGraphicFactory(null);
+        });
     }
 }
