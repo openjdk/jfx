@@ -138,6 +138,9 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstclock.c">
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstcpuid.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstdatetime.c">
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
@@ -190,6 +193,9 @@
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmessage.c">
+      <Filter>gstreamer\gst</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstmetafactory.c">
       <Filter>gstreamer\gst</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstminiobject.c">
@@ -325,6 +331,9 @@
       <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstappsrc.c">
       <Filter>gst-plugins-base\gst-libs\gst\app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\app\gstapputils.c">
