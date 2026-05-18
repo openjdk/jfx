@@ -28,7 +28,6 @@ package javafx.scene.control.skin;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
-import javafx.event.EventDispatchChain;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
@@ -48,7 +47,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
-import com.sun.javafx.event.EventDispatchChainImpl;
+import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -182,12 +181,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
     // Returns 'true' if the event was consumed.
     private boolean forwardToTextField(KeyEvent event) {
-        var dispatcher = textField.getEventDispatcher();
-        if (dispatcher == null) return false;
-
-        EventDispatchChain chain = new EventDispatchChainImpl();
-        chain.append(dispatcher);
-        return chain.dispatchEvent(event.copyFor(textField, textField)) == null;
+        return EventUtil.dispatch(event.copyFor(textField, textField),
+            textField.getEventDispatcher()) == null;
     }
 
     @Override
