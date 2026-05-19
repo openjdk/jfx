@@ -46,6 +46,7 @@ import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -195,7 +196,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 // Fix for the regression noted in a comment in JDK-8115009.
                 // This forwards the event down into the TextField when
                 // the key event is actually received by the Spinner.
-                if (forwardToTextField(ke) && ke.getCode() != KeyCode.ENTER) {
+                if (Utils.dispatchToNode(ke, textField) && ke.getCode() != KeyCode.ENTER) {
                     ke.consume();
                 }
             }
@@ -243,12 +244,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             // Stop spinning when sceneProperty is modified
             behavior.stopSpinning();
         });
-    }
-
-    // Returns 'true' if the event was consumed.
-    private boolean forwardToTextField(KeyEvent event) {
-        return EventUtil.dispatch(event.copyFor(textField, textField),
-            textField.getEventDispatcher()) == null;
     }
 
     private boolean isIncDecKeyEvent(KeyEvent ke) {

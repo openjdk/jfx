@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
 import javafx.event.EventTarget;
 
 public final class EventUtil {
@@ -73,14 +72,5 @@ public final class EventUtil {
         final EventDispatchChain targetDispatchChain =
                 eventTarget.buildEventDispatchChain(eventDispatchChain);
         return targetDispatchChain.dispatchEvent(event);
-    }
-
-    public static Event dispatch(Event event, EventDispatcher dispatcher) {
-        if (dispatcher == null || event == null) {
-            return null;
-        }
-        var chain = new EventDispatchChainImpl();
-        chain.append(dispatcher);
-        return chain.dispatchEvent(event);
     }
 }
