@@ -993,8 +993,8 @@ public class Utils {
         return Utils.class.getResource(str);
     }
 
-    // Dispatches the event to the Node's dispatcher and returns
-    // true if the event was consumed.
+    // Dispatches the event only to the Node's dispatcher, not its entire
+    // dispatch chain. Returns true if the event was consumed.
     public static boolean dispatchToNode(Event event, Node node) {
         var dispatcher = node.getEventDispatcher();
         if (dispatcher == null) return false;
