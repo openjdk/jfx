@@ -207,7 +207,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
 
     private void ensureSize(int size) {
-        if (filtered.length < size) {
+        if (filtered.length <= size) {
             int[] replacement = new int[size * 3/2 + 1];
             System.arraycopy(filtered, 0, replacement, 0, this.size);
             filtered = replacement;

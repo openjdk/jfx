@@ -26,14 +26,10 @@
 package test.javafx.collections;
 
 import com.sun.javafx.collections.ObservableListWrapper;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Predicate;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ModifiableObservableListBase;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
 import javafx.collections.transformation.FilteredList;
@@ -41,7 +37,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FilteredListTest {
 
@@ -60,7 +66,7 @@ public class FilteredListTest {
 
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
-                throw (RuntimeException)throwable;
+                throw (RuntimeException) throwable;
             } else {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
@@ -254,26 +260,8 @@ public class FilteredListTest {
         lo.checkAddRemove(0, filtered, Person.createPersonsList("A", "A"), 0, 0);
         lo.checkAddRemove(1, filtered, Person.createPersonsList("A", "A"), 1, 1);
         lo.checkAddRemove(2, filtered, Person.createPersonsList("A"), 2, 2);
-        assertEquals(Person.createPersonsList( "BB", "BC"), filtered);
+        assertEquals(Person.createPersonsList("BB", "BC"), filtered);
         compareIndices(filtered);
-    }
-
-    private static class Updater<E> extends ObservableListWrapper<E> {
-        public Updater(List<E> list) {
-            super(list);
-        }
-
-        public void update(int from, int to) {
-            ObservableListWrapperShim.beginChange(this);
-            for (int i = from; i < to; ++i) {
-               ObservableListWrapperShim.nextUpdate(this, i);
-            }
-            ObservableListWrapperShim.endChange(this);
-        }
-
-        public void updateAll() {
-            update(0, size());
-        }
     }
 
     @Test
@@ -351,5 +339,109 @@ public class FilteredListTest {
 
         assertEquals(List.of(0L), filteredList);
         assertEquals(List.of(0L), sortedList);
+    }
+
+    @Test
+    public void testMultipleRemoveAndAdd1() {
+
+        for (int j = 3; j < 20; j++) {
+            System.err.println("trying to move index 2 after 0 in a list of " + j + " elements");
+            MyList<String> observableList = new MyList<>();
+            FilteredList<String> filteredList = new FilteredList<>(observableList);
+
+            for (int i = 0; i < j; i++) {
+                final String a = "a" + i;
+                observableList.add(a);
+            }
+
+            System.out.println("elements = " + filteredList.stream().collect(Collectors.joining(",")));
+            observableList.removeAndAdd(observableList.get(2), observableList.get(0));
+            System.out.println("elements = " + filteredList.stream().collect(Collectors.joining(",")));
+
+        }
+    }
+
+    @Test
+    public void testMultipleRemoveAndAdd2() {
+        for (int j = 100; j > 0; j--) {
+            MyList<String> observableList = new MyList<>();
+            System.err.println("observable list with " + j + " elements");
+            for (int i = 0; i < j; i++) {
+                final String a = "a" + i;
+                observableList.add(a);
+            }
+
+            FilteredList<String> filteredList = new FilteredList<>(observableList);
+            final String b = "b";
+            observableList.add(b);
+// System.out.println("elements = " + filteredList.stream().collect(Collectors.joining(",")));
+            observableList.removeAndAdd(b, null);
+// System.out.println("elements = " + filteredList.stream().collect(Collectors.joining(",")));
+        }
+
+    }
+
+    private static class Updater<E> extends ObservableListWrapper<E> {
+        public Updater(List<E> list) {
+            super(list);
+        }
+
+        public void update(int from, int to) {
+            ObservableListWrapperShim.beginChange(this);
+            for (int i = from; i < to; ++i) {
+                ObservableListWrapperShim.nextUpdate(this, i);
+            }
+            ObservableListWrapperShim.endChange(this);
+        }
+
+        public void updateAll() {
+            update(0, size());
+        }
+    }
+
+    public static class MyList<Model> extends ModifiableObservableListBase<Model> {
+
+        private final List<Model> children = new ArrayList<>();
+
+        @Override
+        public Model get(int index) {
+            return children.get(index);
+        }
+
+        @Override
+        public int size() {
+            return children.size();
+        }
+
+        @Override
+        protected void doAdd(int index, Model element) {
+
+            children.add(index, element);
+        }
+
+        @Override
+        protected Model doSet(int index, Model element) {
+            if (children.get(index) == element) {
+                return element;
+            } else {
+                Model old = children.set(index, element);
+                return old;
+            }
+        }
+
+        @Override
+        protected Model doRemove(int index) {
+            Model child = children.remove(index);
+            return child;
+        }
+
+        public void removeAndAdd(Model o, Model after) {
+            beginChange();
+            remove(o);
+            int index = after == null ? 0 : indexOf(after) + 1;
+            add(index, o);
+            endChange();
+        }
+
     }
 }
