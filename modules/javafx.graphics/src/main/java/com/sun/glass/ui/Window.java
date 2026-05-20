@@ -179,9 +179,9 @@ public abstract class Window {
     @Native public static final int DARK_FRAME = 1 << 11;
 
     /**
-     * The backdrop styles
+     * Indicates the window has no backdrop
      */
-    public static final int DEFAULT_BACKDROP_ID = -1;
+    public static final int NO_BACKDROP_ID = -1;
 
     final static public class State {
         @Native public static final int NORMAL = 1;
@@ -288,7 +288,7 @@ public abstract class Window {
         }
 
         if (!Application.GetApplication().supportsWindowBackdrops()) {
-            backdropID = DEFAULT_BACKDROP_ID;
+            backdropID = NO_BACKDROP_ID;
         }
 
         this.owner = owner;
@@ -314,7 +314,7 @@ public abstract class Window {
     }
 
     protected Window(Window owner, Screen screen, int styleMask) {
-        this(owner, screen, styleMask, DEFAULT_BACKDROP_ID);
+        this(owner, screen, styleMask, NO_BACKDROP_ID);
     }
 
     /**

@@ -44,6 +44,8 @@ import javafx.stage.StageStyle;
 import javafx.stage.StageBackdrop;
 import javafx.stage.Window;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -79,9 +81,9 @@ public class BackdropTest extends Application {
     }
 
     private class StageBackdropChoice {
-        StageBackdropChoice(String label, StageBackdrop backdrop) {
-            this.label = label;
+        StageBackdropChoice(StageBackdrop backdrop) {
             this.backdrop = backdrop;
+            this.label = (backdrop == null ? "None" : backdrop.getName());
         }
 
         private String label;
@@ -99,11 +101,14 @@ public class BackdropTest extends Application {
     private List<StageBackdropChoice> backdrops = new ArrayList<>();
 
     void initBackdropList() {
-        backdrops.add(new StageBackdropChoice("Default", null));
-        var materials = StageBackdrop.getMaterials();
-        materials.sort(null);
-        materials.forEach(m -> {
-            backdrops.add(new StageBackdropChoice(m, StageBackdrop.backdrop(m)));
+        backdrops.add(new StageBackdropChoice(null));
+        backdrops.add(new StageBackdropChoice(StageBackdrop.WINDOW));
+        backdrops.add(new StageBackdropChoice(StageBackdrop.PARTIAL));
+        var names = new ArrayList<>(StageBackdrop.getPlatformBackdropNames());
+        names.sort(null);
+        names.forEach(m -> {
+            var backdrop = StageBackdrop.backdrop(m);
+            backdrops.add(new StageBackdropChoice(backdrop));
         });
     }
 
@@ -319,6 +324,10 @@ public class BackdropTest extends Application {
             schemeChoice.setValue(ColorSchemeChoice.DARK);
         }
         opacityChoice.setValue(OpacityChoice.P100);
+        var ob = backdrops.stream()
+            .filter(obj -> obj.getBackdrop() == StageBackdrop.WINDOW)
+            .findFirst();
+        ob.ifPresent(pb -> backdropChoice.setValue(pb));
 
         updateTextColor(stage, textColor);
     }
@@ -327,7 +336,7 @@ public class BackdropTest extends Application {
     {
         stage.setTitle(style.toString());
         stage.initStyle(style.getStageStyle());
-        stage.initBackdrop(backdrop.getBackdrop());
+        stage.initBackdrop(backdrop == null ? null : backdrop.getBackdrop());
         buildScene(stage, style, backdrop);
         stage.show();
     }
@@ -341,6 +350,9 @@ public class BackdropTest extends Application {
     @Override
     public void start(Stage stage) {
         initBackdropList();
-        showStage(stage, StageStyleChoice.EXTENDED, backdrops.get(0));
+        var ob = backdrops.stream()
+            .filter(obj -> obj.getBackdrop() == StageBackdrop.WINDOW)
+            .findFirst();
+        showStage(stage, StageStyleChoice.EXTENDED, ob.orElse(null));
     }
 }

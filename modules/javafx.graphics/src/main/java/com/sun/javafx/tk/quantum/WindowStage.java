@@ -186,9 +186,9 @@ public class WindowStage extends GlassStage {
                 windowMask |= Window.DARK_FRAME;
             }
 
-            int backdropID = Window.DEFAULT_BACKDROP_ID;
+            int backdropID = Window.NO_BACKDROP_ID;
             if (backdrop != null) {
-                backdropID = app.getBackdropIdentifier(backdrop.getMaterial());
+                backdropID = app.getBackdropIdentifier(backdrop);
             }
 
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask, backdropID);

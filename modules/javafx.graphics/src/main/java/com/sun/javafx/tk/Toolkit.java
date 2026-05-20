@@ -911,7 +911,11 @@ public abstract class Toolkit {
 
     public abstract GlassRobot createRobot();
 
-    public List<String> getBackdropMaterials() {
+    public List<String> getPlatformBackdropNames() {
         return List.of();
+    }
+
+    public StageBackdrop createPlatformBackdrop(String name) {
+        return null;
     }
 }

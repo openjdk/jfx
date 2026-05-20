@@ -31,12 +31,18 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.stage.PlatformStageBackdrop;
+
 import javafx.geometry.Dimension2D;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.paint.Color;
+import javafx.stage.StageBackdrop;
 import java.nio.ByteBuffer;
 import java.lang.annotation.Native;
 import java.util.List;
+import java.util.Collections;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -230,22 +236,18 @@ final class MacWindow extends Window {
         @Native public static final int WINDOW     = 42;
         @Native public static final int SIDEBAR    = 43;
         @Native public static final int MENU       = 44;
-        @Native public static final int GLASS      = 100;
-        @Native public static final int CLEARGLASS = 101;
+        @Native public static final int CLEARGLASS = 100;
     }
 
-    private static Map<String, Integer> backdropMaterials = null;
+    private static Map<String, Integer> backdrops = null;
 
-    private static void initMaterials() {
-        if (backdropMaterials == null) {
-            backdropMaterials = new HashMap<>();
+    private static void initBackdrops() {
+        if (backdrops == null) {
+            backdrops = new HashMap<>();
 
-            backdropMaterials.put("Window", BackdropID.WINDOW);
-            backdropMaterials.put("Partial", BackdropID.SIDEBAR);
-
-            backdropMaterials.put("macOS.Window", BackdropID.WINDOW);
-            backdropMaterials.put("macOS.Sidebar", BackdropID.SIDEBAR);
-            backdropMaterials.put("macOS.Menu", BackdropID.MENU);
+            backdrops.put("macOS.Window", BackdropID.WINDOW);
+            backdrops.put("macOS.Sidebar", BackdropID.SIDEBAR);
+            backdrops.put("macOS.Menu", BackdropID.MENU);
 
             // Support for NSGlassEffectView must wait for the macOS 26 SDK
             // try {
@@ -253,24 +255,43 @@ final class MacWindow extends Window {
             //     String major = osVers.replaceFirst("(\\d+)\\.\\d+.*", "$1");
             //     int v = Integer.parseInt(major);
             //     if (v >= 26) {
-            //         backdropMaterials.put("macOS.Glass", BackdropID.GLASS);
-            //         backdropMaterials.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
+            //         backdrops.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
             //     }
             // } catch (Exception e) {
             // }
         }
     }
 
-    public static List<String> getBackdropMaterials() {
-        initMaterials();
-        return new ArrayList<>(backdropMaterials.keySet());
+    public static List<String> getPlatformBackdropNames() {
+        initBackdrops();
+        return Collections.unmodifiableList(new ArrayList<>(backdrops.keySet()));
     }
 
-    public static int getBackdropIdentifier(String material) {
-        initMaterials();
-        var id = backdropMaterials.get(material);
+    public static PlatformStageBackdrop createPlatformBackdrop(String name) {
+        initBackdrops();
+        var id = backdrops.get(name);
         if (id == null) {
-            return Window.DEFAULT_BACKDROP_ID;
+            return null;
+        }
+        var backdrop = new PlatformStageBackdrop(name);
+        if (name == "macOS.ClearGlass") {
+            backdrop.setAvailableOptions(Map.of("TintColor", Color.class, "CornerRadius", Number.class));
+        }
+
+        return backdrop;
+    }
+
+    public static int getBackdropIdentifier(StageBackdrop backdrop) {
+        if (backdrop == StageBackdrop.WINDOW) {
+            return BackdropID.WINDOW;
+        } else if (backdrop == StageBackdrop.PARTIAL) {
+            return BackdropID.SIDEBAR;
+        }
+
+        initBackdrops();
+        var id = backdrops.get(backdrop.getName());
+        if (id == null) {
+            return Window.NO_BACKDROP_ID;
         }
         return id;
     }

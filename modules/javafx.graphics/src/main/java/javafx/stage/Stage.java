@@ -601,6 +601,22 @@ public class Stage extends Window {
     }
 
     /**
+     * Set an option for a backdrop.
+     *
+     * @param name The name of the option
+     * @param option The new value of the option
+     */
+    public final void setBackdropOption(String name, Object option) {
+        if (backdrop != null) {
+            var avail = backdrop.getAvailableOptions();
+            var optionClass = avail.get(name);
+            if (optionClass != null &&
+                optionClass.isInstance(option)) {
+            }
+        }
+    }
+
+    /**
      * Specifies whether this {@code Stage} should be a full-screen,
      * undecorated window.
      * <p>

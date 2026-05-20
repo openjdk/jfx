@@ -609,9 +609,8 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             case com_sun_glass_ui_mac_MacWindow_BackdropID_MENU:
                 [window->hostView setBackdrop: NSVisualEffectMaterialMenu];
                 break;
-            case com_sun_glass_ui_mac_MacWindow_BackdropID_GLASS:
             case com_sun_glass_ui_mac_MacWindow_BackdropID_CLEARGLASS:
-                [window->hostView setGlassBackdrop: (backdropID == com_sun_glass_ui_mac_MacWindow_BackdropID_CLEARGLASS)];
+                [window->hostView setGlassBackdrop: YES];
                 [window->nsWindow setBackgroundColor:[NSColor clearColor]];
                 [window->nsWindow setHasShadow:NO];
                 [window->nsWindow setOpaque: NO];

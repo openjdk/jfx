@@ -29,8 +29,10 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
+import com.sun.javafx.stage.PlatformStageBackdrop;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
+import javafx.stage.StageBackdrop;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -549,20 +551,18 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         _openURI(uri);
     }
 
-    /**
-     * Return the list of backdrop materials supported on this platform.
-     * The default is an empty list.
-     */
     @Override
-    public List<String> getBackdropMaterials() {
-        return MacWindow.getBackdropMaterials();
+    public List<String> getPlatformBackdropNames() {
+        return MacWindow.getPlatformBackdropNames();
     }
 
-    /**
-     * Return the platform identifier for the StageBackdrop
-     */
     @Override
-    public int getBackdropIdentifier(String material) {
-        return MacWindow.getBackdropIdentifier(material);
+    public PlatformStageBackdrop createPlatformBackdrop(String name) {
+        return MacWindow.createPlatformBackdrop(name);
+    }
+
+    @Override
+    public int getBackdropIdentifier(StageBackdrop backdrop) {
+        return MacWindow.getBackdropIdentifier(backdrop);
     }
 }

@@ -33,12 +33,14 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import java.lang.annotation.Native;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import javafx.application.Platform;
 import javafx.application.ConditionalFeature;
+import javafx.stage.StageBackdrop;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -467,31 +469,28 @@ class WinWindow extends Window {
         @Native public static final int TRANSIENT  = 52;
     }
 
-    private static Map<String, Integer> backdropMaterials = null;
+    private static final String TRANSIENT_NAME = "Windows.Transient";
 
-    private static void initMaterials() {
-        if (backdropMaterials == null) {
-            backdropMaterials = new HashMap<>();
-
-            if (Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
-                backdropMaterials.put("Window", BackdropID.WINDOW);
-                backdropMaterials.put("Partial", BackdropID.TABBED);
-                backdropMaterials.put("Windows.Transient", BackdropID.TRANSIENT);
-            }
+    public static List<String> getPlatformBackdropNames() {
+        if (Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
+            return List.of(TRANSIENT_NAME);
         }
+        return List.of();
     }
 
-    public static List<String> getBackdropMaterials() {
-        initMaterials();
-        return new ArrayList<>(backdropMaterials.keySet());
-    }
-
-    public static int getBackdropIdentifier(String material) {
-        initMaterials();
-        var id = backdropMaterials.get(material);
-        if (id == null) {
-            return Window.DEFAULT_BACKDROP_ID;
+    public static int getBackdropIdentifier(StageBackdrop backdrop) {
+        if (!Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
+            return Window.NO_BACKDROP_ID;
         }
-        return id;
+
+        if (backdrop == StageBackdrop.WINDOW) {
+            return BackdropID.WINDOW;
+        } else if (backdrop == StageBackdrop.PARTIAL) {
+            return BackdropID.TABBED;
+        } else if (backdrop.getName() == TRANSIENT_NAME) {
+            return BackdropID.TRANSIENT;
+        }
+
+        return Window.NO_BACKDROP_ID;
     }
 }
