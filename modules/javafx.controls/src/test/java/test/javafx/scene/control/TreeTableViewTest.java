@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
 import com.sun.javafx.scene.control.VirtualScrollBar;
@@ -138,7 +140,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.provider.Arguments;
-import java.util.stream.Stream;
 
 public class TreeTableViewTest {
     private TreeTableView<String> treeTableView;
@@ -3316,7 +3317,6 @@ public class TreeTableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
-            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -7927,5 +7927,137 @@ public class TreeTableViewTest {
 
         cell = VirtualFlowTestUtils.getCell(table, 0, 0);
         assertEquals(newName, cell.getText());
+    }
+
+    @Test
+    public void testGetTreeItem() {
+        List<TreeItem<String>> treeItems = new ArrayList<>(20);
+        for (int i = 0; i < 20; i++) {
+            treeItems.add(new TreeItem<>(Integer.toString(i)));
+        }
+
+        treeItems.get(0).getChildren().addAll(List.of(treeItems.get(1), treeItems.get(11), treeItems.get(12)));
+        treeItems.get(0).setExpanded(true);
+
+        treeItems.get(1).getChildren().add(treeItems.get(2));
+        treeItems.get(1).setExpanded(true);
+
+        treeItems.get(2).getChildren().add(treeItems.get(3));
+        treeItems.get(2).setExpanded(true);
+
+        treeItems.get(3).getChildren().add(treeItems.get(4));
+        treeItems.get(3).setExpanded(true);
+
+        treeItems.get(4).getChildren().addAll(List.of(treeItems.get(5), treeItems.get(6)));
+        treeItems.get(4).setExpanded(true);
+
+        treeItems.get(2).getChildren().add(treeItems.get(7));
+        treeItems.get(2).setExpanded(true);
+
+        treeItems.get(7).getChildren().add(treeItems.get(8));
+        treeItems.get(7).setExpanded(true);
+
+        treeItems.get(8).getChildren().addAll(List.of(treeItems.get(9), treeItems.get(10)));
+        treeItems.get(8).setExpanded(true);
+
+        treeItems.get(12).getChildren().addAll(List.of(treeItems.get(13), treeItems.get(14), treeItems.get(16)));
+        treeItems.get(12).setExpanded(true);
+
+        treeItems.get(14).getChildren().add(treeItems.get(15));
+        treeItems.get(14).setExpanded(true);
+
+        treeItems.get(16).getChildren().addAll(List.of(treeItems.get(17), treeItems.get(18), treeItems.get(19)));
+        treeItems.get(16).setExpanded(true);
+
+        TreeTableView<String> ttv = new TreeTableView<>(treeItems.getFirst());
+
+        List<String> expectedValues, actualValues;
+
+        // the tree is fully expanded
+        // note: the nodes of the tree are labeled in pre-order, depth-first traversal order
+
+        // 0
+        // ├── 1
+        // │   └── 2
+        // │       ├── 3
+        // │       │   └── 4
+        // │       │       ├── 5
+        // │       │       └── 6
+        // │       └── 7
+        // │           └── 8
+        // │               ├── 9
+        // │               └── 10
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(20, ttv.getExpandedItemCount());
+        expectedValues = IntStream.range(0, 20).mapToObj(String::valueOf).toList();
+        actualValues = IntStream.range(0, 20).mapToObj(i -> ttv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
+
+        // node 3 is collapsed
+        treeItems.get(3).setExpanded(false);
+
+        // 0
+        // ├── 1
+        // │   └── 2
+        // │       ├── 3*
+        // │       │
+        // │       │
+        // │       │
+        // │       └── 7
+        // │           └── 8
+        // │               ├── 9
+        // │               └── 10
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(17, ttv.getExpandedItemCount());
+        expectedValues = Stream.of(0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
+        actualValues = IntStream.range(0, 17).mapToObj(i -> ttv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
+
+        // node 2 is collapsed
+        treeItems.get(2).setExpanded(false);
+
+        // 0
+        // ├── 1
+        // │   └── 2*
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(12, ttv.getExpandedItemCount());
+        expectedValues = Stream.of(0, 1, 2, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
+        actualValues = IntStream.range(0, 12).mapToObj(i -> ttv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
     }
 }

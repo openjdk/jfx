@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -762,6 +763,9 @@ public class TreeTableView<S> extends Control {
     // Used in the getTreeItem(int row) method to act as a cache.
     // See JDK-8125681 for the justification and performance gains.
     private Map<Integer, SoftReference<TreeItem<S>>> treeItemCacheMap = new HashMap<>();
+    // Persistent depth-first search iterator so that sequential access is O(N) instead of O(N^2).
+    private Iterator<TreeItem<S>> treeItemIterator = null;
+    private int treeItemIteratorRow = -1;
 
     // this is the only publicly writable list for columns. This represents the
     // columns as they are given initially by the developer.
@@ -795,25 +799,12 @@ public class TreeTableView<S> extends Control {
      **************************************************************************/
 
     // we use this to forward events that have bubbled up TreeItem instances
-    // to the TreeTableViewSkin, to force it to recalculate teh item count and redraw
-    // if necessary
+    // to the TreeTableViewSkin, to force it to recalculate the item count and redraw
     private final EventHandler<TreeItem.TreeModificationEvent<S>> rootEvent = e -> {
         // this forces layoutChildren at the next pulse, and therefore
-        // updates the item count if necessary
-        EventType<?> eventType = e.getEventType();
-        boolean match = false;
-        while (eventType != null) {
-            if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
-                match = true;
-                break;
-            }
-            eventType = eventType.getSuperType();
-        }
-
-        if (match) {
-            expandedItemCountDirty = true;
-            requestLayout();
-        }
+        // updates the item count
+        expandedItemCountDirty = true;
+        requestLayout();
     };
 
     private final ListChangeListener<TreeTableColumn<S,?>> columnsObserver = new ListChangeListener<>() {
@@ -1053,13 +1044,13 @@ public class TreeTableView<S> extends Control {
         @Override protected void invalidated() {
             TreeItem<S> oldTreeItem = weakOldItem == null ? null : weakOldItem.get();
             if (oldTreeItem != null && weakRootEventListener != null) {
-                oldTreeItem.removeEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootEventListener);
+                oldTreeItem.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakRootEventListener);
             }
 
             TreeItem<S> root = getRoot();
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
-                getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootEventListener);
+                root.addEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakRootEventListener);
                 weakOldItem = new WeakReference<>(root);
             }
 
@@ -1807,19 +1798,31 @@ public class TreeTableView<S> extends Control {
 
         if (expandedItemCountDirty) {
             updateExpandedItemCount(getRoot());
-        } else {
-            if (treeItemCacheMap.containsKey(_row)) {
-                SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
-                TreeItem<S> treeItem = treeItemRef.get();
-                if (treeItem != null) {
-                    return treeItem;
-                }
+        }
+
+        SoftReference<TreeItem<S>> ref = treeItemCacheMap.get(_row);
+        if (ref != null) {
+            TreeItem<S> cached = ref.get();
+            if (cached != null) {
+                return cached;
             }
         }
 
-        TreeItem<S> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
-        treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
-        return treeItem;
+        if (treeItemIterator == null || _row <= treeItemIteratorRow) {
+            treeItemIterator = TreeUtil.getItems(getRoot()).iterator();
+            treeItemIteratorRow = -1;
+        }
+
+        while (treeItemIterator.hasNext()) {
+            TreeItem<S> item = treeItemIterator.next();
+            treeItemCacheMap.put(++treeItemIteratorRow, new SoftReference<>(item));
+            if (treeItemIteratorRow == _row) {
+                return item;
+            }
+        }
+
+        // Iterator is exhausted before reaching _row. Should not happen in normal use.
+        return null;
     }
 
     /**
@@ -2130,9 +2133,9 @@ public class TreeTableView<S> extends Control {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
 
         if (expandedItemCountDirty) {
-            // this is a very inefficient thing to do, but for now having a cache
-            // is better than nothing at all...
             treeItemCacheMap.clear();
+            treeItemIterator = null;
+            treeItemIteratorRow = -1;
         }
 
         expandedItemCountDirty = false;
@@ -3281,7 +3284,6 @@ public class TreeTableView<S> extends Control {
 
                 ListChangeListener.Change c = new NonIterableChange.SimpleAddChange<>(startIndex, endIndex + 1, selectedCellsSeq);
                 fireCustomSelectedCellsListChangeEvent(c);
-//                selectedCellsSeq.fireChange(() -> selectedCellsSeq._nextAdd(startIndex, endIndex + 1));
             }
         }
 

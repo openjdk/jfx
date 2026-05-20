@@ -720,6 +720,30 @@ public class ListChangeBuilderTest {
         list.doEndChange();
     }
 
+    @Test
+    public void testRemoveDisjointFirstThenGaps() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of("A", "B", "C", "D", "E", "F")));
+
+        list.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertEquals(1, change.getList().size());
+            change.next();
+
+            assertEquals(List.of("B", "C", "D", "E", "F"), change.getRemoved());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        list.remove("D");
+        list.remove("F");
+        list.remove("B");
+        list.remove("E");
+        list.remove("C");
+
+        list.doEndChange();
+    }
+
     private static class ExposedObservableList<E> extends ObservableListWrapper<E> {
         ExposedObservableList(List<E> list) {
             super(list);

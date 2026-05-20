@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * A package protected util class used by TreeView and TreeTableView to reduce
@@ -148,5 +152,44 @@ class TreeUtil {
         }
 
         return (p == null && row == 0) || parentIsCollapsed ? -1 : isShowRoot ? row : row - 1;
+    }
+
+     /**
+     * Returns an Iterable that traverses all expanded TreeItems in
+     * pre-order depth-first order, starting from root.
+     */
+    static <T> Iterable<TreeItem<T>> getItems(TreeItem<T> root) {
+        return () -> new Iterator<>() {
+            private final Deque<TreeItem<T>> stack = new ArrayDeque<>();
+
+            {
+                if (root != null) {
+                    stack.push(root);
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                return !stack.isEmpty();
+            }
+
+            @Override
+            public TreeItem<T> next() {
+                if (stack.isEmpty()) {
+                    throw new NoSuchElementException();
+                }
+                TreeItem<T> item = stack.pop();
+                if (!item.isLeaf() && item.isExpanded()) {
+                    List<TreeItem<T>> children = item.getChildren();
+                    for (int i = children.size() - 1; i >= 0; i--) {
+                        TreeItem<T> child = children.get(i);
+                        if (child != null) {
+                            stack.push(child);
+                        }
+                    }
+                }
+                return item;
+            }
+        };
     }
 }
