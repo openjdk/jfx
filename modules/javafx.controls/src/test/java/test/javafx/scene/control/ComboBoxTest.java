@@ -413,6 +413,30 @@ public class ComboBoxTest {
 
         assertEquals("NOT NULL", cell.getText());
     }
+    @Test
+    public void testTextFieldUpdateOnStringConverterChangeWithContainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        TextField field = (TextField) getDisplayNode();
+        assertEquals("", field.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", field.getText());
+    }
 
     @Test
     public void testButtonCellUpdateOnStringConverterChangeWithUncontainedNullValue() {
