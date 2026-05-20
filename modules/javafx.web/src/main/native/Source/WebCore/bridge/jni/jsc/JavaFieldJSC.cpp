@@ -70,6 +70,9 @@ JavaField::JavaField(JNIEnv* env, jobject aField)
 
 JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instance* i) const
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
 
     JSValue jsresult = jsUndefined();
@@ -91,6 +94,29 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
         return jsresult;
     }
 
+    JNIEnv* env = getJNIEnv();
+    jclass utilityCls = env->FindClass("com/sun/webkit/Utilities");
+    jmethodID getMethod =
+        env->GetStaticMethodID(utilityCls, "fwkGetFieldWithContext",
+                                            "(Ljava/lang/reflect/Field;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+    jobject rObj = env->CallStaticObjectMethod(utilityCls,
+                                               getMethod,
+                                               jfield,
+                                               jinstance,
+                                               instance->accessControlContext());
+    jthrowable ex = env->ExceptionOccurred();
+    env->ExceptionClear();
+    if (ex != NULL) {
+        JSValue exceptionDescription
+          = (JavaInstance::create(ex, instance->rootObject(), instance->accessControlContext())
+             ->createRuntimeObject(globalObject));
+        throwException(globalObject, scope, exceptionDescription);
+        return jsresult;
+    }
+    if (!rObj) {
+        return jsNull();
+    }
+
     switch (m_type) {
     case JavaTypeArray:
     case JavaTypeObject:
@@ -98,44 +124,39 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
     // to treat it as JS foreign object.
     case JavaTypeChar:
         {
-            jobject anObject = callJNIMethod<jobject>(jfield, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", jinstance);
-            if (!anObject)
-                return jsNull();
-
             const char* arrayType = typeClassName();
             if (arrayType[0] == '[')
-                jsresult = JavaArray::convertJObjectToArray(globalObject, anObject, arrayType, instance->rootObject(), instance->accessControlContext());
-            else if (anObject)
-
-            jsresult = toJS(globalObject, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(globalObject), instance->rootObject(), anObject, instance->accessControlContext()));
+                jsresult = JavaArray::convertJObjectToArray(globalObject, rObj, arrayType, instance->rootObject(), instance->accessControlContext());
+            else
+                jsresult = toJS(globalObject, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(globalObject), instance->rootObject(), rObj, instance->accessControlContext()));
         }
         break;
 
     case JavaTypeBoolean:
-        jsresult = jsBoolean(callJNIMethod<jboolean>(jfield, "getBoolean", "(Ljava/lang/Object;)Z", jinstance));
+        jsresult = jsBoolean(callJNIMethod<jboolean>(rObj, "booleanValue", "()Z"));
         break;
 
     case JavaTypeByte:
-        jsresult = jsNumber(callJNIMethod<jbyte>(jfield, "getByte", "(Ljava/lang/Object;)B", jinstance));
+        jsresult = jsNumber(callJNIMethod<jbyte>(rObj, "byteValue", "()B"));
         break;
 
     case JavaTypeShort:
-        jsresult = jsNumber(callJNIMethod<jshort>(jfield, "getShort", "(Ljava/lang/Object;)S", jinstance));
+        jsresult = jsNumber(callJNIMethod<jshort>(rObj, "shortValue", "()S"));
         break;
 
     case JavaTypeInt:
-        jsresult = jsNumber(static_cast<int>(callJNIMethod<jint>(jfield, "getInt", "(Ljava/lang/Object;)I", jinstance)));
+        jsresult = jsNumber(static_cast<int>(callJNIMethod<jint>(rObj, "intValue", "()I")));
         break;
 
     case JavaTypeLong:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jlong>(jfield, "getLong", "(Ljava/lang/Object;)J", jinstance)));
+        jsresult = jsNumber(static_cast<double>(callJNIMethod<jlong>(rObj, "longValue", "()J")));
         break;
     case JavaTypeFloat:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jfloat>(jfield, "getFloat", "(Ljava/lang/Object;)F", jinstance)));
+        jsresult = jsNumber(static_cast<double>(callJNIMethod<jfloat>(rObj, "floatValue", "()F")));
         break;
 
     case JavaTypeDouble:
-        jsresult = jsNumber(static_cast<double>(callJNIMethod<jdouble>(jfield, "getDouble", "(Ljava/lang/Object;)D", jinstance)));
+        jsresult = jsNumber(static_cast<double>(callJNIMethod<jdouble>(rObj, "doubleValue", "()D")));
         break;
 
     default:
@@ -150,6 +171,9 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
 
 bool JavaField::setValueToInstance(JSGlobalObject* globalObject, const Instance* i, JSValue aValue) const
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
     jvalue javaValue = convertValueToJValue(globalObject, i->rootObject(), aValue, m_type, typeClassName());
 #if !PLATFORM(JAVA)
@@ -174,47 +198,28 @@ bool JavaField::setValueToInstance(JSGlobalObject* globalObject, const Instance*
         return false;
     }
 
-    switch (m_type) {
-    case JavaTypeArray:
-    case JavaTypeObject:
-        callJNIMethod<void>(jfield, "set", "(Ljava/lang/Object;Ljava/lang/Object;)V", jinstance, javaValue.l);
-        break;
-
-    case JavaTypeBoolean:
-        callJNIMethod<void>(jfield, "setBoolean", "(Ljava/lang/Object;Z)V", jinstance, javaValue.z);
-        break;
-
-    case JavaTypeByte:
-        callJNIMethod<void>(jfield, "setByte", "(Ljava/lang/Object;B)V", jinstance, javaValue.b);
-        break;
-
-    case JavaTypeChar:
-        callJNIMethod<void>(jfield, "setChar", "(Ljava/lang/Object;C)V", jinstance, javaValue.c);
-        break;
-
-    case JavaTypeShort:
-        callJNIMethod<void>(jfield, "setShort", "(Ljava/lang/Object;S)V", jinstance, javaValue.s);
-        break;
-
-    case JavaTypeInt:
-        callJNIMethod<void>(jfield, "setInt", "(Ljava/lang/Object;I)V", jinstance, javaValue.i);
-        break;
-
-    case JavaTypeLong:
-        callJNIMethod<void>(jfield, "setLong", "(Ljava/lang/Object;J)V", jinstance, javaValue.j);
-        break;
-
-    case JavaTypeFloat:
-        callJNIMethod<void>(jfield, "setFloat", "(Ljava/lang/Object;F)V", jinstance, javaValue.f);
-        break;
-
-    case JavaTypeDouble:
-        callJNIMethod<void>(jfield, "setDouble", "(Ljava/lang/Object;D)V", jinstance, javaValue.d);
-        break;
-
-    default:
-        abort();
+    JNIEnv* env = getJNIEnv();
+    jobject boxedObj = jvalueToJObject(javaValue, m_type);
+    jclass utilityCls = env->FindClass("com/sun/webkit/Utilities");
+    jmethodID setMethod =
+        env->GetStaticMethodID(utilityCls, "fwkSetFieldWithContext",
+                                            "(Ljava/lang/reflect/Field;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V");
+    env->CallStaticVoidMethod(utilityCls,
+                              setMethod,
+                              jfield,
+                              jinstance,
+                              boxedObj,
+                              instance->accessControlContext());
+    jthrowable ex = env->ExceptionOccurred();
+    env->ExceptionClear();
+    if (ex != NULL) {
+        JSValue exceptionDescription
+          = (JavaInstance::create(ex, instance->rootObject(), instance->accessControlContext())
+             ->createRuntimeObject(globalObject));
+        throwException(globalObject, scope, exceptionDescription);
+        return false;
     }
+
     return true;
 }
 
