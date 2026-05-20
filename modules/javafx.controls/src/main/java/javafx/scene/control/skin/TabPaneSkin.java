@@ -258,8 +258,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     };
 
     /**
-     * This property allows to control the graphic for the overflow menu items,
-     * by generating graphic {@code Node}s when the menu is shown.
+     * This property allows to override the graphic used for the overflow menu items,
+     * by generating {@code Node}s to be used as graphic when the menu is shown.
      * <p>
      * When this property is {@code null}, the menu provides only the basic graphic copied from the corresponding
      * {@link Tab} - either an {@link ImageView} or a {@link Label} with an {@link ImageView} as its graphic.
@@ -269,11 +269,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      * @since 27
      * @defaultValue null
      */
-    private ObjectProperty<Callback<Tab, Node>> menuGraphicFactory;
+    private ObjectProperty<Callback<Tab, Node>> menuGraphicOverride;
 
-    public final ObjectProperty<Callback<Tab, Node>> menuGraphicFactoryProperty() {
-        if (menuGraphicFactory == null) {
-            menuGraphicFactory = new SimpleObjectProperty<>() {
+    public final ObjectProperty<Callback<Tab, Node>> menuGraphicOverrideProperty() {
+        if (menuGraphicOverride == null) {
+            menuGraphicOverride = new SimpleObjectProperty<>() {
                 @Override
                 public Object getBean() {
                     return TabPaneSkin.this;
@@ -281,19 +281,19 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
                 @Override
                 public String getName() {
-                    return "menuGraphicFactory";
+                    return "menuGraphicOverride";
                 }
             };
         }
-        return menuGraphicFactory;
+        return menuGraphicOverride;
     }
 
-    public final Callback<Tab, Node> getMenuGraphicFactory() {
-        return menuGraphicFactory == null ? null : menuGraphicFactory.get();
+    public final Callback<Tab, Node> getMenuGraphicOverride() {
+        return menuGraphicOverride == null ? null : menuGraphicOverride.get();
     }
 
-    public final void setMenuGraphicFactory(Callback<Tab, Node> f) {
-        menuGraphicFactoryProperty().set(f);
+    public final void setMenuGraphicOverride(Callback<Tab, Node> f) {
+        menuGraphicOverrideProperty().set(f);
     }
 
     /* *************************************************************************
@@ -526,7 +526,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private Node createGraphic(Tab t) {
-        Callback<Tab, Node> f = getMenuGraphicFactory();
+        Callback<Tab, Node> f = getMenuGraphicOverride();
         if (f != null) {
             return f.call(t);
         }

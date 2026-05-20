@@ -1342,9 +1342,9 @@ public class TabPaneTest {
         }
     }
 
-    private ContextMenu setupMenuGraphicFactory() {
+    private ContextMenu setupMenuGraphicOverride() {
         TabPaneSkin skin = new TabPaneSkin(tabPane);
-        skin.setMenuGraphicFactory((tab) -> {
+        skin.setMenuGraphicOverride((tab) -> {
             return new Label(tab.getText());
         });
         tabPane.setSkin(skin);
@@ -1362,8 +1362,8 @@ public class TabPaneTest {
     }
 
     @Test
-    public void menuGraphicFactory() {
-        ContextMenu menu = setupMenuGraphicFactory();
+    public void menuGraphicOverride() {
+        ContextMenu menu = setupMenuGraphicOverride();
         for (MenuItem mi : menu.getItems()) {
             Node g = mi.getGraphic();
             assertTrue(g instanceof Label);
@@ -1373,7 +1373,7 @@ public class TabPaneTest {
 
     @Test
     public void menuBindings() {
-        ContextMenu menu = setupMenuGraphicFactory();
+        ContextMenu menu = setupMenuGraphicOverride();
         MenuItem mi = menu.getItems().get(0);
 
         assertFalse(mi.isDisable());
