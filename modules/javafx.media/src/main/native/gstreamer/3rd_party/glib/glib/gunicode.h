@@ -736,6 +736,7 @@ gunichar g_unichar_totitle (gunichar c) G_GNUC_CONST;
    numeric value.  Otherwise return -1.  */
 GLIB_AVAILABLE_IN_ALL
 gint g_unichar_digit_value (gunichar c) G_GNUC_CONST;
+
 GLIB_AVAILABLE_IN_ALL
 gint g_unichar_xdigit_value (gunichar c) G_GNUC_CONST;
 

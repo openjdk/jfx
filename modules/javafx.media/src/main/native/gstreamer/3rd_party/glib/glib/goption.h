@@ -370,9 +370,6 @@ gboolean        g_option_context_parse            (GOptionContext      *context,
                gint                *argc,
                gchar             ***argv,
                GError             **error);
-#endif // GSTREAMER_LITE
-
-#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_40
 gboolean        g_option_context_parse_strv       (GOptionContext      *context,
                                                    gchar             ***arguments,

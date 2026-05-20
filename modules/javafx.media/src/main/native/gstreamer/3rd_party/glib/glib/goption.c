@@ -666,12 +666,10 @@ context_has_h_entry (GOptionContext *context)
           if (group->entries[i].short_name == 'h')
             return TRUE;
         }
-  }
+    }
   return FALSE;
 }
-#endif // GSTREAMER_LITE
 
-#ifndef GSTREAMER_LITE
 /**
  * g_option_context_get_help:
  * @context: a #GOptionContext
