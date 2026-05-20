@@ -163,7 +163,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /**
      * Creates a new TabPaneSkin instance, installing the necessary child
-     * nodes into the Control {@link javafx.scene.control.Control#getChildren() children} list, as
+     * nodes into the Control {@link javafx.scene.Parent#getChildren() children} list, as
      * well as the necessary input mappings for handling key, mouse, etc events.
      *
      * @param control The TabPane that this skin should be installed onto.
