@@ -867,7 +867,7 @@
                 <span class="grammar">&lt;media-feature&gt;:</span>
             </figcaption>
         </figure>
-    <h5>Evaluating Media Features in a Boolean Context</h5>
+    <h5 id="mf-boolean-context">Evaluating Media Features in a Boolean Context</h5>
     <p>If the colon and value is omitted, the media feature is evaluated in a boolean context.
         This is a convenient shorthand for features that have a reasonable default value. A media feature that is
         evaluated in a boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value
@@ -1041,9 +1041,11 @@
                     <span class="nowrap">input-touch</span> | <span class="nowrap">input-multitouch</span> |
                     <span class="nowrap">input-pointer</span></td>
                 <td>discrete</td>
-                <td>Evaluates to <code>true</code> if <code>Platform.isSupported(ConditionalFeature)</code> returns
-                    <code>true</code> for the specified conditional feature.<br>This media feature cannot be
-                    evaluated in a boolean context.</td>
+                <td>Evaluates to <code>true</code> if
+                    <code><a href="../../application/Platform.html#isSupported(javafx.application.ConditionalFeature)">
+                    Platform.isSupported(ConditionalFeature)</a></code> returns <code>true</code> for the specified
+                    conditional feature.<br>
+                    This media feature cannot be evaluated in a <a href="#mf-boolean-context">boolean context</a>.</td>
             </tr>
         </tbody>
     </table>
