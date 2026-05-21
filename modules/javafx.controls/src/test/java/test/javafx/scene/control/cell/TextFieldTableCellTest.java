@@ -25,12 +25,7 @@
 
 package test.javafx.scene.control.cell;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.scene.control.IndexedCell;
@@ -48,6 +43,12 @@ import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TextFieldTableCellTest {
 
@@ -383,7 +384,12 @@ public class TextFieldTableCellTest {
         assertNull(cell.getGraphic());
     }
 
-    @Test public void testJDK8119995() {
+    /**
+     * A right-click on the TextField, usually to bring up the ContextMenu should not stop the editing
+     * or interfere in any way with the cell.
+     */
+    @Test
+    public void testRightClickInTextFieldDoesNotStopEditing() {
         String text = "Dummy Text";
 
         TableColumn<String, String> tc = new TableColumn<>();
@@ -398,6 +404,8 @@ public class TextFieldTableCellTest {
 
         tableView.edit(0, tc);
 
+        Toolkit.getToolkit().firePulse();
+
         IndexedCell<String> cell = VirtualFlowTestUtils.getCell(tableView, 0, 0);
 
         assertTrue(cell.isEditing());
@@ -410,9 +418,13 @@ public class TextFieldTableCellTest {
         assertEquals(text, textField.getSelectedText());
 
         MouseEventFirer mouse = new MouseEventFirer(textField);
-        mouse.fireMouseReleased(MouseButton.SECONDARY);
+
+        mouse.fireMousePressed(MouseButton.SECONDARY);
+        assertNotNull(textField.getScene());
         assertEquals(text, textField.getSelectedText());
+
         mouse.fireMouseReleased(MouseButton.SECONDARY);
+        assertNotNull(textField.getScene());
         assertEquals(text, textField.getSelectedText());
     }
 }

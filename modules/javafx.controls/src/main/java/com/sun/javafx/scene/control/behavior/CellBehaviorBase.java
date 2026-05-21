@@ -25,18 +25,15 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Behaviors for standard cells types. Simply defines methods that subclasses
@@ -291,6 +288,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     protected final void doHandleClick(MouseEvent e, boolean isAlreadySelected) {
         // If not focused yet, we want to shift focus first to the container.
         // This allows other cells to commit their value before we handle the click.
+        // Usually cells will request focus again when the editing starts.
         if (!getCellContainer().isFocused()) {
             getCellContainer().requestFocus();
         }
