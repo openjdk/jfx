@@ -94,8 +94,9 @@ public final class MediaQueryParser {
             switch (stream.peek().getType()) {
                 case CssLexer.COMMA -> {
                     Token comma = stream.consume();
-                    if (expectMediaCondition || expressions.isEmpty()) {
+                    if (expectMediaCondition) {
                         errorHandler.accept(comma, "Unexpected token");
+                        expressions.add(ConstantExpression.of(false));
                     }
 
                     expectMediaCondition = true;
@@ -132,9 +133,21 @@ public final class MediaQueryParser {
 
                 default -> {
                     errorHandler.accept(stream.consume(), "Unexpected token");
-                    return expressions;
+
+                    while (stream.consumeIf(NOT_COMMA) != null) {
+                        // Skip forward to the next comma and replace the malformed segment
+                        // with a query that always evaluates to false.
+                    }
+
+                    expressions.add(ConstantExpression.of(false));
+                    expectMediaCondition = false;
                 }
             }
+        }
+
+        if (expectMediaCondition && !expressions.isEmpty()) {
+            errorHandler.accept(null, "Expected <media-condition>");
+            expressions.add(ConstantExpression.of(false));
         }
 
         return expressions;

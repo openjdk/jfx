@@ -486,6 +486,78 @@ public class CssParser_mediaQuery_Test {
     }
 
     @Test
+    void parserRecoversFromUnexpectedCommaInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark),,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnexpectedTokenInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), 100px,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void leadingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media , (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void trailingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
     void parserRecoversWhenMediaQueryIsMalformed() {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (#123foo=malformed-query), (prefers-reduced-motion: reduce) {
