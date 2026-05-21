@@ -41,7 +41,7 @@ namespace WTF {
 
 template<typename T>
 class Packed {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Packed);
 public:
     static constexpr bool isPackedType = true;
 
@@ -108,7 +108,7 @@ private:
 // alignment information only when we can reduce the size of the storage.
 template<typename T, size_t passedAlignment>
 class PackedAlignedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PackedAlignedPtr);
 public:
     static_assert(::allowCompactPointers<T*>());
     static_assert(hasOneBitSet(passedAlignment), "Alignment needs to be power-of-two");
@@ -277,12 +277,6 @@ template<typename T, typename U>
 inline bool operator==(const PackedPtr<T>& a, U* b)
 {
     return a.get() == b;
-}
-
-template<typename T, typename U>
-inline bool operator==(T* a, const PackedPtr<U>& b)
-{
-    return a == b.get();
 }
 
 template<typename T>

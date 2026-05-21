@@ -69,7 +69,7 @@ enum class ContainerType : uint8_t {
     Button,
 };
 
-using ItemData = std::variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData>;
+using ItemData = Variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData>;
 
 struct Item {
     ItemData data;

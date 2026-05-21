@@ -51,24 +51,21 @@ void ANGLEInstancedArrays::drawArraysInstancedANGLE(GCGLenum mode, GCGLint first
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.drawArraysInstanced(mode, first, count, primcount);
+    protectedContext()->drawArraysInstanced(mode, first, count, primcount);
 }
 
 void ANGLEInstancedArrays::drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.drawElementsInstanced(mode, count, type, offset, primcount);
+    protectedContext()->drawElementsInstanced(mode, count, type, offset, primcount);
 }
 
 void ANGLEInstancedArrays::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.vertexAttribDivisor(index, divisor);
+    protectedContext()->vertexAttribDivisor(index, divisor);
 }
 
 } // namespace WebCore

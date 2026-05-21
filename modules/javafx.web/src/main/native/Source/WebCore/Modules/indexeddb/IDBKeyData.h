@@ -26,7 +26,6 @@
 #pragma once
 
 #include "IDBKey.h"
-#include <variant>
 #include <wtf/Hasher.h>
 #include <wtf/StdSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -47,7 +46,7 @@ public:
     struct Min { Min isolatedCopy() const { return { }; } };
     struct Max { Max isolatedCopy() const { return { }; } };
     struct Invalid { Invalid isolatedCopy() const { return { }; } };
-    using ValueVariant = std::variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
+    using ValueVariant = Variant<std::nullptr_t, Invalid, Vector<IDBKeyData>, String, double, Date, ThreadSafeDataBuffer, Min, Max>;
 
     enum IsolatedCopyTag { IsolatedCopy };
 
@@ -89,12 +88,6 @@ public:
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
     WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(KeyedDecoder&, IDBKeyData&);
 
-    // compare() has the same semantics as strcmp().
-    //   - Returns negative if this IDBKeyData is less than other.
-    //   - Returns positive if this IDBKeyData is greater than other.
-    //   - Returns zero if this IDBKeyData is equal to other.
-    WEBCORE_EXPORT int compare(const IDBKeyData& other) const;
-
     void setArrayValue(const Vector<IDBKeyData>&);
     void setBinaryValue(const ThreadSafeDataBuffer&);
     void setStringValue(const String&);
@@ -105,23 +98,10 @@ public:
 
     bool isNull() const { return std::holds_alternative<std::nullptr_t>(m_value); }
     bool isValid() const;
+    WEBCORE_EXPORT static bool isValidValue(const ValueVariant&);
     IndexedDB::KeyType type() const;
 
-    bool operator<(const IDBKeyData&) const;
-    bool operator>(const IDBKeyData& other) const
-    {
-        return !(*this < other) && !(*this == other);
-    }
-
-    bool operator<=(const IDBKeyData& other) const
-    {
-        return !(*this > other);
-    }
-
-    bool operator>=(const IDBKeyData& other) const
-    {
-        return !(*this < other);
-    }
+    WEBCORE_EXPORT friend std::weak_ordering operator<=>(const IDBKeyData&, const IDBKeyData&);
 
     bool operator==(const IDBKeyData& other) const;
 

@@ -48,7 +48,7 @@ private:
     static ASCIILiteral supplementName();
 
     ServiceWorkerRegistration& m_serviceWorkerRegistration;
-    std::unique_ptr<PushManager> m_pushManager;
+    const std::unique_ptr<PushManager> m_pushManager;
 };
 
 }

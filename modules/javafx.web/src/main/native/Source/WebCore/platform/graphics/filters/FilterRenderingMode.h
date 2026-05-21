@@ -41,4 +41,6 @@ constexpr OptionSet<FilterRenderingMode> allFilterRenderingModes = {
     FilterRenderingMode::GraphicsContext
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, FilterRenderingMode);
+
 } // namespace WebCore

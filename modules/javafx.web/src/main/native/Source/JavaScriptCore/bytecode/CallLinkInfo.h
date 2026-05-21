@@ -55,7 +55,7 @@ struct CallFrameShuffleData;
 struct UnlinkedCallLinkInfo;
 struct BaselineUnlinkedCallLinkInfo;
 
-using CompileTimeCallLinkInfo = std::variant<OptimizingCallLinkInfo*, BaselineUnlinkedCallLinkInfo*, DFG::UnlinkedCallLinkInfo*>;
+using CompileTimeCallLinkInfo = Variant<OptimizingCallLinkInfo*, BaselineUnlinkedCallLinkInfo*, DFG::UnlinkedCallLinkInfo*>;
 
 class CallLinkInfo : public CallLinkInfoBase {
 public:

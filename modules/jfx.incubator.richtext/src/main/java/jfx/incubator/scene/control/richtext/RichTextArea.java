@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.input.FunctionTag;
@@ -99,9 +100,11 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
+ *   textArea.setUndoRedoEnabled(false);
  *   textArea.appendText("RichTextArea\n", heading);
  *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
  *   textArea.appendText("monospaced.\n", mono);
+ *   textArea.setUndoRedoEnabled(true);
  * }</pre>
  * Which results in the following visual representation:
  * <p>
@@ -294,6 +297,7 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<StyledTextModel> model;
     private final SelectionModel selectionModel = new SingleSelectionModel();
     private SimpleBooleanProperty editableProperty;
+    private SimpleObjectProperty<StyleAttributeMap> insertStyles;
     private SimpleObjectProperty<SideDecorator> leftDecorator;
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
@@ -340,28 +344,6 @@ public class RichTextArea extends Control {
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
         setAccessibleRoleDescription("Rich Text Area");
-
-        selectionModel.selectionProperty().addListener((s, old, cur) -> {
-            TextPos min0 = old == null ? null : old.getMin();
-            TextPos max0 = old == null ? null : old.getMax();
-            TextPos min2 = cur == null ? null : cur.getMin();
-            TextPos max2 = cur == null ? null : cur.getMax();
-
-            if (accessibilityHelper != null) {
-                if (accessibilityHelper.handleSelectionChange(cur)) {
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                }
-            }
-
-            if (!Objects.equals(min0, min2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
-            }
-
-            if (!Objects.equals(max0, max2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
-            }
-        });
-
         setModel(model);
     }
 
@@ -593,6 +575,32 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Specifies the styles to be in effect for the characters to be inserted via user input.
+     * The value can be {@code null}, in which case the styles are determined by the model.
+     *
+     * @return the insert styles property
+     * @defaultValue null
+     * @since 26
+     */
+    public final ObjectProperty<StyleAttributeMap> insertStylesProperty() {
+        if (insertStyles == null) {
+            insertStyles = new SimpleObjectProperty<>(this, "insertStyles");
+        }
+        return insertStyles;
+    }
+
+    public final StyleAttributeMap getInsertStyles() {
+        if (insertStyles == null) {
+            return null;
+        }
+        return insertStyles.get();
+    }
+
+    public final void setInsertStyles(StyleAttributeMap v) {
+        insertStylesProperty().set(v);
+    }
+
+    /**
      * Specifies the left-side paragraph decorator.
      * The value can be null.
      *
@@ -618,6 +626,35 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Convenience method which delegates to {@link StyledTextModel#getLineEnding()}.
+     * Returns {@link LineEnding#system()} value if the model is {@code null}.
+     *
+     * @return the model's line ending value
+     * @since 26
+     */
+    public final LineEnding getLineEnding() {
+        StyledTextModel m = getModel();
+        return (m == null ? LineEnding.system() : m.getLineEnding());
+    }
+
+    /**
+     * Sets the model's line ending characters.
+     * Delegates to {@link StyledTextModel#setLineEnding(LineEnding)}.
+     * This method does nothing if the model is {@code null}.
+     *
+     * @param value the line ending value, cannot be null
+     * @throws NullPointerException if the value is null
+     * @since 26
+     */
+    public final void setLineEnding(LineEnding value) {
+        Objects.requireNonNull(value, "line ending must not be null");
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setLineEnding(value);
+        }
+    }
+
+    /**
      * Determines the {@link StyledTextModel} to use with this RichTextArea.
      * The model can be null, which results in an empty, uneditable control.
      * <p>
@@ -629,17 +666,6 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
-                // TODO does this create a memory leak?  should we bind or weak listen?
-                private final StyledTextModel.Listener li = (ch) -> {
-                    if (ch.isEdit()) {
-                        if (accessibilityHelper != null) {
-                            if (accessibilityHelper.handleTextUpdate(ch.getStart(), ch.getEnd())) {
-                                // TODO check the timing, may be runLater?
-                                notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                            }
-                        }
-                    }
-                };
                 private StyledTextModel old;
 
                 @Override
@@ -670,18 +696,21 @@ public class RichTextArea extends Control {
                     }
 
                     if (old != null) {
-                        old.removeListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.unregisterModel(old);
+                        }
                     }
                     if (m != null) {
-                        m.addListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.registerModel(m);
+                        }
                     }
                     old = m;
 
+                    selectionModel.clear();
                     if (accessibilityHelper != null) {
                         accessibilityHelper.handleModelChange();
                     }
-                    selectionModel.clear();
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
                 }
             };
         }
@@ -796,6 +825,32 @@ public class RichTextArea extends Control {
 
     public final boolean isUndoable() {
         return undoableProperty().get();
+    }
+
+    /**
+     * Indicates whether undo/redo functionality is enabled in the model.
+     * Returns {@code false} if the model is {@code null}.
+     * @return true if undo/redo functionality is enabled in the model
+     * @since 26
+     */
+    public final boolean isUndoRedoEnabled() {
+        StyledTextModel m = getModel();
+        return (m == null ? false : m.isUndoRedoEnabled());
+    }
+
+    /**
+     * Controls whether undo/redo functionality is enabled in the model.
+     * Setting the value to {@code false} clears existing undo/redo entries.
+     * This method does nothing if the model is {@code null}.
+     * @param on true to enable undo/redo
+     * @since 26
+     * @see #clearUndoRedo()
+     */
+    public final void setUndoRedoEnabled(boolean on) {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setUndoRedoEnabled(on);
+        }
     }
 
     /**
@@ -1132,14 +1187,14 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the document, creating an undo entry.
+     * Clears the document.
      *
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final void clear() {
         TextPos end = getDocumentEnd();
-        replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
+        replaceText(TextPos.ZERO, end, StyledInput.EMPTY);
     }
 
     /**
@@ -1451,40 +1506,14 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        // TODO JDK-8370140 (line separator property)
-        String lineSeparator = System.getProperty("line.separator");
-
-        int toCopy = limit;
-        int index = start.index();
-        boolean first = true;
-        boolean all = true;
-        while (toCopy > 0) {
-            int beg;
-            if (first) {
-                first = false;
-                beg = start.offset();
-            } else {
-                sb.append(lineSeparator);
-                beg = 0;
-            }
-            String text = getPlainText(index);
-            int len = Math.min(toCopy, text.length() - beg);
-            sb.append(text, beg, beg + len);
-            toCopy -= len;
-            index++;
-
-            // did we copy all?
-            if (toCopy == 0) {
-                if (index < end.index()) {
-                    all = false;
-                } else if (index == end.index()) {
-                    if (beg + len < end.offset()) {
-                        all = false;
-                    }
-                }
-            }
+        LineEnding lineEnding = m.getLineEnding();
+        StringBuilderStyledOutput out = new StringBuilderStyledOutput(sb, lineEnding, limit);
+        try {
+            m.export(start, end, out);
+            return true;
+        } catch(IOException e) {
+            return false;
         }
-        return all;
     }
 
     /**
@@ -1555,7 +1584,7 @@ public class RichTextArea extends Control {
      */
     public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1568,7 +1597,7 @@ public class RichTextArea extends Control {
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos insertText(TextPos pos, StyledInput in) {
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1897,14 +1926,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param text the input text
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, String text) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, text, allowUndo);
+        return m.replace(vflow(), start, end, text);
     }
 
     /**
@@ -1913,14 +1941,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param in the input stream
-     * @param createUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, in, createUndo);
+        return m.replace(vflow(), start, end, in);
     }
 
     /**
@@ -2316,21 +2343,9 @@ public class RichTextArea extends Control {
     private StyleAttributeMap getModelStyleAttrs(StyleResolver r) {
         StyledTextModel m = getModel();
         if (m != null) {
-            TextPos pos = getCaretPosition();
-            if (pos != null) {
-                if (hasNonEmptySelection()) {
-                    TextPos an = getAnchorPosition();
-                    if (pos.compareTo(an) > 0) {
-                        pos = an;
-                    }
-                } else if (!TextPos.ZERO.equals(pos)) {
-                    int ix = pos.offset() - 1;
-                    if (ix < 0) {
-                        // FIX find previous symbol
-                        ix = 0;
-                    }
-                    pos = TextPos.ofLeading(pos.index(), ix);
-                }
+            SelectionSegment sel = getSelection();
+            if (sel != null) {
+                TextPos pos = sel.getMax();
                 return m.getStyleAttributeMap(r, pos);
             }
         }
@@ -2448,6 +2463,10 @@ public class RichTextArea extends Control {
     private RTAccessibilityHelper accessibilityHelper() {
         if(accessibilityHelper == null) {
             accessibilityHelper = new RTAccessibilityHelper(this);
+            StyledTextModel m = getModel();
+            if (m != null) {
+                accessibilityHelper.registerModel(m);
+            }
         }
         return accessibilityHelper;
     }

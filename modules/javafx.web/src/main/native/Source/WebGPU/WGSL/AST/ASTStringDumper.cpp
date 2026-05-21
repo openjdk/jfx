@@ -78,9 +78,12 @@ void StringDumper::visit(ShaderModule& shaderModule)
     }
 }
 
-void StringDumper::visit(DiagnosticDirective&)
+void StringDumper::visit(Diagnostic& diagnostic)
 {
-    // FIXME: we still don't do anything with diagnostics
+    m_out.print("diagnostic("_s, diagnostic.severity, ", "_s, diagnostic.triggeringRule.name);
+    if (auto maybeSuffix = diagnostic.triggeringRule.suffix)
+        m_out.print("."_s, *maybeSuffix);
+    m_out.print(")"_s);
 }
 
 // Attribute
@@ -128,6 +131,12 @@ void StringDumper::visit(WorkgroupSizeAttribute& workgroupSize)
         }
     }
     m_out.print(")");
+}
+
+void StringDumper::visit(DiagnosticAttribute& attribute)
+{
+    m_out.print("@"_s);
+    visit(attribute.diagnostic());
 }
 
 // Declaration

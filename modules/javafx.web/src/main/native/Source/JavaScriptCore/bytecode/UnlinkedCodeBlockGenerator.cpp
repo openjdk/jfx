@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,7 +90,7 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<JSInstructionStream> i
             m_codeBlock->m_rareData->m_constantIdentifierSets = WTFMove(m_constantIdentifierSets);
         }
 
-        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+        if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]]
             m_codeBlock->initializeLoopHintExecutionCounter();
     }
     m_vm.writeBarrier(m_codeBlock.get());

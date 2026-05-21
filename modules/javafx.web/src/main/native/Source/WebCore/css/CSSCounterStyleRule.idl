@@ -23,9 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://www.w3.org/TR/css-counter-styles-3/#the-csscounterstylerule-interface
+// https://drafts.csswg.org/css-counter-styles/#csscounterstylerule
+
 [
-    EnabledBySetting=CSSCounterStyleAtRulesEnabled,
     Exposed=Window
 ] interface CSSCounterStyleRule : CSSRule {
    attribute DOMString name;

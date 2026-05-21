@@ -56,16 +56,17 @@ DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElem
 {
 }
 
-std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
 
-    adjustMinInlineSize(*elementStyle.style);
+    CheckedRef elementStyleStyle = *elementStyle.style;
+    adjustMinInlineSize(elementStyleStyle.get());
 
     if (!hasValue() && shadowHostStyle) {
         auto textColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyColor);
         auto backgroundColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-        elementStyle.style->setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
+        elementStyleStyle->setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
     }
 
     return elementStyle;
@@ -174,7 +175,7 @@ void DateTimeFieldElement::handleBlurEvent(Event& event)
 
 Locale& DateTimeFieldElement::localeForOwner() const
 {
-    return document().getCachedLocale(localeIdentifier());
+    return protectedDocument()->getCachedLocale(localeIdentifier());
 }
 
 AtomString DateTimeFieldElement::localeIdentifier() const
@@ -184,13 +185,15 @@ AtomString DateTimeFieldElement::localeIdentifier() const
 
 String DateTimeFieldElement::visibleValue() const
 {
-    return hasValue() ? value() : placeholderValue();
+    if (hasValue())
+        return value();
+    return placeholderValue();
 }
 
 void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)
 {
     if (!firstChild())
-        appendChild(Text::create(document(), String { emptyString() }));
+        appendChild(Text::create(protectedDocument().get(), String { emptyString() }));
 
     Ref textNode = downcast<Text>(*firstChild());
     String newVisibleValue = visibleValue();

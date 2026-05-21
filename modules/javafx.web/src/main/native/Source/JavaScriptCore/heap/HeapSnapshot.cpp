@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HeapSnapshot.h"
 
+#include <numeric>
 #include <wtf/DataLog.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -58,7 +59,7 @@ void HeapSnapshot::sweepCell(JSCell* cell)
         unsigned start = 0;
         unsigned end = m_nodes.size();
         while (start != end) {
-            unsigned middle = start + ((end - start) / 2);
+            unsigned middle = std::midpoint(start, end);
             HeapSnapshotNode& node = m_nodes[middle];
             if (cell == node.cell) {
                 // Cells should always have 0 as low bits.
@@ -140,7 +141,7 @@ std::optional<HeapSnapshotNode> HeapSnapshot::nodeForCell(JSCell* cell)
         unsigned start = 0;
         unsigned end = m_nodes.size();
         while (start != end) {
-            unsigned middle = start + ((end - start) / 2);
+            unsigned middle = std::midpoint(start, end);
             HeapSnapshotNode& node = m_nodes[middle];
             if (cell == node.cell)
                 return std::optional<HeapSnapshotNode>(node);

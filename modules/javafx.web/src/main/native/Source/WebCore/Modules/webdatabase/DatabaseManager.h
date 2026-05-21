@@ -26,7 +26,6 @@
 #pragma once
 
 #include "DatabaseDetails.h"
-#include "ExceptionOr.h"
 #include <wtf/Assertions.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -42,6 +41,7 @@ class Document;
 class Exception;
 class SecurityOrigin;
 class SecurityOriginData;
+template<typename> class ExceptionOr;
 
 class DatabaseManager {
     WTF_MAKE_NONCOPYABLE(DatabaseManager);

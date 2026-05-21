@@ -680,7 +680,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult invertBigIntCompareResult(JSBigInt::Com
 ALWAYS_INLINE JSValue tryConvertToBigInt32(JSBigInt* bigInt)
 {
 #if USE(BIGINT32)
-    if (UNLIKELY(!bigInt))
+    if (!bigInt) [[unlikely]]
         return JSValue();
 
     if (bigInt->length() <= 1) {
@@ -734,7 +734,7 @@ ALWAYS_INLINE std::optional<double> JSBigInt::tryExtractDouble(JSValue value)
             integer |= (static_cast<uint64_t>(bigInt->digit(1)) << 32);
     }
 
-    if (integer <= static_cast<uint64_t>(maxSafeInteger()))
+    if (integer <= maxSafeIntegerAsUInt64())
         return (bigInt->sign()) ? -static_cast<double>(integer) : static_cast<double>(integer);
 
     return std::nullopt;

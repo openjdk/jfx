@@ -30,7 +30,7 @@
 
 PAS_BEGIN_EXTERN_C;
 
-#define PAS_COMPACT_EXPENDABLE_MEMORY_PAYLOAD_SIZE 20lu * 1024lu * 1024lu
+#define PAS_COMPACT_EXPENDABLE_MEMORY_PAYLOAD_SIZE 20lu * 1024lu * 1024llu
 #define PAS_COMPACT_EXPENDABLE_MEMORY_HEADER_SIZE \
     (PAS_OFFSETOF(pas_expendable_memory, states) + \
      PAS_COMPACT_EXPENDABLE_MEMORY_PAYLOAD_SIZE / PAS_EXPENDABLE_MEMORY_PAGE_SIZE \
@@ -69,7 +69,7 @@ static PAS_ALWAYS_INLINE bool pas_compact_expendable_memory_touch(
     case pas_expendable_memory_touch_to_commit_if_necessary:
         return pas_compact_expendable_memory_commit_if_necessary(object, size);
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

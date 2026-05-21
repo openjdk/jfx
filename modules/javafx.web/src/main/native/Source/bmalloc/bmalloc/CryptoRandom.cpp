@@ -37,7 +37,7 @@
 #include "VMAllocate.h"
 #include <mutex>
 
-#if !BOS(DARWIN)
+#if !BOS(DARWIN) && !BOS(WINDOWS)
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -113,6 +113,9 @@ void ARC4RandomNumberGenerator::stir()
 
 #if BOS(DARWIN)
     RELEASE_BASSERT(!CCRandomGenerateBytes(randomness, length));
+#elif BOS(WINDOWS)
+    // TODO Generate random bytes - this appears to be unused when running libpas
+    BCRASH();
 #else
     static std::once_flag onceFlag;
     static int fd;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
+#include "CocoaView.h"
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakObjCPtr.h>
 #endif
@@ -43,12 +44,8 @@ OBJC_CLASS WebValidationBubbleTapRecognizer;
 OBJC_CLASS WebValidationBubbleViewController;
 #endif
 
-#if PLATFORM(MAC)
-OBJC_CLASS NSView;
-using PlatformView = NSView;
-#elif PLATFORM(IOS_FAMILY)
-OBJC_CLASS UIView;
-using PlatformView = UIView;
+#if PLATFORM(COCOA)
+using PlatformView = CocoaView;
 #elif PLATFORM(GTK)
 using PlatformView = GtkWidget;
 #else
@@ -65,14 +62,14 @@ public:
 
 #if PLATFORM(GTK)
     using ShouldNotifyFocusEventsCallback = Function<void(PlatformView*, bool shouldNotifyFocusEvents)>;
-    static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
+    static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
     {
-        return adoptRef(*new ValidationBubble(view, message, settings, WTFMove(callback)));
+        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings, WTFMove(callback)));
     }
 #else
-    static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings)
+    static Ref<ValidationBubble> create(PlatformView* view, String&& message, const Settings& settings)
     {
-        return adoptRef(*new ValidationBubble(view, message, settings));
+        return adoptRef(*new ValidationBubble(view, WTFMove(message), settings));
     }
 #endif
 
@@ -90,13 +87,17 @@ public:
 
 private:
 #if PLATFORM(GTK)
-    WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
+    WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
     void invalidate();
 #else
-    WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&);
+    WEBCORE_EXPORT ValidationBubble(PlatformView*, String&& message, const Settings&);
 #endif
 
+#if PLATFORM(COCOA)
+    WeakObjCPtr<PlatformView> m_view;
+#else
     PlatformView* m_view;
+#endif
     String m_message;
     double m_fontSize { 0 };
 #if PLATFORM(MAC)

@@ -26,8 +26,8 @@
 
 #include <array>
 #include <span>
-#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VariantListOperations.h>
 #include <wtf/Vector.h>
 
@@ -35,11 +35,11 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
-// `VariantList<std::variant<Ts...>>` acts like a simplified `Vector<std::variant<Ts...>>` but with each
+// `VariantList<Variant<Ts...>>` acts like a simplified `Vector<Variant<Ts...>>` but with each
 // element in the list only taking up space at the size of the specific element, not the size of the
-// largest alternative, as would be the case with `Vector<std::variant<Ts...>>`.
+// largest alternative, as would be the case with `Vector<Variant<Ts...>>`.
 //
-// The tradeoff is that `VariantList<std::variant<Ts...>>` is not random-access indexable. Instead, users
+// The tradeoff is that `VariantList<Variant<Ts...>>` is not random-access indexable. Instead, users
 // must iterate through the elements in order to access them.
 
 template<typename V, size_t inlineCapacity> class VariantList : private VectorBuffer<std::byte, inlineCapacity, VectorBufferMalloc> {
@@ -205,7 +205,7 @@ private:
     std::span<const std::byte> buffer;
 };
 
-static_assert(std::forward_iterator<typename VariantList<std::variant<int, float>>::const_iterator>);
+static_assert(std::forward_iterator<typename VariantList<Variant<int, float>>::const_iterator>);
 
 // Initializes the `VariantList` with an initial capacity derived from a `VariantListSizer`.
 template<typename V, size_t inlineCapacity> VariantList<V, inlineCapacity>::VariantList(Sizer sizer)

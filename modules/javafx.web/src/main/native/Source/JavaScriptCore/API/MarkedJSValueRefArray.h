@@ -49,14 +49,14 @@ public:
     size_t size() const { return m_size; }
     bool isEmpty() const { return !m_size; }
 
-    JSValueRef& operator[](unsigned index) { return data()[index]; }
+    JSValueRef& operator[](unsigned index) LIFETIME_BOUND { return data()[index]; }
 
-    const JSValueRef* data() const
+    const JSValueRef* data() const LIFETIME_BOUND
     {
         return const_cast<MarkedJSValueRefArray*>(this)->data();
     }
 
-    JSValueRef* data()
+    JSValueRef* data() LIFETIME_BOUND
     {
         if (m_buffer)
             return m_buffer.get();

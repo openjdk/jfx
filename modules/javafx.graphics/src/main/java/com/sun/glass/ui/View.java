@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -956,11 +956,6 @@ public abstract class View {
         // If this is an extended window, we give the non-client handler the first chance to handle the event.
         // Note that a full-screen window has no non-client area, and thus the non-client event handler
         // is not notified.
-        // Some implementations (like GTK) can fire synthesized events when they receive a mouse button
-        // event on the resize border. These events, even though happening on non-client regions, must
-        // not be processed by the non-client event handler. For example, if a mouse click happens on
-        // the resize border that straddles the window close button, we don't want the close button to
-        // act on this click, because we just started a resize-drag operation.
         boolean handled = window != null
             && window.isExtendedWindow()
             && !isSynthesized

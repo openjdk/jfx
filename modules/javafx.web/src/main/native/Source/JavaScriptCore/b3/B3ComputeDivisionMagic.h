@@ -75,6 +75,8 @@
 
 #if ENABLE(B3_JIT)
 
+#include <wtf/StdLibExtras.h>
+
 namespace JSC { namespace B3 {
 
 template<typename T>
@@ -88,11 +90,10 @@ struct DivisionMagic {
 template<typename T>
 DivisionMagic<T> computeDivisionMagic(T divisor)
 {
-    typedef typename std::make_unsigned<T>::type UnsignedT;
-    UnsignedT d = divisor;
+    auto d = unsignedCast(divisor);
     unsigned p;
-    UnsignedT ad, anc, delta, q1, r1, q2, r2, t;
-    UnsignedT signedMin = static_cast<UnsignedT>(std::numeric_limits<T>::min());
+    std::make_unsigned_t<T> ad, anc, delta, q1, r1, q2, r2, t;
+    auto signedMin = unsignedCast(std::numeric_limits<T>::min());
     DivisionMagic<T> mag;
     unsigned bitWidth = sizeof(divisor) * 8;
 

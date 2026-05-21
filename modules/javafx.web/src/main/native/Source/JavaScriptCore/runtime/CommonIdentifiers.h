@@ -103,6 +103,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(copyWithin) \
     macro(dateStyle) \
     macro(day) \
     macro(days) \
@@ -247,6 +248,7 @@
     macro(read) \
     macro(region) \
     macro(replace) \
+    macro(variants) \
     macro(resizable) \
     macro(resize) \
     macro(resolve) \
@@ -290,6 +292,7 @@
     macro(toPrecision) \
     macro(toReversed) \
     macro(toSorted) \
+    macro(toSpliced) \
     macro(toString) \
     macro(toTemporalInstant) \
     macro(toWellFormed) \
@@ -313,7 +316,20 @@
     macro(written) \
     macro(year) \
     macro(years) \
-    macro(yearsDisplay)
+    macro(yearsDisplay) \
+    macro(error) \
+    macro(suppressed) \
+    macro(SuppressedError) \
+    macro(DisposableStack) \
+    macro(adopt) \
+    macro(disposed) \
+    macro(dispose) \
+    macro(use) \
+    macro(move) \
+    macro(AsyncDisposableStack) \
+    macro(disposeAsync) \
+    macro(keys) \
+    macro(flat) \
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)
@@ -383,6 +399,10 @@
     macro(toStringTag) \
     macro(unscopables)
 
+#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(macro) \
+    macro(dispose) \
+    macro(asyncDispose)
+
 #define JSC_PARSER_PRIVATE_NAMES(macro) \
     macro(generator) \
     macro(generatorState) \
@@ -433,6 +453,7 @@ namespace JSC {
 
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
+        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_EXPLICIT_RESOURCE_MANAGEMENT_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
         const Identifier intlLegacyConstructedSymbol;
 

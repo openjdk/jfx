@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,11 @@ class DeferredPromise;
 
 struct WebTransportReceiveStreamStats;
 
-class WebTransportReceiveStream : public ReadableStream {
+class WebTransportReceiveStream final : public ReadableStream {
 public:
     static ExceptionOr<Ref<WebTransportReceiveStream>> create(JSDOMGlobalObject&, Ref<ReadableStreamSource>&&);
+
+    ~WebTransportReceiveStream() final = default;
 
     void getStats(Ref<DeferredPromise>&&);
 private:

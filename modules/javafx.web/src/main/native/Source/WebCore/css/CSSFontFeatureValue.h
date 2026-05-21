@@ -40,7 +40,6 @@ public:
 
     const FontTag& tag() const { return m_tag; }
     const CSSPrimitiveValue& value() const { return m_value; }
-    Ref<CSSPrimitiveValue> protectedValue() const { return m_value; }
     String customCSSText(const CSS::SerializationContext&) const;
 
     bool equals(const CSSFontFeatureValue&) const;
@@ -56,7 +55,7 @@ private:
     CSSFontFeatureValue(FontTag&&, Ref<CSSPrimitiveValue>&&);
 
     FontTag m_tag;
-    Ref<CSSPrimitiveValue> m_value;
+    const Ref<CSSPrimitiveValue> m_value;
 };
 
 } // namespace WebCore

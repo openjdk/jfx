@@ -68,7 +68,7 @@ public:
     {
         ASSERT(m_pointer);
         ASSERT(!(m_pointer & initializingTag));
-        if (UNLIKELY(m_pointer & lazyTag)) {
+        if (m_pointer & lazyTag) [[unlikely]] {
             FuncType func = *std::bit_cast<FuncType*>(m_pointer & ~(lazyTag | initializingTag));
             return *func(owner, *this);
         }

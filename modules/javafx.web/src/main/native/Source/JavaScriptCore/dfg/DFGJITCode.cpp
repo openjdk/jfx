@@ -50,7 +50,10 @@ JITData::JITData(unsigned stubInfoSize, unsigned poolSize, const JITCode& jitCod
         case LinkerIR::Type::ArrayIteratorProtocolWatchpointSet:
         case LinkerIR::Type::NumberToStringWatchpointSet:
         case LinkerIR::Type::StructureCacheClearedWatchpointSet:
+        case LinkerIR::Type::StringToStringWatchpointSet:
+        case LinkerIR::Type::StringValueOfWatchpointSet:
         case LinkerIR::Type::StringSymbolReplaceWatchpointSet:
+        case LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet:
         case LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet:
         case LinkerIR::Type::ArraySpeciesWatchpointSet:
         case LinkerIR::Type::ArrayPrototypeChainIsSaneWatchpointSet:
@@ -98,12 +101,24 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
     for (unsigned i = 0; i < jitCode.m_linkerIR.size(); ++i) {
         auto entry = jitCode.m_linkerIR.at(i);
         switch (entry.type()) {
+        case LinkerIR::Type::Invalid: {
+            trailingSpan()[i] = entry.pointer();
+            break;
+        }
         case LinkerIR::Type::CallLinkInfo: {
             unsigned index = std::bit_cast<uintptr_t>(entry.pointer());
             const UnlinkedCallLinkInfo& unlinkedCallLinkInfo = jitCode.m_unlinkedCallLinkInfos[index];
             OptimizingCallLinkInfo& callLinkInfo = m_callLinkInfos[index];
             callLinkInfo.initializeFromDFGUnlinkedCallLinkInfo(vm, unlinkedCallLinkInfo, codeBlock);
             trailingSpan()[i] = &callLinkInfo;
+            break;
+        }
+        case LinkerIR::Type::CellPointer: {
+            trailingSpan()[i] = entry.pointer();
+            break;
+        }
+        case LinkerIR::Type::NonCellPointer: {
+            trailingSpan()[i] = entry.pointer();
             break;
         }
         case LinkerIR::Type::GlobalObject: {
@@ -140,9 +155,24 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
             success &= attemptToWatch(codeBlock, m_globalObject->structureCacheClearedWatchpointSet(), watchpoint);
             break;
         }
+        case LinkerIR::Type::StringToStringWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringToStringWatchpointSet(), watchpoint);
+            break;
+        }
+        case LinkerIR::Type::StringValueOfWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringValueOfWatchpointSet(), watchpoint);
+            break;
+        }
         case LinkerIR::Type::StringSymbolReplaceWatchpointSet: {
             auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
             success &= attemptToWatch(codeBlock, m_globalObject->stringSymbolReplaceWatchpointSet(), watchpoint);
+            break;
+        }
+        case LinkerIR::Type::StringSymbolToPrimitiveWatchpointSet: {
+            auto& watchpoint = m_watchpoints[indexOfWatchpoints++];
+            success &= attemptToWatch(codeBlock, m_globalObject->stringSymbolToPrimitiveWatchpointSet(), watchpoint);
             break;
         }
         case LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet: {
@@ -170,13 +200,7 @@ bool JITData::tryInitialize(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode
             success &= attemptToWatch(codeBlock, m_globalObject->objectPrototypeChainIsSaneWatchpointSet(), watchpoint);
             break;
         }
-        case LinkerIR::Type::Invalid:
-        case LinkerIR::Type::CellPointer:
-        case LinkerIR::Type::NonCellPointer: {
-            trailingSpan()[i] = entry.pointer();
-            break;
         }
-    }
     }
     return success;
 }
@@ -308,18 +332,18 @@ void JITCode::setOptimizationThresholdBasedOnCompilationResult(
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
     switch (result) {
-    case CompilationSuccessful:
+    case CompilationResult::CompilationSuccessful:
         optimizeNextInvocation(codeBlock);
         codeBlock->baselineVersion()->m_hasBeenCompiledWithFTL = true;
         return;
-    case CompilationFailed:
+    case CompilationResult::CompilationFailed:
         dontOptimizeAnytimeSoon(codeBlock);
         codeBlock->baselineVersion()->m_didFailFTLCompilation = true;
         return;
-    case CompilationDeferred:
+    case CompilationResult::CompilationDeferred:
         optimizeAfterWarmUp(codeBlock);
         return;
-    case CompilationInvalidated:
+    case CompilationResult::CompilationInvalidated:
         // This is weird - it will only happen in cases when the DFG code block (i.e.
         // the code block that this JITCode belongs to) is also invalidated. So it
         // doesn't really matter what we do. But, we do the right thing anyway. Note
@@ -337,7 +361,7 @@ void JITCode::setOSREntryBlock(VM& vm, const JSCell* owner, CodeBlock* osrEntryB
 {
     if (Options::verboseOSR()) {
         dataLogLn(RawPointer(this), ": Setting OSR entry block to ", RawPointer(osrEntryBlock));
-        dataLogLn("OSR entries will go to ", osrEntryBlock->jitCode()->ftlForOSREntry()->addressForCall(ArityCheckNotRequired));
+        dataLogLn("OSR entries will go to ", osrEntryBlock->jitCode()->ftlForOSREntry()->addressForCall(ArityCheckMode::ArityCheckNotRequired));
     }
     m_osrEntryBlock.set(vm, owner, osrEntryBlock);
 }
@@ -350,7 +374,7 @@ void JITCode::clearOSREntryBlockAndResetThresholds(CodeBlock *dfgCodeBlock)
     m_osrEntryBlock.clear();
     osrEntryRetry = 0;
     tierUpEntryTriggers.set(osrEntryBytecode, JITCode::TriggerReason::DontTrigger);
-    setOptimizationThresholdBasedOnCompilationResult(dfgCodeBlock, CompilationDeferred);
+    setOptimizationThresholdBasedOnCompilationResult(dfgCodeBlock, CompilationResult::CompilationDeferred);
 }
 #endif // ENABLE(FTL_JIT)
 

@@ -64,6 +64,7 @@ struct BlockCookiesAction : public ActionWithoutMetadata<BlockCookiesAction> { }
 struct CSSDisplayNoneSelectorAction : public ActionWithStringMetadata<CSSDisplayNoneSelectorAction> { };
 struct NotifyAction : public ActionWithStringMetadata<NotifyAction> { };
 struct IgnorePreviousRulesAction : public ActionWithoutMetadata<IgnorePreviousRulesAction> { };
+struct IgnoreFollowingRulesAction : public ActionWithoutMetadata<IgnoreFollowingRulesAction> { };
 struct MakeHTTPSAction : public ActionWithoutMetadata<MakeHTTPSAction> { };
 
 struct WEBCORE_EXPORT ModifyHeadersAction {
@@ -93,7 +94,7 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
             RemoveOperation isolatedCopy() && { return { WTFMove(header).isolatedCopy() }; }
             friend bool operator==(const RemoveOperation&, const RemoveOperation&) = default;
         };
-        using OperationVariant = std::variant<AppendOperation, SetOperation, RemoveOperation>;
+        using OperationVariant = Variant<AppendOperation, SetOperation, RemoveOperation>;
         OperationVariant operation;
 
         static Expected<ModifyHeaderInfo, std::error_code> parse(const JSON::Value&);
@@ -103,7 +104,7 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
         void serialize(Vector<uint8_t>&) const;
         static ModifyHeaderInfo deserialize(std::span<const uint8_t>);
         static size_t serializedLength(std::span<const uint8_t>);
-        void applyToRequest(ResourceRequest&, UncheckedKeyHashMap<String, ModifyHeadersOperationType>&);
+        void applyToRequest(ResourceRequest&, HashMap<String, ModifyHeadersOperationType>&);
     };
 
     enum class HashTableType : uint8_t { Empty, Deleted, Full } hashTableType;
@@ -130,7 +131,7 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
     void serialize(Vector<uint8_t>&) const;
     static ModifyHeadersAction deserialize(std::span<const uint8_t>);
     static size_t serializedLength(std::span<const uint8_t>);
-    void applyToRequest(ResourceRequest&, UncheckedKeyHashMap<String, ModifyHeadersOperationType>&);
+    void applyToRequest(ResourceRequest&, HashMap<String, ModifyHeadersOperationType>&);
 };
 
 struct WEBCORE_EXPORT RedirectAction {
@@ -186,7 +187,7 @@ struct WEBCORE_EXPORT RedirectAction {
         String password;
         String path;
         std::optional<std::optional<uint16_t>> port;
-        using QueryTransformVariant = std::variant<String, QueryTransform>;
+        using QueryTransformVariant = Variant<String, QueryTransform>;
         QueryTransformVariant queryTransform;
         String scheme;
         String username;
@@ -209,7 +210,7 @@ struct WEBCORE_EXPORT RedirectAction {
     };
 
     enum class HashTableType : uint8_t { Empty, Deleted, Full } hashTableType;
-    using ActionVariant = std::variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
+    using ActionVariant = Variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
     ActionVariant action;
 
     RedirectAction(ActionVariant&& action)
@@ -232,12 +233,13 @@ struct WEBCORE_EXPORT RedirectAction {
     void applyToRequest(ResourceRequest&, const URL&);
 };
 
-using ActionData = std::variant<
+using ActionData = Variant<
     BlockLoadAction,
     BlockCookiesAction,
     CSSDisplayNoneSelectorAction,
     NotifyAction,
     IgnorePreviousRulesAction,
+    IgnoreFollowingRulesAction,
     MakeHTTPSAction,
     ModifyHeadersAction,
     RedirectAction

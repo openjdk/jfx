@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "ContainerNodeInlines.h"
 #include "HTMLMediaElement.h"
 #include "RenderImage.h"
 
@@ -37,10 +38,10 @@ class RenderMedia : public RenderImage {
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMedia);
 public:
     RenderMedia(Type, HTMLMediaElement&, RenderStyle&&);
-    RenderMedia(Type, HTMLMediaElement&, RenderStyle&&, const IntSize& intrinsicSize);
     virtual ~RenderMedia();
 
     HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
+    Ref<HTMLMediaElement> protectedMediaElement() const { return mediaElement(); }
 
     bool shouldDisplayBrokenImageIcon() const final { return false; }
 

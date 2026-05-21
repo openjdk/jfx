@@ -30,7 +30,6 @@
 #pragma once
 
 #include "AudioBufferOptions.h"
-#include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include "ScriptWrappable.h"
 #include <JavaScriptCore/Forward.h>
@@ -42,6 +41,7 @@ namespace WebCore {
 
 class AudioBus;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class AudioBuffer : public ScriptWrappable, public RefCounted<AudioBuffer> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioBuffer);

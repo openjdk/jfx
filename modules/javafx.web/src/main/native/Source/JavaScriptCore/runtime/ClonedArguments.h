@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ArgumentsMode.h"
+#include "CommonIdentifiers.h"
 #include "JSObject.h"
 
 namespace JSC {
@@ -58,9 +59,9 @@ public:
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         JSValue lengthValue;
-        if (LIKELY(!structure()->didTransition())) {
+        if (!structure()->didTransition()) [[likely]] {
             lengthValue = getDirect(clonedArgumentsLengthPropertyOffset);
-            if (LIKELY(lengthValue.isInt32()))
+            if (lengthValue.isInt32()) [[likely]]
                 return std::max(lengthValue.asInt32(), 0);
         } else {
             lengthValue = get(globalObject, vm.propertyNames->length);

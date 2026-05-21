@@ -146,7 +146,7 @@ void AbstractHeapRepository::computeRangesAndDecorateInstructions()
     using namespace B3;
     root.compute();
 
-    if (UNLIKELY(verboseCompilationEnabled())) {
+    if (verboseCompilationEnabled()) [[unlikely]] {
         WTF::dataFile().atomically([&](auto&) {
             dataLogLn("Abstract Heap Repository:");
         root.deepDump(WTF::dataFile());

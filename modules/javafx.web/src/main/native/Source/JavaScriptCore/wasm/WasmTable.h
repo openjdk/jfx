@@ -104,6 +104,8 @@ protected:
     NO_UNIQUE_ADDRESS const std::optional<uint32_t> m_maximum;
     const TableElementType m_type;
     Type m_wasmType;
+    // If m_wasmType came from a TypeDefinition, the following retains the definition to prevent a dangling m_wasmType.
+    RefPtr<const TypeDefinition> m_wasmTypeDefinition;
     bool m_isFixedSized { false };
     JSWebAssemblyTable* m_owner;
 };

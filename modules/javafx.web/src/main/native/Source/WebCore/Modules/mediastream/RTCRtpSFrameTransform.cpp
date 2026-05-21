@@ -30,6 +30,7 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "CryptoKeyRaw.h"
+#include "EventTargetInlines.h"
 #include "JSDOMConvertBufferSource.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCEncodedAudioFrame.h"
@@ -173,7 +174,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
         if (!result)
             return;
 
-        frame->setData({ result.value().data(), result.value().size() });
+        frame->setData(result.value().span());
 
         backend->processTransformedFrame(frame.get());
     });
@@ -204,7 +205,8 @@ static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& glo
 template<typename Frame>
 void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
-    auto rtcFrame = frame.rtcFrame();
+    Ref vm = globalObject.vm();
+    auto rtcFrame = frame.rtcFrame(vm, RTCEncodedFrame::ShouldNeuter::No);
     auto chunk = rtcFrame->data();
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
     std::span<const uint8_t> transformedChunk;
@@ -232,7 +234,7 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
         auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
         auto frameConversionResult = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
-        if (UNLIKELY(frameConversionResult.hasException(scope)))
+        if (frameConversionResult.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
         auto frame = frameConversionResult.releaseReturnValue();
 
@@ -285,6 +287,11 @@ ExceptionOr<RefPtr<WritableStream>> RTCRtpSFrameTransform::writable()
 bool RTCRtpSFrameTransform::virtualHasPendingActivity() const
 {
     return (m_isAttached || m_hasWritable) && hasEventListeners();
+}
+
+ScriptExecutionContext* RTCRtpSFrameTransform::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 } // namespace WebCore

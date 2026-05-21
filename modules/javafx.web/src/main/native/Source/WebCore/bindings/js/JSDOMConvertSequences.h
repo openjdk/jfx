@@ -47,7 +47,7 @@ struct GenericSequenceInnerConverter {
         ASSERT(!scope.exception());
 
         auto convertedValue = WebCore::convert<IDL>(lexicalGlobalObject, value);
-        if (UNLIKELY(convertedValue.hasException(scope)))
+        if (convertedValue.hasException(scope)) [[unlikely]]
             return;
 
         sequence.append(convertedValue.releaseReturnValue());
@@ -64,7 +64,7 @@ struct GenericSequenceInnerConverter<IDLInterface<T>> {
         ASSERT(!scope.exception());
 
         auto convertedValue = WebCore::convert<IDL>(lexicalGlobalObject, value);
-        if (UNLIKELY(convertedValue.hasException(scope)))
+        if (convertedValue.hasException(scope)) [[unlikely]]
             return;
 
         result.append(Ref { *convertedValue.releaseReturnValue() });
@@ -152,7 +152,7 @@ struct NumericSequenceConverterImpl {
                 sequence.append(0);
             else {
                 auto convertedValue = Converter<InnerTypeIDL>::convert(lexicalGlobalObject, scope, doubleValue);
-                if (UNLIKELY(convertedValue.hasException(scope)))
+                if (convertedValue.hasException(scope)) [[unlikely]]
                     return Result::exception();
 
                 sequence.append(convertedValue.releaseReturnValue());
@@ -372,7 +372,7 @@ template<typename T> struct JSConverter<IDLSequence<T>> {
             RETURN_IF_EXCEPTION(scope, { });
             list.append(jsValue);
         }
-        if (UNLIKELY(list.hasOverflowed())) {
+        if (list.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
         }
@@ -396,7 +396,7 @@ template<typename T> struct JSConverter<IDLFrozenArray<T>> {
             RETURN_IF_EXCEPTION(scope, { });
             list.append(jsValue);
         }
-        if (UNLIKELY(list.hasOverflowed())) {
+        if (list.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(&lexicalGlobalObject, scope);
             return { };
         }

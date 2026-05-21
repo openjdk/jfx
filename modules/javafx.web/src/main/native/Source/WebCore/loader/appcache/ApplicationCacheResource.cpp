@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,32 +29,32 @@
 
 namespace WebCore {
 
-Ref<ApplicationCacheResource> ApplicationCacheResource::create(const URL& url, const ResourceResponse& response, unsigned type, RefPtr<FragmentedSharedBuffer>&& buffer, const String& path)
+Ref<ApplicationCacheResource> ApplicationCacheResource::create(URL&& url, ResourceResponse&& response, unsigned type, RefPtr<FragmentedSharedBuffer>&& buffer, String&& path)
 {
     ASSERT(!url.hasFragmentIdentifier());
     if (!buffer)
         buffer = SharedBuffer::create();
-    auto resourceResponse = response;
+    auto resourceResponse = WTFMove(response);
     resourceResponse.setSource(ResourceResponse::Source::ApplicationCache);
 
-    return adoptRef(*new ApplicationCacheResource(URL { url }, WTFMove(resourceResponse), type, buffer.releaseNonNull(), path));
+    return adoptRef(*new ApplicationCacheResource(WTFMove(url), WTFMove(resourceResponse), type, buffer.releaseNonNull(), WTFMove(path)));
 }
 
-ApplicationCacheResource::ApplicationCacheResource(URL&& url, ResourceResponse&& response, unsigned type, Ref<FragmentedSharedBuffer>&& data, const String& path)
+ApplicationCacheResource::ApplicationCacheResource(URL&& url, ResourceResponse&& response, unsigned type, Ref<FragmentedSharedBuffer>&& data, String&& path)
     : SubstituteResource(WTFMove(url), WTFMove(response), WTFMove(data))
     , m_type(type)
     , m_storageID(0)
     , m_estimatedSizeInStorage(0)
-    , m_path(path)
+    , m_path(WTFMove(path))
 {
 }
 
 void ApplicationCacheResource::deliver(ResourceLoader& loader)
 {
     if (m_path.isEmpty())
-        loader.deliverResponseAndData(response(), RefPtr { &data() });
+        loader.deliverResponseAndData(ResourceResponse { response() }, RefPtr { &data() });
     else
-        loader.deliverResponseAndData(response(), SharedBuffer::createWithContentsOfFile(m_path));
+        loader.deliverResponseAndData(ResourceResponse { response() }, SharedBuffer::createWithContentsOfFile(m_path));
 }
 
 void ApplicationCacheResource::addType(unsigned type)
@@ -71,14 +71,14 @@ int64_t ApplicationCacheResource::estimatedSizeInStorage()
     m_estimatedSizeInStorage = data().size();
 
     for (const auto& headerField : response().httpHeaderFields())
-        m_estimatedSizeInStorage += (headerField.key.length() + headerField.value.length() + 2) * sizeof(UChar);
+        m_estimatedSizeInStorage += (headerField.key.length() + headerField.value.length() + 2) * sizeof(char16_t);
 
-    m_estimatedSizeInStorage += url().string().length() * sizeof(UChar);
+    m_estimatedSizeInStorage += url().string().length() * sizeof(char16_t);
     m_estimatedSizeInStorage += sizeof(int); // response().m_httpStatusCode
-    m_estimatedSizeInStorage += response().url().string().length() * sizeof(UChar);
+    m_estimatedSizeInStorage += response().url().string().length() * sizeof(char16_t);
     m_estimatedSizeInStorage += sizeof(unsigned); // dataId
-    m_estimatedSizeInStorage += response().mimeType().length() * sizeof(UChar);
-    m_estimatedSizeInStorage += response().textEncodingName().length() * sizeof(UChar);
+    m_estimatedSizeInStorage += response().mimeType().length() * sizeof(char16_t);
+    m_estimatedSizeInStorage += response().textEncodingName().length() * sizeof(char16_t);
 
     return m_estimatedSizeInStorage;
 }

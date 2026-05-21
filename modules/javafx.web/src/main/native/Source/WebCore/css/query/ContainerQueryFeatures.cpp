@@ -26,20 +26,21 @@
 #include "ContainerQueryFeatures.h"
 
 #include "BoxSides.h"
+#include "CSSCustomPropertyValue.h"
 #include "CalculationCategory.h"
 #include "ComputedStyleDependencies.h"
 #include "ContainerQueryEvaluator.h"
-#include "CustomPropertyRegistry.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "StyleBuilder.h"
+#include "StyleCustomProperty.h"
+#include "StyleCustomPropertyRegistry.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore::CQ {
 
 using namespace MQ;
-
-ContainerProgressProviding::~ContainerProgressProviding() = default;
 
 struct SizeFeatureSchema : public FeatureSchema {
     SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, OptionSet<MediaQueryDynamicDependency> dependencies, FixedVector<CSSValueID>&& valueIdentifiers = { })
@@ -68,20 +69,7 @@ struct SizeFeatureSchema : public FeatureSchema {
 
 namespace Features {
 
-static double lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis logicalAxis, const FloatSize& size, const RenderStyle& style)
-{
-    switch (mapAxisLogicalToPhysical(style.writingMode(), logicalAxis)) {
-    case BoxAxis::Horizontal:
-        return size.width();
-
-    case BoxAxis::Vertical:
-        return size.height();
-    }
-
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-struct WidthFeatureSchema : public SizeFeatureSchema, public ContainerProgressProviding {
+struct WidthFeatureSchema : public SizeFeatureSchema {
     WidthFeatureSchema()
         : SizeFeatureSchema("width"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
     {
@@ -93,38 +81,9 @@ struct WidthFeatureSchema : public SizeFeatureSchema, public ContainerProgressPr
         {
         return evaluateLengthFeature(feature, renderer.contentBoxWidth(), conversionData);
         }
-
-
-    // ContainerProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Length;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        dependencies.containerDimensions = true;
-        dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const RenderBox& renderer) const override
-    {
-        return renderer.contentBoxWidth();
-    }
-
-    double valueInCanonicalUnits(const RenderView& view, const RenderStyle&) const override
-    {
-        return view.sizeForCSSSmallViewportUnits().width();
-    }
 };
 
-struct HeightFeatureSchema : public SizeFeatureSchema, public ContainerProgressProviding {
+struct HeightFeatureSchema : public SizeFeatureSchema {
     HeightFeatureSchema()
         : SizeFeatureSchema("height"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
     {
@@ -136,37 +95,9 @@ struct HeightFeatureSchema : public SizeFeatureSchema, public ContainerProgressP
         {
         return evaluateLengthFeature(feature, renderer.contentBoxHeight(), conversionData);
         }
-
-    // ContainerProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Length;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        dependencies.containerDimensions = true;
-        dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const RenderBox& renderer) const override
-    {
-        return renderer.contentBoxHeight();
-    }
-
-    double valueInCanonicalUnits(const RenderView& view, const RenderStyle&) const override
-    {
-        return view.sizeForCSSSmallViewportUnits().height();
-    }
 };
 
-struct InlineSizeFeatureSchema : public SizeFeatureSchema, public ContainerProgressProviding {
+struct InlineSizeFeatureSchema : public SizeFeatureSchema {
     InlineSizeFeatureSchema()
         : SizeFeatureSchema("inline-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
     {
@@ -178,37 +109,9 @@ struct InlineSizeFeatureSchema : public SizeFeatureSchema, public ContainerProgr
         {
         return evaluateLengthFeature(feature, renderer.contentBoxLogicalWidth(), conversionData);
         }
-
-    // ContainerProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-    {
-        return Calculation::Category::Length;
-    }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        dependencies.containerDimensions = true;
-        dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const RenderBox& renderer) const override
-    {
-        return renderer.contentBoxLogicalWidth();
-    }
-
-    double valueInCanonicalUnits(const RenderView& view, const RenderStyle& style) const override
-    {
-        return lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, view.sizeForCSSSmallViewportUnits(), style);
-    }
 };
 
-struct BlockSizeFeatureSchema : public SizeFeatureSchema, public ContainerProgressProviding {
+struct BlockSizeFeatureSchema : public SizeFeatureSchema {
     BlockSizeFeatureSchema()
         : SizeFeatureSchema("block-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
     {
@@ -219,34 +122,6 @@ struct BlockSizeFeatureSchema : public SizeFeatureSchema, public ContainerProgre
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
         return evaluateLengthFeature(feature, renderer.contentBoxLogicalHeight(), conversionData);
-        }
-
-    // ContainerProgressProviding conformance
-
-    AtomString name() const override
-    {
-        return static_cast<const FeatureSchema*>(this)->name;
-    }
-
-    Calculation::Category category() const override
-        {
-        return Calculation::Category::Length;
-        }
-
-    void collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const override
-    {
-        dependencies.containerDimensions = true;
-        dependencies.viewportDimensions = true;
-    }
-
-    double valueInCanonicalUnits(const RenderBox& renderer) const override
-    {
-        return renderer.contentBoxLogicalHeight();
-    }
-
-    double valueInCanonicalUnits(const RenderView& view, const RenderStyle& style) const override
-        {
-        return lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, view.sizeForCSSSmallViewportUnits(), style);
         }
 };
 
@@ -296,23 +171,24 @@ struct StyleFeatureSchema : public FeatureSchema {
 
         auto* customPropertyValue = style.customPropertyValue(feature.name);
         if (!feature.rightComparison)
-            return toEvaluationResult(customPropertyValue && !customPropertyValue->isInvalid());
+            return toEvaluationResult(customPropertyValue && !customPropertyValue->isGuaranteedInvalid());
 
-        auto resolvedFeatureValue = [&]() -> RefPtr<const CSSCustomPropertyValue> {
+        auto resolvedFeatureValue = [&]() -> RefPtr<const Style::CustomProperty> {
             auto featureValue = dynamicDowncast<CSSCustomPropertyValue>(feature.rightComparison->value);
             ASSERT(featureValue);
 
             // Resolve the queried custom property value for var() references, css-wide keywords and registered properties.
             auto builderContext = Style::BuilderContext {
                 context.document.get(),
-                *context.conversionData.parentStyle(),
+                context.conversionData.parentStyle(),
                 context.conversionData.rootStyle(),
                 context.conversionData.elementForContainerUnitResolution()
             };
 
             auto dummyStyle = RenderStyle::clone(style);
+            auto dummyMatchResult = Style::MatchResult::create();
 
-            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), { }, { } };
+            auto styleBuilder = Style::Builder { dummyStyle, WTFMove(builderContext), dummyMatchResult, { } };
             return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
         }();
 
@@ -320,8 +196,8 @@ struct StyleFeatureSchema : public FeatureSchema {
             return EvaluationResult::False;
 
         // Guaranteed-invalid values match guaranteed-invalid values.
-        if (resolvedFeatureValue->isInvalid())
-            return toEvaluationResult(!customPropertyValue || customPropertyValue->isInvalid());
+        if (resolvedFeatureValue->isGuaranteedInvalid())
+            return toEvaluationResult(!customPropertyValue || customPropertyValue->isGuaranteedInvalid());
 
         ASSERT(feature.rightComparison->op == ComparisonOperator::Equal);
         return toEvaluationResult(customPropertyValue && *customPropertyValue == *resolvedFeatureValue);
@@ -418,16 +294,6 @@ Vector<const MQ::FeatureSchema*> allSchemas()
         &Features::blockSize(),
         &Features::aspectRatio(),
         &Features::orientation(),
-    };
-}
-
-Vector<const ContainerProgressProviding*> allContainerProgressProvidingSchemas()
-{
-    return {
-        &Features::widthFeatureSchema(),
-        &Features::heightFeatureSchema(),
-        &Features::inlineSizeFeatureSchema(),
-        &Features::blockSizeFeatureSchema(),
     };
 }
 

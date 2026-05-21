@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2012 Motorola Mobility Inc.
@@ -92,8 +92,8 @@ ExceptionOr<void> DOMURL::setHref(const String& url)
     if (!completeURL.isValid())
         return Exception { ExceptionCode::TypeError };
     m_url = WTFMove(completeURL);
-    if (m_searchParams)
-        m_searchParams->updateFromAssociatedURL();
+    if (RefPtr searchParams = m_searchParams)
+        searchParams->updateFromAssociatedURL();
     return { };
 }
 
@@ -104,11 +104,11 @@ String DOMURL::createObjectURL(ScriptExecutionContext& scriptExecutionContext, B
 
 String DOMURL::createPublicURL(ScriptExecutionContext& scriptExecutionContext, URLRegistrable& registrable)
 {
-    URL publicURL = BlobURL::createPublicURL(scriptExecutionContext.securityOrigin());
+    URL publicURL = BlobURL::createPublicURL(scriptExecutionContext.protectedSecurityOrigin().get());
     if (publicURL.isEmpty())
         return String();
 
-    scriptExecutionContext.publicURLManager().registerURL(publicURL, registrable);
+    scriptExecutionContext.protectedPublicURLManager()->registerURL(publicURL, registrable);
 
     return publicURL.string();
 }
@@ -123,12 +123,12 @@ URLSearchParams& DOMURL::searchParams()
 void DOMURL::revokeObjectURL(ScriptExecutionContext& scriptExecutionContext, const String& urlString)
 {
     URL url { urlString };
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
     request.setDomainForCachePartition(scriptExecutionContext.domainForCachePartition());
 
     MemoryCache::removeRequestFromSessionCaches(scriptExecutionContext, request);
 
-    scriptExecutionContext.publicURLManager().revoke(url);
+    scriptExecutionContext.protectedPublicURLManager()->revoke(request.url());
 }
 
 } // namespace WebCore

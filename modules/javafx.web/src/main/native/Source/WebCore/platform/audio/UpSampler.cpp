@@ -32,6 +32,7 @@
 
 #include "UpSampler.h"
 
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -64,12 +65,12 @@ void UpSampler::initializeKernel()
 
     for (int i = 0; i < n; ++i) {
         // Compute the sinc() with offset.
-        double s = piDouble * (i - halfSize - subsampleOffset);
+        double s = std::numbers::pi * (i - halfSize - subsampleOffset);
         double sinc = !s ? 1.0 : sin(s) / s;
 
         // Compute Blackman window, matching the offset of the sinc().
         double x = (i - subsampleOffset) / n;
-        double window = a0 - a1 * cos(2.0 * piDouble * x) + a2 * cos(4.0 * piDouble * x);
+        double window = a0 - a1 * cos(2.0 * std::numbers::pi * x) + a2 * cos(4.0 * std::numbers::pi * x);
 
         // Window the sinc() function.
         m_kernel[i] = sinc * window;

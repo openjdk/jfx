@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PageAuditAgent.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -35,6 +34,7 @@ namespace WebCore {
 class Document;
 class Node;
 class VoidCallback;
+template<typename> class ExceptionOr;
 
 class InspectorAuditDOMObject : public RefCounted<InspectorAuditDOMObject> {
 public:

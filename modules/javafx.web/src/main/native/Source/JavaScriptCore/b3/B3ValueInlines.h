@@ -93,6 +93,8 @@ namespace JSC { namespace B3 {
     case Add: \
     case Sub: \
     case Mul: \
+    case MulHigh: \
+    case UMulHigh: \
     case Div: \
     case UDiv: \
     case Mod: \
@@ -196,6 +198,8 @@ namespace JSC { namespace B3 {
     case VectorAddSat: \
     case VectorSubSat: \
     case VectorMul: \
+    case VectorMulHigh: \
+    case VectorMulLow: \
     case VectorDotProduct: \
     case VectorDiv: \
     case VectorMin: \

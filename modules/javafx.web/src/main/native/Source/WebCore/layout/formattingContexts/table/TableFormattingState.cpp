@@ -27,6 +27,8 @@
 #include "TableFormattingState.h"
 
 #include "RenderObject.h"
+#include "RenderStyleInlines.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include "TableFormattingContext.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -40,8 +42,8 @@ static UniqueRef<TableGrid> ensureTableGrid(const ElementBox& tableBox)
     auto tableGrid = makeUniqueRef<TableGrid>();
     auto& tableStyle = tableBox.style();
     auto shouldApplyBorderSpacing = tableStyle.borderCollapse() == BorderCollapse::Separate;
-    tableGrid->setHorizontalSpacing(LayoutUnit { shouldApplyBorderSpacing ? tableStyle.horizontalBorderSpacing() : 0 });
-    tableGrid->setVerticalSpacing(LayoutUnit { shouldApplyBorderSpacing ? tableStyle.verticalBorderSpacing() : 0 });
+    tableGrid->setHorizontalSpacing(LayoutUnit { shouldApplyBorderSpacing ? Style::evaluate(tableStyle.borderHorizontalSpacing()) : 0 });
+    tableGrid->setVerticalSpacing(LayoutUnit { shouldApplyBorderSpacing ? Style::evaluate(tableStyle.borderVerticalSpacing()) : 0 });
 
     auto* firstChild = tableBox.firstChild();
     if (!firstChild) {

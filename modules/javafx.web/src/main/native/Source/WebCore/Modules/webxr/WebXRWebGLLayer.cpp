@@ -29,6 +29,8 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
+#include "ExceptionOr.h"
 #include "HTMLCanvasElement.h"
 #include "IntSize.h"
 #include "OffscreenCanvas.h"
@@ -90,6 +92,11 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
     return framebuffer;
 }
 
+static bool isImmersiveMode(XRSessionMode mode)
+{
+    return mode == XRSessionMode::ImmersiveAr || mode == XRSessionMode::ImmersiveVr;
+}
+
 // https://immersive-web.github.io/webxr/#dom-xrwebgllayer-xrwebgllayer
 ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& session, WebXRRenderingContext&& context, const XRWebGLLayerInit& init)
 {
@@ -108,7 +115,7 @@ ExceptionOr<Ref<WebXRWebGLLayer>> WebXRWebGLLayer::create(Ref<WebXRSession>&& se
                 return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with a lost WebGL context."_s };
 
             auto mode = session->mode();
-            if ((mode == XRSessionMode::ImmersiveAr || mode == XRSessionMode::ImmersiveVr) && !baseContext->isXRCompatible())
+            if (isImmersiveMode(mode) && !baseContext->isXRCompatible())
                 return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLLayer with WebGL context not marked as XR compatible."_s };
 
 
@@ -304,7 +311,14 @@ PlatformXR::Device::Layer WebXRWebGLLayer::endFrame()
         { PlatformXR::Eye::Right, m_rightViewportData.viewport->rect() }
     };
 
-    return PlatformXR::Device::Layer { .handle = m_framebuffer->handle(), .visible = true, .views = WTFMove(views) };
+    return PlatformXR::Device::Layer {
+        .handle = m_framebuffer->handle(),
+        .visible = true,
+        .views = WTFMove(views),
+#if USE(OPENXR)
+        .fenceFD = m_framebuffer->takeFenceFD()
+#endif
+    };
 }
 
 void WebXRWebGLLayer::canvasResized(CanvasBase&)
@@ -330,7 +344,7 @@ void WebXRWebGLLayer::computeViewports()
     auto width = framebufferWidth();
     auto height = framebufferHeight();
 
-    if (m_session->mode() == XRSessionMode::ImmersiveVr && m_session->views().size() > 1) {
+    if (isImmersiveMode(m_session->mode()) && m_session->views().size() > 1) {
         if (m_framebuffer && m_framebuffer->usesLayeredMode()) {
             auto scale = m_leftViewportData.currentScale;
             auto viewport = m_framebuffer->drawViewport(PlatformXR::Eye::Left);

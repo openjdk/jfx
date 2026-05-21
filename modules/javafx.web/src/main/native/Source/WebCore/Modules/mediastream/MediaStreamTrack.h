@@ -32,6 +32,7 @@
 #include "ActiveDOMObject.h"
 #include "Blob.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
 #include "MediaProducer.h"
@@ -48,6 +49,7 @@ namespace WebCore {
 
 class AudioSourceProvider;
 class Document;
+class MediaSessionManagerInterface;
 
 struct MediaTrackConstraints;
 
@@ -188,9 +190,7 @@ public:
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-
-    Ref<MediaStreamTrackPrivate> m_private;
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     explicit MediaStreamTrack(MediaStreamTrack&);
@@ -219,6 +219,8 @@ private:
     bool isCapturingAudio() const final;
     bool wantsToCaptureAudio() const final;
 
+    RefPtr<MediaSessionManagerInterface> mediaSessionManager() const;
+
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MediaStreamTrack"_s; }
     WTFLogChannel& logChannel() const final;
@@ -228,6 +230,7 @@ private:
 
     MediaTrackConstraints m_constraints;
 
+    const Ref<MediaStreamTrackPrivate> m_private;
     String m_mediaStreamId;
     State m_readyState { State::Live };
     bool m_muted { false };

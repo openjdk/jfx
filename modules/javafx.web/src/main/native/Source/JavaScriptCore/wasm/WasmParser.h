@@ -112,13 +112,13 @@ protected:
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, m_offset, ": "_s, makeString(args)...));
     }
 #define WASM_PARSER_FAIL_IF(condition, ...) do { \
-    if (UNLIKELY(condition))                     \
+    if (condition) [[unlikely]]                     \
         return fail(__VA_ARGS__);                \
     } while (0)
 
 #define WASM_FAIL_IF_HELPER_FAILS(helper) do {                      \
         auto helperResult = helper;                                 \
-        if (UNLIKELY(!helperResult))                                \
+        if (!helperResult) [[unlikely]]                             \
             return makeUnexpected(WTFMove(helperResult.error()));   \
     } while (0)
 
@@ -189,7 +189,8 @@ ALWAYS_INLINE bool ParserBase::consumeUTF8String(Name& result, size_t stringLeng
             return false;
 
     result.grow(stringLength);
-    memcpy(result.data(), string.data(), stringLength);
+    // FIXME: Adopt memcpySpan().
+    memcpy(result.mutableSpan().data(), string.data(), stringLength);
     m_offset += stringLength;
     return true;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,8 @@
 #include "config.h"
 #include "CSSPositionTryRule.h"
 
+#include "CSSPositionTryDescriptors.h"
 #include "CSSSerializationContext.h"
-#include "PropertySetCSSStyleDeclaration.h"
 
 namespace WebCore {
 
@@ -43,12 +43,12 @@ StyleRulePositionTry::StyleRulePositionTry(AtomString&& name, Ref<StylePropertie
 {
 }
 
-Ref<MutableStyleProperties> StyleRulePositionTry::protectedMutableProperties()
+MutableStyleProperties& StyleRulePositionTry::mutableProperties()
 {
-    auto propertiesRef = protectedProperties();
+    Ref properties = m_properties;
 
-    if (!is<MutableStyleProperties>(propertiesRef))
-        m_properties = propertiesRef->mutableCopy();
+    if (!is<MutableStyleProperties>(properties))
+        m_properties = properties->mutableCopy();
 
     return downcast<MutableStyleProperties>(m_properties.get());
 }
@@ -72,9 +72,9 @@ String CSSPositionTryRule::cssText() const
     StringBuilder builder;
     builder.append("@position-try "_s, name(), " {"_s);
 
-    auto propertiesRef = m_positionTryRule->protectedProperties();
+    Ref properties = m_positionTryRule->properties();
 
-    if (auto declarations = propertiesRef->asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
+    if (auto declarations = properties->asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
         builder.append(' ', declarations, ' ');
     else
         builder.append(' ');
@@ -94,12 +94,12 @@ AtomString CSSPositionTryRule::name() const
     return m_positionTryRule->name();
 }
 
-CSSStyleDeclaration& CSSPositionTryRule::style()
+CSSPositionTryDescriptors& CSSPositionTryRule::style()
 {
-    Ref mutablePropertiesRef = protectedPositionTryRule()->protectedMutableProperties();
+    Ref mutableProperties = protectedPositionTryRule()->mutableProperties();
 
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(mutablePropertiesRef.get(), *this);
+        m_propertiesCSSOMWrapper = CSSPositionTryDescriptors::create(mutableProperties.get(), *this);
 
     return *m_propertiesCSSOMWrapper;
 }

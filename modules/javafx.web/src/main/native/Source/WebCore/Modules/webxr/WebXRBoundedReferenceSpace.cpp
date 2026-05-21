@@ -30,6 +30,8 @@
 
 #include "DOMPointReadOnly.h"
 #include "Document.h"
+#include "Exception.h"
+#include "ExceptionOr.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
 #include <wtf/TZoneMallocInlines.h>

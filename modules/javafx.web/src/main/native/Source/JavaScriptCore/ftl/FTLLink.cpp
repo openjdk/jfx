@@ -56,6 +56,7 @@ void link(State& state)
             tables[index++] = WTFMove(entry.value);
         state.jitCode->common.m_stringSearchTable8 = WTFMove(tables);
     }
+    state.jitCode->common.m_concatKeyAtomStringCaches = WTFMove(graph.m_concatKeyAtomStringCaches);
 
     graph.registerFrozenValues();
 

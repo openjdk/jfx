@@ -39,7 +39,7 @@ namespace WTF {
 
 size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList, bool& exactMatch)
 {
-    auto matchedLanguages = retainPtr([NSLocale matchedLanguagesFromAvailableLanguages:createNSArray(languageList).get() forPreferredLanguages:@[ static_cast<NSString *>(language) ]]);
+    auto matchedLanguages = retainPtr([NSLocale matchedLanguagesFromAvailableLanguages:createNSArray(languageList).get() forPreferredLanguages:@[ language.createNSString().get() ]]);
     if (![matchedLanguages count]) {
         exactMatch = false;
         return notFound;
@@ -56,7 +56,7 @@ size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<St
 
 LocaleComponents parseLocale(const String& localeIdentifier)
 {
-    auto locale = retainPtr([NSLocale localeWithLocaleIdentifier:localeIdentifier]);
+    auto locale = retainPtr([NSLocale localeWithLocaleIdentifier:localeIdentifier.createNSString().get()]);
 
     return {
         locale.get().languageCode,

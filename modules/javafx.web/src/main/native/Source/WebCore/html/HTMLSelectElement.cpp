@@ -31,6 +31,7 @@
 #include "AXObjectCache.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "DOMFormData.h"
 #include "DocumentInlines.h"
 #include "ElementChildIteratorInlines.h"
@@ -57,7 +58,7 @@
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
 #include "Settings.h"
-#include "SpatialNavigation.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -99,7 +100,7 @@ Ref<HTMLSelectElement> HTMLSelectElement::create(Document& document)
     return adoptRef(*new HTMLSelectElement(selectTag, document, nullptr));
 }
 
-void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
+void HTMLSelectElement::didRecalcStyle(OptionSet<Style::Change> styleChange)
 {
     // Even though the options didn't necessarily change, we will call setOptionsChangedOnRenderer for its side effect
     // of recomputing the width of the element. We need to do that if the style change included a change in zoom level.
@@ -252,7 +253,7 @@ void HTMLSelectElement::remove(int optionIndex)
 
 String HTMLSelectElement::value() const
 {
-    if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
+    if (protectedDocument()->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::FormControls))
         return emptyString();
     for (auto& item : listItems()) {
         if (RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get())) {
@@ -325,11 +326,11 @@ int HTMLSelectElement::defaultTabIndex() const
     return 0;
 }
 
-bool HTMLSelectElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool HTMLSelectElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
     if (renderer())
         return isFocusable();
-    return HTMLFormControlElement::isKeyboardFocusable(event);
+    return HTMLFormControlElement::isKeyboardFocusable(focusEventData);
 }
 
 bool HTMLSelectElement::isMouseFocusable() const
@@ -436,8 +437,6 @@ void HTMLSelectElement::optionElementChildrenChanged()
     setOptionsChangedOnRenderer();
     invalidateStyleForSubtree();
     updateValidity();
-    if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this);
 }
 #if PLATFORM(JAVA)
 void HTMLSelectElement::setMultiple(bool multiple)
@@ -531,10 +530,10 @@ ExceptionOr<void> HTMLSelectElement::setLength(unsigned newLength)
         Vector<Ref<HTMLOptionElement>> itemsToRemove;
         size_t optionIndex = 0;
         for (auto& item : items) {
-            auto* option = dynamicDowncast<HTMLOptionElement>(*item);
+            RefPtr option = dynamicDowncast<HTMLOptionElement>(*item);
             if (option && optionIndex++ >= newLength) {
                 ASSERT(item->parentNode());
-                itemsToRemove.append(*option);
+                itemsToRemove.append(option.releaseNonNull());
             }
         }
 
@@ -574,7 +573,8 @@ int HTMLSelectElement::nextValidIndex(int listIndex, SkipDirection direction, in
     int size = listItems.size();
     for (listIndex += direction; listIndex >= 0 && listIndex < size; listIndex += direction) {
         --skip;
-        if (!listItems[listIndex]->isDisabledFormControl() && is<HTMLOptionElement>(*listItems[listIndex])) {
+        RefPtr listItem = listItems[listIndex].get();
+        if (!listItem->isDisabledFormControl() && is<HTMLOptionElement>(*listItem)) {
             lastGoodIndex = listIndex;
             if (skip <= 0)
                 break;
@@ -818,10 +818,9 @@ void HTMLSelectElement::setRecalcListItems()
     }
     if (!isConnected())
         invalidateSelectedItems();
-    if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this);
 
-    if (Ref document = this->document(); this == document->focusedElement()) {
+    Ref document = this->document();
+    if (this == document->focusedElement()) {
         if (RefPtr page = document->page())
             page->chrome().client().focusedSelectElementDidChangeOptions(*this);
     }
@@ -839,13 +838,13 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates, AllowStyleInv
         m_listItems.append(&option);
         if (updateSelectedStates && !m_multiple) {
             if (!firstOption)
-                firstOption = &option;
+                firstOption = option;
             if (option.selected()) {
                 if (foundSelected)
                     foundSelected->setSelectedState(false, allowStyleInvalidation);
-                foundSelected = &option;
+                foundSelected = option;
             } else if (m_size <= 1 && !foundSelected && !option.isDisabledFormControl()) {
-                foundSelected = &option;
+                foundSelected = option;
                 foundSelected->setSelectedState(true, allowStyleInvalidation);
             }
         }
@@ -1150,7 +1149,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
     if (!RenderTheme::singleton().popsMenuByArrowKeys())
         return false;
 
-    if (!isSpatialNavigationEnabled(document().frame())) {
+    if (!document().settings().spatialNavigationEnabled()) {
         if (event->keyIdentifier() == "Down"_s || event->keyIdentifier() == "Up"_s) {
             focus();
             protectedDocument()->updateStyleIfNeeded();
@@ -1194,7 +1193,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         // When using spatial navigation, we want to be able to navigate away
         // from the select element when the user hits any of the arrow keys,
         // instead of changing the selection.
-        if (isSpatialNavigationEnabled(document().frame())) {
+        if (document().settings().spatialNavigationEnabled()) {
             if (!m_activeSelectionState)
                 return;
         }
@@ -1243,7 +1242,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         int keyCode = keyboardEvent->keyCode();
         bool handled = false;
 
-        if (keyCode == ' ' && isSpatialNavigationEnabled(document().frame())) {
+        if (keyCode == ' ' && document().settings().spatialNavigationEnabled()) {
             // Use space to toggle arrow key handling for selection change or spatial navigation.
             m_activeSelectionState = !m_activeSelectionState;
             keyboardEvent->setDefaultHandled();
@@ -1387,6 +1386,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
     auto& eventNames = WebCore::eventNames();
     RefPtr mouseEvent = dynamicDowncast<MouseEvent>(event);
+    RefPtr frame = document().frame();
     if (event.type() == eventNames.mousedownEvent && mouseEvent && mouseEvent->button() == MouseButton::Left) {
         focus();
         protectedDocument()->updateStyleIfNeeded();
@@ -1407,7 +1407,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
                 updateSelectedState(listIndex, mouseEvent->ctrlKey(), mouseEvent->shiftKey());
 #endif
             }
-            if (RefPtr frame = document().frame())
+            if (frame)
                 frame->eventHandler().setMouseDownMayStartAutoscroll();
 
             mouseEvent->setDefaultHandled();
@@ -1436,7 +1436,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             }
             mouseEvent->setDefaultHandled();
         }
-    } else if (event.type() == eventNames.mouseupEvent && mouseEvent && mouseEvent->button() == MouseButton::Left && document().frame()->eventHandler().autoscrollRenderer() != renderer()) {
+    } else if (event.type() == eventNames.mouseupEvent && mouseEvent && mouseEvent->button() == MouseButton::Left && frame && frame->eventHandler().autoscrollRenderer() != renderer()) {
         // This click or drag event was not over any of the options.
         if (m_lastOnChangeSelection.isEmpty())
             return;
@@ -1503,10 +1503,11 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             handled = true;
         }
 
-        if (isSpatialNavigationEnabled(document().frame()))
+        if (document().settings().spatialNavigationEnabled()) {
             // Check if the selection moves to the boundary.
             if (keyIdentifier == "Left"_s || keyIdentifier == "Right"_s || ((keyIdentifier == "Down"_s || keyIdentifier == "Up"_s) && endIndex == m_activeSelectionEndIndex))
                 return;
+        }
 
         if (endIndex >= 0 && handled) {
             // Save the selection so it can be compared to the new selection
@@ -1518,9 +1519,9 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             setActiveSelectionEndIndex(endIndex);
 
 #if PLATFORM(COCOA)
-            m_allowsNonContiguousSelection = m_multiple && isSpatialNavigationEnabled(document().frame());
+            m_allowsNonContiguousSelection = m_multiple && document().settings().spatialNavigationEnabled();
 #else
-            m_allowsNonContiguousSelection = m_multiple && (isSpatialNavigationEnabled(document().frame()) || keyboardEvent->ctrlKey());
+            m_allowsNonContiguousSelection = m_multiple && (document().settings().spatialNavigationEnabled() || keyboardEvent->ctrlKey());
 #endif
             bool selectNewItem = keyboardEvent->shiftKey() || !m_allowsNonContiguousSelection;
 
@@ -1699,7 +1700,7 @@ ExceptionOr<void> HTMLSelectElement::showPicker()
 
     // In cross-origin iframes it should throw a "SecurityError" DOMException. In same-origin iframes it should work fine.
     RefPtr localTopFrame = dynamicDowncast<LocalFrame>(frame->tree().top());
-    if (!localTopFrame || !frame->document()->securityOrigin().isSameOriginAs(localTopFrame->document()->securityOrigin()))
+    if (!localTopFrame || !frame->protectedDocument()->protectedSecurityOrigin()->isSameOriginAs(localTopFrame->protectedDocument()->protectedSecurityOrigin()))
         return Exception { ExceptionCode::SecurityError, "Select showPicker() called from cross-origin iframe."_s };
 
     RefPtr window = frame->window();

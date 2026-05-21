@@ -42,7 +42,7 @@ public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     using ColumnExtrema = Vector<ColorComponents<uint8_t, 4>, 16>;
 
@@ -50,8 +50,8 @@ private:
         MorphologyOperatorType type;
         int radiusX;
         int radiusY;
-        RefPtr<const PixelBuffer> srcPixelBuffer;
-        RefPtr<PixelBuffer> dstPixelBuffer;
+        const PixelBuffer* srcPixelBuffer;
+        PixelBuffer* dstPixelBuffer;
         int width;
         int height;
     };

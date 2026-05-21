@@ -18,6 +18,9 @@ This build requires javafx.home property, pointing to JavaFX SDK directory, e.g.
 	</path>
 
 
+	<echo message="Using Java version ${ant.java.version}."/>
+
+
 	<target name="clean">
 		<delete includeEmptyDirs="true" dir="build" failonerror="false" />
 		<delete includeEmptyDirs="true" dir="dist" failonerror="false" />
@@ -41,12 +44,12 @@ This build requires javafx.home property, pointing to JavaFX SDK directory, e.g.
 			fork="true"
 			nowarn="true"
 			optimize="false"
-			source="24"
-			target="24"
+			source="25"
+			target="25"
 			includeantruntime="false"
 		>
 			<compilerarg value="-Xlint:none"/>
-			<compilerarg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,javafx.media,javafx.swing,javafx.web"/>
+			<compilerarg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,javafx.media,javafx.swing,javafx.web,jfx.incubator.input,jfx.incubator.richtext"/>
 			<classpath refid="libs" />
 		</javac>
 	</target>

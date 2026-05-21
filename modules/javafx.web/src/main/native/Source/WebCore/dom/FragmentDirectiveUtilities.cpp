@@ -29,17 +29,33 @@
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "RenderStyleInlines.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+TextStream& operator<<(TextStream& ts, const ParsedTextDirective& directive)
+{
+    ts << "ParsedTextDirective [";
+    if (!directive.prefix.isEmpty())
+        ts << "prefix: " << directive.prefix << "; ";
+    if (!directive.startText.isEmpty())
+        ts << "startText: " << directive.startText << "; ";
+    if (!directive.endText.isEmpty())
+        ts << "endText: " << directive.endText << "; ";
+    if (!directive.suffix.isEmpty())
+        ts << "suffix: " << directive.suffix << "; ";
+    ts << "]";
+    return ts;
+}
 
 namespace FragmentDirectiveUtilities {
 
 // https://wicg.github.io/scroll-to-text-fragment/#nearest-block-ancestor
-Node& nearestBlockAncestor(Node& node)
+ContainerNode& nearestBlockAncestor(Node& node)
 {
-    for (RefPtr currentNode = &node; currentNode; currentNode = currentNode->parentNode()) {
-        if (!currentNode->isTextNode() && currentNode->renderer() && currentNode->renderer()->style().isDisplayBlockLevel())
-            return *currentNode;
+    for (RefPtr currentNode = node; currentNode; currentNode = currentNode->parentNode()) {
+        if (CheckedPtr renderElement = dynamicDowncast<RenderElement>(currentNode->renderer()); renderElement && renderElement->style().isDisplayBlockLevel())
+            return downcast<ContainerNode>(*currentNode);
     }
     return node.document();
 }

@@ -34,6 +34,11 @@ class TextStream;
 
 namespace WebCore {
 
+class LayoutUnit;
+class WritingMode;
+
+enum class LogicalBoxAxis : uint8_t;
+
 class StyleSelfAlignmentData {
 public:
     constexpr StyleSelfAlignmentData() = default;
@@ -55,12 +60,16 @@ public:
     ItemPositionType positionType() const { return static_cast<ItemPositionType>(m_positionType); }
     OverflowAlignment overflow() const { return static_cast<OverflowAlignment>(m_overflow); }
 
+    // Must resolve Auto before calling. Normal treated as Start.
+    // Returns position adjustment from container's start edge.
+    static LayoutUnit adjustmentFromStartEdge(LayoutUnit extraSpace, ItemPosition alignmentPosition, LogicalBoxAxis containerAxis, WritingMode containerWritingMode, WritingMode selfWritingMode);
+
     friend bool operator==(const StyleSelfAlignmentData&, const StyleSelfAlignmentData&) = default;
 
 private:
-    uint8_t m_position : 4 { 0 }; // ItemPosition
-    uint8_t m_positionType: 1 { 0 }; // ItemPositionType: Whether or not alignment uses the 'legacy' keyword.
-    uint8_t m_overflow : 2 { 0 }; // OverflowAlignment
+    PREFERRED_TYPE(ItemPosition) uint8_t m_position : 4 { 0 };
+    PREFERRED_TYPE(ItemPositionType) uint8_t m_positionType: 1 { 0 }; // Whether or not alignment uses the 'legacy' keyword.
+    PREFERRED_TYPE(OverflowAlignment) uint8_t m_overflow : 2 { 0 };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleSelfAlignmentData&);

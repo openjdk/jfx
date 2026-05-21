@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -103,7 +103,7 @@ RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDe
 
     WGPURenderPassDescriptorMaxDrawCount maxDrawCount {
         .chain = {
-        nullptr,
+            nullptr,
             WGPUSType_RenderPassDescriptorMaxDrawCount,
         },
         .maxDrawCount = descriptor.maxDrawCount.value_or(0)
@@ -111,8 +111,8 @@ RefPtr<RenderPassEncoder> CommandEncoderImpl::beginRenderPass(const RenderPassDe
     WGPURenderPassDescriptor backingDescriptor {
         .nextInChain = descriptor.maxDrawCount ? &maxDrawCount.chain : nullptr,
         .label = label.data(),
-        .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
-        .colorAttachments = colorAttachments.data(),
+        .colorAttachmentCount = colorAttachments.size(),
+        .colorAttachments = colorAttachments.size() ? colorAttachments.span().data() : nullptr,
         .depthStencilAttachment = depthStencilAttachment ? &depthStencilAttachment.value() : nullptr,
         .occlusionQuerySet = descriptor.occlusionQuerySet ? convertToBackingContext->convertToBacking(*descriptor.protectedOcclusionQuerySet()) : nullptr,
         .timestampWrites = timestampWrites.querySet ? &timestampWrites : nullptr
@@ -126,7 +126,7 @@ RefPtr<ComputePassEncoder> CommandEncoderImpl::beginComputePass(const std::optio
     CString label = descriptor ? descriptor->label.utf8() : CString(""_s);
 
     WGPUComputePassTimestampWrites timestampWrites {
-        .querySet = (descriptor && descriptor->timestampWrites && descriptor->timestampWrites->querySet) ? protectedConvertToBackingContext()->convertToBacking(*descriptor->timestampWrites->protectedQuerySet().get()) : nullptr,
+        .querySet = (descriptor && descriptor->timestampWrites && descriptor->timestampWrites->querySet) ? m_convertToBackingContext->convertToBacking(*descriptor->timestampWrites->protectedQuerySet().get()) : nullptr,
         .beginningOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->beginningOfPassWriteIndex : 0,
         .endOfPassWriteIndex = (descriptor && descriptor->timestampWrites) ? descriptor->timestampWrites->endOfPassWriteIndex : 0
     };
@@ -244,7 +244,7 @@ void CommandEncoderImpl::clearBuffer(
     Size64 offset,
     std::optional<Size64> size)
 {
-    wgpuCommandEncoderClearBuffer(m_backing.get(), protectedConvertToBackingContext()->convertToBacking(buffer), offset, size.value_or(WGPU_WHOLE_SIZE));
+    wgpuCommandEncoderClearBuffer(m_backing.get(), m_convertToBackingContext->convertToBacking(buffer), offset, size.value_or(WGPU_WHOLE_SIZE));
 }
 
 void CommandEncoderImpl::pushDebugGroup(String&& groupLabel)
@@ -264,7 +264,7 @@ void CommandEncoderImpl::insertDebugMarker(String&& markerLabel)
 
 void CommandEncoderImpl::writeTimestamp(const QuerySet& querySet, Size32 queryIndex)
 {
-    wgpuCommandEncoderWriteTimestamp(m_backing.get(), protectedConvertToBackingContext()->convertToBacking(querySet), queryIndex);
+    wgpuCommandEncoderWriteTimestamp(m_backing.get(), m_convertToBackingContext->convertToBacking(querySet), queryIndex);
 }
 
 void CommandEncoderImpl::resolveQuerySet(

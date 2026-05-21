@@ -49,6 +49,7 @@ private:
     explicit DataListButtonElement(Document&, DataListButtonOwner&);
 
     void defaultEventHandler(Event&) override;
+    bool isDisabledFormControl() const override;
 
     DataListButtonOwner& m_owner;
 };

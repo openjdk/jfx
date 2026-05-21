@@ -155,8 +155,8 @@ public:
 
     void shrinkToFit();
 
-    void setAsOpaque() { m_parserContext.isContentOpaque = true; }
-    bool isContentOpaque() const { return m_parserContext.isContentOpaque; }
+    void setAsLoadedFromOpaqueSource() { m_parserContext.loadedFromOpaqueSource = LoadedFromOpaqueSource::Yes; }
+    LoadedFromOpaqueSource loadedFromOpaqueSource() const { return m_parserContext.loadedFromOpaqueSource; }
 
     void setLoadErrorOccured() { m_didLoadErrorOccur = true; }
 
@@ -180,7 +180,7 @@ private:
     Vector<Ref<StyleRuleImport>> m_importRules;
     Vector<Ref<StyleRuleNamespace>> m_namespaceRules;
     Vector<Ref<StyleRuleBase>> m_childRules;
-    typedef UncheckedKeyHashMap<AtomString, AtomString> PrefixNamespaceURIMap;
+    typedef HashMap<AtomString, AtomString> PrefixNamespaceURIMap;
     PrefixNamespaceURIMap m_namespaces;
     AtomString m_defaultNamespace;
 

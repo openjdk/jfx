@@ -158,11 +158,4 @@ static __PAS_ALWAYS_INLINE unsigned __pas_depend_cpu_only(unsigned long input)
     return __pas_depend_impl(input, cpu_only);
 }
 
-static inline void __pas_memcpy(volatile void* to, const volatile void* from, __pas_size_t size)
-{
-    PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    __builtin_memcpy((void*)(unsigned long)to, (void*)(unsigned long)from, size);
-    PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
-}
-
 __PAS_END_EXTERN_C;

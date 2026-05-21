@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
@@ -58,6 +57,7 @@ class IDBResultData;
 class IDBTransaction;
 class ThreadSafeDataBuffer;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 namespace IDBClient {
 class IDBConnectionProxy;
@@ -82,11 +82,11 @@ public:
 
     virtual ~IDBRequest();
 
-    using Result = std::variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
+    using Result = Variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
     ExceptionOr<Result> result() const;
     JSValueInWrappedObject& resultWrapper() { return m_resultWrapper; }
 
-    using Source = std::variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
+    using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
     const std::optional<Source>& source() const { return m_source; }
 
     ExceptionOr<DOMException*> error() const;
@@ -194,7 +194,7 @@ private:
     std::optional<Source> m_source;
 
     RefPtr<IDBCursor> m_pendingCursor;
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 
     ReadyState m_readyState { ReadyState::Pending };
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };

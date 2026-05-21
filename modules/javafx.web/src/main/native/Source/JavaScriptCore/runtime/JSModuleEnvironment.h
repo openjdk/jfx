@@ -52,6 +52,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     inline static Structure* createStructure(VM&, JSGlobalObject*);
 
     static size_t offsetOfModuleRecord(SymbolTable* symbolTable)
@@ -87,8 +89,6 @@ private:
     {
         return *std::bit_cast<WriteBarrierBase<AbstractModuleRecord>*>(std::bit_cast<char*>(this) + offsetOfModuleRecord(symbolTable()));
     }
-
-    DECLARE_VISIT_CHILDREN;
 };
 
 inline JSModuleEnvironment::JSModuleEnvironment(VM& vm, Structure* structure, JSScope* currentScope, SymbolTable* symbolTable, JSValue initialValue, AbstractModuleRecord* moduleRecord)

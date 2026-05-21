@@ -79,7 +79,7 @@ inline bool isPointInTriangle(const FloatPoint& p, const FloatPoint& t1, const F
 
 static inline float clampToIntRange(float value)
 {
-    if (UNLIKELY(std::isinf(value) || std::abs(value) > (static_cast<float>(std::numeric_limits<int>::max()))))
+    if (std::isinf(value) || std::abs(value) > (static_cast<float>(std::numeric_limits<int>::max()))) [[unlikely]]
         return std::signbit(value) ? std::numeric_limits<int>::min() : (static_cast<float>(std::numeric_limits<int>::max()));
 
     return value;
@@ -295,7 +295,7 @@ FloatRect unitedBoundingBoxes(const Vector<FloatQuad>& quads)
 
 TextStream& operator<<(TextStream& ts, const FloatQuad& quad)
 {
-    ts << "p1 " << quad.p1() << " p2 " << quad.p2() << " p3 " << quad.p3() << " p4 " << quad.p4();
+    ts << "p1 "_s << quad.p1() << " p2 "_s << quad.p2() << " p3 "_s << quad.p3() << " p4 "_s << quad.p4();
     return ts;
 }
 

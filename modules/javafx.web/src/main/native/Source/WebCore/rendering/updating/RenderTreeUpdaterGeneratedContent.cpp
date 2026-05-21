@@ -26,7 +26,7 @@
 #include "config.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
 
-#include "ContentData.h"
+#include "ContainerNodeInlines.h"
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "InspectorInstrumentation.h"
@@ -34,10 +34,12 @@
 #include "PseudoElement.h"
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
-#include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
+#include "RenderImageResourceStyleImage.h"
 #include "RenderQuote.h"
 #include "RenderStyleInlines.h"
+#include "RenderTextFragment.h"
 #include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "StyleTreeResolver.h"
@@ -92,42 +94,84 @@ void RenderTreeUpdater::GeneratedContent::updateCounters()
 
 static KeyframeEffectStack* keyframeEffectStackForElementAndPseudoId(const Element& element, PseudoId pseudoId)
 {
+    if (!element.mayHaveKeyframeEffects())
+        return nullptr;
+
     return element.keyframeEffectStack(pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { pseudoId }));
 }
 
-static bool elementIsTargetedByKeyframeEffectRequiringPseudoElement(const Element* element, PseudoId pseudoId)
+static bool needsPseudoElementForAnimation(const Element& element, PseudoId pseudoId)
 {
-    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
-        return elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoElement->hostElement(), pseudoId);
+    auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId);
+    if (!stack)
+        return false;
 
-    if (element) {
-        if (auto* stack = keyframeEffectStackForElementAndPseudoId(*element, pseudoId))
-            return stack->requiresPseudoElement();
-    }
-
-    return false;
+    return stack->requiresPseudoElement() || stack->containsProperty(CSSPropertyDisplay);
 }
 
-static bool elementHasDisplayAnimationForPseudoId(const Element& element, PseudoId pseudoId)
+static RenderPtr<RenderObject> createContentRenderer(const Style::Content::Text& value, const String& altText, Document& document, const RenderStyle&)
 {
-    if (auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId))
-        return stack->containsProperty(CSSPropertyDisplay);
-    return false;
+    if (value.text.isEmpty() && altText.isEmpty())
+        return { };
+
+    auto contentRenderer = createRenderer<RenderTextFragment>(document, value.text);
+    contentRenderer->setAltText(altText);
+    return contentRenderer;
+}
+
+static RenderPtr<RenderObject> createContentRenderer(const Style::Content::Image& value, const String& altText, Document& document, const RenderStyle& pseudoStyle)
+{
+    auto contentRenderer = createRenderer<RenderImage>(RenderObject::Type::Image, document, RenderStyle::createStyleInheritingFromPseudoStyle(pseudoStyle), value.image.value.ptr());
+    contentRenderer->initializeStyle();
+    contentRenderer->setAltText(altText);
+    return contentRenderer;
+}
+
+static RenderPtr<RenderObject> createContentRenderer(const Style::Content::Counter& value, const String&, Document& document, const RenderStyle&)
+{
+    return createRenderer<RenderCounter>(document, value);
+}
+
+static RenderPtr<RenderObject> createContentRenderer(const Style::Content::Quote& value, const String&, Document& document, const RenderStyle& pseudoStyle)
+{
+    auto contentRenderer = createRenderer<RenderQuote>(document, RenderStyle::createStyleInheritingFromPseudoStyle(pseudoStyle), value.quote);
+    contentRenderer->initializeStyle();
+    return contentRenderer;
 }
 
 static void createContentRenderers(RenderTreeBuilder& builder, RenderElement& pseudoRenderer, const RenderStyle& style, PseudoId pseudoId)
 {
-    if (auto* contentData = style.contentData()) {
-        for (const ContentData* content = contentData; content; content = content->next()) {
-            auto child = content->createContentRenderer(pseudoRenderer.document(), style);
-            if (pseudoRenderer.isChildAllowed(*child, style))
+    if (auto* contentData = style.content().tryData()) {
+        auto altText = contentData->altText.value_or(String { });
+        for (auto& contentItem : contentData->list) {
+            WTF::switchOn(contentItem,
+                [&](const auto& item) {
+                    if (auto child = createContentRenderer(item, altText, pseudoRenderer.document(), style); child && pseudoRenderer.isChildAllowed(*child, style))
                 builder.attach(pseudoRenderer, WTFMove(child));
         }
-    } else {
+            );
+        }
+    }
+#if ASSERT_ENABLED
+    else {
+        auto elementIsTargetedByKeyframeEffectRequiringPseudoElement = [](const Element& element, PseudoId pseudoId) {
+            if (auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId))
+                return stack->requiresPseudoElement();
+
+            return false;
+        };
+
         // The only valid scenario where this method is called without the "content" property being set
         // is the case where a pseudo-element has animations set on it via the Web Animations API.
-        ASSERT_UNUSED(pseudoId, elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoRenderer.element(), pseudoId));
+        if (RefPtr pseudoElement = dynamicDowncast<PseudoElement>(pseudoRenderer.element())) {
+            RefPtr hostElement = pseudoElement->hostElement();
+            ASSERT(!is<PseudoElement>(hostElement));
+            ASSERT(elementIsTargetedByKeyframeEffectRequiringPseudoElement(*hostElement, pseudoId));
     }
+    }
+#else
+    UNUSED_PARAM(pseudoId);
+#endif
 }
 
 static void updateStyleForContentRenderers(RenderElement& pseudoRenderer, const RenderStyle& style)
@@ -140,16 +184,19 @@ static void updateStyleForContentRenderers(RenderElement& pseudoRenderer, const 
     }
 }
 
-void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, const Style::ElementUpdate& elementUpdate, PseudoId pseudoId)
+void RenderTreeUpdater::GeneratedContent::updateBeforeOrAfterPseudoElement(Element& current, const Style::ElementUpdate& elementUpdate, PseudoId pseudoId)
 {
+    ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
+
     PseudoElement* pseudoElement = pseudoId == PseudoId::Before ? current.beforePseudoElement() : current.afterPseudoElement();
 
     if (auto* renderer = pseudoElement ? pseudoElement->renderer() : nullptr)
         m_updater.renderTreePosition().invalidateNextSibling(*renderer);
 
-    auto* updateStyle = elementUpdate.style ? elementUpdate.style->getCachedPseudoStyle({ pseudoId }) : nullptr;
+    auto* updateStyle = (elementUpdate.style && elementUpdate.style->hasCachedPseudoStyles()) ? elementUpdate.style->getCachedPseudoStyle({ pseudoId }) : nullptr;
 
-    if (!needsPseudoElement(updateStyle) && !elementIsTargetedByKeyframeEffectRequiringPseudoElement(&current, pseudoId) && !elementHasDisplayAnimationForPseudoId(current, pseudoId)) {
+    ASSERT(!is<PseudoElement>(current));
+    if (!needsPseudoElement(updateStyle) && !needsPseudoElementForAnimation(current, pseudoId)) {
         if (pseudoElement) {
             if (pseudoId == PseudoId::Before)
                 removeBeforePseudoElement(current, m_updater.m_builder);
@@ -164,8 +211,8 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
 
     auto* existingStyle = pseudoElement ? pseudoElement->renderOrDisplayContentsStyle() : nullptr;
 
-    auto styleChange = existingStyle ? Style::determineChange(*updateStyle, *existingStyle) : Style::Change::Renderer;
-    if (styleChange == Style::Change::None)
+    auto styleChanges = existingStyle ? Style::determineChanges(*updateStyle, *existingStyle) : Style::Change::Renderer;
+    if (!styleChanges)
         return;
 
     pseudoElement = &current.ensurePseudoElement(pseudoId);
@@ -179,13 +226,13 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
         contentsStyle->copyContentFrom(*updateStyle);
         contentsStyle->copyPseudoElementsFrom(*updateStyle);
 
-        Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChange, elementUpdate.recompositeLayer };
+        Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChanges, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(contentsUpdate));
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
         pseudoElement->storeDisplayContentsOrNoneStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
     } else {
         auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
-        Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChange, elementUpdate.recompositeLayer };
+        Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChanges, elementUpdate.recompositeLayer };
         m_updater.updateElementRenderer(*pseudoElement, WTFMove(pseudoElementUpdate));
         if (updateStyle->display() == DisplayType::None) {
             auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
@@ -198,7 +245,7 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
     if (!pseudoElementRenderer)
         return;
 
-    if (styleChange == Style::Change::Renderer)
+    if (styleChanges.contains(Style::Change::Renderer))
         createContentRenderers(m_updater.m_builder, *pseudoElementRenderer, *updateStyle, pseudoId);
     else
         updateStyleForContentRenderers(*pseudoElementRenderer, *updateStyle);

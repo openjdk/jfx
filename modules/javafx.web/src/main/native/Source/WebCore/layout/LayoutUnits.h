@@ -52,15 +52,10 @@ using InlineLayoutRect = LayoutRect;
 
 struct Position {
     operator LayoutUnit() const { return value; }
-    friend bool operator==(Position, Position) = default;
+    friend auto operator<=>(Position, Position) = default;
 
     LayoutUnit value;
 };
-
-inline bool operator<(const Position& a, const Position& b)
-{
-    return a.value < b.value;
-}
 
 struct Point {
     // FIXME: Use Position<Horizontal>, Position<Vertical> to avoid top/left vs. x/y confusion.

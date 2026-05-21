@@ -25,19 +25,31 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
+namespace CSS {
+struct PropertyParserState;
+struct URL;
+}
+
 class CSSParserTokenRange;
-class CSSPrimitiveValue;
+class CSSValue;
 
 namespace CSSPropertyParserHelpers {
+
+enum class AllowedURLModifiers : uint8_t {
+    CrossOrigin     = 1 << 0,
+    Integrity       = 1 << 1,
+    ReferrerPolicy  = 1 << 2,
+};
 
 // MARK: <url>
 // https://drafts.csswg.org/css-values/#urls
 
-StringView consumeURLRaw(CSSParserTokenRange&);
-RefPtr<CSSPrimitiveValue> consumeURL(CSSParserTokenRange&);
+std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange&, CSS::PropertyParserState&, OptionSet<AllowedURLModifiers>);
+RefPtr<CSSValue> consumeURL(CSSParserTokenRange&, CSS::PropertyParserState&, OptionSet<AllowedURLModifiers>);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

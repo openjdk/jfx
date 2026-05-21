@@ -28,7 +28,7 @@
 [
     EnabledBySetting=WebGPUEnabled,
     ActiveDOMObject,
-    Exposed=(Window,DedicatedWorker),
+    Exposed=(Window,Worker),
     SecureContext,
     JSGenerateToJSObject
 ]

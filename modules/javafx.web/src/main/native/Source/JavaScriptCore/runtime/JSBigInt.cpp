@@ -110,7 +110,7 @@ JSBigInt* JSBigInt::tryCreateZero(VM& vm)
 
 inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, unsigned length)
 {
-    if (UNLIKELY(length > maxLength)) {
+    if (length > maxLength) [[unlikely]] {
         if (nullOrGlobalObjectForOOM) {
             auto scope = DECLARE_THROW_SCOPE(vm);
             throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope, "BigInt generated from this operation is too big"_s);
@@ -120,7 +120,7 @@ inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectFo
 
     ASSERT(length <= maxLength);
     void* data = vm.primitiveGigacageAuxiliarySpace().allocate(vm, length * sizeof(Digit), nullptr, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!data)) {
+    if (!data) [[unlikely]] {
         if (nullOrGlobalObjectForOOM) {
             auto scope = DECLARE_THROW_SCOPE(vm);
             throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope);
@@ -148,7 +148,7 @@ inline JSBigInt* JSBigInt::createFrom(JSGlobalObject* nullOrGlobalObjectForOOM, 
         return createZero(nullOrGlobalObjectForOOM, vm);
 
     JSBigInt* bigInt = createWithLength(nullOrGlobalObjectForOOM, vm, 1);
-    if (UNLIKELY(!bigInt))
+    if (!bigInt) [[unlikely]]
         return nullptr;
 
     if (value < 0) {
@@ -1654,7 +1654,7 @@ bool JSBigInt::absoluteDivWithDigitDivisor(JSGlobalObject* nullOrGlobalObjectFor
     if (divisor == 1) {
         if (quotient) {
             JSBigInt* result = x.toHeapBigInt(nullOrGlobalObjectForOOM, vm);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return false;
             *quotient = result;
         }
@@ -1665,7 +1665,7 @@ bool JSBigInt::absoluteDivWithDigitDivisor(JSGlobalObject* nullOrGlobalObjectFor
     if (quotient) {
         if (*quotient == nullptr) {
             JSBigInt* result = createWithLength(nullOrGlobalObjectForOOM, vm, length);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return false;
             *quotient = result;
         }
@@ -2414,7 +2414,7 @@ JSBigInt* JSBigInt::rightTrim(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm)
 
     unsigned newLength = nonZeroIndex + 1;
     JSBigInt* trimmedBigInt = createWithLength(nullOrGlobalObjectForOOM, vm, newLength);
-    if (UNLIKELY(!trimmedBigInt))
+    if (!trimmedBigInt) [[unlikely]]
         return nullptr;
     std::copy_n(dataStorage(), newLength, trimmedBigInt->dataStorage());
 
@@ -2658,7 +2658,7 @@ JSValue JSBigInt::parseInt(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, std
                 }
             }
             heapResult = allocateFor(nullOrGlobalObjectForOOM, vm, radix, initialLength);
-            if (UNLIKELY(!heapResult))
+            if (!heapResult) [[unlikely]]
                 return JSValue();
             heapResult->initialize(InitializationType::WithZero);
         }

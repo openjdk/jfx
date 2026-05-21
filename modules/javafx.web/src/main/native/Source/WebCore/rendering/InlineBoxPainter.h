@@ -28,7 +28,6 @@
 #include "GraphicsTypes.h"
 #include "InlineIteratorInlineBox.h"
 #include "LayoutRect.h"
-#include "ShadowData.h"
 
 namespace WebCore {
 
@@ -38,6 +37,10 @@ class LegacyInlineFlowBox;
 class RenderBoxModelObject;
 class RenderStyle;
 struct PaintInfo;
+
+namespace Style {
+enum class ShadowStyle : bool;
+}
 
 class InlineBoxPainter {
 public:
@@ -54,7 +57,7 @@ private:
     void paintDecorations();
     void paintFillLayers(const Color&, const FillLayer&, const LayoutRect& paintRect, CompositeOperator);
     void paintFillLayer(const Color&, const FillLayer&, const LayoutRect& paintRect, CompositeOperator);
-    void paintBoxShadow(ShadowStyle, const LayoutRect& paintRect);
+    void paintBoxShadow(Style::ShadowStyle, const LayoutRect& paintRect);
 
     const RenderStyle& style() const;
     // FIXME: Make RenderBoxModelObject functions const.

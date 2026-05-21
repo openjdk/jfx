@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,28 +21,29 @@
 #include "config.h"
 #include "CSSBorderImage.h"
 
+#include "CSSPropertyParserConsumer+Background.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 
-Ref<CSSValueList> createBorderImageValue(RefPtr<CSSValue>&& image, RefPtr<CSSValue>&& imageSlice, RefPtr<CSSValue>&& borderSlice, RefPtr<CSSValue>&& outset, RefPtr<CSSValue>&& repeat)
+Ref<CSSValueList> createBorderImageValue(CSS::BorderImageComponents&& components)
 {
     CSSValueListBuilder list;
-    if (image)
-        list.append(*image);
-    if (borderSlice || outset) {
+    if (components.source)
+        list.append(components.source.releaseNonNull());
+    if (components.width || components.outset) {
         CSSValueListBuilder listSlash;
-        if (imageSlice)
-            listSlash.append(imageSlice.releaseNonNull());
-        if (borderSlice)
-            listSlash.append(borderSlice.releaseNonNull());
-        if (outset)
-            listSlash.append(outset.releaseNonNull());
+        if (components.slice)
+            listSlash.append(components.slice.releaseNonNull());
+        if (components.width)
+            listSlash.append(components.width.releaseNonNull());
+        if (components.outset)
+            listSlash.append(components.outset.releaseNonNull());
         list.append(CSSValueList::createSlashSeparated(WTFMove(listSlash)));
-    } else if (imageSlice)
-        list.append(imageSlice.releaseNonNull());
-    if (repeat)
-        list.append(repeat.releaseNonNull());
+    } else if (components.slice)
+        list.append(components.slice.releaseNonNull());
+    if (components.repeat)
+        list.append(components.repeat.releaseNonNull());
     return CSSValueList::createSpaceSeparated(WTFMove(list));
 }
 

@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include "ScrollExtents.h"
 #include "ScrollingEffectsController.h"
+#include <ranges>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -99,11 +100,11 @@ float ScrollSnapAnimatorState::adjustedScrollDestination(ScrollEventAxis axis, F
 }
 
 // Returns whether the snap point is changed or not
-bool ScrollSnapAnimatorState::preserveCurrentTargetForAxis(ScrollEventAxis axis, ElementIdentifier boxID)
+bool ScrollSnapAnimatorState::preserveCurrentTargetForAxis(ScrollEventAxis axis, NodeIdentifier boxID)
 {
     auto snapOffsets = snapOffsetsForAxis(axis);
 
-    auto found = std::find_if(snapOffsets.begin(), snapOffsets.end(), [boxID](SnapOffset<LayoutUnit> p) -> bool {
+    auto found = std::ranges::find_if(snapOffsets, [boxID](SnapOffset<LayoutUnit> p) -> bool {
         return *p.snapTargetID == boxID;
     });
     if (found == snapOffsets.end()) {
@@ -126,9 +127,9 @@ Vector<SnapOffset<LayoutUnit>> ScrollSnapAnimatorState::currentlySnappedOffsetsF
     return currentlySnappedOffsets;
 }
 
-UncheckedKeyHashSet<ElementIdentifier> ScrollSnapAnimatorState::currentlySnappedBoxes(const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets) const
+HashSet<NodeIdentifier> ScrollSnapAnimatorState::currentlySnappedBoxes(const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets) const
 {
-    UncheckedKeyHashSet<ElementIdentifier> snappedBoxIDs;
+    HashSet<NodeIdentifier> snappedBoxIDs;
 
     for (auto offset : horizontalOffsets) {
         if (!offset.snapTargetID)
@@ -162,17 +163,17 @@ void ScrollSnapAnimatorState::updateCurrentlySnappedBoxes()
     m_currentlySnappedBoxes = currentlySnappedBoxes(horizontalOffsets, verticalOffsets);
 }
 
-static ElementIdentifier chooseBoxToResnapTo(const UncheckedKeyHashSet<ElementIdentifier>& snappedBoxes, const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets)
+static NodeIdentifier chooseBoxToResnapTo(const HashSet<NodeIdentifier>& snappedBoxes, const Vector<SnapOffset<LayoutUnit>>& horizontalOffsets, const Vector<SnapOffset<LayoutUnit>>& verticalOffsets)
 {
     ASSERT(snappedBoxes.size());
 
-    auto found = std::find_if(horizontalOffsets.begin(), horizontalOffsets.end(), [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
+    auto found = std::ranges::find_if(horizontalOffsets, [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
         return snappedBoxes.contains(*p.snapTargetID) && p.isFocused;
     });
     if (found != horizontalOffsets.end())
         return *found->snapTargetID;
 
-    found = std::find_if(verticalOffsets.begin(), verticalOffsets.end(), [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
+    found = std::ranges::find_if(verticalOffsets, [&snappedBoxes](SnapOffset<LayoutUnit> p) -> bool {
         return snappedBoxes.contains(*p.snapTargetID) && p.isFocused;
     });
     if (found != verticalOffsets.end())
@@ -276,12 +277,12 @@ std::pair<float, std::optional<unsigned>> ScrollSnapAnimatorState::targetOffsetF
 
 TextStream& operator<<(TextStream& ts, const ScrollSnapAnimatorState& state)
 {
-    ts << "ScrollSnapAnimatorState";
-    ts.dumpProperty("snap offsets x", state.snapOffsetsForAxis(ScrollEventAxis::Horizontal));
-    ts.dumpProperty("snap offsets y", state.snapOffsetsForAxis(ScrollEventAxis::Vertical));
+    ts << "ScrollSnapAnimatorState"_s;
+    ts.dumpProperty("snap offsets x"_s, state.snapOffsetsForAxis(ScrollEventAxis::Horizontal));
+    ts.dumpProperty("snap offsets y"_s, state.snapOffsetsForAxis(ScrollEventAxis::Vertical));
 
-    ts.dumpProperty("active snap index x", state.activeSnapIndexForAxis(ScrollEventAxis::Horizontal));
-    ts.dumpProperty("active snap index y", state.activeSnapIndexForAxis(ScrollEventAxis::Vertical));
+    ts.dumpProperty("active snap index x"_s, state.activeSnapIndexForAxis(ScrollEventAxis::Horizontal));
+    ts.dumpProperty("active snap index y"_s, state.activeSnapIndexForAxis(ScrollEventAxis::Vertical));
 
     return ts;
 }

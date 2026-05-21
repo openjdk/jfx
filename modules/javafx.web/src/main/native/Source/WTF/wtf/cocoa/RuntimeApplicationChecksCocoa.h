@@ -40,7 +40,7 @@ enum class SDKAlignedBehavior {
     AuthorizationHeaderOnSameOriginRedirects,
     BlanksViewOnJSPrompt,
     BlocksConnectionsToAddressWithOnlyZeros,
-    BrowsingContextControllerSPIAccessRemoved,
+    BrowsingContextControllerMethodStubRemoved,
     ContextMenuTriggersLinkActivationNavigationType,
     ConvertsInvalidURLsToBlank,
     ConvertsInvalidURLsToNull,
@@ -49,7 +49,6 @@ enum class SDKAlignedBehavior {
     DefaultsToExcludingBackgroundsWhenPrinting,
     DefaultsToPassiveTouchListenersOnDocument,
     DefaultsToPassiveWheelListenersOnDocument,
-    DisallowsSettingAnyXHRHeaderFromFileURLs,
     DoesNotDrainTheMicrotaskQueueWhenCallingObjC,
     DoesNotParseStringEndingWithFullStopAsFloatingPointNumber,
     DoesNotAddIntrinsicMarginsToFormControls,
@@ -72,22 +71,18 @@ enum class SDKAlignedBehavior {
     MediaTypesRequiringUserActionForPlayback,
     MinimizesLanguages,
     ModernCompabilityModeByDefault,
+    MutationEventsDisabledByDefault,
+    NavigationActionSourceFrameNonNull,
     NoClientCertificateLookup,
     NoExpandoIndexedPropertiesOnWindow,
-    NoIMDbCSSOMViewScrollingQuirk,
-    NoLaBanquePostaleQuirks,
-    NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
     NoShowModalDialog,
-    NoTheSecretSocietyHiddenMysteryWindowOpenQuirk,
     NoTypedArrayAPIQuirk,
     NoUnconditionalUniversalSandboxExtension,
-    NoWeChatScrollingQuirk,
     NoUNIQLOLazyIframeLoadingQuirk,
     NullOriginForNonSpecialSchemedURLs,
     ObservesClassProperty,
     PictureInPictureMediaPlayback,
-    ProcessSwapOnCrossSiteNavigation,
     PushStateFilePathRestriction,
     RequiresUserGestureToLoadVideo,
     RestrictsBaseURLSchemes,
@@ -95,26 +90,20 @@ enum class SDKAlignedBehavior {
     ScrollViewContentInsetsAreNotObscuringInsets,
     SendsNativeMouseEvents,
     SessionCleanupByDefault,
-    SharedNetworkProcess,
     SiteSpecificQuirksAreEnabledByDefault,
     SnapshotAfterScreenUpdates,
     SupportsDeviceOrientationAndMotionPermissionAPI,
     SupportsInitConstructors,
-    SupportsiOSAppsOnMacOS,
-    SupportsOverflowHiddenOnMainFrame,
     TimerThreadSafetyChecks,
     UIScrollViewDoesNotApplyKeyboardInsetsUnconditionally,
     UnprefixedPlaysInlineAttribute,
     WebIconDatabaseWarning,
     WebSQLDisabledByDefaultInLegacyWebKit,
-    WKContentViewDoesNotOverrideKeyCommands,
     WKWebsiteDataStoreInitReturningNil,
     UIBackForwardSkipsHistoryItemsWithoutUserGesture,
     ProgrammaticFocusDuringUserScriptShowsInputViews,
-    UsesGameControllerPhysicalInputProfile,
     ScreenOrientationAPIEnabled,
     PopoverAttributeEnabled,
-    LiveRangeSelectionEnabledForAllApps,
     DoesNotOverrideUAFromNSUserDefault,
     EvaluateJavaScriptWithoutTransientActivation,
     ResettingTransitionCancelsRunningTransitionQuirk,
@@ -127,11 +116,16 @@ enum class SDKAlignedBehavior {
     LaxCookieSameSiteAttribute,
     BlockOptionallyBlockableMixedContent,
     UseCFNetworkNetworkLoader,
+    AutoLayoutInWKWebView,
     BlockCrossOriginRedirectDownloads,
-    BlobFileAccessEnforcement,
+    BlobFileAccessEnforcementAndNetworkProcessRoundTrip,
     DevolvableWidgets,
     SetSelectionRangeCachesSelectionIfNotFocusedOrSelected,
     DispatchFocusEventBeforeNotifyingClient,
+    EnableTrustedTypesByDefault,
+    BlobFileAccessEnforcement,
+    SupportGameControllerEventInteractionAPI,
+    DidFailProvisionalNavigationWithErrorForFileURLNavigation,
 
     NumberOfBehaviors
 };
@@ -156,7 +150,8 @@ WTF_EXPORT_PRIVATE void clearApplicationBundleIdentifierTestingOverride();
 
 namespace CocoaApplication {
 
-WTF_EXPORT_PRIVATE bool isIBooks();
+WTF_EXPORT_PRIVATE bool isAppleApplication();
+WTF_EXPORT_PRIVATE bool isAppleBooks();
 WTF_EXPORT_PRIVATE bool isWebkitTestRunner();
 
 }
@@ -172,6 +167,7 @@ WTF_EXPORT_PRIVATE bool isQuickenEssentials();
 WTF_EXPORT_PRIVATE bool isSafari();
 WTF_EXPORT_PRIVATE bool isVersions();
 WTF_EXPORT_PRIVATE bool isHRBlock();
+WTF_EXPORT_PRIVATE bool isTurboTax();
 WTF_EXPORT_PRIVATE bool isEpsonSoftwareUpdater();
 WTF_EXPORT_PRIVATE bool isMimeoPhotoProject();
 
@@ -184,48 +180,24 @@ WTF_EXPORT_PRIVATE bool isMimeoPhotoProject();
 namespace IOSApplication {
 
 WTF_EXPORT_PRIVATE bool isAmazon();
-WTF_EXPORT_PRIVATE bool isAppleApplication();
-WTF_EXPORT_PRIVATE bool isCardiogram();
-WTF_EXPORT_PRIVATE bool isCrunchyroll();
+WTF_EXPORT_PRIVATE bool isAppleWebApp();
 WTF_EXPORT_PRIVATE bool isDataActivation();
-WTF_EXPORT_PRIVATE bool isDoubleDown();
 WTF_EXPORT_PRIVATE bool isDumpRenderTree();
-WTF_EXPORT_PRIVATE bool isESPNFantasySports();
 WTF_EXPORT_PRIVATE bool isEssentialSkeleton();
-WTF_EXPORT_PRIVATE bool isEventbrite();
-WTF_EXPORT_PRIVATE bool isEvernote();
-WTF_EXPORT_PRIVATE bool isFIFACompanion();
 WTF_EXPORT_PRIVATE bool isFeedly();
-WTF_EXPORT_PRIVATE bool isFirefox();
 WTF_EXPORT_PRIVATE bool isHimalaya();
 WTF_EXPORT_PRIVATE bool isHoYoLAB();
-WTF_EXPORT_PRIVATE bool isIMDb();
-WTF_EXPORT_PRIVATE bool isGmail();
-WTF_EXPORT_PRIVATE bool isJWLibrary();
-WTF_EXPORT_PRIVATE bool isLaBanquePostale();
-WTF_EXPORT_PRIVATE bool isLutron();
 WTF_EXPORT_PRIVATE bool isMailCompositionService();
 WTF_EXPORT_PRIVATE bool isMiniBrowser();
 WTF_EXPORT_PRIVATE bool isMobileMail();
 WTF_EXPORT_PRIVATE bool isMobileSafari();
 WTF_EXPORT_PRIVATE bool isNews();
-WTF_EXPORT_PRIVATE bool isNike();
-WTF_EXPORT_PRIVATE bool isNoggin();
-WTF_EXPORT_PRIVATE bool isOKCupid();
-WTF_EXPORT_PRIVATE bool isPaperIO();
-WTF_EXPORT_PRIVATE bool isPocketCity();
 WTF_EXPORT_PRIVATE bool isSafariViewService();
 WTF_EXPORT_PRIVATE bool isStocks();
-WTF_EXPORT_PRIVATE bool isTheSecretSocietyHiddenMystery();
 WTF_EXPORT_PRIVATE bool isWebBookmarksD();
 WTF_EXPORT_PRIVATE bool isWebProcess();
-WTF_EXPORT_PRIVATE bool isBackboneApp();
-WTF_EXPORT_PRIVATE bool isIBooksStorytime();
 WTF_EXPORT_PRIVATE bool isMobileStore();
-WTF_EXPORT_PRIVATE bool isMoviStarPlus();
-WTF_EXPORT_PRIVATE bool isSpringBoard();
 WTF_EXPORT_PRIVATE bool isUNIQLOApp();
-WTF_EXPORT_PRIVATE bool isWechat();
 WTF_EXPORT_PRIVATE bool isDOFUSTouch();
 WTF_EXPORT_PRIVATE bool isMyRideK12();
 

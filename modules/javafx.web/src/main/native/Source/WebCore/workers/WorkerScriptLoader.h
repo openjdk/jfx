@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
- * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -139,7 +139,7 @@ private:
 
     WeakPtr<WorkerScriptLoaderClient> m_client;
     RefPtr<ThreadableLoader> m_threadableLoader;
-    RefPtr<TextResourceDecoder> m_decoder;
+    const RefPtr<TextResourceDecoder> m_decoder;
     ScriptBuffer m_script;
     URL m_url;
     URL m_responseURL;

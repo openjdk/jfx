@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,10 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.media.MediaQueryList;
 import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.parser.CssColorParser;
 import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
@@ -37,6 +40,8 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.media.MediaQueryParser;
+import com.sun.javafx.css.parser.CssNumberParser;
+import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -74,6 +79,7 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.effect.BlurType;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
@@ -122,12 +128,27 @@ import java.util.Stack;
  */
 final public class CssParser {
 
+    static {
+        CssParserHelper.setAccessor(new CssParserHelper.Accessor() {
+            @Override
+            public Size parseSize(Token token) {
+                return sizeImpl(token);
+            }
+        });
+    }
+
     /**
      * Constructs a {@code CssParser}.
      */
     public CssParser() {
         properties = new HashMap<>();
     }
+
+    // Specifies whether conditional rules with unmatchable conditions (i.e. conditions that always
+    // evaluate to false) should be included in the returned stylesheet. For serialization purposes,
+    // this flag is set so that the complete stylesheet with all of its rules and imports is retained
+    // in the serialized form.
+    private boolean includeUnmatchableRules;
 
     // stylesheet as a string from parse method. This will be null if the
     // stylesheet is being parsed from a file; otherwise, the parser is parsing
@@ -200,6 +221,19 @@ final public class CssParser {
      * @return the {@code Stylesheet}
      */
     public Stylesheet parse(final String stylesheetText) {
+        Stylesheet stylesheet = parseUnmerged(stylesheetText, false);
+        stylesheet.mergeStylesheetImports();
+        return stylesheet;
+    }
+
+    /**
+     * Parses a stylesheet from the given text, but doesn't merge its imports into the stylesheet.
+     * <p>
+     * The only purpose of having a stylesheet with unmerged imports is to retain its hierarchical structure
+     * for serialization purposes. At runtime, all imported stylesheets must be merged into the main stylesheet.
+     */
+    Stylesheet parseUnmerged(String stylesheetText, boolean includeUnmatchableRules) {
+        this.includeUnmatchableRules = includeUnmatchableRules;
         final Stylesheet stylesheet = new Stylesheet();
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(stylesheetText);
@@ -222,6 +256,7 @@ final public class CssParser {
      * @throws java.io.IOException the exception
      */
     public Stylesheet parse(final String docbase, final String stylesheetText) throws IOException {
+        includeUnmatchableRules = false;
         final Stylesheet stylesheet = new Stylesheet(docbase);
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(docbase, stylesheetText);
@@ -229,6 +264,7 @@ final public class CssParser {
                 parse(stylesheet, reader);
             }
         }
+        stylesheet.mergeStylesheetImports();
         return stylesheet;
     }
 
@@ -241,7 +277,19 @@ final public class CssParser {
      *@throws IOException the exception
      */
     public Stylesheet parse(final URL url) throws IOException {
+        Stylesheet stylesheet = parseUnmerged(url, false);
+        stylesheet.mergeStylesheetImports();
+        return stylesheet;
+    }
 
+    /**
+     * Parses a stylesheet from the given URL, but doesn't merge its imports into the stylesheet.
+     * <p>
+     * The only purpose of having a stylesheet with unmerged imports is to retain its hierarchical structure
+     * for serialization purposes. At runtime, all imported stylesheets must be merged into the main stylesheet.
+     */
+    Stylesheet parseUnmerged(URL url, boolean includeUnmatchableRules) throws IOException {
+        this.includeUnmatchableRules = includeUnmatchableRules;
         final String path = url != null ? url.toExternalForm() : null;
         final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
@@ -508,34 +556,8 @@ final public class CssParser {
 
     // Assumes string is not a lookup!
     private ParsedValueImpl<Color,Color> colorValueOfString(String str) {
-
-        if(str.startsWith("#") || str.startsWith("0x")) {
-
-            double a = 1.0f;
-            String c = str;
-            final int prefixLength = (str.startsWith("#")) ? 1 : 2;
-
-            final int len = c.length();
-            // rgba or rrggbbaa - trim off the alpha
-            if ( (len-prefixLength) == 4) {
-                a = Integer.parseInt(c.substring(len-1), 16) / 15.0f;
-                c = c.substring(0,len-1);
-            } else if ((len-prefixLength) == 8) {
-                a = Integer.parseInt(c.substring(len-2), 16) / 255.0f;
-                c = c.substring(0,len-2);
-            }
-            // else color was rgb or rrggbb (no alpha)
-            return new ParsedValueImpl<>(Color.web(c,a), null);
-        }
-
-        try {
-            return new ParsedValueImpl<>(Color.web(str), null);
-        } catch (final IllegalArgumentException e) {
-        } catch (final NullPointerException e) {
-        }
-
-        // not a color
-        return null;
+        Color color = CssColorParser.tryParseColor(str);
+        return color != null ? new ParsedValueImpl<>(color, null) : null;
     }
 
     private String stripQuotes(String string) {
@@ -574,13 +596,40 @@ final public class CssParser {
     }
 
     private Size size(final Token token) throws ParseException {
+        Size size = sizeImpl(token);
+        if (size == null) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
+                LOGGER.finest("Expected \'<number>\'");
+            }
+
+            ParseException re = new ParseException("Expected \'<number>\'", token, this);
+            reportError(createError(re.toString()));
+            throw re;
+        }
+
+        return size;
+    }
+
+    private static Size sizeImpl(final Token token) {
         SizeUnits units = SizeUnits.PX;
-        // Amount to trim off the suffix, if any. Most are 2 chars.
-        int trim = 2;
-        final String sval = token.getText().trim();
-        final int len = sval.length();
-        final int ttype = token.getType();
-        switch (ttype) {
+        int trim = 2; // Amount to trim off the suffix, if any. Most are 2 chars.
+        String sval = token.getText();
+        int start = 0;
+        int end = sval.length();
+
+        while (start < end && Character.isWhitespace(sval.charAt(start))) {
+            start++;
+        }
+
+        while (end > start && Character.isWhitespace(sval.charAt(end - 1))) {
+            end--;
+        }
+
+        if (start >= end) {
+            return null;
+        }
+
+        switch (token.getType()) {
         case CssLexer.NUMBER:
             units = SizeUnits.PX;
             trim = 0;
@@ -637,16 +686,11 @@ final public class CssParser {
             units = SizeUnits.MS;
             break;
         default:
-            if (LOGGER.isLoggable(Level.FINEST)) {
-                LOGGER.finest("Expected \'<number>\'");
-            }
-            ParseException re = new ParseException("Expected \'<number>\'",token, this);
-            reportError(createError(re.toString()));
-            throw re;
+            return null;
         }
         // TODO: Handle NumberFormatException
         return new Size(
-            Double.parseDouble(sval.substring(0,len-trim)),
+            CssNumberParser.parseDouble(sval, start, end - trim),
             units
         );
     }
@@ -664,16 +708,30 @@ final public class CssParser {
     }
 
     private Size time(Token token) throws ParseException {
+        String sval = token.getText();
+        int start = 0;
+        int end = sval.length();
+
+        while (start < end && Character.isWhitespace(sval.charAt(start))) {
+            start++;
+        }
+
+        while (end > start && Character.isWhitespace(sval.charAt(end - 1))) {
+            end--;
+        }
+
+        if (start >= end) {
+            return null;
+        }
+
         return switch (token.getType()) {
             case CssLexer.SECONDS -> {
-                String sval = token.getText().trim();
-                double v = Double.parseDouble(sval.substring(0, sval.length() - 1).trim());
+                double v = CssNumberParser.parseDouble(sval, start, end - 1);
                 yield new Size(v, SizeUnits.S);
             }
 
             case CssLexer.MS -> {
-                String sval = token.getText().trim();
-                double v = Double.parseDouble(sval.substring(0, sval.length() - 2).trim());
+                double v = CssNumberParser.parseDouble(sval, start, end - 2);
                 yield new Size(v, SizeUnits.MS);
             }
 
@@ -1126,17 +1184,17 @@ final public class CssParser {
         double gval = 0;
         double bval = 0;
         if (argType == CssLexer.NUMBER) {
-            rval = clamp(0.0f, Double.parseDouble(rtext) / 255.0f, 1.0f);
-            gval = clamp(0.0f, Double.parseDouble(gtext) / 255.0f, 1.0f);
-            bval = clamp(0.0f, Double.parseDouble(btext) / 255.0f, 1.0f);
+            rval = clamp(0.0f, CssNumberParser.parseDouble(rtext) / 255.0f, 1.0f);
+            gval = clamp(0.0f, CssNumberParser.parseDouble(gtext) / 255.0f, 1.0f);
+            bval = clamp(0.0f, CssNumberParser.parseDouble(btext) / 255.0f, 1.0f);
         } else {
-            rval = clamp(0.0f, Double.parseDouble(rtext.substring(0,rtext.length()-1)) / 100.0f, 1.0f);
-            gval = clamp(0.0f, Double.parseDouble(gtext.substring(0,gtext.length()-1)) / 100.0f, 1.0f);
-            bval = clamp(0.0f, Double.parseDouble(btext.substring(0,btext.length()-1)) / 100.0f, 1.0f);
+            rval = clamp(0.0f, CssNumberParser.parseDouble(rtext, 0, rtext.length() - 1) / 100.0f, 1.0f);
+            gval = clamp(0.0f, CssNumberParser.parseDouble(gtext, 0, gtext.length() - 1) / 100.0f, 1.0f);
+            bval = clamp(0.0f, CssNumberParser.parseDouble(btext, 0, btext.length() - 1) / 100.0f, 1.0f);
         }
 
         final String atext = (atok != null) ? atok.getText() : null;
-        final double aval =  (atext != null) ? clamp(0.0f, Double.parseDouble(atext), 1.0f) : 1.0;
+        final double aval = (atext != null) ? clamp(0.0f, CssNumberParser.parseDouble(atext), 1.0f) : 1.0;
 
         return new ParsedValueImpl<Color,Color>(Color.color(rval,gval,bval,aval), null);
 
@@ -4066,7 +4124,7 @@ final public class CssParser {
                     if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
                         error(arg != null ? arg : term,  "Expected \'<number>\'");
                     } else {
-                        args[j] = Double.parseDouble(arg.token.getText());
+                        args[j] = CssNumberParser.parseDouble(arg.token.getText());
                     }
 
                     if (j % 2 == 0 && (args[j] < 0 || args[j] > 1)) {
@@ -4104,6 +4162,43 @@ final public class CssParser {
                     }, InterpolatorConverter.getInstance());
             }
 
+            case "linear(" -> {
+                List<Point2D> args = new ArrayList<>();
+
+                for (Term arg = term.firstArg; arg != null; arg = arg.nextArg) {
+                    double inputValue = Double.NaN;
+                    double outputValue = Double.NaN;
+
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg, "Expected \'<number>\'");
+                    } else {
+                        outputValue = CssNumberParser.parseDouble(arg.token.getText());
+                    }
+
+                    // 0, 1, or 2 <percentage>s
+                    for (int i = 0; i < 2; ++i) {
+                        Term next = arg.nextInSeries;
+                        if (next != null) {
+                            if (next.token == null || next.token.getType() != CssLexer.PERCENTAGE) {
+                                error(next, "Expected \'<percentage>\'");
+                            } else {
+                                inputValue = size(next.token).getValue() / 100.0;
+                            }
+
+                            arg = next;
+                            args.add(new Point2D(inputValue, outputValue));
+                        } else if (i == 0) {
+                            args.add(new Point2D(inputValue, outputValue));
+                        }
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
             default -> {
                 yield new ParsedValueImpl<>(
                     new ParsedValueImpl(term.token.getText(), null),
@@ -4112,11 +4207,11 @@ final public class CssParser {
         };
     }
 
-    // https://www.w3.org/TR/css-easing-1/#easing-functions
-    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    // https://www.w3.org/TR/css-easing-2/#easing-functions
+    // <easing-function> = linear | <linear-easing-function> | <cubic-bezier-easing-function> | <step-easing-function>
     private boolean isEasingFunction(Token token) throws ParseException {
         return token != null && switch (token.getText()) {
-            case "linear" -> true;
+            case "linear", "linear(" -> true;
             case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
             case "step-start", "step-end", "steps(" -> true;
             case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;
@@ -4210,10 +4305,9 @@ final public class CssParser {
 
                     imports.push(sourceOfStylesheet);
 
-                    Stylesheet importedStylesheet = handleImport(lexer);
-
+                    StylesheetImport importedStylesheet = handleImport(lexer);
                     if (importedStylesheet != null) {
-                        stylesheet.importStylesheet(importedStylesheet);
+                        stylesheet.addStylesheetImport(importedStylesheet);
                     }
 
                     imports.pop();
@@ -4247,7 +4341,7 @@ final public class CssParser {
                 continue;
 
             } else if ("media".equals(keyword)) {
-                mediaRule = mediaRule(lexer, mediaRule);
+                mediaRule = new MediaRule(mediaQueryList(lexer), mediaRule);
 
                 if (currentToken != null) {
                     if (currentToken.getType() == CssLexer.LBRACE) {
@@ -4270,7 +4364,7 @@ final public class CssParser {
                 currentToken = lexer.nextToken();
                 String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
                 if ("media".equals(keyword)) {
-                    mediaRule = mediaRule(lexer, mediaRule);
+                    mediaRule = new MediaRule(mediaQueryList(lexer), mediaRule);
 
                     if (currentToken != null) {
                         if (currentToken.getType() == CssLexer.LBRACE) {
@@ -4327,7 +4421,9 @@ final public class CssParser {
                 return;
             }
 
-            stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
+            if (includeUnmatchableRules || mediaRule == null || mediaRule.evaluate() != TriState.FALSE) {
+                stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
+            }
 
             Token lastToken = currentToken;
             currentToken = nextToken(lexer);
@@ -4374,7 +4470,7 @@ final public class CssParser {
         }
     }
 
-    private MediaRule mediaRule(CssLexer lexer, MediaRule mediaRule) {
+    private MediaQueryList mediaQueryList(CssLexer lexer) {
         // The media query expression contains all tokens (except for WS and NL) up to the
         // next SEMI or LBRACE. We collect all of these tokens and hand them over to the
         // special-purpose MediaQueryParser.
@@ -4400,7 +4496,7 @@ final public class CssParser {
             reportError(error);
         });
 
-        return new MediaRule(mediaQueryParser.parseMediaQueryList(mediaQueryTokens), mediaRule);
+        return mediaQueryParser.parseMediaQueryList(mediaQueryTokens);
     }
 
     private FontFace fontFace(CssLexer lexer) {
@@ -4561,7 +4657,7 @@ final public class CssParser {
         return new FontFaceImpl(descriptors, sources);
     }
 
-    private Stylesheet handleImport(CssLexer lexer) {
+    private StylesheetImport handleImport(CssLexer lexer) {
         currentToken = nextToken(lexer);
 
         if (currentToken == null || currentToken.getType() == Token.EOF) {
@@ -4573,6 +4669,12 @@ final public class CssParser {
         String fname = null;
         if (ttype == CssLexer.STRING || ttype == CssLexer.URL) {
             fname = currentToken.getText();
+        }
+
+        // Skip loading the referenced stylesheet if we know that the import conditions never match.
+        MediaQueryList importConditions = mediaQueryList(lexer);
+        if (!includeUnmatchableRules && importConditions.evaluate() == TriState.FALSE) {
+            return null;
         }
 
         Stylesheet importedStylesheet = null;
@@ -4596,6 +4698,7 @@ final public class CssParser {
             // run into problems (for example, see JDK-8093583).
             sourceOfStylesheet = _sourceOfStylesheet;
         }
+
         if (importedStylesheet == null) {
             final String msg =
                     MessageFormat.format("Could not import {0}", fname);
@@ -4605,7 +4708,10 @@ final public class CssParser {
             }
             reportError(error);
         }
-        return importedStylesheet;
+
+        return importedStylesheet != null
+            ? new StylesheetImport(importedStylesheet, importConditions)
+            : null;
     }
 
     private List<Selector> selectors(CssLexer lexer) {

@@ -35,12 +35,11 @@ class Document;
 class WeakPtrImplWithEventTargetData;
 class SVGCursorElement;
 
-enum class LoadedFromOpaqueSource : bool;
-
 class StyleCursorImage final : public StyleMultiImage {
     WTF_MAKE_TZONE_ALLOCATED(StyleCursorImage);
 public:
-    static Ref<StyleCursorImage> create(Ref<StyleImage>&&, const std::optional<IntPoint>&, const URL&, LoadedFromOpaqueSource);
+    static Ref<StyleCursorImage> create(const Ref<StyleImage>&, std::optional<IntPoint>, const Style::URL&);
+    static Ref<StyleCursorImage> create(Ref<StyleImage>&&, std::optional<IntPoint>, Style::URL&&);
     virtual ~StyleCursorImage();
 
     bool operator==(const StyleImage&) const final;
@@ -55,7 +54,8 @@ public:
     std::optional<IntPoint> hotSpot() const { return m_hotSpot; }
 
 private:
-    explicit StyleCursorImage(Ref<StyleImage>&&, const std::optional<IntPoint>& hotSpot, const URL&, LoadedFromOpaqueSource);
+    explicit StyleCursorImage(const Ref<StyleImage>&, std::optional<IntPoint> hotSpot, const Style::URL&);
+    explicit StyleCursorImage(Ref<StyleImage>&&, std::optional<IntPoint> hotSpot, Style::URL&&);
 
     void setContainerContextForRenderer(const RenderElement& renderer, const FloatSize& containerSize, float containerZoom) final;
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
@@ -65,8 +65,7 @@ private:
 
     Ref<StyleImage> m_image;
     std::optional<IntPoint> m_hotSpot;
-    URL m_originalURL;
-    LoadedFromOpaqueSource m_loadedFromOpaqueSource;
+    Style::URL m_originalURL;
     WeakHashSet<SVGCursorElement, WeakPtrImplWithEventTargetData> m_cursorElements;
 };
 

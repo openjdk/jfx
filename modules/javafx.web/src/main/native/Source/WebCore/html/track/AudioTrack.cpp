@@ -163,6 +163,9 @@ void AudioTrack::enabledChanged(bool enabled)
 void AudioTrack::configurationChanged(const PlatformAudioTrackConfiguration& configuration)
 {
     m_configuration->setState(configuration);
+    m_clients.forEach([this] (auto& client) {
+        client.audioTrackConfigurationChanged(*this);
+    });
 }
 
 void AudioTrack::idChanged(TrackID id)

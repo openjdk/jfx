@@ -45,7 +45,7 @@ public:
         auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
         auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
-        if (UNLIKELY(!thisObject)) {
+        if (!thisObject) [[unlikely]] {
             if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
                 return JSC::throwVMDOMAttributeSetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
             else
@@ -62,7 +62,7 @@ public:
         auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
         auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
-        if (UNLIKELY(!thisObject)) {
+        if (!thisObject) [[unlikely]] {
             if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
                 return JSC::throwVMDOMAttributeSetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
             else
@@ -89,7 +89,7 @@ public:
             RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject))));
         } else {
             auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
-            if (UNLIKELY(!thisObject)) {
+            if (!thisObject) [[unlikely]] {
                 if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
                     return JSC::throwVMDOMAttributeGetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
                 else if constexpr (shouldThrow == CastedThisErrorBehavior::RejectPromise)
@@ -114,7 +114,7 @@ public:
             RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject, attributeName))));
         } else {
             auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
-            if (UNLIKELY(!thisObject)) {
+            if (!thisObject) [[unlikely]] {
                 if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
                     return JSC::throwVMDOMAttributeGetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
                 else if constexpr (shouldThrow == CastedThisErrorBehavior::RejectPromise)

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "SinkDocument.h"
 
-#include "LocalFrame.h"
+#include "DocumentInlines.h"
 #include "RawDataDocumentParser.h"
 #include <wtf/TZoneMallocInlines.h>
 

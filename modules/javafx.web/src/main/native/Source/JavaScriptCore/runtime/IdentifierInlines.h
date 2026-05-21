@@ -28,8 +28,27 @@
 #include "CallFrame.h"
 #include "Identifier.h"
 #include "Symbol.h"
+#include "VM.h"
 
 namespace JSC  {
+
+inline Identifier::Identifier(VM& vm, std::span<const LChar> string)
+    : m_string(add(vm, string))
+{
+    ASSERT(m_string.impl()->isAtom());
+}
+
+inline Identifier::Identifier(VM& vm, std::span<const char16_t> string)
+    : m_string(add(vm, string))
+{
+    ASSERT(m_string.impl()->isAtom());
+}
+
+ALWAYS_INLINE Identifier::Identifier(VM& vm, ASCIILiteral literal)
+    : m_string(add(vm, literal))
+{
+    ASSERT(m_string.impl()->isAtom());
+}
 
 inline Identifier::Identifier(VM& vm, AtomStringImpl* string)
     : m_string(string)
@@ -53,6 +72,40 @@ inline Identifier::Identifier(VM& vm, const AtomString& string)
 #else
     UNUSED_PARAM(vm);
 #endif
+}
+
+inline Identifier::Identifier(VM& vm, const String& string)
+    : m_string(add(vm, string.impl()))
+{
+    ASSERT(m_string.impl()->isAtom());
+}
+
+inline Identifier::Identifier(VM& vm, StringImpl* rep)
+    : m_string(add(vm, rep))
+{
+    ASSERT(m_string.impl()->isAtom());
+}
+
+inline Ref<AtomStringImpl> Identifier::add(VM& vm, ASCIILiteral literal)
+{
+    if (literal.length() == 1)
+        return vm.smallStrings.singleCharacterStringRep(literal.characterAt(0));
+    return AtomStringImpl::add(literal);
+}
+
+
+template <typename T>
+Ref<AtomStringImpl> Identifier::add(VM& vm, std::span<const T> string)
+{
+    if (string.size() == 1) {
+        T c = string.front();
+        if (canUseSingleCharacterString(c))
+            return vm.smallStrings.singleCharacterStringRep(c);
+    }
+    if (string.empty())
+        return *static_cast<AtomStringImpl*>(StringImpl::empty());
+
+    return *AtomStringImpl::add(string);
 }
 
 inline Ref<AtomStringImpl> Identifier::add(VM& vm, StringImpl* r)
@@ -90,7 +143,7 @@ inline Identifier Identifier::fromString(VM& vm, std::span<const LChar> s)
     return Identifier(vm, s);
 }
 
-inline Identifier Identifier::fromString(VM& vm, std::span<const UChar> s)
+inline Identifier Identifier::fromString(VM& vm, std::span<const char16_t> s)
 {
     return Identifier(vm, s);
 }

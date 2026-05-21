@@ -29,15 +29,14 @@
 
 namespace WebCore {
 
-class Page;
+class Frame;
 class SecurityOriginData;
 
 class BadgeClient : public RefCounted<BadgeClient> {
 public:
     virtual ~BadgeClient() = default;
 
-    virtual void setAppBadge(Page*, const SecurityOriginData&, std::optional<uint64_t>) = 0;
-    virtual void setClientBadge(Page&, const SecurityOriginData&, std::optional<uint64_t>) = 0;
+    virtual void setAppBadge(Frame*, const SecurityOriginData&, std::optional<uint64_t>) = 0;
 };
 
 } // namespace WebCore

@@ -30,8 +30,6 @@
 #include "CSSPropertyNames.h"
 #include "CSSUnits.h"
 #include "ComputedStyleDependencies.h"
-#include "ContainerQueryFeatures.h"
-#include "MediaQueryFeatures.h"
 
 namespace WebCore {
 namespace CSSCalc {
@@ -56,13 +54,11 @@ static void collectComputedStyleDependencies(const Child& root, ComputedStyleDep
             if (auto lengthUnit = CSS::toLengthUnit(root.unit))
                 CSS::collectComputedStyleDependencies(dependencies, *lengthUnit);
         },
-        [&](const IndirectNode<MediaProgress>& root) {
-            root->feature->collectComputedStyleDependencies(dependencies);
-            forAllChildNodes(*root, [&](const auto& root) { collectComputedStyleDependencies(root, dependencies); });
+        [&](const SiblingCount&) {
+            // No potential dependencies.
         },
-        [&](const IndirectNode<ContainerProgress>& root) {
-            root->feature->collectComputedStyleDependencies(dependencies);
-            forAllChildNodes(*root, [&](const auto& root) { collectComputedStyleDependencies(root, dependencies); });
+        [&](const SiblingIndex&) {
+            // No potential dependencies.
         },
         [&](const IndirectNode<Anchor>& anchor) {
             dependencies.anchors = true;

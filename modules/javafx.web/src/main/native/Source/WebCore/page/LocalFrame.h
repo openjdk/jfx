@@ -5,7 +5,7 @@
  *                     2000-2001 Simon Hausmann <hausmann@kde.org>
  *                     2000-2001 Dirk Mueller <mueller@kde.org>
  *                     2000 Stefan Schimanski <1Stein@gmx.de>
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  *
@@ -27,21 +27,13 @@
 
 #pragma once
 
-#include "AdjustViewSizeOrNot.h"
-#include "Document.h"
+#include "DOMPasteAccess.h"
 #include "Frame.h"
-#include "ScrollTypes.h"
-#include "UserScriptTypes.h"
+#include "ScrollbarMode.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakRef.h>
-
-#if PLATFORM(IOS_FAMILY)
-#include "Timer.h"
-#include "ViewportArguments.h"
-#include "VisibleSelection.h"
-#endif
 
 #if PLATFORM(WIN)
 #include "FrameWin.h"
@@ -70,11 +62,13 @@ namespace WebCore {
 
 class Color;
 class LocalDOMWindow;
+class DOMWrapperWorld;
 class DataDetectionResultsStorage;
 class Document;
 class Editor;
 class Element;
 class EventHandler;
+class FloatPoint;
 class FloatSize;
 class FrameDestructionObserver;
 class FrameLoader;
@@ -90,20 +84,32 @@ class LocalFrameLoaderClient;
 class LocalFrameView;
 class Node;
 class Page;
+class RegistrableDomain;
 class RenderLayer;
 class RenderView;
 class RenderWidget;
 class ResourceMonitor;
 class ScriptController;
 class SecurityOrigin;
+class UserScript;
 class VisiblePosition;
 class Widget;
 
+enum class AdjustViewSize : bool;
+
+#if PLATFORM(IOS_FAMILY)
+class VisibleSelection;
+struct ViewportArguments;
+#endif
+
 enum class SandboxFlag : uint16_t;
+enum class UserScriptInjectionTime : bool;
 enum class WindowProxyProperty : uint8_t;
 
 using SandboxFlags = OptionSet<SandboxFlag>;
+using IntDegrees = int32_t;
 
+struct OverrideScreenSize;
 struct SimpleRange;
 
 #if PLATFORM(IOS_FAMILY)
@@ -122,9 +128,9 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 class LocalFrame final : public Frame {
 public:
     using ClientCreator = CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>;
-    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, Frame* opener);
-    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, HTMLFrameOwnerElement&);
-    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ScrollbarMode, Frame& parent);
+    WEBCORE_EXPORT static Ref<LocalFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, Frame* opener, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, HTMLFrameOwnerElement&, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<LocalFrame> createProvisionalSubframe(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, ScrollbarMode, Frame& parent, Ref<FrameTreeSyncData>&&);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
@@ -144,31 +150,27 @@ public:
 
     WEBCORE_EXPORT void willDetachPage();
 
-    Document* document() const;
-    RefPtr<Document> protectedDocument() const;
-    LocalFrameView* view() const;
+    inline Document* document() const; // Defined in LocalFrameInlines.h
+    inline RefPtr<Document> protectedDocument() const; // Defined in LocalFrameInlines.h
+    inline LocalFrameView* view() const; // Defined in LocalFrameInlines.h
     inline RefPtr<LocalFrameView> protectedView() const; // Defined in LocalFrameView.h.
     WEBCORE_EXPORT RefPtr<const LocalFrame> localMainFrame() const;
     WEBCORE_EXPORT RefPtr<LocalFrame> localMainFrame();
 
-    Editor& editor() { return protectedDocument()->editor(); }
-    const Editor& editor() const { return protectedDocument()->editor(); }
-    WEBCORE_EXPORT Ref<Editor> protectedEditor();
-    WEBCORE_EXPORT Ref<const Editor> protectedEditor() const;
+    inline Editor& editor(); // Defined in LocalFrameInlines.h
+    inline const Editor& editor() const; // Defined in LocalFrameInlines.h
+    inline Ref<Editor> protectedEditor(); // Defined in LocalFrameInlines.h
+    inline Ref<const Editor> protectedEditor() const; // Defined in LocalFrameInlines.h
 
     EventHandler& eventHandler() { return m_eventHandler; }
     const EventHandler& eventHandler() const { return m_eventHandler; }
-    WEBCORE_EXPORT CheckedRef<EventHandler> checkedEventHandler();
-    WEBCORE_EXPORT CheckedRef<const EventHandler> checkedEventHandler() const;
 
     const FrameLoader& loader() const { return m_loader.get(); }
     FrameLoader& loader() { return m_loader.get(); }
-    WEBCORE_EXPORT Ref<const FrameLoader> protectedLoader() const;
-    WEBCORE_EXPORT Ref<FrameLoader> protectedLoader();
 
-    FrameSelection& selection() { return document()->selection(); }
-    const FrameSelection& selection() const { return document()->selection(); }
-    CheckedRef<FrameSelection> checkedSelection() const;
+    inline FrameSelection& selection(); // Defined in LocalFrameInlines.h
+    inline const FrameSelection& selection() const; // Defined in LocalFrameInlines.h
+    CheckedRef<FrameSelection> checkedSelection() const; // Defined in LocalFrameInlines.h
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
     CheckedRef<ScriptController> checkedScript();
@@ -183,6 +185,9 @@ public:
 
     bool documentIsBeingReplaced() const { return m_documentIsBeingReplaced; }
 
+    bool hasHadUserInteraction() const { return m_hasHadUserInteraction; }
+    void setHasHadUserInteraction() { m_hasHadUserInteraction = true; }
+
     bool requestDOMPasteAccess(DOMPasteAccessCategory = DOMPasteAccessCategory::General);
 
     String debugDescription() const;
@@ -195,14 +200,11 @@ public:
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
     WEBCORE_EXPORT void injectUserScriptImmediately(DOMWrapperWorld&, const UserScript&);
 
-    void injectUserScriptsAwaitingNotification();
-    void addUserScriptAwaitingNotification(DOMWrapperWorld&, const UserScript&);
-
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
 
     WEBCORE_EXPORT static LocalFrame* frameForWidget(const Widget&);
 
-    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
+    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSize);
     bool shouldUsePrintingLayout() const;
     WEBCORE_EXPORT FloatSize resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize);
 
@@ -277,8 +279,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT int preferredHeight() const;
     WEBCORE_EXPORT void updateLayout() const;
-    WEBCORE_EXPORT NSRect caretRect();
-    WEBCORE_EXPORT NSRect rectForScrollToVisible();
+    WEBCORE_EXPORT IntRect caretRect();
+    WEBCORE_EXPORT IntRect rectForScrollToVisible();
 
     // This function is used by Legacy WebKit.
     WEBCORE_EXPORT void setTimersPaused(bool);
@@ -310,12 +312,12 @@ public:
     void selfOnlyDeref();
 
     void documentURLOrOriginDidChange();
+    void dispatchLoadEventToParent();
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     void didAccessWindowProxyPropertyViaOpener(WindowProxyProperty);
 #endif
 
-    WEBCORE_EXPORT RefPtr<DocumentLoader> loaderForWebsitePolicies() const;
     void storageAccessExceptionReceivedForDomain(const RegistrableDomain&);
     bool requestSkipUserActivationCheckForStorageAccess(const RegistrableDomain&);
 
@@ -323,6 +325,7 @@ public:
     String customUserAgentAsSiteSpecificQuirks() const final;
     String customNavigatorPlatform() const final;
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final;
+    AutoplayPolicy autoplayPolicy() const final;
 
     WEBCORE_EXPORT SandboxFlags effectiveSandboxFlags() const;
     SandboxFlags sandboxFlagsFromSandboxAttributeNotCSP() { return m_sandboxFlags; }
@@ -331,11 +334,14 @@ public:
     ScrollbarMode scrollingMode() const { return m_scrollingMode; }
     WEBCORE_EXPORT void updateScrollingMode() final;
     WEBCORE_EXPORT void setScrollingMode(ScrollbarMode);
+    WEBCORE_EXPORT void showMemoryMonitorError();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     WEBCORE_EXPORT void showResourceMonitoringError();
     WEBCORE_EXPORT void reportResourceMonitoringWarning();
 #endif
+
+    bool frameCanCreatePaymentSession() const final;
 
 protected:
     void frameWasDisconnectedFromOwner() const final;
@@ -343,7 +349,7 @@ protected:
 private:
     friend class NavigationDisabler;
 
-    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
+    LocalFrame(Page&, ClientCreator&&, FrameIdentifier, SandboxFlags, std::optional<ScrollbarMode>, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
 
     void dropChildren();
 
@@ -351,6 +357,7 @@ private:
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
     void didFinishLoadInAnotherProcess() final;
+    RefPtr<SecurityOrigin> frameDocumentSecurityOrigin() const final;
 
     FrameView* virtualView() const final;
     void disconnectView() final;
@@ -360,8 +367,6 @@ private:
     void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) final;
 
     WeakHashSet<FrameDestructionObserver> m_destructionObservers;
-
-    Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
     const UniqueRef<FrameLoader> m_loader;
 
@@ -383,10 +388,10 @@ private:
 
     void setTimersPausedInternal(bool);
 
-    ViewportArguments m_viewportArguments;
+    const UniqueRef<ViewportArguments> m_viewportArguments;
+    const UniqueRef<VisibleSelection> m_rangedSelectionBase;
+    const UniqueRef<VisibleSelection> m_rangedSelectionInitialExtent;
     bool m_selectionChangeCallbacksDisabled { false };
-    VisibleSelection m_rangedSelectionBase;
-    VisibleSelection m_rangedSelectionInitialExtent;
 #endif
 
     float m_pageZoomFactor;
@@ -397,38 +402,19 @@ private:
     bool m_documentIsBeingReplaced { false };
     unsigned m_navigationDisableCount { 0 };
     unsigned m_selfOnlyRefCount { 0 };
+    bool m_hasHadUserInteraction { false };
 
 #if ENABLE(WINDOW_PROXY_PROPERTY_ACCESS_NOTIFICATION)
     OptionSet<WindowProxyProperty> m_accessedWindowProxyPropertiesViaOpener;
 #endif
 
-    FloatSize m_overrideScreenSize;
+    std::unique_ptr<OverrideScreenSize> m_overrideScreenSize;
 
     const WeakPtr<LocalFrame> m_rootFrame;
     SandboxFlags m_sandboxFlags;
-    UniqueRef<EventHandler> m_eventHandler;
-    UncheckedKeyHashSet<RegistrableDomain> m_storageAccessExceptionDomains;
+    const UniqueRef<EventHandler> m_eventHandler;
+    std::unique_ptr<HashSet<RegistrableDomain>> m_storageAccessExceptionDomains;
 };
-
-inline LocalFrameView* LocalFrame::view() const
-{
-    return m_view.get();
-}
-
-inline Document* LocalFrame::document() const
-{
-    return m_doc.get();
-}
-
-inline RefPtr<Document> LocalFrame::protectedDocument() const
-{
-    return document();
-}
-
-inline LocalFrameView* Document::view() const
-{
-    return m_frame ? m_frame->view() : nullptr;
-}
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LocalFrame&);
 

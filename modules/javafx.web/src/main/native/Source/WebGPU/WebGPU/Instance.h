@@ -35,6 +35,7 @@
 #import <wtf/Ref.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/ThreadSafeRefCounted.h>
+#import <wtf/ThreadSafetyAnalysis.h>
 #import <wtf/WeakObjCPtr.h>
 #import <wtf/WeakPtr.h>
 

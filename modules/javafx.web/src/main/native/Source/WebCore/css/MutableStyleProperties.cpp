@@ -29,9 +29,9 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParser.h"
 #include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "CSSValuePool.h"
 #include "ImmutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 
@@ -117,7 +117,7 @@ bool MutableStyleProperties::removePropertyAtIndex(int index, String* returnText
 
     // A more efficient removal strategy would involve marking entries as empty
     // and sweeping them when the vector grows too big.
-    m_propertyVector.remove(index);
+    m_propertyVector.removeAt(index);
     return true;
 }
 
@@ -189,7 +189,6 @@ void MutableStyleProperties::setProperty(CSSPropertyID propertyID, Ref<CSSValue>
         m_propertyVector.append(CSSProperty(longhand, value.copyRef(), important));
 }
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 bool MutableStyleProperties::canUpdateInPlace(const CSSProperty& property, CSSProperty* toReplace) const
 {
     // If the property is in a logical property group, we can't just update the value in-place,
@@ -199,14 +198,13 @@ bool MutableStyleProperties::canUpdateInPlace(const CSSProperty& property, CSSPr
     if (CSSProperty::isInLogicalPropertyGroup(id)) {
         ASSERT(toReplace >= m_propertyVector.begin());
         ASSERT(toReplace < m_propertyVector.end());
-        for (CSSProperty* it = toReplace + 1; it != m_propertyVector.end(); ++it) {
-            if (CSSProperty::areInSameLogicalPropertyGroupWithDifferentMappingLogic(id, it->id()))
+        for (auto& property : m_propertyVector.subspan(toReplace - m_propertyVector.begin() + 1)) {
+            if (CSSProperty::areInSameLogicalPropertyGroupWithDifferentMappingLogic(id, property.id()))
                 return false;
         }
     }
     return true;
 }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSProperty* slot)
 {
@@ -226,7 +224,7 @@ bool MutableStyleProperties::setProperty(const CSSProperty& property, CSSPropert
             *toReplace = property;
             return true;
         }
-        m_propertyVector.remove(toReplace - m_propertyVector.begin());
+        m_propertyVector.removeAt(toReplace - m_propertyVector.begin());
     }
     m_propertyVector.append(property);
     return true;
@@ -244,7 +242,7 @@ bool MutableStyleProperties::parseDeclaration(const String& styleDeclaration, CS
     m_propertyVector.clear();
 
     context.mode = cssParserMode();
-    CSSParser(context).parseDeclaration(*this, styleDeclaration);
+    CSSParser::parseDeclarationList(*this, styleDeclaration, context);
 
     // We could do better. Just changing property order does not require style invalidation.
     return oldProperties != m_propertyVector;
@@ -290,8 +288,8 @@ bool MutableStyleProperties::removeProperties(std::span<const CSSPropertyID> pro
         return false;
 
     // FIXME: This is always used with static sets and in that case constructing the hash repeatedly is pretty pointless.
-    UncheckedKeyHashSet<CSSPropertyID> toRemove;
-    toRemove.add(properties.begin(), properties.end());
+    HashSet<CSSPropertyID> toRemove;
+    toRemove.addAll(properties);
 
     return m_propertyVector.removeAllMatching([&toRemove](const CSSProperty& property) {
         return toRemove.contains(property.id());
@@ -342,10 +340,10 @@ CSSProperty* MutableStyleProperties::findCustomCSSPropertyWithName(const String&
     return &m_propertyVector.at(foundPropertyIndex);
 }
 
-CSSStyleDeclaration& MutableStyleProperties::ensureInlineCSSStyleDeclaration(StyledElement& parentElement)
+CSSStyleProperties& MutableStyleProperties::ensureInlineCSSStyleProperties(StyledElement& parentElement)
 {
     if (!m_cssomWrapper)
-        m_cssomWrapper = makeUniqueWithoutRefCountedCheck<InlineCSSStyleDeclaration>(*this, parentElement);
+        lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<InlineCSSStyleProperties>(*this, parentElement));
     ASSERT(m_cssomWrapper->parentElement() == &parentElement);
     return *m_cssomWrapper;
 }

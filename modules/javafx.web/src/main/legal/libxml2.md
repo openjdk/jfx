@@ -1,4 +1,4 @@
-## xmlsoft.org: libxml2 v2.14.6
+## xmlsoft.org: libxml2 v2.15.2
 
 ### libxml2 License
 ```
@@ -8,6 +8,7 @@ list.c, which are covered by a similar licence but
 with different Copyright notices) all the files are:
 
 Copyright (C) 1998-2012 Daniel Veillard.  All Rights Reserved.
+Copyright (C) The Libxml2 Contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -83,4 +84,25 @@ Igor Zlatkovic for the Windows port
 Aleksey Sanin
 Nick Wellnhofer
 
+Thanks to the following contributors:
+
+- gabriel desharnais
+- Benjamin Gilbert
+- Daniel Garcia Moreno
+- Herman Semenoff
+- Iván Chavero
+- Jayakrishna Menon
+- Michael Heilmann
+- Michal Privoznik
+- Mike Dalessio
+- Nathan
+- Niels Dossche
+- Peter Fordham
+- Petr Simecek
+- Sandino Araico Sanchez
+- Stéphane Cerveau
+- Steve Lhomme
+- Trevor Gamblin
+- ylwango613
+- Yun
 ```

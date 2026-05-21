@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package com.oracle.tools.fx.monkey.tools;
 
-import javafx.application.Platform;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
@@ -45,19 +47,15 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
 
 public final class StageTesterWindow extends Stage {
 
@@ -180,11 +178,11 @@ public final class StageTesterWindow extends Stage {
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
                 case "medium" -> 50;
-                default -> headerBar.getMinSystemHeight();
+                default -> HeaderBar.getMinSystemHeight(stage);
             });
 
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
-        headerBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
+        HeaderBar.minSystemHeightProperty(stage).subscribe(event -> updateMinHeight.run());
 
         var menuBar = new MenuBar(
             new Menu("File", null,
@@ -198,9 +196,9 @@ public final class StageTesterWindow extends Stage {
                 new MenuItem("Copy"),
                 new MenuItem("Paste")));
 
-        var leadingContent = new HBox(menuBar);
-        HeaderBar.setDragType(leadingContent, HeaderDragType.DRAGGABLE);
-        headerBar.setLeading(leadingContent);
+        var leftContent = new HBox(menuBar);
+        HeaderBar.setDragType(leftContent, HeaderDragType.DRAGGABLE);
+        headerBar.setLeft(leftContent);
 
         if (customWindowButtons) {
             HeaderBar.setPrefButtonHeight(stage, 0);
@@ -222,16 +220,16 @@ public final class StageTesterWindow extends Stage {
             });
 
             HBox.setMargin(adaptiveButtonHeight, new Insets(4));
-            leadingContent.getChildren().add(adaptiveButtonHeight);
+            leftContent.getChildren().add(adaptiveButtonHeight);
         }
 
-        var trailingNodes = new HBox(sizeComboBox);
-        trailingNodes.setAlignment(Pos.CENTER);
-        trailingNodes.setSpacing(5);
-        headerBar.setTrailing(trailingNodes);
+        var rightNodes = new HBox(sizeComboBox);
+        rightNodes.setAlignment(Pos.CENTER);
+        rightNodes.setSpacing(5);
+        headerBar.setRight(rightNodes);
 
         if (customWindowButtons) {
-            trailingNodes.getChildren().addAll(createCustomWindowButtons());
+            rightNodes.getChildren().addAll(createCustomWindowButtons());
         }
 
         var borderPane = new BorderPane();
@@ -244,13 +242,13 @@ public final class StageTesterWindow extends Stage {
     private Parent createSplitHeaderBarRoot(Stage stage, NodeOrientation nodeOrientation, boolean customWindowButtons) {
         var leftHeaderBar = new HeaderBar();
         leftHeaderBar.setBackground(Background.fill(Color.VIOLET));
-        leftHeaderBar.setLeading(new Button("\u2728"));
+        leftHeaderBar.setLeft(new Button("\u2728"));
         leftHeaderBar.setCenter(new TextField() {{ setPromptText("Search..."); setMaxWidth(200); }});
-        leftHeaderBar.setTrailingSystemPadding(false);
+        leftHeaderBar.setRightSystemPadding(false);
 
         var rightHeaderBar = new HeaderBar();
         rightHeaderBar.setBackground(Background.fill(Color.LIGHTSKYBLUE));
-        rightHeaderBar.setLeadingSystemPadding(false);
+        rightHeaderBar.setLeftSystemPadding(false);
 
         var sizeComboBox = new ComboBox<>(FXCollections.observableArrayList("Small", "Medium", "Large"));
         sizeComboBox.getSelectionModel().select(0);
@@ -259,23 +257,23 @@ public final class StageTesterWindow extends Stage {
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
                 case "medium" -> 50;
-                default -> rightHeaderBar.getMinSystemHeight();
+                default -> HeaderBar.getMinSystemHeight(stage);
             });
 
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
-        rightHeaderBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
+        HeaderBar.minSystemHeightProperty(stage).subscribe(event -> updateMinHeight.run());
 
-        var trailingNodes = new HBox(sizeComboBox);
-        trailingNodes.setAlignment(Pos.CENTER);
-        trailingNodes.setSpacing(5);
-        rightHeaderBar.setTrailing(trailingNodes);
+        var rightNodes = new HBox(sizeComboBox);
+        rightNodes.setAlignment(Pos.CENTER);
+        rightNodes.setSpacing(5);
+        rightHeaderBar.setRight(rightNodes);
 
         if (customWindowButtons) {
-            trailingNodes.getChildren().addAll(createCustomWindowButtons());
+            rightNodes.getChildren().addAll(createCustomWindowButtons());
             HeaderBar.setPrefButtonHeight(stage, 0);
         }
 
-        rightHeaderBar.setTrailing(trailingNodes);
+        rightHeaderBar.setRight(rightNodes);
 
         var left = new BorderPane();
         left.setTop(leftHeaderBar);

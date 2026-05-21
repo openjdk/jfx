@@ -49,10 +49,8 @@ namespace WebCore {
 
 class GraphicsContext;
 
-class Pattern final : public ThreadSafeRefCounted<Pattern> {
-public:
-    struct Parameters {
-        Parameters(bool repeatX = true, bool repeatY = true, AffineTransform patternSpaceTransform = { })
+struct PatternParameters {
+    PatternParameters(bool repeatX = true, bool repeatY = true, AffineTransform patternSpaceTransform = { })
             : repeatX(repeatX)
             , repeatY(repeatY)
             , patternSpaceTransform(patternSpaceTransform)
@@ -61,8 +59,11 @@ public:
         bool repeatX;
         bool repeatY;
         AffineTransform patternSpaceTransform;
-    };
+};
 
+class Pattern final : public ThreadSafeRefCounted<Pattern> {
+public:
+    using Parameters = PatternParameters;
     WEBCORE_EXPORT static Ref<Pattern> create(SourceImage&& tileImage, const Parameters& = { });
     WEBCORE_EXPORT ~Pattern();
 
@@ -93,5 +94,6 @@ private:
     SourceImage m_tileImage;
     Parameters m_parameters;
 };
+
 
 } //namespace

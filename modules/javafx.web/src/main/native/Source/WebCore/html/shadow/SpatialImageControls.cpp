@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SpatialImageControls.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"

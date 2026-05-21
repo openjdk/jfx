@@ -37,7 +37,7 @@ public:
     FEDisplacementMapSoftwareApplier(const FEDisplacementMap&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     static inline unsigned byteOffsetOfPixel(unsigned x, unsigned y, unsigned rowBytes)
     {

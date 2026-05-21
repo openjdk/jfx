@@ -39,6 +39,7 @@ enum class TaskSource : uint8_t {
     IndexedDB,
     MediaElement,
     Microtask,
+    ModelElement,
     Networking,
     Payment,
     PerformanceTimeline,

@@ -26,8 +26,10 @@
 #include "InspectorCSSOMWrappers.h"
 #include "MatchedDeclarationsCache.h"
 #include "MediaQueryEvaluator.h"
+#include "PropertyCascade.h"
 #include "RuleSet.h"
 #include "StyleScopeRuleSets.h"
+#include "TreeResolutionState.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -71,8 +73,10 @@ enum class RuleMatchingBehavior: uint8_t {
 namespace Style {
 
 struct BuilderContext;
+struct CachedMatchResult;
 struct ResolvedStyle;
 struct SelectorMatchingState;
+struct UnadjustedStyle;
 
 struct ResolutionContext {
     const RenderStyle* parentStyle;
@@ -80,10 +84,12 @@ struct ResolutionContext {
     // This needs to be provided during style resolution when up-to-date document element style is not available via DOM.
     const RenderStyle* documentElementStyle { nullptr };
     SelectorMatchingState* selectorMatchingState { nullptr };
+    CheckedPtr<TreeResolutionState> treeResolutionState { };
+
     bool isSVGUseTreeRoot { false };
 };
 
-using KeyframesRuleMap = UncheckedKeyHashMap<AtomString, RefPtr<StyleRuleKeyframes>>;
+using KeyframesRuleMap = HashMap<AtomString, RefPtr<StyleRuleKeyframes>>;
 
 class Resolver : public RefCounted<Resolver>, public CanMakeSingleThreadWeakPtr<Resolver> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Resolver);
@@ -93,8 +99,10 @@ public:
     static Ref<Resolver> create(Document&, ScopeType);
     ~Resolver();
 
+    UnadjustedStyle unadjustedStyleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
+    UnadjustedStyle unadjustedStyleForCachedMatchResult(Element&, const ResolutionContext&, CachedMatchResult&&);
+
     ResolvedStyle styleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
-    ResolvedStyle styleForElementWithCachedMatchResult(Element&, const ResolutionContext&, const MatchResult&, const RenderStyle& existingRenderStyle);
 
     void keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&, const TimingFunction*);
 
@@ -109,7 +117,7 @@ public:
 
     ScopeType scopeType() const { return m_scopeType; }
 
-    void appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&);
+    void appendAuthorStyleSheets(std::span<const RefPtr<CSSStyleSheet>>);
 
     ScopeRuleSets& ruleSets() { return m_ruleSets; }
     const ScopeRuleSets& ruleSets() const { return m_ruleSets; }
@@ -167,10 +175,11 @@ private:
 
     class State;
 
-    State initializeStateAndStyle(const Element&, const ResolutionContext&);
-    BuilderContext builderContext(const State&);
+    State initializeStateAndStyle(const Element&, const ResolutionContext&, std::unique_ptr<RenderStyle>&& initialStyle = { });
+    BuilderContext builderContext(State&);
 
-    void applyMatchedProperties(State&, const MatchResult&);
+    void applyMatchedProperties(State&, const MatchResult&, PropertyCascade::IncludedProperties&&);
+    void setGlobalStateAfterApplyingProperties(const BuilderState&);
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const ScopeType m_scopeType;

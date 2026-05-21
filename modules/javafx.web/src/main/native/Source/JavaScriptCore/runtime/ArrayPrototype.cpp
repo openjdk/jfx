@@ -69,6 +69,9 @@ static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToReversed);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSorted);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncWith);
 static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncIncludes);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncCopyWithin);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncToSpliced);
+static JSC_DECLARE_HOST_FUNCTION(arrayProtoFuncFlat);
 
 // ------------------------------ ArrayPrototype ----------------------------
 
@@ -115,7 +118,7 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().indexOfPublicName(), arrayProtoFuncIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, ArrayIndexOfIntrinsic);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("lastIndexOf"_s, arrayProtoFuncLastIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().filterPublicName(), arrayPrototypeFilterCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().flatPublicName(), arrayPrototypeFlatCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->flat, arrayProtoFuncFlat, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().flatMapPublicName(), arrayPrototypeFlatMapCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().reducePublicName(), arrayPrototypeReduceCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().reduceRightPublicName(), arrayPrototypeReduceRightCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -127,11 +130,11 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findIndexPublicName(), arrayPrototypeFindIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().findLastIndexPublicName(), arrayPrototypeFindLastIndexCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->includes, arrayProtoFuncIncludes, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, ArrayIncludesIntrinsic);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().copyWithinPublicName(), arrayPrototypeCopyWithinCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->copyWithin, arrayProtoFuncCopyWithin, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().atPublicName(), arrayPrototypeAtCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toReversed, arrayProtoFuncToReversed, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSorted, arrayProtoFuncToSorted, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
-        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().toSplicedPublicName(), arrayPrototypeToSplicedCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toSpliced, arrayProtoFuncToSpliced, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->with, arrayProtoFuncWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().entriesPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().forEachPrivateName(), getDirect(vm, vm.propertyNames->builtinNames().forEachPublicName()), static_cast<unsigned>(PropertyAttribute::ReadOnly));
@@ -146,20 +149,20 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     unscopables->convertToDictionary(vm);
     const Identifier* const unscopableNames[] = {
         &vm.propertyNames->builtinNames().atPublicName(),
-        &vm.propertyNames->builtinNames().copyWithinPublicName(),
+        &vm.propertyNames->copyWithin,
         &vm.propertyNames->builtinNames().entriesPublicName(),
         &vm.propertyNames->fill,
         &vm.propertyNames->builtinNames().findPublicName(),
         &vm.propertyNames->builtinNames().findIndexPublicName(),
         &vm.propertyNames->builtinNames().findLastPublicName(),
         &vm.propertyNames->builtinNames().findLastIndexPublicName(),
-        &vm.propertyNames->builtinNames().flatPublicName(),
+        &vm.propertyNames->flat,
         &vm.propertyNames->builtinNames().flatMapPublicName(),
         &vm.propertyNames->includes,
         &vm.propertyNames->builtinNames().keysPublicName(),
         &vm.propertyNames->toReversed,
         &vm.propertyNames->toSorted,
-        &vm.propertyNames->builtinNames().toSplicedPublicName(),
+        &vm.propertyNames->toSpliced,
         &vm.propertyNames->builtinNames().valuesPublicName()
     };
     for (const auto* unscopableName : unscopableNames) {
@@ -171,16 +174,25 @@ void ArrayPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
 // ------------------------------ Array Functions ----------------------------
 
+enum class RelativeNegativeIndex : bool {
+    No,
+    Yes,
+};
+
+template <RelativeNegativeIndex relativeNegativeIndex>
 static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* globalObject, JSValue value, uint64_t length, uint64_t undefinedValue = 0)
 {
     if (value.isUndefined())
         return undefinedValue;
 
-    if (LIKELY(value.isInt32())) {
+    if (value.isInt32()) [[likely]] {
         int64_t indexInt64 = value.asInt32();
         if (indexInt64 < 0) {
+            if constexpr (relativeNegativeIndex == RelativeNegativeIndex::Yes) {
             indexInt64 += length;
             return indexInt64 < 0 ? 0 : static_cast<uint64_t>(indexInt64);
+            } else
+                return 0;
         }
         uint64_t indexUInt64 = static_cast<uint64_t>(indexInt64);
         return std::min(indexUInt64, length);
@@ -188,8 +200,11 @@ static inline uint64_t argumentClampedIndexFromStartOrEnd(JSGlobalObject* global
 
     double indexDouble = value.toIntegerOrInfinity(globalObject);
     if (indexDouble < 0) {
+        if constexpr (relativeNegativeIndex == RelativeNegativeIndex::Yes) {
         indexDouble += length;
         return indexDouble < 0 ? 0 : static_cast<uint64_t>(indexDouble);
+        } else
+            return 0;
     }
     return indexDouble > length ? length : static_cast<uint64_t>(indexDouble);
 }
@@ -199,7 +214,7 @@ static inline int64_t argumentUnclampedIndexFromStartOrEnd(JSGlobalObject* globa
     if (value.isUndefined())
         return undefinedValue;
 
-    if (LIKELY(value.isInt32())) {
+    if (value.isInt32()) [[likely]] {
         int64_t indexInt64 = value.asInt32();
         if (indexInt64 < 0)
             indexInt64 += length;
@@ -209,169 +224,23 @@ static inline int64_t argumentUnclampedIndexFromStartOrEnd(JSGlobalObject* globa
     double indexDouble = value.toIntegerOrInfinity(globalObject);
     if (indexDouble < 0)
         indexDouble += length;
-    if (UNLIKELY(std::isinf(indexDouble)))
+    if (std::isinf(indexDouble)) [[unlikely]]
         return std::signbit(indexDouble) ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
     return static_cast<int64_t>(indexDouble);
 }
 
-inline bool canUseFastJoin(const JSObject* thisObject)
-{
-    switch (thisObject->indexingType()) {
-    case ALL_CONTIGUOUS_INDEXING_TYPES:
-    case ALL_INT32_INDEXING_TYPES:
-    case ALL_DOUBLE_INDEXING_TYPES:
-    case ALL_UNDECIDED_INDEXING_TYPES:
-        return true;
-    default:
-        break;
-    }
-    return false;
-}
-
-inline bool holesMustForwardToPrototype(JSObject* object)
-{
-    return object->structure()->holesMustForwardToPrototype(object);
-}
-
-inline JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, StringView separator, unsigned length, bool& sawHoles, bool& genericCase)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSStringJoiner joiner(separator);
-
-    unsigned i = 0;
-    switch (thisObject->indexingType()) {
-    case ALL_INT32_INDEXING_TYPES: {
-        auto& butterfly = *thisObject->butterfly();
-        if (UNLIKELY(length > butterfly.publicLength()))
-            break;
-        joiner.reserveCapacity(globalObject, length);
-        RETURN_IF_EXCEPTION(scope, { });
-        auto data = butterfly.contiguous().data();
-        bool holesKnownToBeOK = false;
-        for (; i < length; ++i) {
-            JSValue value = data[i].get();
-            if (LIKELY(value))
-                joiner.appendNumber(vm, value.asInt32());
-            else {
-                sawHoles = true;
-                if (!holesKnownToBeOK) {
-                    if (holesMustForwardToPrototype(thisObject))
-                        goto generalCase;
-                    holesKnownToBeOK = true;
-                }
-                joiner.appendEmptyString();
-            }
-        }
-        RELEASE_AND_RETURN(scope, joiner.join(globalObject));
-    }
-    case ALL_CONTIGUOUS_INDEXING_TYPES: {
-        auto& butterfly = *thisObject->butterfly();
-        if (UNLIKELY(length > butterfly.publicLength()))
-            break;
-        auto data = butterfly.contiguous().data();
-        bool holesKnownToBeOK = false;
-        for (; i < length; ++i) {
-            if (JSValue value = data[i].get()) {
-                if (!joiner.appendWithoutSideEffects(globalObject, value))
-                    goto generalCase;
-                RETURN_IF_EXCEPTION(scope, { });
-            } else {
-                sawHoles = true;
-                if (!holesKnownToBeOK) {
-                    if (holesMustForwardToPrototype(thisObject))
-                        goto generalCase;
-                    holesKnownToBeOK = true;
-                }
-                joiner.appendEmptyString();
-            }
-        }
-        RELEASE_AND_RETURN(scope, joiner.join(globalObject));
-    }
-    case ALL_DOUBLE_INDEXING_TYPES: {
-        auto& butterfly = *thisObject->butterfly();
-        if (UNLIKELY(length > butterfly.publicLength()))
-            break;
-        joiner.reserveCapacity(globalObject, length);
-        RETURN_IF_EXCEPTION(scope, { });
-        auto data = butterfly.contiguousDouble().data();
-        bool holesKnownToBeOK = false;
-        for (; i < length; ++i) {
-            double value = data[i];
-            if (LIKELY(!isHole(value)))
-                joiner.appendNumber(vm, value);
-            else {
-                sawHoles = true;
-                if (!holesKnownToBeOK) {
-                    if (holesMustForwardToPrototype(thisObject))
-                        goto generalCase;
-                    holesKnownToBeOK = true;
-                }
-                joiner.appendEmptyString();
-            }
-        }
-        RELEASE_AND_RETURN(scope, joiner.join(globalObject));
-    }
-    case ALL_UNDECIDED_INDEXING_TYPES: {
-        if (length && holesMustForwardToPrototype(thisObject))
-            goto generalCase;
-        switch (separator.length()) {
-        case 0:
-            RELEASE_AND_RETURN(scope, jsEmptyString(vm));
-        case 1: {
-            if (length <= 1)
-                RELEASE_AND_RETURN(scope, jsEmptyString(vm));
-            if (separator.is8Bit())
-                RELEASE_AND_RETURN(scope, repeatCharacter(globalObject, separator.span8().front(), length - 1));
-            RELEASE_AND_RETURN(scope, repeatCharacter(globalObject, separator.span16().front(), length - 1));
-        default:
-            JSString* result = jsEmptyString(vm);
-            if (length <= 1)
-                return result;
-
-            JSString* operand = jsString(vm, separator);
-            RETURN_IF_EXCEPTION(scope, { });
-            unsigned count = length - 1;
-            for (;;) {
-                if (count & 1) {
-                    result = jsString(globalObject, result, operand);
-                    RETURN_IF_EXCEPTION(scope, { });
-                }
-                count >>= 1;
-                if (!count)
-                    return result;
-                operand = jsString(globalObject, operand, operand);
-                RETURN_IF_EXCEPTION(scope, { });
-            }
-        }
-        }
-    }
-    }
-
-generalCase:
-    genericCase = true;
-    for (; i < length; ++i) {
-        JSValue element = thisObject->getIndex(globalObject, i);
-        RETURN_IF_EXCEPTION(scope, { });
-        joiner.append(globalObject, element);
-        RETURN_IF_EXCEPTION(scope, { });
-    }
-    RELEASE_AND_RETURN(scope, joiner.join(globalObject));
-}
-
-ALWAYS_INLINE JSValue fastJoin(JSGlobalObject* globalObject, JSObject* thisObject, StringView separator, unsigned length)
+ALWAYS_INLINE JSString* fastArrayJoin(JSGlobalObject* globalObject, JSObject* thisObject, StringView separator, unsigned length)
 {
     bool sawHoles = false;
     bool genericCase = false;
-    return fastJoin(globalObject, thisObject, separator, length, sawHoles, genericCase);
+    return fastArrayJoin(globalObject, thisObject, separator, length, sawHoles, genericCase);
 }
 
 inline bool canUseDefaultArrayJoinForToString(JSObject* thisObject)
 {
     JSGlobalObject* globalObject = thisObject->globalObject();
 
-    if (globalObject->arrayJoinWatchpointSet().state() != IsWatched)
+    if (!globalObject->arrayJoinWatchpointSet().isStillValid())
         return false;
 
     Structure* structure = thisObject->structure();
@@ -390,17 +259,17 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToString, (JSGlobalObject* globalObject, 
 
     // 1. Let array be the result of calling ToObject on the this value.
     JSObject* thisObject = thisValue.toObject(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
 
     Integrity::auditStructureID(thisObject->structureID());
-    if (UNLIKELY(!canUseDefaultArrayJoinForToString(thisObject))) {
+    if (!canUseDefaultArrayJoinForToString(thisObject)) [[unlikely]] {
         // 2. Let func be the result of calling the [[Get]] internal method of array with argument "join".
         JSValue function = thisObject->get(globalObject, vm.propertyNames->join);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
 
         // 3. If IsCallable(func) is false, then let func be the standard built-in method Object.prototype.toString (15.2.4.2).
         auto callData = JSC::getCallData(function);
-        if (UNLIKELY(callData.type == CallData::Type::None))
+        if (callData.type == CallData::Type::None) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSValue::encode(objectPrototypeToString(globalObject, thisObject)));
 
         // 4. Return the result of calling the [[Call]] internal method of func providing array as the this value and an empty arguments list.
@@ -409,52 +278,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToString, (JSGlobalObject* globalObject, 
     }
 
     ASSERT(isJSArray(thisValue));
-    JSArray* thisArray = asArray(thisValue);
-
-    unsigned length = thisArray->length();
-
-    StringRecursionChecker checker(globalObject, thisArray);
-    EXCEPTION_ASSERT(!scope.exception() || checker.earlyReturnValue());
-    if (JSValue earlyReturnValue = checker.earlyReturnValue())
-        return JSValue::encode(earlyReturnValue);
-
-    if (LIKELY(canUseFastJoin(thisArray))) {
-        const LChar comma = ',';
-
-        bool isCoW = isCopyOnWrite(thisArray->indexingMode());
-        JSImmutableButterfly* immutableButterfly = nullptr;
-        if (isCoW) {
-            immutableButterfly = JSImmutableButterfly::fromButterfly(thisArray->butterfly());
-            auto iter = vm.heap.immutableButterflyToStringCache.find(immutableButterfly);
-            if (iter != vm.heap.immutableButterflyToStringCache.end())
-                return JSValue::encode(iter->value);
-        }
-
-        bool sawHoles = false;
-        bool genericCase = false;
-        JSValue result = fastJoin(globalObject, thisArray, span(comma), length, sawHoles, genericCase);
-        RETURN_IF_EXCEPTION(scope, { });
-
-        if (!sawHoles && !genericCase && result && isJSString(result) && isCoW) {
-            ASSERT(JSImmutableButterfly::fromButterfly(thisArray->butterfly()) == immutableButterfly);
-            vm.heap.immutableButterflyToStringCache.add(immutableButterfly, jsCast<JSString*>(result));
-        }
-
-        return JSValue::encode(result);
-    }
-
-    JSStringJoiner joiner(","_s);
-    for (unsigned i = 0; i < length; ++i) {
-        JSValue element = thisArray->tryGetIndexQuickly(i);
-        if (!element) {
-            element = thisArray->get(globalObject, i);
-            RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        }
-        joiner.append(globalObject, element);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    }
-
-    RELEASE_AND_RETURN(scope, JSValue::encode(joiner.join(globalObject)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(asArray(thisValue)->fastToString(globalObject)));
 }
 
 static JSString* toLocaleString(JSGlobalObject* globalObject, JSValue value, JSValue locales, JSValue options)
@@ -614,7 +438,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncJoin, (JSGlobalObject* globalObject, Call
     // 1. Let O be ? ToObject(this value).
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return encodedJSValue();
 
     StringRecursionChecker checker(globalObject, thisObject);
@@ -631,7 +455,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncJoin, (JSGlobalObject* globalObject, Call
     if (separatorValue.isUndefined()) {
         const LChar comma = ',';
 
-        if (UNLIKELY(length > std::numeric_limits<unsigned>::max() || !canUseFastJoin(thisObject))) {
+        if (length > std::numeric_limits<unsigned>::max() || !canUseFastArrayJoin(thisObject)) [[unlikely]] {
             JSString* jsSeparator = jsSingleCharacterString(vm, comma);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
@@ -641,20 +465,20 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncJoin, (JSGlobalObject* globalObject, Call
         unsigned unsignedLength = static_cast<unsigned>(length);
         ASSERT(static_cast<double>(unsignedLength) == length);
 
-        RELEASE_AND_RETURN(scope, JSValue::encode(fastJoin(globalObject, thisObject, span(comma), unsignedLength)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(fastArrayJoin(globalObject, thisObject, span(comma), unsignedLength)));
     }
 
     // 4. Let sep be ? ToString(separator).
     JSString* jsSeparator = separatorValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    if (UNLIKELY(length > std::numeric_limits<unsigned>::max() || !canUseFastJoin(thisObject)))
+    if (length > std::numeric_limits<unsigned>::max() || !canUseFastArrayJoin(thisObject)) [[unlikely]]
         RELEASE_AND_RETURN(scope, JSValue::encode(slowJoin(globalObject, thisObject, jsSeparator, length)));
 
     auto view = jsSeparator->view(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(fastJoin(globalObject, thisObject, view, length)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(fastArrayJoin(globalObject, thisObject, view, length)));
 }
 
 inline EncodedJSValue createArrayIteratorObject(JSGlobalObject* globalObject, CallFrame* callFrame, IterationKind kind)
@@ -665,7 +489,7 @@ inline EncodedJSValue createArrayIteratorObject(JSGlobalObject* globalObject, Ca
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
     UNUSED_PARAM(scope);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return encodedJSValue();
 
     return JSValue::encode(JSArrayIterator::create(vm, globalObject->arrayIteratorStructure(), thisObject, jsNumber(static_cast<unsigned>(kind))));
@@ -693,12 +517,12 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPop, (JSGlobalObject* globalObject, CallF
 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
 
-    if (LIKELY(isJSArray(thisValue)))
+    if (isJSArray(thisValue)) [[likely]]
         RELEASE_AND_RETURN(scope, JSValue::encode(asArray(thisValue)->pop(globalObject)));
 
     JSObject* thisObj = thisValue.toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return encodedJSValue();
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -715,7 +539,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPop, (JSGlobalObject* globalObject, CallF
     RETURN_IF_EXCEPTION(scope, { });
     bool success = thisObj->deleteProperty(globalObject, index);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, UnableToDeletePropertyError);
         return { };
     }
@@ -731,7 +555,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPush, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
 
-    if (LIKELY(isJSArray(thisValue) && callFrame->argumentCount() == 1)) {
+    if (isJSArray(thisValue) && callFrame->argumentCount() == 1) [[likely]] {
         JSArray* array = asArray(thisValue);
         scope.release();
         array->pushInline(globalObject, callFrame->uncheckedArgument(0));
@@ -740,13 +564,13 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncPush, (JSGlobalObject* globalObject, Call
 
     JSObject* thisObj = thisValue.toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return encodedJSValue();
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     unsigned argCount = callFrame->argumentCount();
 
-    if (UNLIKELY(length + argCount > static_cast<uint64_t>(maxSafeInteger())))
+    if (length + argCount > maxSafeIntegerAsUInt64()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "push cannot produce an array of length larger than (2 ** 53) - 1"_s);
 
     for (unsigned n = 0; n < argCount; n++) {
@@ -767,7 +591,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncReverse, (JSGlobalObject* globalObject, C
 
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return encodedJSValue();
 
     uint64_t length = toLength(globalObject, thisObject);
@@ -842,7 +666,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncReverse, (JSGlobalObject* globalObject, C
         } else {
             bool success = thisObject->deleteProperty(globalObject, lower);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
-            if (UNLIKELY(!success)) {
+            if (!success) [[unlikely]] {
                 throwTypeError(globalObject, scope, UnableToDeletePropertyError);
                 return encodedJSValue();
             }
@@ -854,7 +678,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncReverse, (JSGlobalObject* globalObject, C
         } else {
             bool success = thisObject->deleteProperty(globalObject, upper);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
-            if (UNLIKELY(!success)) {
+            if (!success) [[unlikely]] {
                 throwTypeError(globalObject, scope, UnableToDeletePropertyError);
                 return encodedJSValue();
             }
@@ -869,7 +693,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncShift, (JSGlobalObject* globalObject, Cal
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* thisObj = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return encodedJSValue();
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -896,14 +720,14 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSlice, (JSGlobalObject* globalObject, Cal
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* thisObj = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return { };
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint64_t begin = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    uint64_t begin = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, { });
-    uint64_t end = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length, length);
+    uint64_t end = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length, length);
     RETURN_IF_EXCEPTION(scope, { });
     if (end < begin)
         end = begin;
@@ -911,10 +735,10 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSlice, (JSGlobalObject* globalObject, Cal
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, thisObj, end - begin);
     // We can only get an exception if we call some user function.
     EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
-    if (UNLIKELY(speciesResult.first == SpeciesConstructResult::Exception))
+    if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
         return { };
 
-    if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
+    if (speciesResult.first == SpeciesConstructResult::FastPath) [[likely]] {
         JSArray* result = JSArray::fastSlice(globalObject, thisObj, begin, end - begin);
         if (result) {
             scope.assertNoExceptionExceptTermination();
@@ -927,7 +751,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSlice, (JSGlobalObject* globalObject, Cal
     if (speciesResult.first == SpeciesConstructResult::CreatedObject)
         result = speciesResult.second;
     else {
-        if (UNLIKELY(end - begin > std::numeric_limits<uint32_t>::max())) {
+        if (end - begin > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
             throwRangeError(globalObject, scope, LengthExceededTheMaximumArrayLengthError);
             return encodedJSValue();
         }
@@ -963,7 +787,7 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
 
     uint64_t undefinedCount = 0;
 
-    if (LIKELY(isJSArray(thisObject) && !holesMustForwardToPrototype(thisObject))) {
+    if (isJSArray(thisObject) && !holesMustForwardToPrototype(thisObject)) [[likely]] {
         IndexingType indexingType = thisObject->indexingType();
         switch (indexingType) {
         case ALL_INT32_INDEXING_TYPES: {
@@ -973,11 +797,11 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
             unsigned count = 0;
             compactedRoot.fill(vm, butterflyLength, [&](JSValue* buffer) {
                 for (unsigned i = 0; i < butterflyLength; ++i) {
-                    if (JSValue value = data[i].get(); LIKELY(value))
+                    if (JSValue value = data[i].get(); value) [[likely]]
                         buffer[count++] = value;
                 }
             });
-            if (UNLIKELY(compactedRoot.hasOverflowed())) {
+            if (compactedRoot.hasOverflowed()) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -990,15 +814,15 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
             unsigned count = 0;
             compactedRoot.fill(vm, butterflyLength, [&](JSValue* buffer) {
                 for (unsigned i = 0; i < butterflyLength; ++i) {
-                    if (JSValue value = data[i].get(); LIKELY(value)) {
-                        if (LIKELY(!value.isUndefined()))
+                    if (JSValue value = data[i].get(); value) [[likely]] {
+                        if (!value.isUndefined()) [[likely]]
                             buffer[count++] = value;
                         else
                             ++undefinedCount;
                     }
                 }
             });
-            if (UNLIKELY(compactedRoot.hasOverflowed())) {
+            if (compactedRoot.hasOverflowed()) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -1012,11 +836,11 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
             compactedRoot.fill(vm, butterflyLength, [&](JSValue* buffer) {
                 for (unsigned i = 0; i < butterflyLength; ++i) {
                     double number = data[i];
-                    if (LIKELY(!isHole(number)))
+                    if (!isHole(number)) [[likely]]
                         buffer[count++] = jsDoubleNumber(number);
                 }
             });
-            if (UNLIKELY(compactedRoot.hasOverflowed())) {
+            if (compactedRoot.hasOverflowed()) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
@@ -1035,7 +859,7 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
                 ++undefinedCount;
             else {
                 compactedRoot.append(value);
-                if (UNLIKELY(compactedRoot.hasOverflowed())) {
+                if (compactedRoot.hasOverflowed()) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return { };
                 }
@@ -1058,14 +882,14 @@ static unsigned sortBucketSort(std::span<EncodedJSValue> sorted, unsigned dst, S
         return dst;
     }
 
-    StdMap<UChar, SortEntryVector> buckets;
+    StdMap<char16_t, SortEntryVector> buckets;
     for (const auto& entry : bucket) {
         if (std::get<1>(entry).length() == depth) {
             sorted[dst++] = JSValue::encode(std::get<0>(entry));
             continue;
         }
 
-        UChar character = std::get<1>(entry).characterAt(depth);
+        char16_t character = std::get<1>(entry).characterAt(depth);
         buckets.insert(std::pair { character, SortEntryVector { } }).first->second.append(entry);
     }
 
@@ -1083,7 +907,7 @@ static ALWAYS_INLINE std::span<EncodedJSValue> sortStableSort(JSGlobalObject* gl
     auto callData = JSC::getCallData(comparator);
     ASSERT(callData.type != CallData::Type::None);
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(comparator), 2);
         RETURN_IF_EXCEPTION(scope, sorted);
         RELEASE_AND_RETURN(scope, arrayStableSort(vm, compacted, sorted, [&](auto left, auto right) ALWAYS_INLINE_LAMBDA {
@@ -1104,7 +928,7 @@ static ALWAYS_INLINE std::span<EncodedJSValue> sortStableSort(JSGlobalObject* gl
 
         args.append(JSValue::decode(left));
         args.append(JSValue::decode(right));
-        if (UNLIKELY(args.hasOverflowed())) {
+        if (args.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return false;
         }
@@ -1124,12 +948,12 @@ static ALWAYS_INLINE void sortCommit(JSGlobalObject* globalObject, JSObject* thi
     unsigned index = 0;
 
     bool appended = false;
-    if (LIKELY(isJSArray(thisObject))) {
+    if (isJSArray(thisObject)) [[likely]] {
         appended = jsCast<JSArray*>(thisObject)->appendMemcpy(globalObject, vm, 0, indexingType, sorted);
         RETURN_IF_EXCEPTION(scope, void());
     }
 
-    if (UNLIKELY(!appended)) {
+    if (!appended) [[unlikely]] {
         for (EncodedJSValue encodedValue : sorted) {
             JSValue value = JSValue::decode(encodedValue);
             constexpr bool shouldThrow = true;
@@ -1138,7 +962,7 @@ static ALWAYS_INLINE void sortCommit(JSGlobalObject* globalObject, JSObject* thi
         }
     } else {
         index = sorted.size();
-        if (LIKELY(index == length))
+        if (index == length) [[likely]]
             return;
     }
 
@@ -1153,7 +977,7 @@ static ALWAYS_INLINE void sortCommit(JSGlobalObject* globalObject, JSObject* thi
     for (; index64 < length; ++index64) {
         bool deleted = thisObject->deleteProperty(globalObject, index64);
         RETURN_IF_EXCEPTION(scope, void());
-        if (UNLIKELY(!deleted)) {
+        if (!deleted) [[unlikely]] {
             throwTypeError(globalObject, scope, UnableToDeletePropertyError);
             return;
         }
@@ -1179,7 +1003,7 @@ static ALWAYS_INLINE void sortImpl(JSGlobalObject* globalObject, JSObject* thisO
     RETURN_IF_EXCEPTION(scope, void());
 
     sortedRoot.fill(vm, compacted.size(), [](JSValue*) { });
-    if (UNLIKELY(sortedRoot.hasOverflowed())) {
+    if (sortedRoot.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return;
     }
@@ -1213,7 +1037,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSort, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
+    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.sort requires the comparator argument to be a function or undefined"_s);
 
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
@@ -1237,7 +1061,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
 
     JSObject* thisObj = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return encodedJSValue();
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1245,7 +1069,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
     if (!callFrame->argumentCount()) {
         std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, thisObj, 0);
         EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
-        if (UNLIKELY(speciesResult.first == SpeciesConstructResult::Exception))
+        if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
             return encodedJSValue();
 
         JSObject* result;
@@ -1263,33 +1087,21 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
         return JSValue::encode(result);
     }
 
-    uint64_t actualStart = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
+    uint64_t actualStart = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    uint64_t actualDeleteCount = length - actualStart;
-    if (callFrame->argumentCount() > 1) {
-        JSValue deleteCountValue = callFrame->uncheckedArgument(1);
-        if (LIKELY(deleteCountValue.isInt32())) {
-            int32_t deleteCount = deleteCountValue.asInt32();
-            if (deleteCount < 0)
-                actualDeleteCount = 0;
-            else if (static_cast<uint64_t>(deleteCount) > length - actualStart)
+    uint64_t itemCount = 0;
+    uint64_t actualDeleteCount = 0;
+    if (callFrame->argumentCount() == 1)
                 actualDeleteCount = length - actualStart;
-            else
-                actualDeleteCount = static_cast<uint64_t>(deleteCount);
-        } else {
-            double deleteCount = deleteCountValue.toIntegerOrInfinity(globalObject);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (deleteCount < 0)
-            actualDeleteCount = 0;
-        else if (deleteCount > length - actualStart)
-            actualDeleteCount = length - actualStart;
-        else
-            actualDeleteCount = static_cast<uint64_t>(deleteCount);
+    else if (callFrame->argumentCount() > 1) {
+        itemCount = callFrame->argumentCount() - 2;
+        actualDeleteCount = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::No>(globalObject, callFrame->uncheckedArgument(1), length - actualStart);
+        RETURN_IF_EXCEPTION(scope, { });
     }
-    }
-    unsigned itemCount = std::max<int>(callFrame->argumentCount() - 2, 0);
-    if (UNLIKELY(length - actualDeleteCount + itemCount > static_cast<uint64_t>(maxSafeInteger())))
+    ASSERT(callFrame->argumentCount() || (!itemCount && !actualDeleteCount));
+
+    if (length - actualDeleteCount + itemCount > maxSafeIntegerAsUInt64()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Splice cannot produce an array of length larger than (2 ** 53) - 1"_s);
 
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, thisObj, actualDeleteCount);
@@ -1298,7 +1110,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
         return JSValue::encode(jsUndefined());
 
     JSObject* result = nullptr;
-    if (LIKELY(speciesResult.first == SpeciesConstructResult::FastPath)) {
+    if (speciesResult.first == SpeciesConstructResult::FastPath) [[likely]] {
         result = JSArray::fastSlice(globalObject, thisObj, actualStart, actualDeleteCount);
         RETURN_IF_EXCEPTION(scope, { });
     }
@@ -1307,12 +1119,12 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
         if (speciesResult.first == SpeciesConstructResult::CreatedObject)
             result = speciesResult.second;
         else {
-            if (UNLIKELY(actualDeleteCount > std::numeric_limits<uint32_t>::max())) {
+            if (actualDeleteCount > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
                 throwRangeError(globalObject, scope, LengthExceededTheMaximumArrayLengthError);
                 return encodedJSValue();
             }
             result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), static_cast<uint32_t>(actualDeleteCount));
-            if (UNLIKELY(!result)) {
+            if (!result) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return encodedJSValue();
             }
@@ -1320,7 +1132,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncSplice, (JSGlobalObject* globalObject, Ca
         for (uint64_t k = 0; k < actualDeleteCount; ++k) {
             JSValue v = getProperty(globalObject, thisObj, k + actualStart);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
-            if (UNLIKELY(!v))
+            if (!v) [[unlikely]]
                 continue;
             result->putDirectIndex(globalObject, k, v, 0, PutDirectIndexShouldThrow);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1354,14 +1166,14 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncUnShift, (JSGlobalObject* globalObject, C
 
     JSObject* thisObj = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
+    if (!thisObj) [[unlikely]]
         return encodedJSValue();
     uint64_t length = toLength(globalObject, thisObj);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     unsigned nrArgs = callFrame->argumentCount();
     if (nrArgs) {
-        if (UNLIKELY(length + nrArgs > static_cast<uint64_t>(maxSafeInteger())))
+        if (length + nrArgs > maxSafeIntegerAsUInt64()) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "unshift cannot produce an array of length larger than (2 ** 53) - 1"_s);
         unshift(globalObject, thisObj, 0, 0, nrArgs, length);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1398,26 +1210,21 @@ ALWAYS_INLINE JSValue fastIndexOf(JSGlobalObject* globalObject, VM& vm, JSArray*
 
     switch (array->indexingType()) {
     case ALL_INT32_INDEXING_TYPES: {
-        if (!searchElement.isNumber())
-            return jsNumber(-1);
-        JSValue searchInt32;
-        if (searchElement.isInt32())
-            searchInt32 = searchElement;
-        else {
-            double searchNumber = searchElement.asNumber();
-            if (!canBeInt32(searchNumber))
-                return jsNumber(-1);
-            searchInt32 = jsNumber(static_cast<int32_t>(searchNumber));
-        }
         auto& butterfly = *array->butterfly();
         auto data = butterfly.contiguous().data();
+
+        int32_t int32Value = 0;
+        if (searchElement.isInt32AsAnyInt())
+            int32Value = searchElement.asInt32AsAnyInt();
+        else if (!searchElement.isNumber() || searchElement.asNumber() != 0.0) [[unlikely]]
+            return jsNumber(-1);
+        JSValue searchInt32 = jsNumber(int32Value);
+
         if constexpr (direction == IndexOfDirection::Forward) {
-            for (; index < length; ++index) {
-                // Array#indexOf uses `===` semantics (not UncheckedKeyHashMap isEqual semantics).
-                // And the hole never matches against Int32 value.
-                if (searchInt32 == data[index].get())
-                    return jsNumber(index);
-            }
+            EncodedJSValue encodedSearchElement = JSValue::encode(searchInt32);
+            auto* result = std::bit_cast<const WriteBarrier<Unknown>*>(WTF::find64(std::bit_cast<const uint64_t*>(data + index), encodedSearchElement, length - index));
+            if (result)
+                return jsNumber(result - data);
         } else {
             do {
                 ASSERT(index < length);
@@ -1501,19 +1308,46 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
     // 15.4.4.14
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return { };
     uint64_t length = toLength(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (!length)
         return JSValue::encode(jsNumber(-1));
 
-    uint64_t index = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length);
+    uint64_t index = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length);
     RETURN_IF_EXCEPTION(scope, { });
     JSValue searchElement = callFrame->argument(0);
 
-    if (LIKELY(isJSArray(thisObject))) {
-        JSValue result = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, asArray(thisObject), length, searchElement, index);
+    if (isJSArray(thisObject)) [[likely]] {
+        JSArray* array = asArray(thisObject);
+        Butterfly* butterfly = array->butterfly();
+        if (isCopyOnWrite(array->indexingMode()) && JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly) && searchElement.isString()) {
+            auto search = asString(searchElement)->toAtomString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+            JSValue result = jsNumber(-1);
+            if (vm.atomStringToJSStringMap.contains(search.data)) {
+                auto data = butterfly->contiguous().data();
+                for (unsigned i = index; i < length; ++i) {
+                    JSValue value = data[i].get();
+                    if (asString(value)->getValueImpl() == search.data) {
+                        result = jsNumber(i);
+                        break;
+                    }
+                }
+            }
+
+#if ASSERT_ENABLED
+            JSValue expected = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, array, length, searchElement, index);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (expected)
+                ASSERT(expected.asNumber() == result.asNumber());
+#endif
+            return JSValue::encode(result);
+        }
+
+        JSValue result = fastIndexOf<IndexOfDirection::Forward>(globalObject, vm, array, length, searchElement, index);
         RETURN_IF_EXCEPTION(scope, { });
         if (result)
             return JSValue::encode(result);
@@ -1541,7 +1375,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncLastIndexOf, (JSGlobalObject* globalObjec
     // 15.4.4.15
     JSObject* thisObject = callFrame->thisValue().toThis(globalObject, ECMAMode::strict()).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return { };
     uint64_t length = toLength(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1551,7 +1385,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncLastIndexOf, (JSGlobalObject* globalObjec
     uint64_t index = length - 1;
     if (callFrame->argumentCount() >= 2) {
         JSValue fromValue = callFrame->uncheckedArgument(1);
-        if (LIKELY(fromValue.isInt32())) {
+        if (fromValue.isInt32()) [[likely]] {
             int64_t fromInt = fromValue.asInt32();
             if (fromInt < 0) {
                 fromInt += length;
@@ -1576,7 +1410,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncLastIndexOf, (JSGlobalObject* globalObjec
 
     JSValue searchElement = callFrame->argument(0);
 
-    if (LIKELY(isJSArray(thisObject))) {
+    if (isJSArray(thisObject)) [[likely]] {
         JSValue result = fastIndexOf<IndexOfDirection::Backward>(globalObject, vm, asArray(thisObject), length, searchElement, index);
         RETURN_IF_EXCEPTION(scope, { });
         if (result)
@@ -1609,7 +1443,7 @@ static JSArray* concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* f
 
     CheckedUint32 checkedResultSize = firstArraySize;
     checkedResultSize += 1;
-    if (UNLIKELY(checkedResultSize.hasOverflowed())) {
+    if (checkedResultSize.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -1618,7 +1452,7 @@ static JSArray* concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* f
     // We should not use `isArray` check here since it is side-effectful for ProxyObject. Let's just bail out if it is ProxyObject or DerivedArray.
     if (second.isObject()) {
         JSType type = asObject(second)->type();
-        if (UNLIKELY(type == ProxyObjectType || type == DerivedArrayType))
+        if (type == ProxyObjectType || type == DerivedArrayType) [[unlikely]]
             return { };
     }
 
@@ -1631,7 +1465,7 @@ static JSArray* concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* f
 
     Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(type);
     JSArray* result = JSArray::tryCreate(vm, resultStructure, resultSize);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -1643,7 +1477,7 @@ static JSArray* concatAppendOne(JSGlobalObject* globalObject, VM& vm, JSArray* f
 
         bool success = moveArrayElements<ArrayFillMode::Empty>(globalObject, vm, result, 0, first, firstArraySize);
         EXCEPTION_ASSERT(!scope.exception() == success);
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return { };
     }
 
@@ -1665,7 +1499,7 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
     CheckedUint32 checkedResultSize = firstArraySize;
     checkedResultSize += secondArraySize;
 
-    if (UNLIKELY(checkedResultSize.hasOverflowed())) {
+    if (checkedResultSize.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -1681,46 +1515,67 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
 
         bool success = moveArrayElements<ArrayFillMode::Empty>(globalObject, vm, result, 0, firstArray, firstArraySize);
         EXCEPTION_ASSERT(!scope.exception() == success);
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return { };
         success = moveArrayElements<ArrayFillMode::Empty>(globalObject, vm, result, firstArraySize, secondArray, secondArraySize);
         EXCEPTION_ASSERT(!scope.exception() == success);
-        if (UNLIKELY(!success))
+        if (!success) [[unlikely]]
             return { };
 
         return result;
     }
 
+    if (!globalObject->isHavingABadTime()) [[likely]] {
+        if (!resultSize)
+            RELEASE_AND_RETURN(scope, constructEmptyArray(globalObject, nullptr));
+
+        if (!secondArraySize) {
+            if (isCopyOnWrite(firstArray->indexingMode()))
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(firstArray->indexingMode()), firstArray->butterfly());
+        } else if (!firstArraySize) {
+            if (isCopyOnWrite(secondArray->indexingMode()))
+                return JSArray::createWithButterfly(vm, nullptr, globalObject->originalArrayStructureForIndexingType(secondArray->indexingMode()), secondArray->butterfly());
+        }
+    }
+
     Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(type);
-    if (UNLIKELY(hasAnyArrayStorage(resultStructure->indexingType())))
+    if (hasAnyArrayStorage(resultStructure->indexingType())) [[unlikely]]
         return { };
 
     ASSERT(!globalObject->isHavingABadTime());
-    ObjectInitializationScope initializationScope(vm);
-    JSArray* result = JSArray::tryCreateUninitializedRestricted(initializationScope, resultStructure, resultSize);
-    if (UNLIKELY(!result)) {
+    auto vectorLength = Butterfly::optimalContiguousVectorLength(resultStructure, resultSize);
+    if (vectorLength > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]]
+        return { };
+
+    ASSERT(!resultStructure->outOfLineCapacity());
+    void* memory = vm.auxiliarySpace().allocate(vm, Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)), nullptr, AllocationFailureMode::ReturnNull);
+    if (!memory) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
+    auto* butterfly = Butterfly::fromBase(memory, 0, 0);
+    butterfly->setVectorLength(vectorLength);
+    butterfly->setPublicLength(resultSize);
 
+    // We can use memcpy / memset since butterfly is not connected to cells yet.
     if (type == ArrayWithDouble) {
-        double* buffer = result->butterfly()->contiguousDouble().data();
+        double* buffer = butterfly->contiguousDouble().data();
         if (firstType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguousDouble().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguousDouble().data(), 0, firstArraySize, firstType);
         else
-            copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), 0, firstArraySize, firstType);
         if (secondType == ArrayWithDouble)
-            copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguousDouble().data(), 0, secondArraySize, secondType);
         else
-            copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+            copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), 0, secondArraySize, secondType);
     } else if (type != ArrayWithUndecided) {
-        WriteBarrier<Unknown>* buffer = result->butterfly()->contiguous().data();
-        copyArrayElements<ArrayFillMode::Empty>(buffer, 0, firstButterfly->contiguous().data(), firstArraySize, firstType);
-        copyArrayElements<ArrayFillMode::Empty>(buffer, firstArraySize, secondButterfly->contiguous().data(), secondArraySize, secondType);
+        WriteBarrier<Unknown>* buffer = butterfly->contiguous().data();
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, 0, firstButterfly->contiguous().data(), 0, firstArraySize, firstType);
+        copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), 0, secondArraySize, secondType);
     }
 
-    ASSERT(result->butterfly()->publicLength() == resultSize);
-    return result;
+    Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, resultSize);
+    return JSArray::createWithButterfly(vm, nullptr, resultStructure, butterfly);
 }
 
 JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncAppendMemcpy, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1750,11 +1605,11 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncFromFastFillWithUndefined, (JSGlob
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue constructor = callFrame->uncheckedArgument(0);
-    if (UNLIKELY(constructor != globalObject->arrayConstructor() && constructor.isObject()))
+    if (constructor != globalObject->arrayConstructor() && constructor.isObject()) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     JSValue arrayValue = callFrame->uncheckedArgument(1);
-    if (UNLIKELY(!isJSArray(arrayValue)))
+    if (!isJSArray(arrayValue)) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     JSArray* array = tryCloneArrayFromFast<ArrayFillMode::Undefined>(globalObject, arrayValue);
@@ -1771,11 +1626,11 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncFromFastFillWithEmpty, (JSGlobalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue constructor = callFrame->uncheckedArgument(0);
-    if (UNLIKELY(constructor != globalObject->arrayConstructor() && constructor.isObject()))
+    if (constructor != globalObject->arrayConstructor() && constructor.isObject()) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     JSValue arrayValue = callFrame->uncheckedArgument(1);
-    if (UNLIKELY(!isJSArray(arrayValue)))
+    if (!isJSArray(arrayValue)) [[unlikely]]
         return JSValue::encode(jsUndefined());
 
     JSArray* array = tryCloneArrayFromFast<ArrayFillMode::Empty>(globalObject, arrayValue);
@@ -1794,41 +1649,41 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
     JSValue thisValue = callFrame->thisValue();
 
     if (!callFrame->argumentCount()) {
-        if (LIKELY(isJSArray(thisValue))) {
+        if (isJSArray(thisValue)) [[likely]] {
             auto* array = jsCast<JSArray*>(thisValue);
-            if (LIKELY(arrayMissingIsConcatSpreadable(vm, array) && arraySpeciesWatchpointIsValid(vm, array))) {
+            if (arrayMissingIsConcatSpreadable(vm, array) && arraySpeciesWatchpointIsValid(vm, array)) [[likely]] {
                 JSArray* result = tryCloneArrayFromFast<ArrayFillMode::Empty>(globalObject, array);
                 RETURN_IF_EXCEPTION(scope, { });
-                if (LIKELY(result))
+                if (result) [[likely]]
                     return JSValue::encode(result);
             }
         }
     } else if (callFrame->argumentCount() == 1) {
         JSValue argumentValue = callFrame->uncheckedArgument(0);
-        if (LIKELY(isJSArray(thisValue))) {
+        if (isJSArray(thisValue)) [[likely]] {
             auto* firstArray = jsCast<JSArray*>(thisValue);
-            if (LIKELY(arrayMissingIsConcatSpreadable(vm, firstArray) && arraySpeciesWatchpointIsValid(vm, firstArray))) {
+            if (arrayMissingIsConcatSpreadable(vm, firstArray) && arraySpeciesWatchpointIsValid(vm, firstArray)) [[likely]] {
                 // This code assumes that neither array has set Symbol.isConcatSpreadable. If the first array
                 // has indexed accessors then one of those accessors might change the value of Symbol.isConcatSpreadable
                 // on the second argument.
-                if (LIKELY(!shouldUseSlowPut(firstArray->indexingType()))) {
+                if (!shouldUseSlowPut(firstArray->indexingType())) [[likely]] {
                     if (!argumentValue.isObject()) {
                         auto* result = concatAppendOne(globalObject, vm, firstArray, argumentValue);
                         RETURN_IF_EXCEPTION(scope, { });
-                        if (LIKELY(result))
+                        if (result) [[likely]]
                             return JSValue::encode(result);
                     } else {
                         auto* argumentObject = jsCast<JSObject*>(argumentValue);
-                        if (LIKELY(arrayMissingIsConcatSpreadable(vm, argumentObject))) {
+                        if (arrayMissingIsConcatSpreadable(vm, argumentObject)) [[likely]] {
                             if (!isJSArray(argumentObject)) {
                                 auto* result = concatAppendOne(globalObject, vm, firstArray, argumentValue);
                                 RETURN_IF_EXCEPTION(scope, { });
-                                if (LIKELY(result))
+                                if (result) [[likely]]
                                     return JSValue::encode(result);
                             } else {
                                 auto* result = concatAppendArray(globalObject, vm, firstArray, jsCast<JSArray*>(argumentValue));
                                 RETURN_IF_EXCEPTION(scope, { });
-                                if (LIKELY(result))
+                                if (result) [[likely]]
         return JSValue::encode(result);
     }
                         }
@@ -1847,7 +1702,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
 
     std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, currentElementObject, 0);
     EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
-    if (UNLIKELY(speciesResult.first == SpeciesConstructResult::Exception))
+    if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
         return { };
 
     JSObject* result;
@@ -1889,7 +1744,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
 
             CheckedUint64 checkedResultSize = length;
             checkedResultSize += resultIndex;
-            if (UNLIKELY(checkedResultSize.hasOverflowed() || checkedResultSize.value() > maxSafeIntegerAsUInt64())) {
+            if (checkedResultSize.hasOverflowed() || checkedResultSize.value() > maxSafeIntegerAsUInt64()) [[unlikely]] {
                 throwTypeError(globalObject, scope, "Length exceeded the maximum array length"_s);
                 return { };
             }
@@ -1918,7 +1773,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, Ca
                 }
             }
         } else {
-            if (UNLIKELY(resultIndex >= maxSafeIntegerAsUInt64())) {
+            if (resultIndex >= maxSafeIntegerAsUInt64()) [[unlikely]] {
                 throwTypeError(globalObject, scope, "Length exceeded the maximum array length"_s);
                 return { };
             }
@@ -1945,7 +1800,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFill, (JSGlobalObject* globalObject, Call
 
     auto thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.fill requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1954,18 +1809,18 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFill, (JSGlobalObject* globalObject, Call
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue argStart = callFrame->argument(1);
-    uint64_t k = argumentClampedIndexFromStartOrEnd(globalObject, argStart, length, 0);
+    uint64_t k = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, argStart, length, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue argEnd = callFrame->argument(2);
-    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd(globalObject, argEnd, length, length);
+    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, argEnd, length, length);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (k > finalIndex)
         return JSValue::encode(thisObject);
 
     JSValue value = callFrame->argument(0);
-    if (LIKELY(isJSArray(thisValue))) {
+    if (isJSArray(thisValue)) [[likely]] {
         auto* array = jsCast<JSArray*>(thisValue);
         if (array->fastFill(vm, k, finalIndex, value))
             return JSValue::encode(array);
@@ -1986,7 +1841,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
 
     auto thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.toReversed requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -1994,19 +1849,19 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToReversed, (JSGlobalObject* globalObject
     uint64_t length = toLength(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+    if (length > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
         throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
         return { };
     }
 
-    if (LIKELY(isJSArray(thisObject))) {
+    if (isJSArray(thisObject)) [[likely]] {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
         if (auto fastResult = thisArray->fastToReversed(globalObject, length))
             return JSValue::encode(fastResult);
     }
 
     JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -2027,13 +1882,13 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSorted, (JSGlobalObject* globalObject, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue comparatorValue = callFrame->argument(0);
-    if (UNLIKELY(!comparatorValue.isUndefined() && !comparatorValue.isCallable()))
+    if (!comparatorValue.isUndefined() && !comparatorValue.isCallable()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.toSorted requires the comparator argument to be a function or undefined"_s);
 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.toSorted requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -2041,19 +1896,19 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSorted, (JSGlobalObject* globalObject, 
     uint64_t length = toLength(globalObject, thisObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+    if (length > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
         throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
         return { };
     }
 
     JSArray* result = nullptr;
-    if (LIKELY(isJSArray(thisValue))) {
+    if (isJSArray(thisValue)) [[likely]] {
         result = tryCloneArrayFromFast<ArrayFillMode::Undefined>(globalObject, thisValue);
         RETURN_IF_EXCEPTION(scope, { });
     }
     if (!result) {
         result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), length);
-        if (UNLIKELY(!result)) {
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -2079,7 +1934,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, Call
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.with requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -2090,24 +1945,24 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, Call
     int64_t actualIndex = argumentUnclampedIndexFromStartOrEnd(globalObject, callFrame->argument(0), length);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(actualIndex >= static_cast<int64_t>(length) || actualIndex < 0)) {
+    if (actualIndex >= static_cast<int64_t>(length) || actualIndex < 0) [[unlikely]] {
         throwRangeError(globalObject, scope, "Array index out of range"_s);
         return { };
     }
 
-    if (UNLIKELY(length > std::numeric_limits<uint32_t>::max())) {
+    if (length > std::numeric_limits<uint32_t>::max()) [[unlikely]] {
         throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
         return { };
     }
     JSValue value = callFrame->argument(1);
-    if (LIKELY(isJSArray(thisObject))) {
+    if (isJSArray(thisObject)) [[likely]] {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
         if (auto fastResult = thisArray->fastWith(globalObject, actualIndex, value, length))
             return JSValue::encode(fastResult);
     }
 
     JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), length);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -2127,6 +1982,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncWith, (JSGlobalObject* globalObject, Call
     return JSValue::encode(result);
 }
 
+// FIXME: We can optimize `Array.prototype.includes` for atom string arrays too. https://bugs.webkit.org/show_bug.cgi?id=288695
 JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -2135,7 +1991,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(thisValue.isUndefinedOrNull()))
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Array.prototype.includes requires that |this| not be null or undefined"_s);
     auto* thisObject = thisValue.toObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -2146,7 +2002,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
     if (!length)
         return JSValue::encode(jsBoolean(false));
 
-    uint64_t index = argumentClampedIndexFromStartOrEnd(globalObject, callFrame->argument(1), length, 0);
+    uint64_t index = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
     ASSERT(index <= length);
@@ -2155,20 +2011,277 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIncludes, (JSGlobalObject* globalObject, 
 
     JSValue searchElement = callFrame->argument(0);
 
-    if (LIKELY(isJSArray(thisObject))) {
+    if (isJSArray(thisObject)) [[likely]] {
         JSArray* thisArray = jsCast<JSArray*>(thisObject);
-        if (auto fastResult = thisArray->fastIncludes(globalObject, searchElement, index, length))
+        auto fastResult = thisArray->fastIncludes(globalObject, searchElement, index, length);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (fastResult)
             return JSValue::encode(jsBoolean(fastResult.value()));
     }
 
     for (; index < length; ++index) {
         auto currentElement = thisObject->getIndex(globalObject, index);
         RETURN_IF_EXCEPTION(scope, { });
-        if (sameValueZero(globalObject, searchElement, currentElement))
+        bool isEqual = sameValueZero(globalObject, searchElement, currentElement);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (isEqual)
             return JSValue::encode(jsBoolean(true));
     }
 
     return JSValue::encode(jsBoolean(false));
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncCopyWithin, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Array.prototype.copyWithin requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t to = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
+    RETURN_IF_EXCEPTION(scope, { });
+    uint64_t from = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(1), length);
+    RETURN_IF_EXCEPTION(scope, { });
+    uint64_t finalIndex = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(2), length, length);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (finalIndex < from)
+        return JSValue::encode(thisValue);
+
+    ASSERT(to <= length);
+    ASSERT(from <= length);
+
+    uint64_t count = std::min(length - std::max(to, from), finalIndex - from);
+    ASSERT(count <= length);
+    if (!count)
+        return JSValue::encode(thisObject);
+
+    if (isJSArray(thisObject)) [[likely]] {
+        JSArray* thisArray = asArray(thisObject);
+        if (thisArray->fastCopyWithin(globalObject, from, to, count, length))
+            return JSValue::encode(thisValue);
+    }
+
+    int8_t direction = 1;
+    if (from < to && to < from + count) {
+        direction = -1;
+        from = from + count - 1;
+        to = to + count - 1;
+    }
+
+    for (uint64_t i = 0; i < count; ++i, from += direction, to += direction) {
+        bool hasProperty = thisObject->hasProperty(globalObject, from);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (hasProperty) {
+            JSValue fromValue = thisObject->getIndex(globalObject, from);
+            RETURN_IF_EXCEPTION(scope, { });
+            thisObject->putByIndexInline(globalObject, to, fromValue, true);
+            RETURN_IF_EXCEPTION(scope, { });
+        } else {
+            bool success = thisObject->deleteProperty(globalObject, to);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (!success) [[unlikely]] {
+                throwTypeError(globalObject, scope, UnableToDeletePropertyError);
+                return { };
+            }
+        }
+    }
+
+    return JSValue::encode(thisObject);
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToSpliced, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Array.prototype.toSpliced requires that |this| not be null or undefined"_s);
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t start = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::Yes>(globalObject, callFrame->argument(0), length);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t insertCount = 0;
+    uint64_t deleteCount = 0;
+    if (callFrame->argumentCount() == 1)
+        deleteCount = length - start;
+    else if (callFrame->argumentCount() > 1) {
+        insertCount = callFrame->argumentCount() - 2;
+        deleteCount = argumentClampedIndexFromStartOrEnd<RelativeNegativeIndex::No>(globalObject, callFrame->uncheckedArgument(1), length - start);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    uint64_t newLen = length + insertCount - deleteCount;
+
+    if (newLen >= maxSafeIntegerAsUInt64()) [[unlikely]] {
+        throwTypeError(globalObject, scope, "Array length exceeds 2**53 - 1"_s);
+        return { };
+    }
+
+    if (newLen > std::numeric_limits<uint32_t>::max()) {
+        throwRangeError(globalObject, scope, "Array length must be a positive integer of safe magnitude."_s);
+        return { };
+    }
+
+    if (isJSArray(thisObject)) [[likely]] {
+        JSArray* thisArray = asArray(thisObject);
+        if (JSArray* result = thisArray->fastToSpliced(globalObject, callFrame, length, newLen, start, deleteCount, insertCount))
+            return JSValue::encode(result);
+    }
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), newLen);
+    if (!result) [[unlikely]] {
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
+
+    uint64_t k = 0;
+
+    for (; k < start; k++) {
+        JSValue fromValue = thisObject->getIndex(globalObject, k);
+        RETURN_IF_EXCEPTION(scope, { });
+        result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    for (uint64_t i = 0; i < insertCount; i++, k++) {
+        result->putDirectIndex(globalObject, k, callFrame->argument(i + 2), 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    for (; k < newLen; k++) {
+        JSValue fromValue = thisObject->getIndex(globalObject, k + deleteCount - insertCount);
+        RETURN_IF_EXCEPTION(scope, { });
+        result->putDirectIndex(globalObject, k, fromValue, 0, PutDirectIndexShouldThrow);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    return JSValue::encode(result);
+}
+
+static uint64_t flatIntoArray(JSGlobalObject* globalObject, JSObject* target, JSObject* source, uint64_t sourceLength, uint64_t targetIndex, uint64_t depth)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
+        throwStackOverflowError(globalObject, scope);
+        return std::numeric_limits<uint64_t>::max();
+    }
+
+    for (uint64_t sourceIndex = 0; sourceIndex < sourceLength; ++sourceIndex) {
+        bool exists = source->hasProperty(globalObject, sourceIndex);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (!exists)
+            continue;
+        JSValue element = source->get(globalObject, sourceIndex);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        bool elementIsArray = isArray(globalObject, element);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (depth > 0 && elementIsArray) {
+            uint64_t newDepth = depth - 1;
+            if (depth == std::numeric_limits<uint64_t>::max()) [[unlikely]]
+                newDepth = depth;
+            JSObject* elementObject = asObject(element);
+            uint64_t elementLength = toLength(globalObject, elementObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            targetIndex = flatIntoArray(globalObject, target, elementObject, elementLength, targetIndex, newDepth);
+            RETURN_IF_EXCEPTION(scope, { });
+        } else {
+            if (targetIndex >= maxSafeIntegerAsUInt64()) [[unlikely]] {
+                throwTypeError(globalObject, scope, "flatten array exceeds 2**52 - 1");
+                return { };
+            }
+            target->putDirectIndex(globalObject, targetIndex, element, 0, PutDirectIndexShouldThrow);
+            RETURN_IF_EXCEPTION(scope, { });
+            targetIndex++;
+        }
+    }
+
+    return targetIndex;
+}
+
+JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFlat, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue();
+
+    thisValue = thisValue.toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+    if (thisValue.isUndefinedOrNull()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Array.prototype.flat requires that |this| not be null or undefined"_s);
+
+    auto* thisObject = thisValue.toObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t length = toLength(globalObject, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    uint64_t depthNum = 1;
+    if (callFrame->argumentCount()) {
+        depthNum = [&]() -> uint64_t {
+            JSValue depthValue = callFrame->uncheckedArgument(0);
+            if (depthValue.isInt32()) [[likely]] {
+                int32_t depthInt32 = depthValue.asInt32();
+                if (depthInt32 < 0) [[unlikely]]
+                    return 0;
+                return static_cast<uint64_t>(depthInt32);
+            }
+            double depthDouble = depthValue.toIntegerOrInfinity(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (depthDouble < 0) [[unlikely]]
+                return 0;
+            if (std::isinf(depthDouble)) [[unlikely]]
+                return std::numeric_limits<uint64_t>::max();
+            return static_cast<uint64_t>(depthDouble);
+        }();
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    if (isJSArray(thisObject) && arraySpeciesWatchpointIsValid(vm, thisObject)) [[likely]] {
+        JSArray* thisArray = jsCast<JSArray*>(thisObject);
+        auto fastResult = thisArray->fastFlat(globalObject, depthNum, length);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (fastResult) [[likely]]
+            return JSValue::encode(fastResult);
+    }
+
+    std::pair<SpeciesConstructResult, JSObject*> speciesResult = speciesConstructArray(globalObject, thisObject, 0);
+    EXCEPTION_ASSERT(!!scope.exception() == (speciesResult.first == SpeciesConstructResult::Exception));
+    if (speciesResult.first == SpeciesConstructResult::Exception) [[unlikely]]
+        return { };
+
+    JSObject* result;
+    if (speciesResult.first == SpeciesConstructResult::CreatedObject) [[unlikely]]
+        result = speciesResult.second;
+    else {
+        result = constructEmptyArray(globalObject, nullptr);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    scope.release();
+    flatIntoArray(globalObject, asObject(result), thisObject, length, /* start */ 0, depthNum);
+    return JSValue::encode(result);
 }
 
 } // namespace JSC

@@ -31,7 +31,7 @@ namespace WTF {
 
 template<typename T>
 class StringParsingBuffer final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StringParsingBuffer);
 public:
     using CharacterType = T;
 
@@ -125,7 +125,7 @@ private:
     std::span<const CharacterType> m_data;
 };
 
-template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, Function&& functor)
+template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, NOESCAPE const Function& functor)
 {
     if (string.is8Bit())
         return functor(StringParsingBuffer { string.span8() });

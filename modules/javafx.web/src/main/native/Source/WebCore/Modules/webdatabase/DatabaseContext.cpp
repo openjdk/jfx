@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
- * Copyright (C) 2011 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,13 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Database.h"
 #include "DatabaseManager.h"
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameDestructionObserverInlines.h"
 #include "LegacySchemeRegistry.h"
 #include "Page.h"
 #include "ScriptExecutionContext.h"
@@ -196,6 +198,11 @@ void DatabaseContext::databaseExceededQuota(const String& name, DatabaseDetails 
         return;
     }
     ASSERT(context->isWorkerGlobalScope());
+}
+
+Document* DatabaseContext::document() const
+{
+    return downcast<Document>(ActiveDOMObject::scriptExecutionContext());
 }
 
 const SecurityOriginData& DatabaseContext::securityOrigin() const

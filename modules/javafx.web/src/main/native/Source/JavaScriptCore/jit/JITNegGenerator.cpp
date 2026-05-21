@@ -66,13 +66,7 @@ JITMathICInlineResult JITNegGenerator::generateInline(CCallHelpers& jit, MathICG
         state.slowPathJumps.append(jit.branchIfInt32(m_src));
         state.slowPathJumps.append(jit.branchIfNotNumber(m_src, m_scratchGPR));
 #if USE(JSVALUE64)
-        if (m_src.payloadGPR() != m_result.payloadGPR()) {
-            jit.move(CCallHelpers::TrustedImm64(static_cast<int64_t>(1ull << 63)), m_result.payloadGPR());
-            jit.xor64(m_src.payloadGPR(), m_result.payloadGPR());
-        } else {
-            jit.move(CCallHelpers::TrustedImm64(static_cast<int64_t>(1ull << 63)), m_scratchGPR);
-            jit.xor64(m_scratchGPR, m_result.payloadGPR());
-        }
+        jit.xor64(CCallHelpers::TrustedImm64(static_cast<int64_t>(1ull << 63)), m_src.payloadGPR(), m_result.payloadGPR());
 #else
         jit.moveValueRegs(m_src, m_result);
         jit.xor32(CCallHelpers::TrustedImm32(1 << 31), m_result.tagGPR());
@@ -110,8 +104,7 @@ bool JITNegGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
 
     // For a double, all we need to do is to invert the sign bit.
 #if USE(JSVALUE64)
-    jit.move(CCallHelpers::TrustedImm64((int64_t)(1ull << 63)), m_scratchGPR);
-    jit.xor64(m_scratchGPR, m_result.payloadGPR());
+    jit.xor64(CCallHelpers::TrustedImm64((int64_t)(1ull << 63)), m_result.payloadGPR());
 #else
     jit.xor32(CCallHelpers::TrustedImm32(1 << 31), m_result.tagGPR());
 #endif

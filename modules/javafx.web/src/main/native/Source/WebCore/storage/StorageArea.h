@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,6 +52,7 @@ public:
     virtual bool contains(const String& key) = 0;
 
     virtual StorageType storageType() const = 0;
+    virtual bool isWebKit2StorageAreaImpl() const { return false; }
 
     virtual size_t memoryBytesUsedByCache() = 0;
 

@@ -80,13 +80,13 @@ Vector<uint8_t> RTCRtpSFrameTransformer::computeEncryptedDataSignature(const Vec
 
     Vector<uint8_t> result(CC_SHA256_DIGEST_LENGTH);
     CCHmacContext context;
-    CCHmacInit(&context, kCCHmacAlgSHA256, key.data(), key.size());
-    CCHmacUpdate(&context, headerLength.data(), headerLength.size());
-    CCHmacUpdate(&context, dataLength.data(), dataLength.size());
-    CCHmacUpdate(&context, nonce.data(), 12);
+    CCHmacInit(&context, kCCHmacAlgSHA256, key.span().data(), key.size());
+    CCHmacUpdate(&context, headerLength.span().data(), headerLength.size());
+    CCHmacUpdate(&context, dataLength.span().data(), dataLength.size());
+    CCHmacUpdate(&context, nonce.span().data(), 12);
     CCHmacUpdate(&context, header.data(), header.size());
     CCHmacUpdate(&context, data.data(), data.size());
-    CCHmacFinal(&context, result.data());
+    CCHmacFinal(&context, result.mutableSpan().data());
 
     return result;
 }

@@ -29,7 +29,7 @@
 #include "pas_log.h"
 #include "pas_race_test_hooks.h"
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 
 PAS_BEGIN_EXTERN_C;
 
@@ -387,7 +387,7 @@ static inline bool pas_lock_lock_with_mode(pas_lock* lock,
         pas_lock_lock(lock);
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -445,7 +445,7 @@ static PAS_ALWAYS_INLINE pas_lock* pas_lock_for_switch_conditionally(pas_lock* l
     case pas_lock_is_not_held:
         return lock;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

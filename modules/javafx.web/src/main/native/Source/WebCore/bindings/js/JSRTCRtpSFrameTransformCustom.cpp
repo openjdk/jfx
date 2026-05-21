@@ -40,7 +40,7 @@ JSValue JSRTCRtpSFrameTransform::setEncryptionKey(JSGlobalObject& lexicalGlobalO
     auto& vm = getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame.argumentCount() < 1)) {
+    if (callFrame.argumentCount() < 1) [[unlikely]] {
         throwVMError(&lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(&lexicalGlobalObject));
         return jsUndefined();
     }
@@ -49,7 +49,7 @@ JSValue JSRTCRtpSFrameTransform::setEncryptionKey(JSGlobalObject& lexicalGlobalO
     auto keyConversionResult = convert<IDLInterface<CryptoKey>>(lexicalGlobalObject, argument0.value(), [](auto& lexicalGlobalObject, auto& scope) {
         throwArgumentTypeError(lexicalGlobalObject, scope, 0, "key"_s, "SFrameTransform"_s, "setEncryptionKey"_s, "CryptoKey"_s);
     });
-    if (UNLIKELY(keyConversionResult.hasException(throwScope)))
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
         return jsUndefined();
 
     EnsureStillAliveScope argument1 = callFrame.argument(1);
@@ -63,7 +63,7 @@ JSValue JSRTCRtpSFrameTransform::setEncryptionKey(JSGlobalObject& lexicalGlobalO
             keyID = JSBigInt::toBigUInt64(argument1.value());
         } else {
             auto keyIDConversionResult = convert<IDLUnsignedLongLong>(lexicalGlobalObject, argument1.value());
-            if (UNLIKELY(keyIDConversionResult.hasException(throwScope)))
+            if (keyIDConversionResult.hasException(throwScope)) [[unlikely]]
                 return jsUndefined();
             keyID = keyIDConversionResult.releaseReturnValue();
         }

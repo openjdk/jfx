@@ -60,7 +60,7 @@ static const unsigned evictionAlgorithmInitialTimeChunk = 30000;
 static const unsigned evictionAlgorithmTimeChunkLowThreshold = 3000;
 
 SourceBufferPrivate::SourceBufferPrivate(MediaSourcePrivate& parent)
-    : SourceBufferPrivate(parent, RunLoop::current())
+    : SourceBufferPrivate(parent, RunLoop::currentSingleton())
 {
 }
 
@@ -224,9 +224,9 @@ void SourceBufferPrivate::clearTrackBuffers(bool shouldReportToClient)
     updateBuffered();
 }
 
-Ref<SourceBufferPrivate::SamplesPromise> SourceBufferPrivate::bufferedSamplesForTrackId(TrackID trackId)
+Ref<SourceBufferPrivate::SamplesPromise> SourceBufferPrivate::bufferedSamplesForTrackId(TrackID trackID)
 {
-    auto trackBuffer = m_trackBufferMap.find(trackId);
+    auto trackBuffer = m_trackBufferMap.find(trackID);
     if (trackBuffer == m_trackBufferMap.end())
         return SamplesPromise::createAndResolve(Vector<String> { });
 
@@ -240,13 +240,21 @@ Ref<SourceBufferPrivate::SamplesPromise> SourceBufferPrivate::enqueuedSamplesFor
     return SamplesPromise::createAndResolve(Vector<String> { });
 }
 
+MediaTime SourceBufferPrivate::minimumUpcomingPresentationTimeForTrackID(TrackID trackID)
+{
+    auto trackBuffer = m_trackBufferMap.find(trackID);
+    if (trackBuffer == m_trackBufferMap.end())
+        return MediaTime::invalidTime();
+    return trackBuffer->second->minimumEnqueuedPresentationTime();
+}
+
 void SourceBufferPrivate::updateMinimumUpcomingPresentationTime(TrackBuffer& trackBuffer, TrackID trackID)
 {
     if (!canSetMinimumUpcomingPresentationTime(trackID))
         return;
 
-    if (trackBuffer.updateMinimumUpcomingPresentationTime())
-        setMinimumUpcomingPresentationTime(trackID, trackBuffer.minimumEnqueuedPresentationTime());
+    if (auto minimumTime = trackBuffer.minimumEnqueuedPresentationTime())
+        setMinimumUpcomingPresentationTime(trackID, minimumTime);
 }
 
 void SourceBufferPrivate::setMediaSourceEnded(bool isEnded)
@@ -269,7 +277,7 @@ void SourceBufferPrivate::setMediaSourceEnded(bool isEnded)
 
 void SourceBufferPrivate::trySignalAllSamplesInTrackEnqueued(TrackBuffer& trackBuffer, TrackID trackID)
 {
-    if (m_isMediaSourceEnded && trackBuffer.decodeQueue().empty()) {
+    if (m_isMediaSourceEnded && !trackBuffer.remainingSamples()) {
         DEBUG_LOG(LOGIDENTIFIER, "All samples in track \"", trackID, "\" enqueued.");
         allSamplesInTrackEnqueued(trackID);
     }
@@ -296,39 +304,17 @@ void SourceBufferPrivate::provideMediaData(TrackBuffer& trackBuffer, TrackID tra
     unsigned enqueuedSamples = 0;
 #endif
 
-    if (trackBuffer.needsMinimumUpcomingPresentationTimeUpdating() && canSetMinimumUpcomingPresentationTime(trackID)) {
-        trackBuffer.setMinimumEnqueuedPresentationTime(MediaTime::invalidTime());
-        clearMinimumUpcomingPresentationTime(trackID);
-    }
-
-    while (!trackBuffer.decodeQueue().empty()) {
+    while (true) {
         if (!isReadyForMoreSamples(trackID)) {
             DEBUG_LOG(LOGIDENTIFIER, "bailing early, track id ", trackID, " is not ready for more data");
             notifyClientWhenReadyForMoreSamples(trackID);
             break;
         }
 
-        // FIXME(rdar://problem/20635969): Remove this re-entrancy protection when the aforementioned radar is resolved; protecting
-        // against re-entrancy introduces a small inefficency when removing appended samples from the decode queue one at a time
-        // rather than when all samples have been enqueued.
-        Ref sample = trackBuffer.decodeQueue().begin()->second;
-
-        if (sample->decodeTime() > trackBuffer.enqueueDiscontinuityBoundary()) {
-            DEBUG_LOG(LOGIDENTIFIER, "bailing early because of unbuffered gap, new sample: ", sample->decodeTime(), " >= the current discontinuity boundary: ", trackBuffer.enqueueDiscontinuityBoundary());
+        RefPtr sample = trackBuffer.nextSample();
+        if (!sample)
             break;
-        }
-
-        // Remove the sample from the decode queue now.
-        trackBuffer.decodeQueue().erase(trackBuffer.decodeQueue().begin());
-
-        MediaTime samplePresentationEnd = sample->presentationTime() + sample->duration();
-        if (trackBuffer.highestEnqueuedPresentationTime().isInvalid() || samplePresentationEnd > trackBuffer.highestEnqueuedPresentationTime())
-            trackBuffer.setHighestEnqueuedPresentationTime(WTFMove(samplePresentationEnd));
-
-        trackBuffer.setLastEnqueuedDecodeKey({ sample->decodeTime(), sample->presentationTime() });
-        trackBuffer.setEnqueueDiscontinuityBoundary(sample->decodeTime() + sample->duration() + discontinuityTolerance);
-
-        enqueueSample(WTFMove(sample), trackID);
+        enqueueSample(sample.releaseNonNull(), trackID);
 #if !RELEASE_LOG_DISABLED
         ++enqueuedSamples;
 #endif
@@ -337,7 +323,7 @@ void SourceBufferPrivate::provideMediaData(TrackBuffer& trackBuffer, TrackID tra
     updateMinimumUpcomingPresentationTime(trackBuffer, trackID);
 
 #if !RELEASE_LOG_DISABLED
-    DEBUG_LOG(LOGIDENTIFIER, "enqueued ", enqueuedSamples, " samples, ", static_cast<uint64_t>(trackBuffer.decodeQueue().size()), " remaining");
+    DEBUG_LOG(LOGIDENTIFIER, "enqueued ", enqueuedSamples, " samples, ", trackBuffer.remainingSamples(), " remaining");
 #endif
 
     trySignalAllSamplesInTrackEnqueued(trackBuffer, trackID);
@@ -841,8 +827,8 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
     // 1.1. Loop Top
 
     do {
-        MediaTime presentationTimestamp;
-        MediaTime decodeTimestamp;
+        MediaTime presentationTimestamp = MediaTime::zeroTime();
+        MediaTime decodeTimestamp = MediaTime::zeroTime();
 
         // NOTE: this is out-of-order, but we need the timescale from the
         // sample's duration for timestamp generation.
@@ -853,12 +839,14 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
         if (m_shouldGenerateTimestamps) {
             // ↳ If generate timestamps flag equals true:
             // 1. Let presentation timestamp equal 0.
+            if (frameDuration.isValid()) {
             // NOTE: Use the duration timscale for the presentation timestamp, as this will eliminate
             // timescale rounding when generating timestamps.
             presentationTimestamp = { 0, frameDuration.timeScale() };
 
             // 2. Let decode timestamp equal 0.
             decodeTimestamp = { 0, frameDuration.timeScale() };
+            }
         } else {
             // ↳ Otherwise:
             // 1. Let presentation timestamp be a double precision floating point representation of
@@ -869,6 +857,7 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
             // decode timestamp in seconds.
             decodeTimestamp = sample->decodeTime();
         }
+        ERROR_LOG_IF(presentationTimestamp.isInvalid(), LOGIDENTIFIER, "invalid sample time encountered:", sample.get());
 
         // 1.3 If mode equals "sequence" and group start timestamp is set, then run the following steps:
         if (m_appendMode == SourceBufferAppendMode::Sequence && m_groupStartTimestamp.isValid()) {
@@ -907,7 +896,9 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
 
         // 1.4 If timestampOffset is not 0, then run the following steps:
         if (m_timestampOffset) {
-            if (!trackBuffer.roundedTimestampOffset().isValid() || presentationTimestamp.timeScale() != trackBuffer.lastFrameTimescale()) {
+            if (!trackBuffer.roundedTimestampOffset().isValid())
+                trackBuffer.setRoundedTimestampOffset(m_timestampOffset);
+            if (presentationTimestamp.isValid() && presentationTimestamp.timeScale() != trackBuffer.lastFrameTimescale()) {
                 trackBuffer.setLastFrameTimescale(presentationTimestamp.timeScale());
                 trackBuffer.setRoundedTimestampOffset(m_timestampOffset, trackBuffer.lastFrameTimescale(), microsecond);
             }
@@ -967,7 +958,7 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
         // 1.9 If frame end timestamp is greater than appendWindowEnd, then set the need random access
         // point flag to true, drop the coded frame, and jump to the top of the loop to start processing
         // the next coded frame.
-        if (presentationTimestamp < m_appendWindowStart || frameEndTimestamp > m_appendWindowEnd) {
+        if (presentationTimestamp.isInvalid() || presentationTimestamp < m_appendWindowStart || frameEndTimestamp > m_appendWindowEnd) {
             // 1.8 Note.
             // Some implementations MAY choose to collect some of these coded frames with presentation
             // timestamp less than appendWindowStart and use them to generate a splice at the first coded
@@ -1152,9 +1143,8 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
             // timestamp < presentationTime, but whose decode timestamp >= decodeTime. These will eventually cause
             // a decode error if left in place, so remove these samples as well.
             DecodeOrderSampleMap::KeyType decodeKey(sample->decodeTime(), sample->presentationTime());
-            auto samplesWithHigherDecodeTimes = trackBuffer.samples().decodeOrder().findSamplesBetweenDecodeKeys(decodeKey, erasedSamples.decodeOrder().begin()->first);
-            if (samplesWithHigherDecodeTimes.first != samplesWithHigherDecodeTimes.second)
-                dependentSamples.insert(samplesWithHigherDecodeTimes.first, samplesWithHigherDecodeTimes.second);
+            if (auto samplesWithHigherDecodeTimes = trackBuffer.samples().decodeOrder().findSamplesBetweenDecodeKeys(decodeKey, erasedSamples.decodeOrder().begin()->first); samplesWithHigherDecodeTimes.size())
+                dependentSamples.insert(samplesWithHigherDecodeTimes.begin(), samplesWithHigherDecodeTimes.end());
 
             PlatformTimeRanges erasedRanges = removeSamplesFromTrackBuffer(dependentSamples, trackBuffer, "didReceiveSample"_s);
 
@@ -1180,48 +1170,12 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
 
         // Otherwise:
         // Add the coded frame with the presentation timestamp, decode timestamp, and frame duration to the track buffer.
-        trackBuffer.addSample(sample);
-
-        // Note: The terminology here is confusing: "enqueuing" means providing a frame to the inner media framework.
-        // First, frames are inserted in the decode queue; later, at the end of the append some of the frames in the
-        // decode may be "enqueued" (sent to the inner media framework) in `provideMediaData()`.
-        //
-        // In order to check whether a frame should be added to the decode queue we check that it does not precede any
-        // frame already enqueued.
-        //
-        // Note that adding a frame to the decode queue is no guarantee that it will be actually enqueued at that point.
-        // If the frame is after the discontinuity boundary, the enqueueing algorithm will hold it there until samples
-        // with earlier timestamps are enqueued. The decode queue is not FIFO, but rather an ordered map.
-        DecodeOrderSampleMap::KeyType decodeKey(sample->decodeTime(), sample->presentationTime());
-        if (trackBuffer.lastEnqueuedDecodeKey().first.isInvalid() || decodeKey > trackBuffer.lastEnqueuedDecodeKey()) {
-            trackBuffer.decodeQueue().insert(DecodeOrderSampleMap::MapType::value_type(decodeKey, sample));
-
-            if (trackBuffer.minimumEnqueuedPresentationTime().isValid() && sample->presentationTime() < trackBuffer.minimumEnqueuedPresentationTime())
-                trackBuffer.setNeedsMinimumUpcomingPresentationTimeUpdating(true);
-        }
-
-        // NOTE: the spec considers the need to check the last frame duration but doesn't specify if that last frame
-        // is the one prior in presentation or decode order.
-        // So instead, as a workaround we use the largest frame duration seen in the current coded frame group (as defined in https://www.w3.org/TR/media-source/#coded-frame-group.
-        if (trackBuffer.lastDecodeTimestamp().isValid()) {
-            MediaTime lastDecodeDuration = decodeTimestamp - trackBuffer.lastDecodeTimestamp();
-            if (!trackBuffer.greatestFrameDuration().isValid())
-                trackBuffer.setGreatestFrameDuration(std::max(lastDecodeDuration, frameDuration));
-            else
-                trackBuffer.setGreatestFrameDuration(std::max({ trackBuffer.greatestFrameDuration(), frameDuration, lastDecodeDuration }));
-        }
-
         // 1.17 Set last decode timestamp for track buffer to decode timestamp.
-        trackBuffer.setLastDecodeTimestamp(WTFMove(decodeTimestamp));
-
         // 1.18 Set last frame duration for track buffer to frame duration.
-        trackBuffer.setLastFrameDuration(frameDuration);
-
         // 1.19 If highest presentation timestamp for track buffer is unset or frame end timestamp is greater
         // than highest presentation timestamp, then set highest presentation timestamp for track buffer
         // to frame end timestamp.
-        if (trackBuffer.highestPresentationTimestamp().isInvalid() || frameEndTimestamp > trackBuffer.highestPresentationTimestamp())
-            trackBuffer.setHighestPresentationTimestamp(frameEndTimestamp);
+        trackBuffer.addSample(sample);
 
         // 1.20 If frame end timestamp is greater than group end timestamp, then set group end timestamp equal
         // to frame end timestamp.
@@ -1233,9 +1187,6 @@ bool SourceBufferPrivate::processMediaSample(SourceBufferPrivateClient& client, 
             m_timestampOffset = frameEndTimestamp;
             resetTimestampOffsetInTrackBuffers();
         }
-
-        auto presentationEndTime = presentationTimestamp + frameDuration;
-        trackBuffer.addBufferedRange(presentationTimestamp, presentationEndTime, AddTimeRangeOption::EliminateSmallGaps);
         break;
     } while (true);
 

@@ -26,6 +26,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
 namespace Cpp {

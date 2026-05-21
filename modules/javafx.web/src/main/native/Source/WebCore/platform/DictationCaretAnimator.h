@@ -26,12 +26,15 @@
 #pragma once
 
 #include "CaretAnimator.h"
+#include "FloatRect.h"
 #include <wtf/TZoneMalloc.h>
 
 #if HAVE(REDESIGNED_TEXT_CURSOR)
 
 namespace WebCore {
 
+class FloatRoundedRect;
+class Gradient;
 class Path;
 
 class DictationCaretAnimator final : public CaretAnimator {

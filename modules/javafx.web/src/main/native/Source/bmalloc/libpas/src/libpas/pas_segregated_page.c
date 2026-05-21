@@ -109,7 +109,7 @@ pas_lock* pas_segregated_page_switch_lock_slow(
 
         page_lock = page->lock_ptr;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 
 void pas_segregated_page_switch_lock_and_rebias_while_ineligible_impl(
@@ -795,7 +795,7 @@ pas_segregated_page_and_config_for_address_and_heap_config(uintptr_t begin,
         case pas_small_bitfit_page_kind:
             return pas_segregated_page_and_config_create_empty();
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return pas_segregated_page_and_config_create_empty();
         }
     }
@@ -820,7 +820,7 @@ pas_segregated_page_and_config_for_address_and_heap_config(uintptr_t begin,
         }
         return pas_segregated_page_and_config_create_empty();
     } }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_segregated_page_and_config_create_empty();
 }
 

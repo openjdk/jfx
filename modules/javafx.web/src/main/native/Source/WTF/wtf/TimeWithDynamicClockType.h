@@ -37,7 +37,7 @@ namespace WTF {
 class PrintStream;
 
 class TimeWithDynamicClockType final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TimeWithDynamicClockType);
 public:
     TimeWithDynamicClockType() { }
 
@@ -139,10 +139,7 @@ public:
     friend bool operator==(const TimeWithDynamicClockType&, const TimeWithDynamicClockType&) = default;
 
     // To do relative comparisons, you must be using times with the same clock type.
-    WTF_EXPORT_PRIVATE bool operator<(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator>(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator<=(const TimeWithDynamicClockType&) const;
-    WTF_EXPORT_PRIVATE bool operator>=(const TimeWithDynamicClockType&) const;
+    WTF_EXPORT_PRIVATE friend std::partial_ordering operator<=>(const TimeWithDynamicClockType&, const TimeWithDynamicClockType&);
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 

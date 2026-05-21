@@ -38,24 +38,24 @@ namespace WebCore {
 
 namespace StereoPanner {
 
-void panWithSampleAccurateValues(const AudioBus* inputBus, AudioBus* outputBus, std::span<const float> panValues)
+void panWithSampleAccurateValues(const AudioBus& inputBus, AudioBus& outputBus, std::span<const float> panValues)
 {
-    bool isInputSafe = inputBus && (inputBus->numberOfChannels() == 1 || inputBus->numberOfChannels() == 2) && panValues.size() <= inputBus->length();
+    bool isInputSafe = (inputBus.numberOfChannels() == 1 || inputBus.numberOfChannels() == 2) && panValues.size() <= inputBus.length();
     ASSERT(isInputSafe);
     if (!isInputSafe)
         return;
 
-    unsigned numberOfInputChannels = inputBus->numberOfChannels();
+    unsigned numberOfInputChannels = inputBus.numberOfChannels();
 
-    bool isOutputSafe = outputBus && outputBus->numberOfChannels() == 2 && panValues.size() <= outputBus->length();
+    bool isOutputSafe = outputBus.numberOfChannels() == 2 && panValues.size() <= outputBus.length();
     ASSERT(isOutputSafe);
     if (!isOutputSafe)
         return;
 
-    auto sourceL = inputBus->channel(0)->span();
-    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span() : sourceL;
-    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
-    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
+    auto sourceL = inputBus.channel(0)->span();
+    auto sourceR = numberOfInputChannels > 1 ? inputBus.channel(1)->span() : sourceL;
+    auto destinationL = outputBus.channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus.channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     double gainL;
     double gainR;
@@ -93,24 +93,24 @@ void panWithSampleAccurateValues(const AudioBus* inputBus, AudioBus* outputBus, 
     }
 }
 
-void panToTargetValue(const AudioBus* inputBus, AudioBus* outputBus, float panValue, size_t framesToProcess)
+void panToTargetValue(const AudioBus& inputBus, AudioBus& outputBus, float panValue, size_t framesToProcess)
 {
-    bool isInputSafe = inputBus && (inputBus->numberOfChannels() == 1 || inputBus->numberOfChannels() == 2) && framesToProcess <= inputBus->length();
+    bool isInputSafe = (inputBus.numberOfChannels() == 1 || inputBus.numberOfChannels() == 2) && framesToProcess <= inputBus.length();
     ASSERT(isInputSafe);
     if (!isInputSafe)
         return;
 
-    unsigned numberOfInputChannels = inputBus->numberOfChannels();
+    unsigned numberOfInputChannels = inputBus.numberOfChannels();
 
-    bool isOutputSafe = outputBus && outputBus->numberOfChannels() == 2 && framesToProcess <= outputBus->length();
+    bool isOutputSafe = outputBus.numberOfChannels() == 2 && framesToProcess <= outputBus.length();
     ASSERT(isOutputSafe);
     if (!isOutputSafe)
         return;
 
-    auto sourceL = inputBus->channel(0)->span().first(framesToProcess);
-    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span().first(framesToProcess) : sourceL;
-    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
-    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
+    auto sourceL = inputBus.channel(0)->span().first(framesToProcess);
+    auto sourceR = numberOfInputChannels > 1 ? inputBus.channel(1)->span().first(framesToProcess) : sourceL;
+    auto destinationL = outputBus.channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus.channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     float targetPan = clampTo(panValue, -1.0, 1.0);
 

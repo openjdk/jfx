@@ -32,11 +32,10 @@
 #include "GPUTextureView.h"
 #include "WebGPUBindGroupEntry.h"
 #include <utility>
-#include <variant>
 
 namespace WebCore {
 
-using GPUBindingResource = std::variant<RefPtr<GPUSampler>, RefPtr<GPUTextureView>, GPUBufferBinding, RefPtr<GPUExternalTexture>>;
+using GPUBindingResource = Variant<RefPtr<GPUSampler>, RefPtr<GPUTextureView>, GPUBufferBinding, RefPtr<GPUExternalTexture>>;
 
 inline WebGPU::BindingResource convertToBacking(const GPUBindingResource& bindingResource)
 {

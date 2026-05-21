@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,6 @@ import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
-import com.sun.jfx.incubator.scene.control.richtext.TextCell;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
@@ -261,7 +260,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             ime.length = text.length();
 
             // replace selection or previous ime text with composed or committed text
-            rta.replaceText(ime.start, rEnd, text, false);
+            // TODO JDK-8370447 may need to coalesce undo events for composed events but not for commit ones
+            rta.replaceText(ime.start, rEnd, text);
 
             // add ime shapes
             TextPos end = ime.start;
@@ -517,6 +517,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
+        /* Not supported due to virtualization
         case BOUNDS_FOR_RANGE:
             {
                 TextPos p = getSkinnable().getCaretPosition();
@@ -524,26 +525,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     int start = (Integer)parameters[0];
                     int end = (Integer)parameters[1];
                     PathElement[] elements = getVFlow().getRangeShape(p.index(), start, end + 1);
-                    return RichUtils.pathToBoundsArray(getVFlow(), elements);
-                }
-                return null;
-            }
-        case FONT:
-            {
-                StyleAttributeMap a = getSkinnable().getActiveStyleAttributeMap();
-                if (a != null) {
-                    String family = a.getFontFamily();
-                    if (family != null) {
-                        Double size = a.getFontSize();
-                        if (size != null) {
-                            return Font.font(family, size);
-                        }
+                    if (elements != null) {
+                        return RichUtils.pathToBoundsArray(getVFlow(), elements);
                     }
                 }
                 return null;
             }
-        case HORIZONTAL_SCROLLBAR:
-            return hscroll;
         case LINE_FOR_OFFSET:
             {
                 TextPos p = getSkinnable().getCaretPosition();
@@ -586,6 +573,23 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 TextPos p = getSkinnable().getTextPosition(screenPoint.getX(), screenPoint.getY());
                 return p == null ? null : p.charIndex();
             }
+        */
+        case FONT:
+        {
+            StyleAttributeMap a = getSkinnable().getActiveStyleAttributeMap();
+            if (a != null) {
+                String family = a.getFontFamily();
+                if (family != null) {
+                    Double size = a.getFontSize();
+                    if (size != null) {
+                        return Font.font(family, size);
+                    }
+                }
+            }
+            return null;
+        }
+        case HORIZONTAL_SCROLLBAR:
+            return hscroll;
         case VERTICAL_SCROLLBAR:
             return vscroll;
         default:

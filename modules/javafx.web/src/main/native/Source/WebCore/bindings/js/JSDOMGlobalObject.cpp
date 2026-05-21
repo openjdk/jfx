@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -107,7 +107,7 @@ const ClassInfo JSDOMGlobalObject::s_info = { "DOMGlobalObject"_s, &JSGlobalObje
 
 JSDOMGlobalObject::JSDOMGlobalObject(VM& vm, Structure* structure, Ref<DOMWrapperWorld>&& world, const GlobalObjectMethodTable* globalObjectMethodTable)
     : JSGlobalObject(vm, structure, globalObjectMethodTable)
-    , m_constructors(makeUnique<DOMConstructors>())
+    , m_constructors(makeUniqueRef<DOMConstructors>())
     , m_world(WTFMove(world))
     , m_worldIsNormal(m_world->isNormal())
     , m_builtinInternalFunctions(makeUniqueRefWithoutFastMallocCheck<JSBuiltinInternalFunctions>(vm))
@@ -192,7 +192,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalWritableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* writableStream = jsDynamicCast<JSWritableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!writableStream))
+    if (!writableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(writableStream->wrapped().internalWritableStream());
 }
@@ -208,7 +208,7 @@ JSC_DEFINE_HOST_FUNCTION(getInternalReadableStream, (JSGlobalObject*, CallFrame*
     ASSERT(callFrame->argumentCount() == 1);
 
     auto* readableStream = jsDynamicCast<JSReadableStream*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!readableStream))
+    if (!readableStream) [[unlikely]]
         return JSValue::encode(jsUndefined());
     return JSValue::encode(readableStream->wrapped().internalReadableStream());
 }
@@ -230,7 +230,7 @@ JSC_DEFINE_HOST_FUNCTION(addAbortAlgorithmToSignal, (JSGlobalObject* globalObjec
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     auto* jsDOMGlobalObject = JSC::jsCast<JSDOMGlobalObject*>(globalObject);
@@ -246,7 +246,7 @@ JSC_DEFINE_HOST_FUNCTION(removeAbortAlgorithmFromSignal, (JSGlobalObject*, CallF
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(!abortSignal))
+    if (!abortSignal) [[unlikely]]
         return JSValue::encode(JSValue(JSC::JSValue::JSFalse));
 
     AbortSignal::removeAbortAlgorithmFromSignal(abortSignal->protectedWrapped().get(), callFrame->uncheckedArgument(1).asUInt32());
@@ -271,7 +271,7 @@ JSC_DEFINE_HOST_FUNCTION(signalAbort, (JSGlobalObject*, CallFrame* callFrame))
     ASSERT(callFrame->argumentCount() == 2);
 
     auto* abortSignal = jsDynamicCast<JSAbortSignal*>(callFrame->uncheckedArgument(0));
-    if (UNLIKELY(abortSignal))
+    if (abortSignal) [[unlikely]]
         abortSignal->protectedWrapped()->signalAbort(callFrame->uncheckedArgument(1));
     return JSValue::encode(JSC::jsUndefined());
 }
@@ -488,8 +488,8 @@ JSFunction* JSDOMGlobalObject::createCrossOriginFunction(JSGlobalObject* lexical
     auto& vm = lexicalGlobalObject->vm();
     CrossOriginMapKey key = std::make_pair(lexicalGlobalObject, nativeFunction.taggedPtr());
 
-    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of UncheckedKeyHashMap::ensure.
-    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up UncheckedKeyHashMap twice.
+    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of HashMap::ensure.
+    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up HashMap twice.
     DeferGC deferGC(vm);
     return m_crossOriginFunctionMap.ensureValue(key, [&] {
         return JSFunction::create(vm, lexicalGlobalObject, length, propertyName.publicName(), nativeFunction, ImplementationVisibility::Public);
@@ -502,8 +502,8 @@ GetterSetter* JSDOMGlobalObject::createCrossOriginGetterSetter(JSGlobalObject* l
     auto& vm = lexicalGlobalObject->vm();
     CrossOriginMapKey key = std::make_pair(lexicalGlobalObject, getter ? getter.taggedPtr() : setter.taggedPtr());
 
-    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of UncheckedKeyHashMap::ensure.
-    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up UncheckedKeyHashMap twice.
+    // WeakGCMap::ensureValue's functor must not invoke GC since GC can modify WeakGCMap in the middle of HashMap::ensure.
+    // We use DeferGC here (1) not to invoke GC when executing WeakGCMap::ensureValue and (2) to avoid looking up HashMap twice.
     DeferGC deferGC(vm);
     return m_crossOriginGetterSetterMap.ensureValue(key, [&] {
         return GetterSetter::create(vm, lexicalGlobalObject,
@@ -560,13 +560,13 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
     // FIXME: for efficiency, we should load blobs directly instead of going through the readableStream path.
     if (inputResponse->isBlobBody() || inputResponse->isBlobFormData()) {
         auto streamOrException = inputResponse->readableStream(*globalObject);
-        if (UNLIKELY(streamOrException.hasException())) {
+        if (streamOrException.hasException()) [[unlikely]] {
             deferred->reject(streamOrException.releaseException());
             return jsCast<JSC::JSPromise*>(deferred->promise());
         }
     }
 
-    auto compiler = JSC::Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, jsCast<JSC::JSPromise*>(deferred->promise()), importObject);
+    auto compiler = JSC::Wasm::StreamingCompiler::create(vm, compilerMode, globalObject, jsCast<JSC::JSPromise*>(deferred->promise()), importObject, JSC::makeSource("handleResponseOnStreamingAction"_s, JSC::SourceOrigin(), JSC::SourceTaintedOrigin::Untainted));
 
     if (inputResponse->isBodyReceivedByChunk()) {
         inputResponse->consumeBodyReceivedByChunk([globalObject, compiler = WTFMove(compiler)](auto&& result) mutable {
@@ -589,7 +589,7 @@ static JSC::JSPromise* handleResponseOnStreamingAction(JSC::JSGlobalObject* glob
 
                 auto scope = DECLARE_THROW_SCOPE(vm);
                 auto error = createDOMException(*globalObject, WTFMove(exception));
-                if (UNLIKELY(scope.exception())) {
+                if (scope.exception()) [[unlikely]] {
                     ASSERT(vm.hasPendingTerminationException());
                     compiler->cancel();
                     return;

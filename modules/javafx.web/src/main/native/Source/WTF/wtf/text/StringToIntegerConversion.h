@@ -78,7 +78,7 @@ template<typename IntegralType, typename CharacterType> std::optional<IntegralTy
             value += digitValue;
     } while (!data.empty() && isCharacterAllowedInBase(data.front(), base));
 
-    if (UNLIKELY(value.hasOverflowed()))
+    if (value.hasOverflowed()) [[unlikely]]
         return std::nullopt;
 
     if (policy == TrailingJunkPolicy::Disallow) {

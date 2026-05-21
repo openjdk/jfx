@@ -111,7 +111,7 @@ protected:
 private:
     bool isMouseEvent() const final;
 
-    void setRelatedTarget(RefPtr<EventTarget>&& relatedTarget) final { m_relatedTarget = WTFMove(relatedTarget); }
+    void setRelatedTarget(RefPtr<EventTarget>&&) final;
 
     int16_t m_button { enumToUnderlyingType(MouseButton::Left) };
     unsigned short m_buttons { 0 };

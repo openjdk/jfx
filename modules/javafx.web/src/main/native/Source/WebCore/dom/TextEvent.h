@@ -64,7 +64,6 @@ namespace WebCore {
 
         bool shouldSmartReplace() const { return m_shouldSmartReplace; }
         bool shouldMatchStyle() const { return m_shouldMatchStyle; }
-        bool createdFromBindings() const { return m_createdFromBindings; }
         MailBlockquoteHandling mailBlockquoteHandling() const { return m_mailBlockquoteHandling; }
         DocumentFragment* pastingFragment() const { return m_pastingFragment.get(); }
         const Vector<DictationAlternative>& dictationAlternatives() const { return m_dictationAlternatives; }
@@ -84,7 +83,6 @@ namespace WebCore {
         RefPtr<DocumentFragment> m_pastingFragment;
         bool m_shouldSmartReplace;
         bool m_shouldMatchStyle;
-        bool m_createdFromBindings { false };
         MailBlockquoteHandling m_mailBlockquoteHandling;
         Vector<DictationAlternative> m_dictationAlternatives;
     };

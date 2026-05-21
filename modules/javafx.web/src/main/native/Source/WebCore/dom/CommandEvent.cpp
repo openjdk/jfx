@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "CommandEvent.h"
 
 #include "Element.h"
+#include "TreeScope.h"
 
 #include <wtf/TZoneMallocInlines.h>
 
@@ -67,8 +68,8 @@ RefPtr<Element> CommandEvent::source() const
         return nullptr;
 
     if (RefPtr target = dynamicDowncast<Node>(currentTarget())) {
-        auto& treeScope = target->treeScope();
-        auto node = treeScope.retargetToScope(*m_source.get());
+        Ref treeScope = target->treeScope();
+        Ref node = treeScope->retargetToScope(*m_source.get());
         return &downcast<Element>(node).get();
     }
     return m_source;

@@ -34,8 +34,10 @@ public:
     LegacyRenderSVGResourceSolidColor();
     virtual ~LegacyRenderSVGResourceSolidColor();
 
-    void removeAllClientsFromCacheIfNeeded(bool, SingleThreadWeakHashSet<RenderObject>*) override { }
-    void removeClientFromCache(RenderElement&, bool = true) override { }
+    void removeAllClientsFromCache() override { }
+    void removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool, SingleThreadWeakHashSet<RenderObject>*) override { }
+    void removeClientFromCache(RenderElement&) override { }
+    void removeClientFromCacheAndMarkForInvalidation(RenderElement&, bool = true) override { }
 
     OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
     void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;

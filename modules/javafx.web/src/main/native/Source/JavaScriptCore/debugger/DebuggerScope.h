@@ -76,8 +76,8 @@ public:
         DebuggerScope* m_node;
     };
 
-    iterator begin();
-    iterator end();
+    iterator begin() LIFETIME_BOUND;
+    iterator end() LIFETIME_BOUND;
     DebuggerScope* next();
 
     void invalidateChain();

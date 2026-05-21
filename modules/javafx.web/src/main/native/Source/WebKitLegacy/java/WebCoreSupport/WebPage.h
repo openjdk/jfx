@@ -34,6 +34,7 @@
 #include <WebCore/HandleUserInputEventResult.h>
 
 #include "MediaPlayerPrivateJava.h"
+#include "TextureMapperJavaAdapter.h"
 
 #include <jni.h> // todo tav remove when building w/ pch
 

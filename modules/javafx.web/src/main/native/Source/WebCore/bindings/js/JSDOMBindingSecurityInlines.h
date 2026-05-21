@@ -33,7 +33,7 @@ namespace BindingSecurity {
 
 inline bool shouldAllowAccessToDOMWindow(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMWindow& target, SecurityReportingOption reportingOption = LogSecurityError)
 {
-    if (LIKELY(lexicalGlobalObject == &target))
+    if (lexicalGlobalObject == &target) [[likely]]
         return true;
     return shouldAllowAccessToDOMWindow(lexicalGlobalObject, target.wrapped(), reportingOption);
 }

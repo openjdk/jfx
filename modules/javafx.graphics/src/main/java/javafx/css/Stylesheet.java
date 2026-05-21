@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,9 @@ import javafx.collections.ObservableList;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaQueryList;
+import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.media.TriState;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -64,9 +67,11 @@ public class Stylesheet {
      * binary stream changes. This number does not correlate with JavaFX versions.
      * Version 5: persist @font-face
      * Version 6: converter classes moved to public package
-     * Version 7: media queries
+     * Version 7: user-preference media queries
+     * Version 8: viewport characteristics media queries
+     * Version 9: conditional stylesheet imports
      */
-    final static int BINARY_CSS_VERSION = 7;
+    final static int BINARY_CSS_VERSION = 9;
 
     private final String url;
     /**
@@ -125,6 +130,9 @@ public class Stylesheet {
 
     /** List of all font faces */
     private final List<FontFace> fontFaces = new ArrayList<>();
+
+    /** List of all stylesheet imports */
+    private List<StylesheetImport> stylesheetImports;
 
     /**
      * Constructs a stylesheet with the base URI defaulting to the root
@@ -223,9 +231,9 @@ public class Stylesheet {
     }
 
     // protected for unit testing
-    final void writeBinary(final DataOutputStream os, final StringStore stringStore)
-        throws IOException
-    {
+    final void writeBinary(final DataOutputStream os, final StringStore stringStore) throws IOException {
+        writeBinaryImports(os, stringStore);
+
         // Note: url is not written since it depends on runtime environment.
         int index = stringStore.addString(origin.name());
         os.writeShort(index);
@@ -246,16 +254,23 @@ public class Stylesheet {
     }
 
     // protected for unit testing
-    final void readBinary(int bssVersion, DataInputStream is, String[] strings)
-        throws IOException
-    {
+    final void readBinary(int bssVersion, DataInputStream is, String[] strings) throws IOException {
         this.stringStore = strings;
+
+        if (bssVersion >= 9) {
+            readBinaryImports(bssVersion, is, strings);
+        }
+
         final int index = is.readShort();
         this.setOrigin(StyleOrigin.valueOf(strings[index]));
         final int nRules = is.readShort();
         List<Rule> persistedRules = new ArrayList<>(nRules);
         for (int n=0; n<nRules; n++) {
-            persistedRules.add(Rule.readBinary(bssVersion,is,strings));
+            Rule rule = Rule.readBinary(bssVersion, is, strings);
+            MediaRule mediaRule = RuleHelper.getMediaRule(rule);
+            if (mediaRule == null || mediaRule.evaluate() != TriState.FALSE) {
+                persistedRules.add(rule);
+            }
         }
         this.rules.addAll(persistedRules);
 
@@ -267,6 +282,44 @@ public class Stylesheet {
                 fontFaceList.add(fontFace);
             }
         }
+    }
+
+    private void writeBinaryImports(DataOutputStream os, StringStore stringStore) throws IOException {
+        if (stylesheetImports == null) {
+            os.writeInt(0);
+            return;
+        }
+
+        os.writeInt(stylesheetImports.size());
+
+        for (StylesheetImport stylesheetImport : stylesheetImports) {
+            stylesheetImport.importConditions().writeBinary(os, stringStore);
+
+            try (var byteStream = new ByteArrayOutputStream();
+                 var importOut = new DataOutputStream(byteStream)) {
+                stylesheetImport.stylesheet().writeBinary(importOut, stringStore);
+                os.writeInt(importOut.size());
+                byteStream.writeTo(os);
+            }
+        }
+    }
+
+    private void readBinaryImports(int bssVersion, DataInputStream is, String[] strings) throws IOException {
+        for (int i = 0, max = is.readInt(); i < max; i++) {
+            var importConditions = MediaQueryList.readBinary(is, strings);
+            int stylesheetSizeInBytes = is.readInt();
+
+            // Skip referenced stylesheets whose media query list can never match.
+            if (importConditions.evaluate() == TriState.FALSE) {
+                is.skipNBytes(stylesheetSizeInBytes);
+            } else {
+                var stylesheet = new Stylesheet();
+                stylesheet.readBinary(bssVersion, is, strings);
+                addStylesheetImport(new StylesheetImport(stylesheet, importConditions));
+            }
+        }
+
+        mergeStylesheetImports();
     }
 
     private String[] stringStore;
@@ -379,7 +432,7 @@ public class Stylesheet {
         }
 
         URI sourceURI = source.toURI();
-        Stylesheet stylesheet = new CssParser().parse(sourceURI.toURL());
+        Stylesheet stylesheet = new CssParser().parseUnmerged(sourceURI.toURL(), true);
 
         // first write all the css binary data into the buffer and collect strings on way
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -404,20 +457,57 @@ public class Stylesheet {
         os.close();
     }
 
-    // Add the rules from the other stylesheet to this one
-    void importStylesheet(Stylesheet importedStylesheet) {
-        if (importedStylesheet == null) return;
+    void addStylesheetImport(StylesheetImport stylesheetImport) {
+        if (stylesheetImports == null) {
+            stylesheetImports = new ArrayList<>();
+        }
 
+        stylesheetImports.add(stylesheetImport);
+    }
+
+    void mergeStylesheetImports() {
+        if (stylesheetImports != null) {
+            List<Rule> importedRules = new ArrayList<>();
+            for (StylesheetImport stylesheetImport : stylesheetImports) {
+                importedRules.addAll(importRules(stylesheetImport));
+            }
+
+            rules.addAll(0, importedRules);
+            stylesheetImports = null;
+        }
+    }
+
+    private List<Rule> importRules(StylesheetImport stylesheetImport) {
+        Stylesheet importedStylesheet = stylesheetImport.stylesheet();
+        MediaQueryList importConditions = stylesheetImport.importConditions();
         List<Rule> rulesToImport = importedStylesheet.getRules();
-        if (rulesToImport == null || rulesToImport.isEmpty()) return;
+        if (rulesToImport.isEmpty()) {
+            return List.of();
+        }
 
+        switch (importConditions.evaluate()) {
+            case FALSE -> {
+                return List.of();
+            }
+
+            case TRUE -> {
+                return importedStylesheet.getRules();
+            }
+        }
+
+        MediaRule importConditionsRule = new MediaRule(importConditions, null);
         List<Rule> importedRules = new ArrayList<>(rulesToImport.size());
+
         for (Rule rule : rulesToImport) {
             List<Selector> selectors = rule.getSelectors();
             List<Declaration> declarations = rule.getUnobservedDeclarationList();
-            importedRules.add(new Rule(RuleHelper.getMediaRule(rule), selectors, declarations));
+            MediaRule mediaRule = RuleHelper.getMediaRule(rule) instanceof MediaRule r
+                ? new MediaRule(r.getQueries(), importConditionsRule)
+                : importConditionsRule;
+
+            importedRules.add(new Rule(mediaRule, selectors, declarations));
         }
 
-        rules.addAll(importedRules);
+        return importedRules;
     }
 }

@@ -42,7 +42,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WEBCORE_EXPORT IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
+class IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBDatabaseNameAndVersionRequest, WEBCORE_EXPORT);
 public:
     using InfoCallback = Function<void(std::optional<Vector<IDBDatabaseNameAndVersion>>&&)>;
@@ -66,7 +66,7 @@ private:
     bool virtualHasPendingActivity() const final;
     void stop() final;
 
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
     IDBResourceIdentifier m_resourceIdentifier;
     InfoCallback m_callback;
 };

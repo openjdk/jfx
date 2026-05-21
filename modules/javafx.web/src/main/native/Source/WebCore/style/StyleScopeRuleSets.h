@@ -48,7 +48,11 @@ class Resolver;
 
 struct InvalidationRuleSet {
     RefPtr<RuleSet> ruleSet;
-    Vector<const CSSSelector*> invalidationSelectors;
+    // Invalidation selectors are used for attribute selector and :has() invalidation.
+    // For attributes selectors it contains the simple selectors for fast testing of whether an attribute mutation may have an effect.
+    // For :has() it contains the complex argument selectors for testing if adding or removing a node may affect :has() matching.
+    // Otherwise the list is empty.
+    CSSSelectorList invalidationSelectors;
     MatchElement matchElement;
     IsNegation isNegation;
 };
@@ -68,8 +72,6 @@ public:
     RuleSet* styleForCascadeLevel(CascadeLevel);
 
     const RuleFeatureSet& features() const;
-    RuleSet* sibling() const { return m_siblingRuleSet.get(); }
-    RuleSet* uncommonAttribute() const { return m_uncommonAttributeRuleSet.get(); }
     RuleSet* scopeBreakingHasPseudoClassInvalidationRuleSet() const { return m_scopeBreakingHasPseudoClassInvalidationRuleSet.get(); }
 
     const Vector<InvalidationRuleSet>* idInvalidationRuleSets(const AtomString&) const;
@@ -78,7 +80,7 @@ public:
     const Vector<InvalidationRuleSet>* pseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey&) const;
     const Vector<InvalidationRuleSet>* hasPseudoClassInvalidationRuleSets(const PseudoClassInvalidationKey&) const;
 
-    const UncheckedKeyHashSet<AtomString>& customPropertyNamesInStyleContainerQueries() const;
+    const HashSet<AtomString>& customPropertyNamesInStyleContainerQueries() const;
 
     SelectorsForStyleAttribute selectorsForStyleAttribute() const;
 
@@ -86,7 +88,7 @@ public:
     void initializeUserStyle();
 
     void resetAuthorStyle();
-    void appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&, MQ::MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
+    void appendAuthorStyleSheets(std::span<const RefPtr<CSSStyleSheet>>, MQ::MediaQueryEvaluator*, Style::InspectorCSSOMWrappers&);
 
     void resetUserAgentMediaQueryStyle();
 
@@ -121,16 +123,14 @@ private:
 
     Resolver& m_styleResolver;
     mutable RuleFeatureSet m_features;
-    mutable RefPtr<RuleSet> m_siblingRuleSet;
-    mutable RefPtr<RuleSet> m_uncommonAttributeRuleSet;
     mutable RefPtr<RuleSet> m_scopeBreakingHasPseudoClassInvalidationRuleSet;
-    mutable UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_idInvalidationRuleSets;
-    mutable UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_classInvalidationRuleSets;
-    mutable UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_attributeInvalidationRuleSets;
-    mutable UncheckedKeyHashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_pseudoClassInvalidationRuleSets;
-    mutable UncheckedKeyHashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_hasPseudoClassInvalidationRuleSets;
+    mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_idInvalidationRuleSets;
+    mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_classInvalidationRuleSets;
+    mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_attributeInvalidationRuleSets;
+    mutable HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_pseudoClassInvalidationRuleSets;
+    mutable HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<InvalidationRuleSet>>> m_hasPseudoClassInvalidationRuleSets;
 
-    mutable std::optional<UncheckedKeyHashSet<AtomString>> m_customPropertyNamesInStyleContainerQueries;
+    mutable std::optional<HashSet<AtomString>> m_customPropertyNamesInStyleContainerQueries;
 
     mutable std::optional<SelectorsForStyleAttribute> m_cachedSelectorsForStyleAttribute;
 

@@ -108,18 +108,26 @@ jfloat getUIScale(GdkScreen* screen) {
     if (OverrideUIScale > 0.0f) {
         uiScale = OverrideUIScale;
     } else {
-        char *scale_str = getenv("GDK_SCALE");
-        int gdk_scale = (scale_str == NULL) ? -1 : atoi(scale_str);
-        if (gdk_scale > 0) {
-            uiScale = (jfloat) gdk_scale;
-        } else {
-            uiScale = (jfloat) glass_settings_get_guint_opt("org.gnome.desktop.interface",
-                                                            "scaling-factor", 0);
-            if (uiScale < 1) {
-                uiScale = (jfloat) (gdk_screen_get_resolution(screen) / DEFAULT_DPI);
-            }
-            if (uiScale < 1) {
-                uiScale = 1;
+        gdouble resolution = gdk_screen_get_resolution(screen);
+        uiScale = (jfloat) (resolution / DEFAULT_DPI);
+        if (int(resolution) == DEFAULT_DPI) {
+            // These legacy settings should only be consulted if the DPI is
+            // 96. They are global and affect all monitors and only allow
+            // integers. And they are not reliable when scaling is
+            // fractional. KDE in Ubuntu 22 sets GDK_SCALE to the floor of
+            // the actual scaling factor. KDE in Ubuntu 24 sets the
+            // Gnome "scaling-factor" instead. Both settings are obsolete in
+            // their respective toolkits and are not trustworthy.
+            char *scale_str = getenv("GDK_SCALE");
+            int gdk_scale = (scale_str == NULL) ? -1 : atoi(scale_str);
+            if (gdk_scale > 0) {
+                uiScale = (jfloat) gdk_scale;
+            } else {
+                guint gnome_scale = glass_settings_get_guint_opt("org.gnome.desktop.interface",
+                                                                 "scaling-factor", 0);
+                if (gnome_scale > 0) {
+                    uiScale = (jfloat) gnome_scale;
+                }
             }
         }
     }

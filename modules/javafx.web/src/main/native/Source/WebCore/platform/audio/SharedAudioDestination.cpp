@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,8 +40,9 @@ namespace WebCore {
 
 class SharedAudioDestinationAdapter : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SharedAudioDestinationAdapter>, public AudioIOCallback {
 public:
+    using CreationOptions = AudioDestinationCreationOptions;
     using AudioDestinationCreationFunction = SharedAudioDestination::AudioDestinationCreationFunction;
-    static Ref<SharedAudioDestinationAdapter> ensureAdapter(unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&& ensureFunction);
+    static Ref<SharedAudioDestinationAdapter> ensureAdapter(const CreationOptions&, AudioDestinationCreationFunction&& ensureFunction);
     ~SharedAudioDestinationAdapter();
 
     void addRenderer(SharedAudioDestination&, CompletionHandler<void(bool)>&&);
@@ -54,29 +55,41 @@ public:
 
     MediaTime outputLatency() const
     {
-        return protectedDestination()->outputLatency();
+        return m_destination->outputLatency();
     }
 
+#if PLATFORM(IOS_FAMILY)
+    const String& sceneIdentifier() const { return m_sceneIdentifier; }
+#endif
+
+    AudioDestinationCreationFunction takeEnsureFunction() { return WTFMove(m_ensureFunction); }
+
 private:
+#if PLATFORM(IOS_FAMILY)
+    using AdapterKey = std::tuple<unsigned, float, String>;
+#else
     using AdapterKey = std::tuple<unsigned, float>;
-    using AdapterMap = UncheckedKeyHashMap<AdapterKey, ThreadSafeWeakPtr<SharedAudioDestinationAdapter>>;
+#endif
+    using AdapterMap = HashMap<AdapterKey, ThreadSafeWeakPtr<SharedAudioDestinationAdapter>>;
     static AdapterMap& sharedMap();
 
-    SharedAudioDestinationAdapter(unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&&);
+    SharedAudioDestinationAdapter(const CreationOptions&, AudioDestinationCreationFunction&&);
 
-    void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
+    void render(AudioBus& destinationBus, size_t framesToProcess, const AudioIOPosition& outputPosition) final;
     void isPlayingDidChange() final { }
 
     void configureRenderThread(CompletionHandler<void(bool)>&&);
 
-    Ref<AudioDestination> protectedDestination() const { return m_destination; }
-    Ref<AudioBus> protectedWorkBus() { return m_workBus; }
-
     unsigned m_numberOfOutputChannels;
     float m_sampleRate;
 
-    Ref<AudioDestination> m_destination;
-    Ref<AudioBus> m_workBus;
+#if PLATFORM(IOS_FAMILY)
+    String m_sceneIdentifier { emptyString() };
+#endif
+
+    const Ref<AudioDestination> m_destination;
+    const Ref<AudioBus> m_workBus;
+    AudioDestinationCreationFunction m_ensureFunction;
 
     bool m_started { false };
 
@@ -98,34 +111,47 @@ auto SharedAudioDestinationAdapter::sharedMap() -> AdapterMap&
     return map;
 }
 
-Ref<SharedAudioDestinationAdapter> SharedAudioDestinationAdapter::ensureAdapter(unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&& ensureFunction)
+Ref<SharedAudioDestinationAdapter> SharedAudioDestinationAdapter::ensureAdapter(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
 {
-    std::tuple key { numberOfOutputChannels, sampleRate };
+    std::tuple key { options.numberOfOutputChannels, options.sampleRate
+#if PLATFORM(IOS_FAMILY)
+        , options.sceneIdentifier.isNull() ? emptyString() : options.sceneIdentifier
+#endif
+    };
     auto results = sharedMap().find(key);
     if (results != sharedMap().end()) {
         if (RefPtr existingAdapter = results->value.get())
             return existingAdapter.releaseNonNull();
     }
 
-    Ref newAdapter = adoptRef(*new SharedAudioDestinationAdapter(numberOfOutputChannels, sampleRate, WTFMove(ensureFunction)));
+    Ref newAdapter = adoptRef(*new SharedAudioDestinationAdapter(options, WTFMove(ensureFunction)));
     auto weakAdapter = ThreadSafeWeakPtr<SharedAudioDestinationAdapter> { newAdapter.get() };
     sharedMap().set(key, WTFMove(weakAdapter));
     return newAdapter;
 }
 
-SharedAudioDestinationAdapter::SharedAudioDestinationAdapter(unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&& ensureFunction)
-    : m_numberOfOutputChannels { numberOfOutputChannels }
-    , m_sampleRate { sampleRate }
-    , m_destination { ensureFunction(*this) }
-    , m_workBus { AudioBus::create(numberOfOutputChannels, AudioUtilities::renderQuantumSize).releaseNonNull() }
+SharedAudioDestinationAdapter::SharedAudioDestinationAdapter(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
+    : m_numberOfOutputChannels { options.numberOfOutputChannels }
+    , m_sampleRate { options.sampleRate }
+    , m_destination { ensureFunction({ *this, options.inputDeviceId, options.numberOfInputChannels, options.numberOfOutputChannels, options.sampleRate
+#if PLATFORM(IOS_FAMILY)
+        , options.sceneIdentifier.isNull() ? emptyString() : options.sceneIdentifier
+#endif
+        }) }
+    , m_workBus { AudioBus::create(options.numberOfOutputChannels, AudioUtilities::renderQuantumSize) }
+    , m_ensureFunction { WTFMove(ensureFunction) }
 {
 }
 
 SharedAudioDestinationAdapter::~SharedAudioDestinationAdapter()
 {
-    auto key = std::make_tuple(m_numberOfOutputChannels, m_sampleRate);
+    auto key = std::make_tuple(m_numberOfOutputChannels, m_sampleRate
+#if PLATFORM(IOS_FAMILY)
+        , m_sceneIdentifier
+#endif
+        );
     sharedMap().remove(key);
-    protectedDestination()->clearCallback();
+    m_destination->clearCallback();
 }
 
 void SharedAudioDestinationAdapter::addRenderer(SharedAudioDestination& renderer, CompletionHandler<void(bool)>&& completionHandler)
@@ -169,13 +195,13 @@ void SharedAudioDestinationAdapter::configureRenderThread(CompletionHandler<void
 
     if (shouldStart) {
         m_started = true;
-        protectedDestination()->start(nullptr, WTFMove(completionHandler));
+        m_destination->start(nullptr, WTFMove(completionHandler));
         return;
     }
 
     if (shouldStop) {
         m_started = false;
-        protectedDestination()->stop(WTFMove(completionHandler));
+        m_destination->stop(WTFMove(completionHandler));
         return;
     }
 
@@ -191,7 +217,7 @@ void SharedAudioDestinationAdapter::configureRenderThread(CompletionHandler<void
 }
 
 
-void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestinationAdapter::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (m_renderLock.tryLock()) {
         Locker locker { AdoptLock, m_renderLock };
@@ -210,25 +236,24 @@ void SharedAudioDestinationAdapter::render(AudioBus* sourceBus, AudioBus* destin
     for (RefPtr renderer : m_configuredRenderers) {
         if (isFirstRenderer) {
             // The first renderer should render directly to destinationBus.
-            renderer->sharedRender(sourceBus, destinationBus, numberOfFrames, outputPosition);
+            renderer->sharedRender(destinationBus, numberOfFrames, outputPosition);
             isFirstRenderer = false;
             continue;
         }
         // Subsequent renderers should render to the m_workBus, which will
         // then be summed to the destinationBus.
-        Ref protectedWorkBus = this->protectedWorkBus();
-        renderer->sharedRender(sourceBus, protectedWorkBus.ptr(), numberOfFrames, outputPosition);
-        destinationBus->sumFrom(protectedWorkBus);
+        renderer->sharedRender(m_workBus, numberOfFrames, outputPosition);
+        destinationBus.sumFrom(m_workBus);
     }
 }
-Ref<SharedAudioDestination> SharedAudioDestination::create(AudioIOCallback& callback, unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&& ensureFunction)
+Ref<SharedAudioDestination> SharedAudioDestination::create(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
 {
-    return adoptRef(*new SharedAudioDestination(callback, numberOfOutputChannels, sampleRate, WTFMove(ensureFunction)));
+    return adoptRef(*new SharedAudioDestination(options, WTFMove(ensureFunction)));
 }
 
-SharedAudioDestination::SharedAudioDestination(AudioIOCallback& callback, unsigned numberOfOutputChannels, float sampleRate, AudioDestinationCreationFunction&& ensureFunction)
-    : AudioDestination(callback, sampleRate)
-    , m_outputAdapter(SharedAudioDestinationAdapter::ensureAdapter(numberOfOutputChannels, sampleRate, WTFMove(ensureFunction)))
+SharedAudioDestination::SharedAudioDestination(const CreationOptions& options, AudioDestinationCreationFunction&& ensureFunction)
+    : AudioDestination(options)
+    , m_outputAdapter(SharedAudioDestinationAdapter::ensureAdapter(options, WTFMove(ensureFunction)))
 {
 }
 
@@ -286,25 +311,72 @@ void SharedAudioDestination::setIsPlaying(bool isPlaying)
     }
 }
 
-void SharedAudioDestination::sharedRender(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void SharedAudioDestination::sharedRender(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     if (!m_dispatchToRenderThreadLock.tryLock()) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     Locker locker { AdoptLock, m_dispatchToRenderThreadLock };
     if (!m_dispatchToRenderThread)
-        callRenderCallback(sourceBus, destinationBus, numberOfFrames, outputPosition);
+        callRenderCallback(destinationBus, numberOfFrames, outputPosition);
     else {
         BinarySemaphore semaphore;
-        m_dispatchToRenderThread([protectedThis = Ref { *this }, sourceBus = RefPtr { sourceBus }, destinationBus = RefPtr { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
-            protectedThis->callRenderCallback(sourceBus.get(), destinationBus.get(), numberOfFrames, outputPosition);
+        m_dispatchToRenderThread([protectedThis = Ref { *this }, destinationBus = Ref { destinationBus }, numberOfFrames, outputPosition, &semaphore]() mutable {
+            protectedThis->callRenderCallback(destinationBus, numberOfFrames, outputPosition);
             semaphore.signal();
         });
         semaphore.wait();
     }
 }
+
+#if PLATFORM(IOS_FAMILY)
+class NullAudioIOCallback final : public AudioIOCallback {
+public:
+    static NullAudioIOCallback& singleton()
+    {
+        static NeverDestroyed<NullAudioIOCallback> callback;
+        return callback.get();
+    }
+private:
+    void render(AudioBus&, size_t, const AudioIOPosition&) final { }
+    void isPlayingDidChange() final { }
+};
+
+void SharedAudioDestination::setSceneIdentifier(const String& identifier)
+{
+    if (protectedOutputAdapter()->sceneIdentifier() == identifier)
+        return;
+
+    // We need to re-create the outputAdapter when the sceneIdentifier
+    // changes, as the adapter may be shared with other destinations
+    // whose sceneIdentifier is _not_ changing.
+    auto ensureFunction = protectedOutputAdapter()->takeEnsureFunction();
+    ASSERT(ensureFunction);
+    if (!ensureFunction)
+        return;
+
+    bool wasPlaying = isPlaying();
+
+    if (wasPlaying)
+        protectedOutputAdapter()->removeRenderer(*this, [] (bool) { });
+
+    m_outputAdapter = SharedAudioDestinationAdapter::ensureAdapter({
+        NullAudioIOCallback::singleton(),
+        inputDeviceId(),
+        numberOfInputChannels(),
+        numberOfOutputChannels(),
+        sampleRate(),
+#if PLATFORM(IOS_FAMILY)
+        identifier,
+#endif
+    }, WTFMove(ensureFunction));
+
+    if (wasPlaying)
+        protectedOutputAdapter()->addRenderer(*this, [] (bool) { });
+}
+#endif
 
 Ref<SharedAudioDestinationAdapter> SharedAudioDestination::protectedOutputAdapter() const
 {

@@ -67,7 +67,7 @@ static inline const char* pas_heap_kind_get_string(pas_heap_kind kind)
     case pas_large_expendable_heap_kind:
         return "large_expendable_heap";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <memory>
 #include <wtf/EmbeddedFixedVector.h>
 #include <wtf/MallocCommon.h>
 
@@ -34,7 +35,6 @@ template<typename T, typename Malloc>
 class FixedVector {
     WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
 public:
-
     using Storage = EmbeddedFixedVector<T, Malloc>;
     using Self = FixedVector<T, Malloc>;
     using value_type = typename Storage::value_type;
@@ -56,13 +56,13 @@ public:
     FixedVector(FixedVector&& other) = default;
 
     FixedVector(std::initializer_list<T> initializerList)
-        : m_storage(initializerList.size() ? Storage::create(initializerList.size()).moveToUniquePtr() : nullptr)
+        : m_storage(initializerList.size() ? Storage::create(initializerList).moveToUniquePtr() : nullptr)
     {
-        size_t index = 0;
-        for (const auto& element : initializerList) {
-            m_storage->at(index) = element;
-            index++;
         }
+
+    template<typename U, size_t Extent> FixedVector(std::span<U, Extent> span)
+        : m_storage(span.empty() ? nullptr : Storage::create(span).moveToUniquePtr())
+    {
     }
 
     template<typename InputIterator> FixedVector(InputIterator begin, InputIterator end)
@@ -94,33 +94,33 @@ public:
         fill(value);
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
         : m_storage(other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr())
     { }
 
     // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
     // should probably go through the explicit constructor.
-    template<size_t inlineCapacity, typename OverflowHandler>
-    FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
     {
         m_storage = other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr();
         return *this;
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    explicit FixedVector(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    explicit FixedVector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        auto target = WTFMove(other);
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
     }
 
     // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
     // should probably go through the explicit constructor.
-    template<size_t inlineCapacity, typename OverflowHandler>
-    FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        auto target = WTFMove(other);
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
         return *this;
     }
@@ -134,7 +134,20 @@ public:
     template<std::invocable<size_t> Generator>
     static FixedVector createWithSizeFromGenerator(size_t size, NOESCAPE Generator&& generator)
     {
-        return Self { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
+        return Self { size ? Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
+    }
+
+    template<std::invocable<size_t> FailableGenerator>
+    static FixedVector createWithSizeFromFailableGenerator(size_t size, NOESCAPE FailableGenerator&& generator)
+    {
+        return Self { size ? Storage::createWithSizeFromFailableGenerator(size, std::forward<FailableGenerator>(generator)) : std::unique_ptr<Storage> { nullptr } };
+    }
+
+    template<typename SizedRange, typename Mapper>
+    static FixedVector map(SizedRange&& range, NOESCAPE Mapper&& mapper)
+    {
+        auto size = std::size(range);
+        return Self { size ? Storage::map(size, std::forward<SizedRange>(range), std::forward<Mapper>(mapper)).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
     }
 
     size_t size() const { return m_storage ? m_storage->size() : 0; }
@@ -184,9 +197,12 @@ public:
         return *m_storage == *other.m_storage;
     }
 
-    template<typename U> bool contains(const U&) const;
-    template<typename U> size_t find(const U&) const;
-    template<typename MatchFunction> size_t findIf(const MatchFunction&) const;
+    bool contains(const auto&) const;
+    bool containsIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
+    size_t find(const auto&) const;
+    size_t findIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
+    size_t reverseFind(const auto&) const;
+    size_t reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto&) const;
 
     void swap(Self& other)
     {
@@ -223,15 +239,19 @@ private:
 static_assert(sizeof(FixedVector<int>) == sizeof(int*));
 
 template<typename T, typename Malloc>
-template<typename U>
-bool FixedVector<T, Malloc>::contains(const U& value) const
+bool FixedVector<T, Malloc>::containsIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const
+{
+    return findIf(matches) != notFound;
+}
+
+template<typename T, typename Malloc>
+bool FixedVector<T, Malloc>::contains(const auto& value) const
 {
     return find(value) != notFound;
 }
 
 template<typename T, typename Malloc>
-template<typename MatchFunction>
-size_t FixedVector<T, Malloc>::findIf(const MatchFunction& matches) const
+size_t FixedVector<T, Malloc>::findIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const
 {
     for (size_t i = 0; i < size(); ++i) {
         if (matches(at(i)))
@@ -241,10 +261,28 @@ size_t FixedVector<T, Malloc>::findIf(const MatchFunction& matches) const
 }
 
 template<typename T, typename Malloc>
-template<typename U>
-size_t FixedVector<T, Malloc>::find(const U& value) const
+size_t FixedVector<T, Malloc>::find(const auto& value) const
 {
     return findIf([&](auto& item) {
+        return item == value;
+    });
+}
+
+template<typename T, typename Malloc>
+size_t FixedVector<T, Malloc>::reverseFindIf(NOESCAPE const Invocable<bool(const T&)> auto& matches) const
+{
+    for (size_t i = 1; i <= size(); ++i) {
+        const size_t index = size() - i;
+        if (matches(at(index)))
+            return index;
+    }
+    return notFound;
+}
+
+template<typename T, typename Malloc>
+size_t FixedVector<T, Malloc>::reverseFind(const auto& value) const
+{
+    return reverseFindIf([&](auto& item) {
         return item == value;
     });
 }
@@ -255,18 +293,10 @@ inline void swap(FixedVector<T, Malloc>& a, FixedVector<T, Malloc>& b)
     a.swap(b);
 }
 
-template<typename T, typename MapFunction, typename Malloc, typename ReturnType = typename std::invoke_result<MapFunction, const T&>::type>
-FixedVector<ReturnType, Malloc> map(const FixedVector<T, Malloc>& source, MapFunction&& mapFunction)
+template<typename T, typename Mapper, typename Malloc, typename ReturnType = typename std::invoke_result<Mapper, const T&>::type>
+FixedVector<ReturnType, Malloc> map(const FixedVector<T, Malloc>& source, Mapper&& mapper)
 {
-    FixedVector<ReturnType, Malloc> result(source.size());
-
-    size_t resultIndex = 0;
-    for (const auto& item : source) {
-        result[resultIndex] = mapFunction(item);
-        resultIndex++;
-    }
-
-    return result;
+    return FixedVector<ReturnType, Malloc>::map(source, std::forward<Mapper>(mapper));
 }
 
 } // namespace WTF

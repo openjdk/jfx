@@ -78,17 +78,15 @@ PlatformDisplay* PlatformDisplay::sharedDisplayIfExists()
 }
 #endif
 
-static UncheckedKeyHashSet<PlatformDisplay*>& eglDisplays()
+static HashSet<PlatformDisplay*>& eglDisplays()
 {
-    static NeverDestroyed<UncheckedKeyHashSet<PlatformDisplay*>> displays;
+    static NeverDestroyed<HashSet<PlatformDisplay*>> displays;
     return displays;
 }
 
-PlatformDisplay::PlatformDisplay(std::unique_ptr<GLDisplay>&& glDisplay)
+PlatformDisplay::PlatformDisplay(Ref<GLDisplay>&& glDisplay)
     : m_eglDisplay(WTFMove(glDisplay))
 {
-    RELEASE_ASSERT(m_eglDisplay);
-
     eglDisplays().add(this);
 
 #if !PLATFORM(WIN)
@@ -133,9 +131,6 @@ void PlatformDisplay::clearGLContexts()
 #endif
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     m_gstGLContext = nullptr;
-#endif
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
-    clearANGLESharingGLContext();
 #endif
     m_sharingGLContext = nullptr;
 }

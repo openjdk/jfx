@@ -2175,6 +2175,10 @@ static msegmentptr segment_holding(mstate m, char* addr) {
 /* Return true if segment contains a segment link */
 static int has_segment_link(mstate m, msegmentptr ss) {
   msegmentptr sp = &m->seg;
+#ifdef GSTREAMER_LITE
+  if (ss == NULL)
+    return 0;
+#endif // GSTREAMER_LITE
   for (;;) {
     if ((char*)sp >= ss->base && (char*)sp < ss->base + ss->size)
       return 1;
@@ -3373,10 +3377,18 @@ static void* prepend_alloc(mstate m, char* newbase, char* oldbase,
 
 
 /* Add a segment to hold a new noncontiguous region */
+#ifdef GSTREAMER_LITE
+static int add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
+#else // GSTREAMER_LITE
 static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
+#endif // GSTREAMER_LITE
   /* Determine locations and sizes of segment, fenceposts, old top */
   char* old_top = (char*)m->top;
   msegmentptr oldsp = segment_holding(m, old_top);
+#ifdef GSTREAMER_LITE
+  if (oldsp == NULL)
+    return 0;
+#endif // GSTREAMER_LITE
   char* old_end = oldsp->base + oldsp->size;
   size_t ssize = pad_request(sizeof(struct malloc_segment));
   char* rawsp = old_end - (ssize + FOUR_SIZE_T_SIZES + CHUNK_ALIGN_MASK);
@@ -3388,6 +3400,7 @@ static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
   mchunkptr tnext = chunk_plus_offset(sp, ssize);
   mchunkptr p = tnext;
   int nfences = 0;
+  (void)nfences; // Suppress unused variable warning
 
   /* reset top to new space */
   init_top(m, (mchunkptr)tbase, tsize - TOP_FOOT_SIZE);
@@ -3423,6 +3436,10 @@ static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
   }
 
   check_top_chunk(m, m->top);
+
+#ifdef GSTREAMER_LITE
+  return 1;
+#endif // GSTREAMER_LITE
 }
 
 /* -------------------------- System allocation -------------------------- */
@@ -3599,7 +3616,14 @@ static void* sys_alloc(mstate m, size_t nb) {
           return prepend_alloc(m, tbase, oldbase, nb);
         }
         else
+#ifdef GSTREAMER_LITE
+          if (add_segment(m, tbase, tsize, mmap_flag) == 0) {
+            MALLOC_FAILURE_ACTION;
+            return 0;
+          }
+#else // GSTREAMER_LITE
           add_segment(m, tbase, tsize, mmap_flag);
+#endif // GSTREAMER_LITE
       }
     }
 
@@ -3673,6 +3697,10 @@ static int sys_trim(mstate m, size_t pad) {
       size_t extra = ((m->topsize - pad + (unit - SIZE_T_ONE)) / unit -
                       SIZE_T_ONE) * unit;
       msegmentptr sp = segment_holding(m, (char*)m->top);
+#ifdef GSTREAMER_LITE
+      if (sp == NULL)
+        return 0;
+#endif // GSTREAMER_LITE
 
       if (!is_extern_segment(sp)) {
         if (is_mmapped_segment(sp)) {

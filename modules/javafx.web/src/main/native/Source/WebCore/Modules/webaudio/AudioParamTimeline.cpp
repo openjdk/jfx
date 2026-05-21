@@ -25,12 +25,12 @@
  */
 
 #include "config.h"
+#include "AudioParamTimeline.h"
 
 #if ENABLE(WEB_AUDIO)
 
-#include "AudioParamTimeline.h"
-
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "FloatConversion.h"
 #include "VectorMath.h"
 #include <algorithm>
@@ -211,7 +211,7 @@ void AudioParamTimeline::cancelScheduledValues(Seconds cancelTime)
     // Remove all events starting at cancelTime.
     for (unsigned i = 0; i < m_events.size(); ++i) {
         if (isAfter(m_events[i], cancelTime)) {
-            m_events.remove(i, m_events.size() - i);
+            m_events.removeAt(i, m_events.size() - i);
             break;
         }
     }
@@ -325,7 +325,7 @@ ExceptionOr<void> AudioParamTimeline::cancelAndHoldAtTime(Seconds cancelTime)
 
 void AudioParamTimeline::removeCancelledEvents(size_t firstEventToRemove)
 {
-    m_events.remove(firstEventToRemove, m_events.size() - firstEventToRemove);
+    m_events.removeAt(firstEventToRemove, m_events.size() - firstEventToRemove);
 }
 
 void AudioParamTimeline::removeOldEvents(size_t eventCount)
@@ -335,7 +335,7 @@ void AudioParamTimeline::removeOldEvents(size_t eventCount)
         return;
 
     // Always leave at least one event in the list.
-    m_events.remove(0, std::min(eventCount, m_events.size() - 1));
+    m_events.removeAt(0, std::min(eventCount, m_events.size() - 1));
 }
 
 std::optional<float> AudioParamTimeline::valueForContextTime(BaseAudioContext& context, float defaultValue, float minValue, float maxValue)
@@ -836,9 +836,16 @@ float AudioParamTimeline::linearRampAtTime(Seconds t, float value1, Seconds time
     return value1 + (value2 - value1) * (t - time1).value() / (time2 - time1).value();
 }
 
+// See : https://webaudio.github.io/web-audio-api/#dom-audioparam-exponentialramptovalueattime
 float AudioParamTimeline::exponentialRampAtTime(Seconds t, float value1, Seconds time1, float value2, Seconds time2)
 {
-    return value1 * pow(value2 / value1, (t - time1).value() / (time2 - time1).value());
+    ASSERT(std::isfinite(value1));
+    ASSERT(std::isfinite(value2));
+    ASSERT(time2 > time1);
+
+    return (!value1 || (value2 && std::signbit(value1) != std::signbit(value2)))
+        ? value1
+        : value1 * std::pow(value2 / value1, (t - time1).value() / (time2 - time1).value());
 }
 
 float AudioParamTimeline::valueCurveAtTime(Seconds t, Seconds time1, Seconds duration, std::span<const float> curveData, size_t curveLength)

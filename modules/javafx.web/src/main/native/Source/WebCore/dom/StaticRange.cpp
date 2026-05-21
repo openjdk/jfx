@@ -26,7 +26,7 @@
 #include "config.h"
 #include "StaticRange.h"
 
-#include "ContainerNode.h"
+#include "ContainerNodeInlines.h"
 #include "JSNode.h"
 #include "Text.h"
 #include "WebCoreOpaqueRootInlines.h"

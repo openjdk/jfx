@@ -75,8 +75,8 @@ std::optional<ScrollingStateTree> ScrollingStateTree::createAfterReconstruction(
     ScrollingStateTree tree(hasNewRootStateNode, hasChangedProperties, WTFMove(rootStateNode));
 
     bool allIdentifiersUnique { true };
-    if (tree.m_rootStateNode) {
-        tree.m_rootStateNode->traverse([&] (auto& node) {
+    if (RefPtr rootStateNode = tree.m_rootStateNode) {
+        rootStateNode->traverse([&] (auto& node) {
             auto addResult = tree.m_stateNodeMap.add(node.scrollingNodeID(), node);
             if (!addResult.isNewEntry)
                 allIdentifiersUnique = false;
@@ -101,9 +101,9 @@ void ScrollingStateTree::attachDeserializedNodes()
     // into a ScrollingStateTree then move to a std::unique_ptr<ScrollingStateTree> and if we
     // did this in the constructor, createAfterReconstruction would be setting nodes' tree pointers
     // to the wrong ScrollingStateTree.
-    if (m_rootStateNode) {
-        m_rootStateNode->attachAfterDeserialization(*this);
-        ASSERT(m_rootStateNode->parentPointersAreCorrect());
+    if (RefPtr rootStateNode = m_rootStateNode) {
+        rootStateNode->attachAfterDeserialization(*this);
+        ASSERT(rootStateNode->parentPointersAreCorrect());
     }
 }
 
@@ -224,7 +224,7 @@ std::optional<ScrollingNodeID> ScrollingStateTree::insertNode(ScrollingNodeType 
     if (!parentID) {
         RELEASE_ASSERT(nodeType == ScrollingNodeType::MainFrame || nodeType == ScrollingNodeType::Subframe);
         ASSERT(!childIndex || childIndex == notFound);
-        // If we're resetting the root node, we should clear the UncheckedKeyHashMap and destroy the current children.
+        // If we're resetting the root node, we should clear the HashMap and destroy the current children.
         clear();
 
         setRootStateNode(ScrollingStateFrameScrollingNode::create(*this, nodeType, newNodeID));
@@ -347,8 +347,8 @@ std::unique_ptr<ScrollingStateTree> ScrollingStateTree::commit(LayerRepresentati
     auto treeStateClone = makeUnique<ScrollingStateTree>();
     treeStateClone->setPreferredLayerRepresentation(preferredLayerRepresentation);
 
-    if (m_rootStateNode)
-        treeStateClone->setRootStateNode(downcast<ScrollingStateFrameScrollingNode>(m_rootStateNode->cloneAndReset(*treeStateClone)));
+    if (RefPtr rootStateNode = m_rootStateNode)
+        treeStateClone->setRootStateNode(downcast<ScrollingStateFrameScrollingNode>(rootStateNode->cloneAndReset(*treeStateClone)));
 
     // Now the clone tree has changed properties, and the original tree does not.
     treeStateClone->m_hasChangedProperties = std::exchange(m_hasChangedProperties, false);
@@ -367,11 +367,12 @@ void ScrollingStateTree::traverse(const ScrollingStateNode& node, NOESCAPE const
 
 bool ScrollingStateTree::isValid() const
 {
-    if (!m_rootStateNode)
+    RefPtr rootStateNode = m_rootStateNode;
+    if (!rootStateNode)
         return true;
 
     bool isValid = true;
-    traverse(*m_rootStateNode, [&](const ScrollingStateNode& node) {
+    traverse(*rootStateNode, [&](const ScrollingStateNode& node) {
         switch (node.nodeType()) {
         case ScrollingNodeType::MainFrame:
             break;
@@ -437,7 +438,7 @@ void ScrollingStateTree::removeNodeAndAllDescendants(ScrollingStateNode& node)
             return child.ptr() == &node;
         });
         if (index != notFound)
-            children.remove(index);
+            children.removeAt(index);
         else
             ASSERT_NOT_REACHED();
         }

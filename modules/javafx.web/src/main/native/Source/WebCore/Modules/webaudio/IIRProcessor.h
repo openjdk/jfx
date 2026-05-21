@@ -1,6 +1,6 @@
 /*
  * Copyright 2016 The Chromium Authors. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,12 +35,13 @@ class IIRDSPKernel;
 
 class IIRProcessor final : public AudioDSPKernelProcessor {
     WTF_MAKE_TZONE_ALLOCATED(IIRProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IIRProcessor);
 public:
     IIRProcessor(float sampleRate, unsigned numberOfChannels, const Vector<double>& feedforward, const Vector<double>& feedback, bool isFilterStable);
     ~IIRProcessor();
 
     // AudioDSPKernelProcessor.
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) final;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) final;
     std::unique_ptr<AudioDSPKernel> createKernel() final;
 
     // Get the magnitude and phase response of the filter at the given set of frequencies (in Hz). The phase response is in radians.

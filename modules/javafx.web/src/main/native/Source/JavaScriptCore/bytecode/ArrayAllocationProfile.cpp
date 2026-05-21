@@ -58,7 +58,7 @@ void ArrayAllocationProfile::updateProfile()
     IndexingTypeAndVectorLength current = storage.type();
     if (!lastArray)
         return;
-    if (LIKELY(Options::useArrayAllocationProfiling())) {
+    if (Options::useArrayAllocationProfiling()) [[likely]] {
         // The basic model here is that we will upgrade ourselves to whatever the CoW version of lastArray is except ArrayStorage since we don't have CoW ArrayStorage.
         IndexingType indexingType = leastUpperBoundOfIndexingTypes(current.indexingType() & IndexingTypeMask, lastArray->indexingType());
         if (isCopyOnWrite(current.indexingType())) {

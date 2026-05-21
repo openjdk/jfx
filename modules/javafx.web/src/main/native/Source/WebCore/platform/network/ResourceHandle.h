@@ -104,6 +104,8 @@ public:
     void receivedRequestToPerformDefaultHandling(const AuthenticationChallenge&) override;
     void receivedChallengeRejection(const AuthenticationChallenge&) override;
 
+    virtual bool isBlobResourceHandle() const { return false; }
+
 #if PLATFORM(COCOA)
     bool tryHandlePasswordBasedAuthentication(const AuthenticationChallenge&);
 #endif

@@ -65,10 +65,11 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if USE(AUDIO_SESSION)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
 #endif
-#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    , m_shouldDeactivateAudioSession(PlatformMediaSessionManager::shouldDeactivateAudioSession())
-#endif
 {
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
+    if (RefPtr page = settings.page().get())
+        m_shouldDeactivateAudioSession = page->mediaSessionManager().shouldDeactivateAudioSession();
+#endif
 }
 
 void InternalSettings::Backup::restoreTo(Settings& settings)
@@ -120,7 +121,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #endif
 
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    PlatformMediaSessionManager::setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
+    if (RefPtr page = settings.page().get())
+        page->mediaSessionManager().setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -535,8 +537,9 @@ ExceptionOr<void>  InternalSettings::setShouldDeactivateAudioSession(bool should
 {
     if (!m_page)
         return Exception { ExceptionCode::InvalidAccessError };
+
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
-    PlatformMediaSessionManager::setShouldDeactivateAudioSession(should);
+    m_page->mediaSessionManager().setShouldDeactivateAudioSession(should);
 #else
     UNUSED_PARAM(should);
 #endif

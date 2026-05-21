@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,21 @@ import javafx.scene.layout.Pane;
  */
 public class DemoPage {
     private final String title;
+    private final boolean highlight;
     private final Supplier<Pane> generator;
 
-    public DemoPage(String title, Supplier<Pane> generator) {
+    public DemoPage(String title, boolean highlight, Supplier<Pane> generator) {
         this.title = title;
+        this.highlight = highlight;
         this.generator = generator;
+    }
+
+    public DemoPage(String title, Supplier<Pane> generator) {
+        this(title, false, generator);
+    }
+
+    public boolean isHighlight() {
+        return highlight;
     }
 
     public Pane createPane() {

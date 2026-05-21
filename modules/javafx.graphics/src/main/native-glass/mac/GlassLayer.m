@@ -44,6 +44,7 @@ static NSArray *allModes = nil;
     andClientContext:(NSObject*)clCtx
          mtlQueuePtr:(long)mtlCommandQueuePtr
       withHiDPIAware:(BOOL)HiDPIAware
+      isVsyncEnabled:(BOOL)isVsyncEnabled
         withIsSwPipe:(BOOL)isSwPipe
          useMTLForSW:(BOOL)mtlForSW
 {
@@ -54,6 +55,7 @@ static NSArray *allModes = nil;
         if (mtlCommandQueuePtr != 0l || mtlForSW) { // MTL
             LOG("GlassLayer initGlassLayer using MTLLayer");
             GlassLayerMTL* mtlLayer = [[GlassLayerMTL alloc] init:mtlCommandQueuePtr
+                                                   isVsyncEnabled:isVsyncEnabled
                                                      withIsSwPipe:isSwPipe];
             self->painterOffScreen = [mtlLayer getPainterOffscreen];
             self->glassOffScreen = nil;

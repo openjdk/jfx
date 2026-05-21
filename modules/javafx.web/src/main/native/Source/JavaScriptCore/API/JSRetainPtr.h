@@ -171,8 +171,3 @@ template<typename T, typename U> inline bool operator==(const JSRetainPtr<T>& a,
 {
     return a.get() == b;
 }
-
-template<typename T, typename U> inline bool operator==(T* a, const JSRetainPtr<U>& b)
-{
-    return a == b.get();
-}

@@ -25,15 +25,22 @@
 
 #pragma once
 
-#include "FetchOptions.h"
 #include <wtf/text/WTFString.h>
+
+namespace WTF {
+
+class URL;
+
+} // namespace WTF
+
+using WTF::URL;
 
 namespace WTF::Persistence {
 
 class Decoder;
 class Encoder;
 
-}
+} // namespace WTF::Persistence
 
 namespace WebCore {
 
@@ -43,6 +50,8 @@ class ScriptExecutionContext;
 
 struct ReportingClient;
 class SecurityOriginData;
+
+enum class FetchOptionsDestination : uint8_t;
 
 // https://html.spec.whatwg.org/multipage/origin.html#embedder-policy-value
 enum class CrossOriginEmbedderPolicyValue : bool {
@@ -71,6 +80,6 @@ enum class COEPDisposition : bool { Reporting , Enforce };
 
 WEBCORE_EXPORT CrossOriginEmbedderPolicy obtainCrossOriginEmbedderPolicy(const ResourceResponse&, const ScriptExecutionContext*);
 WEBCORE_EXPORT void sendCOEPInheritenceViolation(ReportingClient&, const URL& embedderURL, const String& endpoint, COEPDisposition, const String& type, const URL& blockedURL);
-WEBCORE_EXPORT void sendCOEPCORPViolation(ReportingClient&, const URL& embedderURL, const String& endpoint, COEPDisposition, FetchOptions::Destination, const URL& blockedURL);
+WEBCORE_EXPORT void sendCOEPCORPViolation(ReportingClient&, const URL& embedderURL, const String& endpoint, COEPDisposition, FetchOptionsDestination, const URL& blockedURL);
 
 } // namespace WebCore

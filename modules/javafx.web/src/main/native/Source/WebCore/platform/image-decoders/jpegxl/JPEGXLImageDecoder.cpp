@@ -271,6 +271,8 @@ void JPEGXLImageDecoder::decode(Query query, size_t frameIndex, bool allDataRece
         return;
     }
 
+    ASSERT(!failed());
+
     size_t remainingDataSize = JxlDecoderReleaseInput(m_decoder.get());
     m_readOffset = dataSize - remainingDataSize;
 }
@@ -300,7 +302,8 @@ JxlDecoderStatus JPEGXLImageDecoder::processInput(Query query)
             if (query == Query::Size) {
                 // setSize() must be called only if the query is Query::Size,
                 // otherwise this would roll back the encoded data status from completed.
-                setSize(IntSize(m_basicInfo->xsize, m_basicInfo->ysize));
+                if (!setSize(IntSize(m_basicInfo->xsize, m_basicInfo->ysize)))
+                    return JXL_DEC_ERROR;
                 return status;
             }
 
@@ -433,18 +436,18 @@ LCMSProfilePtr JPEGXLImageDecoder::tryDecodeICCColorProfile()
         return nullptr;
 
     Vector<uint8_t> profileData(profileSize);
-    if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), &s_pixelFormat, JXL_COLOR_PROFILE_TARGET_DATA, profileData.data(), profileData.size()) != JXL_DEC_SUCCESS)
+    if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), &s_pixelFormat, JXL_COLOR_PROFILE_TARGET_DATA, profileData.mutableSpan().data(), profileData.size()) != JXL_DEC_SUCCESS)
         return nullptr;
 #else
     if (JxlDecoderGetICCProfileSize(m_decoder.get(), JXL_COLOR_PROFILE_TARGET_DATA, &profileSize) != JXL_DEC_SUCCESS)
         return nullptr;
 
     Vector<uint8_t> profileData(profileSize);
-    if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), JXL_COLOR_PROFILE_TARGET_DATA, profileData.data(), profileData.size()) != JXL_DEC_SUCCESS)
+    if (JxlDecoderGetColorAsICCProfile(m_decoder.get(), JXL_COLOR_PROFILE_TARGET_DATA, profileData.mutableSpan().data(), profileData.size()) != JXL_DEC_SUCCESS)
         return nullptr;
 #endif
 
-    return LCMSProfilePtr(cmsOpenProfileFromMem(profileData.data(), profileData.size()));
+    return LCMSProfilePtr(cmsOpenProfileFromMem(profileData.span().data(), profileData.size()));
 }
 
 void JPEGXLImageDecoder::maybePerformColorSpaceConversion(std::span<uint8_t> inputBuffer, std::span<uint8_t> outputBuffer, unsigned numberOfPixels)

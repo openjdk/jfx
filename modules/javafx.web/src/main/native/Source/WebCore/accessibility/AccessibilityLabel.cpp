@@ -33,16 +33,16 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityLabel::AccessibilityLabel(AXID axID, RenderObject& renderer)
-    : AccessibilityRenderObject(axID, renderer)
+AccessibilityLabel::AccessibilityLabel(AXID axID, RenderObject& renderer, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, renderer, cache)
 {
 }
 
 AccessibilityLabel::~AccessibilityLabel() = default;
 
-Ref<AccessibilityLabel> AccessibilityLabel::create(AXID axID, RenderObject& renderer)
+Ref<AccessibilityLabel> AccessibilityLabel::create(AXID axID, RenderObject& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityLabel(axID, renderer));
+    return adoptRef(*new AccessibilityLabel(axID, renderer, cache));
 }
 
 String AccessibilityLabel::stringValue() const
@@ -57,7 +57,7 @@ static bool childrenContainOnlyStaticText(const AccessibilityObject::Accessibili
     if (children.isEmpty())
         return false;
     for (const auto& child : children) {
-        if (child->roleValue() == AccessibilityRole::StaticText)
+        if (child->role() == AccessibilityRole::StaticText)
             continue;
         if (child->isGroup()) {
             if (!childrenContainOnlyStaticText(child->unignoredChildren()))

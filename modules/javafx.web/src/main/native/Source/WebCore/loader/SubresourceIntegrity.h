@@ -41,7 +41,7 @@ std::optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata
 
 inline bool matchIntegrityMetadata(const CachedResource& resource, const String& integrityMetadata)
 {
-    if (LIKELY(integrityMetadata.isEmpty() && !resource.isHashReportingNeeded()))
+    if (integrityMetadata.isEmpty() && !resource.isHashReportingNeeded()) [[likely]]
         return true;
     bool result = matchIntegrityMetadataSlow(resource, integrityMetadata);
     if (result)

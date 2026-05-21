@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ private:
     bool isClosed() const final;
     MediaTime duration() const final;
     PlatformTimeRanges buffered() const final;
-    Ref<TimeRanges> seekable() const final;
+    PlatformTimeRanges seekable() const final;
     bool isStreamingContent() const final;
     bool attachToElement(WeakPtr<HTMLMediaElement>&&) final;
     void detachFromElement() final;
@@ -53,10 +53,11 @@ private:
     void setAsSrcObject(bool) final;
     void memoryPressure() final;
     bool detachable() const final;
+    void setLogIdentifier(uint64_t) final;
 
     explicit MediaSourceInterfaceWorker(Ref<MediaSourceHandle>&&);
 
-    Ref<MediaSourceHandle> m_handle;
+    const Ref<MediaSourceHandle> m_handle;
     RefPtr<MediaSourcePrivateClient> m_client;
 };
 

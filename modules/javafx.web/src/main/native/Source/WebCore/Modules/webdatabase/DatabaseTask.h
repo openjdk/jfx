@@ -28,16 +28,17 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Database;
 class SQLTransaction;
+template<typename> class ExceptionOr;
 
 // Can be used to wait until DatabaseTask is completed.
 // Has to be passed into DatabaseTask::create to be associated with the task.

@@ -27,7 +27,7 @@
 #include "MediaCapabilities.h"
 
 #include "ContentType.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaCapabilitiesDecodingInfo.h"
@@ -183,10 +183,14 @@ static void gatherDecodingInfo(Document& document, MediaDecodingConfiguration&& 
     configuration.canExposeVP9 = document.settings().vp9DecoderEnabled();
 #endif
 
+    RefPtr protectedPage = document.page();
+    if (protectedPage)
+        configuration.pageIdentifier = protectedPage->identifier();
+
 #if ENABLE(WEB_RTC)
     if (configuration.type == MediaDecodingType::WebRTC) {
-        if (auto* page = document.page())
-            page->webRTCProvider().createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
+        if (protectedPage)
+            protectedPage->webRTCProvider().createDecodingConfiguration(WTFMove(configuration), WTFMove(decodingCallback));
         return;
     }
 #endif

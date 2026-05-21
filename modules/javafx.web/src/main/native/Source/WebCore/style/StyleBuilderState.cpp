@@ -29,8 +29,10 @@
 
 #include "config.h"
 #include "StyleBuilderState.h"
+#include "StyleBuilderStateInlines.h"
 
 #include "CSSAppleColorFilterPropertyValue.h"
+#include "CSSCalcRandomCachingKey.h"
 #include "CSSCanvasValue.h"
 #include "CSSColorValue.h"
 #include "CSSCrossfadeValue.h"
@@ -44,10 +46,10 @@
 #include "CSSImageValue.h"
 #include "CSSNamedImageValue.h"
 #include "CSSPaintImageValue.h"
-#include "CalculationRandomKeyMap.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
+#include "ElementTraversal.h"
 #include "FontCache.h"
 #include "HTMLElement.h"
 #include "RenderStyleSetters.h"
@@ -75,9 +77,14 @@
 namespace WebCore {
 namespace Style {
 
-BuilderState::BuilderState(Builder& builder, RenderStyle& style, BuilderContext&& context)
-    : m_builder(builder)
-    , m_styleMap(*this)
+BuilderState::BuilderState(RenderStyle& style)
+    : m_styleMap(*this)
+    , m_style(style)
+{
+}
+
+BuilderState::BuilderState(RenderStyle& style, BuilderContext&& context)
+    : m_styleMap(*this)
     , m_style(style)
     , m_context(WTFMove(context))
     , m_cssToLengthConversionData(style, *this)
@@ -157,16 +164,6 @@ FilterOperations BuilderState::createAppleColorFilterOperations(const CSSValue& 
     return createAppleColorFilterOperations(filterValue->filter());
 }
 
-Color BuilderState::createStyleColor(const CSSValue& value, ForVisitedLink forVisitedLink) const
-{
-    if (!element() || !element()->isLink())
-        forVisitedLink = ForVisitedLink::No;
-
-    if (RefPtr color = dynamicDowncast<CSSColorValue>(value))
-        return toStyle(color->color(), *this, forVisitedLink);
-    return toStyle(CSS::Color { CSS::KeywordColor { value.valueID() } }, *this, forVisitedLink);
-}
-
 void BuilderState::registerContentAttribute(const AtomString& attributeLocalName)
 {
     if (style().pseudoElementType() == PseudoId::Before || style().pseudoElementType() == PseudoId::After)
@@ -236,11 +233,7 @@ void BuilderState::updateFontForZoomChange()
     if (m_style.usedZoom() == parentStyle().usedZoom() && m_style.textZoom() == parentStyle().textZoom())
         return;
 
-    const auto& childFont = m_style.fontDescription();
-    auto newFontDescription = childFont;
-    setFontSize(newFontDescription, childFont.specifiedSize());
-
-    m_style.setFontDescriptionWithoutUpdate(WTFMove(newFontDescription));
+    setFontDescriptionFontSize(m_style.fontDescription().specifiedSize());
 }
 
 void BuilderState::updateFontForGenericFamilyChange()
@@ -308,19 +301,84 @@ void BuilderState::setCurrentPropertyInvalidAtComputedValueTime()
     m_invalidAtComputedValueTimeProperties.set(cssPropertyID());
 }
 
-Ref<Calculation::RandomKeyMap> BuilderState::randomKeyMap(bool perElement) const
+void BuilderState::setUsesViewportUnits()
 {
-    if (perElement) {
+    m_style.setUsesViewportUnits();
+}
+
+void BuilderState::setUsesContainerUnits()
+{
+    m_style.setUsesContainerUnits();
+}
+
+double BuilderState::lookupCSSRandomBaseValue(const CSSCalc::RandomCachingKey& key, std::optional<CSS::Keyword::ElementShared> elementShared) const
+{
+    if (!elementShared)
+        return element()->lookupCSSRandomBaseValue(style().pseudoElementIdentifier(), key);
+
+    return document().lookupCSSRandomBaseValue(key);
+}
+
+// MARK: - Tree Counting Functions
+
+unsigned BuilderState::siblingCount()
+{
+    // https://drafts.csswg.org/css-values-5/#funcdef-sibling-count
+
         ASSERT(element());
 
-        std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier;
-        if (style().pseudoElementType() != PseudoId::None)
-            pseudoElementIdentifier = Style::PseudoElementIdentifier { style().pseudoElementType(), style().pseudoElementNameArgument() };
+    RefPtr parent = element()->parentElement();
+    if (!parent)
+        return 1;
 
-        return element()->randomKeyMap(pseudoElementIdentifier);
-    }
-    return document().randomKeyMap();
+    m_style.setUsesTreeCountingFunctions();
+    parent->setChildrenAffectedByBackwardPositionalRules();
+    parent->setChildrenAffectedByForwardPositionalRules();
+
+    unsigned count = 1;
+    for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))
+        ++count;
+    for (const auto* sibling = ElementTraversal::nextSibling(*element()); sibling; sibling = ElementTraversal::nextSibling(*sibling))
+        ++count;
+    return count;
 }
+
+unsigned BuilderState::siblingIndex()
+{
+    // https://drafts.csswg.org/css-values-5/#funcdef-sibling-index
+
+    ASSERT(element());
+
+    RefPtr parent = element()->parentElement();
+    if (!parent)
+        return 1;
+
+    m_style.setUsesTreeCountingFunctions();
+    parent->setChildrenAffectedByBackwardPositionalRules();
+    parent->setChildrenAffectedByForwardPositionalRules();
+
+    unsigned count = 1;
+    for (const auto* sibling = ElementTraversal::previousSibling(*element()); sibling; sibling = ElementTraversal::previousSibling(*sibling))
+        ++count;
+    return count;
+}
+
+void BuilderState::disableNativeAppearanceIfNeeded(CSSPropertyID propertyID, CascadeLevel cascadeLevel)
+{
+    auto shouldDisable = [&] {
+        if (cascadeLevel != CascadeLevel::Author)
+            return false;
+        if (!CSSProperty::disablesNativeAppearance(propertyID))
+            return false;
+        if (!applyPropertyToRegularStyle())
+            return false;
+        return element()->isDevolvableWidget() || RenderTheme::hasAppearanceForElementTypeFromUAStyle(*element());
+    };
+
+    if (shouldDisable())
+        style().setNativeAppearanceDisabled(true);
+}
+
 
 } // namespace Style
 } // namespace WebCore

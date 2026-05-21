@@ -140,7 +140,7 @@ CString Plan::signpostMessage(CompilationMode compilationMode, uint32_t function
 
 void Plan::beginCompilerSignpost(CompilationMode compilationMode, uint32_t functionIndexSpace) const
 {
-    if (UNLIKELY(Options::useCompilerSignpost())) {
+    if (Options::useCompilerSignpost()) [[unlikely]] {
         auto message = signpostMessage(compilationMode, functionIndexSpace);
         WTFBeginSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, message.data() ? message.data() : "(nullptr)");
     }
@@ -153,7 +153,7 @@ void Plan::beginCompilerSignpost(const Callee& callee) const
 
 void Plan::endCompilerSignpost(CompilationMode compilationMode, uint32_t functionIndexSpace) const
 {
-    if (UNLIKELY(Options::useCompilerSignpost())) {
+    if (Options::useCompilerSignpost()) [[unlikely]] {
         auto message = signpostMessage(compilationMode, functionIndexSpace);
         WTFEndSignpost(this, JSCJITCompiler, "%" PUBLIC_LOG_STRING, message.data() ? message.data() : "(nullptr)");
     }

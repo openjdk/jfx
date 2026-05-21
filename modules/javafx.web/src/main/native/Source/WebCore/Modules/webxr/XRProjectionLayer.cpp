@@ -55,9 +55,15 @@ void XRProjectionLayer::startFrame(PlatformXR::FrameData& data)
 
     auto& frameData = it->value;
     if (frameData->layerSetup && frameData->textureData) {
+        m_layerData = frameData;
         auto& textureData = frameData->textureData;
         m_backing->startFrame(frameData->renderingFrameIndex, WTFMove(textureData->colorTexture.handle), WTFMove(textureData->depthStencilBuffer.handle), WTFMove(frameData->layerSetup->completionSyncEvent), textureData->reusableTextureIndex);
     }
+}
+
+std::optional<PlatformXR::FrameData::LayerData> XRProjectionLayer::layerData() const
+{
+    return m_layerData;
 }
 
 PlatformXR::Device::Layer XRProjectionLayer::endFrame()

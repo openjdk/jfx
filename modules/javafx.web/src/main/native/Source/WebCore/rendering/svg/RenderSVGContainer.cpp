@@ -188,7 +188,15 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
             return true;
     }
 
-    // Spec: Only graphical elements can be targeted by the mouse, period.
+    // pointer-events=bounding-box makes it possible for containers to be direct targets.
+    if (style().pointerEvents() == PointerEvents::BoundingBox) {
+        if (!isObjectBoundingBoxValid())
+            return false;
+        if (objectBoundingBox().contains(localPoint)) {
+            updateHitTestResult(result, LayoutPoint(localPoint));
+            return true;
+        }
+    }
     // 16.4: "If there are no graphics elements whose relevant graphics content is under the pointer (i.e., there is no target element), the event is not dispatched."
     return false;
 }

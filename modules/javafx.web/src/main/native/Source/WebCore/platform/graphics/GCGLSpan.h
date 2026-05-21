@@ -44,7 +44,7 @@ struct GCGLSpanTuple {
                 RELEASE_ASSERT(((otherVectors.size() == size) && ...));
                 return size;
             }(dataVectors...))
-        , dataTuple { dataVectors.data()... }
+        , dataTuple { dataVectors.span().data()... }
     { }
 
     template<unsigned I>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "GPUBindGroupEntry.h"
 #include "GPUComputePipeline.h"
 #include "GPUDeviceLostInfo.h"
@@ -159,13 +160,13 @@ private:
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::GPUDevice; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    UniqueRef<LostPromise> m_lostPromise;
-    Ref<WebGPU::Device> m_backing;
-    Ref<GPUQueue> m_queue;
+    const UniqueRef<LostPromise> m_lostPromise;
+    const Ref<WebGPU::Device> m_backing;
+    const Ref<GPUQueue> m_queue;
     RefPtr<GPUPipelineLayout> m_autoPipelineLayout;
     WeakHashSet<GPUBuffer> m_buffersToUnmap;
 

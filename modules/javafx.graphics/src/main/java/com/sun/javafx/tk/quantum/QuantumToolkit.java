@@ -341,7 +341,7 @@ public final class QuantumToolkit extends Toolkit {
             setFxUserThread(user);
 
             // Glass screens were inited in Application.run(), assign adapters
-            assignScreensAdapters();
+            Screen.updateAdapterOrdinals();
             /*
              *  Glass Application instance is now valid - create the ResourceFactory
              *  on the render thread
@@ -758,15 +758,8 @@ public final class QuantumToolkit extends Toolkit {
         return screenAccessor;
     }
 
-    private static void assignScreensAdapters() {
-        GraphicsPipeline pipeline = GraphicsPipeline.getPipeline();
-        for (Screen screen : Screen.getScreens()) {
-            screen.setAdapterOrdinal(pipeline.getAdapterOrdinal(screen));
-        }
-    }
-
     private static void notifyScreenListener(TKScreenConfigurationListener listener) {
-        assignScreensAdapters();
+        Screen.updateAdapterOrdinals();
         listener.screenConfigurationChanged();
     }
 

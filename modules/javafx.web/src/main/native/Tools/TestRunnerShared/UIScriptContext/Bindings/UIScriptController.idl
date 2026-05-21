@@ -401,6 +401,7 @@ interface UIScriptController {
     undefined setWebViewEditable(boolean editable);
 
     readonly attribute object fixedContainerEdgeColors;
+    undefined cancelFixedColorExtensionFadeAnimations();
 
     undefined cookiesForDomain(DOMString domain, object callback);
 

@@ -178,7 +178,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             if (listView == null) return;
             listView.requestLayout();
         });
-        lh.addChangeListener(control.converterProperty(), e -> updateListViewItems());
+        lh.addChangeListener(control.converterProperty(), e -> {
+            listView.refresh();
+            updateDisplayNode();
+        });
         lh.addChangeListener(control.buttonCellProperty(), e -> {
             updateButtonCell();
             updateDisplayArea();
@@ -453,6 +456,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean updateDisplayText(ListCell<T> cell, T item, boolean empty) {
         if (empty) {
             if (cell == null) return true;
+
+            if (cell == buttonCell) {
+                final String promptText = comboBox.getPromptText();
+                if (comboBox.getValue() == null
+                        && promptText != null && !promptText.isEmpty()) {
+                    cell.setGraphic(null);
+                    cell.setText(promptText);
+                    return false;
+                }
+            }
+
             cell.setGraphic(null);
             cell.setText(null);
             return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,6 +161,12 @@ private:
     //components contain corresponding insets values.
     RECT m_insets;
 
+    struct {
+        bool entered = false;
+        bool tracking = false;
+        POINT dragStart = {};
+    } m_caption;
+
     static unsigned int sm_instanceCounter;
     static HHOOK sm_hCBTFilter;
     static LRESULT CALLBACK CBTFilter(int nCode, WPARAM wParam, LPARAM lParam);
@@ -189,6 +195,7 @@ private:
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
     bool HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
+    bool HandleCaptionMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
     void HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam);
     BOOL HandleNCHitTestEvent(SHORT, SHORT, LRESULT&);

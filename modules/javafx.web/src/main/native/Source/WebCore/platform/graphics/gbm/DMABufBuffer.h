@@ -63,9 +63,13 @@ public:
     const Attributes& attributes() const { return m_attributes; }
     std::optional<Attributes> takeAttributes();
 
-    enum class ColorSpace : uint8_t { BT601, BT709, BT2020, SMPTE240M };
+    enum class ColorSpace : uint8_t { Bt601, Bt709, Bt2020, Smpte240M };
     std::optional<ColorSpace> colorSpace() const { return m_colorSpace; }
     void setColorSpace(ColorSpace colorSpace) { m_colorSpace = colorSpace; }
+
+    enum class TransferFunction : uint8_t { Bt709, Pq };
+    std::optional<TransferFunction> transferFunction() const { return m_transferFunction; }
+    void setTransferFunction(TransferFunction transferFunction) { m_transferFunction = transferFunction; }
 
     CoordinatedPlatformLayerBuffer* buffer() const { return m_buffer.get(); }
     void setBuffer(std::unique_ptr<CoordinatedPlatformLayerBuffer>&&);
@@ -77,6 +81,7 @@ private:
     uint64_t m_id { 0 };
     Attributes m_attributes;
     std::optional<ColorSpace> m_colorSpace;
+    std::optional<TransferFunction> m_transferFunction;
     std::unique_ptr<CoordinatedPlatformLayerBuffer> m_buffer;
 };
 

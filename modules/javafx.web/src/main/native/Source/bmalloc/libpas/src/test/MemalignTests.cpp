@@ -40,7 +40,7 @@ void testMemalignArray(size_t size, size_t typeSize, size_t typeAlignment)
     bmalloc_type type = BMALLOC_TYPE_INITIALIZER(static_cast<unsigned>(typeSize),
                                                  static_cast<unsigned>(typeAlignment),
                                                  "test");
-    pas_heap_ref heapRef = BMALLOC_HEAP_REF_INITIALIZER(&type);
+    pas_heap_ref heapRef = BMALLOC_HEAP_REF_INITIALIZER(&type, pas_bmalloc_heap_ref_kind_non_compact);
     pas_segregated_view view;
     pas_segregated_size_directory* directory;
 

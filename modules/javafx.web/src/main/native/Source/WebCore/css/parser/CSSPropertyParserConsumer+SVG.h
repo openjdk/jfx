@@ -31,21 +31,20 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-// MARK: <paint> consuming
-// https://svgwg.org/svg2-draft/painting.html#SpecifyingPaint
-RefPtr<CSSValue> consumePaint(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: <'paint-order'> consuming
 // https://svgwg.org/svg2-draft/painting.html#PaintOrderProperty
-RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <'stroke-dasharray'> consuming
 // https://svgwg.org/svg2-draft/painting.html#StrokeDashing
-RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

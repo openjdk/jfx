@@ -179,6 +179,11 @@ public final class IosApplication extends Application {
         return null;
     }
 
+    @Override
+    protected void _showDocument(String uri) {
+        System.err.println("Cannot launch browser");
+    }
+
     private native Object _enterNestedEventLoopImpl();
     private native void _leaveNestedEventLoopImpl(Object retValue);
 

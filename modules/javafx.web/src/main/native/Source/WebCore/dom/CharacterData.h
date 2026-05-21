@@ -49,8 +49,11 @@ public:
 protected:
     CharacterData(Document& document, String&& text, NodeType type, OptionSet<TypeFlag> typeFlags = { })
         : Node(document, type, typeFlags | TypeFlag::IsCharacterData)
-        , m_data(!text.isNull() ? WTFMove(text) : emptyString())
+        , m_data(WTFMove(text))
     {
+        if (m_data.isNull())
+            m_data = emptyString();
+
         ASSERT(isCharacterDataNode());
         ASSERT(!isContainerNode());
     }
@@ -73,13 +76,6 @@ private:
 
     String m_data;
 };
-
-inline unsigned Node::length() const
-{
-    if (auto characterData = dynamicDowncast<CharacterData>(*this))
-        return characterData->length();
-    return countChildNodes();
-}
 
 } // namespace WebCore
 

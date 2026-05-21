@@ -368,18 +368,18 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
     case TypeKind::Struct:
     case TypeKind::Func: {
         resultLocation = Location::fromGPR2(GPRInfo::returnValueGPR2, GPRInfo::returnValueGPR);
-        ASSERT(m_validGPRs.contains(GPRInfo::returnValueGPR, IgnoreVectors));
+        ASSERT(validGPRs().contains(GPRInfo::returnValueGPR, IgnoreVectors));
         break;
     }
     case TypeKind::F32:
     case TypeKind::F64: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::V128: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::Void:
@@ -389,11 +389,11 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     RegisterBinding currentBinding;
     if (resultLocation.isGPR())
-        currentBinding = m_gprBindings[resultLocation.asGPR()];
+        currentBinding = bindingFor(resultLocation.asGPR());
     else if (resultLocation.isFPR())
-        currentBinding = m_fprBindings[resultLocation.asFPR()];
+        currentBinding = bindingFor(resultLocation.asFPR());
     else if (resultLocation.isGPR2())
-        currentBinding = m_gprBindings[resultLocation.asGPRhi()];
+        currentBinding = bindingFor(resultLocation.asGPRhi());
     RELEASE_ASSERT(!currentBinding.isScratch());
 
     bind(result, resultLocation);

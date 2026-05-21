@@ -54,7 +54,7 @@ public:
 
     const Style::PathFunction& path() const { return m_path; }
 
-    Path path(const FloatRect&) const;
+    WebCore::Path path(const FloatRect&) const;
     WindRule windRule() const;
 
     bool canBlend(const StylePathData&) const;

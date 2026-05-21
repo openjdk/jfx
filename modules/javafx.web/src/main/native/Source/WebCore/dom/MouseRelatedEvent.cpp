@@ -125,7 +125,7 @@ LocalFrameView* MouseRelatedEvent::frameViewFromWindowProxy(WindowProxy* windowP
     if (!window)
         return nullptr;
 
-    auto* frame = window->frame();
+    auto* frame = window->localFrame();
     return frame ? frame->view() : nullptr;
 }
 

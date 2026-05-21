@@ -45,7 +45,7 @@ static constexpr bool dumpPhaseTimes = false;
 
 static inline bool dumpASTIfNeeded(bool shouldDump, ShaderModule& program, const char* message)
 {
-    if (UNLIKELY(shouldDump)) {
+    if (shouldDump) [[unlikely]] {
         dataLogLn(message);
         AST::dumpAST(program);
         return true;
@@ -73,7 +73,7 @@ using PhaseTimes = Vector<std::pair<const char*, Seconds>>;
 
 static inline void logPhaseTimes(PhaseTimes& phaseTimes)
 {
-    if (LIKELY(!dumpPhaseTimes))
+    if (!dumpPhaseTimes) [[likely]]
         return;
 
     for (auto& entry : phaseTimes)

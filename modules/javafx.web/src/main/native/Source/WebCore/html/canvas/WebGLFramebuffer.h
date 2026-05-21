@@ -28,7 +28,6 @@
 #if ENABLE(WEBGL)
 
 #include "WebGLObject.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -67,13 +66,13 @@ public:
         GCGLint layer;
         friend bool operator==(const TextureLayerAttachment&, const TextureLayerAttachment&) = default;
     };
-    using AttachmentEntry = std::variant<RefPtr<WebGLRenderbuffer>, TextureAttachment, TextureLayerAttachment>;
+    using AttachmentEntry = Variant<RefPtr<WebGLRenderbuffer>, TextureAttachment, TextureLayerAttachment>;
 
     void setAttachmentForBoundFramebuffer(GCGLenum target, GCGLenum attachment, AttachmentEntry);
 
     // Below are nonnull. RefPtr instead of Ref due to call site object identity
     // purposes, call site uses i.e pointer operator==.
-    using AttachmentObject = std::variant<RefPtr<WebGLRenderbuffer>, RefPtr<WebGLTexture>>;
+    using AttachmentObject = Variant<RefPtr<WebGLRenderbuffer>, RefPtr<WebGLTexture>>;
 
     // If an object is attached to the currently bound framebuffer, remove it.
     void removeAttachmentFromBoundFramebuffer(const AbstractLocker&, GCGLenum target, AttachmentObject);
@@ -120,7 +119,7 @@ private:
     // null, remove the attached object.
     void removeAttachmentInternal(const AbstractLocker&, GCGLenum attachment);
 
-    UncheckedKeyHashMap<GCGLenum, AttachmentEntry> m_attachments;
+    HashMap<GCGLenum, AttachmentEntry> m_attachments;
     bool m_hasEverBeenBound { false };
     Vector<GCGLenum> m_drawBuffers;
     Vector<GCGLenum> m_filteredDrawBuffers;

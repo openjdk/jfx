@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Document.h"
 #include "DragActions.h"
 #include "DragImage.h"
 #include "IntPoint.h"
@@ -65,7 +66,7 @@ public:
 
     static DragOperation platformGenericDragOperation();
 
-    WEBCORE_EXPORT std::variant<std::optional<DragOperation>, RemoteUserInputEventData> dragEnteredOrUpdated(LocalFrame&, DragData&&);
+    WEBCORE_EXPORT Variant<std::optional<DragOperation>, RemoteUserInputEventData> dragEnteredOrUpdated(LocalFrame&, DragData&&);
     WEBCORE_EXPORT void dragExited(LocalFrame&, DragData&&);
     WEBCORE_EXPORT bool performDragOperation(DragData&&);
     WEBCORE_EXPORT void dragCancelled();

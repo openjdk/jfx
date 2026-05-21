@@ -631,6 +631,8 @@ public:
     void merge(MediaConstraintType, const StringConstraint&);
     void merge(MediaConstraintType, const MediaConstraint&);
 
+    void clearDeviceId() { m_deviceId = { }; }
+
     const std::optional<IntConstraint>& width() const { return m_width; }
     const std::optional<IntConstraint>& height() const { return m_height; }
     const std::optional<IntConstraint>& sampleRate() const { return m_sampleRate; }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "RemoveNodeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Editing.h"
 #include "RenderElement.h"
 #include <wtf/Assertions.h>
@@ -43,17 +44,16 @@ RemoveNodeCommand::RemoveNodeCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwa
 
 void RemoveNodeCommand::doApply()
 {
-    auto node = protectedNode();
-    RefPtr parent = node->parentNode();
+    RefPtr parent = m_node->parentNode();
     if (!parent || (m_shouldAssumeContentIsAlwaysEditable == DoNotAssumeContentIsAlwaysEditable
         && !isEditableNode(*parent) && parent->renderer()))
         return;
     ASSERT(isEditableNode(*parent) || !parent->renderer());
 
     m_parent = WTFMove(parent);
-    m_refChild = node->nextSibling();
+    m_refChild = m_node->nextSibling();
 
-    node->remove();
+    m_node->remove();
 }
 
 void RemoveNodeCommand::doUnapply()
@@ -63,7 +63,7 @@ void RemoveNodeCommand::doUnapply()
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    parent->insertBefore(protectedNode(), WTFMove(refChild));
+    parent->insertBefore(m_node, WTFMove(refChild));
 }
 
 #ifndef NDEBUG

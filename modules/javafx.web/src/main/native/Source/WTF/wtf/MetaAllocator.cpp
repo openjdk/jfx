@@ -71,7 +71,7 @@ void MetaAllocator::release(const Locker<Lock>&, MetaAllocatorHandle& handle)
         addFreeSpaceFromReleasedHandle(start.retagged<FreeSpacePtrTag>(), sizeInBytes);
     }
 
-    if (UNLIKELY(!!m_tracker))
+    if (!!m_tracker) [[unlikely]]
         m_tracker->release(handle);
 }
 
@@ -192,7 +192,7 @@ RefPtr<MetaAllocatorHandle> MetaAllocator::allocate(const Locker<Lock>&, size_t 
 
     auto handle = adoptRef(*new MetaAllocatorHandle(*this, start.retagged<HandleMemoryPtrTag>(), sizeInBytes));
 
-    if (UNLIKELY(!!m_tracker))
+    if (!!m_tracker) [[unlikely]]
         m_tracker->notify(*handle.ptr());
 
     return handle;

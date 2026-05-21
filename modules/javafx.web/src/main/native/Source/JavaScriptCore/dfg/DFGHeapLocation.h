@@ -40,6 +40,8 @@ enum LocationKind {
     ArrayMaskLoc,
     VectorLengthLoc,
     ButterflyLoc,
+    DataViewByteLengthLoc,
+    DataViewByteLengthAsInt52Loc,
     CheckTypeInfoFlagsLoc,
     OverridesHasInstanceLoc,
     ClosureVariableLoc,

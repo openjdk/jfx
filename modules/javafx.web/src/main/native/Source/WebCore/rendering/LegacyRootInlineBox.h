@@ -72,9 +72,6 @@ public:
         m_lineBoxBottom = lineBoxBottom;
     }
 
-    LayoutUnit baselinePosition(FontBaseline baselineType) const final;
-    LayoutUnit lineHeight() const final;
-
     RenderObject::HighlightState selectionState() const final;
     const LegacyInlineBox* firstSelectedBox() const;
     const LegacyInlineBox* lastSelectedBox() const;

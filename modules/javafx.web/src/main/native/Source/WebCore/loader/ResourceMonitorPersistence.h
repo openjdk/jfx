@@ -34,7 +34,7 @@ namespace WebCore {
 class SQLiteDatabase;
 
 class ResourceMonitorPersistence final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ResourceMonitorPersistence);
 public:
     struct Record {
         String host;
@@ -44,7 +44,7 @@ public:
     WEBCORE_EXPORT ResourceMonitorPersistence();
     WEBCORE_EXPORT ~ResourceMonitorPersistence();
 
-    bool openDatabase(String&& path);
+    bool openDatabase(String&& directoryPath);
     bool isDatabaseOpen() const { return m_sqliteDB && m_sqliteDB->isOpen(); }
 
     void deleteAllRecords();

@@ -82,7 +82,7 @@ Navigator* WebXRSystem::navigator()
 void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& callback)
 {
     // Don't ask platform code for XR devices, we're using simulated ones.
-    if (UNLIKELY(m_testingDevices)) {
+    if (m_testingDevices) [[unlikely]] {
         callback();
         return;
     }
@@ -271,6 +271,8 @@ bool WebXRSystem::isFeaturePermitted(PlatformXR::SessionFeature feature) const
     switch (feature) {
     case PlatformXR::SessionFeature::ReferenceSpaceTypeViewer:
         return true;
+    case PlatformXR::SessionFeature::WebGPU:
+        return true;
     case PlatformXR::SessionFeature::ReferenceSpaceTypeLocal:
     case PlatformXR::SessionFeature::ReferenceSpaceTypeLocalFloor:
     case PlatformXR::SessionFeature::ReferenceSpaceTypeBoundedFloor:
@@ -425,7 +427,7 @@ void WebXRSystem::resolveFeaturePermissions(XRSessionMode mode, const XRSessionI
     }
 
     // Skip platform code for asking for user's permission as we're using simulated ones.
-    if (UNLIKELY(m_testingDevices)) {
+    if (m_testingDevices) [[unlikely]] {
         device->setEnabledFeatures(mode, resolvedFeatures->granted);
         completionHandler(resolvedFeatures->granted);
         return;
@@ -489,7 +491,7 @@ void WebXRSystem::requestSession(Document& document, XRSessionMode mode, const X
     // 3. Let global object be the relevant Global object for the XRSystem on which this method was invoked.
     bool immersive = isImmersive(mode);
     Ref protectedDocument { document };
-    RefPtr globalObject = protectedDocument->domWindow();
+    RefPtr globalObject = protectedDocument->window();
     if (!globalObject) {
         promise.reject(Exception { ExceptionCode::InvalidAccessError });
         return;
@@ -634,15 +636,15 @@ private:
     {
     }
 
-    CallbackResult<void> handleEvent(double) final
+    CallbackResult<void> invoke(double) final
     {
         m_callback();
         return { };
     }
 
-    CallbackResult<void> handleEventRethrowingException(double now) final
+    CallbackResult<void> invokeRethrowingException(double now) final
     {
-        return handleEvent(now);
+        return invoke(now);
     }
 
     Function<void()> m_callback;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 #include "Page.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameView.h"
-#include "RenderWidget.h"
+#include "RenderWidgetInlines.h"
 #include "SVGDocumentExtensions.h"
 #include "ScriptController.h"
 #include "SerializedScriptValue.h"
@@ -151,7 +151,7 @@ void CachedFrameBase::restore()
     if (m_isMainFrame && localFrame) {
         localFrame->loader().client().didRestoreFrameHierarchyForCachedFrame();
 
-        if (RefPtr domWindow = m_document->domWindow(); domWindow && domWindow->scrollEventListenerCount()) {
+        if (RefPtr window = m_document->window(); window && window->scrollEventListenerCount()) {
             // FIXME: Use Document::hasListenerType(). See <rdar://problem/9615482>.
             if (RefPtr page = frame->page())
                 page->chrome().client().setNeedsScrollNotifications(*localFrame, true);
@@ -180,8 +180,8 @@ CachedFrame::CachedFrame(Frame& frame)
         m_childFrames.append(makeUniqueRef<CachedFrame>(*child));
 
     if (document) {
-        RELEASE_ASSERT(document->domWindow());
-        RELEASE_ASSERT(document->domWindow()->frame());
+        RELEASE_ASSERT(document->window());
+        RELEASE_ASSERT(document->window()->frame());
 
     // Active DOM objects must be suspended before we cache the frame script data.
         document->suspend(ReasonForSuspension::BackForwardCache);
@@ -229,7 +229,7 @@ CachedFrame::CachedFrame(Frame& frame)
 
 #if PLATFORM(IOS_FAMILY)
     if (m_isMainFrame && localFrame) {
-        if (RefPtr domWindow = document->domWindow(); domWindow && domWindow->scrollEventListenerCount()) {
+        if (RefPtr window = document->window(); window && window->scrollEventListenerCount()) {
             if (RefPtr page = frame.page())
                 page->chrome().client().setNeedsScrollNotifications(*localFrame, false);
         }
@@ -248,7 +248,7 @@ void CachedFrame::open()
     ASSERT(m_document || is<RemoteFrameView>(m_view.get()));
 
     if (RefPtr localFrameView = dynamicDowncast<LocalFrameView>(m_view.get()))
-        localFrameView->protectedFrame()->protectedLoader()->open(*this);
+        localFrameView->protectedFrame()->loader().open(*this);
 }
 
 void CachedFrame::clear()
@@ -291,7 +291,7 @@ void CachedFrame::destroy()
     Ref frame = m_view->frame();
     if (!m_isMainFrame && m_view->frame().page()) {
         if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame.get()))
-            localFrame->protectedLoader()->detachViewsAndDocumentLoader();
+            localFrame->loader().detachViewsAndDocumentLoader();
         frame->detachFromPage();
     }
 

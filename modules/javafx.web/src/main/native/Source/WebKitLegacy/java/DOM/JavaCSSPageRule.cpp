@@ -27,7 +27,7 @@
 
 
 #include <WebCore/CSSPageRule.h>
-#include <WebCore/CSSStyleDeclaration.h>
+#include <CSSPageDescriptors.h>
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_setSelectorTextIm
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->style()));
+    return JavaReturn<CSSPageDescriptors>(env, WTF::getPtr(IMPL->style()));
 }
 
 }

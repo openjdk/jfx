@@ -197,7 +197,7 @@ inline void ConservativeRoots::genericAddPointer(char* pointer, HeapVersion mark
     };
 
     if (isJSCellKind(cellKind)) {
-        if (LIKELY(MarkedBlock::isAtomAligned(pointer))) {
+        if (MarkedBlock::isAtomAligned(pointer)) [[likely]] {
             if (tryPointer(pointer))
                 return;
         }

@@ -53,7 +53,7 @@ bool CSSStyleSheetObservableArray::setValueAt(JSC::JSGlobalObject* lexicalGlobal
     RELEASE_ASSERT(index <= m_sheets.size());
 
     auto sheetConversionResult = convert<IDLInterface<CSSStyleSheet>>(*lexicalGlobalObject, value);
-    if (UNLIKELY(sheetConversionResult.hasException(scope)))
+    if (sheetConversionResult.hasException(scope)) [[unlikely]]
         return false;
 
     if (auto exception = shouldThrowWhenAddingSheet(*sheetConversionResult.returnValue())) {

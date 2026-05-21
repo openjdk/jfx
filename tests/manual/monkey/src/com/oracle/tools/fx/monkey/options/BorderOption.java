@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ public class BorderOption extends ObjectOption<Border> {
         addChoice("Empty (100)", createBorder(Color.TRANSPARENT, 100, null));
         addChoice("Red (1)", createBorder(Color.RED, 1, null));
         addChoice("Green (20)", createBorder(Color.GREEN, 20, null));
+        addChoice("Gray (33.3)", createBorder(Color.LIGHTGRAY, 33.3, null));
         addChoice("(T:11, B:22, L:33, R:44)", createBorder(Color.rgb(127, 127, 127, 0.5), 11, 44, 22, 33));
         addChoice("Rounded", createBorder(Color.ORANGE, 1, 5.0));
 

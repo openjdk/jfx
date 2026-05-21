@@ -316,9 +316,15 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     // --- string converter
     /**
-     * Converts the user-typed input (when the ComboBox is
-     * {@link #editableProperty() editable}) to an object of type T, such that
-     * the input may be retrieved via the  {@link #valueProperty() value} property.
+     * Converts items of type T to a string representation and the other way around.
+     *
+     * The converter is used to obtain the string representation that should be displayed
+     * for the {@link #valueProperty() value} and any {@link #getItems() item}.
+     *
+     * When the ComboBox is {@link #editableProperty() editable}), the converter is used
+     * to convert the input to an object of type T, such that the input may be retrieved
+     * via the {@link #valueProperty() value} property.
+     *
      * @return the converter property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() { return converter; }

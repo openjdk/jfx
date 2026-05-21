@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDOMPromiseDeferred.h"
 
+#include "Document.h"
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
@@ -61,7 +62,7 @@ void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveM
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto handleExceptionIfNeeded = makeScopeExit([&] {
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             handleUncaughtException(scope, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject));
     });
 
@@ -175,14 +176,14 @@ void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandle
 
     if (exceptionObject.isEmpty()) {
         exceptionObject = createDOMException(lexicalGlobalObject, WTFMove(exception));
-    if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
     }
 
     reject(lexicalGlobalObject, exceptionObject, rejectAsHandled);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         handleUncaughtException(scope, lexicalGlobalObject);
 }
 
@@ -211,20 +212,20 @@ void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHa
     }
 
     auto error = createDOMException(&lexicalGlobalObject, ec, message);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         handleUncaughtException(scope, lexicalGlobalObject);
         return;
     }
 
     reject(lexicalGlobalObject, error, rejectAsHandled);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         handleUncaughtException(scope, lexicalGlobalObject);
 }
 
 void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSPromise& promise, JSC::CatchScope& catchScope)
 {
     UNUSED_PARAM(lexicalGlobalObject);
-    if (LIKELY(!catchScope.exception()))
+    if (!catchScope.exception()) [[likely]]
         return;
     if (catchScope.vm().hasPendingTerminationException())
         return;

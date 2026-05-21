@@ -31,6 +31,7 @@
 #include "GPRInfo.h"
 #include "JSExportMacros.h"
 #include "Options.h"
+#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace B3 {
 
@@ -72,9 +73,8 @@ static IntType chillMod(IntType numerator, IntType denominator)
 template<typename IntType>
 static IntType chillUDiv(IntType numerator, IntType denominator)
 {
-    typedef typename std::make_unsigned<IntType>::type UnsignedIntType;
-    UnsignedIntType unsignedNumerator = static_cast<UnsignedIntType>(numerator);
-    UnsignedIntType unsignedDenominator = static_cast<UnsignedIntType>(denominator);
+    auto unsignedNumerator = unsignedCast(numerator);
+    auto unsignedDenominator = unsignedCast(denominator);
     if (!unsignedDenominator)
         return 0;
     return unsignedNumerator / unsignedDenominator;
@@ -83,9 +83,8 @@ static IntType chillUDiv(IntType numerator, IntType denominator)
 template<typename IntType>
 static IntType chillUMod(IntType numerator, IntType denominator)
 {
-    typedef typename std::make_unsigned<IntType>::type UnsignedIntType;
-    UnsignedIntType unsignedNumerator = static_cast<UnsignedIntType>(numerator);
-    UnsignedIntType unsignedDenominator = static_cast<UnsignedIntType>(denominator);
+    auto unsignedNumerator = unsignedCast(numerator);
+    auto unsignedDenominator = unsignedCast(denominator);
     if (!unsignedDenominator)
         return 0;
     return unsignedNumerator % unsignedDenominator;
@@ -94,8 +93,7 @@ static IntType chillUMod(IntType numerator, IntType denominator)
 template<typename IntType>
 static IntType rotateRight(IntType value, int32_t shift)
 {
-    typedef typename std::make_unsigned<IntType>::type UnsignedIntType;
-    UnsignedIntType uValue = static_cast<UnsignedIntType>(value);
+    auto uValue = unsignedCast(value);
     int32_t bits = sizeof(IntType) * 8;
     int32_t mask = bits - 1;
     shift &= mask;
@@ -105,8 +103,7 @@ static IntType rotateRight(IntType value, int32_t shift)
 template<typename IntType>
 static IntType rotateLeft(IntType value, int32_t shift)
 {
-    typedef typename std::make_unsigned<IntType>::type UnsignedIntType;
-    UnsignedIntType uValue = static_cast<UnsignedIntType>(value);
+    auto uValue = unsignedCast(value);
     int32_t bits = sizeof(IntType) * 8;
     int32_t mask = bits - 1;
     shift &= mask;

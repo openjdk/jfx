@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSCustomElementRegistry.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "CustomElementRegistry.h"
 #include "Document.h"
 #include "HTMLNames.h"
@@ -88,7 +89,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame.argumentCount() < 2))
+    if (callFrame.argumentCount() < 2) [[unlikely]]
         return throwException(&lexicalGlobalObject, scope, createNotEnoughArgumentsError(&lexicalGlobalObject));
 
     AtomString localName(callFrame.uncheckedArgument(0).toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject));
@@ -151,7 +152,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
         RETURN_IF_EXCEPTION(scope, { });
         if (!observedAttributesValue.isUndefined()) {
             auto observedAttributes = convert<IDLSequence<IDLAtomStringAdaptor<IDLDOMString>>>(lexicalGlobalObject, observedAttributesValue);
-            if (UNLIKELY(observedAttributes.hasException(scope)))
+            if (observedAttributes.hasException(scope)) [[unlikely]]
                 return { };
             elementInterface->setAttributeChangedCallback(attributeChangedCallback, observedAttributes.releaseReturnValue());
         }
@@ -161,7 +162,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     RETURN_IF_EXCEPTION(scope, { });
     if (!disabledFeaturesValue.isUndefined()) {
         auto disabledFeatures = convert<IDLSequence<IDLDOMString>>(lexicalGlobalObject, disabledFeaturesValue);
-        if (UNLIKELY(disabledFeatures.hasException(scope)))
+        if (disabledFeatures.hasException(scope)) [[unlikely]]
             return { };
 
         if (disabledFeatures.returnValue().contains("internals"_s))
@@ -207,7 +208,7 @@ static JSValue whenDefinedPromise(JSGlobalObject& lexicalGlobalObject, CallFrame
 {
     auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
 
-    if (UNLIKELY(callFrame.argumentCount() < 1))
+    if (callFrame.argumentCount() < 1) [[unlikely]]
         return throwException(&lexicalGlobalObject, scope, createNotEnoughArgumentsError(&lexicalGlobalObject));
 
     AtomString localName(callFrame.uncheckedArgument(0).toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject));
@@ -238,7 +239,7 @@ JSValue JSCustomElementRegistry::whenDefined(JSGlobalObject& lexicalGlobalObject
     auto* result = JSPromise::create(lexicalGlobalObject.vm(), lexicalGlobalObject.promiseStructure());
     JSValue promise = whenDefinedPromise(lexicalGlobalObject, callFrame, *globalObject(), wrapped(), *result);
 
-    if (UNLIKELY(catchScope.exception())) {
+    if (catchScope.exception()) [[unlikely]] {
         rejectPromiseWithExceptionIfAny(lexicalGlobalObject, *globalObject(), *result, catchScope);
         // FIXME: We could have error since any JS call can throw stack-overflow errors.
         // https://bugs.webkit.org/show_bug.cgi?id=203402

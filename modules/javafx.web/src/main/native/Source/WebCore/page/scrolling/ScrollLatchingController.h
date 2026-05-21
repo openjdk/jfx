@@ -42,6 +42,7 @@ namespace WebCore {
 
 class Element;
 class LocalFrame;
+class Page;
 class PlatformWheelEvent;
 class ScrollableArea;
 class WeakPtrImplWithEventTargetData;

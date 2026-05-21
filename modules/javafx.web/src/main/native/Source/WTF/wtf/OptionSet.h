@@ -43,14 +43,14 @@ template<typename E> class OptionSet;
 // must be powers of two greater than 0. This class is useful as a replacement for passing a bitmask of
 // enumerators around.
 template<typename E> class OptionSet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(OptionSet);
     static_assert(std::is_enum<E>::value, "T is not an enum type");
 
 public:
     using StorageType = std::make_unsigned_t<std::underlying_type_t<E>>;
 
     template<typename StorageType> class Iterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Iterator);
     public:
         // Isolate the rightmost set bit.
         E operator*() const { return static_cast<E>(m_value & -m_value); }
@@ -123,6 +123,11 @@ public:
     constexpr bool containsAll(OptionSet optionSet) const
     {
         return (*this & optionSet) == optionSet;
+    }
+
+    constexpr bool containsOnly(OptionSet optionSet) const
+    {
+        return *this == (*this & optionSet);
     }
 
     constexpr void add(OptionSet optionSet)

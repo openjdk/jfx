@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
- * Copyright (C) 2009 Google Inc. All Rights Reserved.
+ * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #include "EventLoop.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMGuardedObject.h"
-#include "JSMicrotaskCallback.h"
+#include "JSExecState.h"
 #include "JSTrustedScript.h"
 #include "TrustedType.h"
 #include "WorkerGlobalScope.h"
@@ -150,15 +150,12 @@ void JSWorkerGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* 
     return JSGlobalObject::reportViolationForUnsafeEval(globalObject, source);
 }
 
-void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, JSC::QueuedTask&& task)
 {
     JSWorkerGlobalScopeBase& thisObject = static_cast<JSWorkerGlobalScopeBase&>(object);
-
-    auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto& context = thisObject.wrapped();
-    context.eventLoop().queueMicrotask([callback = WTFMove(callback)]() mutable {
-        callback->call();
-    });
+    task.setDispatcher(context.eventLoop().jsMicrotaskDispatcher());
+    context.eventLoop().queueMicrotask(WTFMove(task));
 }
 
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)

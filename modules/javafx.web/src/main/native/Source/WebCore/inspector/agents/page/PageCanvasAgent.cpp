@@ -32,7 +32,9 @@
 #include "CanvasPattern.h"
 #include "CanvasRenderingContext.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "Element.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -43,6 +45,7 @@
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include <wtf/TZoneMallocInlines.h>
 

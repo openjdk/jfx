@@ -72,7 +72,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyModuleCustomSections, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame->argumentCount() < 2))
+    if (callFrame->argumentCount() < 2) [[unlikely]]
         return JSValue::encode(throwException(globalObject, throwScope, createNotEnoughArgumentsError(globalObject)));
 
     JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(callFrame->uncheckedArgument(0));
@@ -299,7 +299,7 @@ JSWebAssemblyModule* WebAssemblyModuleConstructor::createModule(JSGlobalObject* 
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     auto result = Wasm::Module::validateSync(vm, WTFMove(buffer));
-    if (UNLIKELY(!result.has_value())) {
+    if (!result.has_value()) [[unlikely]] {
         throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
         return nullptr;
     }

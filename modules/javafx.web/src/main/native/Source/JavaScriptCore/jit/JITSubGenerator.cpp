@@ -67,10 +67,12 @@ JITMathICInlineResult JITSubGenerator::generateInline(CCallHelpers& jit, MathICG
         ASSERT(!m_leftOperand.isConstInt32() || !m_rightOperand.isConstInt32());
         state.slowPathJumps.append(jit.branchIfNotInt32(m_left));
         state.slowPathJumps.append(jit.branchIfNotInt32(m_right));
-
+#if CPU(ARM64)
+        state.slowPathJumps.append(jit.branchSub32(CCallHelpers::Overflow, m_left.payloadGPR(), m_right.payloadGPR(), m_scratchGPR));
+#else
         jit.move(m_left.payloadGPR(), m_scratchGPR);
         state.slowPathJumps.append(jit.branchSub32(CCallHelpers::Overflow, m_right.payloadGPR(), m_scratchGPR));
-
+#endif
         jit.boxInt32(m_scratchGPR, m_result);
         return JITMathICInlineResult::GeneratedFastPath;
     }
@@ -91,9 +93,12 @@ bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
     CCallHelpers::Jump leftNotInt = jit.branchIfNotInt32(m_left);
     CCallHelpers::Jump rightNotInt = jit.branchIfNotInt32(m_right);
 
+#if CPU(ARM64)
+    slowPathJumpList.append(jit.branchSub32(CCallHelpers::Overflow, m_left.payloadGPR(), m_right.payloadGPR(), m_scratchGPR));
+#else
     jit.move(m_left.payloadGPR(), m_scratchGPR);
     slowPathJumpList.append(jit.branchSub32(CCallHelpers::Overflow, m_right.payloadGPR(), m_scratchGPR));
-
+#endif
     jit.boxInt32(m_scratchGPR, m_result);
 
     endJumpList.append(jit.jump());

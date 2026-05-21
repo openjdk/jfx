@@ -112,11 +112,11 @@ public:
 
     bool isEmpty() const { return !size(); }
     size_t size() const { return m_list.size(); }
-    const FontTaggedSetting<T>& operator[](int index) const { return m_list[index]; }
-    const FontTaggedSetting<T>& at(size_t index) const { return m_list.at(index); }
+    const FontTaggedSetting<T>& operator[](int index) const LIFETIME_BOUND { return m_list[index]; }
+    const FontTaggedSetting<T>& at(size_t index) const LIFETIME_BOUND { return m_list.at(index); }
 
-    typename Vector<FontTaggedSetting<T>>::const_iterator begin() const { return m_list.begin(); }
-    typename Vector<FontTaggedSetting<T>>::const_iterator end() const { return m_list.end(); }
+    auto begin() const LIFETIME_BOUND { return m_list.begin(); }
+    auto end() const LIFETIME_BOUND { return m_list.end(); }
 
     unsigned hash() const;
 
@@ -134,7 +134,7 @@ void FontTaggedSettings<T>::insert(FontTaggedSetting<T>&& feature)
         if (m_list[i].tag() < feature.tag())
             continue;
         if (m_list[i].tag() == feature.tag())
-            m_list.remove(i);
+            m_list.removeAt(i);
             break;
     }
     m_list.insert(i, WTFMove(feature));

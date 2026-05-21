@@ -28,7 +28,6 @@
 #if ENABLE(WEBGL)
 
 #include "EventLoop.h"
-#include "ExceptionOr.h"
 #include "GPUBasedCanvasRenderingContext.h"
 #include "GraphicsContextGL.h"
 #include "ImageBuffer.h"
@@ -159,14 +158,16 @@ class HTMLVideoElement;
 
 #if ENABLE(OFFSCREEN_CANVAS)
 class OffscreenCanvas;
-using WebGLCanvas = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
+using WebGLCanvas = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 #else
-using WebGLCanvas = std::variant<RefPtr<HTMLCanvasElement>>;
+using WebGLCanvas = Variant<RefPtr<HTMLCanvasElement>>;
 #endif
 
 #if ENABLE(MEDIA_STREAM)
 class VideoFrame;
 #endif
+
+template<typename> class ExceptionOr;
 
 class WebGLRenderingContextBase : public GraphicsContextGL::Client, public GPUBasedCanvasRenderingContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLRenderingContextBase);
@@ -197,7 +198,7 @@ public:
     void blendFunc(GCGLenum sfactor, GCGLenum dfactor);
     void blendFuncSeparate(GCGLenum srcRGB, GCGLenum dstRGB, GCGLenum srcAlpha, GCGLenum dstAlpha);
 
-    using BufferDataSource = std::variant<RefPtr<ArrayBuffer>, RefPtr<ArrayBufferView>>;
+    using BufferDataSource = Variant<RefPtr<ArrayBuffer>, RefPtr<ArrayBufferView>>;
     void bufferData(GCGLenum target, long long size, GCGLenum usage);
     void bufferData(GCGLenum target, std::optional<BufferDataSource>&&, GCGLenum usage);
     void bufferSubData(GCGLenum target, long long offset, BufferDataSource&&);
@@ -316,7 +317,7 @@ public:
     // These must be virtual so more validation can be added in WebGL 2.0.
     virtual void texImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&&);
 
-    using TexImageSource = std::variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>
+    using TexImageSource = Variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>
 #if ENABLE(VIDEO)
         , RefPtr<HTMLVideoElement>
 #endif
@@ -340,20 +341,20 @@ public:
     template <class TypedArray, class DataType>
     class TypedList {
     public:
-        using VariantType = std::variant<RefPtr<TypedArray>, Vector<DataType>>;
+        using VariantType = Variant<RefPtr<TypedArray>, Vector<DataType>>;
 
         TypedList(VariantType&& variant)
             : m_variant(WTFMove(variant))
         {
         }
 
-        std::span<const DataType> span() const { return unsafeMakeSpan(data(), length()); }
+        std::span<const DataType> span() const LIFETIME_BOUND { return unsafeMakeSpan(data(), length()); }
 
-        const DataType* data() const
+        const DataType* data() const LIFETIME_BOUND
         {
             return WTF::switchOn(m_variant,
                 [] (const RefPtr<TypedArray>& typedArray) -> const DataType* { return typedArray->data(); },
-                [] (const Vector<DataType>& vector) -> const DataType* { return vector.data(); }
+                [] (const Vector<DataType>& vector) -> const DataType* { return vector.span().data(); }
             );
         }
 
@@ -487,6 +488,8 @@ public:
     using PixelStoreParameters = GraphicsContextGL::PixelStoreParameters;
     const PixelStoreParameters& pixelStorePackParameters() const { return m_packParameters; }
     const PixelStoreParameters& unpackPixelStoreParameters() const { return m_unpackParameters; };
+
+    bool isOpaque() const final;
 
     WeakPtr<WebGLRenderingContextBase> createRefForContextObject();
 
@@ -779,9 +782,9 @@ protected:
     bool m_areOESTextureHalfFloatFormatsAndTypesAdded { false };
     bool m_areEXTsRGBFormatsAndTypesAdded { false };
 
-    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceInternalFormats;
-    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceFormats;
-    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceTypes;
+    HashSet<GCGLenum> m_supportedTexImageSourceInternalFormats;
+    HashSet<GCGLenum> m_supportedTexImageSourceFormats;
+    HashSet<GCGLenum> m_supportedTexImageSourceTypes;
 
     // Helpers for getParameter and other similar functions.
     bool getBooleanParameter(GCGLenum);
@@ -975,7 +978,7 @@ protected:
 
     // Helper function to validate parameters for bufferData.
     // Return the current bound buffer to target, or 0 if parameters are invalid.
-    virtual WebGLBuffer* validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage);
+    virtual RefPtr<WebGLBuffer> validateBufferDataParameters(ASCIILiteral functionName, GCGLenum target, GCGLenum usage);
 
     // Helper function for tex{Sub}Image2D to make sure image is ready.
     ExceptionOr<bool> validateHTMLImageElement(ASCIILiteral functionName, HTMLImageElement&);
@@ -1002,7 +1005,7 @@ protected:
 
     // Helper function to validate the target for bufferData.
     // Return the current bound buffer to target, or 0 if the target is invalid.
-    virtual WebGLBuffer* validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target);
+    virtual RefPtr<WebGLBuffer> validateBufferDataTarget(ASCIILiteral functionName, GCGLenum target);
 
     virtual bool validateAndCacheBufferBinding(const AbstractLocker&, ASCIILiteral functionName, GCGLenum target, WebGLBuffer*);
 
@@ -1035,6 +1038,9 @@ private:
     // Helper for restoration after context lost.
     void maybeRestoreContextSoon(Seconds timeout = 0_s);
     void maybeRestoreContext();
+
+    RefPtr<WebGLVertexArrayObjectBase> protectedBoundVertexArrayObject() const { return m_boundVertexArrayObject; }
+    RefPtr<WebGLFramebuffer> protectedFramebufferBinding() const { return m_framebufferBinding; }
 
     ExceptionOr<void> texImageSource(TexImageFunctionID, GCGLenum target, GCGLint level, GCGLint internalformat, GCGLint border, GCGLenum format, GCGLenum type, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, const IntRect& inputSourceImageRect, GCGLsizei depth, GCGLint unpackImageHeight, ImageBitmap& source);
     ExceptionOr<void> texImageSource(TexImageFunctionID, GCGLenum target, GCGLint level, GCGLint internalformat, GCGLint border, GCGLenum format, GCGLenum type, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, const IntRect& inputSourceImageRect, GCGLsizei depth, GCGLint unpackImageHeight, ImageData& source);

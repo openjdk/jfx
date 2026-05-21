@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -88,7 +88,12 @@
 #define SCRIPTCONTROLLER_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - ScriptController::" fmt, this, ##__VA_ARGS__)
 
 #if ENABLE(LLVM_PROFILE_GENERATION)
+#if PLATFORM(IOS_FAMILY)
+#include <wtf/LLVMProfilingUtils.h>
+extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/WebCore_%m_pid%p%c.profraw";
+#else
 extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/WebCore_%m_pid%p%c.profraw";
+#endif
 #endif
 
 namespace WebCore {
@@ -193,7 +198,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
     auto& lexicalGlobalObject = *proxy.window();
 
     auto* promise = JSExecState::loadModule(lexicalGlobalObject, topLevelModuleURL, JSC::JSScriptFetchParameters::create(lexicalGlobalObject.vm(), WTFMove(topLevelFetchParameters)), JSC::JSScriptFetcher::create(lexicalGlobalObject.vm(), { &moduleScript }));
-    if (UNLIKELY(!promise))
+    if (!promise) [[unlikely]]
         return;
     setupModuleScriptHandlers(moduleScript, *promise, world);
 }
@@ -211,7 +216,7 @@ void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScrip
     auto& lexicalGlobalObject = *proxy.window();
 
     auto* promise = JSExecState::loadModule(lexicalGlobalObject, sourceCode.jsSourceCode(), JSC::JSScriptFetcher::create(lexicalGlobalObject.vm(), { &moduleScript }));
-    if (UNLIKELY(!promise))
+    if (!promise) [[unlikely]]
         return;
     setupModuleScriptHandlers(moduleScript, *promise, world);
 }
@@ -315,7 +320,7 @@ void ScriptController::initScriptForWindowProxy(JSWindowProxy& windowProxy)
         windowProxy.window()->setConsoleClient(page->console());
     }
 
-    protectedFrame()->protectedLoader()->dispatchDidClearWindowObjectInWorld(world);
+    protectedFrame()->loader().dispatchDidClearWindowObjectInWorld(world);
 }
 
 Ref<LocalFrame> ScriptController::protectedFrame() const
@@ -459,12 +464,12 @@ void ScriptController::setWebAssemblyEnabled(bool value, const String& errorMess
     jsWindowProxy->window()->setWebAssemblyEnabled(value, errorMessage);
 }
 
-void ScriptController::setRequiresTrustedTypes(bool required)
+void ScriptController::setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement enforcement)
 {
     auto* proxy = protectedWindowProxy()->existingJSWindowProxy(mainThreadNormalWorldSingleton());
     if (!proxy)
         return;
-    proxy->window()->setRequiresTrustedTypes(required);
+    proxy->window()->setTrustedTypesEnforcement(enforcement);
 }
 
 bool ScriptController::canAccessFromCurrentOrigin(LocalFrame* frame, Document& accessingDocument)
@@ -533,7 +538,7 @@ void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::JSGlobalObj
 {
     for (auto& jsWindowProxy : protectedWindowProxy()->jsWindowProxiesAsVector()) {
         auto* lexicalGlobalObject = jsWindowProxy->window();
-        RefPtr origin = &downcast<LocalDOMWindow>(jsWindowProxy->protectedWrapped())->protectedDocument()->securityOrigin();
+        RefPtr origin = downcast<LocalDOMWindow>(jsWindowProxy->protectedWrapped())->protectedDocument()->securityOrigin();
         result.append(std::make_pair(lexicalGlobalObject, WTFMove(origin)));
     }
 }
@@ -628,7 +633,7 @@ ValueOrException ScriptController::executeScriptInWorld(DOMWrapperWorld& world, 
     if (parameters.forceUserGesture == ForceUserGesture::Yes && UserGestureIndicator::currentUserGesture() && parameters.removeTransientActivation == RemoveTransientActivation::Yes) {
         UserGestureIndicator::currentUserGesture()->addDestructionObserver([](UserGestureToken& token) {
             token.forEachImpactedDocument([](Document& document) {
-                if (RefPtr window = document.domWindow())
+                if (RefPtr window = document.window())
                     window->consumeTransientActivation();
             });
         });
@@ -668,11 +673,10 @@ ValueOrException ScriptController::callInWorld(RunJavaScriptParameters&& paramet
     functionStringBuilder.append("(async function("_s);
     for (auto argument = parameters.arguments->begin(); argument != parameters.arguments->end();) {
         functionStringBuilder.append(argument->key);
-        auto serializedArgument = SerializedScriptValue::createFromWireBytes(WTFMove(argument->value));
 
         auto scope = DECLARE_CATCH_SCOPE(globalObject.vm());
-        auto jsArgument = serializedArgument->deserialize(globalObject, &globalObject);
-        if (UNLIKELY(scope.exception())) {
+        auto jsArgument = argument->value(globalObject);
+        if (scope.exception()) [[unlikely]] {
             errorMessage = "Unable to deserialize argument to execute asynchronous JavaScript function"_s;
             break;
         }
@@ -899,7 +903,7 @@ void ScriptController::executeJavaScriptURL(const URL& url, const NavigationActi
         // If there is no current history item, create one since we're about to commit a document
         // from the JS URL.
         if (!m_frame->loader().history().currentItem())
-            m_frame->loader().protectedHistory()->updateForRedirectWithLockedBackForwardList();
+            m_frame->loader().history().updateForRedirectWithLockedBackForwardList();
 
         // Since we're replacing the document, this JavaScript URL load acts as a "Replace" navigation.
         // Make sure the triggering action get set on the DocumentLoader since some logic in
