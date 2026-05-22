@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,30 +22,41 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.options;
+package com.oracle.tools.fx.monkey.util;
 
-import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
-import com.oracle.tools.fx.monkey.util.CustomPane;
-import com.oracle.tools.fx.monkey.util.ImageTools;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import jfx.incubator.scene.control.richtext.SideDecorator;
 
 /**
- * Graphic Option.
+ * Colorful SideDecorator.
  */
-public class GraphicOption extends ObjectOption<Node> {
-    public GraphicOption(String name, ObjectProperty<Node> p) {
-        super(name, p);
+public class ColorSideDecorator implements SideDecorator {
+    public ColorSideDecorator() {
+    }
 
-        addChoice("<null>", null);
-        addChoice("1x1", ImageTools.createImageView(1, 1));
-        addChoice("Small", ImageTools.createImageView(16, 16));
-        addChoice("Wide", ImageTools.createImageView(128, 16));
-        addChoice("Tall", ImageTools.createImageView(16, 128));
-        addChoice("Large", ImageTools.createImageView(256, 256));
-        addChoiceSupplier("Complex Pane", () -> {
-            return CustomPane.create();
-        });
+    @Override
+    public double getPrefWidth(double viewWidth) {
+        return 20.0;
+    }
 
-        selectInitialValue();
+    @Override
+    public Node getNode(int index) {
+        int num = 36;
+        double a = 360.0 * (index % num) / num;
+        Color c = Color.hsb(a, 0.5, 1.0);
+
+        Region r = new Region();
+        r.setOpacity(1.0);
+        r.setBackground(new Background(new BackgroundFill(c, null, null)));
+        return r;
+    }
+
+    @Override
+    public Node getMeasurementNode(int index) {
+        return null;
     }
 }

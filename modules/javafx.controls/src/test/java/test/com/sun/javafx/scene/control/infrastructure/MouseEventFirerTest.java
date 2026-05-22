@@ -69,36 +69,42 @@ public class MouseEventFirerTest {
     @Test
     public void testLocalStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, - 10, - 5);
     }
 
     @Test
     public void testLocalStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, 10, 5);
     }
 
     @Test
     public void testLocalStandalone() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, 0, 0);
     }
 
     @Test
     public void testMouseCoordinatesStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, - 10, - 5);
     }
 
     @Test
     public void testMouseCoordinatesStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, 10, 5);
     }
 
     @Test
     public void testMouseCoordinatesStandalone() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, 0, 0);
     }
 

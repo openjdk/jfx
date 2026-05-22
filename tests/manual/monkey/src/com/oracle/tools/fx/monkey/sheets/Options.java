@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,16 @@ package com.oracle.tools.fx.monkey.sheets;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.function.Consumer;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.BoundingBox;
@@ -39,8 +43,10 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -66,9 +72,12 @@ import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.util.CustomPane;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.StageInfoPane;
 import com.oracle.tools.fx.monkey.util.TextTemplates;
 import com.oracle.tools.fx.monkey.util.Utils;
 
@@ -88,6 +97,13 @@ public class Options {
         TextChoiceOption op = new TextChoiceOption(name, true, prop);
         Object[] pairs = multiLine ? TextTemplates.multiLineTextPairs() : TextTemplates.singleLineTextPairs();
         Utils.fromPairs(pairs, (k,v) -> op.addChoice(k, v));
+        op.selectFirst();
+        return op;
+    }
+
+    public static Node textOption(String name, boolean allowEditButton, StringProperty prop, Object ... nameValuePairs) {
+        TextChoiceOption op = new TextChoiceOption(name, true, prop);
+        Utils.fromPairs(nameValuePairs, (k,v) -> op.addChoice(k, v));
         op.selectFirst();
         return op;
     }
@@ -172,11 +188,17 @@ public class Options {
         op.addChoiceSupplier("Black", () -> {
             return Background.fill(Color.BLACK);
         });
-        op.addChoiceSupplier("Red", () -> {
-            return Background.fill(Color.RED);
+        op.addChoiceSupplier("Dark Gray", () -> {
+            return Background.fill(Color.DARKGRAY);
+        });
+        op.addChoiceSupplier("Light Gray", () -> {
+            return Background.fill(Color.LIGHTGRAY);
         });
         op.addChoiceSupplier("White", () -> {
             return Background.fill(Color.WHITE);
+        });
+        op.addChoiceSupplier("Red", () -> {
+            return Background.fill(Color.RED);
         });
         op.addChoiceSupplier("Linear Gradient", () -> {
             LinearGradient g = new LinearGradient(
@@ -376,5 +398,87 @@ public class Options {
     private static File parseFileURI(String text) {
         // TODO
         return null;
+    }
+
+    public static Node tooltipOption(String name, ObjectProperty<Tooltip> p) {
+        ObjectOption<Tooltip> op = new ObjectOption<>(name, p);
+        op.addChoice("<null>", null);
+        op.addChoiceSupplier("simple text", () -> createSimpleTextTooltip());
+        op.addChoiceSupplier("with image", () -> createTooltipWithImage());
+        op.selectInitialValue();
+        return op;
+    }
+
+    private static Tooltip createSimpleTextTooltip() {
+        Tooltip t = new Tooltip("simple text tooltip");
+        return t;
+    }
+
+    private static Tooltip createTooltipWithImage() {
+        Tooltip t = new Tooltip("tooltip with image");
+        t.setGraphic(ImageTools.createImageView(128, 96));
+        return t;
+    }
+
+    public static <T extends Enum> ObjectSelector<T> ofEnum(String name, boolean allowNull, Class<T> type, T defaultValue, Consumer<T> client) {
+        ObjectSelector<T> op = new ObjectSelector<>(name, client);
+        T[] values = type.getEnumConstants();
+        Arrays.sort(values, new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                return a.toString().compareTo(b.toString());
+            }
+        });
+
+        if (allowNull) {
+            op.addChoice("<null>", null);
+        }
+        for (T v : values) {
+            op.addChoice(v.toString(), v);
+        }
+        return op;
+    }
+
+    public static ObjectOption<Node> nodeOption(String name, ObjectProperty<Node> p) {
+        ObjectOption<Node> op = new ObjectOption<Node>(name, p);
+        op.addChoice("<null>", null);
+        op.addChoice("1 x 1", ImageTools.createImageView(1, 1));
+        op.addChoice("16 x 16", ImageTools.createImageView(16, 16));
+        op.addChoice("128 x 16", ImageTools.createImageView(128, 16));
+        op.addChoice("16 x 128", ImageTools.createImageView(16, 128));
+        op.addChoice("512 x 512", ImageTools.createImageView(512, 512));
+        op.addChoiceSupplier("Complex Pane", CustomPane::create);
+        op.addChoiceSupplier("Stage Information", StageInfoPane::new);
+        op.selectInitialValue();
+        return op;
+    }
+
+    public static Node opacity(String name, DoubleProperty p) {
+        DoubleOption op = new DoubleOption(name, p);
+        op.addChoice(0);
+        op.addChoice(0.5);
+        op.addChoice(1.0);
+        op.addChoice("NaN", Double.NaN);
+        op.selectInitialValue();
+        return op;
+    }
+
+    public static Node scale(String name, DoubleProperty p) {
+        DoubleOption op = new DoubleOption(name, p);
+        op.addChoice(0);
+        op.addChoice(0.5);
+        op.addChoice(1.0);
+        op.addChoice(2.0);
+        op.addChoice("NaN", Double.NaN);
+        op.selectInitialValue();
+        return op;
+    }
+
+    public static CheckBox booleanIndicator(String text, ReadOnlyBooleanProperty p) {
+        CheckBox c = new CheckBox(text);
+        c.setPadding(OptionPane.INDENT);
+        c.setDisable(true);
+        c.selectedProperty().bind(p);
+        return c;
     }
 }

@@ -11,7 +11,6 @@ LIBFFI_DIR = ../../../$(THIRD_PARTY_DIR)/libffi
 DEP_DIRS = $(BUILD_DIR) $(OBJBASE_DIR)
 
 C_SOURCES = gatomicarray.c \
-            gbinding.c \
             gboxed.c \
             gclosure.c \
             genums.c \

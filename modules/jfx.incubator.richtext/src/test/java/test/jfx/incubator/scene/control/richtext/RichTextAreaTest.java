@@ -41,6 +41,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.geometry.Insets;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.input.Clipboard;
@@ -52,6 +53,7 @@ import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
+import javafx.scene.text.Font;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,13 +82,6 @@ import test.jfx.incubator.scene.util.TUtil;
 
 /**
  * Tests the RichTextArea control.
- *
- * NOTES:
- * 1. methods that involve moving the caret (backspace, delete, move*, select*, etc.) needs a real
- * text layout and therefore need to be headful (or wait for JDK-8342565).
- * 2. operations with models that contain more than one paragraph might also fail due to scrollCaretToVisible().
- *
- * TODO accessibility APIs
  */
 public class RichTextAreaTest {
     private RichTextArea control;
@@ -510,7 +505,6 @@ public class RichTextAreaTest {
         assertEquals(new TextPos(2, 3, 2, false), control.getParagraphEnd(2));
 
         control.setModel(null);
-        // TODO this should throw an IOOBE
         assertEquals(TextPos.ZERO, control.getParagraphEnd(0));
     }
 
@@ -1097,5 +1091,71 @@ public class RichTextAreaTest {
 
         String s = RichTestUtil.getText(control, sel);
         assertEquals(text, s);
+    }
+
+    @Test
+    public void queryAccessibilityEditable() {
+        assertEquals(true, control.queryAccessibleAttribute(AccessibleAttribute.EDITABLE));
+        control.setEditable(false);
+        assertEquals(false, control.queryAccessibleAttribute(AccessibleAttribute.EDITABLE));
+    }
+
+    @Test
+    public void queryAccessibilityText() {
+        control.setLineEnding(LineEnding.LF);
+        assertEquals(null, control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        control.select(TextPos.ZERO);
+        assertEquals("\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        control.appendText("1\n2\n");
+        assertEquals("1\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals("2\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        control.select(TextPos.ofLeading(999, 0));
+        assertEquals("\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+        control.select(TextPos.ofLeading(1, 1), new TextPos(1, 1, 1, false));
+        assertEquals("2\n", control.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+    }
+
+    @Test
+    public void queryAccessibilitySelectionAndCaret() {
+        control.appendText("111\n222\n");
+        control.setLineEnding(LineEnding.LF);
+
+        control.select(TextPos.ZERO);
+        assertEquals(0, control.queryAccessibleAttribute(AccessibleAttribute.SELECTION_START));
+        assertEquals(0, control.queryAccessibleAttribute(AccessibleAttribute.SELECTION_END));
+        assertEquals(0, control.queryAccessibleAttribute(AccessibleAttribute.CARET_OFFSET));
+
+        control.select(TextPos.ofLeading(0, 1), TextPos.ofLeading(1, 2));
+        assertEquals(1, control.queryAccessibleAttribute(AccessibleAttribute.SELECTION_START));
+        assertEquals(6, control.queryAccessibleAttribute(AccessibleAttribute.SELECTION_END));
+        assertEquals(6, control.queryAccessibleAttribute(AccessibleAttribute.CARET_OFFSET));
+    }
+
+    @Test
+    public void queryAccessibilitySkin() {
+        double size = 16.0;
+        Font f = Font.getDefault();
+        StyleAttributeMap FONT = StyleAttributeMap.builder().
+            setFontFamily(f.getFamily()).
+            setFontSize(size).
+            build();
+
+        control.setLineEnding(LineEnding.LF);
+        control.appendText("111\n222\n");
+        control.layout();
+        control.applyStyle(TextPos.ZERO, control.getDocumentEnd(), FONT);
+        control.select(TextPos.ZERO);
+
+        // looking for the font size only since the platform may substitute
+        assertEquals(size, ((Font)control.queryAccessibleAttribute(AccessibleAttribute.FONT)).getSize());
+
+        Object hsb = control.lookup(".scroll-bar:horizontal");
+        assertNotNull(hsb);
+        assertEquals(hsb, control.queryAccessibleAttribute(AccessibleAttribute.HORIZONTAL_SCROLLBAR));
+
+        Object vsb = control.lookup(".scroll-bar:vertical");
+        assertNotNull(vsb);
+        assertEquals(vsb, control.queryAccessibleAttribute(AccessibleAttribute.VERTICAL_SCROLLBAR));
     }
 }

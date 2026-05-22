@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.collections;
 
 import com.sun.javafx.collections.ObservableListWrapper;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +37,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
 import javafx.collections.transformation.FilteredList;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +57,19 @@ public class FilteredListTest {
         mlo = new MockListObserver<>();
         filteredList = new FilteredList<>(list, predicate);
         filteredList.addListener(mlo);
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @Test
@@ -320,5 +335,21 @@ public class FilteredListTest {
         assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(list.size()));
         assertDoesNotThrow(() -> filteredList.getViewIndex(filteredList.size()));
+    }
+
+    @Test
+    public void testSortedThenFilteredListDoesNotThrowIOOBE() {
+        ObservableList<Long> numbers = FXCollections.observableArrayList();
+
+        ObservableList<Long> sortedList = numbers.sorted(Long::compare);
+        ObservableList<Long> filteredList = sortedList.filtered(_ -> true);
+
+        numbers.add(0L);
+        numbers.addAll(List.of(0L, 4L, 8L, 2L, 6L, 0L, 4L, 8L, 2L, 6L, 0L));
+
+        assertDoesNotThrow(() -> numbers.subList(0, numbers.size() - 1).clear());
+
+        assertEquals(List.of(0L), filteredList);
+        assertEquals(List.of(0L), sortedList);
     }
 }
