@@ -76,7 +76,7 @@ class StageOwnershipTest extends VisualTestBase {
     private static final Color COLOR2 = Color.YELLOW;
     private static final Color COLOR3 = Color.GREEN;
     private static final int X_DELTA = 15; // shadows
-    private static final int Y_DELTA = 75; // shadows + decoration
+    private static final int Y_DELTA = 100; // shadows + decoration
 
     private static final double TOLERANCE = 0.07;
 
