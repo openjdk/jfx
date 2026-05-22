@@ -344,8 +344,7 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setValue("ITEM1");
 
-        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getDisplayNode();
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
         assertEquals("ITEM1", cell.getText());
 
         comboBox.setConverter(new StringConverter<>() {
@@ -395,8 +394,7 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setValue(null);
 
-        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getDisplayNode();
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
         assertNull(cell.getText());
 
         comboBox.setConverter(new StringConverter<>() {
@@ -445,8 +443,7 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setValue(null);
 
-        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getDisplayNode();
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
         assertNull(cell.getText());
 
         comboBox.setConverter(new StringConverter<>() {
