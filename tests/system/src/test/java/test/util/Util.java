@@ -84,7 +84,7 @@ public class Util {
      * Configurable via system property {@code test.state.delay}.
      */
     public static final long STATE_DELAY =
-            Long.getLong("test.state.delay", 1000);
+            Long.getLong("test.state.delay", 500);
 
     /**
      * Time in milliseconds to wait for focus changes to be processed.
