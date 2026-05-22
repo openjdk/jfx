@@ -169,6 +169,8 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
 
     view_position.setOnChange([this](const Point& point) {
         notify_view_move();
+        // FullScreen will hide the decoration
+        update_window_size();
     });
 
     window_size.setOnChange([this](const Size& size) {
