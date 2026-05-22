@@ -285,17 +285,6 @@ public class TestStage extends Application {
         btnSelectNext.setTooltip(new Tooltip("Select next stage"));
         btnSelectNone.setTooltip(new Tooltip("Deselect current stage"));
 
-        double buttonMinWidth = 90;
-        btnCreate.setMinWidth(buttonMinWidth);
-        btnCreateShow.setMinWidth(buttonMinWidth + 20);
-        btnShow.setMinWidth(buttonMinWidth);
-        btnHide.setMinWidth(buttonMinWidth);
-        btnToFront.setMinWidth(buttonMinWidth);
-        btnToBack.setMinWidth(buttonMinWidth);
-        btnFocus.setMinWidth(buttonMinWidth);
-        btnSizeToScene.setMinWidth(buttonMinWidth + 30);
-        btnCenterOnScreen.setMinWidth(buttonMinWidth + 50);
-
         Label initLabel = createSectionLabel("Stage Initialization");
         GridPane initGrid = new GridPane();
         initGrid.setHgap(10);
@@ -317,7 +306,7 @@ public class TestStage extends Application {
         initGrid.add(cbOwner, 1, 1);
 
         Label actionsLabel = createSectionLabel("Stage Actions");
-        FlowPane createActions = new FlowPane(btnCreate, btnCreateShow, btnShow, btnHide);
+        FlowPane createActions = new FlowPane(btnCreate, btnShow, btnCreateShow, btnHide);
         createActions.setHgap(8);
         createActions.setVgap(8);
         createActions.setPadding(new Insets(5, 10, 5, 10));
@@ -727,8 +716,8 @@ public class TestStage extends Application {
             stagePane.addBooleanProperty("Maximized", stage.maximizedProperty(), stage::setMaximized);
             stagePane.addBooleanProperty("Iconified", stage.iconifiedProperty(), stage::setIconified);
             stagePane.addBooleanProperty("Resizable", stage.resizableProperty(), stage::setResizable);
-            stagePane.addDoublePropery("X", stage.xProperty(), stage::setX, 0, MAX_WIDTH * 2, 1.0);
-            stagePane.addDoublePropery("Y", stage.yProperty(), stage::setY, 0, MAX_HEIGHT * 2, 1.0);
+            stagePane.addDoublePropery("X", stage.xProperty(), stage::setX, -1, MAX_WIDTH * 2, 1.0);
+            stagePane.addDoublePropery("Y", stage.yProperty(), stage::setY, -1, MAX_HEIGHT * 2, 1.0);
             stagePane.addDoublePropery("Width", stage.widthProperty(), stage::setWidth, 1, MAX_WIDTH, 1.0);
             stagePane.addDoublePropery("Height", stage.heightProperty(), stage::setHeight, 1, MAX_HEIGHT, 1.0);
             stagePane.addDoublePropery("Min Width", stage.minWidthProperty(), stage::setMinWidth, 1, MAX_WIDTH, 1.0);

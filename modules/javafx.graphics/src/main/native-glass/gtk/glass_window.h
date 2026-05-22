@@ -44,6 +44,7 @@
 
 #include <iostream>
 #include <functional>
+#include <algorithm>
 
 
 // Used for notification triggering and to only notify when
@@ -129,14 +130,27 @@ struct Size {
         return width == other.width && height == other.height;
     }
 
-    Size max(const Size& other) const {
-        int w = std::max(other.width, width);
-        int h = std::max(other.height, height);
-        return {w, h};
-    }
-
     bool is_valid() const {
         return width > 0 && height > 0;
+    }
+};
+
+struct Bounds : Size {
+    Bounds() : Size{-1, -1} {}
+    Bounds(int w, int h) : Size{ w, h} {}
+
+    Bounds max(const Size& other) const {
+        return {std::max(other.width, width), std::max(other.height, height)};
+    }
+
+    bool is_set() const {
+        return width > 0 || height > 0;
+    }
+
+    Bounds without_extents(const Rectangle& extents) const {
+        int w = width  > 0 ? std::clamp(width  - extents.width,  1, MAX_WINDOW_SIZE) : -1;
+        int h = height > 0 ? std::clamp(height - extents.height, 1, MAX_WINDOW_SIZE) : -1;
+        return {w, h};
     }
 };
 
@@ -282,9 +296,9 @@ class WindowContext: public DeletedMemDebug<0xCC> {
     GdkCursor* gdk_cursor{};
     GdkCursor* gdk_cursor_override{};
 
-    Size minimum_size = Size{1, 1};
-    Size maximum_size = Size{G_MAXINT, G_MAXINT};
-    Size sys_min_size = Size{1, 1};
+    Bounds minimum_size;
+    Bounds maximum_size;
+    Bounds sys_min_size;
     bool resizable{true};
     Observable<Point> view_position = Point{0, 0}; //Default for non-titled windows
     Observable<Size> view_size = Size{-1, -1};
@@ -378,6 +392,7 @@ public:
     void process_state(GdkEventWindowState*);
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
+    void remove_window_constraints();
     void process_delete();
     void process_destroy();
 

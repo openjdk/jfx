@@ -94,7 +94,7 @@ public class Util {
      * Configurable via system property {@code test.focus.delay}.
      */
     public static final long FOCUS_DELAY =
-            Long.getLong("test.focus.delay", 250);
+            Long.getLong("test.focus.delay", 300);
 
     /**
      * Default timeout in milliseconds for waiting on an observable property
