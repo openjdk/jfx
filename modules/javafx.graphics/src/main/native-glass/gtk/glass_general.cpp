@@ -50,6 +50,7 @@ void glass_gtk_log_init(const char* categories) {
     glass_log_flags = g_parse_debug_string(categories, glass_log_keys, G_N_ELEMENTS(glass_log_keys));
 }
 
+
 #endif // VERBOSE
 
 

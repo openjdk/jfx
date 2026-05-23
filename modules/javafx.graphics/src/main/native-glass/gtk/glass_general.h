@@ -255,13 +255,15 @@ extern unsigned int glass_log_flags;
 
 void glass_gtk_log_init(const char* categories);
 
+extern "C" { extern jboolean gtk_verbose; }
+
 template<typename... Args>
 inline void log(int category,
                 const char* categoryName,
                 const std::string& artifact,
                 const char* fmt,
                 Args... args) {
-    if (glass_log_flags & category) {
+    if (gtk_verbose && (glass_log_flags & category)) {
         std::printf("[%s %.30s] ", categoryName, artifact.c_str());
         if constexpr (sizeof...(args) == 0) {
             std::fputs(fmt, stdout);
