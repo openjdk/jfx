@@ -336,12 +336,15 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         });
 
         usePromptText = new BooleanBinding() {
-            { bind(control.textProperty(), control.promptTextProperty()); }
+            { bind(control.textProperty(),
+                   control.promptTextProperty(),
+                   control.focusedProperty()); }
             @Override protected boolean computeValue() {
                 String txt = control.getText();
                 String promptTxt = control.getPromptText();
                 return ((txt == null || txt.isEmpty()) &&
-                        promptTxt != null && !promptTxt.isEmpty());
+                        promptTxt != null && !promptTxt.isEmpty() &&
+                        !control.isFocused());
             }
         };
 

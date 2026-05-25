@@ -49,7 +49,6 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -289,13 +288,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         usePromptText = new BooleanBinding() {
             { bind(control.textProperty(),
                    control.promptTextProperty(),
-                   promptTextFillProperty()); }
+                   control.focusedProperty()); }
             @Override protected boolean computeValue() {
                 String txt = control.getText();
                 String promptTxt = control.getPromptText();
                 return ((txt == null || txt.isEmpty()) &&
                         promptTxt != null && !promptTxt.isEmpty() &&
-                        !getPromptTextFill().equals(Color.TRANSPARENT));
+                        !control.isFocused());
             }
         };
 
