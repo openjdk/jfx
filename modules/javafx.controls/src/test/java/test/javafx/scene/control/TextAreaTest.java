@@ -41,6 +41,7 @@ import javafx.scene.control.TextInputControlShim;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.control.skin.TextInputSkinShim;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
@@ -298,6 +299,40 @@ public class TextAreaTest {
         root.getChildren().add(txtArea);
         Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
         assertNull(promptNode);
+    }
+
+    @Test
+    public void textAreaPromptWithCustomFillIsHiddenWhenFocused() {
+        initStage();
+
+        TextArea a = new TextArea();
+        TextArea b = new TextArea();
+
+        a.setPromptText("This is a prompt text");
+        a.setStyle("-fx-prompt-text-fill: red;");
+
+        b.setPromptText("Other prompt");
+
+        VBox box = new VBox(0);
+        box.setMinWidth(0);
+        box.setFillWidth(false);
+        box.getChildren().addAll(a, b);
+
+        scene.setRoot(box);
+        stage.show();
+
+        b.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        Text promptNode = TextInputSkinShim.getPromptNode(a);
+        assertNotNull(promptNode);
+        assertTrue(promptNode.isVisible());
+
+        a.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(a.isFocused());
+        assertFalse(promptNode.isVisible());
     }
 
     /*********************************************************************

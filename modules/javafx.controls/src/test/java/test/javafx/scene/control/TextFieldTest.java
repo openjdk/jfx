@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -298,6 +299,41 @@ public class TextFieldTest {
         root.getChildren().add(txtField);
         Text promptNode = TextInputSkinShim.getPromptNode(txtField);
         assertNull(promptNode);
+    }
+
+    @Test
+    public void textFieldPromptWithCustomCssIsHiddenWhenFocused() {
+        initStage();
+
+        TextField a = new TextField();
+        TextField b = new TextField();
+
+        a.setPromptText("This is a prompt text");
+        a.setStyle("-fx-prompt-text-fill: red;");
+        b.setPromptText("Other prompt");
+
+        VBox box = new VBox(0);
+        box.setMinWidth(0);
+        box.setFillWidth(false);
+        box.getChildren().addAll(a, b);
+
+        scene.setRoot(box);
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        b.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(b.isFocused());
+
+        Text promptNode = TextInputSkinShim.getPromptNode(a);
+        assertNotNull(promptNode);
+        assertTrue(promptNode.isVisible());
+
+        a.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(a.isFocused());
+        assertFalse(promptNode.isVisible());
     }
 
     /*********************************************************************
