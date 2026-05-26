@@ -32,7 +32,7 @@ extern "C" JavaVM* g_pJVM;
 void DetachThread(gpointer data)
 {
     void *env = NULL;
-    if (g_pJVM && g_pJVM->GetEnv(&env, JNI_VERSION_1_2) != JNI_EDETACHED)
+    if (g_pJVM && g_pJVM->GetEnv(&env, JNI_VERSION_1_8) != JNI_EDETACHED)
         g_pJVM->DetachCurrentThread();
 }
 
@@ -40,7 +40,7 @@ static GPrivate g_Private = G_PRIVATE_INIT(DetachThread);
 
 jboolean GstGetEnv(JNIEnv **env)
 {
-    if (g_pJVM->GetEnv((void**)env, JNI_VERSION_1_2) == JNI_OK)
+    if (g_pJVM->GetEnv((void**)env, JNI_VERSION_1_8) == JNI_OK)
         return true;
     else
     {

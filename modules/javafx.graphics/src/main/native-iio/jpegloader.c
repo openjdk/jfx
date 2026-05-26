@@ -101,30 +101,15 @@ static jmethodID JPEGImageLoader_emitWarningID;
 static JavaVM *jvm;
 
 #ifdef STATIC_BUILD
-
-JNIEXPORT jint JNICALL
-JNI_OnLoad_javafx_iio(JavaVM *vm, void *reserved) {
+JNIEXPORT jint JNICALL JNI_OnLoad_javafx_iio(JavaVM *vm, void *reserved) {
     jvm = vm;
-#ifdef JNI_VERSION_1_8
-    //min. returned JNI_VERSION required by JDK8 for builtin libraries
-    JNIEnv *env;
-    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
-            return JNI_VERSION_1_2;
-    }
     return JNI_VERSION_1_8;
-#else
-    return JNI_VERSION_1_2;
-#endif
 }
-
 #else
-
-JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM *vm, void *reserved) {
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     jvm = vm;
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_1_8;
 }
-
 #endif // STATIC_BUILD
 
 
@@ -577,7 +562,7 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
     char buffer[JMSG_LENGTH_MAX];
     jstring string;
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     jobject theObject;
     j_decompress_ptr dinfo;
 
@@ -742,7 +727,7 @@ imageio_fill_input_buffer(j_decompress_ptr cinfo) {
     struct jpeg_source_mgr *src = cinfo->src;
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
     streamBufferPtr sb = &data->streamBuf;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     int ret;
 
     /* This is where input suspends */
@@ -828,7 +813,7 @@ imageio_fill_suspended_buffer(j_decompress_ptr cinfo) {
     struct jpeg_source_mgr *src = cinfo->src;
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
     streamBufferPtr sb = &data->streamBuf;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     jint ret;
     int offset, buflen;
 
@@ -921,7 +906,7 @@ imageio_skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
     struct jpeg_source_mgr *src = cinfo->src;
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
     streamBufferPtr sb = &data->streamBuf;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     jlong ret;
     jobject reader;
 
@@ -1001,7 +986,7 @@ imageio_term_source(j_decompress_ptr cinfo) {
     // To pushback, just seek back by src->bytes_in_buffer
     struct jpeg_source_mgr *src = cinfo->src;
     imageIODataPtr data = (imageIODataPtr) cinfo->client_data;
-    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_2);
+    JNIEnv *env = (JNIEnv *) GetEnv(jvm, JNI_VERSION_1_8);
     jobject reader = data->imageIOobj;
     if (src->bytes_in_buffer > 0) {
         RELEASE_ARRAYS(env, data, src->next_input_byte);

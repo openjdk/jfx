@@ -50,15 +50,15 @@ static void (*_VM_fire_load_event)(int id, int frameId, int state,
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
-LOGV(TAG, "ONLOAD WEB");
-LOGI("ONLOAD WEB");
-    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6)) {
+    LOGV(TAG, "ONLOAD WEB");
+    LOGI("ONLOAD WEB");
+    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_8)) {
         return JNI_ERR; /* JNI version not supported */
     }
     jvm = vm;
     init_ids(env);
     init_functions(env);
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_8;
 }
 
 void init_ids(JNIEnv *env) {
