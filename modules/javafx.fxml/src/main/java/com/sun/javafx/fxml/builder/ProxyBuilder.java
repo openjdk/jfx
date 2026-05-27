@@ -44,6 +44,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javafx.beans.NamedArg;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.util.Builder;
 import com.sun.javafx.reflect.ConstructorUtil;
 import com.sun.javafx.reflect.ReflectUtil;
@@ -185,6 +188,14 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
         Method getter = findGetter(propName);
         if (getter != null) {
             Class<?> retType = getter.getReturnType();
+
+            if (ObservableList.class.isAssignableFrom(retType)) {
+                return FXCollections.observableArrayList();
+            }
+            if (ObservableMap.class.isAssignableFrom(retType)) {
+                return FXCollections.observableHashMap();
+            }
+
             if (Map.class.isAssignableFrom(retType)) {
                 return new LinkedHashMap<>();
             }
