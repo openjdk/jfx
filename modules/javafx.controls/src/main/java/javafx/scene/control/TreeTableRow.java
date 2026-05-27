@@ -476,10 +476,10 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         }
 
         final TreeItem<T> editItem = editingCell == null ? null : editingCell.getTreeItem();
-        if (! isEditing() && getTreeItem().equals(editItem)) {
+        if (!isEditing() && getTreeItem().equals(editItem)) {
             startEdit();
-        } else if (isEditing() && ! getTreeItem().equals(editItem)) {
-            cancelEdit();
+        } else if (isEditing() && !getTreeItem().equals(editItem)) {
+            stopEdit();
         }
     }
 
