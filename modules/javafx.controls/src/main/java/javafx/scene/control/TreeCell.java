@@ -575,11 +575,11 @@ public class TreeCell<T> extends IndexedCell<T> {
 
         FocusModel<TreeItem<T>> fm = getTreeView().getFocusModel();
         if (fm == null) {
-            setFocused(false);
+            setFocusedViaFocusModel(false);
             return;
         }
 
-        setFocused(fm.isFocused(getIndex()));
+        setFocusedViaFocusModel(fm.isFocused(getIndex()));
     }
 
     private boolean updateEditingIndex = true;

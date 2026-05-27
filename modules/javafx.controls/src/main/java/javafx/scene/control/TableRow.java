@@ -303,7 +303,7 @@ public class TableRow<T> extends IndexedCell<T> {
         if (sm == null || fm == null) return;
 
         boolean isFocused = ! sm.isCellSelectionEnabled() && fm.isFocused(getIndex());
-        setFocused(isFocused);
+        setFocusedViaFocusModel(isFocused);
     }
 
     private void updateEditing() {

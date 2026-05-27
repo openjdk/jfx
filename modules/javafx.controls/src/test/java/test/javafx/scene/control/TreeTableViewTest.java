@@ -99,6 +99,7 @@ import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -8059,5 +8060,40 @@ public class TreeTableViewTest {
         expectedValues = Stream.of(0, 1, 2, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
         actualValues = IntStream.range(0, 12).mapToObj(i -> ttv.getTreeItem(i).getValue()).toList();
         assertEquals(expectedValues, actualValues);
+    }
+
+    // See JDK-8331464
+    @Test public void test_focusWithinProperty_firesOnFocusTransferToAndFromTreeTableView() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("A"), new TreeItem<>("B"), new TreeItem<>("C"),
+                new TreeItem<>("D"), new TreeItem<>("E"));
+
+        TreeTableView<String> table = new TreeTableView<>(root);
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Items");
+        col.setCellValueFactory(r -> new ReadOnlyStringWrapper(r.getValue().getValue()));
+        table.getColumns().add(col);
+        Button button = new Button("Other");
+
+        stageLoader = new StageLoader(new HBox(table, button));
+        stageLoader.getStage().requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        table.requestFocus();
+        table.getFocusModel().focus(0);
+        Toolkit.getToolkit().firePulse();
+
+        List<String> events = new ArrayList<>();
+        table.focusWithinProperty().addListener((obs, oldVal, newVal) ->
+                events.add(newVal ? "gained" : "lost"));
+
+        button.requestFocus();
+        assertEquals(List.of("lost"), events);
+        Toolkit.getToolkit().firePulse();
+
+        table.requestFocus();
+        assertEquals(List.of("lost", "gained"), events);
+        Toolkit.getToolkit().firePulse();
     }
 }

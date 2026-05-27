@@ -109,6 +109,7 @@ import javafx.scene.control.skin.TableHeaderRowShim;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -6714,5 +6715,35 @@ public class TableViewTest {
 
         sm.clearSelection();
         assertEquals(List.of(), sm.getSelectedIndices());
+    }
+
+    // See JDK-8331464
+    @Test public void test_focusWithinProperty_firesOnFocusTransferToAndFromTableView() {
+        TableView<String> table = new TableView<>(
+                FXCollections.observableArrayList("A", "B", "C", "D", "E"));
+        TableColumn<String, String> col = new TableColumn<>("Items");
+        col.setCellValueFactory(r -> new SimpleStringProperty(r.getValue()));
+        table.getColumns().add(col);
+        Button button = new Button("Other");
+
+        stageLoader = new StageLoader(new HBox(table, button));
+        stageLoader.getStage().requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        table.requestFocus();
+        table.getFocusModel().focus(0);
+        Toolkit.getToolkit().firePulse();
+
+        List<String> events = new ArrayList<>();
+        table.focusWithinProperty().addListener((obs, oldVal, newVal) ->
+                events.add(newVal ? "gained" : "lost"));
+
+        button.requestFocus();
+        assertEquals(List.of("lost"), events);
+        Toolkit.getToolkit().firePulse();
+
+        table.requestFocus();
+        assertEquals(List.of("lost", "gained"), events);
+        Toolkit.getToolkit().firePulse();
     }
 }

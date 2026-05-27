@@ -549,7 +549,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final boolean isFocused = isFocused();
         if (! isInCellSelectionMode()) {
             if (isFocused) {
-                setFocused(false);
+                setFocusedViaFocusModel(false);
             }
             return;
         }
@@ -561,11 +561,11 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         final TableViewFocusModel<S> fm = tableView.getFocusModel();
         if (fm == null) {
-            setFocused(false);
+            setFocusedViaFocusModel(false);
             return;
         }
 
-        setFocused(fm.isFocused(index, getTableColumn()));
+        setFocusedViaFocusModel(fm.isFocused(index, getTableColumn()));
     }
 
     private void updateEditing() {
