@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -73,6 +74,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
@@ -712,6 +714,22 @@ public class PaginationSkin extends SkinBase<Pagination> {
             hasPendingAnimation = true;
             return;
         }
+
+        // If animations are disabled (including due to reduced motion), create
+        // the target page if needed and switch panes without animating.
+        if (!shouldAnimate()) {
+            if (!nextStackPane.isVisible()) {
+                if (!createPage(nextStackPane, currentAnimatedIndex)) {
+                    return;
+                }
+            }
+            swapPanes();
+            nextPageReached = false;
+            hasPendingAnimation = false;
+            timeline = null;
+            return;
+        }
+
         if (timeline != null) {
             timeline.setRate(8);
             hasPendingAnimation = true;
@@ -800,6 +818,14 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
     // If the swipe hasn't reached the THRESHOLD we want to animate the clamping.
     private void animateClamping(boolean rightToLeft) {
+        if (!shouldAnimate()) {
+            currentStackPane.setTranslateX(0);
+            nextStackPane.setTranslateX(0);
+            nextStackPane.setVisible(false);
+            timeline = null;
+            return;
+        }
+
         if (rightToLeft) {  // animate right to left
             timeline = new Timeline();
             KeyFrame k1 = new KeyFrame(Duration.millis(0),
@@ -825,7 +851,14 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
     }
 
-
+    private boolean shouldAnimate() {
+        Pagination skinnable = getSkinnable();
+        return animate
+            && skinnable != null
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -928,10 +961,15 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 previousIndex = old.intValue();
                 currentIndex = cur.intValue();
                 updatePageIndex();
-                if (animate) {
+                if (shouldAnimate()) {
                     currentAnimatedIndex = currentIndex;
                     animateSwitchPage();
                 } else {
+                    currentStackPane.setTranslateX(0);
+                    currentStackPane.getChildren().clear();
+                    nextStackPane.setTranslateX(0);
+                    nextStackPane.setVisible(false);
+                    nextStackPane.getChildren().clear();
                     createPage(currentStackPane, currentIndex);
                 }
             });
