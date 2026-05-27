@@ -635,8 +635,8 @@ public class AxisTest {
             @Override public double getDisplayPosition(String value) { return 0; }
             @Override public String getValueForDisplay(double displayPosition) { return null; }
             @Override public boolean isValueOnAxis(String value) { return false; }
-            @Override  public double toNumericValue(String value) { return 0; }
-            @Override  public String toRealValue(double value) { return null; }
+            @Override public double toNumericValue(String value) { return 0; }
+            @Override public String toRealValue(double value) { return null; }
         };
 
         StageLoader stageLoader = new StageLoader(testAxis);
