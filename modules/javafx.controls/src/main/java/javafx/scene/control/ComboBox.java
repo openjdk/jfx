@@ -40,6 +40,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -415,10 +417,18 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             editor = new ReadOnlyObjectWrapper<>(this, "editor");
             textField = new FakeFocusTextField();
             editor.set(textField);
+            setFocusDelegate(textField);
         }
         return editor.getReadOnlyProperty();
     }
 
+    @Override
+    protected boolean shouldDelegateEvent(KeyEvent event) {
+        if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.ESCAPE) {
+            return false;
+        }
+        return true;
+    }
 
     // --- Placeholder Node
     private ObjectProperty<Node> placeholder;
