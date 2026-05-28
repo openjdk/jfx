@@ -105,6 +105,7 @@ public abstract class TableRowSkinBase<T,
 
     boolean isDirty = false;
 
+    private Map<Node, FadeTransition> currentTransitions;
 
     /* *************************************************************************
      *                                                                         *
@@ -665,27 +666,60 @@ public abstract class TableRowSkinBase<T,
     }
 
     private void fadeOut(final Node node) {
-        if (node.getOpacity() < 1.0) return;
+        if (node.getOpacity() < 1.0) {
+            return;
+        }
+
+        cancelTransition(node);
 
         if (shouldAnimate()) {
-            FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-            fader.setToValue(0.0);
-            fader.play();
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(0.0);
+            transition.play();
+            trackTransition(node, transition);
         } else {
             node.setOpacity(0);
         }
     }
 
     private void fadeIn(final Node node) {
-        if (node.getOpacity() > 0.0) return;
+        if (node.getOpacity() > 0.0) {
+            return;
+        }
+
+        cancelTransition(node);
 
         if (shouldAnimate()) {
-            FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-            fader.setToValue(1.0);
-            fader.play();
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(1.0);
+            transition.play();
+            trackTransition(node, transition);
         } else {
             node.setOpacity(1);
         }
+    }
+
+    private void cancelTransition(Node node) {
+        if (currentTransitions != null && currentTransitions.get(node) instanceof FadeTransition transition) {
+            transition.stop();
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void removeTransition(Node node) {
+        if (currentTransitions != null) {
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void trackTransition(Node node, FadeTransition transition) {
+        if (currentTransitions == null) {
+            currentTransitions = new IdentityHashMap<>(8);
+        }
+
+        currentTransitions.put(node, transition);
     }
 
     private boolean shouldAnimate() {

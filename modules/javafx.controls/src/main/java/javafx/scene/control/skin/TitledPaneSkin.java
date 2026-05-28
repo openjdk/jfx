@@ -196,6 +196,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
     @Override public void dispose() {
         super.dispose();
 
+        if (timeline != null) {
+            timeline.stop();
+        }
+
         if (behavior != null) {
             behavior.dispose();
         }
@@ -294,8 +298,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         // we need to perform the transition between expanded / hidden
         if (shouldAnimate()) {
             transitionStartValue = getTransition();
-            doAnimationTransition();
+            runTransitionAnimation();
         } else {
+            cancelTransitionAnimation();
+
             if (expanded) {
                 setTransition(1.0f);
             } else {
@@ -327,7 +333,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         return headerHeight + snapSizeY(contentHeight) + snappedTopInset() + snappedBottomInset();
     }
 
-    private void doAnimationTransition() {
+    private void runTransitionAnimation() {
         if (content == null) {
             return;
         }
@@ -388,6 +394,13 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
         timeline.getKeyFrames().setAll(k1, k2);
         timeline.play();
+    }
+
+    private void cancelTransitionAnimation() {
+        if (timeline != null) {
+            timeline.stop();
+            timeline = null;
+        }
     }
 
     private boolean shouldAnimate() {
