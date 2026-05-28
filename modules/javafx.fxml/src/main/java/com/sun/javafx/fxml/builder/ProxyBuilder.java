@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 import javafx.util.Builder;
 import com.sun.javafx.reflect.ConstructorUtil;
 import com.sun.javafx.reflect.ReflectUtil;
@@ -192,12 +194,18 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             if (ObservableList.class.isAssignableFrom(retType)) {
                 return FXCollections.observableArrayList();
             }
+            if (ObservableSet.class.isAssignableFrom(retType)) {
+                return FXCollections.observableSet();
+            }
             if (ObservableMap.class.isAssignableFrom(retType)) {
                 return FXCollections.observableHashMap();
             }
 
             if (Map.class.isAssignableFrom(retType)) {
                 return new LinkedHashMap<>();
+            }
+            if (Set.class.isAssignableFrom(retType)) {
+                return new LinkedHashSet<>();
             }
             if (Collection.class.isAssignableFrom(retType)) {
                 return new ArrayListWrapper<>();

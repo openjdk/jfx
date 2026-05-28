@@ -248,11 +248,42 @@ public class ProxyBuilderTest {
         assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
     }
 
-    /**
-     * containsKey("properties") must return true when the class has a
-     * no-arg getter that returns Map, and false for a property that has
-     * no getter at all.
-     */
+    @Test
+    public void testContainsKeyForListProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithCollection.class);
+        assertTrue(pb.containsKey("list"),
+                "containsKey should be true for a getter-backed List property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForObservableListProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithCollection.class);
+        assertTrue(pb.containsKey("propertyList"),
+                "containsKey should be true for a getter-backed ObservableList property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlySetProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlySet.class);
+        assertTrue(pb.containsKey("properties"),
+                "containsKey should be true for a getter-backed Set property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableSetProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlySet.class);
+        assertTrue(pb.containsKey("observableProperties"),
+                "containsKey should be true for a getter-backed ObservableSet property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
     @Test
     public void testContainsKeyForReadOnlyMapProperty() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
@@ -262,11 +293,15 @@ public class ProxyBuilderTest {
                 "containsKey should be false when no getter exists");
     }
 
-    /**
-     * containsKey("properties") must return false for a class whose
-     * @NamedArg constructor does not expose a 'properties' getter, so
-     * ProxyBuilder does not intercept unrelated property names.
-     */
+    @Test
+    public void testContainsKeyForReadOnlyObservableMapProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        assertTrue(pb.containsKey("observableProperties"),
+                "containsKey should be true for a getter-backed ObservableMap property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
     @Test
     public void testContainsKeyFalseWhenNoMapGetter() {
         ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
@@ -274,11 +309,6 @@ public class ProxyBuilderTest {
                 "containsKey should be false when the class has no getProperties()");
     }
 
-    /**
-     * The main regression test: building a @NamedArg class with a
-     * read-only Map property must set the @NamedArg value AND populate
-     * the map with any entries that were added to the container.
-     */
     @Test
     public void testReadOnlyMapWithNamedArg() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);

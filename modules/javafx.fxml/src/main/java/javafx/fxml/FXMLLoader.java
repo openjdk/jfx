@@ -41,6 +41,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -123,7 +124,7 @@ public class FXMLLoader {
             // Return true if value is a list, or if the value's type defines
             // a default property that is a list
             boolean collection;
-            if (value instanceof List<?>) {
+            if (value instanceof List<?> || value instanceof Set<?>) {
                 collection = true;
             } else {
                 Class<?> type = value.getClass();
@@ -144,16 +145,18 @@ public class FXMLLoader {
             // If value is a list, add element to it; otherwise, get the value
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
-            List<Object> list;
+            Collection<Object> collection;
             if (value instanceof List<?>) {
-                list = (List<Object>)value;
+                collection = (List<Object>) value;
+            } else if (value instanceof Set<?>) {
+                collection = (Set<Object>) value;
             } else {
                 Class<?> type = value.getClass();
                 DefaultProperty defaultProperty = type.getAnnotation(DefaultProperty.class);
                 String defaultPropertyName = defaultProperty.value();
 
                 // Get the list value
-                list = (List<Object>)getProperties().get(defaultPropertyName);
+                collection = (List<Object>)getProperties().get(defaultPropertyName);
 
                 // Coerce the element to the list item type
                 if (!Map.class.isAssignableFrom(type)) {
@@ -162,7 +165,7 @@ public class FXMLLoader {
                 }
             }
 
-            list.add(element);
+            collection.add(element);
         }
 
         public void set(Object value) throws LoadException {

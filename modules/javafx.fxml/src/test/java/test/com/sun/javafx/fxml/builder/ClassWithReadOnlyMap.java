@@ -26,6 +26,8 @@
 package test.com.sun.javafx.fxml.builder;
 
 import javafx.beans.NamedArg;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +42,7 @@ public class ClassWithReadOnlyMap {
 
     public final String label;
     private final Map<String, Object> properties = new HashMap<>();
+    private final ObservableMap<String, Object> observableProperties = FXCollections.observableHashMap();
 
     public ClassWithReadOnlyMap() {
         this.label = null;
@@ -52,5 +55,9 @@ public class ClassWithReadOnlyMap {
     /** Read-only map property: getter only, no setter. */
     public Map<String, Object> getProperties() {
         return properties;
+    }
+
+    public ObservableMap<String, Object> getObservableProperties() {
+        return observableProperties;
     }
 }
