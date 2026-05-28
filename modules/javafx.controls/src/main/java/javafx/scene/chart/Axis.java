@@ -434,9 +434,7 @@ public abstract class Axis<T> extends Region {
     protected final void invalidateRange() { rangeValid = false; }
 
     /**
-     * This is used to check if any given animation should run.
-     * <p>
-     * The default implementation returns true if animation is enabled, the node
+     * This is used to check if any given animation should run. It returns true if animation is enabled, the node
      * is visible and in a scene, and reduced-motion mode is not enabled.
      *
      * @return {@code true} if animations should run, {@code false} otherwise
