@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import test.javafx.fxml.ClassWithCollections?>
+<ClassWithCollections xmlns:fx="http://javafx.com/fxml">
+<!--                      names="a, b, c"-->
+<!--                      ratios="1.0, 2.0, 3.0"-->
+
+    <!-- Standard collection creation -->
+
+    <list>
+        <String fx:value="list_value_1"/>
+        <String fx:value="list_value_2"/>
+        <String fx:value="list_value_3"/>
+    </list>
+
+    <set>
+        <String fx:value="set_value_1"/>
+        <String fx:value="set_value_2"/>
+        <String fx:value="set_value_3"/>
+    </set>
+
+    <map>
+        <key1>
+            <String fx:value="map_value_1" />
+        </key1>
+        <key2>
+            <String fx:value="mav_value_2" />
+        </key2>
+    </map>
+
+    <!-- (FX)Observable collection creation -->
+
+    <observableList>
+        <String fx:value="list_value_1"/>
+        <String fx:value="list_value_2"/>
+        <String fx:value="list_value_3"/>
+    </observableList>
+
+    <observableSet>
+        <String fx:value="set_value_1"/>
+        <String fx:value="set_value_2"/>
+        <String fx:value="set_value_3"/>
+    </observableSet>
+
+    <observableMap>
+        <key1>
+            <String fx:value="map_value_1" />
+        </key1>
+        <key2>
+            <String fx:value="mav_value_2" />
+        </key2>
+    </observableMap>
+
+</ClassWithCollections>

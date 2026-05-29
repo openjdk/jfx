@@ -652,7 +652,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     /**
-     * Determines the type of a list item.
+     * Determines the type of a list or set item.
      *
      * @param listType
      */
@@ -682,7 +682,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     /**
-     * Determines the type of a list item.
+     * Determines the type of a list or set item.
      *
      * @param listType
      */
@@ -696,6 +696,9 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                 Class<?> rawType = (Class<?>)parameterizedType.getRawType();
 
                 if (List.class.isAssignableFrom(rawType)) {
+                    itemType = parameterizedType.getActualTypeArguments()[0];
+                }
+                if (Set.class.isAssignableFrom(rawType)) {
                     itemType = parameterizedType.getActualTypeArguments()[0];
                 }
 
@@ -713,6 +716,10 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                     Class<?> interfaceType = (Class<?>)parameterizedType.getRawType();
 
                     if (List.class.isAssignableFrom(interfaceType)) {
+                        itemType = parameterizedType.getActualTypeArguments()[0];
+                        break;
+                    }
+                    if (Set.class.isAssignableFrom(interfaceType)) {
                         itemType = parameterizedType.getActualTypeArguments()[0];
                         break;
                     }

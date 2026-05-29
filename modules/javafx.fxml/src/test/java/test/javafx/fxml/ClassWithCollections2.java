@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ClassWithCollections {
+public class ClassWithCollections2 {
+
+    private String id;
 
     private List<String> list = new ArrayList<>();
     private Set<String> set = new HashSet<>();
@@ -27,7 +29,9 @@ public class ClassWithCollections {
     private float[] ratios = new float[]{};
     private String[] names = new String[]{};
 
-    public ClassWithCollections() {}
+    public ClassWithCollections2(@NamedArg("id") String id) {
+        this.id = id;
+    }
 
     public List<String> getList() {
         return list;

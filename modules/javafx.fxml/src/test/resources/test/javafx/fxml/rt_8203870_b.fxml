@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import java.lang.String?>
-<?import test.javafx.fxml.ClassWithCollections?>
-<ClassWithCollections xmlns:fx="http://javafx.com/fxml"
+<?import test.javafx.fxml.ClassWithCollections2?>
+<ClassWithCollections2 xmlns:fx="http://javafx.com/fxml"
                       id="RT_8203870">
 <!--                      names="a, b, c"-->
 <!--                      ratios="1.0, 2.0, 3.0"-->
@@ -53,4 +53,4 @@
         </key2>
     </observableMap>
 
-</ClassWithCollections>
+</ClassWithCollections2>
