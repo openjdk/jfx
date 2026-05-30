@@ -31,6 +31,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
@@ -444,6 +445,56 @@ class StageOwnershipTest extends VisualTestBase {
             assertColorEquals(COLOR1, stage1);
             assertColorEquals(COLOR2, stage2);
             assertColorEquals(COLOR3, stage3);
+        });
+    }
+
+    // This replaces WrongFocusWithApplicationModalityTest
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
+    void closingApplicationModalSiblingsShouldTransferFocusToNextModal(StageStyle style) {
+        runAndWait(() -> {
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, Modality.APPLICATION_MODAL, 150, 150);
+            stage2 = createStage(style, COLOR2, stage0, Modality.APPLICATION_MODAL, 200, 200);
+            stage3 = createStage(style, COLOR3, stage0, Modality.APPLICATION_MODAL, 250, 250);
+
+            for (Stage s : new Stage[] {stage1, stage2, stage3}) {
+                s.getScene().setOnKeyPressed(e -> { if (e.getCode() == KeyCode.ESCAPE) s.close(); });
+            }
+        });
+
+        showStageAndWait(stage0);
+        showStageAndWait(stage1);
+        showStageAndWait(stage2);
+        showStageAndWait(stage3);
+
+        waitForBoolean(stage3.focusedProperty(), true);
+        Util.sleep(FOCUS_DELAY);
+        runAndWait(() -> assertColorEquals(COLOR3, stage3));
+
+        escape();
+        waitForBoolean(stage3.showingProperty(), false);
+        waitForBoolean(stage2.focusedProperty(), true);
+        Util.sleep(FOCUS_DELAY);
+        runAndWait(() -> assertColorEquals(COLOR2, stage2));
+
+        escape();
+        waitForBoolean(stage2.showingProperty(), false);
+        waitForBoolean(stage1.focusedProperty(), true);
+        Util.sleep(FOCUS_DELAY);
+        runAndWait(() -> assertColorEquals(COLOR1, stage1));
+
+        escape();
+        waitForBoolean(stage1.showingProperty(), false);
+        waitForBoolean(stage0.focusedProperty(), true);
+        Util.sleep(FOCUS_DELAY);
+        runAndWait(() -> assertColorEquals(COLOR0, stage0));
+    }
+
+    private void escape() {
+        runAndWait(() -> {
+            robot.keyPress(KeyCode.ESCAPE);
+            robot.keyRelease(KeyCode.ESCAPE);
         });
     }
 }
