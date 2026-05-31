@@ -70,10 +70,8 @@ public class Util {
      * to be processed. On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
-     * Configurable via system property {@code test.geometry.delay}.
      */
-    public static final long GEOMETRY_DELAY =
-            Long.getLong("test.geometry.delay", 300);
+    public static final long GEOMETRY_DELAY = 300;
 
     /**
      * Time in milliseconds to wait for window state changes
@@ -81,29 +79,23 @@ public class Util {
      * On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
-     * Configurable via system property {@code test.state.delay}.
      */
-    public static final long STATE_DELAY =
-            Long.getLong("test.state.delay", 500);
+    public static final long STATE_DELAY =  500;
 
     /**
      * Time in milliseconds to wait for focus changes to be processed.
      * On Linux, these operations are asynchronous.
      * The native side may adjust values after Glass has applied them on the Java side.
      * <p>
-     * Configurable via system property {@code test.focus.delay}.
      */
-    public static final long FOCUS_DELAY =
-            Long.getLong("test.focus.delay", 300);
+    public static final long FOCUS_DELAY = 300;
 
     /**
      * Default timeout in milliseconds for waiting on an observable property
      * to reach an expected value.
      * <p>
-     * Configurable via system property {@code test.property.value.timeout}.
      */
-    public static final long PROPERTY_VALUE_TIMEOUT =
-            Long.getLong("test.property.value.timeout", 1000);
+    public static final long PROPERTY_VALUE_TIMEOUT = 1000;
 
     private static interface Future {
         public abstract boolean await(long timeout, TimeUnit unit);
