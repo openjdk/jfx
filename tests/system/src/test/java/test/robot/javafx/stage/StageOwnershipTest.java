@@ -337,8 +337,8 @@ class StageOwnershipTest extends VisualTestBase {
         assumeTrue(!PlatformUtil.isMac()); // Fails on macOS Tahoe
 
         runAndWait(() -> {
-            stage0 = createStage(style, COLOR0, null, null, 0, 0);
-            stage1 = createStage(style, COLOR1, stage0, null, 0, 0);
+            stage0 = createStage(style, COLOR0, null, null, 100, 100);
+            stage1 = createStage(style, COLOR1, stage0, null, 100, 100);
         });
 
         showStageAndWait(stage0, stage1);
