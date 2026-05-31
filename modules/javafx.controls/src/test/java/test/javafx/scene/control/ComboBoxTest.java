@@ -72,6 +72,8 @@ import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -2612,5 +2614,43 @@ public class ComboBoxTest {
         assertEquals("B", comboBox.getSelectionModel().getSelectedItem());
         mouse.fireMousePressAndRelease();
         assertEquals("B", comboBox.getSelectionModel().getSelectedItem());
+    }
+
+    //JDK-8210037
+    @Test public void test_jdk_8210037_gridPaneColumnWidthsPreservedAfterComboBoxPopup() {
+        ObservableList<String> items = FXCollections.observableArrayList("Option 1", "Option 2", "Option 3");
+
+        final ComboBox<String> cb1 = new ComboBox<>(items);
+        cb1.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(cb1, Priority.ALWAYS);
+
+        final ComboBox<String> cb2 = new ComboBox<>(items);
+        cb2.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(cb2, Priority.ALWAYS);
+
+        Label lbl1 = new Label("Label 1");
+        GridPane.setHgrow(lbl1, Priority.SOMETIMES);
+
+        Label lbl2 = new Label("Label 2");
+        GridPane.setHgrow(lbl2, Priority.SOMETIMES);
+
+        GridPane grid = new GridPane();
+        grid.addRow(0, lbl1, cb1, lbl2, cb2);
+
+        sl = new StageLoader(grid);
+        sl.getStage().setWidth(800);
+        Toolkit.getToolkit().firePulse();
+
+        double width1Before = cb1.getWidth();
+        double width2Before = cb2.getWidth();
+        assertEquals(width1Before, width2Before, 1.0,
+                "ComboBox widths should be equal before popup is shown");
+
+        cb1.show();
+        cb1.hide();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(cb1.getWidth(), cb2.getWidth(), 1.0,
+                "ComboBox widths should remain equal after popup is shown and hidden");
     }
 }
