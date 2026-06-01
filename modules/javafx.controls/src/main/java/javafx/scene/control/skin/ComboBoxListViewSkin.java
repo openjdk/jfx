@@ -360,6 +360,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             T value = comboBox.getValue();
             int index = getIndexOfComboBoxValueInItemsList();
             if (index > -1) {
+                // This guarantees that the cell is cleared even when the
+                // value is null and contained in the items (which is allowed)
                 buttonCell.updateIndex(-1);
                 buttonCell.updateIndex(index);
             } else {
