@@ -411,6 +411,7 @@ public class ComboBoxTest {
 
         assertEquals("NOT NULL", cell.getText());
     }
+
     @Test
     public void testTextFieldUpdateOnStringConverterChangeWithContainedNullValue() {
         ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
@@ -490,6 +491,54 @@ public class ComboBoxTest {
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "item1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "item2");
         VirtualFlowTestUtils.assertCellTextEquals(list, 2, "item3");
+    }
+
+    @Test
+    public void testGraphicUpdateOnStringConverterChangeWithContainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(new Label(item != null ? item : "null-text"));
+            }
+        });
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "null-text";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM1");
+        assertEquals("ITEM1", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "null";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+        assertEquals("ITEM1", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM2");
+        assertEquals("ITEM2", ((Label) comboBox.getButtonCell().getGraphic()).getText());
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
