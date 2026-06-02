@@ -959,6 +959,7 @@ update_month_match (gsize *longest,
 
 #define NUM_LEN 10
 
+#ifndef GSTREAMER_LITE
 /* HOLDS: g_date_global_lock */
 static void
 g_date_fill_parse_tokens (const gchar *str, GDateParseTokens *pt)
@@ -1385,6 +1386,7 @@ g_date_set_parse (GDate       *d,
 #endif
   G_UNLOCK (g_date_global);
 }
+#endif // GSTREAMER_LITE
 
 gboolean
 _g_localtime (time_t timet, struct tm *out_tm)
