@@ -124,7 +124,7 @@ public class FXMLLoader {
             // Return true if value is a list, or if the value's type defines
             // a default property that is a list
             boolean collection;
-            if (value instanceof List<?> || value instanceof Set<?>) {
+            if (value instanceof Collection<?>) {
                 collection = true;
             } else {
                 Class<?> type = value.getClass();
@@ -146,10 +146,8 @@ public class FXMLLoader {
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
             Collection<Object> collection;
-            if (value instanceof List<?>) {
-                collection = (List<Object>) value;
-            } else if (value instanceof Set<?>) {
-                collection = (Set<Object>) value;
+            if (value instanceof Collection<?>) {
+                collection = (Collection<Object>) value;
             } else {
                 Class<?> type = value.getClass();
                 DefaultProperty defaultProperty = type.getAnnotation(DefaultProperty.class);
@@ -160,8 +158,8 @@ public class FXMLLoader {
 
                 // Coerce the element to the list item type
                 if (!Map.class.isAssignableFrom(type)) {
-                    Type listType = getValueAdapter().getGenericType(defaultPropertyName);
-                    element = BeanAdapter.coerce(element, BeanAdapter.getListItemType(listType));
+                    Type collectionType = getValueAdapter().getGenericType(defaultPropertyName);
+                    element = BeanAdapter.coerce(element, BeanAdapter.getCollectionItemType(collectionType));
                 }
             }
 
@@ -487,7 +485,7 @@ public class FXMLLoader {
             // Split the string and add the values to the list
             List<Object> list = (List<Object>)valueAdapter.get(listPropertyName);
             Type listType = valueAdapter.getGenericType(listPropertyName);
-            Type itemType = BeanAdapter.getGenericListItemType(listType);
+            Type itemType = BeanAdapter.getGenericCollectionItemType(listType);
 
             if (itemType instanceof ParameterizedType) {
                 itemType = ((ParameterizedType)itemType).getRawType();
@@ -795,13 +793,13 @@ public class FXMLLoader {
             }
         }
 
-        private Object getListValue(Element parent, String listPropertyName, Object value) {
+        private Object getCollectionValue(Element parent, String listPropertyName, Object value) {
             // If possible, coerce the value to the list item type
             if (parent.isTyped()) {
                 Type listType = parent.getValueAdapter().getGenericType(listPropertyName);
 
                 if (listType != null) {
-                    Type itemType = BeanAdapter.getGenericListItemType(listType);
+                    Type itemType = BeanAdapter.getGenericCollectionItemType(listType);
 
                     if (itemType instanceof ParameterizedType) {
                         itemType = ((ParameterizedType)itemType).getRawType();
@@ -877,9 +875,9 @@ public class FXMLLoader {
                 BeanAdapter valueAdapter = getValueAdapter();
 
                 if (valueAdapter.isReadOnly(defaultPropertyName)
-                    && List.class.isAssignableFrom(valueAdapter.getType(defaultPropertyName))) {
-                    List<Object> list = (List<Object>)valueAdapter.get(defaultPropertyName);
-                    list.add(getListValue(this, defaultPropertyName, text));
+                    && Collection.class.isAssignableFrom(valueAdapter.getType(defaultPropertyName))) {
+                    Collection<Object> collection = (Collection<Object>)valueAdapter.get(defaultPropertyName);
+                    collection.add(getCollectionValue(this, defaultPropertyName, text));
                 } else {
                     valueAdapter.put(defaultPropertyName, text.trim());
                 }
@@ -1373,7 +1371,7 @@ public class FXMLLoader {
                 if (parent.isTyped()) {
                     readOnly = parent.getValueAdapter().isReadOnly(name);
                 } else {
-                // If the map already defines a value for the property, assume
+                    // If the map already defines a value for the property, assume
                     // that it is read-only
                     readOnly = parentProperties.containsKey(name);
                 }
@@ -1401,8 +1399,8 @@ public class FXMLLoader {
         public void add(Object element) {
             // Coerce the element to the list item type
             if (parent.isTyped()) {
-                Type listType = parent.getValueAdapter().getGenericType(name);
-                element = BeanAdapter.coerce(element, BeanAdapter.getListItemType(listType));
+                Type collectionType = parent.getValueAdapter().getGenericType(name);
+                element = BeanAdapter.coerce(element, BeanAdapter.getCollectionItemType(collectionType));
             }
 
             // Add the item to the list
