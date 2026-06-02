@@ -35,6 +35,20 @@
 
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+// Added due to removal of guniprop.c and it is dependency.
+// GStreamer lite might used it for loggin in case of errors, but
+// we only use ascii. So, ok to escape non-ascii characters in log
+// messages.
+static gboolean g_unichar_isprint_ascii_only(gunichar c)
+{
+   if ((c & 0xFFFFFF00) != 0)
+      return FALSE;
+
+  return g_ascii_isprint((guchar)c);
+}
+#endif // GSTREAMER_LITE
+
 /**
  * GVariant: (copy-func g_variant_ref_sink) (free-func g_variant_unref)
  *
@@ -2482,7 +2496,11 @@ g_variant_print_string (GVariant *value,
             if (c == quote || c == '\\')
               g_string_append_c (string, '\\');
 
+#ifndef GSTREAMER_LITE
             if (g_unichar_isprint (c))
+#else // GSTREAMER_LITE
+            if (g_unichar_isprint_ascii_only (c))
+#endif // GSTREAMER_LITE
               g_string_append_unichar (string, c);
 
             else

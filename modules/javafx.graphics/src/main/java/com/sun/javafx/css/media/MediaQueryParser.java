@@ -88,21 +88,33 @@ public final class MediaQueryParser {
     public MediaQueryList parseMediaQueryList(List<Token> tokens) {
         var stream = new TokenStream(tokens);
         var expressions = new MediaQueryList();
-        boolean lastWasComma = false;
+        boolean expectMediaCondition = true;
 
-        while (stream.consume() != null) {
-            switch (stream.current().getType()) {
+        while (stream.peek() != null) {
+            switch (stream.peek().getType()) {
                 case CssLexer.COMMA -> {
-                    if (lastWasComma || expressions.isEmpty()) {
-                        errorHandler.accept(stream.current(), "Unexpected token");
+                    Token comma = stream.consume();
+                    if (expectMediaCondition) {
+                        errorHandler.accept(comma, "Unexpected token");
+                        expressions.add(ConstantExpression.of(false));
                     }
 
-                    lastWasComma = true;
+                    expectMediaCondition = true;
                 }
 
                 case CssLexer.IDENT, CssLexer.LPAREN -> {
-                    lastWasComma = false;
-                    stream.reconsume();
+                    if (!expectMediaCondition) {
+                        errorHandler.accept(stream.consume(), "Expected COMMA");
+
+                        while (stream.consumeIf(NOT_COMMA) != null) {
+                            // Skip forward to the next comma and replace the previous query with a
+                            // malformed segment that always evaluates to false.
+                        }
+
+                        expressions.set(expressions.size() - 1, ConstantExpression.of(false));
+                        continue;
+                    }
+
                     MediaQuery expression = parseMediaCondition(stream);
                     if (expression != null) {
                         expressions.add(expression);
@@ -115,13 +127,27 @@ public final class MediaQueryParser {
                         // Invalid expressions always evaluate to false.
                         expressions.add(ConstantExpression.of(false));
                     }
+
+                    expectMediaCondition = false;
                 }
 
                 default -> {
-                    errorHandler.accept(stream.current(), "Unexpected token");
-                    return expressions;
+                    errorHandler.accept(stream.consume(), "Unexpected token");
+
+                    while (stream.consumeIf(NOT_COMMA) != null) {
+                        // Skip forward to the next comma and replace the malformed segment
+                        // with a query that always evaluates to false.
+                    }
+
+                    expressions.add(ConstantExpression.of(false));
+                    expectMediaCondition = false;
                 }
             }
+        }
+
+        if (expectMediaCondition && !expressions.isEmpty()) {
+            errorHandler.accept(null, "Expected <media-condition>");
+            expressions.add(ConstantExpression.of(false));
         }
 
         return expressions;

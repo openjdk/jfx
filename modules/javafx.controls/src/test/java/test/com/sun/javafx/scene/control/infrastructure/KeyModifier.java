@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,7 @@
 package test.com.sun.javafx.scene.control.infrastructure;
 
 import com.sun.javafx.util.Utils;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.input.KeyCode;
 
 public enum KeyModifier {
     SHIFT,
@@ -37,14 +35,6 @@ public enum KeyModifier {
     META;
 
     public static KeyModifier getShortcutKey() {
-        // The StubToolkit doesn't know what the platform shortcut key is, so
-        // we have to tell it here (and lets not be cute about optimising this
-        // code as we need the platform shortcut key to be known elsewhere in the
-        // code base for keyboard navigation tests to work accurately).
-        if (Toolkit.getToolkit() instanceof StubToolkit) {
-            ((StubToolkit)Toolkit.getToolkit()).setPlatformShortcutKey(Utils.isMac() ? KeyCode.META : KeyCode.CONTROL);
-        }
-
         switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
             case SHIFT:
                 return SHIFT;

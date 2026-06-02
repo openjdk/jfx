@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import com.sun.javafx.scene.control.TabObservableList;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -49,6 +51,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.transformation.FilteredList;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.event.Event;
@@ -1277,6 +1280,43 @@ public class TabPaneTest {
     @Test
     public void testHorizontalScrollLeftSide() {
         scrollTabPane(Side.LEFT, 100, 0);
+    }
+
+    @Test
+    public void testTabsReorderPermutationReflectedInFilteredList() {
+        Tab other = new Tab("other");
+        Tab lib1 = new Tab("lib1");
+        Tab lib2 = new Tab("lib2");
+        Tab lib3 = new Tab("lib3");
+        Tab lib4 = new Tab("lib4");
+
+        TabPane tabPane = new TabPane(lib1, other, lib2, lib3, lib4);
+        TabObservableList<Tab> tabList = (TabObservableList) tabPane.getTabs();
+
+        FilteredList<Tab> filtered = new FilteredList<>(tabList, tab -> tab.getText().startsWith("lib"));
+
+        assertEquals(List.of(lib1, other, lib2, lib3, lib4), tabList);
+        assertEquals(List.of(lib1, lib2, lib3, lib4), filtered);
+
+        tabList.reorder(lib1, other);
+        assertEquals(List.of(other, lib1, lib2, lib3, lib4), tabList);
+        assertEquals(List.of(lib1, lib2, lib3, lib4), filtered);
+
+        tabList.reorder(other, lib3);
+        assertEquals(List.of(lib1, lib2, lib3, other, lib4), tabList);
+        assertEquals(List.of(lib1, lib2, lib3, lib4), filtered);
+
+        tabList.reorder(lib4, lib1);
+        assertEquals(List.of(lib4, lib1, lib2, lib3, other), tabList);
+        assertEquals(List.of(lib4, lib1, lib2, lib3), filtered);
+
+        tabList.reorder(other, lib4);
+        assertEquals(List.of(other, lib4, lib1, lib2, lib3), tabList);
+        assertEquals(List.of(lib4, lib1, lib2, lib3), filtered);
+
+        tabList.reorder(lib1, lib3);
+        assertEquals(List.of(other, lib4, lib2, lib3, lib1), tabList);
+        assertEquals(List.of(lib4, lib2, lib3, lib1), filtered);
     }
 
     private void scrollTabPane(Side side, double deltaX, double deltaY) {

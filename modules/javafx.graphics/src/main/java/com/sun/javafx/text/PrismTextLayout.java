@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -715,10 +715,20 @@ public class PrismTextLayout implements TextLayout {
         return index;
     }
 
-    private boolean copyCache() {
+    /**
+     * Decides whether the text layout is worth caching and/or if we can reuse it completely or only the runs.
+     * A text layout is worth caching and to be reused completely
+     * when the text layout uses the (simple) default settings.
+     * <br>
+     * If the text layout was cached, and we now have a text layout with the same text and font
+     * but settings that differ from the default, we can reuse the runs as they are structurally the same.
+     * However, the metrics need to be (re)calculated, so we cannot use more from the cache.
+     *
+     * @return true, if only the runs can be reused
+     */
+    private boolean onlyReuseRuns() {
         int align = flags & ALIGN_MASK;
         int boundsType = flags & BOUNDS_MASK;
-        /* Caching for boundsType == Center, bias towards  Modena */
         return wrapWidth != 0 || align != ALIGN_LEFT || boundsType == 0 || isMirrored();
     }
 
@@ -734,7 +744,7 @@ public class PrismTextLayout implements TextLayout {
                 }
             }
             if (layoutCache != null) {
-                if (copyCache()) {
+                if (onlyReuseRuns()) {
                     /* This instance has some property that requires it to
                      * build its own lines (i.e. wrapping width). Thus, only use
                      * the runs from the cache (and it needs to make a copy
@@ -1477,7 +1487,7 @@ public class PrismTextLayout implements TextLayout {
 
 
         if (layoutCache != null) {
-            if (cacheKey != null && !layoutCache.valid && !copyCache()) {
+            if (cacheKey != null && !layoutCache.valid && !onlyReuseRuns()) {
                 /* After layoutCache is added to the stringCache it can be
                  * accessed by multiple threads. All the data in it must
                  * be immutable. See copyCache() for the cases where the entire

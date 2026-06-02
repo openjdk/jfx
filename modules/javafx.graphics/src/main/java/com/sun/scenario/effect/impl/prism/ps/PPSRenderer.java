@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -169,15 +169,11 @@ public class PPSRenderer extends PrRenderer {
      * May be called multiple times.
      */
     protected void dispose() {
-        // even if new peers are added from another thread while we're executing
-        // this on the rendering thread, they won't have any native resources
-        // since we're on the rendering thread, so no need to synchronize
-        for (EffectPeer peer : getPeers()) {
-            peer.dispose();
-        }
         synchronized (this) {
             state = DISPOSED;
         }
+
+        clearPeers();
         rf.removeFactoryListener(listener);
         rf = null;
         screen = null;

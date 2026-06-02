@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,16 @@
 @private
 jobject jAccessible;
 id parent;
+id jRole;
 }
 - (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
 - (jobject)getJAccessible;
+- (NSString *)getJavaRole;
 - (id)requestNodeAttribute:(NSString *)attribute;
+- (id)requestNodeAttribute:(NSString *)attribute forParameter:(id)parameter;
+- (BOOL)isNodeAttributeSettable:(NSString *)attribute;
+- (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute;
+- (NSString *)accessibilityPlaceholderValue;
 - (NSRect)accessibilityFrame;
 - (id)accessibilityParent;
 - (BOOL)isAccessibilityElement;

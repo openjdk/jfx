@@ -40,7 +40,7 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:23];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:25];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
@@ -64,6 +64,8 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
     [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"TAB_PANE"];
     [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
+    [rolesMap setObject:@"JFXNavigableTextAccessibility" forKey:@"TEXT_AREA"];
+    [rolesMap setObject:@"JFXNavigableTextAccessibility" forKey:@"TEXT_FIELD"];
     [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
 
 }
@@ -107,6 +109,16 @@ static NSMutableDictionary * rolesMap;
     return self->jAccessible;
 }
 
+- (NSString *)getJavaRole
+{
+    return self->jRole;
+}
+
+- (void)setJavaRole:(NSString *)newRole
+{
+    self->jRole = [newRole copy];
+}
+
 /*
  * Request accessibility attribute by name from JavaFX Node. Returns attribute value
  * converted to the native format or NULL if attribute with that name does not exist.
@@ -120,6 +132,49 @@ static NSMutableDictionary * rolesMap;
                                               jAccessibilityAttributeValue, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
     return variantToID(env, jresult);
+}
+
+/*
+ * Request accessibility attribute by name from JavaFX Node providing a specified parameter.
+ * Returns attribute value converted to the native format or NULL if attribute with that name does not exist.
+ * Code that uses this function needs to convert NULL to the default value of a certain type where required.
+ */
+
+- (id)requestNodeAttribute:(NSString *)attribute forParameter:(id)parameter
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jobject jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
+                                              jAccessibilityAttributeValueForParameter,
+                                              (jlong)attribute, (jlong)parameter);
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+/*
+ * Check whether an accessibility attribute on the JavaFX Node can be set.
+ */
+- (BOOL)isNodeAttributeSettable:(NSString *)attribute
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return FALSE;
+    jboolean jresult = (*env)->CallBooleanMethod(env, [self getJAccessible],
+                                                 jAccessibilityIsAttributeSettable,
+                                                 (jlong)attribute);
+    GLASS_CHECK_EXCEPTION(env);
+    return jresult;
+}
+
+/*
+ * Set accessibility attribute by name on the JavaFX Node.
+ */
+- (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return;
+    (*env)->CallVoidMethod(env, [self getJAccessible], jAccessibilitySetValue,
+                           (jlong)value, (jlong)attribute);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 - (id)accessibilityValue
@@ -160,6 +215,11 @@ static NSMutableDictionary * rolesMap;
 - (id)accessibilityTitleUIElement
 {
     return [self requestNodeAttribute:@"AXTitleUIElement"];
+}
+
+- (NSString *)accessibilityPlaceholderValue
+{
+    return [self requestNodeAttribute:@"AXPlaceholderValue"];
 }
 
 - (NSArray *)accessibilityChildren
@@ -225,12 +285,7 @@ static NSMutableDictionary * rolesMap;
 
 - (void)setAccessibilityFocused:(BOOL)value
 {
-    GET_MAIN_JENV;
-    if (env == NULL) return;
-    (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilitySetValue,
-                           (jlong)[NSNumber numberWithBool:value],
-                           (jlong)@"AXFocused");
-    GLASS_CHECK_EXCEPTION(env);
+    [self setNodeAttribute:[NSNumber numberWithBool:value] forAttribute:@"AXFocused"];
 }
 
 @end
@@ -247,6 +302,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1createAccessib
     Class classType = [AccessibleBase getComponentAccessibilityClass:roleName];
     NSObject* accessible = NULL;
     accessible = [[classType alloc] initWithEnv: env accessible: jAccessible];
+    if ([accessible isKindOfClass:[AccessibleBase class]]) {
+        [(AccessibleBase *) accessible setJavaRole:roleName];
+    }
     return ptr_to_jlong(accessible);
 }
 

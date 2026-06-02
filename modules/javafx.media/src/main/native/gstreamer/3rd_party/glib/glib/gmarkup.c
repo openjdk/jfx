@@ -395,6 +395,7 @@ propagate_error (GMarkupParseContext  *context,
 #define IS_COMMON_NAME_END_CHAR(c) \
   ((c) == '=' || (c) == '/' || (c) == '>' || (c) == ' ')
 
+#ifndef GSTREAMER_LITE
 static gboolean
 slow_name_validate (GMarkupParseContext  *context,
                     const gchar          *name,
@@ -478,6 +479,7 @@ name_validate (GMarkupParseContext  *context,
  slow_validate:
   return slow_name_validate (context, name, error);
 }
+#endif // GSTREAMER_LITE
 
 static gboolean
 text_validate (GMarkupParseContext  *context,
@@ -960,6 +962,7 @@ clear_attributes (GMarkupParseContext *context)
  * are unwound on exit - otherwise we grow & blow the stack
  * with large documents
  */
+#ifndef GSTREAMER_LITE
 static inline void
 emit_start_element (GMarkupParseContext  *context,
                     GError              **error)
@@ -1057,6 +1060,7 @@ emit_end_element (GMarkupParseContext  *context,
 
   pop_tag (context);
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_markup_parse_context_parse:
@@ -1078,6 +1082,7 @@ emit_end_element (GMarkupParseContext  *context,
  *
  * Returns: %FALSE if an error occurred, %TRUE on success
  */
+#ifndef GSTREAMER_LITE
 gboolean
 g_markup_parse_context_parse (GMarkupParseContext  *context,
                               const gchar          *text,
@@ -1711,6 +1716,7 @@ g_markup_parse_context_parse (GMarkupParseContext  *context,
 
   return context->state != STATE_ERROR;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_markup_parse_context_end_parse:

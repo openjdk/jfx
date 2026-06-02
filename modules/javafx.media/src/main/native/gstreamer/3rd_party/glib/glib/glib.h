@@ -56,7 +56,9 @@
 #include <glib/ghook.h>
 #include <glib/ghostutils.h>
 #include <glib/giochannel.h>
+#ifndef GSTREAMER_LITE
 #include <glib/gkeyfile.h>
+#endif // GSTREAMER_LITE
 #include <glib/glist.h>
 #include <glib/gmacros.h>
 #include <glib/gmain.h>

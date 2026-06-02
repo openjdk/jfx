@@ -86,15 +86,16 @@ public class Utils {
     private static final TextBoundsType DEFAULT_BOUNDS_TYPE = textInstance.getBoundsType();
     private static final AtomicBoolean helperGuard = new AtomicBoolean(false);
 
-    /* Using TextLayout directly for simple text measurement.
+    /**
+     * Using TextLayout directly for a simple text measurement.
      * Instead of restoring the TextLayout attributes to default values
      * (each renders the TextLayout unable to efficiently cache layout data).
      * It always sets all the attributes pertinent to calculation being performed.
      * Note that lineSpacing and boundsType are important when computing the height
      * but irrelevant when computing the width.
-     *
-     * Note: This code assumes that TextBoundsType#VISUAL is never used by controls.
-     * */
+     * <br>
+     * Note: This code assumes that the callers never use TextBoundsType#VISUAL.
+     */
     private static final TextLayout layoutInstance = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
     private static final AtomicBoolean layoutGuard = new AtomicBoolean(false);
 
@@ -167,6 +168,8 @@ public class Utils {
         try {
             layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
             layout.setWrapWidth((float)wrappingWidth);
+            layout.setLineSpacing(0);
+            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
             return layout.getBounds().getWidth();
         } finally {
             release(layout);

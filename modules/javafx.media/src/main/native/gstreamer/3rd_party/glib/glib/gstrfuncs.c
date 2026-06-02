@@ -2992,6 +2992,7 @@ g_strv_length (gchar **str_array)
   return i;
 }
 
+#ifndef GSTREAMER_LITE
 static void
 index_add_folded (GPtrArray   *array,
                   const gchar *start,
@@ -3239,6 +3240,7 @@ one_matched:
 
   return matched;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_strv_contains:
