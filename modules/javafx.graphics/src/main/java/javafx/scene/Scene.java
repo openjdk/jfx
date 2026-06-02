@@ -2021,6 +2021,8 @@ public class Scene implements EventTarget {
                     pickedTarget = e.getPickResult().getIntersectedNode();
                     if (pickedTarget != null) {
                         gesture.target = new WeakReference<>(pickedTarget);
+                    } else {
+                        pickedTarget = this;
                     }
                 }
             }
