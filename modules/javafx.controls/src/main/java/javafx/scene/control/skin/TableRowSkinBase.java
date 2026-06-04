@@ -141,7 +141,14 @@ public abstract class TableRowSkinBase<T,
         registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
 
+    @Override
+    public void dispose() {
+        if (currentTransitions != null) {
+            currentTransitions.forEach((_, value) -> value.stop());
+        }
 
+        super.dispose();
+    }
 
     /* *************************************************************************
      *                                                                         *

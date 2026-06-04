@@ -1596,6 +1596,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             listener.dispose();
             setOnContextMenuRequested(null);
             setOnMousePressed(null);
+
+            if (currentAnimation != null) {
+                currentAnimation.stop();
+            }
         }
 
         private TabAnimationState animationState = TabAnimationState.NONE;
