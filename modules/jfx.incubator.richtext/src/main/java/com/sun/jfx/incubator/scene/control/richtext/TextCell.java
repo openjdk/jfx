@@ -458,8 +458,12 @@ public final class TextCell extends BorderPane {
             add(new FirstLineIndentSpacer(firstLineIndent));
         }
 
-        TabStopPolicy p = new TabStopPolicy();
         TabStop[] tabStops = a.getTabStops();
+        if ((tabStops == null) && (defaultInterval == 0.0)) {
+            return;
+        }
+
+        TabStopPolicy p = new TabStopPolicy();
         if (tabStops != null) {
             p.tabStops().setAll(tabStops);
         }
