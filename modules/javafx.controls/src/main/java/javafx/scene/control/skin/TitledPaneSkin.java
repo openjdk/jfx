@@ -194,15 +194,13 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
-        super.dispose();
-
-        if (timeline != null) {
-            timeline.stop();
-        }
+        cancelTransitionAnimation();
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     // Override LabeledSkinBase updateChildren because
