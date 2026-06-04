@@ -415,9 +415,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
             return;
         }
 
-        getSkinnable().setClip(null);
-        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
-
         if (deferredStartup != null) {
             deferredStartup.cancel();
         }
@@ -429,6 +426,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
         if (behavior != null) {
             behavior.dispose();
         }
+
+        getSkinnable().setClip(null);
+        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
 
         super.dispose();
     }
