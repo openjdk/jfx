@@ -385,7 +385,11 @@ g_file_test (const gchar *filename,
   return TRUE;
 
       /* Check if it is one of the types listed in %PATHEXT% */
-
+#ifdef GSTREAMER_LITE
+      // We do not use PATHEXT enviroment variable in GStreamer Lite, so just
+      // ignore this code, to remove dependency on g_utf8_casefold.
+      break;
+#else // GSTREAMER_LITE
       pathext = g_getenv ("PATHEXT");
       if (pathext == NULL)
         break;
@@ -396,6 +400,7 @@ g_file_test (const gchar *filename,
       extlen = strlen (lastdot);
 
       p = pathext;
+#endif // GSTREAMER_LITE
       while (TRUE)
   {
     const gchar *q = strchr (p, ';');
