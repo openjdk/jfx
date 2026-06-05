@@ -289,11 +289,11 @@ public class TestRichTextFormatHandler {
         RichTextModel m = new RichTextModel();
         m.setDefaultTabStops(155);
         String s = save(m);
-        assertEquals(TestRichTextModel.VERSION + "{#tabs|155.0}{}{!}", s);
+        assertEquals(TestRichTextModel.VERSION + "{#tabs|155.0}{}{!}", s); // verify tab stops are saved
 
         m.setDefaultTabStops(77);
         s = save(m);
-        assertEquals(TestRichTextModel.VERSION + "{#tabs|77.0}{}{!}", s);
+        assertEquals(TestRichTextModel.VERSION + "{#tabs|77.0}{}{!}", s); // verify tab stops are saved
     }
 
     private static String save(RichTextModel m) throws IOException {
@@ -321,6 +321,6 @@ public class TestRichTextFormatHandler {
         m.replace(null, TextPos.ZERO, m.getDocumentEnd(), in);
 
         assertEquals(5, m.size());
-        assertEquals(156.0, m.getDefaultTabStops());
+        assertEquals(156.0, m.getDefaultTabStops()); // verify tab stops are loaded
     }
 }
