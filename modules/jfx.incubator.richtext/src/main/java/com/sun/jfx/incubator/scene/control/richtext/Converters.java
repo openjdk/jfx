@@ -197,6 +197,9 @@ public class Converters {
     }
 
     private static TabStop[] toTabStops(String text) {
+        if (text.length() == 0) {
+            return null;
+        }
         String[] ss = text.split(",");
         int sz = ss.length;
         TabStop[] ts = new TabStop[sz];

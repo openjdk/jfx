@@ -1137,8 +1137,22 @@ public class RichTextAreaTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(1000.0, control.getWidth(), EPSILON);
 
-        // default tab stops = 0 is equivalent to single space
+        // default tab stops = 0 (legacy behavior, tab == 8 spaces)
         // keep in mind there is +2.5 pixels added for borders and padding
+        assertX(0, 1, 96.5);
+        assertX(0, 3, 192.5);
+        assertX(0, 5, 288.5);
+
+        assertX(1, 1, 96.5);
+        assertX(1, 3, 192.5);
+        assertX(1, 5, 288.5);
+
+        assertX(2, 1, 12.5);
+        assertX(2, 3, 36.5);
+        assertX(2, 5, 60.5);
+
+        // default tab stops = -1, tab == 1 space
+        m.setDefaultTabStops(-1);
         assertX(0, 1, 12.5);
         assertX(0, 3, 36.5);
         assertX(0, 5, 60.5);

@@ -57,7 +57,7 @@ public class TabsDialog extends Stage {
         initModality(Modality.APPLICATION_MODAL);
         FX.name(this, "TabsDialog");
 
-        defaultInterval = Utils.numberField(null, 100.0, 200.0);
+        defaultInterval = Utils.numberField(-1.0, 0.0, 50.0, 100.0, 200.0);
 
         GridPane g = new GridPane();
         g.getColumnConstraints().setAll(

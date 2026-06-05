@@ -47,6 +47,20 @@ import jfx.incubator.scene.control.richtext.TextPos;
  */
 public class RichTextModel extends StyledTextModel {
 
+    /**
+     * This value of the {@link #defaultTabStopsProperty()} results in the tab stops spaced by the width of 8 space
+     * characters of the system font.
+     * @since 27
+     */
+    public static final double DEFAULT_TAB_STOPS_8 = 0.0;
+
+    /**
+     * This value of the {@link #defaultTabStopsProperty()} disables the default tab stops, making a tab characters
+     * appear as a single space.
+     * @since 27
+     */
+    public static final double DEFAULT_TAB_STOPS_DISABLED = -1.0;
+
     private static final String VERSION_2 = "RichText-v2-incubator";
     private static final String PROP_TABS = "tabs";
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
@@ -73,15 +87,18 @@ public class RichTextModel extends StyledTextModel {
      * This is a fixed repeating distance (in pixels) to the
      * next tab stop computed at regular intervals relative to the document content leading edge.
      * <p>
-     * A value of equal or less than 0 disables the default interval, rendering tab character as a single space.
+     * Value {@link #DEFAULT_TAB_STOPS_8} results in a legacy behavior where tab size is equal to 8 spaces,
+     * which may result in misaligned text when using different font size.
+     * The value {@link #DEFAULT_TAB_STOPS_DISABLED} disables the default interval,
+     * rendering tab character as a single space.
      *
      * @return the default tab stop interval property
-     * @defaultValue 0
+     * @defaultValue DEFAULT_TAB_STOPS_8
      * @since 27
      */
     public final DoubleProperty defaultTabStopsProperty() {
         if (defaultTabStops == null) {
-            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", 0.0) {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", DEFAULT_TAB_STOPS_8) {
                 @Override
                 protected void invalidated() {
                     fireStyleChangeEvent(TextPos.ZERO, getDocumentEnd());
@@ -96,7 +113,7 @@ public class RichTextModel extends StyledTextModel {
     }
 
     public final double getDefaultTabStops() {
-        return defaultTabStops == null ? 0.0 : defaultTabStops.get();
+        return defaultTabStops == null ? DEFAULT_TAB_STOPS_8 : defaultTabStops.get();
     }
 
     @Override
