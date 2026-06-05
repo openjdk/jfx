@@ -970,9 +970,9 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
   else {
     /* reuse some code from gst-plugins-base/gst-libs/gst/tag/gstxmptag.c */
     gint gmt_offset = -1;
-    gchar *plus_pos = NULL;
-    gchar *neg_pos = NULL;
-    gchar *pos = NULL;
+    const gchar *plus_pos = NULL;
+    const gchar *neg_pos = NULL;
+    const gchar *pos = NULL;
 
     GST_LOG ("Checking for timezone information");
 
