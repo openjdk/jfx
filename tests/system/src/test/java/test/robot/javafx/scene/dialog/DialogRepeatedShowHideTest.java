@@ -64,7 +64,7 @@ public class DialogRepeatedShowHideTest {
 
     @Test
     public void dialogSizeOnReShownTest() throws Exception {
-        assumeTrue(!Util.isOnWayland()); // JDK-8385956
+        assumeTrue(!Util.isOnWayland()); // JDK-8375347
         Thread.sleep(400);
         clickButton();
         hide();
