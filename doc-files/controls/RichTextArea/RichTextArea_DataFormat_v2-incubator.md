@@ -2,7 +2,7 @@
 
 Andy Goryachev
 
-April 22, 2026
+June 8, 2026
 
 
 
@@ -10,7 +10,7 @@ April 22, 2026
 
 This document describes the data format used by `RichTextModel`, the default model used by the `RichTextArea`'s control.
 
-This format (as a part of an incubator module) is likely to change once the decision is made to integrate it
+WARNING: This format (as a part of an incubator module) is likely to change once the decision is made to integrate it
 into the JavaFX core.
 
 
@@ -75,11 +75,21 @@ Example:
 
 `{#tabs|99.5}`
 
-specifies the following properties:
+specifies the document property `tabs` (default tab stops in pixels) with a numeric value of `99.5`.
 
-|Key     |Value      |Comment
-|:-------|:----------|:-----------
-|tabs    |99.5       |default tab stops in pixels
+
+#### Document Properties
+
+|Key     |Type       |Default Value|Comments
+|:-------|:----------|------------:|:----------------------------------
+|tabs    |double     |0            |default tab stops in pixels when greater than 0, Note 1.
+
+Notes:
+
+1. value of 0 results in a legacy behavior where the tab spacing corresponds to 8 spaces.
+This may result in milasigned columns when different text segments use different fonts.  Value of -1 disables
+the default tab stops, rendering the tabs as single spaces.
+
 
 
 ### Character Attribute Segment

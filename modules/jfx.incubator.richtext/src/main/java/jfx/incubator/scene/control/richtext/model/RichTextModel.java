@@ -48,8 +48,9 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public class RichTextModel extends StyledTextModel {
 
     /**
-     * This value of the {@link #defaultTabStopsProperty()} results in the tab stops spaced by the width of 8 space
-     * characters of the system font.
+     * This value of the {@link #defaultTabStopsProperty()} results in a legacy behavior
+     * where the tab spacing corresponds to 8 spaces.
+     * This may result in milasigned columns when different text segments use different fonts.
      * @since 27
      */
     public static final double DEFAULT_TAB_STOPS_8 = 0.0;
@@ -87,8 +88,8 @@ public class RichTextModel extends StyledTextModel {
      * This is a fixed repeating distance (in pixels) to the
      * next tab stop computed at regular intervals relative to the document content leading edge.
      * <p>
-     * Value {@link #DEFAULT_TAB_STOPS_8} results in a legacy behavior where tab size is equal to 8 spaces,
-     * which may result in misaligned text when using different font size.
+     * Value {@link #DEFAULT_TAB_STOPS_8} results in a legacy behavior where the tab spacing corresponds to 8 spaces.
+     * This may result in milasigned columns when different text segments use different fonts.
      * The value {@link #DEFAULT_TAB_STOPS_DISABLED} disables the default interval,
      * rendering tab character as a single space.
      *
