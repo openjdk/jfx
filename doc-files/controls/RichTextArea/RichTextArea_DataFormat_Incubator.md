@@ -1,6 +1,8 @@
-# Rich Text Area (Incubator) Data Format Version 2
+# Rich Text Area (Incubator) Data Format
 
 Andy Goryachev
+
+Version 2
 
 June 8, 2026
 
