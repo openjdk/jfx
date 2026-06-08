@@ -99,7 +99,6 @@ public class TextInputControlModenaTest {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-
     /******************************************************
      * Test for highlight-text-fill                       *
      *****************************************************/
