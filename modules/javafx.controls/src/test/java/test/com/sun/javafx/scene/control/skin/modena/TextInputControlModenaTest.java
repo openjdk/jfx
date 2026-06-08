@@ -99,13 +99,6 @@ public class TextInputControlModenaTest {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
-    private static Collection<Class<? extends TextInputControl>> promptTextControls() {
-        return List.<Class<? extends TextInputControl>>of(
-                TextField.class,
-                PasswordField.class,
-                TextArea.class
-        );
-    }
 
     /******************************************************
      * Test for highlight-text-fill                       *
@@ -150,7 +143,7 @@ public class TextInputControlModenaTest {
     }
 
     @ParameterizedTest
-    @MethodSource("promptTextControls")
+    @MethodSource("parameters")
     public void promptTextIsVisibleWhenEmptyFocusedTextInput(Class<? extends TextInputControl> type)
             throws Exception {
         String userAgentStylesheet = Application.getUserAgentStylesheet();
