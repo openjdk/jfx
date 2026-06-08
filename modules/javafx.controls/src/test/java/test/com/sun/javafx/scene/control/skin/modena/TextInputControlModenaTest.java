@@ -38,12 +38,17 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
+import javafx.application.Application;
+import javafx.scene.control.skin.TextInputSkinShim;
+import javafx.scene.paint.Color;
+import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  *
@@ -94,6 +99,14 @@ public class TextInputControlModenaTest {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
+    private static Collection<Class<? extends TextInputControl>> promptTextControls() {
+        return List.<Class<? extends TextInputControl>>of(
+                TextField.class,
+                PasswordField.class,
+                TextArea.class
+        );
+    }
+
     /******************************************************
      * Test for highlight-text-fill                       *
      *****************************************************/
@@ -134,6 +147,48 @@ public class TextInputControlModenaTest {
             String resolved = fill.toString().toLowerCase();
             assertTrue(resolved.contains(expectedTextColor));
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("promptTextControls")
+    public void promptTextIsVisibleWhenEmptyFocusedTextInput(Class<? extends TextInputControl> type)
+            throws Exception {
+        String userAgentStylesheet = Application.getUserAgentStylesheet();
+        Stage stage = new Stage();
+
+        try {
+            Application.setUserAgentStylesheet(Application.STYLESHEET_MODENA);
+
+            TextInputControl control = type.getDeclaredConstructor().newInstance();
+            control.setPromptText("Prompt text");
+
+            StackPane root = new StackPane(control);
+            Scene scene = new Scene(root, 400, 200);
+            stage.setScene(scene);
+            stage.show();
+
+            control.requestFocus();
+            Toolkit.getToolkit().firePulse();
+            control.applyCss();
+            assertTrue(control.isFocused(), type.getSimpleName() + " should be focused");
+
+            Text promptNode = getPromptNode(control);
+            assertNotNull(promptNode, type.getSimpleName() + " should have a prompt node");
+            assertTrue(promptNode.isVisible(), type.getSimpleName() + " prompt text should be visible");
+            assertNotEquals(Color.TRANSPARENT, promptNode.getFill(),
+                    type.getSimpleName() + " prompt text fill should not be transparent");
+        } finally {
+            stage.hide();
+            Application.setUserAgentStylesheet(userAgentStylesheet);
+        }
+    }
+
+    private static Text getPromptNode(TextInputControl control) {
+        if (control instanceof TextArea) {
+            return TextInputSkinShim.getPromptNode((TextArea) control);
+        }
+
+        return TextInputSkinShim.getPromptNode((TextField) control);
     }
 
 }
