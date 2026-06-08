@@ -4427,6 +4427,8 @@ bool RenderLayerBacking::updateAcceleratedEffectsAndBaseValues()
     ASSERT(target);
 
     bool hasInterpolatingEffect = false;
+    bool hasEffectAffectingFilter = false;
+    bool hasEffectAffectingBackdropFilter = false;
     auto borderBoxRect = snappedIntRect(m_owningLayer.rendererBorderBoxRect());
 
     auto baseValues = [&]() -> AcceleratedEffectValues {
@@ -4438,15 +4440,32 @@ bool RenderLayerBacking::updateAcceleratedEffectsAndBaseValues()
     AcceleratedEffects acceleratedEffects;
     WeakListHashSet<AcceleratedEffect> weakAcceleratedEffects;
     if (auto* effectStack = target->keyframeEffectStack()) {
-        auto animatesWidth = effectStack->containsProperty(CSSPropertyWidth);
-        auto animatesHeight = effectStack->containsProperty(CSSPropertyHeight);
-        for (const auto& effect : effectStack->sortedEffects()) {
-            if (!effect || !effect->canBeAccelerated())
-                continue;
-            if (animatesWidth || animatesHeight) {
-                auto& blendingKeyframes = effect->blendingKeyframes();
-                if ((animatesWidth && blendingKeyframes.hasWidthDependentTransform()) || (animatesHeight && blendingKeyframes.hasHeightDependentTransform()))
-                    disallowedAcceleratedProperties.add(transformRelatedAcceleratedProperties);
+        WeakListHashSet<AcceleratedEffect> weakAcceleratedEffects;
+        if (effectStack->allowsAcceleration()) {
+            auto animatesWidth = effectStack->containsProperty(CSSPropertyWidth);
+            auto animatesHeight = effectStack->containsProperty(CSSPropertyHeight);
+            for (const auto& effect : effectStack->sortedEffects()) {
+                if (!effect || !effect->canHaveAcceleratedRepresentation() || !effect->canBeAccelerated())
+                    continue;
+                if (animatesWidth || animatesHeight) {
+                    auto& blendingKeyframes = effect->blendingKeyframes();
+                    if ((animatesWidth && blendingKeyframes.hasWidthDependentTransform()) || (animatesHeight && blendingKeyframes.hasHeightDependentTransform()))
+                        disallowedAcceleratedProperties.add(transformRelatedAcceleratedProperties);
+                }
+                Ref acceleratedEffect = effect->acceleratedRepresentation(borderBoxRect, baseValues, disallowedAcceleratedProperties);
+                // FIXME: it feels like we should be able to assert here, or perhaps we could just fold this into the logic
+                // to determine whether we have an interpolating effect.
+                if (acceleratedEffect->animatedProperties().isEmpty())
+                    continue;
+                if (!hasInterpolatingEffect && effect->isRunningAccelerated())
+                    hasInterpolatingEffect = true;
+                if (!hasEffectAffectingFilter && acceleratedEffect->animatedProperties().contains(AcceleratedEffectProperty::Filter))
+                    hasEffectAffectingFilter = true;
+                if (!hasEffectAffectingBackdropFilter && acceleratedEffect->animatedProperties().contains(AcceleratedEffectProperty::BackdropFilter))
+                    hasEffectAffectingBackdropFilter = true;
+                effectTimelines.add(Ref { *acceleratedEffect->timeline() });
+                weakAcceleratedEffects.add(acceleratedEffect.ptr());
+                acceleratedEffects.append(WTF::move(acceleratedEffect));
             }
             auto acceleratedEffect = AcceleratedEffect::create(*effect, borderBoxRect, baseValues, disallowedAcceleratedProperties);
             if (!acceleratedEffect)
@@ -4462,9 +4481,28 @@ bool RenderLayerBacking::updateAcceleratedEffectsAndBaseValues()
 
     // If all of the effects in the stack are either idle, paused or filling, then the
     // effect stack will not produce an interpolated value and we don't need to run
-    // any of these effects.
-    if (!hasInterpolatingEffect)
+    // any of these effects. Otherwise, add the timelines we've encountered for the
+    // effects to the general timelines list.
+    if (hasInterpolatingEffect)
+        timelines.addAll(effectTimelines);
+    else {
         acceleratedEffects.clear();
+        baseValues = { };
+    }
+
+    // If a filter property was disallowed, it's because it cannot be represented remotely,
+    // so we must ensure we reset it in the base values so that we don't attempt to encode
+    // an unsupported filter operation.
+    if (!hasEffectAffectingFilter || disallowedAcceleratedProperties.contains(AcceleratedEffectProperty::Filter)) {
+        for (auto& effect : acceleratedEffects)
+            effect->clearProperty(AcceleratedEffectProperty::Filter);
+        baseValues.filter = { };
+    }
+    if (!hasEffectAffectingBackdropFilter || disallowedAcceleratedProperties.contains(AcceleratedEffectProperty::BackdropFilter)) {
+        for (auto& effect : acceleratedEffects)
+            effect->clearProperty(AcceleratedEffectProperty::BackdropFilter);
+        baseValues.backdropFilter = { };
+    }
 
     m_graphicsLayer->setAcceleratedEffectsAndBaseValues(WTFMove(acceleratedEffects), WTFMove(baseValues));
 

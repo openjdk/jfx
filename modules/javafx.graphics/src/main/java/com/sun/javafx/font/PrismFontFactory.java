@@ -1825,8 +1825,9 @@ public abstract class PrismFontFactory implements FontFactory {
                 try {
                     int screenDPI = Screen.getMainScreen().getResolutionY();
                     systemFontSize = screenDPI / 6f; // 12 points
-                } catch (NullPointerException npe) {
-                    // if no screen is defined
+                } catch (RuntimeException e) {
+                    // if no screen is defined or screens are not initialized,
+                    // this can throw a RuntimeException or NoSuchElementException
                     systemFontSize = 13f; // same as desktop Linux
                 }
             } else {

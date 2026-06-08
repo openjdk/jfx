@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public class Menus {
             new Insets(0, 0, 0, 10),
             new Insets(10, 20, 30, 40)
         };
-        subMenu(cm, "Margin", Formats::formatInsets, setter, getter, values);
+        subMenu(cm, "Margin", Formats::insets, setter, getter, values);
     }
 
     public static <E extends Enum> void enumSubMenu(ContextMenu cm, String text, Class<E> type, boolean includeNull, Consumer<E> setter, Supplier<E> getter) {
@@ -165,7 +165,7 @@ public class Menus {
         } else if (v == Double.POSITIVE_INFINITY) {
             return "INFINITY";
         }
-        return Formats.format2DP(v);
+        return Formats.num2(v);
     }
 
     private static MenuItem item(Menu m, String text, Runnable action) {

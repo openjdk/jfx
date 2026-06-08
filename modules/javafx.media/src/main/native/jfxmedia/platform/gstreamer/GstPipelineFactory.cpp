@@ -1017,8 +1017,6 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     else
     {
         gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, pVideoSink, NULL);
-        if (!gst_element_link_many(pVideoSink, NULL))
-            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
     }
 #endif
     GstPad* sink_pad = gst_element_get_static_pad(videoqueue, "sink");

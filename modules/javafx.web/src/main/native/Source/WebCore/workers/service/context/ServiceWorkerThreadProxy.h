@@ -72,7 +72,7 @@ public:
     bool isTerminatingOrTerminated() const { return m_isTerminatingOrTerminated; }
     void setAsTerminatingOrTerminated() { m_isTerminatingOrTerminated = true; }
 
-    WEBCORE_EXPORT std::unique_ptr<FetchLoader> createBlobLoader(FetchLoaderClient&, const URL&);
+    WEBCORE_EXPORT RefPtr<FetchLoader> createBlobLoader(FetchLoaderClient&, const URL&);
 
     const URL& scriptURL() const { return m_document->url(); }
 

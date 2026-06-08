@@ -5258,12 +5258,12 @@ public class Scene implements EventTarget {
                 }
                 return result;
             } else {
-                try {
-                    return slowMap.get(id);
-                } catch (NullPointerException e) {
+                Integer result = slowMap.get(id);
+                if (result == null) {
                     throw new RuntimeException("Platform reported wrong "
                             + "touch point ID");
                 }
+                return result;
             }
         }
 

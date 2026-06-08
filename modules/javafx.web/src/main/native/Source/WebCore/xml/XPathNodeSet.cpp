@@ -179,17 +179,16 @@ void NodeSet::sort() const
     m_isSorted = true;
 }
 
-static Node* findRootNode(Node* node)
+static inline RefPtr<Node> findRootNode(Node* node)
 {
-    if (RefPtr attr = dynamicDowncast<Attr>(*node))
-        node = attr->ownerElement();
-    if (node->isConnected())
-        node = &node->document();
-    else {
-        while (RefPtr parent = node->parentNode())
-            node = parent.get();
-    }
-    return node;
+    RefPtr<Node> current = node;
+    if (RefPtr attr = dynamicDowncast<Attr>(*current))
+        current = attr->ownerElement();
+    if (current->isConnected())
+        return current->protectedDocument();
+    for (RefPtr parent = current->parentNode(); parent; parent = current->parentNode())
+        current = WTFMove(parent);
+    return current;
 }
 
 void NodeSet::traversalSort() const

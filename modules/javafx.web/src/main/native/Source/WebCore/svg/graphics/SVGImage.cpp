@@ -139,7 +139,7 @@ void SVGImage::setContainerSize(const FloatSize& size)
     }
 
     if (CheckedPtr renderer = dynamicDowncast<RenderSVGRoot>(rootElement->renderer())) {
-    renderer->setContainerSize(IntSize(size));
+        renderer->setContainerSize(IntSize(size));
         return;
     }
 }
@@ -304,7 +304,11 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
         context.setCompositeOperation(CompositeOperator::SourceOver, BlendMode::Normal);
     }
 
-    // FIXME: We should honor options.orientation(), since ImageBitmap's flipY handling relies on it. https://bugs.webkit.org/show_bug.cgi?id=231001
+    auto orientation = options.orientation();
+    // SVG images don't have intrinsic orientation metadata like EXIF, so FromImage defaults to None.
+    if (orientation == ImageOrientation::Orientation::FromImage)
+        orientation = ImageOrientation::Orientation::None;
+
     FloatSize scale(dstRect.size() / srcRect.size());
 
     // We can only draw the entire frame, clipped to the rect we want. So compute where the top left
@@ -314,6 +318,13 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
 
     context.translate(destOffset);
     context.scale(scale);
+
+    // Apply orientation transformation if needed.
+    if (orientation != ImageOrientation::Orientation::None) {
+        auto containerSizeForTransform = containerSize();
+        auto orientationTransform = ImageOrientation(orientation).transformFromDefault(FloatSize(containerSizeForTransform));
+        context.concatCTM(orientationTransform);
+    }
 
     view->resize(containerSize());
 

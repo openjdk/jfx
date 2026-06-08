@@ -312,7 +312,7 @@ Inspector::Protocol::ErrorStringOr<RefPtr<Inspector::Protocol::Animation::Effect
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
 
@@ -329,7 +329,7 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> Ins
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
 
@@ -354,9 +354,13 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObjec
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* animation = assertAnimation(errorString, animationId);
+    RefPtr animation = assertAnimation(errorString, animationId);
     if (!animation)
         return makeUnexpected(errorString);
+
+    RefPtr scriptExecutionContext = animation->scriptExecutionContext();
+    if (!scriptExecutionContext)
+        return makeUnexpected("Animation is detached from context"_s);
 
     auto* state = animation->scriptExecutionContext()->globalObject();
     auto injectedScript = m_injectedScriptManager.injectedScriptFor(state);
@@ -367,7 +371,7 @@ Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObjec
         JSC::JSLockHolder lock(state);
 
         auto* globalObject = deprecatedGlobalObjectForPrototype(state);
-        value = toJS(state, globalObject, animation);
+        value = toJS(state, globalObject, animation.get());
     }
 
     if (!value) {
@@ -582,7 +586,7 @@ void InspectorAnimationAgent::frameNavigated(LocalFrame& frame)
 String InspectorAnimationAgent::findAnimationId(WebAnimation& animation)
 {
     for (auto& [animationId, existingAnimation] : m_animationIdMap) {
-        if (existingAnimation == &animation)
+        if (existingAnimation.ptr() == &animation)
             return animationId;
     }
     return nullString();
@@ -599,7 +603,7 @@ WebAnimation* InspectorAnimationAgent::assertAnimation(Inspector::Protocol::Erro
 void InspectorAnimationAgent::bindAnimation(WebAnimation& animation, RefPtr<Inspector::Protocol::Console::StackTrace> backtrace)
 {
     auto animationId = makeString("animation:"_s, IdentifiersFactory::createIdentifier());
-    m_animationIdMap.set(animationId, &animation);
+    m_animationIdMap.set(animationId, animation);
 
     auto animationPayload = Inspector::Protocol::Animation::Animation::create()
         .setAnimationId(animationId)

@@ -27,8 +27,10 @@
 
 #define G_VARIANT_TYPE_INFO_CHAR_MAYBE      'm'
 #define G_VARIANT_TYPE_INFO_CHAR_ARRAY      'a'
+#ifndef GSTREAMER_LITE
 #define G_VARIANT_TYPE_INFO_CHAR_TUPLE      '('
 #define G_VARIANT_TYPE_INFO_CHAR_DICT_ENTRY '{'
+#endif // GSTREAMER_LITE
 #define G_VARIANT_TYPE_INFO_CHAR_VARIANT    'v'
 #define g_variant_type_info_get_type_char(info) \
   (g_variant_type_info_get_type_string(info)[0])

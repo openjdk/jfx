@@ -3133,6 +3133,13 @@ void RenderBox::computeInlineDirectionMargins(const RenderBlock& containingBlock
             marginEndLength = 0_css_px;
     }
 
+    if (isGridItem() && downcast<RenderGrid>(containingBlock).isComputingTrackSizes()) {
+        if (marginStartLength.isAuto())
+            marginStartLength = 0_css_px;
+        if (marginEndLength.isAuto())
+            marginEndLength = 0_css_px;
+    }
+
     auto handleMarginAuto = [&] {
         auto containerWidthForMarginAuto = availableSpaceAdjustedWithFloats.value_or(containerWidth);
     // Case One: The object is being centered in the containing block's available logical width.
@@ -4837,8 +4844,8 @@ void RenderBox::addOverflowFromChild(const RenderBox& child, const LayoutSize& d
     } else {
         // Update our visual overflow in case the child spills out the block, but only if we were going to paint
         // the child block ourselves.
-        if (child.hasSelfPaintingLayer())
-        return;
+        if (child.hasSelfPaintingLayer() && !hasFilter())
+            return;
     }
     if (!childVisualOverflowRect)
         computeChildVisualOverflowRect();
@@ -4991,6 +4998,41 @@ RenderLayer* RenderBox::enclosingFloatPaintingLayer() const
     return nullptr;
 }
 
+LayoutRect RenderBox::applyPaintGeometryTransformToRect(LayoutRect rect) const
+{
+    // If we are relatively positioned or if we have a transform, then we have to convert
+    // this rectangle into physical coordinates, apply relative positioning and transforms
+    // to it, and then convert it back.
+    // It ensures that the overflow rect tracks the paint geometry and not the inflow layout position.
+
+    bool isTransformed = this->isTransformed();
+    // While a stickily positioned renderer is also inflow positioned, they stretch the overflow rect with their inflow geometry
+    // (as opposed to the paint geometry) because they are not stationary.
+    bool paintGeometryAffectsOverflow = isTransformed || (isInFlowPositioned() && !isStickilyPositioned());
+
+    if (!paintGeometryAffectsOverflow)
+        return rect;
+
+    flipForWritingMode(rect);
+
+    LayoutSize containerOffset;
+    if (isInFlowPositioned())
+        containerOffset = offsetForInFlowPosition();
+
+    auto container = this->container();
+    if (shouldUseTransformFromContainer(container)) {
+        TransformationMatrix transform;
+        getTransformFromContainer(containerOffset, transform);
+        rect = transform.mapRect(rect);
+    } else
+        rect.move(offsetForInFlowPosition());
+
+    // Now we need to flip back.
+    flipForWritingMode(rect);
+
+    return rect;
+}
+
 LayoutRect RenderBox::logicalVisualOverflowRectForPropagation(const WritingMode parentWritingMode) const
 {
     LayoutRect rect = visualOverflowRectForPropagation(parentWritingMode);
@@ -4999,15 +5041,14 @@ LayoutRect RenderBox::logicalVisualOverflowRectForPropagation(const WritingMode 
     return rect;
 }
 
-LayoutRect RenderBox::visualOverflowRectForPropagation(const WritingMode parentWritingMode) const
+LayoutRect RenderBox::convertRectToParentWritingMode(LayoutRect rect, const WritingMode parentWritingMode) const
 {
     // If the writing modes of the child and parent match, then we don't have to
     // do anything fancy. Just return the result.
-    LayoutRect rect = visualOverflowRect();
     if (parentWritingMode.blockDirection() == writingMode().blockDirection())
         return rect;
 
-    // We are putting ourselves into our parent's coordinate space.  If there is a flipped block mismatch
+    // We are putting ourselves into our parent's coordinate space. If there is a flipped block mismatch
     // in a particular axis, then we have to flip the rect along that axis.
     if (writingMode().blockDirection() == FlowDirection::RightToLeft || parentWritingMode.blockDirection() == FlowDirection::RightToLeft)
         rect.setX(width() - rect.maxX());
@@ -5015,6 +5056,12 @@ LayoutRect RenderBox::visualOverflowRectForPropagation(const WritingMode parentW
         rect.setY(height() - rect.maxY());
 
     return rect;
+}
+
+LayoutRect RenderBox::visualOverflowRectForPropagation(const WritingMode parentWritingMode) const
+{
+    LayoutRect rect = applyPaintGeometryTransformToRect(visualOverflowRect());
+    return convertRectToParentWritingMode(rect, parentWritingMode);
 }
 
 LayoutRect RenderBox::logicalLayoutOverflowRectForPropagation(const WritingMode parentWritingMode) const
@@ -5052,46 +5099,8 @@ LayoutRect RenderBox::layoutOverflowRectForPropagation(const WritingMode parentW
             rect.unite(layoutOverflowRect());
     }
 
-    bool isTransformed = this->isTransformed();
-    // While a stickily positioned renderer is also inflow positioned, they stretch the overflow rect with their inflow geometry
-    // (as opposed to the paint geometry) because they are not stationary.
-    bool paintGeometryAffectsLayoutOverflow = isTransformed || (isInFlowPositioned() && !isStickilyPositioned());
-    if (paintGeometryAffectsLayoutOverflow) {
-        // If we are relatively positioned or if we have a transform, then we have to convert
-        // this rectangle into physical coordinates, apply relative positioning and transforms
-        // to it, and then convert it back.
-        // It ensures that the overflow rect tracks the paint geometry and not the inflow layout position.
-        flipForWritingMode(rect);
-
-        LayoutSize containerOffset;
-        if (isInFlowPositioned())
-            containerOffset = offsetForInFlowPosition();
-
-        auto container = this->container();
-        if (shouldUseTransformFromContainer(container)) {
-            TransformationMatrix transform;
-            getTransformFromContainer(containerOffset, transform);
-            rect = transform.mapRect(rect);
-        } else
-            rect.move(offsetForInFlowPosition());
-
-        // Now we need to flip back.
-        flipForWritingMode(rect);
-    }
-
-    // If the writing modes of the child and parent match, then we don't have to
-    // do anything fancy. Just return the result.
-    if (parentWritingMode.blockDirection() == writingMode().blockDirection())
-        return rect;
-
-    // We are putting ourselves into our parent's coordinate space.  If there is a flipped block mismatch
-    // in a particular axis, then we have to flip the rect along that axis.
-    if (writingMode().blockDirection() == FlowDirection::RightToLeft || parentWritingMode.blockDirection() == FlowDirection::RightToLeft)
-        rect.setX(width() - rect.maxX());
-    else if (writingMode().blockDirection() == FlowDirection::BottomToTop || parentWritingMode.blockDirection() == FlowDirection::BottomToTop)
-        rect.setY(height() - rect.maxY());
-
-    return rect;
+    rect = applyPaintGeometryTransformToRect(rect);
+    return convertRectToParentWritingMode(rect, parentWritingMode);
 }
 
 LayoutRect RenderBox::flippedClientBoxRect() const

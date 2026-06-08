@@ -599,13 +599,13 @@
 - (void) setClipRect:(int)x y:(int)y width:(int)width height:(int)height
 {
     id<MTLTexture> currRtt = [rtt getTexture];
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
     int x1 = x + width;
     int y1 = y + height;
     if (x <= 0 && y <= 0 && x1 >= currRtt.width && y1 >= currRtt.height) {
         [self resetClipRect];
     } else {
-        if (x < 0)                    x = 0;
-        if (y < 0)                    y = 0;
         if (x1 > currRtt.width)  width  = currRtt.width - x;
         if (y1 > currRtt.height) height = currRtt.height - y;
         if (x > x1)              width  = x = 0;

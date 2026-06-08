@@ -168,7 +168,12 @@ class DefaultSerializedImageBuffer : public SerializedImageBuffer {
 public:
     DefaultSerializedImageBuffer(ImageBuffer* image)
         : m_buffer(image)
-    { }
+    {
+#if USE(SKIA)
+        if (image->renderingMode() == RenderingMode::Accelerated)
+            image->flushDrawingContext();
+#endif
+    }
 
     RefPtr<ImageBuffer> sinkIntoImageBuffer() final
     {
@@ -360,47 +365,6 @@ RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread(RefPtr<ImageBu
     ASSERT(buffer->hasOneRef());
     return buffer->sinkIntoBufferForDifferentThread();
 }
-
-#if USE(SKIA)
-RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(RefPtr<ImageBuffer> buffer)
-{
-    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
-        return buffer;
-    if (buffer->hasOneRef())
-        return buffer;
-    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Accelerated);
-}
-
-RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer> buffer, std::unique_ptr<GLFence>&& fence)
-{
-    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
-        return buffer;
-
-    auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
-    if (!glContext || !glContext->makeContextCurrent())
-        return nullptr;
-
-    if (fence)
-        fence->serverWait();
-
-    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
-    RELEASE_ASSERT(grContext);
-
-    auto* currentSurface = buffer->surface();
-    RELEASE_ASSERT(currentSurface);
-
-    auto backendRenderTarget = SkSurfaces::GetBackendRenderTarget(currentSurface, SkSurfaces::BackendHandleAccess::kFlushRead);
-
-    const auto& imageInfo = currentSurface->imageInfo();
-    auto surface = SkSurfaces::WrapBackendRenderTarget(grContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, imageInfo.colorType(), imageInfo.refColorSpace(), &currentSurface->props());
-    if (!surface || !surface->getCanvas())
-        return nullptr;
-
-    auto bufferBackendParameters = ImageBuffer::backendParameters(buffer->parameters());
-    auto backend = ImageBufferSkiaAcceleratedBackend::create(bufferBackendParameters, { }, WTFMove(surface));
-    return ImageBuffer::create<ImageBuffer>(buffer->parameters(), buffer->backendInfo(), { }, WTFMove(backend));
-}
-#endif
 
 RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread()
 {

@@ -87,7 +87,6 @@ C_SOURCES = glib/garcbox.c \
             glib/ghook.c \
             glib/giochannel.c \
             glib/giounix.c \
-            glib/gkeyfile.c \
             glib/glib-init.c \
             glib/glib-private.c \
             glib/glist.c \
@@ -130,7 +129,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gtree.c \
             glib/gunibreak.c \
             glib/gunidecomp.c \
-            glib/guniprop.c \
             glib/guri.c \
             glib/gutf8.c \
             glib/gutils.c \
@@ -149,7 +147,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gnulib/printf.c \
             glib/gnulib/vasnprintf.c \
             gobject/gatomicarray.c \
-            gobject/gbinding.c \
             gobject/gboxed.c \
             gobject/gclosure.c \
             gobject/genums.c \
