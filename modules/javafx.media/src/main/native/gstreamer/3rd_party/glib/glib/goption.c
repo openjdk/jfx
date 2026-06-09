@@ -137,6 +137,7 @@ static void free_pending_nulls (GOptionContext *context,
                                 gboolean        perform_nulls);
 
 
+#ifndef GSTREAMER_LITE
 static int
 _g_unichar_get_width (gunichar c)
 {
@@ -165,6 +166,7 @@ _g_utf8_strwidth (const gchar *p)
 
   return len;
 }
+#endif // GSTREAMER_LITE
 
 G_DEFINE_QUARK (g-option-context-error-quark, g_option_error)
 
@@ -513,6 +515,7 @@ g_option_context_add_main_entries (GOptionContext      *context,
   g_option_group_set_translation_domain (context->main_group, translation_domain);
 }
 
+#ifndef GSTREAMER_LITE
 static gint
 calculate_max_length (GOptionGroup *group,
                       GHashTable   *aliases)
@@ -959,6 +962,7 @@ print_help (GOptionContext *context,
 
   exit (0);
 }
+#endif // GSTREAMER_LITE
 
 static gboolean
 parse_int (const gchar *arg_name,
@@ -1770,6 +1774,7 @@ platform_get_argv0 (void)
   return NULL;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_option_context_parse:
  * @context: a #GOptionContext
@@ -2129,6 +2134,7 @@ g_option_context_parse (GOptionContext   *context,
 
   return FALSE;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_option_group_new:
@@ -2567,6 +2573,7 @@ g_option_context_get_description (GOptionContext *context)
   return context->description;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_option_context_parse_strv:
  * @context: a #GOptionContext
@@ -2615,3 +2622,4 @@ g_option_context_parse_strv (GOptionContext   *context,
 
   return success;
 }
+#endif // GSTREAMER_LITE

@@ -21,7 +21,6 @@
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghostutils.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giochannel.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giowin32.c" />
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gkeyfile.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\glist.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmain.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmappedfile.c" />
@@ -60,7 +59,6 @@
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunibreak.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunicollate.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunidecomp.c" />
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\guniprop.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gurifuncs.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutf8.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutils.c" />
