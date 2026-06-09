@@ -1414,21 +1414,21 @@ GST_EXPORT GstDebugLevel            _gst_debug_min;
  *
  * Since: 1.28
  */
-#define GST_CAT_LEVEL_LOG_ONCE(cat,level,object,...) G_STMT_START{	    \
-  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) {	\
+#define GST_CAT_LEVEL_LOG_ONCE(cat,level,object,...) G_STMT_START{      \
+  if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) {  \
     _gst_debug_log_once ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
-        (GObject *) (object), __VA_ARGS__);				    \
-  }									    \
+        (GObject *) (object), __VA_ARGS__);            \
+  }                      \
 }G_STMT_END
 
 /* With specified category and object */
 #define GST_CAT_ERROR_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_ERROR,   obj,__VA_ARGS__)
 #define GST_CAT_WARNING_ONCE_OBJECT(cat,obj,...)  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_WARNING, obj,__VA_ARGS__)
 #define GST_CAT_INFO_ONCE_OBJECT(cat,obj,...)     GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_INFO,    obj,__VA_ARGS__)
-#define GST_CAT_DEBUG_ONCE_OBJECT(cat,obj,...)	  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_DEBUG,   obj,__VA_ARGS__)
-#define GST_CAT_LOG_ONCE_OBJECT(cat,obj,...)	  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_LOG,     obj,__VA_ARGS__)
-#define GST_CAT_FIXME_ONCE_OBJECT(cat,obj,...)	  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_FIXME,   obj,__VA_ARGS__)
-#define GST_CAT_TRACE_ONCE_OBJECT(cat,obj,...)	  GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_TRACE,   obj,__VA_ARGS__)
+#define GST_CAT_DEBUG_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_DEBUG,   obj,__VA_ARGS__)
+#define GST_CAT_LOG_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_LOG,     obj,__VA_ARGS__)
+#define GST_CAT_FIXME_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_FIXME,   obj,__VA_ARGS__)
+#define GST_CAT_TRACE_ONCE_OBJECT(cat,obj,...)    GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_TRACE,   obj,__VA_ARGS__)
 
 /* With specified category and no object */
 #define GST_CAT_ERROR_ONCE(cat,...)   GST_CAT_LEVEL_LOG_ONCE(cat,GST_LEVEL_ERROR,   NULL,__VA_ARGS__)
@@ -1467,11 +1467,11 @@ GST_EXPORT GstDebugLevel            _gst_debug_min;
  *
  * Since: 1.28
  */
-#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,id,...) G_STMT_START{	      \
+#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,id,...) G_STMT_START{        \
   if (G_UNLIKELY (((level) <= GST_LEVEL_MAX) && ((level) <= _gst_debug_min))) { \
     _gst_debug_log_once_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__, \
-	(id), __VA_ARGS__);				                      \
-  }									      \
+  (id), __VA_ARGS__);                              \
+  }                        \
 }G_STMT_END
 
 /* With ids */
@@ -1684,48 +1684,48 @@ GST_EXPORT GstDebugLevel            _gst_debug_min;
 
 /* Log context macros are no-ops when debugging is disabled */
 
-#define GST_CAT_LEVEL_LOG_ONCE(cat,level,...)		G_STMT_START{ }G_STMT_END
-#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,...)	G_STMT_START{ }G_STMT_END
+#define GST_CAT_LEVEL_LOG_ONCE(cat,level,...)    G_STMT_START{ }G_STMT_END
+#define GST_CAT_LEVEL_LOG_ONCE_ID(cat,level,...)  G_STMT_START{ }G_STMT_END
 
-#define GST_CAT_ERROR_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_WARNING_ONCE_OBJECT(...)		G_STMT_START{ }G_STMT_END
-#define GST_CAT_INFO_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_DEBUG_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_LOG_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_FIXME_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_TRACE_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
+#define GST_CAT_ERROR_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_WARNING_ONCE_OBJECT(...)    G_STMT_START{ }G_STMT_END
+#define GST_CAT_INFO_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_DEBUG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_LOG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_FIXME_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_TRACE_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
 
-#define GST_CAT_ERROR_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_CAT_WARNING_ONCE(...)			G_STMT_START{ }G_STMT_END
-#define GST_CAT_INFO_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_CAT_DEBUG_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_CAT_LOG_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_CAT_FIXME_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_CAT_TRACE_ONCE(...)				G_STMT_START{ }G_STMT_END
+#define GST_CAT_ERROR_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_WARNING_ONCE(...)      G_STMT_START{ }G_STMT_END
+#define GST_CAT_INFO_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_DEBUG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_LOG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_FIXME_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_CAT_TRACE_ONCE(...)        G_STMT_START{ }G_STMT_END
 
-#define GST_ERROR_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_WARNING_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_INFO_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_DEBUG_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_LOG_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_FIXME_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
-#define GST_TRACE_ONCE_OBJECT(...)			G_STMT_START{ }G_STMT_END
+#define GST_ERROR_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE_OBJECT(...)      G_STMT_START{ }G_STMT_END
 
-#define GST_ERROR_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
-#define GST_WARNING_ONCE_ID(...)			G_STMT_START{ }G_STMT_END
-#define GST_INFO_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
-#define GST_DEBUG_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
-#define GST_LOG_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
-#define GST_FIXME_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
-#define GST_TRACE_ONCE_ID(...)				G_STMT_START{ }G_STMT_END
+#define GST_ERROR_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE_ID(...)      G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE_ID(...)        G_STMT_START{ }G_STMT_END
 
-#define GST_ERROR_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_WARNING_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_INFO_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_DEBUG_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_LOG_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_FIXME_ONCE(...)				G_STMT_START{ }G_STMT_END
-#define GST_TRACE_ONCE(...)				G_STMT_START{ }G_STMT_END
+#define GST_ERROR_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_WARNING_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_INFO_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_DEBUG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_LOG_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_FIXME_ONCE(...)        G_STMT_START{ }G_STMT_END
+#define GST_TRACE_ONCE(...)        G_STMT_START{ }G_STMT_END
 
 #endif /* GST_DISABLE_GST_DEBUG */
 
