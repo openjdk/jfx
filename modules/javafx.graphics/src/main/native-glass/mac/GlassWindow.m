@@ -30,6 +30,7 @@
 #import "com_sun_glass_ui_Window_Level.h"
 #import "com_sun_glass_ui_mac_MacWindow.h"
 #import "com_sun_glass_ui_mac_MacWindow_BackdropID.h"
+#import "com_sun_glass_ui_mac_MacWindow_BackdropOptionID.h"
 
 #import "GlassMacros.h"
 #import "GlassWindow.h"
@@ -1642,6 +1643,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyl
                 [[window->nsWindow standardWindowButton:NSWindowCloseButton] setHidden:!buttonsVisible];
                 [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:!buttonsVisible];
                 [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:!buttonsVisible];
+            }
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setBackdropOption
+ * Signature: (JIDDDD)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackdropOption
+(JNIEnv *env, jobject jWindow, jlong jPtr, jint optionID, jdouble r, jdouble g, jdouble b, jdouble a)
+{
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        if (window) {
+            if (optionID == com_sun_glass_ui_mac_MacWindow_BackdropOptionID_TINT_COLOR) {
+                NSColor* t = [NSColor colorWithSRGBRed:r green:g blue:b alpha:a];
+                [window->hostView setTintColor: t];
+            }
+            else if (optionID == com_sun_glass_ui_mac_MacWindow_BackdropOptionID_CORNER_RADIUS) {
+                [window->hostView setCornerRadius: r];
             }
         }
     }

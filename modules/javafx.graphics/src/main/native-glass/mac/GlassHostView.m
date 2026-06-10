@@ -25,7 +25,15 @@
 
 #import "GlassHostView.h"
 
-@implementation GlassHostView : NSView
+// Support for the NSGlassEffectView must wait for the macOS 26 SDK
+#define SUPPORT_GLASS_EFFECT 0
+
+@implementation GlassHostView
+{
+@private
+    NSView* glassEffect;
+}
+
 - (void)setJFXView:(NSView*)view
 {
     if (jfxView != nil) {
@@ -48,12 +56,34 @@
 // Called when the window is first created.
 -(void)setGlassBackdrop:(BOOL)clear
 {
-#if 0
-    // Support for the NSGlassEffectView must wait for the macOS 26 SDK
+#if SUPPORT_GLASS_EFFECT
     if (@available(macOS 26.0, *)) {
         NSGlassEffectView* effect = [[NSGlassEffectView alloc] initWithFrame: self.bounds];
         effect.style = (clear ? NSGlassEffectViewStyleClear : NSGlassEffectViewStyleRegular);
         [self addSubview: effect];
+        glassEffect = effect;
+    }
+#endif
+}
+
+-(void)setTintColor:(NSColor*)t
+{
+#if SUPPORT_GLASS_EFFECT
+    if (@available(macOS 26.0, *)) {
+        if (glassEffect != nil) {
+            ((NSGlassEffectView*) glassEffect).tintColor = t;
+        }
+    }
+#endif
+}
+
+-(void)setCornerRadius:(double)r
+{
+#if SUPPORT_GLASS_EFFECT
+    if (@available(macOS 26.0, *)) {
+        if (glassEffect != nil) {
+            ((NSGlassEffectView*) glassEffect).cornerRadius = r;
+        }
     }
 #endif
 }

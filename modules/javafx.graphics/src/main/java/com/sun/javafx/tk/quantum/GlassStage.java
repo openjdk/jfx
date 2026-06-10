@@ -27,6 +27,7 @@ package com.sun.javafx.tk.quantum;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.javafx.tk.FocusCause;
@@ -79,6 +80,9 @@ abstract class GlassStage implements TKStage {
 
     @Override
     public void setDarkFrame(boolean value) {}
+
+    @Override
+    public void setBackdropOption(String name, Object option) {}
 
     protected final GlassScene getScene() {
         return scene;

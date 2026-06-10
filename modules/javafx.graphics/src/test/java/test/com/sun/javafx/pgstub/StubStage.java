@@ -228,6 +228,10 @@ public class StubStage implements TKStage {
     }
 
     @Override
+    public void setBackdropOption(String name, Object option) {
+    }
+
+    @Override
     public void requestFocus() {
         notificationSender.changedFocused(true, FocusCause.ACTIVATED);
     }

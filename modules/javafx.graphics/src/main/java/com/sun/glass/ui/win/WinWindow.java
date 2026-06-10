@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.HashMap;
 import javafx.application.Platform;
 import javafx.application.ConditionalFeature;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -471,23 +471,23 @@ class WinWindow extends Window {
 
     private static final String TRANSIENT_NAME = "Windows.Transient";
 
-    public static List<String> getPlatformBackdropNames() {
+    public static List<String> getPlatformBackdropStyleNames() {
         if (Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
             return List.of(TRANSIENT_NAME);
         }
         return List.of();
     }
 
-    public static int getBackdropIdentifier(StageBackdrop backdrop) {
+    public static int getBackdropStyleIdentifier(StageBackdropStyle style) {
         if (!Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
             return Window.NO_BACKDROP_ID;
         }
 
-        if (backdrop == StageBackdrop.WINDOW) {
+        if (style == StageBackdropStyle.WINDOW) {
             return BackdropID.WINDOW;
-        } else if (backdrop == StageBackdrop.PARTIAL) {
+        } else if (style == StageBackdropStyle.PARTIAL) {
             return BackdropID.TABBED;
-        } else if (backdrop.getName() == TRANSIENT_NAME) {
+        } else if (style.getName() == TRANSIENT_NAME) {
             return BackdropID.TRANSIENT;
         }
 

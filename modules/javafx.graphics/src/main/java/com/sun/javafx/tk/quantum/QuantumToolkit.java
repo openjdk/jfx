@@ -54,7 +54,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
@@ -616,9 +616,9 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
                                            Modality modality, TKStage owner, boolean rtl, boolean darkFrame,
-                                           StageBackdrop backdrop) {
+                                           StageBackdropStyle backdropStyle) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame, backdrop);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame, backdropStyle);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -1850,12 +1850,12 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public List<String> getPlatformBackdropNames() {
-        return Application.GetApplication().getPlatformBackdropNames();
+    public List<String> getPlatformBackdropStyleNames() {
+        return Application.GetApplication().getPlatformBackdropStyleNames();
     }
 
     @Override
-    public StageBackdrop createPlatformBackdrop(String name) {
-        return Application.GetApplication().createPlatformBackdrop(name);
+    public StageBackdropStyle createPlatformBackdropStyle(String name) {
+        return Application.GetApplication().createPlatformBackdropStyle(name);
     }
 }

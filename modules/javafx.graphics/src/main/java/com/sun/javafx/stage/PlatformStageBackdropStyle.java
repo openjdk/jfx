@@ -25,22 +25,44 @@
 
 package com.sun.javafx.stage;
 
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
+import java.util.Map;
 
 /**
- *
+ * A PlatformStageBackdropStyle tracks the name and an optional map detailing
+ * the options available for this backdrop style.
  */
-public enum StandardStageBackdrop implements StageBackdrop {
-    WINDOW("Window"),
-    PARTIAL("Partial");
+public final class PlatformStageBackdropStyle implements StageBackdropStyle {
+    public String name;
+    public Map<String, Class<?>> options;
 
-    private String name;
-
-    private StandardStageBackdrop(String name) {
-       this.name = name;
+    public PlatformStageBackdropStyle(String name) {
+        this.name = name;
+        this.options = Map.of();
     }
 
+    @Override
     public String getName() {
         return name;
+    }
+
+    @Override
+    public Map<String, Class<?>> getAvailableOptions() {
+        return options;
+    }
+
+    public void setAvailableOptions(Map<String, Class<?>> o) {
+        options = o;
+    }
+
+    @Override
+    public String toString() {
+        String klassName = getClass().getName();
+        String simpleName = klassName.substring(klassName.lastIndexOf('.')+1);
+        StringBuilder sbuf = new StringBuilder(simpleName);
+        sbuf.append("[name=");
+        sbuf.append(getName());
+        sbuf.append("]");
+        return sbuf.toString();
     }
 }

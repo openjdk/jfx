@@ -29,10 +29,10 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
-import com.sun.javafx.stage.PlatformStageBackdrop;
+import com.sun.javafx.stage.PlatformStageBackdropStyle;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -552,17 +552,17 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public List<String> getPlatformBackdropNames() {
-        return MacWindow.getPlatformBackdropNames();
+    public List<String> getPlatformBackdropStyleNames() {
+        return MacWindow.getPlatformBackdropStyleNames();
     }
 
     @Override
-    public PlatformStageBackdrop createPlatformBackdrop(String name) {
-        return MacWindow.createPlatformBackdrop(name);
+    public PlatformStageBackdropStyle createPlatformBackdropStyle(String name) {
+        return MacWindow.createPlatformBackdropStyle(name);
     }
 
     @Override
-    public int getBackdropIdentifier(StageBackdrop backdrop) {
-        return MacWindow.getBackdropIdentifier(backdrop);
+    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
+        return MacWindow.getBackdropStyleIdentifier(style);
     }
 }

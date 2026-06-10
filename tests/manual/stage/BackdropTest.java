@@ -41,7 +41,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 import javafx.stage.Window;
 import java.util.List;
 import java.util.Map;
@@ -80,17 +80,17 @@ public class BackdropTest extends Application {
         }
     }
 
-    private class StageBackdropChoice {
-        StageBackdropChoice(StageBackdrop backdrop) {
-            this.backdrop = backdrop;
-            this.label = (backdrop == null ? "None" : backdrop.getName());
+    private class StageBackdropStyleChoice {
+        StageBackdropStyleChoice(StageBackdropStyle style) {
+            this.backdropStyle = style;
+            this.label = (style == null ? "None" : style.getName());
         }
 
         private String label;
-        private StageBackdrop backdrop;
+        private StageBackdropStyle backdropStyle;
 
-        public StageBackdrop getBackdrop() {
-            return backdrop;
+        public StageBackdropStyle getBackdropStyle() {
+            return backdropStyle;
         }
 
         public String toString() {
@@ -98,17 +98,17 @@ public class BackdropTest extends Application {
         }
     }
 
-    private List<StageBackdropChoice> backdrops = new ArrayList<>();
+    private List<StageBackdropStyleChoice> backdropStyles = new ArrayList<>();
 
-    void initBackdropList() {
-        backdrops.add(new StageBackdropChoice(null));
-        backdrops.add(new StageBackdropChoice(StageBackdrop.WINDOW));
-        backdrops.add(new StageBackdropChoice(StageBackdrop.PARTIAL));
-        var names = new ArrayList<>(StageBackdrop.getPlatformBackdropNames());
+    void initBackdropStyleList() {
+        backdropStyles.add(new StageBackdropStyleChoice(null));
+        backdropStyles.add(new StageBackdropStyleChoice(StageBackdropStyle.WINDOW));
+        backdropStyles.add(new StageBackdropStyleChoice(StageBackdropStyle.PARTIAL));
+        var names = new ArrayList<>(StageBackdropStyle.getPlatformStyleNames());
         names.sort(null);
         names.forEach(m -> {
-            var backdrop = StageBackdrop.backdrop(m);
-            backdrops.add(new StageBackdropChoice(backdrop));
+            var style = StageBackdropStyle.style(m);
+            backdropStyles.add(new StageBackdropStyleChoice(style));
         });
     }
 
@@ -182,7 +182,7 @@ public class BackdropTest extends Application {
     private ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
 
     private void updateTextColor(Stage stage, ObjectProperty<Color> textColor) {
-        if (stage.getBackdrop() == null) {
+        if (stage.getBackdropStyle() == null) {
             textColor.set(Color.BLACK);
         } else if (stage.getScene().getPreferences().getColorScheme() == ColorScheme.DARK) {
             textColor.set(Color.WHITE);
@@ -211,7 +211,7 @@ public class BackdropTest extends Application {
         return box;
     }
 
-    private void buildScene(Stage stage, StageStyleChoice stageStyle, StageBackdropChoice backdrop) {
+    private void buildScene(Stage stage, StageStyleChoice stageStyle, StageBackdropStyleChoice backdropStyle) {
 
         var iconifyButton = new Button("Iconify");
         iconifyButton.setOnAction(e -> {
@@ -245,17 +245,17 @@ public class BackdropTest extends Application {
         stageStyleChoice.getItems().setAll(StageStyleChoice.values());
         stageStyleChoice.setValue(stageStyle);
 
-        var backdropLabel = newLabel("backdrop", textColor);
-        ChoiceBox<StageBackdropChoice> backdropChoice = new ChoiceBox<>();
-        backdropChoice.getItems().setAll(backdrops);
-        backdropChoice.setValue(backdrop);
+        var backdropStyleLabel = newLabel("backdrop style", textColor);
+        ChoiceBox<StageBackdropStyleChoice> backdropStyleChoice = new ChoiceBox<>();
+        backdropStyleChoice.getItems().setAll(backdropStyles);
+        backdropStyleChoice.setValue(backdropStyle);
 
         Button createButton = new Button("Create!");
         createButton.setOnAction(e -> {
-            createAndShowStage(stageStyleChoice.getValue(), backdropChoice.getValue());
+            createAndShowStage(stageStyleChoice.getValue(), backdropStyleChoice.getValue());
         });
 
-        HBox stageCreationControls = new HBox(styleLabel, stageStyleChoice, backdropLabel, backdropChoice, createButton);
+        HBox stageCreationControls = new HBox(styleLabel, stageStyleChoice, backdropStyleLabel, backdropStyleChoice, createButton);
         stageCreationControls.setAlignment(Pos.BASELINE_LEFT);
         stageCreationControls.setSpacing(10);
 
@@ -270,7 +270,7 @@ public class BackdropTest extends Application {
 
         // Pull it together
         VBox controls = new VBox(
-            labeledSection("This stage is " + stageStyle + " and the backdrop is " + backdrop, textColor),
+            labeledSection("This stage is " + stageStyle + " and the backdrop style is " + backdropStyle, textColor),
             labeledSection("New stage", textColor, stageCreationControls),
             labeledSection("Fill color for this stage", textColor, fillChoice),
             labeledSection("Color scheme for this stage", textColor, schemeChoice),
@@ -296,7 +296,9 @@ public class BackdropTest extends Application {
         Parent root = borderPane;
         if (stage.getStyle() == StageStyle.EXTENDED) {
             var headerBar = new HeaderBar();
-            headerBar.setCenter(new Label(stage.getTitle()));
+            var label = new Label(stage.getTitle());
+            label.textFillProperty().bind(textColor);
+            headerBar.setCenter(label);
             var box = new VBox(headerBar, borderPane);
             box.setBackground(null);
             root = box;
@@ -324,35 +326,32 @@ public class BackdropTest extends Application {
             schemeChoice.setValue(ColorSchemeChoice.DARK);
         }
         opacityChoice.setValue(OpacityChoice.P100);
-        var ob = backdrops.stream()
-            .filter(obj -> obj.getBackdrop() == StageBackdrop.WINDOW)
-            .findFirst();
-        ob.ifPresent(pb -> backdropChoice.setValue(pb));
 
         updateTextColor(stage, textColor);
     }
 
-    private void showStage(Stage stage, StageStyleChoice style, StageBackdropChoice backdrop)
+    private void showStage(Stage stage, StageStyleChoice style, StageBackdropStyleChoice backdropStyle)
     {
         stage.setTitle(style.toString());
         stage.initStyle(style.getStageStyle());
-        stage.initBackdrop(backdrop == null ? null : backdrop.getBackdrop());
-        buildScene(stage, style, backdrop);
+        stage.initBackdropStyle(backdropStyle.getBackdropStyle());
+        var backdrop = stage.getBackdrop();
+        if (backdrop != null) {
+            backdrop.setOption("TintColor", Color.RED);
+        }
+        buildScene(stage, style, backdropStyle);
         stage.show();
     }
 
-    private void createAndShowStage(StageStyleChoice style, StageBackdropChoice backdrop)
+    private void createAndShowStage(StageStyleChoice style, StageBackdropStyleChoice backdropStyle)
     {
         Stage stage = new Stage();
-        showStage(stage, style, backdrop);
+        showStage(stage, style, backdropStyle);
     }
 
     @Override
     public void start(Stage stage) {
-        initBackdropList();
-        var ob = backdrops.stream()
-            .filter(obj -> obj.getBackdrop() == StageBackdrop.WINDOW)
-            .findFirst();
-        showStage(stage, StageStyleChoice.EXTENDED, ob.orElse(null));
+        initBackdropStyleList();
+        showStage(stage, StageStyleChoice.EXTENDED, backdropStyles.get(0));
     }
 }

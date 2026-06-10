@@ -41,6 +41,7 @@ import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public abstract class Window {
 
@@ -1014,6 +1015,8 @@ public abstract class Window {
     }
 
     public void setDarkFrame(boolean value) {}
+
+    public void setBackdropOption(String name, Object option) {}
 
     public boolean isEnabled() {
         Application.checkEventThread();

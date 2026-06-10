@@ -28,11 +28,11 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
-import com.sun.javafx.stage.PlatformStageBackdrop;
+import com.sun.javafx.stage.PlatformStageBackdropStyle;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -452,20 +452,20 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public List<String> getPlatformBackdropNames() {
-        return WinWindow.getPlatformBackdropNames();
+    public List<String> getPlatformBackdropStyleNames() {
+        return WinWindow.getPlatformBackdropStyleNames();
     }
 
     @Override
-    public PlatformStageBackdrop createPlatformBackdrop(String name) {
-        if (getPlatformBackdropNames().contains(name)) {
-            return new PlatformStageBackdrop(name);
+    public PlatformStageBackdropStyle createPlatformBackdropStyle(String name) {
+        if (getPlatformBackdropStyleNames().contains(name)) {
+            return new PlatformStageBackdropStyle(name);
         }
         return null;
     }
 
     @Override
-    public int getBackdropIdentifier(StageBackdrop backdrop) {
-        return WinWindow.getBackdropIdentifier(backdrop);
+    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
+        return WinWindow.getBackdropStyleIdentifier(style);
     }
 }

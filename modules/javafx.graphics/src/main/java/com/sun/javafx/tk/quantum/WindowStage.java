@@ -35,7 +35,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
@@ -63,7 +63,7 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
-    private StageBackdrop backdrop = null;
+    private StageBackdropStyle backdropStyle = null;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -89,12 +89,12 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
     public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
-                       TKStage owner, boolean darkFrame, final StageBackdrop backdrop) {
+                       TKStage owner, boolean darkFrame, final StageBackdropStyle backdropStyle) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
         this.darkFrame = darkFrame;
-        this.backdrop = backdrop;
+        this.backdropStyle = backdropStyle;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -187,8 +187,8 @@ public class WindowStage extends GlassStage {
             }
 
             int backdropID = Window.NO_BACKDROP_ID;
-            if (backdrop != null) {
-                backdropID = app.getBackdropIdentifier(backdrop);
+            if (backdropStyle != null) {
+                backdropID = app.getBackdropStyleIdentifier(backdropStyle);
             }
 
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask, backdropID);
@@ -220,6 +220,15 @@ public class WindowStage extends GlassStage {
                 }
             }
 
+            if (fxStage != null && fxStage.getBackdrop() != null) {
+                var backdrop = fxStage.getBackdrop();
+                backdrop.getStyle().getAvailableOptions().forEach((name, optionClass) -> {
+                    var option = backdrop.getOption(name);
+                    if (option != null) {
+                        platformWindow.setBackdropOption(name, option);
+                    }
+                });
+            }
         }
         platformWindows.put(platformWindow, this);
     }
@@ -925,6 +934,13 @@ public class WindowStage extends GlassStage {
 
         if (platformWindow != null) {
             platformWindow.setDarkFrame(value);
+        }
+    }
+
+    @Override
+    public void setBackdropOption(String name, Object option) {
+        if (platformWindow != null) {
+            platformWindow.setBackdropOption(name, option);
         }
     }
 

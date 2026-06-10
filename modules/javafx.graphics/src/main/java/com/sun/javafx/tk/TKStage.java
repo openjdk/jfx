@@ -28,6 +28,7 @@ package com.sun.javafx.tk;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.ModifierValue;
+import java.util.Map;
 
 /**
  * TKStage - Peer interface for a Stage
@@ -125,6 +126,8 @@ public interface TKStage {
     public void setPrefHeaderButtonHeight(double height);
 
     public void setDarkFrame(boolean value);
+
+    public void setBackdropOption(String name, Object option);
 
     // =================================================================================================================
     // Functions

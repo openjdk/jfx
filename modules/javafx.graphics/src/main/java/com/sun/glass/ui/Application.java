@@ -28,9 +28,9 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
-import com.sun.javafx.stage.PlatformStageBackdrop;
+import com.sun.javafx.stage.PlatformStageBackdropStyle;
 
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -855,24 +855,24 @@ public abstract class Application {
     }
 
     /**
-     * Return the list of backdrops supported on this platform.
+     * Return the list of backdrop styles supported on this platform.
      * The default is an empty list.
      */
-    public List<String> getPlatformBackdropNames() {
+    public List<String> getPlatformBackdropStyleNames() {
         return List.of();
     }
 
     /**
-     * Create a Platform backdrop for the specified name
+     * Create a Platform backdrop style for the specified name
      */
-    public PlatformStageBackdrop createPlatformBackdrop(String name) {
+    public PlatformStageBackdropStyle createPlatformBackdropStyle(String name) {
         return null;
     }
 
     /**
-     * Return the platform identifier for the backdrop
+     * Return the platform identifier for the backdrop style
      */
-    public int getBackdropIdentifier(StageBackdrop backdrop) {
+    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
         return Window.NO_BACKDROP_ID;
     }
 }

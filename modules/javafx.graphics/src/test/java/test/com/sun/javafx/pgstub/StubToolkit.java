@@ -60,7 +60,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
-import javafx.stage.StageBackdrop;
+import javafx.stage.StageBackdropStyle;
 import javafx.stage.Window;
 import javafx.util.Pair;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
@@ -150,7 +150,7 @@ public class StubToolkit extends Toolkit {
     @Override
     public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
                                  Modality modality, TKStage owner, boolean rtl,
-                                 boolean darkFrame, StageBackdrop backdrop) {
+                                 boolean darkFrame, StageBackdropStyle backdropStyle) {
 
         return new StubStage();
     }
