@@ -39,12 +39,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import javafx.application.Application;
-import javafx.scene.control.skin.TextInputSkinShim;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Collection;
 import java.util.List;
 
+import static javafx.scene.control.skin.TextInputSkinShim.getPromptNode;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -161,7 +161,6 @@ public class TextInputControlModenaTest {
 
             control.requestFocus();
             Toolkit.getToolkit().firePulse();
-            control.applyCss();
             assertTrue(control.isFocused(), type.getSimpleName() + " should be focused");
 
             Text promptNode = getPromptNode(control);
@@ -174,13 +173,4 @@ public class TextInputControlModenaTest {
             Application.setUserAgentStylesheet(userAgentStylesheet);
         }
     }
-
-    private static Text getPromptNode(TextInputControl control) {
-        if (control instanceof TextArea) {
-            return TextInputSkinShim.getPromptNode((TextArea) control);
-        }
-
-        return TextInputSkinShim.getPromptNode((TextField) control);
-    }
-
 }
