@@ -599,7 +599,8 @@ public class ComboBoxTest {
         assertNotNull(comboBox.getButtonCell().getGraphic());
         assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
 
-        // Calls updateDisplayNode()
+        // A call to getDisplayNode() will call updateDisplayNode() in its implementation
+        // as that is how the skin does it
         getDisplayNode();
         assertNotNull(comboBox.getButtonCell().getGraphic());
         assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
