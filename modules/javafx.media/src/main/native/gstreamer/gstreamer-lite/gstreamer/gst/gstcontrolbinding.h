@@ -177,7 +177,7 @@ gboolean            gst_control_binding_sync_values        (GstControlBinding * 
                                                             GstClockTime timestamp, GstClockTime last_sync);
 GST_API
 GValue *            gst_control_binding_get_value          (GstControlBinding *binding,
-                                                            GstClockTime timestamp);
+                                                            GstClockTime timestamp) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gboolean            gst_control_binding_get_value_array    (GstControlBinding *binding, GstClockTime timestamp,
                                                             GstClockTime interval, guint n_values, gpointer values);

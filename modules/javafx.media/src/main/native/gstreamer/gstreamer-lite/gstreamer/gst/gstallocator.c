@@ -449,7 +449,7 @@ _sysmem_new_block (GstMemoryFlags flags,
   }
   slice_size = sizeof (GstMemorySystem) + maxsize;
 
-  mem = g_malloc (slice_size);
+  mem = g_try_malloc (slice_size);
   if (mem == NULL)
     return NULL;
 
