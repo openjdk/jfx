@@ -50,6 +50,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.javafx.util.ReflectionUtils;
+import test.util.property.PropertyMetadataVerifier;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("deprecation")
@@ -82,6 +84,15 @@ public class HeaderBarTest {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new HeaderBar(), HeaderBar.class, targetClass -> {
+            if (targetClass == Node.class) return new Rectangle();
+            if (targetClass == Stage.class) return new Stage();
+            return null;
+        });
     }
 
     @Test

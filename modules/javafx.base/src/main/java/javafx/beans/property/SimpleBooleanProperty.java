@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
 
     private final Object bean;
     private final String name;
+    private Class<?> declaringClass;
 
     /**
      * {@inheritDoc}
@@ -58,29 +59,40 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * {@inheritDoc}
+     *
+     * @since 27
+     */
+    @Override
+    public Class<?> getDeclaringClass() {
+        if (declaringClass != null) {
+            return declaringClass;
+        }
+
+        return declaringClass = super.getDeclaringClass();
+    }
+
+    /**
+     * The constructor of {@code SimpleBooleanProperty}.
      */
     public SimpleBooleanProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleBooleanProperty(boolean initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param bean
-     *            the bean of this {@code BooleanProperty}
-     * @param name
-     *            the name of this {@code BooleanProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleBooleanProperty(Object bean, String name) {
         this.bean = bean;
@@ -88,14 +100,11 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param bean
-     *            the bean of this {@code BooleanProperty}
-     * @param name
-     *            the name of this {@code BooleanProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleBooleanProperty(Object bean, String name, boolean initialValue) {
         super(initialValue);
@@ -103,4 +112,30 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
         this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
+    /**
+     * The constructor of {@code SimpleBooleanProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public SimpleBooleanProperty(Object bean, Class<?> declaringClass, String name) {
+        this(bean, name);
+        this.declaringClass = declaringClass;
+    }
+
+    /**
+     * The constructor of {@code SimpleBooleanProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public SimpleBooleanProperty(Object bean, Class<?> declaringClass, String name, boolean initialValue) {
+        this(bean, name, initialValue);
+        this.declaringClass = declaringClass;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,39 +44,58 @@ public class ReadOnlyFloatWrapper extends SimpleFloatProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyFloatWrapper(float initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyFloatProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyFloatProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyFloatWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyFloatProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyFloatProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyFloatWrapper(Object bean, String name, float initialValue) {
         super(bean, name, initialValue);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyFloatWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlyFloatWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyFloatWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlyFloatWrapper(Object bean, Class<?> declaringClass, String name, float initialValue) {
+        super(bean, declaringClass, name, initialValue);
     }
 
     /**
@@ -87,7 +106,9 @@ public class ReadOnlyFloatWrapper extends SimpleFloatProperty {
      */
     public ReadOnlyFloatProperty getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -118,6 +139,19 @@ public class ReadOnlyFloatWrapper extends SimpleFloatProperty {
         @Override
         public String getName() {
             return ReadOnlyFloatWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyFloatWrapper.this.getDeclaringClass();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyFloatWrapper.this).getTargetClass();
         }
     }
 }
