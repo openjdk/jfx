@@ -26,6 +26,43 @@
 #import "GlassHostView.h"
 
 @implementation GlassHostView : NSView
+- (void)setJFXView:(NSView*)view
+{
+    if (jfxView != nil) {
+        [jfxView removeFromSuperview];
+    }
+    jfxView = view;
+    if (jfxView) {
+        [self addSubview: jfxView positioned: NSWindowAbove relativeTo: backdropView];
+    }
+}
+
+// Called when the window is first created.
+-(void)setBackdrop:(NSVisualEffectMaterial)material
+{
+    NSVisualEffectView* effect = [[NSVisualEffectView alloc] initWithFrame: self.bounds];
+    effect.material = material;
+    [self addSubview: effect];
+}
+
+// Called when the window is first created.
+-(void)setGlassBackdrop:(BOOL)clear
+{
+#if 0
+    // Support for the NSGlassEffectView must wait for the macOS 26 SDK
+    if (@available(macOS 26.0, *)) {
+        NSGlassEffectView* effect = [[NSGlassEffectView alloc] initWithFrame: self.bounds];
+        effect.style = (clear ? NSGlassEffectViewStyleClear : NSGlassEffectViewStyleRegular);
+        [self addSubview: effect];
+    }
+#endif
+}
+
+- (void)resizeSubviewsWithOldSize:(NSSize) oldSize {
+    for (NSView* child in self.subviews) {
+        child.frame = self.bounds;
+    }
+}
 
 - (void)dealloc
 {
@@ -70,21 +107,6 @@
 - (BOOL)mouseDownCanMoveWindow
 {
     return NO;
-}
-
-- (void)addSubview:(NSView *)aView
-{
-    [super addSubview:aView];
-    self->view = aView;
-}
-
-- (void)drawRect:(NSRect)rect
-{
-    //NSLog(@"Sparkle: drawRect: [%@] %.2f,%.2f %.2fx%.2f,", self, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
-    //NSLog(@"Sparkle: frame: [%@] %.2f,%.2f %.2fx%.2f,", self, [self frame].origin.x, [self frame].origin.y, [self frame].size.width, [self frame].size.height);
-    //NSLog(@"Sparkle: bounds: [%@] %.2f,%.2f %.2fx%.2f,", self, [self bounds].origin.x, [self bounds].origin.y, [self bounds].size.width, [self bounds].size.height);
-    //[[NSColor redColor] set];
-    //NSRectFill([self bounds]);
 }
 
 - (BOOL) isFlipped

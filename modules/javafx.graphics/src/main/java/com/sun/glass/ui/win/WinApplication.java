@@ -28,9 +28,11 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
+import com.sun.javafx.stage.PlatformStageBackdrop;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
+import javafx.stage.StageBackdrop;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -214,8 +216,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     // FACTORY METHODS
 
-    @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
-        return new WinWindow(owner, screen, styleMask);
+    @Override public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
+        return new WinWindow(owner, screen, styleMask, backdropID);
     }
 
     @Override public View createView() {
@@ -380,6 +382,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
+    @Override native protected boolean _supportsWindowBackdrops();
+
     @Override
     public String getDataDirectory() {
         checkEventThread();
@@ -445,5 +449,23 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("Windows.UISettings.AutoHideScrollBars", Boolean.class),
             Map.entry("Windows.NetworkInformation.InternetCostType", String.class)
         );
+    }
+
+    @Override
+    public List<String> getPlatformBackdropNames() {
+        return WinWindow.getPlatformBackdropNames();
+    }
+
+    @Override
+    public PlatformStageBackdrop createPlatformBackdrop(String name) {
+        if (getPlatformBackdropNames().contains(name)) {
+            return new PlatformStageBackdrop(name);
+        }
+        return null;
+    }
+
+    @Override
+    public int getBackdropIdentifier(StageBackdrop backdrop) {
+        return WinWindow.getBackdropIdentifier(backdrop);
     }
 }

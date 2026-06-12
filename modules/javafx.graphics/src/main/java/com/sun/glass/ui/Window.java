@@ -178,6 +178,11 @@ public abstract class Window {
      */
     @Native public static final int DARK_FRAME = 1 << 11;
 
+    /**
+     * Indicates the window has no backdrop
+     */
+    public static final int NO_BACKDROP_ID = -1;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -211,6 +216,7 @@ public abstract class Window {
     private final int styleMask;
     private final boolean isDecorated;
     private final boolean isPopup;
+    private final int backdropID;
 
     protected View view = null;
     protected Screen screen = null;
@@ -246,8 +252,8 @@ public abstract class Window {
 
     private EventHandler eventHandler;
 
-    protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask);
-    protected Window(Window owner, Screen screen, int styleMask) {
+    protected abstract long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID);
+    protected Window(Window owner, Screen screen, int styleMask, int backdropID) {
         Application.checkEventThread();
         switch (styleMask & (TITLED | TRANSPARENT | EXTENDED)) {
             case UNTITLED:
@@ -281,11 +287,16 @@ public abstract class Window {
             styleMask &= ~TRANSPARENT;
         }
 
+        if (!Application.GetApplication().supportsWindowBackdrops()) {
+            backdropID = NO_BACKDROP_ID;
+        }
+
         this.owner = owner;
         this.styleMask = styleMask;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
         this.isPopup = (this.styleMask & Window.POPUP) != 0;
         this.isModal = (this.styleMask & Window.MODAL) != 0;
+        this.backdropID = backdropID;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -296,10 +307,14 @@ public abstract class Window {
         }
 
         this.ptr = _createWindow(owner != null ? owner.getNativeHandle() : 0L,
-                this.screen.getNativeScreen(), this.styleMask);
+                this.screen.getNativeScreen(), this.styleMask, this.backdropID);
         if (this.ptr == 0L) {
             throw new RuntimeException("could not create platform window");
         }
+    }
+
+    protected Window(Window owner, Screen screen, int styleMask) {
+        this(owner, screen, styleMask, NO_BACKDROP_ID);
     }
 
     /**
@@ -748,6 +763,11 @@ public abstract class Window {
     public boolean isFocused() {
         Application.checkEventThread();
         return this.isFocused;
+    }
+
+    public boolean hasBackdrop() {
+        // The backdrop is only set if backdrops are supported.
+        return (this.backdropID >= 0);
     }
 
     protected abstract boolean _requestFocus(long ptr, int event);

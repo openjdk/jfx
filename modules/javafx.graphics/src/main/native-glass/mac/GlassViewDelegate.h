@@ -44,7 +44,6 @@ typedef enum GestureMaskType {
 
     NSTrackingRectTag       trackingRect;
 
-    GlassHostView           *parentHost;
     NSWindow                *parentWindow;
     CGFloat                 parentWindowAlpha;
 

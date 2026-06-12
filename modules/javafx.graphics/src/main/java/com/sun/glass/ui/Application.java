@@ -28,10 +28,14 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
+import com.sun.javafx.stage.PlatformStageBackdrop;
+
+import javafx.stage.StageBackdrop;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
@@ -562,7 +566,14 @@ public abstract class Application {
      * allowed to be of exactly one visual kind, and exactly one functional
      * type.
      */
-    public abstract Window createWindow(Window owner, Screen screen, int styleMask);
+    public abstract Window createWindow(Window owner, Screen screen, int styleMask, int backdropID);
+
+    /**
+     * Create a window with no backdrop.
+     */
+    public final Window createWindow(Window owner, Screen screen, int styleMask) {
+        return createWindow(owner, screen, styleMask, Window.NO_BACKDROP_ID);
+    }
 
     /**
      * Create a window.
@@ -575,7 +586,7 @@ public abstract class Application {
      * type.
      */
     public final Window createWindow(Screen screen, int styleMask) {
-        return createWindow(null, screen, styleMask);
+        return createWindow(null, screen, styleMask, Window.NO_BACKDROP_ID);
     }
 
     public abstract View createView();
@@ -719,6 +730,15 @@ public abstract class Application {
         return _supportsExtendedWindows();
     }
 
+    protected boolean _supportsWindowBackdrops() {
+        return false;
+    }
+
+    public final boolean supportsWindowBackdrops() {
+        checkEventThread();
+        return _supportsWindowBackdrops();
+    }
+
     protected boolean _supportsSystemMenu() {
         // Overridden in subclasses
         return false;
@@ -832,5 +852,27 @@ public abstract class Application {
 
     public void showDocument(String uri) {
         _showDocument(uri);
+    }
+
+    /**
+     * Return the list of backdrops supported on this platform.
+     * The default is an empty list.
+     */
+    public List<String> getPlatformBackdropNames() {
+        return List.of();
+    }
+
+    /**
+     * Create a Platform backdrop for the specified name
+     */
+    public PlatformStageBackdrop createPlatformBackdrop(String name) {
+        return null;
+    }
+
+    /**
+     * Return the platform identifier for the backdrop
+     */
+    public int getBackdropIdentifier(StageBackdrop backdrop) {
+        return Window.NO_BACKDROP_ID;
     }
 }

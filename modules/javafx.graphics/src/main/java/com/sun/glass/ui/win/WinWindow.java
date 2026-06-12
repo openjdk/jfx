@@ -32,6 +32,15 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import java.lang.annotation.Native;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import javafx.application.Platform;
+import javafx.application.ConditionalFeature;
+import javafx.stage.StageBackdrop;
 
 /**
  * MS Windows platform implementation class for Window.
@@ -53,8 +62,8 @@ class WinWindow extends Window {
         _initIDs();
     }
 
-    protected WinWindow(Window owner, Screen screen, int styleMask) {
-        super(owner, screen, styleMask);
+    protected WinWindow(Window owner, Screen screen, int styleMask, int backdropID) {
+        super(owner, screen, styleMask, backdropID);
 
         if (isExtendedWindow()) {
             prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
@@ -290,7 +299,7 @@ class WinWindow extends Window {
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
     native private void _showSystemMenu(long ptr, int x, int y);
-    @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
+    @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
     @Override native protected void _updateViewSize(long ptr);
@@ -452,5 +461,36 @@ class WinWindow extends Window {
             case CLOSE -> HT.CLOSE.value;
             case null -> HT.CLIENT.value;
         };
+    }
+
+    final static public class BackdropID {
+        @Native public static final int WINDOW     = 50;
+        @Native public static final int TABBED     = 51;
+        @Native public static final int TRANSIENT  = 52;
+    }
+
+    private static final String TRANSIENT_NAME = "Windows.Transient";
+
+    public static List<String> getPlatformBackdropNames() {
+        if (Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
+            return List.of(TRANSIENT_NAME);
+        }
+        return List.of();
+    }
+
+    public static int getBackdropIdentifier(StageBackdrop backdrop) {
+        if (!Platform.isSupported(ConditionalFeature.WINDOW_BACKDROP)) {
+            return Window.NO_BACKDROP_ID;
+        }
+
+        if (backdrop == StageBackdrop.WINDOW) {
+            return BackdropID.WINDOW;
+        } else if (backdrop == StageBackdrop.PARTIAL) {
+            return BackdropID.TABBED;
+        } else if (backdrop.getName() == TRANSIENT_NAME) {
+            return BackdropID.TRANSIENT;
+        }
+
+        return Window.NO_BACKDROP_ID;
     }
 }

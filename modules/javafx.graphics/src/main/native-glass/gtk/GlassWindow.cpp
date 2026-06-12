@@ -81,7 +81,7 @@ extern "C" {
  * Signature: (JJI)J
  */
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
-  (JNIEnv * env, jobject obj, jlong owner, jlong screen, jint mask)
+  (JNIEnv * env, jobject obj, jlong owner, jlong screen, jint mask, jint backdropID)
 {
     (void)env;
 

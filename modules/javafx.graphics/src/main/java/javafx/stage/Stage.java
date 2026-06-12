@@ -567,6 +567,55 @@ public class Stage extends Window {
         return owner;
     }
 
+    private StageBackdrop backdrop = null;
+
+    /**
+     * Specifies the backdrop for this stage. This must be done prior to
+     * making the stage visible.
+     *
+     * @param backdrop the backdrop for this stage.
+     *
+     * @throws IllegalStateException if this property is set after the stage
+     * has ever been made visible.
+     *
+     * @defaultValue null
+     */
+    @SuppressWarnings("deprecation")
+    public final void initBackdrop(StageBackdrop backdrop) {
+        PreviewFeature.WINDOW_BACKDROP.checkEnabled();
+
+        if (hasBeenVisible) {
+            throw new IllegalStateException("Cannot set backdrop once stage has been set visible");
+        }
+
+        this.backdrop = backdrop;
+    }
+
+    /**
+     * Retrieves the backdrop for this stage.
+     *
+     * @return the backdrop.
+     */
+    public final StageBackdrop getBackdrop() {
+        return backdrop;
+    }
+
+    /**
+     * Set an option for a backdrop.
+     *
+     * @param name The name of the option
+     * @param option The new value of the option
+     */
+    public final void setBackdropOption(String name, Object option) {
+        if (backdrop != null) {
+            var avail = backdrop.getAvailableOptions();
+            var optionClass = avail.get(name);
+            if (optionClass != null &&
+                optionClass.isInstance(option)) {
+            }
+        }
+    }
+
     /**
      * Specifies whether this {@code Stage} should be a full-screen,
      * undecorated window.
@@ -1117,10 +1166,10 @@ public class Stage extends Window {
             ColorScheme colorScheme = scene != null
                 ? scene.getPreferences().getColorScheme()
                 : PlatformImpl.getPlatformPreferences().getColorScheme();
-
             StageStyle stageStyle = getStyle();
             setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
-                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK));
+                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK,
+                    this.backdrop));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),

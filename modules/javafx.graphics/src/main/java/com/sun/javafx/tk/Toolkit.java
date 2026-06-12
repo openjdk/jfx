@@ -51,6 +51,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdrop;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
@@ -360,7 +361,8 @@ public abstract class Toolkit {
     public abstract boolean isNestedLoopRunning();
 
     public abstract TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-                                          Modality modality, TKStage owner, boolean rtl, boolean darkFrame);
+                                          Modality modality, TKStage owner, boolean rtl, boolean darkFrame,
+                                          StageBackdrop backdrop);
 
     public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner);
     public abstract TKStage createTKEmbeddedStage(HostInterface host);
@@ -907,4 +909,12 @@ public abstract class Toolkit {
     }
 
     public abstract GlassRobot createRobot();
+
+    public List<String> getPlatformBackdropNames() {
+        return List.of();
+    }
+
+    public StageBackdrop createPlatformBackdrop(String name) {
+        return null;
+    }
 }

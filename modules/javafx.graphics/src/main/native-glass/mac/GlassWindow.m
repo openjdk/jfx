@@ -29,6 +29,7 @@
 #import "com_sun_glass_ui_Window.h"
 #import "com_sun_glass_ui_Window_Level.h"
 #import "com_sun_glass_ui_mac_MacWindow.h"
+#import "com_sun_glass_ui_mac_MacWindow_BackdropID.h"
 
 #import "GlassMacros.h"
 #import "GlassWindow.h"
@@ -445,13 +446,17 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-
+- (void)setJFXView:(GlassView3D<GlassView>*)newView
+{
+    [hostView setJFXView: newView];
+    view = newView;
+}
 @end
 
 #pragma mark --- Dispatcher
 
 // TODO: re-implement using Obj-C blocks ?
-static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
+static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jint backdropID)
 {
     GlassWindow *window = nil;
 
@@ -591,6 +596,29 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setOpaque:YES];
         }
 
+        window->hostView = [[GlassHostView alloc] initWithFrame: NSMakeRect(0, 0, 0, 0)];
+        window->nsWindow.contentView = window->hostView;
+
+        switch (backdropID) {
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_WINDOW:
+                [window->hostView setBackdrop: NSVisualEffectMaterialUnderWindowBackground];
+                break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_SIDEBAR:
+                [window->hostView setBackdrop: NSVisualEffectMaterialSidebar];
+                break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_MENU:
+                [window->hostView setBackdrop: NSVisualEffectMaterialMenu];
+                break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_CLEARGLASS:
+                [window->hostView setGlassBackdrop: YES];
+                [window->nsWindow setBackgroundColor:[NSColor clearColor]];
+                [window->nsWindow setHasShadow:NO];
+                [window->nsWindow setOpaque: NO];
+                // Prevent changes to the background color.
+                isTransparent = true;
+                break;
+        }
+
         window->isDecorated = isTitled || isExtended;
         window->isExtended = isExtended;
         window->isTransparent = isTransparent;
@@ -610,7 +638,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 }
 
 static jlong _createWindowCommon
-(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
+(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jint backdropID)
 {
     LOG("_createWindowCommon");
 
@@ -620,7 +648,7 @@ static jlong _createWindowCommon
     GLASS_POOL_ENTER;
     {
         jobject jWindowRef = (*env)->NewGlobalRef(env, jWindow);
-        value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask);
+        value = _createWindowCommonDo(env, jWindowRef, jOwnerPtr, jScreenPtr, jStyleMask, backdropID);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -736,14 +764,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _createWindow
- * Signature: (JJI)J
+ * Signature: (JJII)J
  */
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createWindow
-(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
+(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jint backdropID)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1createWindow");
 
-    return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask);
+    return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask, backdropID);
 }
 
 /*
@@ -916,6 +944,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         }
 
         NSView<GlassView> *oldView = window->view;
+        [window setJFXView: getMacView(env, jview)];
         window->view = getMacView(env, jview);
         //NSLog(@"        window: %@", window);
         //NSLog(@"                frame: %.2f,%.2f %.2fx%.2f", [window frame].origin.x, [window frame].origin.y, [window frame].size.width, [window frame].size.height);
@@ -936,15 +965,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 
         if (window->view != nil)
         {
-            CALayer *layer = [window->view getLayer];
-            LOG("   layer: %p", layer);
-            // TODO : Move below logic to CGL specific View/Layer class
-            if (([layer.sublayers[0] isKindOfClass:[CAOpenGLLayer class]] == YES) &&
-                (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
-            {
-                [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
-            }
-
             window->suppressWindowMoveEvent = YES; // JDK-8111165
             {
                 NSRect viewFrame = [window->view frame];
@@ -956,18 +976,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
                     [window _setWindowFrameWithRect:NSMakeRect(windowFrame.origin.x, windowFrame.origin.y, windowFrame.size.width, windowFrame.size.height) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
                 }
 
-                [window->nsWindow setContentView:[window->view superview]]; // use our superview not ourselves!
                 [window->nsWindow setInitialFirstResponder:window->view];
                 [window->nsWindow makeFirstResponder:window->view];
             }
             window->suppressWindowMoveEvent = NO;
-        }
-        else
-        {
-            // If the contentView is set to nil within performKeyEquivalent: the OS will crash.
-            NSView* dummy = [[NSView alloc] initWithFrame: NSMakeRect(0, 0, 10, 10)];
-            [window->nsWindow performSelectorOnMainThread:@selector(setContentView:) withObject:dummy waitUntilDone:YES];
-            [dummy release];
         }
     }
     GLASS_POOL_EXIT;
