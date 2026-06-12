@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,7 +85,7 @@ public class CodeAreaSkin extends RichTextAreaSkin {
             cx.addStyle("-fx-line-spacing:" + lineSpacing + ";");
 
             // tab size
-            double tabSize = control.getTabSize();
+            int tabSize = control.getTabSize();
             cx.addStyle("-fx-tab-size:" + tabSize + ";");
         }
     }
