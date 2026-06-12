@@ -107,7 +107,7 @@ public class Ruler extends BorderPane {
                 TabStopPolicy p = get();
                 if (p != null) {
                     sub = p.tabStops().subscribe(Ruler.this::clearTicks);
-                    sub.and(p.defaultIntervalProperty().subscribe(Ruler.this::requestLayout));
+                    sub = sub.and(p.defaultIntervalProperty().subscribe(Ruler.this::requestLayout));
                 }
             }
         };

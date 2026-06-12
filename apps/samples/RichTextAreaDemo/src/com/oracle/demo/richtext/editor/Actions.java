@@ -779,7 +779,7 @@ public class Actions {
     private void handleTabStopChange() {
         SelectionSegment sel = editor.getSelection();
         if (sel != null) {
-            TabStops stops = TabStops.of(tabPolicy.tabStops());
+            TabStops stops = new TabStops(tabPolicy.tabStops());
             StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, stops).build();
             int min = sel.getMin().index();
             int max = sel.getMax().index();

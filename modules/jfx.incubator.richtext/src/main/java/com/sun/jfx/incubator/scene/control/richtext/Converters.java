@@ -210,7 +210,7 @@ public class Converters {
             double v = Double.parseDouble(s);
             ts.add(new TabStop(v));
         }
-        return TabStops.of(ts);
+        return new TabStops(ts);
     }
 
     private static String fromTextAlignment(TextAlignment a) {

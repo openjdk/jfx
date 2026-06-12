@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Map;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
@@ -85,6 +86,35 @@ public class TestRichTextFormatHandler {
             s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
             nl()
         );
+    }
+
+    @Test
+    public void testDocumentProperties() throws IOException {
+        var props = Map.of("{}%|\"", "{}%|\"");
+        RichTextModel m = new RichTextModel() {
+            @Override
+            protected Map<String,String> documentProperties() {
+                return props;
+             }
+        };
+
+        String s = save(m);
+        assertEquals("{@RichText-v2-incubator}{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}", s);
+        
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        int count = 0;
+        StyledInput in = h.createStyledInput(s, null);
+        StyledSegment seg;
+        while ((seg = in.nextSegment()) != null) {
+            switch (seg.getType()) {
+            case DOCUMENT_PROPERTIES:
+                count++;
+                Map<String,String> dp = seg.getDocumentProperties();
+                assertEquals(props, dp);
+                break;
+            }
+        }
+        assertEquals(1, count, "missing document segment");
     }
 
     // JDK-8357393

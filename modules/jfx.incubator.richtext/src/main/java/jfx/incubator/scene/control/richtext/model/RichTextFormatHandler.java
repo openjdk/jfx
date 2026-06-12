@@ -276,7 +276,11 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
     private static void log(Object x) {
         if (DEBUG) {
-            System.err.println(x);
+            if (x instanceof Throwable e) {
+                e.printStackTrace();
+            } else {
+                System.err.println(x);
+            }
         }
     }
 
@@ -709,7 +713,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             sb.append(text, 0, i);
                         }
                     }
-                    char ch = decodeHexByte(text, i);
+                    char ch = decodeHexByte(text, i + 1);
                     i += 2;
                     sb.append(ch);
                     break;
@@ -759,8 +763,8 @@ public class RichTextFormatHandler extends DataFormatHandler {
         }
 
         private static char decodeHexByte(String text, int offset) throws IOException {
-            int v = decodeHex(text.charAt(offset++));
-            return (char)(v + decodeHex(text.charAt(offset)));
+            int v = decodeHex(text.charAt(offset++)) << 4;
+            return (char)(v | decodeHex(text.charAt(offset)));
         }
 
         private static int decodeHex(int ch) throws IOException {

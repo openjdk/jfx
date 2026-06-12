@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import javafx.scene.paint.Color;
-import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +42,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * Tests RichTextAreaModel functionality by exporting via the RichTextFormatHandler.
@@ -185,10 +185,7 @@ public class TestRichExport {
 
     @Test
     public void attribute_TAB_STOPS() {
-        TabStop[] ts = {
-            new TabStop(11),
-            new TabStop(22)
-        };
+        TabStops ts = TabStops.of(11, 22);
         setParagraphAttributes(StyleAttributeMap.TAB_STOPS, ts);
         append("TAB_STOPS");
         verify("{}TAB_STOPS{!tabs|11.0,22.0}");

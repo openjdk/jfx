@@ -41,8 +41,8 @@ public class TabStops implements List<TabStop> {
     // JDK should have a public ImmutableList class.
     private final List<TabStop> stops;
     
-    private TabStops(List<TabStop> stops) {
-        this.stops = stops;
+    public TabStops(List<TabStop> stops) {
+        this.stops = List.copyOf(stops);
     }
 
     /**
@@ -59,15 +59,6 @@ public class TabStops implements List<TabStop> {
         return new TabStops(ts);
     }
 
-    /**
-     * Creates a {@code TabStops} instance from list of tab stops.
-     * @param stops the tab stops
-     * @return the new instance
-     */
-    public static TabStops of(List<TabStop> stops) {
-        return new TabStops(List.copyOf(stops));
-    }
-
     @Override
     public Iterator<TabStop> iterator() {
         return stops.iterator();
@@ -82,10 +73,8 @@ public class TabStops implements List<TabStop> {
     public boolean equals(Object x) {
         if (x == this) {
             return true;
-        } else if (x instanceof TabStops s) {
-            return stops.equals(s.stops);
         }
-        return false;
+        return stops.equals(x);
     }
 
     @Override
