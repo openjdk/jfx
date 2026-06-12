@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -2116,6 +2117,123 @@ assertEquals(0, firstCell.getIndex());
 
         assertEquals(10, flow.sheetChildren.size());
         assertEquals(flow.cells, flow.sheetChildren);
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testScrollToTopSetsPendingScrollToIndex() {
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "pendingScrollToIndex must be -1 initially");
+
+        flow.scrollToTop(50);
+        assertEquals(50, flow.getPendingScrollToIndex(),
+            "scrollToTop must set pendingScrollToIndex");
+
+        pulse();
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "pendingScrollToIndex must be cleared after layout");
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testScrollToTopSetsPendingScrollToIndexNearEnd() {
+        // The bug manifested when scrolling to items near the end of
+        // the list after adding new items. Verify the flag is set for
+        // indices near the end so the post-layout visibility check runs.
+        flow.setCellCount(20);
+        pulse();
+        pulse();
+
+        flow.setCellCount(100);
+        flow.scrollToTop(98);
+        assertEquals(98, flow.getPendingScrollToIndex(),
+            "scrollToTop must set pendingScrollToIndex after adding items");
+
+        pulse();
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "pendingScrollToIndex must be cleared after layout");
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testScrollToTopCallsScrollToCellOnOvershoot() {
+        // Track scrollTo(cell) calls via an anonymous subclass.
+        AtomicInteger scrollToCalls = new AtomicInteger(0);
+        VirtualFlowShim<IndexedCell> testFlow = new VirtualFlowShim<>() {
+            @Override public void scrollTo(IndexedCell cell) {
+                scrollToCalls.incrementAndGet();
+                super.scrollTo(cell);
+            }
+        };
+        testFlow.setVertical(true);
+        testFlow.setCellFactory(p -> new CellStub(testFlow) {
+            @Override protected double computePrefHeight(double width) { return 25; }
+            @Override protected double computeMinHeight(double width) { return 25; }
+            @Override protected double computeMaxHeight(double width) { return 25; }
+            @Override protected double computePrefWidth(double height) { return 100; }
+            @Override protected double computeMinWidth(double height) { return 100; }
+            @Override protected double computeMaxWidth(double height) { return 100; }
+        });
+        testFlow.setCellCount(100);
+        testFlow.resize(300, 30);
+        testFlow.layout();
+        testFlow.layout();
+
+        // scrollToTop sets pendingScrollToIndex and computes absoluteOffset.
+        // Nudge absoluteOffset backward to simulate the estimation drift
+        // that occurs in the real rendering pipeline. This shifts the
+        // target cell down so its bottom extends past the viewport.
+        testFlow.scrollToTop(50);
+        testFlow.adjustAbsoluteOffset(-10);
+        scrollToCalls.set(0);
+        testFlow.layout();
+
+        assertTrue(scrollToCalls.get() > 0,
+            "scrollTo(cell) must be called when cell overshoots viewport");
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testScrollPixelsClearsPendingScrollToIndex() {
+        // An intervening scroll (scrollbar drag, wheel, programmatic
+        // scrollTo(cell)) must invalidate a pending scrollToTop target,
+        // otherwise the post-layout correction would yank the viewport
+        // back to the stale target.
+        flow.scrollToTop(50);
+        assertEquals(50, flow.getPendingScrollToIndex());
+
+        flow.scrollPixels(25);
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "scrollPixels must clear pendingScrollToIndex");
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testSetPositionClearsPendingScrollToIndex() {
+        flow.scrollToTop(50);
+        assertEquals(50, flow.getPendingScrollToIndex());
+
+        flow.setPosition(0.1);
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "setPosition must clear pendingScrollToIndex");
+    }
+
+    @Test
+    // see JDK-8328167
+    public void testScrollToIntFallbackSetsPendingScrollToIndex() {
+        // scrollTo(int) falls back to adjustPositionToIndex when the
+        // target cell is not visible and no neighbor is available. That
+        // path uses size estimates for unrendered cells so it needs the
+        // same post-layout visibility check as scrollToTop(int).
+        assertEquals(-1, flow.getPendingScrollToIndex());
+
+        flow.scrollTo(95);
+        assertEquals(95, flow.getPendingScrollToIndex(),
+            "scrollTo(int) fallback must set pendingScrollToIndex");
+
+        pulse();
+        assertEquals(-1, flow.getPendingScrollToIndex(),
+            "pendingScrollToIndex must be cleared after layout");
     }
 
 }
