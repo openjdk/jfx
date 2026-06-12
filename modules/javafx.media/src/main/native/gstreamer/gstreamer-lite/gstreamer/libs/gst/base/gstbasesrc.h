@@ -336,7 +336,7 @@ GST_BASE_API
 gboolean        gst_base_src_set_caps         (GstBaseSrc *src, GstCaps *caps);
 
 GST_BASE_API
-GstBufferPool * gst_base_src_get_buffer_pool  (GstBaseSrc *src);
+GstBufferPool * gst_base_src_get_buffer_pool  (GstBaseSrc *src) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void            gst_base_src_get_allocator    (GstBaseSrc *src,

@@ -94,7 +94,7 @@ GType gst_argb_control_binding_get_type (void);
 GST_CONTROLLER_API
 GstControlBinding * gst_argb_control_binding_new   (GstObject * object, const gchar * property_name,
                                                             GstControlSource * cs_a, GstControlSource * cs_r,
-                                                            GstControlSource * cs_g, GstControlSource * cs_b);
+                                                            GstControlSource * cs_g, GstControlSource * cs_b) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstARGBControlBinding, gst_object_unref)
 

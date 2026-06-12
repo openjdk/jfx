@@ -146,7 +146,7 @@ GType           gst_toc_entry_get_type          (void);
 /* functions to create, ref and unref/free TOCs */
 
 GST_API
-GstToc *           gst_toc_new                     (GstTocScope scope);
+GstToc *           gst_toc_new                     (GstTocScope scope) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstTocScope        gst_toc_get_scope               (const GstToc *toc);
@@ -177,7 +177,7 @@ void               gst_toc_dump                    (GstToc *toc);
 /* functions to create, ref and unref/free TOC entries */
 
 GST_API
-GstTocEntry *   gst_toc_entry_new               (GstTocEntryType type, const gchar *uid);
+GstTocEntry *   gst_toc_entry_new               (GstTocEntryType type, const gchar *uid) G_GNUC_WARN_UNUSED_RESULT;
 
 #define gst_toc_entry_ref(entry)            (GstTocEntry*)gst_mini_object_ref(GST_MINI_OBJECT_CAST(entry))
 #define gst_toc_entry_unref(entry)          gst_mini_object_unref(GST_MINI_OBJECT_CAST(entry))

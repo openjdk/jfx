@@ -461,7 +461,7 @@ gst_adapter_try_to_merge_up (GstAdapter * adapter, gsize size)
 /**
  * gst_adapter_map:
  * @adapter: a #GstAdapter
- * @size: the number of bytes to map/peek
+ * @size: (in): the number of bytes to map/peek
  *
  * Gets the first @size bytes stored in the @adapter. The returned pointer is
  * valid until the next function is called on the adapter.
@@ -753,7 +753,7 @@ gst_adapter_get_internal (GstAdapter * adapter, gsize nbytes)
 /**
  * gst_adapter_take:
  * @adapter: a #GstAdapter
- * @nbytes: the number of bytes to take
+ * @nbytes: (in): the number of bytes to take
  *
  * Returns a freshly allocated buffer containing the first @nbytes bytes of the
  * @adapter. The returned bytes will be flushed from the adapter.
@@ -1053,6 +1053,14 @@ done:
  * flags such as the DISCONT flag are set on the returned buffer, or not.
  * The caller needs to explicitly set or unset flags that should be set or
  * unset.
+ *
+ * Likewise, no assumptions should be made about timestamps and offset of the
+ * returned buffer. The caller should use gst_adapter_prev_pts(),
+ * gst_adapter_prev_dts(), and gst_adapter_prev_offset() to obtain the relevant
+ * information.
+ *
+ * The returned buffer might not be writable, use gst_buffer_make_writable()
+ * if you need to change e.g. flags or timestamps.
  *
  * Since 1.6 this will also copy over all GstMeta of the input buffers except
  * for meta with the %GST_META_FLAG_POOLED flag or with the "memory" tag.
