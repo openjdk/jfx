@@ -25,11 +25,13 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
+import java.util.ArrayList;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * Converters used to serialize/deserialize text attributes.
@@ -79,15 +81,15 @@ public class Converters {
         };
     }
 
-    public static StringConverter<TabStop[]> tabStopsConverter() {
+    public static StringConverter<TabStops> tabStopsConverter() {
         return new StringConverter<>() {
             @Override
-            public String toString(TabStop[] v) {
+            public String toString(TabStops v) {
                 return fromTabStops(v);
             }
 
             @Override
-            public TabStop[] fromString(String s) {
+            public TabStops fromString(String s) {
                 return toTabStops(s);
             }
         };
@@ -182,7 +184,7 @@ public class Converters {
         throw new IllegalArgumentException("not a hex char:" + ch);
     }
 
-    private static String fromTabStops(TabStop[] ts) {
+    private static String fromTabStops(TabStops ts) {
         StringBuilder sb = new StringBuilder();
         boolean sep = false;
         for (TabStop t : ts) {
@@ -196,19 +198,19 @@ public class Converters {
         return sb.toString();
     }
 
-    private static TabStop[] toTabStops(String text) {
+    private static TabStops toTabStops(String text) {
         if (text.length() == 0) {
             return null;
         }
         String[] ss = text.split(",");
         int sz = ss.length;
-        TabStop[] ts = new TabStop[sz];
+        ArrayList<TabStop> ts = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
             String s = ss[i];
             double v = Double.parseDouble(s);
-            ts[i] = new TabStop(v);
+            ts.add(new TabStop(v));
         }
-        return ts;
+        return TabStops.of(ts);
     }
 
     private static String fromTextAlignment(TextAlignment a) {

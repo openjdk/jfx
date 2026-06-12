@@ -39,7 +39,6 @@ import java.util.HashMap;
 import java.util.Map;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
-import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
@@ -133,7 +132,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
-    private static final StringConverter<TabStop[]> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
+    private static final StringConverter<TabStops> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
     // String -> Handler
     // StyleAttribute -> Handler

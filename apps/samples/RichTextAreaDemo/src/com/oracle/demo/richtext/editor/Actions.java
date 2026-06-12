@@ -53,7 +53,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
-import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -72,6 +71,7 @@ import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * This is a bit of hack.  JavaFX has no actions (yet), so here we are using FxActions from
@@ -779,8 +779,8 @@ public class Actions {
     private void handleTabStopChange() {
         SelectionSegment sel = editor.getSelection();
         if (sel != null) {
-            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
-            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            TabStops stops = TabStops.of(tabPolicy.tabStops());
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, stops).build();
             int min = sel.getMin().index();
             int max = sel.getMax().index();
             for (int ix = min; ix <= max; ix++) {

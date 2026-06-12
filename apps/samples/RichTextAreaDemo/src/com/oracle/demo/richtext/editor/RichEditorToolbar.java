@@ -41,13 +41,13 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
-import javafx.scene.text.TabStop;
 import javafx.scene.text.TabStopPolicy;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * Rich editor toolbar.
@@ -158,7 +158,7 @@ public class RichEditorToolbar extends BorderPane {
         if (ruler != null) {
             TabStopPolicy tp = ruler.getTabStopPolicy();
             if (tp != null) {
-                TabStop[] ts = a.get(StyleAttributeMap.TAB_STOPS);
+                TabStops ts = a.get(StyleAttributeMap.TAB_STOPS);
                 if (ts == null) {
                     tp.tabStops().clear();
                 } else {

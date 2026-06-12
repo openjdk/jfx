@@ -87,7 +87,7 @@ public final class StyleAttributeMap {
      * Tab stops paragraph attribute.
      * @since 27
      */
-    public static final StyleAttribute<TabStop[]> TAB_STOPS = StyleAttribute.paragraph("TAB_STOPS", TabStop[].class);
+    public static final StyleAttribute<TabStops> TAB_STOPS = StyleAttribute.paragraph("TAB_STOPS", TabStops.class);
 
     /** Text alignment paragraph attribute. */
     public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = StyleAttribute.paragraph("TEXT_ALIGNMENT", TextAlignment.class);
@@ -360,7 +360,7 @@ public final class StyleAttributeMap {
      * This convenience method returns the value of {@link #TAB_STOPS} attribute, or null.
      * @return the paragraph alignment attribute value
      */
-    public TabStop[] getTabStops() {
+    public TabStops getTabStops() {
         return get(TAB_STOPS);
     }
 
@@ -670,7 +670,7 @@ public final class StyleAttributeMap {
             for (int i = 0; i < positions.length; i++) {
                 ts[i] = new TabStop(positions[i]);
             }
-            set(TAB_STOPS, ts);
+            set(TAB_STOPS, TabStops.of(positions));
             return this;
         }
 
