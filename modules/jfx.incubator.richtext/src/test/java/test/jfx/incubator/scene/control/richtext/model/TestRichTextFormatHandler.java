@@ -107,7 +107,7 @@ public class TestRichTextFormatHandler {
         if (expectedSave != null) {
             assertEquals(expectedSave, s);
         }
-        
+
         RichTextFormatHandler h = RichTextFormatHandler.getInstance();
         int count = 0;
         StyledInput in = h.createStyledInput(s, null);
