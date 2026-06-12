@@ -545,7 +545,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final boolean isFocused = isFocused();
         if (! isInCellSelectionMode()) {
             if (isFocused) {
-                setFocused(false);
+                setFocusedViaFocusModel(false);
             }
             return;
         }
@@ -555,11 +555,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
         TreeTableView.TreeTableViewFocusModel<S> fm = tv.getFocusModel();
         if (fm == null) {
-            setFocused(false);
+            setFocusedViaFocusModel(false);
             return;
         }
 
-        setFocused(fm.isFocused(getIndex(), getTableColumn()));
+        setFocusedViaFocusModel(fm.isFocused(getIndex(), getTableColumn()));
     }
 
     private void updateEditing() {

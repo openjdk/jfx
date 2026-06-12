@@ -8397,6 +8397,9 @@ public abstract sealed class Node
      * @see #requestFocus()
      * @defaultValue false
      */
+
+    private boolean focusModelUpdate;
+
     private final FocusPropertyBase focused = new FocusPropertyBase() {
         @Override
         protected PseudoClass getPseudoClass() {
@@ -8422,19 +8425,36 @@ public abstract sealed class Node
             if (get() != value) {
                 super.set(value);
 
-                int change = value ? 1 : -1;
-                Node node = Node.this;
+                if (!focusModelUpdate) {
+                    int change = value ? 1 : -1;
+                    Node node = Node.this;
 
-                do {
-                    node.focusWithin.adjust(change);
-                    node = node.getParent();
-                } while (node != null);
+                    do {
+                        node.focusWithin.adjust(change);
+                        node = node.getParent();
+                    } while (node != null);
+                }
             }
         }
     };
 
     protected final void setFocused(boolean value) {
         setFocusQuietly(value, false);
+        notifyFocusListeners();
+    }
+
+    protected final void setFocusedViaFocusModel(boolean value) {
+        if (focused.get() != value) {
+            focusModelUpdate = true;
+            try {
+                focused.set(value);
+            } finally {
+                focusModelUpdate = false;
+            }
+        }
+        if (!value && focusVisible.get()) {
+            focusVisible.set(false);
+        }
         notifyFocusListeners();
     }
 

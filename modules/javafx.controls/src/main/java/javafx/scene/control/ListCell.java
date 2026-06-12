@@ -575,11 +575,11 @@ public class ListCell<T> extends IndexedCell<T> {
 
         FocusModel<T> fm = listView.getFocusModel();
         if (fm == null) {
-            setFocused(false);
+            setFocusedViaFocusModel(false);
             return;
         }
 
-        setFocused(fm.isFocused(index));
+        setFocusedViaFocusModel(fm.isFocused(index));
     }
 
     private void updateEditing() {
