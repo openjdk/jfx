@@ -90,7 +90,12 @@ public class TestRichTextFormatHandler {
 
     @Test
     public void testDocumentProperties() throws IOException {
-        var props = Map.of("{}%|\"", "{}%|\"");
+        docp(Map.of(), 0, null);
+        docp(Map.of("{}%|\"", "{}%|\""), 1, "{@RichText-v2-incubator}{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}");
+        docp(Map.of("title", ""), 1, "{@RichText-v2-incubator}{#title|}{}{!}");
+    }
+
+    private void docp(Map<String,String> props, int expectedCount, String expectedSave) throws IOException {
         RichTextModel m = new RichTextModel() {
             @Override
             protected Map<String,String> documentProperties() {
@@ -99,7 +104,9 @@ public class TestRichTextFormatHandler {
         };
 
         String s = save(m);
-        assertEquals("{@RichText-v2-incubator}{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}", s);
+        if (expectedSave != null) {
+            assertEquals(expectedSave, s);
+        }
         
         RichTextFormatHandler h = RichTextFormatHandler.getInstance();
         int count = 0;
@@ -114,7 +121,7 @@ public class TestRichTextFormatHandler {
                 break;
             }
         }
-        assertEquals(1, count, "missing document segment");
+        assertEquals(expectedCount, count, "missing document segment");
     }
 
     // JDK-8357393

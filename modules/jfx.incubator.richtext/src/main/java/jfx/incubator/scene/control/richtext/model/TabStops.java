@@ -40,7 +40,11 @@ import javafx.scene.text.TabStop;
 public class TabStops implements List<TabStop> {
     // JDK should have a public ImmutableList class.
     private final List<TabStop> stops;
-    
+
+    /**
+     * Constructor.
+     * @param stops the tab stops
+     */
     public TabStops(List<TabStop> stops) {
         this.stops = List.copyOf(stops);
     }

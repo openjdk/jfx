@@ -585,7 +585,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         private Map<String, String> parseDocumentProperties() throws IOException {
             String s = parseString();
-            String[] ss = s.split("\\|");
+            String[] ss = s.split("\\|", -1);
             int sz = ss.length;
             if ((sz & 0x01) != 0) {
                 throw err("malformed document properties");
