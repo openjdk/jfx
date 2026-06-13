@@ -25,44 +25,17 @@
 
 package javafx.util.converter;
 
-import javafx.util.StringConverter;
+/// A `StringConverter` implementation for `Long` (and `long`) values.
+///
+/// @since JavaFX 2.1
+public class LongStringConverter extends BaseStringConverter<Long> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link Long}
- * (and long primitive) values.</p>
- * @since JavaFX 2.1
- */
-public class LongStringConverter extends StringConverter<Long> {
-
-    /**
-     * Creates a default {@code LongStringConverter}.
-     */
+    /// Creates a default `LongStringConverter`.
     public LongStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public Long fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return Long.valueOf(value);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString(Long value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
-
-        return Long.toString(value.longValue());
+    @Override
+    Long fromNonEmptyString(String string) {
+        return Long.valueOf(string);
     }
 }
