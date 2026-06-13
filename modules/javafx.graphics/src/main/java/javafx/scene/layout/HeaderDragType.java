@@ -47,10 +47,8 @@ import javafx.stage.StageStyle;
  * </ul>
  *
  * @since 25
- * @deprecated This is a preview feature which may be changed or removed in a future release.
  * @see HeaderBar#setDragType(Node, HeaderDragType)
  */
-@Deprecated(since = "25")
 public enum HeaderDragType {
 
     /**
