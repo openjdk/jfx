@@ -38,7 +38,7 @@ public enum PreviewFeature {
 
     // Add preview feature constants here:
     // TEST_FEATURE("Test Feature")
-    HEADER_BAR("HeaderBar");
+    ;
 
     PreviewFeature(String featureName) {
         this.featureName = featureName;
