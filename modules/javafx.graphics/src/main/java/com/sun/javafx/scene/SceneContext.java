@@ -31,6 +31,7 @@ import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.stage.StageHelper;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -123,7 +124,16 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
     }
 
     private final MediaProperty<ColorScheme> colorScheme = new MediaProperty<>(
-            "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty());
+            "colorScheme", PlatformImpl.getPlatformPreferences().colorSchemeProperty()) {
+                @Override
+                protected void onInvalidated() {
+                    if (scene.getWindow() instanceof Stage stage) {
+                        StageHelper.notifyColorSchemeChanged(stage);
+                    }
+
+                    super.onInvalidated();
+                }
+            };
 
     @Override
     public ObjectProperty<ColorScheme> colorSchemeProperty() {

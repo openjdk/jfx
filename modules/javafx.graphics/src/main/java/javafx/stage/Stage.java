@@ -42,7 +42,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
-import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -196,6 +195,11 @@ public class Stage extends Window {
             }
 
             @Override
+            public void notifyColorSchemeChanged(Stage stage) {
+                stage.updateHeaderButtonDarkStyle();
+            }
+
+            @Override
             public void setPrimary(Stage stage, boolean primary) {
                 stage.setPrimary(primary);
             }
@@ -206,13 +210,23 @@ public class Stage extends Window {
             }
 
             @Override
-            public void setPrefHeaderButtonHeight(Stage stage, double height) {
-                stage.setPrefHeaderButtonHeight(height);
+            public void setHeaderButtonHeight(Stage stage, double height) {
+                stage.setHeaderButtonHeight(height);
             }
 
             @Override
-            public double getPrefHeaderButtonHeight(Stage stage) {
-                return stage.getPrefHeaderButtonHeight();
+            public double getHeaderButtonHeight(Stage stage) {
+                return stage.getHeaderButtonHeight();
+            }
+
+            @Override
+            public void setHeaderButtonColorScheme(Stage stage, ColorScheme colorScheme) {
+                stage.setHeaderButtonColorScheme(colorScheme);
+            }
+
+            @Override
+            public ColorScheme getHeaderButtonColorScheme(Stage stage) {
+                return stage.getHeaderButtonColorScheme();
             }
 
             @Override
@@ -469,11 +483,7 @@ public class Stage extends Window {
      *
      * @defaultValue StageStyle.DECORATED
      */
-    @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
-        if (style == StageStyle.EXTENDED) {
-            PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
-        }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");
         }
@@ -1125,7 +1135,8 @@ public class Stage extends Window {
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
-            getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
+            getPeer().setHeaderButtonHeight(getHeaderButtonHeight());
+            getPeer().setHeaderButtonDarkStyle(isHeaderButtonDarkStyle());
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1302,18 +1313,42 @@ public class Stage extends Window {
         return headerButtonMetrics;
     }
 
-    private double prefHeaderButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
+    private double headerButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
 
-    private double getPrefHeaderButtonHeight() {
-        return prefHeaderButtonHeight;
+    private double getHeaderButtonHeight() {
+        return headerButtonHeight;
     }
 
-    private void setPrefHeaderButtonHeight(double height) {
-        prefHeaderButtonHeight = height;
+    private void setHeaderButtonHeight(double height) {
+        headerButtonHeight = height;
 
-        TKStage peer = getPeer();
-        if (peer != null) {
-            peer.setPrefHeaderButtonHeight(height);
+        if (getPeer() instanceof TKStage peer) {
+            peer.setHeaderButtonHeight(height);
         }
+    }
+
+    private ColorScheme headerButtonColorScheme;
+
+    private ColorScheme getHeaderButtonColorScheme() {
+        return headerButtonColorScheme;
+    }
+
+    private void setHeaderButtonColorScheme(ColorScheme colorScheme) {
+        headerButtonColorScheme = colorScheme;
+        updateHeaderButtonDarkStyle();
+    }
+
+    private void updateHeaderButtonDarkStyle() {
+        if (getPeer() instanceof TKStage peer) {
+            peer.setHeaderButtonDarkStyle(isHeaderButtonDarkStyle());
+        }
+    }
+
+    private boolean isHeaderButtonDarkStyle() {
+        return headerButtonColorScheme != null
+            ? headerButtonColorScheme == ColorScheme.DARK
+            : getScene() instanceof Scene s && s.getPreferences().getColorScheme() instanceof ColorScheme cs
+                ? cs == ColorScheme.DARK
+                : PlatformImpl.getPlatformPreferences().getColorScheme() == ColorScheme.DARK;
     }
 }
