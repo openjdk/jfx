@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,22 +24,22 @@
  */
 
 /**
- * Incubates the mechanism for customization of JavaFX controls using the
- * {@link jfx.incubator.scene.control.input.InputMap InputMap}.
+ * <p>Incubates a customization mechanism for the JavaFX Controls utilizing the
+ * {@link javafx.scene.control.input.InputMap InputMap}.
+ * <p>
+ * The {@code InputMap}
+ * <ul>
+ * <li>allows for customization of a control behavior by changing the existing or adding new key mappings
+ * <li>supports dynamic modification of the key mappings
+ * <li>allows for accessing the default functionality even when it was overwritten by the application
+ * <li>allows for reverting customization to the default implementation
+ * <li>guarantees priorities between the application and the skin event handlers and key mappings
+ * <li>allows for gradual migration of the existing controls to use the InputMap
+ * <li>supports stateful and stateless (fully static) behavior implementations
+ * </ul>
  * <p>
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
- *
- * @moduleGraph
- * @since 24
+ * @since 999 TODO
  */
-module jfx.incubator.input {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.controls;
-
-    exports jfx.incubator.scene.control.input;
-
-    // becomes unnecessary once InputMap is moved to Control JDK-8314968
-    exports com.sun.jfx.incubator.scene.control.input to jfx.incubator.richtext;
-}
+package javafx.scene.control.input;

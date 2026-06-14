@@ -23,23 +23,29 @@
  * questions.
  */
 
+package javafx.scene.control.input;
+
 /**
- * <p>Incubates a customization mechanism for the JavaFX Controls utilizing the
- * {@link jfx.incubator.scene.control.input.InputMap InputMap}.
- * <p>
- * The {@code InputMap}
- * <ul>
- * <li>allows for customization of a control behavior by changing the existing or adding new key mappings
- * <li>supports dynamic modification of the key mappings
- * <li>allows for accessing the default functionality even when it was overwritten by the application
- * <li>allows for reverting customization to the default implementation
- * <li>guarantees priorities between the application and the skin event handlers and key mappings
- * <li>allows for gradual migration of the existing controls to use the InputMap
- * </ul>
- * <p>
- * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
+ * A function tag is a public identifier of a method that can be mapped to a key binding by the
+ * control's {@link InputMap}.
+ * <h2>Example</h2>
+ * Example:
+ * <pre>
+ * public class RichTextArea extends Control {
+ *     public static class Tags {
+ *         // Deletes the symbol before the caret.
+ *         public static final FunctionTag BACKSPACE = new FunctionTag();
+ *         // Copies selected text to the clipboard.
+ *         public static final FunctionTag COPY = new FunctionTag();
+ *         // Cuts selected text and places it to the clipboard.
+ *         public static final FunctionTag CUT = new FunctionTag();
+ *         ...
+ * </pre>
  *
- * @since 24
+ * @since 999 TODO
  */
-package jfx.incubator.scene.control.input;
+public final class FunctionTag {
+    /** Constructs the function tag. */
+    public FunctionTag() {
+    }
+}
