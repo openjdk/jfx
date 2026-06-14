@@ -799,10 +799,6 @@ void WindowContext::set_cursor(GdkCursor* cursor) {
         }
     }
 
-    if (gdk_cursor) {
-        g_object_unref(gdk_cursor);
-    }
-
     gdk_cursor = cursor;
 
     if (gdk_cursor_override == nullptr) {
@@ -1816,10 +1812,6 @@ Point WindowContext::get_view_position() {
 WindowContext::~WindowContext() {
     LOG(LIFECYCLE, log_id, "~WindowContext\n");
     disableIME();
-
-    if (gdk_cursor) {
-        g_object_unref(gdk_cursor);
-    }
 
     gtk_widget_destroy(gtk_widget);
 }

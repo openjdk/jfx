@@ -45,8 +45,8 @@
                 & ~GDK_TOUCH_MASK)
 
 #define ALPHA_CHANNEL_ERROR_MSG \
-    "Can't create transparent stage, because your screen doesn't support alpha channel. " \
-    "You need to enable XComposite extension.\n"
+    "Cannot create a transparent stage because the screen does not support an alpha channel " \
+    "without enabling the XComposite extension.\n"
 
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
