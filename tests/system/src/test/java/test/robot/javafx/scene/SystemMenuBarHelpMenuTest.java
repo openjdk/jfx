@@ -48,7 +48,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
@@ -76,10 +75,6 @@ public class SystemMenuBarHelpMenuTest {
     private static final int MENU_BAR_X = 120;
     private static final int MENU_BAR_Y = 10;
 
-    // Estimated y offset for the Help -> About menu item, after the Spotlight search field that macOS inserts to
-    // this menu.
-    private static final int MENU_ABOUT_Y = 80;
-
     private static Robot robot;
     private static final AtomicBoolean aboutItemFired = new AtomicBoolean(false);
     private static final CountDownLatch aboutItemLatch = new CountDownLatch(1);
@@ -98,7 +93,6 @@ public class SystemMenuBarHelpMenuTest {
      * Verifies that after opening, the Help menu includes the Spotlight search field, which is
      * included seamlessly by the system.
      */
-    @Disabled("JDK-8381443")
     @Test
     void testHelpMenuHasSpotlight() {
         Assumptions.assumeTrue(PlatformUtil.isMac(), "System menu bar tests only apply to macOS");
@@ -116,8 +110,8 @@ public class SystemMenuBarHelpMenuTest {
 
         // Step 2: click on About
         Util.runAndWait(() -> {
-            robot.mouseMove(MENU_BAR_X, MENU_ABOUT_Y);
-            robot.mouseClick(MouseButton.PRIMARY);
+            robot.keyType(KeyCode.DOWN);
+            robot.keyType(KeyCode.ENTER);
         });
         Util.waitForLatch(aboutItemLatch, 5, "About menu item action should fire");
 
@@ -133,7 +127,6 @@ public class SystemMenuBarHelpMenuTest {
      * Verifies that after opening the system menu and then showing a modal dialog
      * the menu can still be opened again after the dialog is closed.
      */
-    @Disabled("JDK-8381443")
     @Test
     void testMenuCanBeReopenedAfterDialogClosed() {
         Assumptions.assumeTrue(PlatformUtil.isMac(), "System menu bar tests only apply to macOS");
