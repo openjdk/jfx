@@ -62,7 +62,7 @@ JNIEnv *GetJavaEnvironment(JavaVM *jvm, jboolean &didAttach)
     JNIEnv *env = NULL;
     didAttach = false;
     if (jvm) {
-        if (jvm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
+        if (jvm->GetEnv((void**)&env, JNI_VERSION_1_8) != JNI_OK) {
             didAttach = true;
             jvm->AttachCurrentThreadAsDaemon((void**)&env, NULL);
         }
