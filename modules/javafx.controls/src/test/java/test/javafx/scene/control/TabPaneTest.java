@@ -58,9 +58,12 @@ import javafx.event.Event;
 import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
@@ -1377,5 +1380,49 @@ public class TabPaneTest {
             assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
             assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
         }
+    }
+
+    private ContextMenu setupMenuGraphicOverride() {
+        TabPaneSkin skin = new TabPaneSkin(tabPane);
+        skin.setMenuGraphicOverride((tab) -> {
+            return new Label(tab.getText());
+        });
+        tabPane.setSkin(skin);
+
+        tabPane.setMaxSize(20, 20);
+        root.getChildren().add(tabPane);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        show();
+        tk.firePulse();
+
+        ContextMenu menu = TabPaneSkinShim.getTabsMenu(skin);
+        assertNotNull(menu);
+        assertEquals(3, menu.getItems().size());
+        return menu;
+    }
+
+    @Test
+    public void menuGraphicOverride() {
+        ContextMenu menu = setupMenuGraphicOverride();
+        for (MenuItem mi : menu.getItems()) {
+            Node g = mi.getGraphic();
+            assertTrue(g instanceof Label);
+            assertEquals(mi.getText(), ((Label)g).getText());
+        }
+    }
+
+    @Test
+    public void menuBindings() {
+        ContextMenu menu = setupMenuGraphicOverride();
+        MenuItem mi = menu.getItems().get(0);
+
+        assertFalse(mi.isDisable());
+        assertEquals("one", mi.getText());
+
+        tab1.setText("yo");
+        tab1.setDisable(true);
+
+        assertTrue(mi.isDisable());
+        assertEquals("yo", mi.getText());
     }
 }
