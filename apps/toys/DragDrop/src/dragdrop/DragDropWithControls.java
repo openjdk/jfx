@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,8 +72,8 @@ import javafx.util.Pair;
 
 public class DragDropWithControls extends Application {
 
-    final static DataFormat customBytes = new DataFormat("dndwithcontrols.custom.bytes");
-    final static DataFormat customString = new DataFormat("dndwithcontrols.custom.string");
+    final static DataFormat customBytes = DataFormat.of("dndwithcontrols.custom.bytes");
+    final static DataFormat customString = DataFormat.of("dndwithcontrols.custom.string");
 
     final static String html =
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">" +
