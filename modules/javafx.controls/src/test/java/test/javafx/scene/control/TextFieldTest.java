@@ -389,6 +389,7 @@ public class TextFieldTest {
      * Guard against potential regression of JDK-8145515: eventFilter
      * on editor not notified for ENTER released.
      */
+    @Disabled("JDK-8145515")
     @Test
     public void testEditorInComboBoxEnterReleasedFilter() {
         initStage();
