@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,8 @@ include "base",
         "media",
         "systemTests"
 
+include 'manualApps'
+
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
@@ -57,6 +59,7 @@ project(":fxml").projectDir = file("modules/javafx.fxml")
 project(":jsobject").projectDir = file("modules/jdk.jsobject")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
+project(":manualApps").projectDir = file("tests/manual2")
 project(":systemTests").projectDir = file("tests/system")
 
 def closedDir = file("../rt-closed")
