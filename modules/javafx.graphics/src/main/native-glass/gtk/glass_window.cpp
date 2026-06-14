@@ -1148,12 +1148,6 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
     LOG(POSITION, log_id, "process_configure (position): send_event=%d, x=%d, y=%d\n",
         event->send_event, event->x, event->y);
 
-    // Synthetized events will mess the flow with unwanted values
-    if (event->send_event) {
-        LOG(SIZE, log_id, "process_configure: synthetic event, ignoring\n");
-        return;
-    }
-
     int x, y;
     int view_x = 0, view_y = 0;
 
@@ -1189,6 +1183,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
     glong to_screen = getScreenPtrForLocation(event->x, event->y);
     if (to_screen != -1) {
         if (to_screen != screen) {
+            LOG(POSITION, log_id, "Screen Changed %ld\n", to_screen);
             if (jwindow) {
                 jobject jScreen = createJavaScreen(mainEnv, to_screen);
                 mainEnv->CallVoidMethod(jwindow, jWindowNotifyMoveToAnotherScreen, jScreen);
