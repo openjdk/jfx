@@ -338,7 +338,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DWMCOMPOSITIONCHANGED:
-            if (m_isUnified && (IS_WINVISTA)) {
+            if ((m_isUnified || m_isExtended) && (IS_WINVISTA)) {
                 BOOL bEnabled = FALSE;
                 if(SUCCEEDED(::DwmIsCompositionEnabled(&bEnabled)) && bEnabled) {
                     MARGINS dwmMargins = { -1, -1, -1, -1 };
