@@ -25,12 +25,11 @@
 
 package javafx.scene.control.skin;
 
-
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
@@ -39,6 +38,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.Region;
 import javafx.util.Duration;
@@ -69,8 +69,6 @@ public abstract class TableRowSkinBase<T,
      * Static Fields                                                           *
      *                                                                         *
      **************************************************************************/
-
-    private static boolean DO_ANIMATIONS = PlatformUtil.isDoAnimations();
 
     private static final Duration FADE_DURATION = Duration.millis(200);
 
@@ -107,6 +105,7 @@ public abstract class TableRowSkinBase<T,
 
     boolean isDirty = false;
 
+    private Map<Node, FadeTransition> currentTransitions;
 
     /* *************************************************************************
      *                                                                         *
@@ -142,7 +141,14 @@ public abstract class TableRowSkinBase<T,
         registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
 
+    @Override
+    public void dispose() {
+        if (currentTransitions != null) {
+            currentTransitions.forEach((_, value) -> value.stop());
+        }
 
+        super.dispose();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -667,28 +673,67 @@ public abstract class TableRowSkinBase<T,
     }
 
     private void fadeOut(final Node node) {
-        if (node.getOpacity() < 1.0) return;
-
-        if (! DO_ANIMATIONS) {
-            node.setOpacity(0);
+        if (node.getOpacity() < 1.0) {
             return;
         }
 
-        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-        fader.setToValue(0.0);
-        fader.play();
+        cancelTransition(node);
+
+        if (shouldAnimate()) {
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(0.0);
+            transition.play();
+            trackTransition(node, transition);
+        } else {
+            node.setOpacity(0);
+        }
     }
 
     private void fadeIn(final Node node) {
-        if (node.getOpacity() > 0.0) return;
-
-        if (! DO_ANIMATIONS) {
-            node.setOpacity(1);
+        if (node.getOpacity() > 0.0) {
             return;
         }
 
-        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-        fader.setToValue(1.0);
-        fader.play();
+        cancelTransition(node);
+
+        if (shouldAnimate()) {
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(1.0);
+            transition.play();
+            trackTransition(node, transition);
+        } else {
+            node.setOpacity(1);
+        }
+    }
+
+    private void cancelTransition(Node node) {
+        if (currentTransitions != null && currentTransitions.get(node) instanceof FadeTransition transition) {
+            transition.stop();
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void removeTransition(Node node) {
+        if (currentTransitions != null) {
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void trackTransition(Node node, FadeTransition transition) {
+        if (currentTransitions == null) {
+            currentTransitions = new IdentityHashMap<>(8);
+        }
+
+        currentTransitions.put(node, transition);
+    }
+
+    private boolean shouldAnimate() {
+        C skinnable = getSkinnable();
+        return skinnable != null
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 }
