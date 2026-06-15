@@ -403,7 +403,7 @@ gst_uri_is_valid (const gchar * uri)
 gchar *
 gst_uri_get_protocol (const gchar * uri)
 {
-  gchar *colon;
+  const gchar *colon;
 
   if (!gst_uri_is_valid (uri))
     return NULL;
@@ -425,7 +425,7 @@ gst_uri_get_protocol (const gchar * uri)
 gboolean
 gst_uri_has_protocol (const gchar * uri, const gchar * protocol)
 {
-  gchar *colon;
+  const gchar *colon;
 
   g_return_val_if_fail (protocol != NULL, FALSE);
 
@@ -1615,7 +1615,7 @@ _gst_uri_from_string_internal (const gchar * uri, gboolean unescape)
     }
     if (uri != NULL && uri[0] == '?') {
       /* get query */
-      gchar *eoq;
+      const gchar *eoq;
       eoq = strchr (++uri, '#');
       if (eoq == NULL) {
         uri_obj->query = _gst_uri_string_to_table (uri, "&", "=", TRUE, TRUE);

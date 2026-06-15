@@ -37,15 +37,20 @@
 #include "gstenumtypes.h"
 #include "gstevent.h"
 #include "gststreamcollection.h"
+#include "gstvecdeque.h"
 
 GST_DEBUG_CATEGORY_STATIC (stream_collection_debug);
 #define GST_CAT_DEFAULT stream_collection_debug
 
+typedef struct
+{
+  GstStream *stream;
+  gulong notify_signal_handler_id;
+} Stream;
+
 struct _GstStreamCollectionPrivate
 {
-  /* Maybe switch this to a GArray if performance is
-   * ever an issue? */
-  GQueue streams;
+  GstVecDeque *streams;
 };
 
 /* stream signals and properties */
@@ -73,7 +78,7 @@ static void gst_stream_collection_get_property (GObject * object, guint prop_id,
 
 static void
 proxy_stream_notify_cb (GstStream * stream, GParamSpec * pspec,
-    GstStreamCollection * collection);
+    GWeakRef * weak);
 
 #define _do_init        \
 { \
@@ -127,18 +132,27 @@ gst_stream_collection_class_init (GstStreamCollectionClass * klass)
 }
 
 static void
-gst_stream_collection_init (GstStreamCollection * collection)
+clear_stream (Stream * stream)
 {
-  collection->priv = gst_stream_collection_get_instance_private (collection);
-  g_queue_init (&collection->priv->streams);
+  g_signal_handler_disconnect (stream->stream,
+      stream->notify_signal_handler_id);
+  gst_object_unref (stream->stream);
 }
 
 static void
-release_gst_stream (GstStream * stream, GstStreamCollection * collection)
+free_weak_ref (GWeakRef * weak)
 {
-  g_signal_handlers_disconnect_by_func (stream,
-      proxy_stream_notify_cb, collection);
-  gst_object_unref (stream);
+  g_weak_ref_clear (weak);
+  g_free (weak);
+}
+
+static void
+gst_stream_collection_init (GstStreamCollection * collection)
+{
+  collection->priv = gst_stream_collection_get_instance_private (collection);
+  collection->priv->streams = gst_vec_deque_new_for_struct (sizeof (Stream), 0);
+  gst_vec_deque_set_clear_func (collection->priv->streams,
+      (GDestroyNotify) clear_stream);
 }
 
 static void
@@ -151,9 +165,7 @@ gst_stream_collection_dispose (GObject * object)
     collection->upstream_id = NULL;
   }
 
-  g_queue_foreach (&collection->priv->streams,
-      (GFunc) release_gst_stream, collection);
-  g_queue_clear (&collection->priv->streams);
+  g_clear_pointer (&collection->priv->streams, gst_vec_deque_free);
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
@@ -267,13 +279,19 @@ gst_stream_collection_get_property (GObject * object, guint prop_id,
 }
 
 static void
-proxy_stream_notify_cb (GstStream * stream, GParamSpec * pspec,
-    GstStreamCollection * collection)
+proxy_stream_notify_cb (GstStream * stream, GParamSpec * pspec, GWeakRef * weak)
 {
+  GstStreamCollection *collection = g_weak_ref_get (weak);
+
+  if (!collection)
+    return;
+
   GST_DEBUG_OBJECT (collection, "Stream %" GST_PTR_FORMAT " updated %s",
       stream, pspec->name);
   g_signal_emit (collection, gst_stream_collection_signals[SIG_STREAM_NOTIFY],
       g_quark_from_string (pspec->name), stream, pspec);
+
+  gst_object_unref (collection);
 }
 
 /**
@@ -296,9 +314,16 @@ gst_stream_collection_add_stream (GstStreamCollection * collection,
 
   GST_DEBUG_OBJECT (collection, "Adding stream %" GST_PTR_FORMAT, stream);
 
-  g_queue_push_tail (&collection->priv->streams, stream);
-  g_signal_connect (stream, "notify", (GCallback) proxy_stream_notify_cb,
-      collection);
+  GWeakRef *weak = g_new0 (GWeakRef, 1);
+  g_weak_ref_init (weak, collection);
+
+  Stream stream_struct;
+  stream_struct.stream = stream;
+  stream_struct.notify_signal_handler_id =
+      g_signal_connect_data (stream, "notify",
+      (GCallback) proxy_stream_notify_cb, weak, (GClosureNotify) free_weak_ref,
+      0);
+  gst_vec_deque_push_tail_struct (collection->priv->streams, &stream_struct);
 
   return TRUE;
 }
@@ -318,7 +343,7 @@ gst_stream_collection_get_size (GstStreamCollection * collection)
 {
   g_return_val_if_fail (GST_IS_STREAM_COLLECTION (collection), 0);
 
-  return g_queue_get_length (&collection->priv->streams);
+  return gst_vec_deque_get_length (collection->priv->streams);
 }
 
 /**
@@ -339,5 +364,8 @@ gst_stream_collection_get_stream (GstStreamCollection * collection, guint index)
 {
   g_return_val_if_fail (GST_IS_STREAM_COLLECTION (collection), NULL);
 
-  return g_queue_peek_nth (&collection->priv->streams, index);
+  const Stream *stream =
+      gst_vec_deque_peek_nth_struct (collection->priv->streams, index);
+
+  return stream->stream;
 }
