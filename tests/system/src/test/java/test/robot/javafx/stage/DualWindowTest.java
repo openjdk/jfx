@@ -147,10 +147,6 @@ public class DualWindowTest {
 
     @Test
     public void testTwoStages() throws Exception {
-        if (PlatformUtil.isLinux()) {
-            Assumptions.assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321624
-        }
-
         Util.sleep(1000);
         Util.runAndWait(() -> {
             Assertions.assertEquals(STAGE1_X, stage1.getX(), 1.0);

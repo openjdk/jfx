@@ -130,7 +130,6 @@ class GtkWindow extends Window {
     @Override
     protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
-        notifyStateChanged(WindowEvent.MINIMIZE);
         return minimize;
     }
 
@@ -138,7 +137,6 @@ class GtkWindow extends Window {
     protected boolean _maximize(long ptr, boolean maximize,
                                 boolean wasMaximized) {
         maximizeImpl(ptr, maximize, wasMaximized);
-        notifyStateChanged(WindowEvent.MAXIMIZE);
         return maximize;
     }
 
