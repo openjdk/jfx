@@ -39,12 +39,12 @@ import com.sun.javafx.stage.PlatformStageBackdropStyle;
  * The backdrop style of a {@code Stage}. Backdrops are visual effects drawn
  * across the entire stage behind the Scene's fill and background. The
  * specific effects vary but in general the backdrop will track the window's
- * color scheme. The effect is drawn behind the Scene's fill and background.
+ * color scheme.
  *
  * <p>
  *
- * Backdrops are not supported on all platforms. To check if it is supported
- * see {@link javafx.application.ConditionalFeature#WINDOW_BACKDROP
+ * Backdrops are not supported on all platforms. To check if backdrops are
+ * supported see {@link javafx.application.ConditionalFeature#WINDOW_BACKDROP
  * ConditionalFeature.WINDOW_BACKDROP}.
  *
  * <p>
@@ -68,7 +68,7 @@ import com.sun.javafx.stage.PlatformStageBackdropStyle;
 public sealed interface StageBackdropStyle permits StandardStageBackdropStyle, PlatformStageBackdropStyle {
 
     /**
-     * Gets the backdrop style's name
+     * Gets the backdrop style's name.
      *
      * @return the name of the backdrop style
      */

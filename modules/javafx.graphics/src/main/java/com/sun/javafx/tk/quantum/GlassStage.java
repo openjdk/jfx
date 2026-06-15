@@ -27,7 +27,6 @@ package com.sun.javafx.tk.quantum;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.javafx.tk.FocusCause;
