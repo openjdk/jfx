@@ -708,8 +708,8 @@ convert_frame_finish (GstVideoConvertSampleContext * context,
    * immediately after getting the result of the conversion above.
    */
   if (context->pipeline) {
-    gst_element_call_async (context->pipeline, convert_frame_stop_pipeline,
-        NULL, NULL);
+    gst_object_call_async (GST_OBJECT_CAST (context->pipeline),
+        (GstObjectCallAsyncFunc) convert_frame_stop_pipeline, NULL);
     gst_object_unref (context->pipeline);
     context->pipeline = NULL;
   }

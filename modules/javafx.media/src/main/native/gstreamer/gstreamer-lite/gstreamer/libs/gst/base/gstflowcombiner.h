@@ -43,7 +43,7 @@ G_BEGIN_DECLS
 typedef struct _GstFlowCombiner GstFlowCombiner;
 
 GST_BASE_API
-GstFlowCombiner * gst_flow_combiner_new (void);
+GstFlowCombiner * gst_flow_combiner_new (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 GstFlowCombiner * gst_flow_combiner_ref (GstFlowCombiner * combiner);

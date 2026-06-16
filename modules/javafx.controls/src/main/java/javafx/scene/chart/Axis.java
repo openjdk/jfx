@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.geometry.Dimension2D;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -433,13 +434,16 @@ public abstract class Axis<T> extends Region {
     protected final void invalidateRange() { rangeValid = false; }
 
     /**
-     * This is used to check if any given animation should run. It returns true if animation is enabled and the node
-     * is visible and in a scene.
+     * This is used to check if any given animation should run. It returns true if animation is enabled, the node
+     * is visible and in a scene, and reduced-motion mode is not enabled.
      *
-     * @return true if animations should happen
+     * @return {@code true} if animations should run, {@code false} otherwise
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && NodeHelper.isTreeShowing(this);
+        return getAnimated()
+            && NodeHelper.isTreeShowing(this)
+            && getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 
     /**
@@ -653,7 +657,7 @@ public abstract class Axis<T> extends Region {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && NodeHelper.isTreeShowing(this) && rangeInvalid);
+                setRange(range, shouldAnimate() && !isFirstPass && rangeInvalid);
             } else {
                 range = getRange();
             }

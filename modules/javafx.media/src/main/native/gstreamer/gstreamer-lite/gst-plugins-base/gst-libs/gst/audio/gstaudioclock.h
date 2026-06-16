@@ -94,7 +94,7 @@ GType           gst_audio_clock_get_type        (void);
 
 GST_AUDIO_API
 GstClock*       gst_audio_clock_new             (const gchar *name, GstAudioClockGetTimeFunc func,
-                                                 gpointer user_data, GDestroyNotify destroy_notify);
+                                                 gpointer user_data, GDestroyNotify destroy_notify) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 void            gst_audio_clock_reset           (GstAudioClock *clock, GstClockTime time);

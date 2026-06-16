@@ -1377,11 +1377,7 @@ iterate_adapter:
       goto pull_error;
   }
 
-  /* If we have a pending close/start segment, send it now. */
-  if (G_UNLIKELY (aiff->close_segment != NULL)) {
-    gst_pad_push_event (aiff->srcpad, aiff->close_segment);
-    aiff->close_segment = NULL;
-  }
+  /* If we have a pending start segment, send it now. */
   if (G_UNLIKELY (aiff->start_segment != NULL)) {
     gst_pad_push_event (aiff->srcpad, aiff->start_segment);
     aiff->start_segment = NULL;

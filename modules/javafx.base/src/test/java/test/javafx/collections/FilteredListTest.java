@@ -27,6 +27,7 @@ package test.javafx.collections;
 
 import com.sun.javafx.collections.ObservableListWrapper;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -351,5 +352,21 @@ public class FilteredListTest {
 
         assertEquals(List.of(0L), filteredList);
         assertEquals(List.of(0L), sortedList);
+    }
+
+    @Test
+    public void testMoveItemDoesNotThrowAIOOBE() {
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of(1L)));
+        FilteredList<Long> filteredList = new FilteredList<>(list);
+
+        list.add(2L);
+        assertEquals(List.of(1L, 2L), filteredList);
+
+        ObservableListWrapperShim.beginChange(list);
+        list.remove(2L);
+        list.addFirst(2L);
+        assertDoesNotThrow(() -> ObservableListWrapperShim.endChange(list));
+
+        assertEquals(List.of(2L, 1L), filteredList);
     }
 }
