@@ -1139,7 +1139,7 @@ public class RichTextAreaTest {
 
         // default tab stops = 0 (legacy behavior, tab == 8 spaces)
         // keep in mind there is +2.5 pixels added for borders and padding
-        m.setDefaultTabStops(RichTextModel.DEFAULT_TAB_STOPS_8);
+        m.setDefaultTabStops(RichTextModel.DEFAULT_TAB_STOPS_FIXED);
         assertX(0, 1, 96.5);
         assertX(0, 3, 192.5);
         assertX(0, 5, 288.5);

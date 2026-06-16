@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import javafx.scene.paint.Color;
-import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
@@ -359,6 +358,7 @@ public final class StyleAttributeMap {
     /**
      * This convenience method returns the value of {@link #TAB_STOPS} attribute, or null.
      * @return the paragraph alignment attribute value
+     * @since 27
      */
     public TabStops getTabStops() {
         return get(TAB_STOPS);
@@ -666,10 +666,6 @@ public final class StyleAttributeMap {
          * @since 27
          */
         public Builder setTabStops(double ... positions) {
-            TabStop[] ts = new TabStop[positions.length];
-            for (int i = 0; i < positions.length; i++) {
-                ts[i] = new TabStop(positions[i]);
-            }
             set(TAB_STOPS, TabStops.of(positions));
             return this;
         }

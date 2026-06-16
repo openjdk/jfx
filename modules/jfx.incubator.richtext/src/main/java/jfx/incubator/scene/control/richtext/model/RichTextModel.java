@@ -53,7 +53,7 @@ public class RichTextModel extends StyledTextModel {
      * This may result in milasigned columns when different text segments use different fonts.
      * @since 27
      */
-    public static final double DEFAULT_TAB_STOPS_8 = 0.0;
+    public static final double DEFAULT_TAB_STOPS_FIXED = 0.0;
 
     /**
      * This value of the {@link #defaultTabStopsProperty()} disables the default tab stops, making a tab characters
@@ -88,18 +88,18 @@ public class RichTextModel extends StyledTextModel {
      * This is a fixed repeating distance (in pixels) to the
      * next tab stop computed at regular intervals relative to the document content leading edge.
      * <p>
-     * Value {@link #DEFAULT_TAB_STOPS_8} results in a legacy behavior where the tab spacing corresponds to 8 spaces.
+     * Value {@link #DEFAULT_TAB_STOPS_FIXED} results in a legacy behavior where the tab spacing corresponds to 8 spaces.
      * This may result in milasigned columns when different text segments use different fonts.
      * The value {@link #DEFAULT_TAB_STOPS_DISABLED} disables the default interval,
      * rendering tab character as a single space.
      *
      * @return the default tab stop interval property
-     * @defaultValue DEFAULT_TAB_STOPS_8
+     * @defaultValue DEFAULT_TAB_STOPS_FIXED
      * @since 27
      */
     public final DoubleProperty defaultTabStopsProperty() {
         if (defaultTabStops == null) {
-            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", DEFAULT_TAB_STOPS_8) {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", DEFAULT_TAB_STOPS_FIXED) {
                 @Override
                 protected void invalidated() {
                     fireStyleChangeEvent(TextPos.ZERO, getDocumentEnd());
@@ -114,7 +114,7 @@ public class RichTextModel extends StyledTextModel {
     }
 
     public final double getDefaultTabStops() {
-        return defaultTabStops == null ? DEFAULT_TAB_STOPS_8 : defaultTabStops.get();
+        return defaultTabStops == null ? DEFAULT_TAB_STOPS_FIXED : defaultTabStops.get();
     }
 
     @Override

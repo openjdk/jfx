@@ -4,7 +4,7 @@ Andy Goryachev
 
 Version 2
 
-June 8, 2026
+June 16, 2026
 
 
 
@@ -16,16 +16,20 @@ WARNING: This format (as a part of an incubator module) is likely to change once
 into the JavaFX core.
 
 
-## Example
 
-In short, the format is plain text which contains a sequence of segments representing:
+## Description
 
-- format version
-- document properties
-- character attributes
-- paragraph attributes
-- text
-- newlines
+The document is persisted as a UTF-8 encoded plain text file which contains a sequence of segments.
+The first segment is the version, the second is the document properties segment, followed by one or more segments
+representing the paragraphs.
+
+Each paragraph is represented by character attribute segment(s), one segment per attribute,
+the paragraph text segments, paragraph attribute segment(s), also one segment per attribute,
+terminatedby a single `LF` character.
+
+
+
+### Example
 
 As an example, the following rich text
 
@@ -46,16 +50,6 @@ is represented by the following file:
 In this example, the document properties are enclosed in `{# }`, each paragraph attribute is enclosed in `{! }`,
 each character attribute is enclosed in `{ }`.
 
-
-
-## Description
-
-The document is persisted as a UTF-8 encoded plain text file which contains a sequence of segments.
-The first segment is the document properties segment, followed by segments representing the paragraphs.
-
-Each paragraph is represented by character attribute segment(s), one segment per attribute,
-the paragraph text segments, paragraph attribute segment(s), also one segment per attribute,
-terminatedby a single `LF` character.
 
 
 ### Format Version Segment

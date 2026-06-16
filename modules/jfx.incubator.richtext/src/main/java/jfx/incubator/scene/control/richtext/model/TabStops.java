@@ -37,12 +37,12 @@ import javafx.scene.text.TabStop;
  *
  * @since 27
  */
-public class TabStops implements List<TabStop> {
+public final class TabStops implements List<TabStop> {
     // JDK should have a public ImmutableList class.
     private final List<TabStop> stops;
 
     /**
-     * Constructor.
+     * Creates a {@code TabStops} instance from tab stop positions.
      * @param stops the tab stops
      */
     public TabStops(List<TabStop> stops) {
@@ -54,7 +54,7 @@ public class TabStops implements List<TabStop> {
      * @param positions the tab stop positions
      * @return the new instance
      */
-    public static TabStops of(double ... positions) {
+    public static TabStops of(double... positions) {
         int sz = positions.length;
         ArrayList<TabStop> ts = new ArrayList<>(sz);
         for (int i = 0; i < sz; i++) {
