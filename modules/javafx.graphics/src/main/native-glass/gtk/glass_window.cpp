@@ -297,10 +297,12 @@ void WindowContext::process_expose(GdkEventExpose* event) {
 void WindowContext::process_map() {
     // We need only first map. Popups are override_redirect windows,
     // so the compositor does not mess with them.
-    if (mapped || window_type == POPUP) return;
+    if (mapped) return;
 
     LOG(LIFECYCLE, log_id, "process_map -------------------------------------------\n");
     mapped = true;
+
+    if (window_type == POPUP) return;
 
     // The compositor may adjust the window size and position during the process,
     // so checking again increases the chances that the final geometry matches
