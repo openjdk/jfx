@@ -2236,6 +2236,22 @@ assertEquals(0, firstCell.getIndex());
             "pendingScrollToIndex must be cleared after layout");
     }
 
+    @Test
+    // see JDK-8328167
+    public void testSubPixelReclampDoesNotClearPendingScrollToIndex() {
+        // While arming a scrollTo target the engine re-clamps the position it
+        // just set by a sub-pixel amount, which lands back in invalidated().
+        // That self-inflicted change must NOT cancel the pending target, or
+        // the post-layout visibility correction would never run.
+        flow.scrollToTop(50);
+        assertEquals(50, flow.getPendingScrollToIndex());
+
+        double p = flow.getPosition();
+        flow.setPosition(Math.nextUp(p));
+        assertEquals(50, flow.getPendingScrollToIndex(),
+            "a sub-pixel position re-clamp must NOT clear pendingScrollToIndex");
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

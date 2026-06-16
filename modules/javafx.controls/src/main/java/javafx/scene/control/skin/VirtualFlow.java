@@ -301,6 +301,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     // Tracks index that needs to be made fully visible after layout
     int pendingScrollToIndex = -1;
+    // Position captured when pendingScrollToIndex was armed. Used to tell the
+    // engine's own sub-pixel re-clamp of that position apart from a genuine
+    // intervening scroll.
+    double pendingScrollToPosition = -1;
+    // Position deltas at or below this are floating-point clamp noise, not a real scroll.
+    private static final double PENDING_SCROLL_EPSILON = 1e-9;
 
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
@@ -940,10 +946,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         @Override protected void invalidated() {
             super.invalidated();
-            // Any change to position supersedes a pending scrollToTop/scrollTo
-            // target — scrollbar drags, wheel, scrollTo(cell), external
-            // setPosition, or property bindings all land here.
-            pendingScrollToIndex = -1;
+            // A genuine intervening scroll (scrollbar drag, wheel, external
+            // setPosition, property binding) supersedes a pending scrollToTop/
+            // scrollTo target. But while arming that target the engine also
+            // re-clamps the very position we just set by a sub-pixel amount,
+            // and that self-inflicted change must NOT cancel the pending
+            // correction, otherwise the post-layout visibility check never runs.
+            if (pendingScrollToIndex >= 0
+                    && Math.abs(get() - pendingScrollToPosition) > PENDING_SCROLL_EPSILON) {
+                pendingScrollToIndex = -1;
+            }
             adjustAbsoluteOffset();
             requestLayout();
         }
@@ -1598,6 +1610,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // Same offset-estimation caveat as scrollToTop(int): re-verify
             // full visibility after layout, once real cell sizes are known.
             pendingScrollToIndex = index;
+            pendingScrollToPosition = getPosition();
 
             requestLayout();
         }
@@ -1654,6 +1667,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // Mark this index to be checked for full visibility after layout
         pendingScrollToIndex = index;
+        pendingScrollToPosition = getPosition();
 
         requestLayout();
     }
