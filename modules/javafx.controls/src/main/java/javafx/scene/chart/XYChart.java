@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,9 @@ public abstract class XYChart<X,Y> extends Chart {
     private final Rectangle plotAreaClip = new Rectangle();
 
     private final List<Series<X, Y>> displayedSeries = new ArrayList<>();
-    private Legend legend = new Legend();
+    private final Legend legend = new Legend();
+
+    private boolean suppressAnimation;
 
     /** This is called when a series is added or removed from the chart */
     private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
@@ -236,51 +238,56 @@ public abstract class XYChart<X,Y> extends Chart {
     }
 
     /** XYCharts data */
-    private ObjectProperty<ObservableList<Series<X,Y>>> data = new ObjectPropertyBase<>() {
+    private final ObjectProperty<ObservableList<Series<X,Y>>> data = new ObjectPropertyBase<>() {
         private ObservableList<Series<X,Y>> old;
-        @Override protected void invalidated() {
+
+        @Override
+        protected void invalidated() {
             final ObservableList<Series<X,Y>> current = getValue();
             if (current == old) return;
-            int saveAnimationState = -1;
-            // add remove listeners
-            if(old != null) {
-                old.removeListener(seriesChanged);
-                // Set animated to false so we don't animate both remove and add
-                // at the same time. JDK-8113301
-                // JDK-8127526 - disable animated only when current is also not null.
-                if (current != null && old.size() > 0) {
-                    saveAnimationState = (old.get(0).getChart().getAnimated()) ? 1 : 2;
-                    old.get(0).getChart().setAnimated(false);
+
+            try {
+                // add remove listeners
+                if (old != null) {
+                    old.removeListener(seriesChanged);
+
+                    // Suppress animation so we don't animate both remove and add at the same time.
+                    if (current != null && !old.isEmpty()) {
+                        suppressAnimation = true;
+                    }
                 }
-            }
-            if(current != null) current.addListener(seriesChanged);
-            // fire series change event if series are added or removed
-            if(old != null || current != null) {
-                final List<Series<X,Y>> removed = (old != null) ? old : Collections.<Series<X,Y>>emptyList();
-                final int toIndex = (current != null) ? current.size() : 0;
-                // let series listener know all old series have been removed and new that have been added
-                if (toIndex > 0 || !removed.isEmpty()) {
-                    seriesChanged.onChanged(new NonIterableChange<>(0, toIndex, current){
-                        @Override public List<Series<X,Y>> getRemoved() { return removed; }
+
+                if (current != null) {
+                    current.addListener(seriesChanged);
+                }
+
+                // fire series change event if series are added or removed
+                if (old != null || current != null) {
+                    final List<Series<X,Y>> removed = (old != null) ? old : Collections.emptyList();
+                    final int toIndex = (current != null) ? current.size() : 0;
+
+                    // let series listener know all old series have been removed and new that have been added
+                    if (toIndex > 0 || !removed.isEmpty()) {
+                        seriesChanged.onChanged(new NonIterableChange<>(0, toIndex, current) {
+                            @Override public List<Series<X,Y>> getRemoved() { return removed; }
+                            @Override protected int[] getPermutation() {
+                                return new int[0];
+                            }
+                        });
+                    }
+                } else {
+                    // let series listener know all old series have been removed
+                    seriesChanged.onChanged(new NonIterableChange<>(0, 0, null) {
+                        @Override public List<Series<X,Y>> getRemoved() { return old; }
                         @Override protected int[] getPermutation() {
                             return new int[0];
                         }
                     });
                 }
-            } else if (old != null && old.size() > 0) {
-                // let series listener know all old series have been removed
-                seriesChanged.onChanged(new NonIterableChange<>(0, 0, current){
-                    @Override public List<Series<X,Y>> getRemoved() { return old; }
-                    @Override protected int[] getPermutation() {
-                        return new int[0];
-                    }
-                });
+            } finally {
+                old = current;
+                suppressAnimation = false;
             }
-            // restore animated on chart.
-            if (current != null && current.size() > 0 && saveAnimationState != -1) {
-                current.get(0).getChart().setAnimated((saveAnimationState == 1) ? true : false);
-            }
-            old = current;
         }
 
         public Object getBean() {
@@ -532,6 +539,15 @@ public abstract class XYChart<X,Y> extends Chart {
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
+
+    @Override
+    protected boolean shouldAnimate() {
+        return !suppressAnimation && super.shouldAnimate();
+    }
+
+    final void setSuppressAnimation(boolean value) {
+        suppressAnimation = value;
+    }
 
     /**
      * Gets the size of the data returning 0 if the data is null

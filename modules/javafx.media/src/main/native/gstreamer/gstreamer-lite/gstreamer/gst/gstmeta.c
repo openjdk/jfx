@@ -48,6 +48,9 @@
 
 #include "gstbuffer.h"
 #include "gstmeta.h"
+#ifndef GSTREAMER_LITE
+#include "gstmetafactory.h"
+#endif // GSTREAMER_LITE
 #include "gstinfo.h"
 #include "gstutils.h"
 
@@ -59,6 +62,13 @@ GQuark _gst_meta_tag_memory;
 GQuark _gst_meta_tag_memory_reference;
 static GQuark _gst_meta_tags_quark;
 static GQuark _gst_allocation_meta_params_aggregator_quark;
+
+GST_LOG_CONTEXT_STATIC_DEFINE (_gst_meta_ctx_once,
+    GST_LOG_CONTEXT_FLAG_THROTTLE,
+    GST_LOG_CONTEXT_BUILDER_SET_CATEGORY (GST_CAT_META);
+    GST_LOG_CONTEXT_BUILDER_SET_HASH_FLAGS (GST_LOG_CONTEXT_USE_STRING_ARGS);
+    );
+#define GST_META_CTX_ONCE GST_LOG_CONTEXT_LAZY_INIT(_gst_meta_ctx_once)
 
 typedef struct
 {
@@ -413,6 +423,38 @@ gst_meta_api_type_get_tags (GType api)
 }
 
 /**
+ * gst_meta_api_type_tags_contain_only:
+ * @api: an API
+ * @valid_tags: (array zero-terminated=1) (element-type utf8): a list of valid tags
+ *
+ * Returns: %TRUE if @api only contains tags from @valid_tags.
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_meta_api_type_tags_contain_only (GType api, const gchar ** valid_tags)
+{
+  const gchar **tags, **curr;
+
+  g_return_val_if_fail (api != 0, FALSE);
+  g_return_val_if_fail (valid_tags != NULL, FALSE);
+
+  tags = g_type_get_qdata (api, _gst_meta_tags_quark);
+
+  if (!tags)
+    return TRUE;
+
+  for (curr = tags; *curr; ++curr) {
+
+    if (!g_strv_contains (valid_tags, *curr)) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
  * gst_meta_api_type_aggregate_params:
  * @api: the GType of the API for which the parameters are being aggregated.
  * @aggregated_params: This structure will be updated with the
@@ -692,6 +734,7 @@ gst_meta_compare_seqnum (const GstMeta * meta1, const GstMeta * meta2)
   return (seqnum1 < seqnum2) ? -1 : 1;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_meta_serialize:
  * @meta: a #GstMeta
@@ -792,7 +835,7 @@ gst_meta_serialize_simple (const GstMeta * meta, GByteArray * data)
 /**
  * gst_meta_deserialize:
  * @buffer: a #GstBuffer
- * @data: serialization data obtained from gst_meta_serialize()
+ * @data: (array length=size): serialization data obtained from gst_meta_serialize()
  * @size: size of @data
  * @consumed: (out): total size used by this meta, could be less than @size
  *
@@ -839,9 +882,12 @@ gst_meta_deserialize (GstBuffer * buffer, const guint8 * data, gsize size,
 
   const GstMetaInfo *info = gst_meta_get_info (name);
   if (info == NULL) {
-    GST_CAT_WARNING (GST_CAT_META,
-        "%s does not correspond to a registered meta", name);
-    return NULL;
+    info = gst_meta_factory_load (name);
+    if (info == NULL) {
+      GST_CTX_WARNING (GST_META_CTX_ONCE,
+          "%s does not correspond to a registered meta", name);
+      return NULL;
+    }
   }
 
   if (info->deserialize_func == NULL) {
@@ -868,3 +914,4 @@ bad_header:
   GST_CAT_MEMDUMP (GST_CAT_META, "Meta serialization data", data, size);
   return NULL;
 }
+#endif // GSTREAMER_LITE

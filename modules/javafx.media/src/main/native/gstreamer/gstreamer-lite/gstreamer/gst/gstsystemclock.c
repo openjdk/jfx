@@ -624,7 +624,7 @@ static GstClockReturn gst_system_clock_id_wait_async (GstClock * clock,
     GstClockEntry * entry);
 static void gst_system_clock_id_unschedule (GstClock * clock,
     GstClockEntry * entry);
-static void gst_system_clock_async_thread (GstClock * clock);
+static gpointer gst_system_clock_async_thread (GstClock * clock);
 static gboolean gst_system_clock_start_async (GstSystemClock * clock);
 
 static GMutex _gst_sysclock_mutex;
@@ -871,7 +871,7 @@ gst_system_clock_obtain (void)
  *
  * MT safe.
  */
-static void
+static gpointer
 gst_system_clock_async_thread (GstClock * clock)
 {
   GstSystemClock *sysclock = GST_SYSTEM_CLOCK_CAST (clock);
@@ -1016,6 +1016,8 @@ exit:
   GST_SYSTEM_CLOCK_BROADCAST (clock);
   GST_SYSTEM_CLOCK_UNLOCK (clock);
   GST_CAT_DEBUG_OBJECT (GST_CAT_CLOCK, clock, "exit system clock thread");
+
+  return NULL;
 }
 
 #ifdef HAVE_POSIX_TIMERS
@@ -1502,4 +1504,37 @@ gst_system_clock_id_unschedule (GstClock * clock, GstClockEntry * entry)
   }
   GST_SYSTEM_CLOCK_ENTRY_UNLOCK ((GstClockEntryImpl *) entry);
   GST_SYSTEM_CLOCK_UNLOCK (clock);
+}
+
+/**
+ * gst_clock_is_system_monotonic:
+ * @clock: a #GstClock
+ *
+ * Checks that @clock is the default system clock, as returned by
+ * gst_system_clock_obtain(), and is of type %GST_CLOCK_TYPE_MONOTONIC.
+ *
+ * Returns: %TRUE if @clock is the default system monotonic clock,
+ *   %FALSE otherwise.
+ * Since: 1.28
+ */
+gboolean
+gst_clock_is_system_monotonic (GstClock * clock)
+{
+  g_return_val_if_fail (GST_IS_CLOCK (clock), FALSE);
+
+  if (G_OBJECT_TYPE (clock) != GST_TYPE_SYSTEM_CLOCK)
+    return FALSE;
+
+  GstSystemClock *system_clock = GST_SYSTEM_CLOCK_CAST (clock);
+  if (system_clock->priv->clock_type != GST_CLOCK_TYPE_MONOTONIC)
+    return FALSE;
+
+  g_mutex_lock (&_gst_sysclock_mutex);
+  if (clock != _the_system_clock) {
+    g_mutex_unlock (&_gst_sysclock_mutex);
+    return FALSE;
+  }
+  g_mutex_unlock (&_gst_sysclock_mutex);
+
+  return TRUE;
 }

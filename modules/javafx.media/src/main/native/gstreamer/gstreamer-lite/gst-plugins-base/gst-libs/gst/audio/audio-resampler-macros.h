@@ -105,4 +105,30 @@ static DECL_RESAMPLE_FUNC (type, inter, channels, arch)
 #define MAKE_RESAMPLE_FUNC_STATIC(type,inter,channels,arch)     \
 static MAKE_RESAMPLE_FUNC (type, inter, channels, arch)
 
+#if defined(_MSC_VER) && !defined(__i386__) && !defined(__x86_64__)
+#if defined(_M_IX86)
+#define __i386__ 1
+#elif defined(_M_X64) && !defined(_M_ARM64EC)
+#define __x86_64__ 1
+#endif
+#endif /* _MSC_VER */
+
+#if !defined(__SSE__) && defined(_MSC_VER)
+#if (defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)) && !defined(_M_ARM64EC)
+  #define __SSE__ 1
+#endif
+#endif
+
+#if !defined(__SSE2__) && defined(_MSC_VER)
+#if (defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)) && !defined(_M_ARM64EC)
+  #define __SSE2__ 1
+#endif
+#endif
+
+#if !defined(__SSE4_1__) && defined(_MSC_VER)
+#if (defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)) && !defined(_M_ARM64EC)
+  #define __SSE4_1__ 1
+#endif
+#endif
+
 #endif /* __GST_AUDIO_RESAMPLER_MACROS_H__ */

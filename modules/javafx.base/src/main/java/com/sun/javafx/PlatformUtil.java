@@ -288,14 +288,4 @@ public class PlatformUtil {
     public static boolean isAndroid() {
        return ANDROID;
     }
-
-    /**
-     * Returns true if animations should be done.
-     *
-     * @return true if animations should be done, false otherwise
-     * @implNote To save CPU cycles, animations are not done for embedded
-     */
-    public static boolean isDoAnimations() {
-        return !isEmbedded();
-    }
 }

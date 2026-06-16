@@ -282,6 +282,11 @@ gst_video_frame_unmap (GstVideoFrame * frame)
 
   if ((flags & GST_VIDEO_FRAME_MAP_FLAG_NO_REF) == 0)
     gst_buffer_unref (frame->buffer);
+
+  /* Reset various fields to avoid use-after-frees.
+   * This also makes it possible to call unmap() twice. */
+  frame->buffer = NULL;
+  memset (&frame->data, 0, sizeof (frame->data));
 }
 
 /**
@@ -414,7 +419,7 @@ gboolean
 gst_video_frame_copy (GstVideoFrame * dest, const GstVideoFrame * src)
 {
   guint i, n_planes;
-  const GstVideoInfo *sinfo;
+  const GstVideoInfo *sinfo GST_UNUSED_CHECKS;
   GstVideoInfo *dinfo;
 
   g_return_val_if_fail (dest != NULL, FALSE);

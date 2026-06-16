@@ -45,7 +45,7 @@ GST_API
 GType              gst_atomic_queue_get_type    (void);
 
 GST_API
-GstAtomicQueue *   gst_atomic_queue_new         (guint initial_size) G_GNUC_MALLOC;
+GstAtomicQueue *   gst_atomic_queue_new         (guint initial_size) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void               gst_atomic_queue_ref         (GstAtomicQueue * queue);
@@ -57,7 +57,7 @@ GST_API
 void               gst_atomic_queue_push        (GstAtomicQueue* queue, gpointer data);
 
 GST_API
-gpointer           gst_atomic_queue_pop         (GstAtomicQueue* queue);
+gpointer           gst_atomic_queue_pop         (GstAtomicQueue* queue) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gpointer           gst_atomic_queue_peek        (GstAtomicQueue* queue);

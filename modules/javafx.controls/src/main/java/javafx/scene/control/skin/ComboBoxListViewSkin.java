@@ -360,19 +360,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             T value = comboBox.getValue();
             int index = getIndexOfComboBoxValueInItemsList();
 
-            // JDK-8127575 Show the ComboBox value even though it doesn't
-            // exist in the ComboBox items list (part two of fix)
-            buttonCell.updateIndex(index);
-            boolean empty = updateDisplayText(buttonCell, value, false);
+            // This guarantees that the cell is cleared even when the
+            // value is null and contained in the items (which is allowed)
+            buttonCell.updateIndex(-1);
 
-            // Note that empty boolean collected above. This is used to resolve
-            // JDK-8124141, where we were getting different styling based on whether
-            // the cell was updated via the updateIndex method above, or just
-            // by directly updating the text. We fake the pseudoclass state
-            // for empty, filled, and selected here.
-            buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_EMPTY,    empty);
-            buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_FILLED,   !empty);
-            buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, true);
+            if (index > -1) {
+                buttonCell.updateIndex(index);
+            } else {
+                // JDK-8127575 Show the ComboBox value even though it doesn't
+                // exist in the ComboBox items list (part two of fix)
+                boolean empty = updateDisplayText(buttonCell, value, false);
+
+                // Note that empty boolean collected above. This is used to resolve
+                // JDK-8124141, where we were getting different styling based on whether
+                // the cell was updated via the updateIndex method above, or just
+                // by directly updating the text. We fake the pseudoclass state
+                // for empty, filled, and selected here.
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_EMPTY,    empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_FILLED,   !empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, true);
+            }
         }
     }
 

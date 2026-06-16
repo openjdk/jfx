@@ -985,15 +985,21 @@ void                    gst_element_create_all_pads     (GstElement *element);
 
 GST_API
 GstPad*                 gst_element_get_compatible_pad  (GstElement *element, GstPad *pad,
-                                                         GstCaps *caps);
+                                                         GstCaps *caps) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstPadTemplate*         gst_element_get_compatible_pad_template (GstElement *element, GstPadTemplate *compattempl);
 
-GST_API
+GST_DEPRECATED_FOR(gst_state_get_name)
 const gchar*            gst_element_state_get_name      (GstState state);
 
-GST_API
+GST_DEPRECATED_FOR(gst_state_change_return_get_name)
 const gchar *           gst_element_state_change_return_get_name (GstStateChangeReturn state_ret);
+
+GST_API
+const gchar*            gst_state_get_name               (GstState state);
+
+GST_API
+const gchar *           gst_state_change_return_get_name (GstStateChangeReturn state_ret);
 
 GST_API
 const gchar *           gst_state_change_get_name       (GstStateChange transition);
@@ -1036,15 +1042,15 @@ gboolean                gst_element_seek_simple         (GstElement   *element,
 
 GST_API
 gchar *                 gst_element_decorate_stream_id  (GstElement   *element,
-                                                         const gchar  *stream_id);
+                                                         const gchar  *stream_id) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gchar *   gst_element_decorate_stream_id_printf_valist  (GstElement * element,
                                                          const gchar * format,
-                                                         va_list var_args) G_GNUC_PRINTF (2, 0) G_GNUC_MALLOC;
+                                                         va_list var_args) G_GNUC_PRINTF (2, 0) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gchar *          gst_element_decorate_stream_id_printf  (GstElement * element,
                                                          const gchar * format,
-                                                         ...) G_GNUC_PRINTF (2, 3) G_GNUC_MALLOC;
+                                                         ...) G_GNUC_PRINTF (2, 3) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 /* util elementfactory functions */
 
 GST_API
@@ -1077,7 +1083,7 @@ GST_API
 void                    gst_pad_use_fixed_caps          (GstPad *pad);
 
 GST_API
-GstElement*             gst_pad_get_parent_element      (GstPad *pad);
+GstElement*             gst_pad_get_parent_element      (GstPad *pad) G_GNUC_WARN_UNUSED_RESULT;
 
 /* util query functions */
 
@@ -1097,7 +1103,7 @@ GST_API
 gboolean                gst_pad_query_convert           (GstPad *pad, GstFormat src_format, gint64 src_val,
                                                          GstFormat dest_format, gint64 *dest_val);
 GST_API
-GstCaps *               gst_pad_query_caps              (GstPad *pad, GstCaps *filter);
+GstCaps *               gst_pad_query_caps              (GstPad *pad, GstCaps *filter) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean                gst_pad_query_accept_caps       (GstPad *pad, GstCaps *caps);
@@ -1119,25 +1125,25 @@ GST_API
 gboolean                gst_pad_peer_query_convert      (GstPad *pad, GstFormat src_format, gint64 src_val,
                                                          GstFormat dest_format, gint64 *dest_val);
 GST_API
-GstCaps *               gst_pad_peer_query_caps         (GstPad * pad, GstCaps *filter);
+GstCaps *               gst_pad_peer_query_caps         (GstPad * pad, GstCaps *filter) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean                gst_pad_peer_query_accept_caps  (GstPad * pad, GstCaps *caps);
 
 GST_API
-gchar *                 gst_pad_create_stream_id               (GstPad * pad, GstElement * parent, const gchar *stream_id) G_GNUC_MALLOC;
+gchar *                 gst_pad_create_stream_id               (GstPad * pad, GstElement * parent, const gchar *stream_id) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar *                 gst_pad_create_stream_id_printf        (GstPad * pad, GstElement * parent, const gchar *stream_id, ...) G_GNUC_PRINTF (3, 4) G_GNUC_MALLOC;
+gchar *                 gst_pad_create_stream_id_printf        (GstPad * pad, GstElement * parent, const gchar *stream_id, ...) G_GNUC_PRINTF (3, 4) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar *                 gst_pad_create_stream_id_printf_valist (GstPad * pad, GstElement * parent, const gchar *stream_id, va_list var_args) G_GNUC_PRINTF (3, 0) G_GNUC_MALLOC;
+gchar *                 gst_pad_create_stream_id_printf_valist (GstPad * pad, GstElement * parent, const gchar *stream_id, va_list var_args) G_GNUC_PRINTF (3, 0) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar *                 gst_pad_get_stream_id           (GstPad * pad);
+gchar *                 gst_pad_get_stream_id           (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstStream *             gst_pad_get_stream              (GstPad * pad);
+GstStream *             gst_pad_get_stream              (GstPad * pad) G_GNUC_WARN_UNUSED_RESULT;
 
 /* bin functions */
 
@@ -1148,7 +1154,7 @@ GST_API
 void                    gst_bin_remove_many             (GstBin *bin, GstElement *element_1, ...) G_GNUC_NULL_TERMINATED;
 
 GST_API
-GstPad *                gst_bin_find_unlinked_pad       (GstBin *bin, GstPadDirection direction);
+GstPad *                gst_bin_find_unlinked_pad       (GstBin *bin, GstPadDirection direction) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean                gst_bin_sync_children_states    (GstBin *bin);
@@ -1253,6 +1259,20 @@ guint         gst_util_floor_log2               (guint32 v);
 GST_API
 gint          gst_util_filename_compare        (const gchar *a, const gchar *b);
 #endif // GSTREAMER_LITE
+
+/**
+ * GstCallAsyncFunc:
+ * @user_data: Data passed in the function where that callback has been passed
+ *
+ * Callback prototype used in #gst_call_async
+ *
+ * Since: 1.28
+ */
+typedef void  (*GstCallAsyncFunc)               (gpointer user_data);
+
+GST_API
+void          gst_call_async                    (GstCallAsyncFunc func,
+                                                 gpointer user_data);
 
 G_END_DECLS
 

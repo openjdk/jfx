@@ -59,7 +59,6 @@ struct _GstAiffParse {
   GstPad      *sinkpad;
   GstPad      *srcpad;
 
-  GstEvent    *close_segment;
   GstEvent    *start_segment;
 
   /* AIFF decoding state */
