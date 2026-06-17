@@ -41,6 +41,8 @@ import jfx.incubator.scene.control.richtext.StyleResolver;
  * <li>an inline Node
  * <li>a paragraph containing a single Region
  * <li>paragraph attributes
+ * <li>document properties
+ * <li>version string
  * </ol>
  *
  * @since 24
