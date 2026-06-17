@@ -134,6 +134,23 @@ public abstract class NodeHelper {
         getHelper(node).processCSSImpl(node);
     }
 
+    /**
+     * Returns the styleClass or null if the node styleClass list is not initialized.
+     * <p>
+     * If the styleClass of a {@link Node} was never accessed (and therefore used),
+     * it is null as it will be lazily initialized only when accessed
+     * for the first time by the developer or JavaFX code.
+     * <p>
+     * Layout containers (such as Pane) usually never have any styleClass set (unless set by a developer),
+     * so we save an allocation by returning null when the styleClass is not initialized.
+     *
+     * @param node the node
+     * @return the styleClass or null
+     */
+    public static List<String> getStyleClassOrNull(Node node) {
+        return nodeAccessor.getStyleClassOrNull(node);
+    }
+
     /*
      * Methods that will be overridden by subclasses
      */
@@ -431,6 +448,7 @@ public abstract class NodeHelper {
         void removeTransitionTimer(Node node, String propertyName);
         TransitionTimer findTransitionTimer(Node node, String propertyName);
         MediaQueryContext getMediaQueryContext(Node node);
+        List<String> getStyleClassOrNull(Node node);
     }
 
 }
