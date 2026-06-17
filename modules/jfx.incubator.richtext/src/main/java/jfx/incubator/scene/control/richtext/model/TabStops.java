@@ -33,7 +33,11 @@ import java.util.ListIterator;
 import javafx.scene.text.TabStop;
 
 /**
- * Encapsulates the tab stop positions within a paragraph.
+ * Encapsulates the tab stop positions within a paragraph,
+ * in the form of an unmodifiable {@link List}.
+ * <p>
+ * Calling any mutator method on this object will always cause
+ * {@code UnsupportedOperationException} to be thrown.
  *
  * @since 27
  */

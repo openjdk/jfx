@@ -67,7 +67,7 @@ Example:
 The second segment is a document properties segment which contains a pipe-delimited key-value pairs enclosed in `{# ... }`.
 There is only one document properties segment per file.
 
-Example: 
+Example:
 
 `{#tabs|99.5}`
 
@@ -181,7 +181,7 @@ attributes are replaced by a numeric tokens:
 {!number}
 ```
 
-where `number` is the index of the duplicate attribute map in the document. 
+where `number` is the index of the duplicate attribute map in the document.
 
 Example:
 
