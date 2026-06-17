@@ -96,7 +96,7 @@ import javafx.beans.value.ObservableValue;
  * and no decorations.</li>
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
- * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar} (Preview Feature).</li>
+ * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar}.</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
  * <p>On some platforms decorations might not be available. For example, on

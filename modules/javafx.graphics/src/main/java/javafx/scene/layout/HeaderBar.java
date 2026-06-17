@@ -217,7 +217,7 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Specifies the {@code HeaderDragType} of the child, indicating whether it is a draggable part
+     * Specifies the {@link HeaderDragType} of the child, indicating whether it is a draggable part
      * of the {@code HeaderBar}. A value of {@code null} indicates that the drag type is not set.
      *
      * @param child the child node
@@ -267,7 +267,7 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Specifies the {@code HeaderButtonType} of the child, indicating its semantic use in the header bar.
+     * Specifies the {@link HeaderButtonType} of the child, indicating its semantic use in the header bar.
      * <p>
      * This property can be set on any {@link Node}. Specifying a {@code HeaderButtonType} also provides the
      * behavior associated with the button type. If the default behavior is not desired, applications can
