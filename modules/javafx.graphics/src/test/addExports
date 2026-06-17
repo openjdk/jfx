@@ -52,10 +52,14 @@
 --add-exports javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.animation.shared=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.effect=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.scenario.effect.impl=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.scenario.effect.impl.state=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.scenario.effect.impl.prism=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.effect.light=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario=ALL-UNNAMED
 --add-opens javafx.graphics/com.sun.javafx.css.parser=ALL-UNNAMED
 --add-opens javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
+--add-opens javafx.graphics/com.sun.scenario.effect.impl=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.css=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.robot=ALL-UNNAMED

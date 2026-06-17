@@ -36,6 +36,7 @@ GST_EXPORT GType _gst_structure_type;
 #endif // GSTREAMER_LITE
 
 typedef struct _GstStructure GstStructure;
+typedef struct _GstCaps GstCaps;
 
 /**
  * GST_SERIALIZE_FLAG_STRICT:
@@ -191,52 +192,52 @@ GST_API
 GType                 gst_structure_get_type             (void);
 
 GST_API
-GstStructure *        gst_structure_new_empty            (const gchar * name) G_GNUC_MALLOC;
+GstStructure *        gst_structure_new_empty            (const gchar * name) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstStructure *        gst_structure_new_static_str_empty (const gchar * name) G_GNUC_MALLOC;
+GstStructure *        gst_structure_new_static_str_empty (const gchar * name) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_DEPRECATED_FOR(gst_structure_new_id_str_empty)
-GstStructure *        gst_structure_new_id_empty         (GQuark quark) G_GNUC_MALLOC;
+GstStructure *        gst_structure_new_id_empty         (GQuark quark) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstStructure *        gst_structure_new_id_str_empty     (const GstIdStr *name) G_GNUC_MALLOC;
+GstStructure *        gst_structure_new_id_str_empty     (const GstIdStr *name) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstStructure *        gst_structure_new                  (const gchar * name,
                                                           const gchar * firstfield,
-                                                          ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC;
+                                                          ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstStructure *        gst_structure_new_static_str       (const gchar * name,
                                                           const gchar * firstfield,
-                                                          ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC;
+                                                          ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstStructure *        gst_structure_new_id_str_valist    (const GstIdStr * name,
                                                           const GstIdStr * firstfield,
-                                                          va_list       varargs) G_GNUC_MALLOC;
+                                                          va_list       varargs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstStructure *        gst_structure_new_valist           (const gchar * name,
                                                           const gchar * firstfield,
-                                                          va_list       varargs) G_GNUC_MALLOC;
+                                                          va_list       varargs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstStructure *        gst_structure_new_static_str_valist(const gchar * name,
                                                           const gchar * firstfield,
-                                                          va_list       varargs) G_GNUC_MALLOC;
+                                                          va_list       varargs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_DEPRECATED_FOR(gst_structure_new_id_str)
 GstStructure *        gst_structure_new_id               (GQuark name_quark,
                                                           GQuark field_quark,
-                                                          ...) G_GNUC_MALLOC;
+                                                          ...) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstStructure *        gst_structure_new_id_str           (const GstIdStr *name,
                                                           const GstIdStr *fieldname,
-                                                          ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC;
+                                                          ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstStructure *        gst_structure_new_from_string      (const gchar * string);
+GstStructure *        gst_structure_new_from_string      (const gchar * string) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstStructure *        gst_structure_copy                 (const GstStructure  * structure) G_GNUC_MALLOC;
+GstStructure *        gst_structure_copy                 (const GstStructure  * structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean              gst_structure_set_parent_refcount  (GstStructure        * structure,
@@ -535,17 +536,17 @@ gboolean              gst_structure_get_flags            (const GstStructure  * 
                                                           guint               * value);
 
 GST_API
-gchar *               gst_structure_to_string            (const GstStructure * structure) G_GNUC_MALLOC;
+gchar *               gst_structure_to_string            (const GstStructure * structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_DEPRECATED_FOR(gst_structure_serialize_full)
 gchar *               gst_structure_serialize            (const GstStructure * structure,
-                                                          GstSerializeFlags flags) G_GNUC_MALLOC;
+                                                          GstSerializeFlags flags) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gchar *               gst_structure_serialize_full       (const GstStructure * structure,
-                                                          GstSerializeFlags flags) G_GNUC_MALLOC;
+                                                          GstSerializeFlags flags) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstStructure *        gst_structure_from_string  (const gchar * string,
-                                                  gchar      ** end) G_GNUC_MALLOC;
+                                                  gchar      ** end) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gboolean              gst_structure_fixate_field_nearest_int      (GstStructure * structure,
                                                                    const char   * field_name,
@@ -584,7 +585,11 @@ gboolean              gst_structure_can_intersect (const GstStructure * struct1,
                                                    const GstStructure * struct2);
 GST_API
 GstStructure *        gst_structure_intersect     (const GstStructure * struct1,
-                                                   const GstStructure * struct2) G_GNUC_MALLOC;
+                                                   const GstStructure * struct2) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean              gst_structure_get_caps      (const GstStructure * structure,
+                                                   const gchar * fieldname,
+                                                   const GstCaps ** caps);
 
 GST_API
 gboolean              gst_structure_is_writable   (const GstStructure        * structure);

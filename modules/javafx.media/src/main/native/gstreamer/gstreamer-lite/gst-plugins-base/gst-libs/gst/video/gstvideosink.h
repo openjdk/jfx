@@ -25,8 +25,7 @@
 
 #include <gst/gst.h>
 #include <gst/base/gstbasesink.h>
-#include <gst/video/video-prelude.h>
-#include <gst/video/video-info.h>
+#include <gst/video/video.h>
 
 G_BEGIN_DECLS
 
@@ -63,24 +62,7 @@ G_BEGIN_DECLS
 
 typedef struct _GstVideoSink GstVideoSink;
 typedef struct _GstVideoSinkClass GstVideoSinkClass;
-typedef struct _GstVideoRectangle GstVideoRectangle;
 typedef struct _GstVideoSinkPrivate GstVideoSinkPrivate;
-
-/**
- * GstVideoRectangle:
- * @x: X coordinate of rectangle's top-left point
- * @y: Y coordinate of rectangle's top-left point
- * @w: width of the rectangle
- * @h: height of the rectangle
- *
- * Helper structure representing a rectangular area.
- */
-struct _GstVideoRectangle {
-  gint x;
-  gint y;
-  gint w;
-  gint h;
-};
 
 /**
  * GstVideoSink:
