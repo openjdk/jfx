@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,11 +263,11 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
     public BorderWidths interpolate(BorderWidths endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
-        if (t <= 0 || equals(endValue)) {
+        if (t == 0 || equals(endValue)) {
             return this;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return endValue;
         }
 
@@ -337,7 +337,7 @@ public final class BorderWidths implements Interpolatable<BorderWidths> {
 
     private static double interpolate(double start, double end, double t) {
         return start != AUTO && end != AUTO ?
-            InterpolationUtils.interpolate(start, end, t) :
+            Math.max(0, InterpolationUtils.interpolate(start, end, t)) :
             InterpolationUtils.interpolateDiscrete(start, end, t);
     }
 

@@ -213,6 +213,8 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
                 objc_type = 'std::optional<%s>' % objc_type
             param_expression = in_param_expression(in_param_name, parameter)
             import_expression = self.objc_protocol_import_expression_for_parameter(param_expression, domain, command.command_name, parameter)
+            if objc_type == "NSString *":
+                import_expression = import_expression + ".createNSString().autorelease()"
             if not parameter.is_optional:
                 lines.append('    %s = %s;' % (join_type_and_name(objc_type, objc_in_param_name), import_expression))
 

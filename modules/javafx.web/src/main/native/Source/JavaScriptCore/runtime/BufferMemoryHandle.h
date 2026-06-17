@@ -25,9 +25,13 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "MemoryMode.h"
 #include "Options.h"
 #include "PageCount.h"
+
+#include <set>
 
 #include <wtf/CagedPtr.h>
 #include <wtf/Expected.h>
@@ -138,7 +142,7 @@ public:
         return m_size.load(order);
     }
 
-    std::span<uint8_t> mutableSpan(std::memory_order order = std::memory_order_seq_cst) { return { static_cast<uint8_t*>(memory()), size(order) }; }
+    std::span<uint8_t> mutableSpan(std::memory_order order = std::memory_order_seq_cst) LIFETIME_BOUND { return unsafeMakeSpan(static_cast<uint8_t*>(memory()), size(order)); }
 
     size_t mappedCapacity() const { return m_mappedCapacity; }
     PageCount initial() const { return m_initial; }

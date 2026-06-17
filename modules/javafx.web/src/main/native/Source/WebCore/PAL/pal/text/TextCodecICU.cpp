@@ -174,9 +174,9 @@ void TextCodecICU::createICUConverter() const
         ucnv_setFallback(m_converter.get(), true);
 }
 
-int TextCodecICU::decodeToBuffer(std::span<UChar> targetSpan, std::span<const uint8_t>& sourceSpan, int32_t* offsets, bool flush, UErrorCode& error)
+int TextCodecICU::decodeToBuffer(std::span<char16_t> targetSpan, std::span<const uint8_t>& sourceSpan, int32_t* offsets, bool flush, UErrorCode& error)
 {
-    UChar* targetStart = targetSpan.data();
+    char16_t* targetStart = targetSpan.data();
     error = U_ZERO_ERROR;
     auto* source = byteCast<char>(sourceSpan.data());
     auto* sourceLimit = byteCast<char>(std::to_address(sourceSpan.end()));
@@ -207,9 +207,7 @@ public:
             UConverterToUCallback oldAction;
             ucnv_setToUCallBack(&m_converter, m_savedAction, m_savedContext, &oldAction, &oldContext, &err);
             ASSERT(oldAction == UCNV_TO_U_CALLBACK_SUBSTITUTE);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            ASSERT(!strcmp(static_cast<const char*>(oldContext), UCNV_SUB_STOP_ON_ILLEGAL));
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            ASSERT(equalSpans(unsafeSpan(static_cast<const char*>(oldContext)), UCNV_SUB_STOP_ON_ILLEGAL ""_span));
             ASSERT(U_SUCCESS(err));
         }
     }
@@ -237,7 +235,7 @@ String TextCodecICU::decode(std::span<const uint8_t> source, bool flush, bool st
 
     StringBuilder result;
 
-    std::array<UChar, ConversionBufferSize> buffer;
+    std::array<char16_t, ConversionBufferSize> buffer;
     auto target = std::span { buffer };
     int32_t* offsets = nullptr;
     UErrorCode err = U_ZERO_ERROR;
@@ -262,7 +260,7 @@ String TextCodecICU::decode(std::span<const uint8_t> source, bool flush, bool st
 
 // Invalid character handler when writing escaped entities for unrepresentable
 // characters. See the declaration of TextCodec::encode for more.
-static void urlEscapedEntityCallback(const void* context, UConverterFromUnicodeArgs* fromUArgs, const UChar* codeUnits, int32_t length,
+static void urlEscapedEntityCallback(const void* context, UConverterFromUnicodeArgs* fromUArgs, const char16_t* codeUnits, int32_t length,
     UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* error)
 {
     if (reason == UCNV_UNASSIGNED) {
@@ -307,6 +305,7 @@ Vector<uint8_t> TextCodecICU::encode(StringView string, UnencodableHandling hand
         ucnv_setFromUCallBack(m_converter.get(), urlEscapedEntityCallback, 0, 0, 0, &error);
         if (U_FAILURE(error))
             return { };
+        ucnv_setFallback(m_converter.get(), false);
         break;
     }
 
@@ -323,6 +322,10 @@ Vector<uint8_t> TextCodecICU::encode(StringView string, UnencodableHandling hand
         ucnv_fromUnicode(m_converter.get(), &target, targetLimit, &source, sourceLimit, 0, true, &error);
         result.append(byteCast<uint8_t>(std::span(buffer)).first(target - buffer.data()));
     } while (needsToGrowToProduceBuffer(error));
+
+    if (handling == UnencodableHandling::URLEncodedEntities)
+        ucnv_setFallback(m_converter.get(), true);
+
     return result;
 }
 

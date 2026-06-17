@@ -1,7 +1,7 @@
 /*
  * This file is part of the XSL implementation.
  *
- * Copyright (C) 2004, 2005, 2006, 2008, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,13 +34,8 @@
 #include "XMLDocumentParserScope.h"
 #include "XSLImportRule.h"
 #include "XSLTProcessor.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/uri.h>
 #include <libxslt/xsltutils.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HexNumber.h>
 #include <wtf/text/MakeString.h>
@@ -125,7 +120,7 @@ void XSLStyleSheet::clearXSLStylesheetDocument()
 
 CachedResourceLoader* XSLStyleSheet::cachedResourceLoader()
 {
-    Document* document = ownerDocument();
+    RefPtr document = ownerDocument();
     if (!document)
         return nullptr;
     return &document->cachedResourceLoader();
@@ -138,7 +133,7 @@ bool XSLStyleSheet::parseString(const String& string)
     clearXSLStylesheetDocument();
 
     PageConsoleClient* console = nullptr;
-    auto* frame = ownerDocument()->frame();
+    RefPtr frame = ownerDocument()->frame();
     if (frame && frame->page())
         console = &frame->page()->console();
 
@@ -147,7 +142,7 @@ bool XSLStyleSheet::parseString(const String& string)
     auto upconvertedCharacters = StringView(string).upconvertedCharacters();
     const char* buffer = reinterpret_cast<const char*>(upconvertedCharacters.get());
     CheckedUint32 unsignedSize = string.length();
-    unsignedSize *= sizeof(UChar);
+    unsignedSize *= sizeof(char16_t);
     if (unsignedSize.hasOverflowed() || unsignedSize > static_cast<unsigned>(std::numeric_limits<int>::max()))
         return false;
 
@@ -214,10 +209,7 @@ void XSLStyleSheet::loadChildSheets()
             if (IS_XSLT_ELEM(curr) && IS_XSLT_NAME(curr, "import")) {
                 xmlChar* uriRef = xsltGetNsProp(curr, (const xmlChar*)"href", XSLT_NAMESPACE);
                 loadChildSheet(String::fromUTF8((const char*)uriRef));
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(uriRef);
-IGNORE_WARNINGS_END
             } else
                 break;
             curr = curr->next;
@@ -228,10 +220,7 @@ IGNORE_WARNINGS_END
             if (curr->type == XML_ELEMENT_NODE && IS_XSLT_ELEM(curr) && IS_XSLT_NAME(curr, "include")) {
                 xmlChar* uriRef = xsltGetNsProp(curr, (const xmlChar*)"href", XSLT_NAMESPACE);
                 loadChildSheet(String::fromUTF8((const char*)uriRef));
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 xmlFree(uriRef);
-IGNORE_WARNINGS_END
             }
             curr = curr->next;
         }
@@ -276,7 +265,7 @@ void XSLStyleSheet::setParentStyleSheet(XSLStyleSheet* parent)
 Document* XSLStyleSheet::ownerDocument()
 {
     for (RefPtr styleSheet = this; styleSheet; styleSheet = styleSheet->parentStyleSheet()) {
-        if (auto* node = styleSheet->ownerNode())
+        if (RefPtr node = styleSheet->ownerNode())
             return &node->document();
     }
     return nullptr;
@@ -301,11 +290,8 @@ xmlDocPtr XSLStyleSheet::locateStylesheetSubResource(xmlDocPtr parentDoc, const 
             xmlChar* base = xmlNodeGetBase(parentDoc, (xmlNodePtr)parentDoc);
             xmlChar* childURI = xmlBuildURI((const xmlChar*)importHref.data(), base);
             bool equalURIs = xmlStrEqual(uri, childURI);
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(base);
             xmlFree(childURI);
-IGNORE_WARNINGS_END
             if (equalURIs) {
                 child->markAsProcessed();
                 return child->document();

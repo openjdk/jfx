@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.stage;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -42,6 +43,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
 import com.sun.javafx.PreviewFeature;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
@@ -95,6 +97,7 @@ import javafx.beans.value.ObservableValue;
  * and no decorations.</li>
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
+ * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar} (Preview Feature).</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
  * <p>On some platforms decorations might not be available. For example, on
@@ -1111,10 +1114,13 @@ public class Stage extends Window {
             TKStage tkStage = (window == null ? null : window.getPeer());
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+            ColorScheme colorScheme = scene != null
+                ? scene.getPreferences().getColorScheme()
+                : PlatformImpl.getPlatformPreferences().getColorScheme();
 
             StageStyle stageStyle = getStyle();
             setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
-                    getModality(), tkStage, rtl));
+                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),

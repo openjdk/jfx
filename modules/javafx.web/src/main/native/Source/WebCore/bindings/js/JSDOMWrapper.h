@@ -24,7 +24,6 @@
 #include "JSDOMGlobalObject.h"
 #include "NodeConstants.h"
 #include <JavaScriptCore/JSDestructibleObject.h>
-#include <JavaScriptCore/StructureInlines.h>
 #include <wtf/Compiler.h>
 #include <wtf/SignedPtr.h>
 

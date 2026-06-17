@@ -31,8 +31,9 @@
 #include "CaretRectComputation.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -53,10 +54,12 @@
 #include "LayoutDisallowedScope.h"
 #include "LocalFrame.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
@@ -98,7 +101,7 @@ Node::InsertedIntoAncestorResult HTMLTextFormControlElement::insertedIntoAncesto
     InsertedIntoAncestorResult InsertedIntoAncestorResult = HTMLFormControlElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         String initialValue = value();
-        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
+        setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? String(emptyString()) : WTFMove(initialValue));
     }
     return InsertedIntoAncestorResult;
 }
@@ -166,7 +169,7 @@ void HTMLTextFormControlElement::forwardEvent(Event& event)
         innerText->defaultEventHandler(event);
 }
 
-static bool isNotLineBreak(UChar ch) { return ch != newlineCharacter && ch != carriageReturn; }
+static bool isNotLineBreak(char16_t ch) { return ch != newlineCharacter && ch != carriageReturn; }
 
 bool HTMLTextFormControlElement::isPlaceholderEmpty() const
 {
@@ -227,13 +230,14 @@ String HTMLTextFormControlElement::selectedText() const
 {
     if (!isTextField())
         return String();
-    return value().substring(selectionStart(), selectionEnd() - selectionStart());
+    return value()->substring(selectionStart(), selectionEnd() - selectionStart());
 }
 
 void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
 {
-    if (m_textAsOfLastFormControlChangeEvent != value()) {
-        setTextAsOfLastFormControlChangeEvent(value());
+    auto value = this->value();
+    if (m_textAsOfLastFormControlChangeEvent != value.get()) {
+        setTextAsOfLastFormControlChangeEvent(String { value });
         dispatchChangeEvent();
     }
     setChangedSinceLastFormControlChangeEvent(false);
@@ -498,7 +502,7 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
 static void setContainerAndOffsetForRange(Node& node, unsigned offset, RefPtr<Node>& containerNode, unsigned& offsetInContainer)
 {
     if (node.isTextNode()) {
-        containerNode = &node;
+        containerNode = node;
         offsetInContainer = offset;
     } else {
         containerNode = node.parentNode();
@@ -804,7 +808,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
     if (!renderer)
         return value();
 
-    Node* breakNode = nullptr;
+    RefPtr<Node> breakNode;
     unsigned breakOffset = 0;
     auto currentLineBox = InlineIterator::firstLineBoxFor(*renderer);
     if (!currentLineBox)
@@ -915,7 +919,7 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
     }
 
     if (parentStyle.fieldSizing() == FieldSizing::Content)
-        textBlockStyle.setLogicalMinWidth(Length { caretWidth(), LengthType::Fixed });
+        textBlockStyle.setLogicalMinWidth(Style::MinimumSize::Fixed { static_cast<float>(caretWidth()) });
 
 #if PLATFORM(IOS_FAMILY)
     if (textBlockStyle.textSecurity() != TextSecurity::None && textBlockStyle.writingMode().isBidiRTL()) {

@@ -64,5 +64,7 @@ template<> struct ComputedStyleDependenciesCollector<Symbol> { constexpr void op
 template<> struct CSSValueChildrenVisitor<SymbolRaw> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const SymbolRaw&) { return IterationStatus::Continue; } };
 template<> struct CSSValueChildrenVisitor<Symbol> { constexpr IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const Symbol&) { return IterationStatus::Continue; } };
 
+WTF::TextStream& operator<<(WTF::TextStream&, const Symbol&);
+
 } // namespace CSS
 } // namespace WebCore

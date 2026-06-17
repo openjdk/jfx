@@ -47,9 +47,9 @@ struct MotionPathData {
 class MotionPath {
 public:
     static std::optional<MotionPathData> motionPathDataForRenderer(const RenderElement&);
-    static bool needsUpdateAfterContainingBlockLayout(const PathOperation&);
+    static bool needsUpdateAfterContainingBlockLayout(const Style::OffsetPath&);
 
-    static void applyMotionPathTransform(TransformationMatrix&, const TransformOperationData&, const FloatPoint& transformOrigin, const PathOperation&, const LengthPoint& offsetAnchor, const Length& offsetDistance, const OffsetRotation&, TransformBox);
+    static void applyMotionPathTransform(TransformationMatrix&, const TransformOperationData&, const FloatPoint& transformOrigin, const Style::OffsetPath&, const Style::OffsetAnchor&, const Style::OffsetDistance&, const Style::OffsetRotate&, TransformBox);
     static void applyMotionPathTransform(const RenderStyle&, const TransformOperationData&, TransformationMatrix&);
 
     static std::optional<Path> computePathForBox(const BoxPathOperation&, const TransformOperationData&);

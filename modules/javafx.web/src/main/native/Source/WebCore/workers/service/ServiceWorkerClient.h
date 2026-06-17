@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerClientData.h"
 #include <JavaScriptCore/Strong.h>
@@ -42,6 +41,8 @@ namespace WebCore {
 class ServiceWorkerGlobalScope;
 
 struct StructuredSerializeOptions;
+
+template<typename> class ExceptionOr;
 
 class ServiceWorkerClient : public RefCounted<ServiceWorkerClient>, public ContextDestructionObserver {
 public:

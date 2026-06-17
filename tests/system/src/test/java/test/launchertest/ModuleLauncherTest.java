@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import test.javafx.util.OutputRedirect;
 
 /**
  * Unit test for launching modular FX applications
@@ -57,6 +58,15 @@ public class ModuleLauncherTest {
     private final int testExitCode = ERROR_NONE;
 
     private void doTestLaunchModule(String appModulePath, String testAppName) throws Exception {
+        OutputRedirect.suppressStderr();
+        try {
+            doTestLaunchModule2(appModulePath, testAppName);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr();
+        }
+    }
+
+    private void doTestLaunchModule2(String appModulePath, String testAppName) throws Exception {
         final String javafxModulePath = System.getProperty("worker.module.path");
         String modulePath;
         if (javafxModulePath != null) {

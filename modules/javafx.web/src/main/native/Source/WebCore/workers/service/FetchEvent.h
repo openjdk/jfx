@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,7 +89,7 @@ private:
     void processResponse(Expected<Ref<FetchResponse>, std::optional<ResourceError>>&&);
     void respondWithError(ResourceError&&);
 
-    Ref<FetchRequest> m_request;
+    const Ref<FetchRequest> m_request;
     String m_clientId;
     String m_resultingClientId;
 
@@ -97,7 +97,7 @@ private:
     bool m_waitToRespond { false };
     bool m_respondWithError { false };
     RefPtr<DOMPromise> m_respondPromise;
-    Ref<DOMPromise> m_handled;
+    const Ref<DOMPromise> m_handled;
 
     ResponseCallback m_onResponse;
 

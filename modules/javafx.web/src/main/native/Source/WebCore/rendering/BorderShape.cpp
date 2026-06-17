@@ -34,31 +34,18 @@
 #include "FloatRoundedRect.h"
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
+#include "LayoutRoundedRect.h"
 #include "LengthFunctions.h"
 #include "Path.h"
 #include "RenderStyleInlines.h"
-#include "RoundedRect.h"
 
 namespace WebCore {
 
-static RoundedRect::Radii calcRadiiFor(const BorderData::Radii& radii, const LayoutSize& size)
-{
-    return {
-        sizeForLengthSize(radii.topLeft, size),
-        sizeForLengthSize(radii.topRight, size),
-        sizeForLengthSize(radii.bottomLeft, size),
-        sizeForLengthSize(radii.bottomRight, size)
-    };
-}
-
 BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, RectEdges<bool> closedEdges)
 {
-    auto borderWidths = RectEdges<LayoutUnit> {
-        LayoutUnit(style.borderTopWidth()),
-        LayoutUnit(style.borderRightWidth()),
-        LayoutUnit(style.borderBottomWidth()),
-        LayoutUnit(style.borderLeftWidth()),
-    };
+    auto borderWidths = RectEdges<LayoutUnit>::map(style.borderWidth(), [](auto width) {
+        return LayoutUnit { Style::evaluate(width) };
+    });
     return shapeForBorderRect(style, borderRect, borderWidths, closedEdges);
 }
 
@@ -73,7 +60,7 @@ BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const Layo
     };
 
     if (style.hasBorderRadius()) {
-        auto radii = calcRadiiFor(style.borderRadii(), borderRect.size());
+        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
         radii.scale(calcBorderRadiiConstraintScaleFor(borderRect, radii));
 
         if (!closedEdges.top()) {
@@ -102,28 +89,103 @@ BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const Layo
     return BorderShape { borderRect, usedBorderWidths };
 }
 
+BorderShape BorderShape::shapeForOutsetRect(const RenderStyle& style, const LayoutRect& borderRect, const LayoutRect& outlineBoxRect, const RectEdges<LayoutUnit>& outlineWidths, RectEdges<bool> closedEdges)
+{
+    // top, right, bottom, left.
+    auto usedOutlineWidths = RectEdges<LayoutUnit> {
+        LayoutUnit(closedEdges.top() ? outlineWidths.top() : 0_lu),
+        LayoutUnit(closedEdges.right() ? outlineWidths.right() : 0_lu),
+        LayoutUnit(closedEdges.bottom() ? outlineWidths.bottom() : 0_lu),
+        LayoutUnit(closedEdges.left() ? outlineWidths.left() : 0_lu),
+    };
+
+    if (style.hasBorderRadius()) {
+        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
+
+        auto leftOutset = std::max(borderRect.x() - outlineBoxRect.x(), 0_lu);
+        auto topOutset = std::max(borderRect.y() - outlineBoxRect.y(), 0_lu);
+        auto rightOutset = std::max(outlineBoxRect.maxX() - borderRect.maxX(), 0_lu);
+        auto bottomOutset = std::max(outlineBoxRect.maxY() - borderRect.maxY(), 0_lu);
+
+        radii.expand(topOutset, bottomOutset, leftOutset, rightOutset);
+
+        // FIXME: Share
+        if (!closedEdges.top()) {
+            radii.setTopLeft({ });
+            radii.setTopRight({ });
+        }
+        if (!closedEdges.right()) {
+            radii.setTopRight({ });
+            radii.setBottomRight({ });
+        }
+        if (!closedEdges.bottom()) {
+            radii.setBottomRight({ });
+            radii.setBottomLeft({ });
+        }
+        if (!closedEdges.left()) {
+            radii.setBottomLeft({ });
+            radii.setTopLeft({ });
+        }
+
+        if (!radii.areRenderableInRect(outlineBoxRect))
+            radii.makeRenderableInRect(outlineBoxRect);
+
+        return BorderShape { outlineBoxRect, usedOutlineWidths, radii };
+    }
+
+    return BorderShape { outlineBoxRect, usedOutlineWidths };
+}
+
+BorderShape BorderShape::shapeForInsetRect(const RenderStyle& style, const LayoutRect& borderRect, const LayoutRect& insetRect)
+{
+    if (style.hasBorderRadius()) {
+        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
+
+        auto leftInset = std::max(insetRect.x() - borderRect.x(), 0_lu);
+        auto topInset = std::max(insetRect.y()- borderRect.y(), 0_lu);
+        auto rightInset = std::max(borderRect.maxX() - insetRect.maxX(), 0_lu);
+        auto bottomInset = std::max(borderRect.maxY() - insetRect.maxY(), 0_lu);
+
+        auto insetWidths = RectEdges<LayoutUnit> { topInset, rightInset, bottomInset, leftInset };
+        auto roundedRect = LayoutRoundedRect { borderRect, radii };
+
+        auto insetRoundedRect = computeInnerEdgeRoundedRect(roundedRect, insetWidths);
+
+        return BorderShape { insetRect, { }, insetRoundedRect.radii() };
+    }
+
+    return BorderShape { insetRect, { } };
+}
+
 BorderShape::BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUnit>& borderWidths)
     : m_borderRect(borderRect)
+    , m_innerEdgeRect(computeInnerEdgeRoundedRect(m_borderRect, borderWidths))
     , m_borderWidths(borderWidths)
 {
 }
 
-BorderShape::BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUnit>& borderWidths, const RoundedRectRadii& radii)
+BorderShape::BorderShape(const LayoutRect& borderRect, const RectEdges<LayoutUnit>& borderWidths, const LayoutRoundedRectRadii& radii)
     : m_borderRect(borderRect, radii)
+    , m_innerEdgeRect(computeInnerEdgeRoundedRect(m_borderRect, borderWidths))
     , m_borderWidths(borderWidths)
 {
     // The caller should have adjusted the radii already.
     ASSERT(m_borderRect.isRenderable());
 }
 
-RoundedRect BorderShape::deprecatedRoundedRect() const
+BorderShape BorderShape::shapeWithBorderWidths(const RectEdges<LayoutUnit>& borderWidths) const
+{
+    return BorderShape(m_borderRect.rect(), borderWidths, m_borderRect.radii());
+}
+
+LayoutRoundedRect BorderShape::deprecatedRoundedRect() const
 {
     return m_borderRect;
 }
 
-RoundedRect BorderShape::deprecatedInnerRoundedRect() const
+LayoutRoundedRect BorderShape::deprecatedInnerRoundedRect() const
 {
-    return innerEdgeRoundedRect();
+    return m_innerEdgeRect;
 }
 
 FloatRoundedRect BorderShape::deprecatedPixelSnappedRoundedRect(float deviceScaleFactor) const
@@ -133,7 +195,7 @@ FloatRoundedRect BorderShape::deprecatedPixelSnappedRoundedRect(float deviceScal
 
 FloatRoundedRect BorderShape::deprecatedPixelSnappedInnerRoundedRect(float deviceScaleFactor) const
 {
-    return innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    return m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
 }
 
 FloatRect BorderShape::snappedOuterRect(float deviceScaleFactor) const
@@ -148,7 +210,7 @@ FloatRect BorderShape::snappedInnerRect(float deviceScaleFactor) const
 
 bool BorderShape::innerShapeContains(const LayoutRect& rect) const
 {
-    return innerEdgeRoundedRect().contains(rect);
+    return m_innerEdgeRect.contains(rect);
 }
 
 bool BorderShape::outerShapeContains(const LayoutRect& rect) const
@@ -156,14 +218,26 @@ bool BorderShape::outerShapeContains(const LayoutRect& rect) const
     return m_borderRect.contains(rect);
 }
 
+bool BorderShape::outerShapeIsRectangular() const
+{
+    return !m_borderRect.isRounded();
+}
+
+bool BorderShape::innerShapeIsRectangular() const
+{
+    return !m_innerEdgeRect.isRounded();
+}
+
 void BorderShape::move(LayoutSize offset)
 {
     m_borderRect.move(offset);
+    m_innerEdgeRect.move(offset);
 }
 
 void BorderShape::inflate(LayoutUnit amount)
 {
     m_borderRect.inflateWithRadii(amount);
+    m_innerEdgeRect = computeInnerEdgeRoundedRect(m_borderRect, m_borderWidths);
 }
 
 static void addRoundedRectToPath(const FloatRoundedRect& roundedRect, Path& path)
@@ -184,7 +258,7 @@ Path BorderShape::pathForOuterShape(float deviceScaleFactor) const
 
 Path BorderShape::pathForInnerShape(float deviceScaleFactor) const
 {
-    auto pixelSnappedRect = innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    auto pixelSnappedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     ASSERT(pixelSnappedRect.isRenderable());
 
     Path path;
@@ -192,10 +266,23 @@ Path BorderShape::pathForInnerShape(float deviceScaleFactor) const
     return path;
 }
 
+void BorderShape::addOuterShapeToPath(Path& path, float deviceScaleFactor) const
+{
+    auto pixelSnappedRect = m_borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    addRoundedRectToPath(pixelSnappedRect, path);
+}
+
+void BorderShape::addInnerShapeToPath(Path& path, float deviceScaleFactor) const
+{
+    auto pixelSnappedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    ASSERT(pixelSnappedRect.isRenderable());
+    addRoundedRectToPath(pixelSnappedRect, path);
+}
+
 Path BorderShape::pathForBorderArea(float deviceScaleFactor) const
 {
     auto pixelSnappedOuterRect = m_borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
-    auto pixelSnappedInnerRect = innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    auto pixelSnappedInnerRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
 
     ASSERT(pixelSnappedInnerRect.isRenderable());
 
@@ -205,7 +292,7 @@ Path BorderShape::pathForBorderArea(float deviceScaleFactor) const
     return path;
 }
 
-void BorderShape::clipToOuterShape(GraphicsContext& context, float deviceScaleFactor)
+void BorderShape::clipToOuterShape(GraphicsContext& context, float deviceScaleFactor) const
 {
     auto pixelSnappedRect = m_borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     if (pixelSnappedRect.isRounded())
@@ -214,9 +301,9 @@ void BorderShape::clipToOuterShape(GraphicsContext& context, float deviceScaleFa
         context.clip(pixelSnappedRect.rect());
 }
 
-void BorderShape::clipToInnerShape(GraphicsContext& context, float deviceScaleFactor)
+void BorderShape::clipToInnerShape(GraphicsContext& context, float deviceScaleFactor) const
 {
-    auto pixelSnappedRect = innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    auto pixelSnappedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     ASSERT(pixelSnappedRect.isRenderable());
     if (pixelSnappedRect.isRounded())
         context.clipRoundedRect(pixelSnappedRect);
@@ -224,7 +311,7 @@ void BorderShape::clipToInnerShape(GraphicsContext& context, float deviceScaleFa
         context.clip(pixelSnappedRect.rect());
 }
 
-void BorderShape::clipOutOuterShape(GraphicsContext& context, float deviceScaleFactor)
+void BorderShape::clipOutOuterShape(GraphicsContext& context, float deviceScaleFactor) const
 {
     auto pixelSnappedRect = m_borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     if (pixelSnappedRect.isEmpty())
@@ -236,9 +323,9 @@ void BorderShape::clipOutOuterShape(GraphicsContext& context, float deviceScaleF
         context.clipOut(pixelSnappedRect.rect());
 }
 
-void BorderShape::clipOutInnerShape(GraphicsContext& context, float deviceScaleFactor)
+void BorderShape::clipOutInnerShape(GraphicsContext& context, float deviceScaleFactor) const
 {
-    auto pixelSnappedRect = innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    auto pixelSnappedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     if (pixelSnappedRect.isEmpty())
         return;
 
@@ -248,7 +335,7 @@ void BorderShape::clipOutInnerShape(GraphicsContext& context, float deviceScaleF
         context.clipOut(pixelSnappedRect.rect());
 }
 
-void BorderShape::fillOuterShape(GraphicsContext& context, const Color& color, float deviceScaleFactor)
+void BorderShape::fillOuterShape(GraphicsContext& context, const Color& color, float deviceScaleFactor) const
 {
     auto pixelSnappedRect = m_borderRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     if (pixelSnappedRect.isRounded())
@@ -257,9 +344,9 @@ void BorderShape::fillOuterShape(GraphicsContext& context, const Color& color, f
         context.fillRect(pixelSnappedRect.rect(), color);
 }
 
-void BorderShape::fillInnerShape(GraphicsContext& context, const Color& color, float deviceScaleFactor)
+void BorderShape::fillInnerShape(GraphicsContext& context, const Color& color, float deviceScaleFactor) const
 {
-    auto pixelSnappedRect = innerEdgeRoundedRect().pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    auto pixelSnappedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
     ASSERT(pixelSnappedRect.isRenderable());
     if (pixelSnappedRect.isRounded())
         context.fillRoundedRect(pixelSnappedRect, color);
@@ -267,32 +354,37 @@ void BorderShape::fillInnerShape(GraphicsContext& context, const Color& color, f
         context.fillRect(pixelSnappedRect.rect(), color);
 }
 
-RoundedRect BorderShape::innerEdgeRoundedRect() const
+void BorderShape::fillRectWithInnerHoleShape(GraphicsContext& context, const LayoutRect& outerRect, const Color& color, float deviceScaleFactor) const
 {
-    auto roundedRect = RoundedRect { innerEdgeRect() };
-    if (m_borderRect.isRounded()) {
-        auto innerRadii = m_borderRect.radii();
-        innerRadii.shrink(m_borderWidths.top(), m_borderWidths.bottom(), m_borderWidths.left(), m_borderWidths.right());
-        roundedRect.setRadii(innerRadii);
-    }
-
-    if (!roundedRect.isRenderable())
-        roundedRect.adjustRadii();
-
-    return roundedRect;
+    auto pixelSnappedOuterRect = snapRectToDevicePixels(outerRect, deviceScaleFactor);
+    auto innerSnappedRoundedRect = m_innerEdgeRect.pixelSnappedRoundedRectForPainting(deviceScaleFactor);
+    ASSERT(innerSnappedRoundedRect.isRenderable());
+    context.fillRectWithRoundedHole(pixelSnappedOuterRect, innerSnappedRoundedRect, color);
 }
 
-LayoutRect BorderShape::innerEdgeRect() const
+LayoutRoundedRect BorderShape::computeInnerEdgeRoundedRect(const LayoutRoundedRect& borderRoundedRect, const RectEdges<LayoutUnit>& borderWidths)
 {
-    auto& borderRect = m_borderRect.rect();
-    auto width = std::max(0_lu, borderRect.width() - m_borderWidths.left() - m_borderWidths.right());
-    auto height = std::max(0_lu, borderRect.height() - m_borderWidths.top() - m_borderWidths.bottom());
-    return {
-        borderRect.x() + m_borderWidths.left(),
-        borderRect.y() + m_borderWidths.top(),
+    auto borderRect = borderRoundedRect.rect();
+    auto width = std::max(0_lu, borderRect.width() - borderWidths.left() - borderWidths.right());
+    auto height = std::max(0_lu, borderRect.height() - borderWidths.top() - borderWidths.bottom());
+    auto innerRect = LayoutRect {
+        borderRect.x() + borderWidths.left(),
+        borderRect.y() + borderWidths.top(),
         width,
         height
     };
+
+    auto innerEdgeRect = LayoutRoundedRect { innerRect };
+    if (borderRoundedRect.isRounded()) {
+        auto innerRadii = borderRoundedRect.radii();
+        innerRadii.shrink(borderWidths.top(), borderWidths.bottom(), borderWidths.left(), borderWidths.right());
+        innerEdgeRect.setRadii(innerRadii);
+
+        if (!innerEdgeRect.isRenderable())
+            innerEdgeRect.adjustRadii();
+    }
+
+    return innerEdgeRect;
 }
 
 } // namespace WebCore

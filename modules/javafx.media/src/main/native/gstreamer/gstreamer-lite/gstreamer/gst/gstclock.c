@@ -515,7 +515,7 @@ gst_clock_id_get_time (GstClockID id)
 /**
  * gst_clock_id_wait:
  * @id: The #GstClockID to wait on
- * @jitter: (out) (allow-none): a pointer that will contain the jitter,
+ * @jitter: (out) (optional): a pointer that will contain the jitter,
  *     can be %NULL.
  *
  * Performs a blocking wait on @id.
@@ -903,7 +903,7 @@ gst_clock_get_resolution (GstClock * clock)
 /* FIXME 2.0: Remove clock parameter below */
 /**
  * gst_clock_adjust_with_calibration:
- * @clock: (allow-none): a #GstClock to use
+ * @clock: (nullable): a #GstClock to use
  * @internal_target: a clock time
  * @cinternal: a reference internal time
  * @cexternal: a reference external time
@@ -996,7 +996,7 @@ gst_clock_adjust_unlocked (GstClock * clock, GstClockTime internal)
 /* FIXME 2.0: Remove clock parameter below */
 /**
  * gst_clock_unadjust_with_calibration:
- * @clock: (allow-none): a #GstClock to use
+ * @clock: (nullable): a #GstClock to use
  * @external_target: a clock time
  * @cinternal: a reference internal time
  * @cexternal: a reference external time
@@ -1214,10 +1214,10 @@ gst_clock_set_calibration (GstClock * clock, GstClockTime internal, GstClockTime
 /**
  * gst_clock_get_calibration:
  * @clock: a #GstClock
- * @internal: (out) (allow-none): a location to store the internal time
- * @external: (out) (allow-none): a location to store the external time
- * @rate_num: (out) (allow-none): a location to store the rate numerator
- * @rate_denom: (out) (allow-none): a location to store the rate denominator
+ * @internal: (out) (optional): a location to store the internal time
+ * @external: (out) (optional): a location to store the external time
+ * @rate_num: (out) (optional): a location to store the rate numerator
+ * @rate_denom: (out) (optional): a location to store the rate denominator
  *
  * Gets the internal rate and reference time of @clock. See
  * gst_clock_set_calibration() for more information.
@@ -1282,7 +1282,7 @@ gst_clock_slave_callback (GstClock * master, GstClockTime time,
 /**
  * gst_clock_set_master:
  * @clock: a #GstClock
- * @master: (allow-none): a master #GstClock
+ * @master: (nullable): a master #GstClock
  *
  * Sets @master as the master clock for @clock. @clock will be automatically
  * calibrated so that gst_clock_get_time() reports the same time as the
@@ -1452,14 +1452,14 @@ gst_clock_id_uses_clock (GstClockID id, GstClock * clock)
 /**
  * gst_clock_add_observation:
  * @clock: a #GstClock
- * @slave: a time on the slave
- * @master: a time on the master
+ * @observation_internal: a time on the internal clock
+ * @observation_external: a time on the external clock
  * @r_squared: (out): a pointer to hold the result
  *
- * The time @master of the master clock and the time @slave of the slave
- * clock are added to the list of observations. If enough observations
- * are available, a linear regression algorithm is run on the
- * observations and @clock is recalibrated.
+ * The time @observation_external of the external or master clock and the time
+ * @observation_internal of the internal or slave clock are added to the list of
+ * observations. If enough observations are available, a linear regression
+ * algorithm is run on the observations and @clock is recalibrated.
  *
  * If this functions returns %TRUE, @r_squared will contain the
  * correlation coefficient of the interpolation. A value of 1.0
@@ -1471,13 +1471,13 @@ gst_clock_id_uses_clock (GstClockID id, GstClock * clock)
  * regression algorithm.
  */
 gboolean
-gst_clock_add_observation (GstClock * clock, GstClockTime slave,
-    GstClockTime master, gdouble * r_squared)
+gst_clock_add_observation (GstClock * clock, GstClockTime observation_internal,
+    GstClockTime observation_external, gdouble * r_squared)
 {
   GstClockTime m_num, m_denom, b, xbase;
 
-  if (!gst_clock_add_observation_unapplied (clock, slave, master, r_squared,
-          &xbase, &b, &m_num, &m_denom))
+  if (!gst_clock_add_observation_unapplied (clock, observation_internal,
+          observation_external, r_squared, &xbase, &b, &m_num, &m_denom))
     return FALSE;
 
   /* if we have a valid regression, adjust the clock */
@@ -1489,17 +1489,17 @@ gst_clock_add_observation (GstClock * clock, GstClockTime slave,
 /**
  * gst_clock_add_observation_unapplied:
  * @clock: a #GstClock
- * @slave: a time on the slave
- * @master: a time on the master
+ * @observation_internal: a time on the internal clock
+ * @observation_external: a time on the external clock
  * @r_squared: (out): a pointer to hold the result
- * @internal: (out) (allow-none): a location to store the internal time
- * @external: (out) (allow-none): a location to store the external time
- * @rate_num: (out) (allow-none): a location to store the rate numerator
- * @rate_denom: (out) (allow-none): a location to store the rate denominator
+ * @internal: (out) (optional): a location to store the internal time
+ * @external: (out) (optional): a location to store the external time
+ * @rate_num: (out) (optional): a location to store the rate numerator
+ * @rate_denom: (out) (optional): a location to store the rate denominator
  *
  * Add a clock observation to the internal slaving algorithm the same as
- * gst_clock_add_observation(), and return the result of the master clock
- * estimation, without updating the internal calibration.
+ * gst_clock_add_observation(), and return the result of the external or master
+ * clock estimation, without updating the internal calibration.
  *
  * The caller can then take the results and call gst_clock_set_calibration()
  * with the values, or some modified version of them.
@@ -1509,9 +1509,9 @@ gst_clock_add_observation (GstClock * clock, GstClockTime slave,
  * Since: 1.6
  */
 gboolean
-gst_clock_add_observation_unapplied (GstClock * clock, GstClockTime slave,
-    GstClockTime master, gdouble * r_squared,
-    GstClockTime * internal, GstClockTime * external,
+gst_clock_add_observation_unapplied (GstClock * clock,
+    GstClockTime internal_observation, GstClockTime external_observation,
+    gdouble * r_squared, GstClockTime * internal, GstClockTime * external,
     GstClockTime * rate_num, GstClockTime * rate_denom)
 {
   GstClockTime m_num, m_denom, b, xbase;
@@ -1519,8 +1519,8 @@ gst_clock_add_observation_unapplied (GstClock * clock, GstClockTime slave,
   guint n;
 
   g_return_val_if_fail (GST_IS_CLOCK (clock), FALSE);
-  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (slave), FALSE);
-  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (master), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (internal_observation), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (external_observation), FALSE);
   g_return_val_if_fail (r_squared != NULL, FALSE);
 
   priv = clock->priv;
@@ -1528,11 +1528,12 @@ gst_clock_add_observation_unapplied (GstClock * clock, GstClockTime slave,
   GST_CLOCK_SLAVE_LOCK (clock);
 
   GST_CAT_LOG_OBJECT (GST_CAT_CLOCK, clock,
-      "adding observation slave %" GST_TIME_FORMAT ", master %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (slave), GST_TIME_ARGS (master));
+      "adding observation internal %" GST_TIME_FORMAT ", external %"
+      GST_TIME_FORMAT, GST_TIME_ARGS (internal_observation),
+      GST_TIME_ARGS (external_observation));
 
-  priv->times[(2 * priv->time_index)] = slave;
-  priv->times[(2 * priv->time_index) + 1] = master;
+  priv->times[(2 * priv->time_index)] = internal_observation;
+  priv->times[(2 * priv->time_index) + 1] = external_observation;
 
   priv->time_index++;
   if (G_UNLIKELY (priv->time_index == priv->window_size)) {

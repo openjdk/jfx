@@ -23,7 +23,9 @@
 #include "SVGCursorElement.h"
 
 #include "Document.h"
+#include "NodeInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGStringList.h"
 #include "StyleCursorImage.h"
 #include <wtf/NeverDestroyed.h>
@@ -60,7 +62,7 @@ SVGCursorElement::~SVGCursorElement()
 
 void SVGCursorElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     if (name == SVGNames::xAttr)
         Ref { m_x }->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));

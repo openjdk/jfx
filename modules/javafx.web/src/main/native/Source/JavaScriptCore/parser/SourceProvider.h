@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #include "CachedBytecode.h"
+#include "CodeBlockHash.h"
 #include "CodeSpecializationKind.h"
 #include "SourceOrigin.h"
 #include "SourceTaintedOrigin.h"
@@ -48,18 +49,18 @@ class SourceCode;
 class UnlinkedFunctionExecutable;
 class UnlinkedFunctionCodeBlock;
 
-    enum class SourceProviderSourceType : uint8_t {
+enum class SourceProviderSourceType : uint8_t {
         Program,
         Module,
         WebAssembly,
         JSON,
         ImportMap,
-    };
+};
 
-    using BytecodeCacheGenerator = Function<RefPtr<CachedBytecode>()>;
+using BytecodeCacheGenerator = Function<RefPtr<CachedBytecode>()>;
 
-    class SourceProvider : public RefCounted<SourceProvider> {
-    public:
+class SourceProvider : public ThreadSafeRefCounted<SourceProvider> {
+public:
         static const intptr_t nullID = 1;
 
         JS_EXPORT_PRIVATE SourceProvider(const SourceOrigin&, String&& sourceURL, String&& preRedirectURL, SourceTaintedOrigin, const TextPosition& startPosition, SourceProviderSourceType);
@@ -104,9 +105,17 @@ class UnlinkedFunctionCodeBlock;
         SourceTaintedOrigin sourceTaintedOrigin() const { return m_taintedness; }
         bool couldBeTainted() const { return m_taintedness != SourceTaintedOrigin::Untainted; }
 
-    private:
+    JS_EXPORT_PRIVATE void lockUnderlyingBuffer();
+    JS_EXPORT_PRIVATE void unlockUnderlyingBuffer();
+    JS_EXPORT_PRIVATE virtual CodeBlockHash codeBlockHashConcurrently(int startOffset, int endOffset, CodeSpecializationKind);
+
+private:
+    JS_EXPORT_PRIVATE virtual void lockUnderlyingBufferImpl();
+    JS_EXPORT_PRIVATE virtual void unlockUnderlyingBufferImpl();
+
         JS_EXPORT_PRIVATE void getID();
 
+    std::atomic<unsigned> m_lockingCount { 0 };
         SourceProviderSourceType m_sourceType;
         SourceOrigin m_sourceOrigin;
         String m_sourceURL;
@@ -117,12 +126,12 @@ class UnlinkedFunctionCodeBlock;
         TextPosition m_startPosition;
         SourceID m_id { 0 };
         SourceTaintedOrigin m_taintedness;
-    };
+};
 
-    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
-    class StringSourceProvider : public SourceProvider {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StringSourceProvider);
-    public:
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
+class StringSourceProvider : public SourceProvider {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StringSourceProvider, StringSourceProvider);
+public:
         static Ref<StringSourceProvider> create(const String& source, const SourceOrigin& sourceOrigin, String sourceURL, SourceTaintedOrigin taintedness, const TextPosition& startPosition = TextPosition(), SourceProviderSourceType sourceType = SourceProviderSourceType::Program)
         {
             return adoptRef(*new StringSourceProvider(source, sourceOrigin, taintedness, WTFMove(sourceURL), startPosition, sourceType));
@@ -138,31 +147,28 @@ class UnlinkedFunctionCodeBlock;
             return m_source.get();
         }
 
-    protected:
+protected:
         StringSourceProvider(const String& source, const SourceOrigin& sourceOrigin, SourceTaintedOrigin taintedness, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
             : SourceProvider(sourceOrigin, WTFMove(sourceURL), String(), taintedness, startPosition, sourceType)
             , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
         {
         }
 
-    private:
-        Ref<StringImpl> m_source;
-    };
+private:
+    const Ref<StringImpl> m_source;
+};
 
 #if ENABLE(WEBASSEMBLY)
-    class BaseWebAssemblySourceProvider : public SourceProvider {
-    public:
+class BaseWebAssemblySourceProvider : public SourceProvider {
+public:
         virtual const uint8_t* data() = 0;
         virtual size_t size() const = 0;
-        virtual void lockUnderlyingBuffer() { }
-        virtual void unlockUnderlyingBuffer() { }
-
-    protected:
+protected:
         JS_EXPORT_PRIVATE BaseWebAssemblySourceProvider(const SourceOrigin&, String&& sourceURL);
-    };
+};
 
-    class WebAssemblySourceProvider final : public BaseWebAssemblySourceProvider {
-    public:
+class WebAssemblySourceProvider final : public BaseWebAssemblySourceProvider {
+public:
         static Ref<WebAssemblySourceProvider> create(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String sourceURL)
         {
             return adoptRef(*new WebAssemblySourceProvider(WTFMove(data), sourceOrigin, WTFMove(sourceURL)));
@@ -180,7 +186,7 @@ class UnlinkedFunctionCodeBlock;
 
         const uint8_t* data() final
         {
-            return m_data.data();
+        return m_data.span().data();
         }
 
         size_t size() const final
@@ -193,7 +199,7 @@ class UnlinkedFunctionCodeBlock;
             return m_data;
         }
 
-    private:
+private:
         WebAssemblySourceProvider(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String&& sourceURL)
             : BaseWebAssemblySourceProvider(sourceOrigin, WTFMove(sourceURL))
             , m_source("[WebAssembly source]"_s)
@@ -203,27 +209,31 @@ class UnlinkedFunctionCodeBlock;
 
         String m_source;
         Vector<uint8_t> m_data;
-    };
+};
+#endif
 
-    // RAII class for managing a Wasm source provider's underlying buffer.
-    class WebAssemblySourceProviderBufferGuard {
-    public:
-        explicit WebAssemblySourceProviderBufferGuard(BaseWebAssemblySourceProvider* sourceProvider)
+// RAII class for managing a source provider's underlying buffer.
+class SourceProviderBufferGuard {
+public:
+    explicit SourceProviderBufferGuard(SourceProvider* sourceProvider)
             : m_sourceProvider(sourceProvider)
         {
             if (m_sourceProvider)
                 m_sourceProvider->lockUnderlyingBuffer();
         }
 
-        ~WebAssemblySourceProviderBufferGuard()
+    ~SourceProviderBufferGuard()
         {
             if (m_sourceProvider)
                 m_sourceProvider->unlockUnderlyingBuffer();
         }
 
-    private:
-        RefPtr<BaseWebAssemblySourceProvider> m_sourceProvider;
-    };
-#endif
+    SourceProvider* provider() { return m_sourceProvider; }
+
+private:
+    // This must not be RefPtr. It is possible that this is used by the concurrent compiler and
+    // we are ensuring that this does not go away with different mechanism. But SourceProvider etc. can have main-thread-only affinity.
+    SourceProvider* m_sourceProvider { nullptr };
+};
 
 } // namespace JSC

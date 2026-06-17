@@ -23,8 +23,10 @@
 
 #include "FilterEffectGeometry.h"
 #include "FilterEffectVector.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
+#include "SVGUnitTypes.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 

@@ -25,7 +25,6 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "MouseEventTypes.h"
 #include "PointerID.h"
 #include <wtf/HashMap.h>
@@ -42,6 +41,7 @@ class Page;
 class PlatformTouchEvent;
 class PointerEvent;
 class WindowProxy;
+template<typename> class ExceptionOr;
 
 class PointerCaptureController {
     WTF_MAKE_NONCOPYABLE(PointerCaptureController);
@@ -122,7 +122,7 @@ private:
     WeakPtr<Page> m_page;
     // While PointerID is defined as int32_t, we use int64_t here so that we may use a value outside of the int32_t range to have safe
     // empty and removed values, allowing any int32_t to be provided through the API for lookup in this hashmap.
-    using PointerIdToCapturingDataMap = UncheckedKeyHashMap<int64_t, Ref<CapturingData>, IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;
+    using PointerIdToCapturingDataMap = HashMap<int64_t, Ref<CapturingData>, IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;
     PointerIdToCapturingDataMap m_activePointerIdsToCapturingData;
     bool m_processingPendingPointerCapture { false };
     bool m_haveAnyCapturingElement { false };

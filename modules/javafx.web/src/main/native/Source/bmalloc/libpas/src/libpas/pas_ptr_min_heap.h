@@ -48,7 +48,7 @@ static inline int pas_ptr_min_heap_compare(void** left_ptr, void** right_ptr)
 static inline size_t pas_ptr_min_heap_get_index(void** element_ptr)
 {
     PAS_UNUSED_PARAM(element_ptr);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

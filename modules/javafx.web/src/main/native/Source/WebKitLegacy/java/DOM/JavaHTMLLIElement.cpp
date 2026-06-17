@@ -56,12 +56,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_setTypeImpl(JNI
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, AtomString{String(env, value)});
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_getValueImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::valueAttr);
-}
-
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_setValueImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;

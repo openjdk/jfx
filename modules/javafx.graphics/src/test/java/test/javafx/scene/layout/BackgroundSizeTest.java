@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -352,19 +352,37 @@ public class BackgroundSizeTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new BackgroundSize(10, 20, false, false, false, false);
             var endValue = new BackgroundSize(20, 40, false, false, false, false);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new BackgroundSize(10, 20, false, false, false, false);
             var endValue = new BackgroundSize(20, 40, false, false, false, false);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(20, 40, false, false, false, false);
+            assertEquals(new BackgroundSize(0, 0, false, false, false, false),
+                         startValue.interpolate(endValue, -1));
+            assertEquals(new BackgroundSize(0, 0, false, false, false, false),
+                         startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new BackgroundSize(10, 20, false, false, false, false);
+            var endValue = new BackgroundSize(20, 40, false, false, false, false);
+            assertEquals(new BackgroundSize(30, 60, false, false, false, false),
+                         startValue.interpolate(endValue, 2));
+            assertEquals(new BackgroundSize(40, 80, false, false, false, false),
+                         startValue.interpolate(endValue, 3));
         }
 
         @Test

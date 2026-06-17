@@ -27,6 +27,8 @@
 
 #include "CodeSpecializationKind.h"
 #include <wtf/PrintStream.h>
+#include <wtf/SixCharacterHash.h>
+#include <wtf/text/StringImpl.h>
 
 // CodeBlock hashes are useful for informally identifying code blocks. They correspond
 // to the low 32 bits of a SHA1 hash of the source code with two low bit flipped
@@ -36,42 +38,64 @@
 // toString(const CodeBlockHash&). Finally, we support CodeBlockHashes for native
 // functions, in which case the hash is replaced by the function address.
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class SourceCode;
 
 class CodeBlockHash {
 public:
-    CodeBlockHash()
-        : m_hash(0)
-    {
-    }
+    static constexpr size_t stringLength = 6;
+
+    CodeBlockHash() = default;
 
     explicit CodeBlockHash(unsigned hash)
         : m_hash(hash)
     {
     }
 
-    CodeBlockHash(const SourceCode&, CodeSpecializationKind);
+    JS_EXPORT_PRIVATE CodeBlockHash(const SourceCode&, CodeSpecializationKind);
+    JS_EXPORT_PRIVATE CodeBlockHash(StringView codeBlockSourceCode, StringView entireSourceCode, CodeSpecializationKind);
 
-    explicit CodeBlockHash(std::span<const char, 6>);
+    explicit CodeBlockHash(std::span<const char, stringLength>);
 
     bool isSet() const { return !!m_hash; }
-    bool operator!() const { return !isSet(); }
+    explicit operator bool() const { return isSet(); }
 
     unsigned hash() const { return m_hash; }
 
     void dump(PrintStream&) const;
 
     // Comparison methods useful for bisection.
-    friend bool operator==(const CodeBlockHash&, const CodeBlockHash&) = default;
-    bool operator<(const CodeBlockHash& other) const { return hash() < other.hash(); }
-    bool operator>(const CodeBlockHash& other) const { return hash() > other.hash(); }
-    bool operator<=(const CodeBlockHash& other) const { return hash() <= other.hash(); }
-    bool operator>=(const CodeBlockHash& other) const { return hash() >= other.hash(); }
+    friend auto operator<=>(const CodeBlockHash&, const CodeBlockHash&) = default;
 
 private:
-    unsigned m_hash;
+    unsigned m_hash { };
 };
 
 } // namespace JSC
+namespace WTF {
+
+template<> class StringTypeAdapter<JSC::CodeBlockHash> {
+public:
+    explicit StringTypeAdapter(const JSC::CodeBlockHash& hash)
+        : m_hash { hash }
+    {
+    }
+
+    unsigned length() const { return JSC::CodeBlockHash::stringLength; }
+    bool is8Bit() const { return true; }
+    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) const
+    {
+        auto buffer = integerToSixCharacterHashString(m_hash.hash());
+        StringImpl::copyCharacters(destination, std::span<const LChar>(std::bit_cast<const LChar*>(buffer.data()), buffer.size()));
+    }
+
+private:
+    JSC::CodeBlockHash m_hash;
+};
+
+} // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

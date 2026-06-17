@@ -27,6 +27,7 @@
 
 #include "FloatRect.h"
 #include "Image.h"
+#include "PlatformLayerIdentifier.h"
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
@@ -58,7 +59,7 @@ enum class TextIndicatorDismissalAnimation : uint8_t {
     FadeOut
 };
 
-// FIXME: Move PresentationTransition to TextIndicatorWindow, because it's about presentation.
+// FIXME: Perhaps move TextIndicatorPresentationTransition to TextIndicatorLayer, because it's about presentation.
 enum class TextIndicatorPresentationTransition : uint8_t {
     None,
 
@@ -66,7 +67,7 @@ enum class TextIndicatorPresentationTransition : uint8_t {
     Bounce,
     BounceAndCrossfade,
 
-    // This animation needs to be driven manually via TextIndicatorWindow::setAnimationProgress.
+    // This animation needs to be driven manually via TextIndicatorLayer::setAnimationProgress.
     FadeIn,
 };
 
@@ -140,12 +141,13 @@ struct TextIndicatorData {
     Color estimatedBackgroundColor;
     TextIndicatorPresentationTransition presentationTransition { TextIndicatorPresentationTransition::None };
     OptionSet<TextIndicatorOption> options;
+    std::optional<WebCore::PlatformLayerIdentifier> enclosingGraphicsLayerID;
 };
 
 class TextIndicator : public RefCounted<TextIndicator> {
 public:
     // FIXME: These are fairly Mac-specific, and they don't really belong here.
-    // But they're needed at TextIndicator creation time, so they can't go in TextIndicatorWindow.
+    // But they're needed at TextIndicator creation time, so they can't go in TextIndicatorLayer.
     // Maybe they can live in some Theme code somewhere?
     constexpr static float defaultHorizontalMargin { 2 };
     constexpr static float defaultVerticalMargin { 1 };
@@ -158,14 +160,22 @@ public:
 
     FloatRect selectionRectInRootViewCoordinates() const { return m_data.selectionRectInRootViewCoordinates; }
     FloatRect textBoundingRectInRootViewCoordinates() const { return m_data.textBoundingRectInRootViewCoordinates; }
+    FloatRect contentImageWithoutSelectionRectInRootViewCoordinates() const { return m_data.contentImageWithoutSelectionRectInRootViewCoordinates; }
     const Vector<FloatRect>& textRectsInBoundingRectCoordinates() const { return m_data.textRectsInBoundingRectCoordinates; }
     float contentImageScaleFactor() const { return m_data.contentImageScaleFactor; }
     Image* contentImageWithHighlight() const { return m_data.contentImageWithHighlight.get(); }
+    Image* contentImageWithoutSelection() const { return m_data.contentImageWithoutSelection.get(); }
     Image* contentImage() const { return m_data.contentImage.get(); }
     RefPtr<Image> protectedContentImage() const { return contentImage(); }
 
     TextIndicatorPresentationTransition presentationTransition() const { return m_data.presentationTransition; }
     void setPresentationTransition(TextIndicatorPresentationTransition transition) { m_data.presentationTransition = transition; }
+
+    WEBCORE_EXPORT bool wantsBounce() const;
+    WEBCORE_EXPORT bool wantsManualAnimation() const;
+
+    Color estimatedBackgroundColor() const { return m_data.estimatedBackgroundColor; }
+    OptionSet<TextIndicatorOption> options() const { return m_data.options; }
 
     TextIndicatorData data() const { return m_data; }
 

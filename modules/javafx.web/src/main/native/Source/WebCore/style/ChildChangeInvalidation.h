@@ -45,7 +45,7 @@ private:
     void invalidateForHasAfterMutation();
     void invalidateAfterChange();
     void checkForSiblingStyleChanges();
-    using MatchingHasSelectors = UncheckedKeyHashSet<const CSSSelector*>;
+    using MatchingHasSelectors = HashSet<const CSSSelector*>;
     enum class ChangedElementRelation : uint8_t { SelfOrDescendant, Sibling };
     void invalidateForChangedElement(Element&, MatchingHasSelectors&, ChangedElementRelation);
     void invalidateForChangeOutsideHasScope();
@@ -56,7 +56,7 @@ private:
 
     Element& parentElement() { return *m_parentElement; }
 
-    Element* m_parentElement { nullptr };
+    RefPtr<Element> m_parentElement;
     const ContainerNode::ChildChange& m_childChange;
 
     const bool m_isEnabled;

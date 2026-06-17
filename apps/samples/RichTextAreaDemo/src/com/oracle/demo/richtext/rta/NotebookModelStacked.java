@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -166,6 +166,10 @@ public class NotebookModelStacked extends StyledTextModel {
     @Override
     public StyleAttributeMap getStyleAttributeMap(StyleResolver r, TextPos pos) {
         return StyleAttributeMap.EMPTY;
+    }
+
+    @Override
+    protected void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs) {
     }
 
     @Override

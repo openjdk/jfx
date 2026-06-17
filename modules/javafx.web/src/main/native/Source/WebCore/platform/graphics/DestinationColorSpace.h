@@ -37,6 +37,7 @@ public:
     WEBCORE_EXPORT static const DestinationColorSpace& LinearSRGB();
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
     WEBCORE_EXPORT static const DestinationColorSpace& DisplayP3();
+    WEBCORE_EXPORT static const DestinationColorSpace& ExtendedDisplayP3();
 #endif
 #if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
     WEBCORE_EXPORT static const DestinationColorSpace& ExtendedSRGB();
@@ -62,12 +63,12 @@ public:
     PlatformColorSpace serializableColorSpace() const { return m_platformColorSpace; }
 
     WEBCORE_EXPORT std::optional<DestinationColorSpace> asRGB() const;
+    WEBCORE_EXPORT std::optional<DestinationColorSpace> asExtended() const;
 
     WEBCORE_EXPORT bool supportsOutput() const;
 
-    bool usesExtendedRange() const;
-    bool usesRec2100TransferFunctions() const;
-    bool usesStandardRange() const { return !usesExtendedRange() && !usesRec2100TransferFunctions(); }
+    WEBCORE_EXPORT bool usesExtendedRange() const;
+    bool usesITUR_2100TF() const;
 
 private:
     PlatformColorSpace m_platformColorSpace;

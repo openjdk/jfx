@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include <cmath>
 #include <type_traits>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
@@ -141,7 +143,7 @@ struct ConstantStruct {
     HashMap<String, ConstantValue> fields;
 };
 
-using BaseValue = std::variant<float, half, double, int32_t, uint32_t, int64_t, bool, ConstantArray, ConstantVector, ConstantMatrix, ConstantStruct>;
+using BaseValue = Variant<float, half, double, int32_t, uint32_t, int64_t, bool, ConstantArray, ConstantVector, ConstantMatrix, ConstantStruct>;
 struct ConstantValue : BaseValue {
     ConstantValue() = default;
 
@@ -185,7 +187,7 @@ template<typename To, typename From>
 std::optional<To> convertInteger(From value)
 {
     auto result = Checked<To, RecordOverflow>(value);
-    if (UNLIKELY(result.hasOverflowed()))
+    if (result.hasOverflowed()) [[unlikely]]
         return std::nullopt;
     return { result.value() };
 }

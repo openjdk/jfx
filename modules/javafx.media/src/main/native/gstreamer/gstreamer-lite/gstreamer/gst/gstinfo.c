@@ -101,9 +101,9 @@
 
 #include "gst_private.h"
 #include "gstutils.h"
-#include "gstquark.h"
 #include "gstsegment.h"
 #include "gstvalue.h"
+#include "gstvecdeque.h"
 #include "gstcapsfeatures.h"
 
 #endif /* GST_DISABLE_GST_DEBUG */
@@ -127,6 +127,32 @@ static char *gst_info_printf_pointer_extension_func (const char *format,
 #  include <unistd.h>           /* getpid on UNIX */
 #endif
 
+#ifdef HAVE_STDINT_H
+#  include <stdint.h>           /* uintptr_t */
+#endif
+
+#if !defined(G_OS_WIN32) && !defined(HAVE_GETTID)
+#  ifdef __linux__
+#    include <sys/types.h>
+#    include <syscall.h>        /* SYS_gettid */
+#  else
+#    include <pthread.h>        /* pthread_self() on macOS/iOS and some other UNIXes */
+#  endif
+#endif
+
+#ifdef __clang__
+#define GST_DISABLE_FORMAT_NONLITERAL_WARNING \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wformat-nonliteral\"")
+#define GST_ENABLE_FORMAT_NONLITERAL_WARNING \
+    _Pragma("clang diagnostic pop")
+#else
+/* For non-clang compilers, these macros do nothing */
+#define GST_DISABLE_FORMAT_NONLITERAL_WARNING
+#define GST_ENABLE_FORMAT_NONLITERAL_WARNING
+#endif
+
+
 #ifdef G_OS_WIN32
 #  define WIN32_LEAN_AND_MEAN   /* prevents from including too many things */
 #  include <windows.h>          /* GetStdHandle, windows console */
@@ -138,13 +164,17 @@ static char *gst_info_printf_pointer_extension_func (const char *format,
 /* use glib's abstraction once it's landed
  * https://gitlab.gnome.org/GNOME/glib/-/merge_requests/2475 */
 #ifdef G_OS_WIN32
-static inline DWORD
+typedef DWORD GstPid;
+
+static inline GstPid
 _gst_getpid (void)
 {
   return GetCurrentProcessId ();
 }
 #else
-static inline pid_t
+typedef pid_t GstPid;
+
+static inline GstPid
 _gst_getpid (void)
 {
   return getpid ();
@@ -333,6 +363,34 @@ struct _GstDebugMessage
   gchar tmp_id[32];
 };
 
+struct _GstLogContext
+{
+  GstLogContextHashFlags hash_flags;
+  GstLogContextFlags flags;
+  GstClockTime interval;
+  GstDebugCategory *category;
+
+  GMutex lock;
+  GHashTable *logged_messages;
+  GstClockTime last_reset_time;
+};
+
+struct _GstLogContextBuilder
+{
+  GstLogContextHashFlags hash_flags;
+  GstLogContextFlags flags;
+  GstDebugCategory *category;
+  GstClockTime interval;
+};
+
+/* Global registry for cleanup */
+static GHashTable *_log_contexts_registry = NULL;
+static GMutex _log_contexts_registry_lock;
+
+/* Global registry for automatically created "once" contexts */
+static GHashTable *_once_log_contexts_registry = NULL;
+static GMutex _once_log_contexts_registry_lock;
+
 /* list of all name/level pairs from --gst-debug and GST_DEBUG */
 static GMutex __level_name_mutex;
 static GSList *__level_name = NULL;
@@ -360,7 +418,7 @@ typedef struct
   GDestroyNotify notify;
 }
 LogFuncEntry;
-static GMutex __log_func_mutex;
+static GRWLock __log_func_mutex;
 static GSList *__log_functions = NULL;
 
 /* whether to add the default log function in gst_init() */
@@ -374,7 +432,7 @@ static gint G_GNUC_MAY_ALIAS __use_color = GST_DEBUG_COLOR_MODE_ON;
 
 static gchar *
 _replace_pattern_in_gst_debug_file_name (gchar * name, const char *token,
-    guint val)
+    guint64 val)
 {
   gchar *token_start;
   if ((token_start = strstr (name, token))) {
@@ -382,7 +440,9 @@ _replace_pattern_in_gst_debug_file_name (gchar * name, const char *token,
     gchar *name_prefix = name;
     gchar *name_suffix = token_start + token_len;
     token_start[0] = '\0';
-    name = g_strdup_printf ("%s%u%s", name_prefix, val, name_suffix);
+    name =
+        g_strdup_printf ("%s%" G_GUINT64_FORMAT "%s", name_prefix, val,
+        name_suffix);
     g_free (name_prefix);
   }
   return name;
@@ -601,10 +661,139 @@ gst_path_basename (const gchar * file_name)
   return file_name;
 }
 
+static gchar *
+_gst_log_ctx_get_id_literal (GstLogContext * ctx,
+    const gchar * file, gint line, GObject * object, const gchar * object_id,
+    const gchar * message)
+{
+  return g_strdup_printf ("%s:%d/%p/%s/%s",
+      (ctx->hash_flags & GST_LOG_CONTEXT_IGNORE_FILE) ? "" : file,
+      (ctx->hash_flags & GST_LOG_CONTEXT_USE_LINE_NUMBER) ? line : -1,
+      (ctx->hash_flags & GST_LOG_CONTEXT_IGNORE_OBJECT) ? 0 : object,
+      (ctx->hash_flags & GST_LOG_CONTEXT_IGNORE_OBJECT) ? "" : object_id,
+      (ctx->hash_flags & GST_LOG_CONTEXT_IGNORE_FORMAT) ? "" : message);
+
+}
+
+
+/* Message hashing based on context flags */
+static gchar *
+_gst_log_ctx_get_id_valist (GstLogContext * ctx, const gchar * file, gint line,
+    GObject * object, const gchar * object_id, const gchar * format,
+    va_list args)
+{
+  gchar *full_message = NULL;
+
+  if (ctx->hash_flags & GST_LOG_CONTEXT_USE_STRING_ARGS) {
+    g_assert (!(ctx->hash_flags & GST_LOG_CONTEXT_IGNORE_FORMAT));
+
+    GST_DISABLE_FORMAT_NONLITERAL_WARNING;
+    full_message = g_strdup_vprintf (format, args);
+    GST_ENABLE_FORMAT_NONLITERAL_WARNING;
+  }
+
+  gchar *res = _gst_log_ctx_get_id_literal (ctx, file, line, object, object_id,
+      full_message ? full_message : format);
+
+  g_free (full_message);
+
+  return res;
+}
+
+static gboolean
+_gst_log_ctx_check_id (GstLogContext * ctx, gchar * id)
+{
+  /* If throttling is not enabled, always return TRUE to allow logging */
+  if (!(ctx->flags & GST_LOG_CONTEXT_FLAG_THROTTLE))
+    return TRUE;
+
+  g_mutex_lock (&ctx->lock);
+  gboolean res = g_hash_table_add (ctx->logged_messages, id);
+  g_mutex_unlock (&ctx->lock);
+
+  return res;
+}
+
 static void
-gst_debug_log_full_valist (GstDebugCategory * category, GstDebugLevel level,
-    const gchar * file, const gchar * function, gint line,
-    GObject * object, const gchar * id, const gchar * format, va_list args)
+_gst_log_context_reset_unlocked (GstLogContext * ctx)
+{
+  if (ctx->logged_messages) {
+    g_hash_table_remove_all (ctx->logged_messages);
+  }
+
+  ctx->last_reset_time = gst_util_get_timestamp ();
+}
+
+
+static gboolean
+_gst_log_ctx_check_periodic_reset (GstLogContext * ctx)
+{
+  gboolean ret = TRUE;
+
+  g_mutex_lock (&ctx->lock);
+  if (ctx->interval == 0)
+    goto done;
+
+  if (!GST_CLOCK_TIME_IS_VALID (ctx->last_reset_time)) {
+    ctx->last_reset_time = gst_util_get_timestamp ();
+
+    goto done;
+  }
+
+  GstClockTime now = gst_util_get_timestamp ();
+  gint64 elapsed = GST_CLOCK_DIFF (ctx->last_reset_time, now);
+
+  if (elapsed >= ctx->interval) {
+    _gst_log_context_reset_unlocked (ctx);
+
+    goto done;
+  }
+  ret = FALSE;
+
+done:
+  g_mutex_unlock (&ctx->lock);
+
+  return ret;
+}
+
+static gboolean
+_gst_log_ctx_check_id_literal (GstLogContext * ctx,
+    const gchar * file, gint line, GObject * object, const gchar * id,
+    const gchar * message)
+{
+  if (!ctx)
+    return TRUE;
+
+  /* Check for periodic reset if needed */
+  if (!_gst_log_ctx_check_periodic_reset (ctx))
+    return FALSE;
+
+  return _gst_log_ctx_check_id (ctx, _gst_log_ctx_get_id_literal (ctx, file,
+          line, object, id, message));
+}
+
+static gboolean
+_gst_log_ctx_check_id_valist (GstLogContext * ctx,
+    const gchar * file, gint line,
+    GObject * object, const gchar * object_id, const gchar * format,
+    va_list args)
+{
+  if (!ctx)
+    return TRUE;
+
+  if (!_gst_log_ctx_check_periodic_reset (ctx)) {
+    return FALSE;
+  }
+
+  return _gst_log_ctx_check_id (ctx, _gst_log_ctx_get_id_valist (ctx, file,
+          line, object, object_id, format, args));
+}
+
+static void
+gst_debug_log_full_valist (GstDebugCategory * category, GstLogContext * ctx,
+    GstDebugLevel level, const gchar * file, const gchar * function, gint line,
+    GObject * object, const gchar * object_id, const gchar * format,
+    va_list args)
 {
   GstDebugMessage message;
   LogFuncEntry *entry;
@@ -615,22 +804,36 @@ gst_debug_log_full_valist (GstDebugCategory * category, GstDebugLevel level,
   if (level > gst_debug_category_get_threshold (category))
     return;
 
+  if (ctx) {
+    va_list arguments;
+    g_return_if_fail (level < GST_LEVEL_MEMDUMP);
+    G_VA_COPY (arguments, args);
+    if (!_gst_log_ctx_check_id_valist (ctx, file, line, object, object_id,
+            format, arguments)) {
+      va_end (arguments);
+      return;
+    }
+    va_end (arguments);
+  }
+
   g_return_if_fail (file != NULL);
   g_return_if_fail (function != NULL);
   g_return_if_fail (format != NULL);
 
 #ifdef GST_ENABLE_EXTRA_CHECKS
-  g_return_if_fail (id != NULL || object == NULL || G_IS_OBJECT (object));
+  g_return_if_fail (object_id != NULL || object == NULL
+      || G_IS_OBJECT (object));
 #endif
 
   message.message = NULL;
   message.format = format;
   message.object = object;
-  message.object_id = (gchar *) id;
+  message.object_id = (gchar *) object_id;
   message.free_object_id = FALSE;
 
   G_VA_COPY (message.arguments, args);
 
+  g_rw_lock_reader_lock (&__log_func_mutex);
   handler = __log_functions;
   while (handler) {
     entry = handler->data;
@@ -638,6 +841,8 @@ gst_debug_log_full_valist (GstDebugCategory * category, GstDebugLevel level,
     entry->func (category, level, file, function, line, object, &message,
         entry->user_data);
   }
+  g_rw_lock_reader_unlock (&__log_func_mutex);
+
   g_free (message.message);
   if (message.free_object_id)
     g_free (message.object_id);
@@ -667,8 +872,8 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
   g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
 #endif
 
-  gst_debug_log_full_valist (category, level, file, function, line, object,
-      NULL, format, args);
+  gst_debug_log_full_valist (category, NULL, level, file, function, line,
+      object, NULL, format, args);
 }
 
 /**
@@ -692,13 +897,13 @@ gst_debug_log_id_valist (GstDebugCategory * category, GstDebugLevel level,
     const gchar * file, const gchar * function, gint line,
     const gchar * id, const gchar * format, va_list args)
 {
-  gst_debug_log_full_valist (category, level, file, function, line, NULL, id,
-      format, args);
+  gst_debug_log_full_valist (category, NULL, level, file, function, line, NULL,
+      id, format, args);
 }
 
 static void
-gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
-    const gchar * file, const gchar * function, gint line,
+gst_debug_log_literal_full (GstDebugCategory * category, GstLogContext * ctx,
+    GstDebugLevel level, const gchar * file, const gchar * function, gint line,
     GObject * object, const gchar * id, const gchar * message_string)
 {
   GstDebugMessage message;
@@ -709,6 +914,13 @@ gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
 
   if (level > gst_debug_category_get_threshold (category))
     return;
+
+  if (ctx) {
+    g_return_if_fail (level < GST_LEVEL_MEMDUMP);
+    if (!_gst_log_ctx_check_id_literal (ctx, file, line, object, id,
+            message_string))
+      return;
+  }
 
 #ifdef GST_ENABLE_EXTRA_CHECKS
   g_return_if_fail (id != NULL || object == NULL || G_IS_OBJECT (object));
@@ -723,6 +935,7 @@ gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
   message.object_id = (gchar *) id;
   message.free_object_id = FALSE;
 
+  g_rw_lock_reader_lock (&__log_func_mutex);
   handler = __log_functions;
   while (handler) {
     entry = handler->data;
@@ -730,6 +943,7 @@ gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
     entry->func (category, level, file, function, line, object, &message,
         entry->user_data);
   }
+  g_rw_lock_reader_unlock (&__log_func_mutex);
 
   if (message.free_object_id)
     g_free (message.object_id);
@@ -759,8 +973,8 @@ gst_debug_log_literal (GstDebugCategory * category, GstDebugLevel level,
   g_warn_if_fail (object == NULL || G_IS_OBJECT (object));
 #endif
 
-  gst_debug_log_literal_full (category, level, file, function, line, object,
-      NULL, message_string);
+  gst_debug_log_literal_full (category, NULL, level, file, function, line,
+      object, NULL, message_string);
 }
 
 /**
@@ -783,8 +997,8 @@ gst_debug_log_id_literal (GstDebugCategory * category, GstDebugLevel level,
     const gchar * file, const gchar * function, gint line,
     const gchar * id, const gchar * message_string)
 {
-  gst_debug_log_literal_full (category, level, file, function, line, NULL, id,
-      message_string);
+  gst_debug_log_literal_full (category, NULL, level, file, function, line, NULL,
+      id, message_string);
 }
 
 /**
@@ -919,7 +1133,7 @@ gst_info_structure_to_string (const GstStructure * s)
 {
   if (G_LIKELY (s)) {
     gchar *str = gst_structure_to_string (s);
-    if (G_UNLIKELY (pretty_tags && s->name == GST_QUARK (TAGLIST)))
+    if (G_UNLIKELY (pretty_tags && gst_structure_has_name (s, "taglist")))
       return prettify_structure_string (str);
     else
       return str;
@@ -1078,8 +1292,27 @@ gst_info_describe_stream_collection (GstStreamCollection * collection)
   return ret;
 }
 
-static gchar *
-gst_debug_print_object (gpointer ptr)
+/**
+ * gst_debug_print_object:
+ * @ptr: (nullable): the object
+ *
+ * Returns a string that represents @ptr. This is safe to call with
+ * %GstStructure, %GstCapsFeatures, %GstMiniObject s (e.g. %GstCaps,
+ * %GstBuffer or %GstMessage), and %GObjects (e.g. %GstElement or %GstPad).
+ *
+ * The string representation is meant to be used for debugging purposes and
+ * might change between GStreamer versions.
+ *
+ * Passing other kind of pointers might or might not work and is generally
+ * unsafe to do.
+ *
+ * Returns: (transfer full) (type gchar*): a string containing a string
+ *     representation of the object
+ *
+ * Since: 1.26
+ */
+gchar *
+gst_debug_print_object (gconstpointer ptr)
 {
   GObject *object = (GObject *) ptr;
 
@@ -1175,11 +1408,23 @@ gst_debug_print_object (gpointer ptr)
   return g_strdup_printf ("%p", ptr);
 }
 
-static gchar *
-gst_debug_print_segment (gpointer ptr)
+/**
+ * gst_debug_print_segment:
+ * @segment: (nullable): the %GstSegment
+ *
+ * Returns a string that represents @segments.
+ *
+ * The string representation is meant to be used for debugging purposes and
+ * might change between GStreamer versions.
+ *
+ * Returns: (transfer full) (type gchar*): a string containing a string
+ *     representation of the segment
+ *
+ * Since: 1.26
+ */
+gchar *
+gst_debug_print_segment (const GstSegment * segment)
 {
-  GstSegment *segment = (GstSegment *) ptr;
-
   /* nicely printed segment */
   if (segment == NULL) {
     return g_strdup ("(NULL)");
@@ -1366,24 +1611,25 @@ gst_debug_construct_win_color (guint colorinfo)
   return color;
 }
 
-/* width of %p varies depending on actual value of pointer, which can make
- * output unevenly aligned if multiple threads are involved, hence the %14p
- * (should really be %18p, but %14p seems a good compromise between too many
- * white spaces and likely unalignment on my system) */
 #if defined (GLIB_SIZEOF_VOID_P) && GLIB_SIZEOF_VOID_P == 8
-#define PTR_FMT "%14p"
+#define PTR_FMT "%16p"
 #else
-#define PTR_FMT "%10p"
+#define PTR_FMT "%8p"
 #endif
 #ifdef G_OS_WIN32
-#define PID_FMT "%5lu"
+#define PID_FMT "%10lu"
 #else
-#define PID_FMT "%5d"
+#define PID_FMT "%10d"
+#endif
+#if defined(G_OS_WIN32) || defined(__linux__) || defined(HAVE_GETTID)
+#define TID_FMT PID_FMT
+#else
+#define TID_FMT PTR_FMT
 #endif
 #define CAT_FMT "%20s %s:%d:%s:%s"
-#define NOCOLOR_PRINT_FMT " "PID_FMT" "PTR_FMT" %s "CAT_FMT" %s\n"
+#define NOCOLOR_PRINT_FMT " "PID_FMT" "TID_FMT" %s "CAT_FMT" %s\n"
 #define CAT_FMT_ID "%20s %s:%d:%s:<%s>"
-#define NOCOLOR_PRINT_FMT_ID " "PID_FMT" "PTR_FMT" %s "CAT_FMT_ID" %s\n"
+#define NOCOLOR_PRINT_FMT_ID " "PID_FMT" "TID_FMT" %s "CAT_FMT_ID" %s\n"
 
 #ifdef G_OS_WIN32
 static const guchar levelcolormap_w32[GST_LEVEL_COUNT] = {
@@ -1457,6 +1703,28 @@ _gst_debug_log_preamble (GstDebugMessage * message, const gchar ** file,
   *elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
 }
 
+#ifdef G_OS_WIN32
+typedef DWORD GstTid;
+#elif defined(__linux__) || defined(HAVE_GETTID)
+typedef pid_t GstTid;
+#else
+typedef gpointer GstTid;
+#endif
+
+static inline GstTid
+_get_thread_id (void)
+{
+#ifdef G_OS_WIN32
+  return GetCurrentThreadId ();
+#elif defined(HAVE_GETTID)
+  return gettid ();
+#elif defined(__linux__)
+  return syscall (SYS_gettid);
+#else
+  return (gpointer) (uintptr_t) pthread_self ();
+#endif
+}
+
 /**
  * gst_debug_log_get_line:
  * @category: category to log
@@ -1484,17 +1752,18 @@ gst_debug_log_get_line (GstDebugCategory * category, GstDebugLevel level,
   GstClockTime elapsed;
   gchar *ret;
   const gchar *message_str, *object_id;
+  GstTid thread = _get_thread_id ();
 
   _gst_debug_log_preamble (message, &file, &message_str, &object_id, &elapsed);
 
   if (object_id)
     ret = g_strdup_printf ("%" GST_TIME_FORMAT NOCOLOR_PRINT_FMT_ID,
-        GST_TIME_ARGS (elapsed), _gst_getpid (), g_thread_self (),
+        GST_TIME_ARGS (elapsed), _gst_getpid (), thread,
         gst_debug_level_get_name (level), gst_debug_category_get_name
         (category), file, line, function, object_id, message_str);
   else
     ret = g_strdup_printf ("%" GST_TIME_FORMAT NOCOLOR_PRINT_FMT,
-        GST_TIME_ARGS (elapsed), _gst_getpid (), g_thread_self (),
+        GST_TIME_ARGS (elapsed), _gst_getpid (), thread,
         gst_debug_level_get_name (level), gst_debug_category_get_name
         (category), file, line, function, "", message_str);
 
@@ -1565,12 +1834,13 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
     const gchar * file, const gchar * function, gint line,
     GObject * object, GstDebugMessage * message, gpointer user_data)
 {
-  gint pid;
+  GstPid pid;
   GstClockTime elapsed;
   const gchar *object_id;
   GstDebugColorMode color_mode;
   const gchar *message_str;
   FILE *log_file = user_data ? user_data : stderr;
+  GstTid thread;
 #ifdef G_OS_WIN32
 #define FPRINTF_DEBUG _gst_debug_fprintf
 /* _gst_debug_fprintf will do fflush if it's required */
@@ -1590,6 +1860,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
 
   pid = _gst_getpid ();
   color_mode = gst_debug_get_color_mode ();
+  thread = _get_thread_id ();
 
   if (color_mode != GST_DEBUG_COLOR_MODE_OFF) {
 #ifdef G_OS_WIN32
@@ -1604,20 +1875,20 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
 
       _construct_term_color (gst_debug_category_get_color (category), color);
       clear = "\033[00m";
-      g_sprintf (pidcolor, "\033[%02dm", pid % 6 + 31);
+      g_sprintf (pidcolor, "\033[%02dm", (gint) (pid % 6 + 31));
       levelcolor = levelcolormap[level];
 
       if (object_id) {
-#define PRINT_FMT_ID " %s"PID_FMT"%s "PTR_FMT" %s%s%s %s"CAT_FMT_ID"%s %s\n"
+#define PRINT_FMT_ID " %s"PID_FMT"%s "TID_FMT" %s%s%s %s"CAT_FMT_ID"%s %s\n"
         FPRINTF_DEBUG (log_file, "%" GST_TIME_FORMAT PRINT_FMT_ID,
-            GST_TIME_ARGS (elapsed), pidcolor, pid, clear, g_thread_self (),
+            GST_TIME_ARGS (elapsed), pidcolor, pid, clear, thread,
             levelcolor, gst_debug_level_get_name (level), clear, color,
             gst_debug_category_get_name (category), file, line, function,
             object_id, clear, message_str);
       } else {
-#define PRINT_FMT " %s"PID_FMT"%s "PTR_FMT" %s%s%s %s"CAT_FMT"%s %s\n"
+#define PRINT_FMT " %s"PID_FMT"%s "TID_FMT" %s%s%s %s"CAT_FMT"%s %s\n"
         FPRINTF_DEBUG (log_file, "%" GST_TIME_FORMAT PRINT_FMT,
-            GST_TIME_ARGS (elapsed), pidcolor, pid, clear, g_thread_self (),
+            GST_TIME_ARGS (elapsed), pidcolor, pid, clear, thread,
             levelcolor, gst_debug_level_get_name (level), clear, color,
             gst_debug_category_get_name (category), file, line, function, "",
             clear, message_str);
@@ -1641,7 +1912,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
       FPRINTF_DEBUG (log_file, PID_FMT, pid);
       /* thread */
       SET_COLOR (clear);
-      FPRINTF_DEBUG (log_file, " " PTR_FMT " ", g_thread_self ());
+      FPRINTF_DEBUG (log_file, " " TID_FMT " ", thread);
       /* level */
       SET_COLOR (levelcolormap_w32[level]);
       FPRINTF_DEBUG (log_file, "%s ", gst_debug_level_get_name (level));
@@ -1666,13 +1937,13 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
     /* no color, all platforms */
     if (object_id) {
       FPRINTF_DEBUG (log_file, "%" GST_TIME_FORMAT NOCOLOR_PRINT_FMT_ID,
-          GST_TIME_ARGS (elapsed), pid, g_thread_self (),
+          GST_TIME_ARGS (elapsed), pid, thread,
           gst_debug_level_get_name (level),
           gst_debug_category_get_name (category), file, line, function,
           object_id, message_str);
     } else {
       FPRINTF_DEBUG (log_file, "%" GST_TIME_FORMAT NOCOLOR_PRINT_FMT,
-          GST_TIME_ARGS (elapsed), pid, g_thread_self (),
+          GST_TIME_ARGS (elapsed), pid, thread,
           gst_debug_level_get_name (level),
           gst_debug_category_get_name (category), file, line, function, "",
           message_str);
@@ -1731,7 +2002,6 @@ gst_debug_add_log_function (GstLogFunction func, gpointer user_data,
     GDestroyNotify notify)
 {
   LogFuncEntry *entry;
-  GSList *list;
 
   if (func == NULL)
     func = gst_debug_log_default;
@@ -1740,16 +2010,9 @@ gst_debug_add_log_function (GstLogFunction func, gpointer user_data,
   entry->func = func;
   entry->user_data = user_data;
   entry->notify = notify;
-  /* FIXME: we leak the old list here - other threads might access it right now
-   * in gst_debug_logv. Another solution is to lock the mutex in gst_debug_logv,
-   * but that is waaay costly.
-   * It'd probably be clever to use some kind of RCU here, but I don't know
-   * anything about that.
-   */
-  g_mutex_lock (&__log_func_mutex);
-  list = g_slist_copy (__log_functions);
-  __log_functions = g_slist_prepend (list, entry);
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_lock (&__log_func_mutex);
+  __log_functions = g_slist_prepend (__log_functions, entry);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
 
   if (gst_is_initialized ())
     GST_DEBUG ("prepended log function %p (user data %p) to log functions",
@@ -1776,26 +2039,16 @@ static guint
 gst_debug_remove_with_compare_func (GCompareFunc func, gpointer data)
 {
   GSList *found;
-  GSList *new, *cleanup = NULL;
+  GSList *cleanup = NULL;
   guint removals = 0;
 
-  g_mutex_lock (&__log_func_mutex);
-  new = __log_functions;
-  cleanup = NULL;
-  while ((found = g_slist_find_custom (new, data, func))) {
-    if (new == __log_functions) {
-      /* make a copy when we have the first hit, so that we modify the copy and
-       * make that the new list later */
-      new = g_slist_copy (new);
-      continue;
-    }
+  g_rw_lock_writer_lock (&__log_func_mutex);
+  while ((found = g_slist_find_custom (__log_functions, data, func))) {
     cleanup = g_slist_prepend (cleanup, found->data);
-    new = g_slist_delete_link (new, found);
+    __log_functions = g_slist_delete_link (__log_functions, found);
     removals++;
   }
-  /* FIXME: We leak the old list here. See _add_log_function for why. */
-  __log_functions = new;
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
 
   while (cleanup) {
     LogFuncEntry *entry = cleanup->data;
@@ -2531,9 +2784,501 @@ clear_level_names (void)
   g_mutex_unlock (&__level_name_mutex);
 }
 
+/* Logging context implementation */
+
+static void
+_gst_log_context_free (GstLogContext * ctx)
+{
+  if (!ctx)
+    return;
+
+  g_mutex_lock (&ctx->lock);
+  if (ctx->logged_messages) {
+    g_hash_table_remove_all (ctx->logged_messages);
+    g_hash_table_unref (ctx->logged_messages);
+  }
+  g_mutex_unlock (&ctx->lock);
+
+  g_free (ctx);
+}
+
+static void
+_register_log_context (GstLogContext * ctx)
+{
+  g_mutex_lock (&_log_contexts_registry_lock);
+  if (!_log_contexts_registry) {
+    _log_contexts_registry =
+        g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
+        (GDestroyNotify) _gst_log_context_free);
+  }
+
+  g_hash_table_add (_log_contexts_registry, ctx);
+  g_mutex_unlock (&_log_contexts_registry_lock);
+}
+
+static GstLogContext *
+_fetch_or_register_once_log_context (GstDebugCategory * category)
+{
+  GstLogContext *ctx;
+
+  g_mutex_lock (&_once_log_contexts_registry_lock);
+
+  if (!_once_log_contexts_registry) {
+    _once_log_contexts_registry =
+        g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
+  }
+
+  if (!(ctx = g_hash_table_lookup (_once_log_contexts_registry, category))) {
+    GstLogContextBuilder *builder =
+        gst_log_context_builder_new (category, GST_LOG_CONTEXT_FLAG_THROTTLE);
+    builder = gst_log_context_builder_set_hash_flags (builder,
+        GST_LOG_CONTEXT_USE_LINE_NUMBER);
+    ctx = gst_log_context_builder_build (builder);
+    g_hash_table_insert (_once_log_contexts_registry, ctx->category, ctx);
+  }
+
+  g_mutex_unlock (&_once_log_contexts_registry_lock);
+
+  return ctx;
+}
+
+/**
+ * gst_log_context_builder_new: (skip):
+ * @category: the debug category to use
+ * @flags: the flags to use for the log context
+ *
+ * Creates a new builder for configuring a #GstLogContext with the specified
+ * debug category and flags.
+ *
+ * Returns: (transfer full): a new #GstLogContextBuilder
+ *
+ * Since: 1.28
+ */
+GstLogContextBuilder *
+gst_log_context_builder_new (GstDebugCategory * category,
+    GstLogContextFlags flags)
+{
+  GstLogContextBuilder *builder;
+
+  g_return_val_if_fail (category, NULL);
+
+  builder = g_new0 (GstLogContextBuilder, 1);
+  builder->hash_flags = GST_LOG_CONTEXT_DEFAULT;
+  builder->flags = flags;
+  builder->interval = 0;
+  builder->category = category;
+
+  return builder;
+}
+
+
+/**
+ * gst_log_context_builder_set_category: (skip):
+ * @builder: (transfer full): a #GstLogContextBuilder
+ * @category: the debug category to use, or NULL for no specific category
+ *
+ * Sets the debug category for the log context being built.
+ *
+ * Returns: (transfer full): the same #GstLogContextBuilder
+ *
+ * Since: 1.28
+ */
+GstLogContextBuilder *
+gst_log_context_builder_set_category (GstLogContextBuilder * builder,
+    GstDebugCategory * category)
+{
+  g_return_val_if_fail (builder != NULL, NULL);
+
+  builder->category = category;
+
+  return builder;
+}
+
+/**
+ * gst_log_context_builder_set_hash_flags: (skip):
+ * @builder: (transfer full): a #GstLogContextBuilder
+ * @flags: the hash flags to use for the log context
+ *
+ * Sets the hash flags for the log context being built. These determine how
+ * message hashes are calculated for determining duplicates.
+ *
+ * Returns: (transfer full): the same #GstLogContextBuilder
+
+ * Since: 1.28
+ */
+GstLogContextBuilder *
+gst_log_context_builder_set_hash_flags (GstLogContextBuilder * builder,
+    GstLogContextHashFlags flags)
+{
+  g_return_val_if_fail (builder != NULL, NULL);
+
+  builder->hash_flags = flags;
+
+  return builder;
+}
+
+
+/**
+ * gst_log_context_builder_set_interval: (skip):
+ * @builder: (transfer full): a #GstLogContextBuilder
+ * @interval: the interval in nanoseconds for automatic reset
+ *
+ * Sets the automatic reset interval for the log context being built.
+ * If @interval is 0, no automatic reset will occur.
+ *
+ * Returns: (transfer full): the same #GstLogContextBuilder
+ *
+ * Since: 1.28
+ */
+GstLogContextBuilder *
+gst_log_context_builder_set_interval (GstLogContextBuilder * builder,
+    GstClockTime interval)
+{
+  g_return_val_if_fail (builder != NULL, NULL);
+
+  builder->interval = interval;
+
+  return builder;
+}
+
+/**
+ * gst_log_context_builder_build: (skip):
+ * @builder: (transfer full): a #GstLogContextBuilder
+ *
+ * Builds a #GstLogContext from the builder configuration.
+ * The builder is consumed by this function and should not be used afterward.
+ *
+ * Returns: (transfer full): a new #GstLogContext
+ *
+ * Since: 1.28
+ */
+GstLogContext *
+gst_log_context_builder_build (GstLogContextBuilder * builder)
+{
+  /* Create a new context */
+  GstLogContext *ctx;
+
+  ctx = g_new0 (GstLogContext, 1);
+  ctx->hash_flags = builder->hash_flags;
+  ctx->flags = builder->flags;
+  ctx->interval = builder->interval;
+  ctx->logged_messages =
+      g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  ctx->last_reset_time = GST_CLOCK_TIME_NONE;
+  ctx->category = builder->category;
+
+  /* Register for cleanup */
+  _register_log_context (ctx);
+  g_free (builder);
+
+  return ctx;
+}
+
+/**
+ * gst_log_context_get_category: (skip):
+ * @context: a #GstLogContext
+ *
+ * Get the #GstDebugCategory associated with this log context.
+ *
+ * Returns: (nullable): the #GstDebugCategory to which the context is bound
+ *
+ * Since: 1.28
+ */
+GstDebugCategory *
+gst_log_context_get_category (GstLogContext * context)
+{
+  g_return_val_if_fail (context != NULL, NULL);
+
+  return context->category;
+}
+
+/**
+ * gst_log_context_reset:
+ * @ctx: a #GstLogContext
+ *
+ * Resets the logging context, clearing all tracked messages.
+ *
+ * Since: 1.28
+ */
+void
+gst_log_context_reset (GstLogContext * ctx)
+{
+  g_return_if_fail (ctx != NULL);
+
+  g_mutex_lock (&ctx->lock);
+  _gst_log_context_reset_unlocked (ctx);
+  g_mutex_unlock (&ctx->lock);
+}
+
+/**
+ * gst_log_context_free:
+ * @ctx: a #GstLogContext
+ *
+ * Free the logging context, clearing all tracked messages.
+ *
+ * Since: 1.28
+ */
+void
+gst_log_context_free (GstLogContext * ctx)
+{
+  g_return_if_fail (ctx != NULL);
+
+  g_mutex_lock (&_log_contexts_registry_lock);
+  if (!_log_contexts_registry) {
+    g_warning ("Trying to free log context %p while was not registered", ctx);
+  } else {
+    if (!g_hash_table_remove (_log_contexts_registry, ctx)) {
+      g_warning ("Trying to free log context %p while was not registered", ctx);
+    }
+  }
+  g_mutex_unlock (&_log_contexts_registry_lock);
+}
+
+/**
+ * gst_debug_log_with_context:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @object: (nullable): the object this message relates to,
+ *     or %NULL if none
+ * @format: a printf style format string
+ * @...: optional arguments for the format string
+ *
+ * Logs a message with the specified context. If the context has already seen this
+ * message based on its flags configuration, the message will not be logged.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_with_context (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, GObject * object, const gchar * format, ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      object, NULL, format, args);
+  va_end (args);
+}
+
+/**
+ * gst_debug_log_with_context_valist:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @object: (nullable): the object this message relates to,
+ *     or %NULL if none
+ * @format: a printf style format string
+ * @args: optional arguments for the format string
+ *
+ * Logs a message with the specified context using a va_list. If the context has
+ * already seen this message based on its flags configuration, the message will
+ * not be logged.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_with_context_valist (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, GObject * object, const gchar * format, va_list args)
+{
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      object, NULL, format, args);
+}
+
+/**
+ * gst_debug_log_literal_with_context:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @object: (nullable): the object this message relates to,
+ *     or %NULL if none
+ * @message: message string
+ *
+ * Logs a literal message with the specified context. Depending on the context
+ * state, the message may not be logged at all.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_literal_with_context (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function, gint line, GObject * object, const gchar * message)
+{
+  gst_debug_log_literal_full (ctx->category, ctx, level, file, function, line,
+      object, NULL, message);
+}
+
+/**
+ * gst_debug_log_id_with_context:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @id: (nullable): the contextual ID of the message
+ * @format: a printf style format string
+ * @...: optional arguments for the format string
+ *
+ * Logs a message with the specified context and ID. If the context has already
+ * seen this message based on its flags configuration, the message will not be
+ * logged.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_id_with_context (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, const gchar * id, const gchar * format, ...)
+{
+  va_list args;
+  va_start (args, format);
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      NULL, id, format, args);
+  va_end (args);
+}
+
+/**
+ * gst_debug_log_id_with_context_valist:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @id: (nullable): the contextual ID of the message
+ * @format: a printf style format string
+ * @args: optional arguments for the format string
+ *
+ * Logs a message with the specified context and ID. If the context has already
+ * seen this message based on its flags configuration, the message will not be
+ * logged.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_id_with_context_valist (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, const gchar * id, const gchar * format, va_list args)
+{
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      NULL, id, format, args);
+}
+
+/**
+ * gst_debug_log_id_literal_with_context:
+ * @ctx: a #GstLogContext
+ * @level: level of the message
+ * @file: the file that emitted the message, usually the __FILE__ identifier
+ * @function: the function that emitted the message
+ * @line: the line that emitted the message, usually the __LINE__ identifier
+ * @id: (nullable): the contextual ID of the message
+ * @message: message string
+ *
+ * Logs a message with the specified context and ID. If the context has already
+ * seen this message based on its flags configuration, the message will not be
+ * logged.
+ *
+ * @level >= %GST_LEVEL_MEMDUMP is not supported.
+ *
+ * Since: 1.28
+ */
+void
+gst_debug_log_id_literal_with_context (GstLogContext * ctx,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function, gint line, const gchar * id, const gchar * message)
+{
+  gst_debug_log_literal_full (ctx->category, ctx, level, file, function, line,
+      NULL, id, message);
+}
+
+void
+_gst_debug_log_once (GstDebugCategory * category,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, GObject * object, const gchar * format, ...)
+{
+  va_list args;
+  GstLogContext *ctx = _fetch_or_register_once_log_context (category);
+
+  va_start (args, format);
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      object, NULL, format, args);
+  va_end (args);
+}
+
+void
+_gst_debug_log_once_id (GstDebugCategory * category,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, const gchar * id, const gchar * format, ...)
+{
+  va_list args;
+  GstLogContext *ctx = _fetch_or_register_once_log_context (category);
+  va_start (args, format);
+  gst_debug_log_full_valist (ctx->category, ctx, level, file, function, line,
+      NULL, id, format, args);
+  va_end (args);
+}
+
+static void
+_gst_log_context_cleanup (void)
+{
+  /*
+   * We need to lock both context registries for cleanup because they share
+   * values and unreffing the first will unref values from the second.
+   */
+  g_mutex_lock (&_log_contexts_registry_lock);
+  g_mutex_lock (&_once_log_contexts_registry_lock);
+
+  if (_log_contexts_registry) {
+    g_hash_table_unref (_log_contexts_registry);
+    _log_contexts_registry = NULL;
+  }
+
+  if (_once_log_contexts_registry) {
+    g_hash_table_unref (_once_log_contexts_registry);
+    _once_log_contexts_registry = NULL;
+  }
+
+  g_mutex_unlock (&_once_log_contexts_registry_lock);
+  g_mutex_unlock (&_log_contexts_registry_lock);
+}
+
 void
 _priv_gst_debug_cleanup (void)
 {
+  /* Clean up our log contexts */
+  _gst_log_context_cleanup ();
+
   g_mutex_lock (&__dbg_functions_mutex);
 
   if (__gst_function_pointers) {
@@ -2555,7 +3300,7 @@ _priv_gst_debug_cleanup (void)
 
   clear_level_names ();
 
-  g_mutex_lock (&__log_func_mutex);
+  g_rw_lock_writer_lock (&__log_func_mutex);
   while (__log_functions) {
     LogFuncEntry *log_func_entry = __log_functions->data;
     if (log_func_entry->notify)
@@ -2563,7 +3308,16 @@ _priv_gst_debug_cleanup (void)
     g_free (log_func_entry);
     __log_functions = g_slist_delete_link (__log_functions, __log_functions);
   }
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
+
+#ifdef HAVE_UNWIND
+# ifdef HAVE_DW
+  if (_global_dwfl) {
+    dwfl_end (_global_dwfl);
+    _global_dwfl = NULL;
+  }
+# endif
+#endif
 }
 
 static void
@@ -2889,6 +3643,51 @@ _gst_debug_dump_mem (GstDebugCategory * cat, const gchar * file,
     const guint8 * data, guint length)
 {
 }
+
+void
+gst_log_context_free (GstLogContext * ctx)
+{
+}
+
+void
+gst_log_context_reset (GstLogContext * ctx)
+{
+}
+
+GstDebugCategory *
+gst_log_context_get_category (GstLogContext * context)
+{
+  return NULL;
+}
+
+void
+gst_debug_log_with_context (GstLogContext * ctx, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line, GObject * object,
+    const gchar * format, ...)
+{
+}
+
+void
+gst_debug_log_with_context_valist (GstLogContext * ctx, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line, GObject * object,
+    const gchar * format, va_list args)
+{
+}
+
+void
+gst_debug_log_literal_with_context (GstLogContext * ctx, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line, GObject * object,
+    const gchar * message)
+{
+}
+
+void
+gst_debug_log_id_with_context (GstLogContext * ctx, GstDebugLevel level,
+    const gchar * file, const gchar * function, gint line, const gchar * id,
+    const gchar * format, ...)
+{
+}
+
 #endif /* GST_REMOVE_DISABLED */
 #endif /* GST_DISABLE_GST_DEBUG */
 
@@ -3536,9 +4335,9 @@ typedef struct
 {
   GList *link;
   gint64 last_use;
-  GThread *thread;
+  GstTid thread;
 
-  GQueue log;
+  GstVecDeque *log;
   gsize log_size;
 } GstRingBufferLog;
 
@@ -3551,7 +4350,7 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
     gint line, GObject * object, GstDebugMessage * message, gpointer user_data)
 {
   GstRingBufferLogger *logger = user_data;
-  GThread *thread;
+  GstTid thread;
   GstClockTime elapsed;
   gchar c;
   gchar *output;
@@ -3571,7 +4370,7 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
   }
 
   elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
-  thread = g_thread_self ();
+  thread = _get_thread_id ();
 
   if (object_id) {
     /* no color, all platforms */
@@ -3608,9 +4407,11 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
       if (log->last_use + logger->thread_timeout * G_USEC_PER_SEC >= now)
         break;
 
-      g_hash_table_remove (logger->thread_index, log->thread);
-      while ((buf = g_queue_pop_head (&log->log)))
+      g_hash_table_remove (logger->thread_index,
+          (gconstpointer) (gsize) log->thread);
+      while ((buf = gst_vec_deque_pop_head (log->log)))
         g_free (buf);
+      gst_vec_deque_free (log->log);
       g_free (log);
       g_queue_pop_tail (&logger->threads);
     }
@@ -3618,15 +4419,17 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
 
   /* Get logger for this thread, and put it back at the
    * head of the threads queue */
-  log = g_hash_table_lookup (logger->thread_index, thread);
+  log =
+      g_hash_table_lookup (logger->thread_index,
+      (gconstpointer) (gsize) thread);
   if (!log) {
     log = g_new0 (GstRingBufferLog, 1);
-    g_queue_init (&log->log);
+    log->log = gst_vec_deque_new (2048);
     log->log_size = 0;
     g_queue_push_head (&logger->threads, log);
     log->link = logger->threads.head;
     log->thread = thread;
-    g_hash_table_insert (logger->thread_index, thread, log);
+    g_hash_table_insert (logger->thread_index, (gpointer) (gsize) thread, log);
   } else {
     g_queue_unlink (&logger->threads, log->link);
     g_queue_push_head_link (&logger->threads, log->link);
@@ -3636,20 +4439,12 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
   if (output_len < logger->max_size_per_thread) {
     gchar *buf;
 
-    /* While using a GQueue here is not the most efficient thing to do, we
-     * have to allocate a string for every output anyway and could just store
-     * that instead of copying it to an actual ringbuffer.
-     * Better than GQueue would be GstQueueArray, but that one is in
-     * libgstbase and we can't use it here. That one allocation will not make
-     * much of a difference anymore, considering the number of allocations
-     * needed to get to this point...
-     */
     while (log->log_size + output_len > logger->max_size_per_thread) {
-      buf = g_queue_pop_head (&log->log);
+      buf = gst_vec_deque_pop_head (log->log);
       log->log_size -= strlen (buf);
       g_free (buf);
     }
-    g_queue_push_tail (&log->log, output);
+    gst_vec_deque_push_tail (log->log, output);
     log->log_size += output_len;
   } else {
     gchar *buf;
@@ -3657,7 +4452,7 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
     /* Can't really write anything as the line is bigger than the maximum
      * allowed log size already, so just remove everything */
 
-    while ((buf = g_queue_pop_head (&log->log)))
+    while ((buf = gst_vec_deque_pop_head (log->log)))
       g_free (buf);
     g_free (output);
     log->log_size = 0;
@@ -3690,16 +4485,17 @@ gst_debug_ring_buffer_logger_get_logs (void)
   tmp = logs = g_new0 (gchar *, ring_buffer_logger->threads.length + 1);
   for (l = ring_buffer_logger->threads.head; l; l = l->next) {
     GstRingBufferLog *log = l->data;
-    GList *l;
     gchar *p;
-    gsize len;
+    gsize n_lines, line_len;
 
     *tmp = p = g_new0 (gchar, log->log_size + 1);
 
-    for (l = log->log.head; l; l = l->next) {
-      len = strlen (l->data);
-      memcpy (p, l->data, len);
-      p += len;
+    n_lines = gst_vec_deque_get_length (log->log);
+    for (gsize i = 0; i < n_lines; i++) {
+      const gchar *line = gst_vec_deque_peek_nth (log->log, i);
+      line_len = strlen (line);
+      memcpy (p, line, line_len);
+      p += line_len;
     }
 
     tmp++;
@@ -3719,7 +4515,7 @@ gst_ring_buffer_logger_free (GstRingBufferLogger * logger)
 
     while ((log = g_queue_pop_head (&logger->threads))) {
       gchar *buf;
-      while ((buf = g_queue_pop_head (&log->log)))
+      while ((buf = gst_vec_deque_pop_head (log->log)))
         g_free (buf);
       g_free (log);
     }

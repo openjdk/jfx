@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,8 +106,12 @@ public class CanvasPage extends TestPaneBase {
     private ContextMenu createMenu(PickResult pick) {
         Node source = pick.getIntersectedNode();
         ContextMenu m = new ContextMenu();
-        FX.item(m, "Show Properties Monitor...", () -> PropertiesMonitor.open(source));
-        FX.item(m, "Accessibility Attributes...", () -> AccessibilityPropertyViewer.open(pick));
+        FX.item(m, "Accessibility Attributes...", () -> {
+            AccessibilityPropertyViewer.open(pick);
+        });
+        FX.item(m, "Show Properties Monitor...", () -> {
+            PropertiesMonitor.open(source);
+        });
         return m;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -85,9 +85,11 @@ public class UsageExamples {
 
         RichTextArea textArea = new RichTextArea();
         // build the content
+        textArea.setUndoRedoEnabled(false);
         textArea.appendText("RichTextArea\n", heading);
         textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
         textArea.appendText("monospaced.\n", mono);
+        textArea.setUndoRedoEnabled(true);
         return textArea;
     }
 

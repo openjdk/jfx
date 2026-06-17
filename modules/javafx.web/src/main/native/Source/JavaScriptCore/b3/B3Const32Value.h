@@ -44,6 +44,8 @@ public:
     Value* addConstant(Procedure&, const Value* other) const override;
     Value* subConstant(Procedure&, const Value* other) const override;
     Value* mulConstant(Procedure&, const Value* other) const override;
+    Value* mulHighConstant(Procedure&, const Value* other) const override;
+    Value* uMulHighConstant(Procedure&, const Value* other) const override;
     Value* checkAddConstant(Procedure&, const Value* other) const override;
     Value* checkSubConstant(Procedure&, const Value* other) const override;
     Value* checkMulConstant(Procedure&, const Value* other) const override;

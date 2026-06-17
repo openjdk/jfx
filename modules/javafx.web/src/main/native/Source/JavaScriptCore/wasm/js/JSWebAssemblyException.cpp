@@ -27,6 +27,7 @@
 #include "config.h"
 #include "JSWebAssemblyException.h"
 #include "WasmExceptionType.h"
+#include "WasmOps.h"
 #include "WasmTypeDefinition.h"
 
 #if ENABLE(WEBASSEMBLY)
@@ -86,18 +87,22 @@ void JSWebAssemblyException::destroy(JSCell* cell)
 
 JSValue JSWebAssemblyException::getArg(JSGlobalObject* globalObject, unsigned i) const
 {
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     const auto& tagType = tag().type();
     ASSERT(i < tagType.argumentCount());
 
-    // It feels like maybe we should throw an exception here, but as far as I can tell,
-    // the current draft spec just asserts that we can't getArg a v128. Maybe we can
-    // revisit this later.
-    RELEASE_ASSERT(tagType.argumentType(i).kind != Wasm::TypeKind::V128);
+    auto argTypeKind = tagType.argumentType(i).kind;
+    if (argTypeKind == Wasm::TypeKind::V128 || argTypeKind == Wasm::TypeKind::Exn) {
+        throwTypeError(globalObject, scope, "argument type cannot be a V128 or exnref");
+        return { };
+    }
 
     unsigned offset = 0;
     for (unsigned j = 0; j < i; ++j)
         offset += tagType.argumentType(j).kind == Wasm::TypeKind::V128 ? 2 : 1;
-    return toJSValue(globalObject, tagType.argumentType(i), payload()[offset]);
+    RELEASE_AND_RETURN(scope, toJSValue(globalObject, tagType.argumentType(i), payload()[offset]));
 }
 
 } // namespace JSC

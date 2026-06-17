@@ -17,7 +17,6 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -35,7 +34,10 @@ class Text : public CharacterData {
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static Ref<Text> create(Document&, String&&);
+    static Ref<Text> create(Document& document, String&& data)
+    {
+        return adoptRef(*new Text(document, WTFMove(data), TEXT_NODE, { }));
+    }
     static Ref<Text> createEditingText(Document&, String&&);
 
     virtual ~Text();
@@ -52,6 +54,7 @@ public:
     bool canContainRangeEndPoint() const final { return true; }
 
     RenderText* renderer() const;
+    CheckedPtr<RenderText> checkedRenderer() const;
 
     void updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
 
@@ -67,7 +70,8 @@ protected:
 
 private:
     String nodeName() const override;
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const override;
+    SerializedNode serializeNode(CloningOperation) const override;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 
     virtual Ref<Text> virtualCreate(String&&);

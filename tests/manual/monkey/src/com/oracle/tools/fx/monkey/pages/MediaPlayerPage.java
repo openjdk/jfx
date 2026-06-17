@@ -24,26 +24,22 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.io.File;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.scene.Node;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
-import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.sheets.NodePropertySheet;
-import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -55,7 +51,7 @@ public class MediaPlayerPage extends TestPaneBase {
     private final MediaView mediaView;
     private final Label currentTime = new Label();
     private final Label status = new Label();
-    private String sourceURI;
+    private final SimpleStringProperty sourceURI = new SimpleStringProperty();
     private Media media;
     private MediaPlayer player;
     private final SimpleBooleanProperty autoPlay = new SimpleBooleanProperty();
@@ -100,7 +96,7 @@ public class MediaPlayerPage extends TestPaneBase {
         OptionPane op = new OptionPane();
         // media
         op.section("Media");
-        op.option("Source URI:", createSourceOption("source"));
+        op.option("Source URI:", Options.createSourceUriOption(this, "source", sourceURI));
         op.option(new HBox(5, playButton, stopButton));
         // player
         op.section("MediaPlayer");
@@ -133,39 +129,9 @@ public class MediaPlayerPage extends TestPaneBase {
         setContent(new ScrollPane(mediaView));
     }
 
-    private Node createSourceOption(String name) {
-        TextField uri = new TextField();
-        uri.setPromptText("URI");
-        Button button = new Button("Browse...");
-        button.setOnAction((ev) -> {
-            FileChooser fc = new FileChooser();
-            if (sourceURI != null) {
-                File f = parseFileURI(sourceURI);
-                if (f != null) {
-                    fc.setInitialDirectory(f.getParentFile());
-                    fc.setInitialFileName(f.getName());
-                }
-            }
-            File file = fc.showOpenDialog(FX.getParentWindow(this));
-            if (file != null) {
-                String s = file.toURI().toString();
-                uri.setText(s);
-                sourceURI = s;
-            }
-        });
-        HBox hb = new HBox(5, uri, button);
-        HBox.setHgrow(uri, Priority.ALWAYS);
-        return hb;
-    }
-
-    private static File parseFileURI(String text) {
-        // FIX
-        return null;
-    }
-
     private MediaPlayer player() {
         if (player == null) {
-            String uri = sourceURI;
+            String uri = sourceURI.get();
             if (Utils.isBlank(uri)) {
                 player = null;
             } else {

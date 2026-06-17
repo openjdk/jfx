@@ -35,8 +35,8 @@
 namespace WTF {
 
 struct FileMetadata {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FileMetadata);
+    public:
     // The last modification time of the file, in seconds.
     WallTime modificationTime;
 

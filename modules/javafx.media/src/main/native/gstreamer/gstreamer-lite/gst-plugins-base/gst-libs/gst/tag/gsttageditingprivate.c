@@ -280,6 +280,115 @@ __exif_tag_capturing_white_balance_from_exif_value (gint value)
   }
 }
 
+gint
+__exif_tag_capturing_light_source_to_exif_value (const gchar * str)
+{
+  if (str == NULL) {
+    GST_WARNING ("Invalid light source: NULL");
+    return -1;
+  }
+
+  if (strcmp (str, "unknown") == 0)
+    return 0;
+  else if (strcmp (str, "daylight") == 0)
+    return 1;
+  else if (strcmp (str, "flourescent") == 0)
+    return 2;
+  else if (strcmp (str, "tungsten") == 0)
+    return 3;
+  else if (strcmp (str, "flash") == 0)
+    return 4;
+  else if (strcmp (str, "fine-weather") == 0)
+    return 9;
+  else if (strcmp (str, "cloudy-weather") == 0)
+    return 10;
+  else if (strcmp (str, "shade") == 0)
+    return 11;
+  else if (strcmp (str, "daylight-fluorescent") == 0)
+    return 12;
+  else if (strcmp (str, "day-white-fluorescent") == 0)
+    return 13;
+  else if (strcmp (str, "cool-white-fluorescent") == 0)
+    return 14;
+  else if (strcmp (str, "white-fluorescent") == 0)
+    return 15;
+  else if (strcmp (str, "warm-white-fluorescent") == 0)
+    return 16;
+  else if (strcmp (str, "standard-light-A") == 0)
+    return 17;
+  else if (strcmp (str, "standard-light-B") == 0)
+    return 18;
+  else if (strcmp (str, "standard-light-C") == 0)
+    return 19;
+  else if (strcmp (str, "D55") == 0)
+    return 20;
+  else if (strcmp (str, "D65") == 0)
+    return 21;
+  else if (strcmp (str, "D75") == 0)
+    return 22;
+  else if (strcmp (str, "D50") == 0)
+    return 23;
+  else if (strcmp (str, "iso-studio-tungsten") == 0)
+    return 24;
+  else if (strcmp (str, "other") == 0)
+    return 255;
+
+  GST_WARNING ("Invalid light source: %s", str);
+  return -1;
+}
+
+const gchar *
+__exif_tag_capturing_light_source_from_exif_value (gint value)
+{
+  switch (value) {
+    case 0:
+      return "unknown";
+    case 1:
+      return "daylight";
+    case 2:
+      return "flourescent";
+    case 4:
+      return "flash";
+    case 9:
+      return "fine-weather";
+    case 10:
+      return "cloudy-weather";
+    case 11:
+      return "shade";
+    case 12:
+      return "daylight-fluorescent";
+    case 13:
+      return "day-white-fluorescent";
+    case 14:
+      return "cool-white-fluorescent";
+    case 15:
+      return "white-fluorescent";
+    case 16:
+      return "warm-white-fluorescent";
+    case 17:
+      return "standard-light-A";
+    case 18:
+      return "standard-light-B";
+    case 19:
+      return "standard-light-C";
+    case 20:
+      return "D55";
+    case 21:
+      return "D65";
+    case 22:
+      return "D75";
+    case 23:
+      return "D50";
+    case 24:
+      return "iso-studio-tungsten";
+    case 255:
+      return "other";
+    default:
+      GST_WARNING ("Invalid light source type: %d", value);
+      return NULL;
+  }
+}
+
 static gint
 __exif_tag_capturing_contrast_sharpness_to_exif_value (const gchar * str,
     const gchar * tag_name)

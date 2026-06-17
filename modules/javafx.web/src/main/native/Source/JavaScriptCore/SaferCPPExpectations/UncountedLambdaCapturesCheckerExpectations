@@ -4,11 +4,9 @@ bytecode/InlineCacheCompiler.cpp
 bytecode/ObjectPropertyConditionSet.cpp
 bytecompiler/NodesCodegen.cpp
 debugger/Debugger.cpp
-dfg/DFGAbstractInterpreterInlines.h
 dfg/DFGDesiredWatchpoints.h
 dfg/DFGLazyJSValue.cpp
 dfg/DFGObjectAllocationSinkingPhase.cpp
-dfg/DFGOperations.cpp
 ftl/FTLCompile.cpp
 ftl/FTLLowerDFGToB3.cpp
 ftl/FTLOSRExitHandle.cpp
@@ -21,10 +19,5 @@ runtime/CachedTypes.cpp
 runtime/SamplingProfiler.cpp
 runtime/WaiterListManager.h
 wasm/WasmCallee.cpp
-wasm/WasmIPIntSlowPaths.cpp
-wasm/WasmOperations.cpp
-wasm/WasmSlowPaths.cpp
 wasm/WasmTable.cpp
 wasm/js/JSWebAssembly.cpp
-wasm/js/JSWebAssemblyInstance.cpp
-wasm/js/WebAssemblyModuleRecord.cpp

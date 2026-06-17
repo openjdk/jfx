@@ -34,9 +34,11 @@
 
 #include <JavaScriptCore/TypedArrays.h>
 #include "BaseAudioContext.h"
+#include "ExceptionOr.h"
 #include "FFTFrame.h"
 #include "VectorMath.h"
 #include <algorithm>
+#include <numbers>
 #include <wtf/StdLibExtras.h>
 
 // The number of bands per octave. Each octave will have this many entries in the wave tables.
@@ -264,7 +266,7 @@ void PeriodicWave::generateBasicWaveform(Type shape)
     imagP[0] = 0;
 
     for (unsigned n = 1; n < halfSize; ++n) {
-        float piFactor = 2 / (n * piFloat);
+        float piFactor = 2 / (n * std::numbers::pi_v<float>);
 
         // All waveforms are odd functions with a positive slope at time 0. Hence
         // the coefficients for cos() are always 0.

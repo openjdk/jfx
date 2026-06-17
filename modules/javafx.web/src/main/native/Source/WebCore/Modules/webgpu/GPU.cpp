@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,11 +70,6 @@ void GPU::requestAdapter(const std::optional<GPURequestAdapterOptions>& options,
 GPUTextureFormat GPU::getPreferredCanvasFormat() const
 {
     return GPUTextureFormat::Bgra8unorm;
-}
-
-Ref<WGSLLanguageFeatures> GPU::wgslLanguageFeatures() const
-{
-    return m_wgslLanguageFeatures;
 }
 
 RefPtr<GPUPresentationContext> GPU::createPresentationContext(const GPUPresentationContextDescriptor& presentationContextDescriptor)

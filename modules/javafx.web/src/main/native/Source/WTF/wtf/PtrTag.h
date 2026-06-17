@@ -170,7 +170,7 @@ WTF_EXPORT_PRIVATE const char* tagForPtr(const void*);
 
 constexpr bool enablePtrTagDebugAssert = true;
 #define REPORT_BAD_TAG(success, ptr, expectedTag) do { \
-        if (UNLIKELY(!success)) \
+        if (!success) [[unlikely]] \
             reportBadTag(reinterpret_cast<const void*>(ptr), expectedTag); \
     } while (false)
 #else

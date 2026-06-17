@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "RegistrableDomain.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
@@ -33,6 +32,8 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class LoginStatusAuthenticationType : uint8_t { WebAuthn, PasswordManager, Unmanaged };
 

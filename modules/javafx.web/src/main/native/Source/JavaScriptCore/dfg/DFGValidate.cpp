@@ -47,9 +47,8 @@ public:
         : m_graph(graph)
         , m_graphDumpMode(graphDumpMode)
         , m_graphDumpBeforePhase(graphDumpBeforePhase)
-        , m_myTupleRefCounts(m_graph.m_tupleData.size())
+        , m_myTupleRefCounts(m_graph.m_tupleData.size(), 0)
     {
-        m_myTupleRefCounts.fill(0);
     }
 
     #define VALIDATE(context, assertion) do { \
@@ -364,9 +363,17 @@ public:
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
                     }
                     break;
-                case MaterializeNewArrayWithConstantSize:
-                    VALIDATE((node), isNewArrayWithConstantSizeIndexingType(node->indexingType()));
+                case NewArrayWithButterfly:
+                case NewButterflyWithSize:
+                case MaterializeNewArrayWithButterfly: {
+                    // These only support constant size butterflies right now.
+                    Edge sizeChild = node->op() == MaterializeNewArrayWithButterfly ? m_graph.varArgChild(node, 0) : node->child1();
+                    VALIDATE((node), sizeChild->isInt32Constant());
+                    VALIDATE((node), !hasAnyArrayStorage(node->indexingType()));
+                    if (node->op() == MaterializeNewArrayWithButterfly)
+                        VALIDATE((node), !hasUndecided(node->indexingType()));
                     break;
+                }
                 case DoubleConstant:
                 case Int52Constant:
                     VALIDATE((node), node->isNumberConstant());
@@ -678,13 +685,14 @@ private:
                 case CheckInBounds:
                 case CheckInBoundsInt52:
                 case PhantomNewObject:
-                case PhantomNewArrayWithConstantSize:
+                case PhantomNewArrayWithButterfly:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
                 case PhantomNewAsyncGeneratorFunction:
                 case PhantomCreateActivation:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
                 case PutHint:
@@ -899,7 +907,7 @@ private:
                     continue;
                 switch (node->op()) {
                 case PhantomNewObject:
-                case PhantomNewArrayWithConstantSize:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -908,7 +916,7 @@ private:
                 case PhantomDirectArguments:
                 case PhantomCreateRest:
                 case PhantomClonedArguments:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case MovHint:
                 case Upsilon:
                 case ForwardVarargs:
@@ -919,6 +927,29 @@ private:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
                     break;
+
+                case PhantomNewArrayWithButterfly:
+                    // Conceptually it would be valid to sink/eliminate the Array wrapper around a butterfly.
+                    // The problem is that our GC doesn't scan auxilary buffers it sees on the stack since
+                    // they don't have an indexing header. This means any new objects that are stored into
+                    // the butterfly wouldn't be marked. e.g. something like:
+                    //
+                    // 1: NewButterflyWithSize
+                    // 2: PhantomNewArrayWithButterfly
+                    // 3: NewObject
+                    // -: PutByVal(@2, 1, @3, @1)
+                    // ... GC
+                    // 4: GetByVal(@2, 1, @1)
+                    // -: Use(@4) <-- UAF
+                    //
+                    // It's possible we work around this by one of:
+                    // 1) Allocating a JSCellButterfly but that only saves a few bytes so it probably
+                    //    wouldn't be profitable.
+                    // 2) Conservatively scanning any auxilary found on the stack but not visited by an
+                    //    object.
+                    VALIDATE((node), node->child2()->op() == PhantomNewButterflyWithSize);
+                    break;
+
 
                 case Check:
                 case CheckVarargs:
@@ -977,6 +1008,10 @@ private:
 
                 case InitializeEntrypointArguments:
                     VALIDATE((node), node->entrypointIndex() < m_graph.m_numberOfEntrypoints);
+                    break;
+
+                case GetButterfly:
+                    VALIDATE((node), !node->child1()->isPhantomAllocation());
                     break;
 
                 default:

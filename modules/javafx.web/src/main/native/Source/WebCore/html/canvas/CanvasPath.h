@@ -28,18 +28,17 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "Path.h"
-#include <variant>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 struct DOMPointInit;
+template<typename> class ExceptionOr;
 
 class CanvasPath {
 public:
-    using RadiusVariant = std::variant<double, DOMPointInit>;
+    using RadiusVariant = Variant<double, DOMPointInit>;
     virtual ~CanvasPath() = default;
 
     void closePath();
@@ -63,11 +62,12 @@ protected:
         : m_path(path)
     { }
 
-    virtual bool hasInvertibleTransform() const { return true; }
+    bool hasInvertibleTransform() const { return m_hasInvertibleTransform; }
 
     void lineTo(FloatPoint);
 
     Path m_path;
+    bool m_hasInvertibleTransform { true };
 };
 
 }

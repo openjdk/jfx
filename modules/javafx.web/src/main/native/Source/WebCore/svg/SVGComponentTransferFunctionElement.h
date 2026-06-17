@@ -23,7 +23,9 @@
 
 #include "FEComponentTransfer.h"
 #include "NodeName.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
+#include "SVGNumberList.h"
 #include <wtf/SortedArrayMap.h>
 #include <wtf/TZoneMalloc.h>
 

@@ -60,10 +60,10 @@ public:
     {
         // https://tc39.es/proposal-resizablearraybuffer/#sec-isviewoutofbounds
         // https://tc39.es/proposal-resizablearraybuffer/#sec-getviewbytelength
-        if (UNLIKELY(isDetached()))
+        if (isDetached()) [[unlikely]]
             return std::nullopt;
 
-        if (LIKELY(canUseRawFieldsDirectly()))
+        if (canUseRawFieldsDirectly()) [[likely]]
             return byteLengthRaw();
 
         RefPtr<ArrayBuffer> buffer = possiblySharedBuffer();

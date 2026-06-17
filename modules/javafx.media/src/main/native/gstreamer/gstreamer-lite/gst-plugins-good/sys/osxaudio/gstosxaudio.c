@@ -31,7 +31,9 @@
 #include "gstosxaudiosink.h"
 #include "gstosxaudiosrc.h"
 #ifndef GSTREAMER_LITE
-#ifndef HAVE_IOS
+#include "gstatdec.h"
+#include "gstatenc.h"
+#if TARGET_OS_OSX
 #include "gstosxaudiodeviceprovider.h"
 #endif
 #endif // GSTREAMER_LITE
@@ -50,10 +52,12 @@ plugin_init (GstPlugin * plugin)
   ret |= GST_ELEMENT_REGISTER (osxaudiosrc, plugin);
 #endif // GSTREAMER_LITE_TEST
 
-ret |= GST_ELEMENT_REGISTER (osxaudiosink, plugin);
+  ret |= GST_ELEMENT_REGISTER (osxaudiosink, plugin);
 
 #ifndef GSTREAMER_LITE
-#ifndef HAVE_IOS
+  ret |= GST_ELEMENT_REGISTER (atdec, plugin);
+  ret |= GST_ELEMENT_REGISTER (atenc, plugin);
+#if TARGET_OS_OSX
   ret |= GST_DEVICE_PROVIDER_REGISTER (osxaudiodeviceprovider, plugin);
 #endif
 #endif // GSTREAMER_LITE

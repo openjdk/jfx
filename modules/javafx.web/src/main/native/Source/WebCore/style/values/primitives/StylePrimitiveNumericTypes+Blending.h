@@ -36,11 +36,6 @@ using namespace CSS::Literals;
 // MARK: Interpolation of base numeric types
 // https://drafts.csswg.org/css-values/#combining-values
 template<Numeric StyleType> struct Blending<StyleType> {
-    constexpr auto canBlend(const StyleType&, const StyleType&) -> bool
-    {
-        return true;
-    }
-
     auto blend(const StyleType& from, const StyleType& to, const BlendingContext& context) -> StyleType
     {
         if (!context.progress && context.isReplace())
@@ -63,11 +58,6 @@ template<Numeric StyleType> struct Blending<StyleType> {
 // MARK: Interpolation of mixed numeric types
 // https://drafts.csswg.org/css-values/#combine-mixed
 template<auto R, typename V> struct Blending<LengthPercentage<R, V>> {
-    constexpr auto canBlend(const LengthPercentage<R, V>&, const LengthPercentage<R, V>&) -> bool
-    {
-        return true;
-    }
-
     auto blend(const LengthPercentage<R, V>& from, const LengthPercentage<R, V>& to, const BlendingContext& context) -> LengthPercentage<R, V>
     {
         using Length = typename LengthPercentage<R, V>::Dimension;
@@ -97,14 +87,14 @@ template<auto R, typename V> struct Blending<LengthPercentage<R, V>> {
 
             if (!WTF::holdsAlternative<Calc>(to) && !WTF::holdsAlternative<Percentage>(from) && (context.progress == 1 || fromIsZero)) {
                 if (WTF::holdsAlternative<Length>(to))
-                    return WebCore::Style::blend<Length>(0_css_px, get<Length>(to), context);
-                return WebCore::Style::blend<Percentage>(0_css_percentage, get<Percentage>(to), context);
+                    return WebCore::Style::blend(Length(0_css_px), get<Length>(to), context);
+                return WebCore::Style::blend(Percentage(0_css_percentage), get<Percentage>(to), context);
             }
 
             if (!WTF::holdsAlternative<Calc>(from) && !WTF::holdsAlternative<Percentage>(to) && (!context.progress || toIsZero)) {
                 if (WTF::holdsAlternative<Length>(from))
-                    return WebCore::Style::blend<Length>(get<Length>(from), 0_css_px, context);
-                return WebCore::Style::blend<Percentage>(get<Percentage>(from), 0_css_percentage, context);
+                    return WebCore::Style::blend(get<Length>(from), Length(0_css_px), context);
+                return WebCore::Style::blend(get<Percentage>(from), Percentage(0_css_percentage), context);
             }
 
             return Calc { Calculation::blend(copyCalculation(from), copyCalculation(to), context.progress) };

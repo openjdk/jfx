@@ -8,7 +8,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/com.sun.javafx=ALL-UNNAMED:javafx.base/test.util.memory=ALL-UNNAMED"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx=ALL-UNNAMED:javafx.base/test.util.memory=ALL-UNNAMED:javafx.base/test.javafx.util=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/graphics">
@@ -21,6 +21,11 @@
 		<attributes>
 			<attribute name="module" value="true"/>
 			<attribute name="add-exports" value="javafx.controls/test.com.sun.javafx.scene.control.infrastructure=ALL-UNNAMED:javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/jsobject">
+		<attributes>
+			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/fxml">

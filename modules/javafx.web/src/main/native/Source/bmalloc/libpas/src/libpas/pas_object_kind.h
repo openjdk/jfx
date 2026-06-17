@@ -62,7 +62,7 @@ static inline const char* pas_object_kind_get_string(pas_object_kind object_kind
     case pas_not_an_object_kind:
         return "not_an_object";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -75,7 +75,7 @@ pas_object_kind_for_segregated_variant(pas_segregated_page_config_variant varian
     case pas_medium_segregated_page_config_variant:
         return pas_medium_segregated_object_kind;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_not_an_object_kind;
 }
 
@@ -90,7 +90,7 @@ pas_object_kind_for_bitfit_variant(pas_bitfit_page_config_variant variant)
     case pas_marge_bitfit_page_config_variant:
         return pas_marge_bitfit_object_kind;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_not_an_object_kind;
 }
 
@@ -110,7 +110,7 @@ static inline pas_object_kind pas_object_kind_for_page_kind(pas_page_kind page_k
     case pas_marge_bitfit_page_kind:
         return pas_marge_bitfit_object_kind;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_not_an_object_kind;
 }
 

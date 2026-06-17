@@ -76,7 +76,7 @@ Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityO
         return create({ });
 
     auto addResult = windowEventLoopMap().add(key, nullptr);
-    if (UNLIKELY(addResult.isNewEntry)) {
+    if (addResult.isNewEntry) [[unlikely]] {
         auto newEventLoop = create(key);
         addResult.iterator->value = newEventLoop.ptr();
         return newEventLoop;
@@ -292,7 +292,7 @@ void WindowEventLoop::breakToAllowRenderingUpdate()
     // FIXME: Also bail out from the task loop in EventLoop::run().
     threadGlobalData().threadTimers().breakFireLoopForRenderingUpdate();
 
-    RunLoop::protectedMain()->suspendFunctionDispatchForCurrentCycle();
+    RunLoop::mainSingleton().suspendFunctionDispatchForCurrentCycle();
 #endif
 }
 

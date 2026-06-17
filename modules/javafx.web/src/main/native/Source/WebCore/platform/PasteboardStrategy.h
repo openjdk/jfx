@@ -82,17 +82,15 @@ public:
     virtual int64_t writeCustomData(const Vector<PasteboardCustomData>&, const String& pasteboardName, const PasteboardContext*) = 0;
     virtual bool containsStringSafeForDOMToReadForType(const String&, const String& pasteboardName, const PasteboardContext*) = 0;
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WPE)
     virtual Vector<String> types(const String& pasteboardName) = 0;
-    virtual String readTextFromClipboard(const String& pasteboardName) = 0;
+    virtual String readTextFromClipboard(const String& pasteboardName, const String& pasteboardType) = 0;
     virtual Vector<String> readFilePathsFromClipboard(const String& pasteboardName) = 0;
     virtual RefPtr<SharedBuffer> readBufferFromClipboard(const String& pasteboardName, const String& pasteboardType) = 0;
     virtual void writeToClipboard(const String& pasteboardName, SelectionData&&) = 0;
     virtual void clearClipboard(const String& pasteboardName) = 0;
     virtual int64_t changeCount(const String& pasteboardName) = 0;
-#endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
+#elif USE(LIBWPE)
     virtual void getTypes(Vector<String>& types) = 0;
     virtual void writeToPasteboard(const PasteboardWebContent&) = 0;
     virtual void writeToPasteboard(const String& pasteboardType, const String&) = 0;

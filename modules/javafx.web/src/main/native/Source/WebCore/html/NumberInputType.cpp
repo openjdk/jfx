@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010-2014 Google Inc. All rights reserved.
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #include "config.h"
 #include "NumberInputType.h"
 
+#include "ContainerNodeInlines.h"
 #include "Decimal.h"
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
@@ -40,9 +41,11 @@
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "PlatformLocale.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTextControl.h"
 #include "StepRange.h"
 #include <limits>
@@ -102,7 +105,7 @@ const AtomString& NumberInputType::formControlType() const
 void NumberInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
     ASSERT(element());
-    if (!valueChanged && sanitizedValue.isEmpty() && !element()->innerTextValue().isEmpty())
+    if (!valueChanged && sanitizedValue.isEmpty() && !protectedElement()->innerTextValue().isEmpty())
         updateInnerTextValue();
     TextFieldInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
 }
@@ -110,20 +113,20 @@ void NumberInputType::setValue(const String& sanitizedValue, bool valueChanged, 
 double NumberInputType::valueAsDouble() const
 {
     ASSERT(element());
-    return parseToDoubleForNumberType(element()->value());
+    return parseToDoubleForNumberType(protectedElement()->value().get());
 }
 
 ExceptionOr<void> NumberInputType::setValueAsDouble(double newValue, TextFieldEventBehavior eventBehavior) const
 {
     ASSERT(element());
-    element()->setValue(serializeForNumberType(newValue), eventBehavior);
+    protectedElement()->setValue(serializeForNumberType(newValue), eventBehavior);
     return { };
 }
 
 ExceptionOr<void> NumberInputType::setValueAsDecimal(const Decimal& newValue, TextFieldEventBehavior eventBehavior) const
 {
     ASSERT(element());
-    element()->setValue(serializeForNumberType(newValue), eventBehavior);
+    protectedElement()->setValue(serializeForNumberType(newValue), eventBehavior);
     return { };
 }
 
@@ -135,7 +138,7 @@ bool NumberInputType::typeMismatchFor(const String& value) const
 bool NumberInputType::typeMismatch() const
 {
     ASSERT(element());
-    ASSERT(!typeMismatchFor(element()->value()));
+    ASSERT(!typeMismatchFor(protectedElement()->value()));
     return false;
 }
 
@@ -147,11 +150,11 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     const Decimal stepBase = findStepBase(numberDefaultStepBase);
 
     const Decimal doubleMax = Decimal::doubleMax();
-    const Element& element = *this->element();
+    Ref element = *this->element();
 
     RangeLimitations rangeLimitations = RangeLimitations::Invalid;
     auto extractBound = [&] (const QualifiedName& attributeName, const Decimal& defaultValue) -> Decimal {
-        const AtomString& attributeValue = element.attributeWithoutSynchronization(attributeName);
+        const AtomString& attributeValue = element->attributeWithoutSynchronization(attributeName);
         Decimal valueFromAttribute = parseToNumberOrNaN(attributeValue);
         if (valueFromAttribute.isFinite()) {
             rangeLimitations = RangeLimitations::Valid;
@@ -162,7 +165,7 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     Decimal minimum = extractBound(minAttr, -doubleMax);
     Decimal maximum = extractBound(maxAttr, doubleMax);
 
-    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element.attributeWithoutSynchronization(stepAttr));
+    const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element->attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, rangeLimitations, minimum, maximum, step, stepDescription);
 }
 
@@ -171,15 +174,16 @@ bool NumberInputType::sizeShouldIncludeDecoration(int defaultSize, int& preferre
     preferredSize = defaultSize;
 
     ASSERT(element());
-    auto& stepString = element()->attributeWithoutSynchronization(stepAttr);
+    Ref element = *this->element();
+    auto& stepString = element->attributeWithoutSynchronization(stepAttr);
     if (equalLettersIgnoringASCIICase(stepString, "any"_s))
         return false;
 
-    const Decimal minimum = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr));
+    const Decimal minimum = parseToDecimalForNumberType(element->attributeWithoutSynchronization(minAttr));
     if (!minimum.isFinite())
         return false;
 
-    const Decimal maximum = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(maxAttr));
+    const Decimal maximum = parseToDecimalForNumberType(element->attributeWithoutSynchronization(maxAttr));
     if (!maximum.isFinite())
         return false;
 
@@ -193,17 +197,26 @@ bool NumberInputType::sizeShouldIncludeDecoration(int defaultSize, int& preferre
     return true;
 }
 
-float NumberInputType::decorationWidth() const
+float NumberInputType::decorationWidth(float inputWidth) const
 {
     ASSERT(element());
 
     float width = 0;
-    RefPtr<HTMLElement> spinButton = element()->innerSpinButtonElement();
-    if (RenderBox* spinRenderer = spinButton ? spinButton->renderBox() : 0) {
+    RefPtr spinButton = protectedElement()->innerSpinButtonElement();
+    if (CheckedPtr spinRenderer = spinButton ? spinButton->renderBox() : nullptr) {
         width += spinRenderer->borderAndPaddingLogicalWidth();
+
         // Since the width of spinRenderer is not calculated yet, spinRenderer->logicalWidth() returns 0.
         // So computedStyle()->logicalWidth() is used instead.
-        width += spinButton->computedStyle()->logicalWidth().value();
+
+        // FIXME <https://webkit.org/b/294858>: This is incorrect for anything other than fixed widths.
+        if (auto fixedLogicalWidth = spinButton->computedStyle()->logicalWidth().tryFixed())
+            width += fixedLogicalWidth->value;
+        else if (auto percentageLogicalWidth = spinButton->computedStyle()->logicalWidth().tryPercentage()) {
+            auto percentageLogicalWidthValue = percentageLogicalWidth->value;
+            if (percentageLogicalWidthValue != 100.f)
+                width += inputWidth * percentageLogicalWidthValue / (100 - percentageLogicalWidthValue);
+    }
     }
     return width;
 }
@@ -228,7 +241,7 @@ String NumberInputType::serialize(const Decimal& value) const
     return serializeForNumberType(value);
 }
 
-static bool isE(UChar ch)
+static bool isE(char16_t ch)
 {
     return ch == 'e' || ch == 'E';
 }
@@ -241,13 +254,13 @@ String NumberInputType::localizeValue(const String& proposedValue) const
     if (proposedValue.find(isE) != notFound)
         return proposedValue;
     ASSERT(element());
-    return element()->locale().convertToLocalizedNumber(proposedValue);
+    return protectedElement()->locale().convertToLocalizedNumber(proposedValue);
 }
 
 String NumberInputType::visibleValue() const
 {
     ASSERT(element());
-    return localizeValue(element()->value());
+    return localizeValue(protectedElement()->value());
 }
 
 String NumberInputType::convertFromVisibleValue(const String& visibleValue) const
@@ -258,20 +271,22 @@ String NumberInputType::convertFromVisibleValue(const String& visibleValue) cons
     if (visibleValue.find(isE) != notFound)
         return visibleValue;
     ASSERT(element());
-    return element()->locale().convertFromLocalizedNumber(visibleValue);
+    return protectedElement()->locale().convertFromLocalizedNumber(visibleValue);
 }
 
-String NumberInputType::sanitizeValue(const String& proposedValue) const
+ValueOrReference<String> NumberInputType::sanitizeValue(const String& proposedValue LIFETIME_BOUND) const
 {
     if (proposedValue.isEmpty())
         return proposedValue;
-    return std::isfinite(parseToDoubleForNumberType(proposedValue)) ? proposedValue : emptyString();
+    if (std::isfinite(parseToDoubleForNumberType(proposedValue)))
+        return proposedValue;
+    return emptyString();
 }
 
 bool NumberInputType::hasBadInput() const
 {
     ASSERT(element());
-    String standardValue = convertFromVisibleValue(element()->innerTextValue());
+    String standardValue = convertFromVisibleValue(protectedElement()->innerTextValue());
     return !standardValue.isEmpty() && !std::isfinite(parseToDoubleForNumberType(standardValue));
 }
 
@@ -291,17 +306,17 @@ void NumberInputType::attributeChanged(const QualifiedName& name)
     switch (name.nodeName()) {
     case AttributeNames::maxAttr:
     case AttributeNames::minAttr:
-        if (auto* element = this->element()) {
+        if (RefPtr element = this->element()) {
             element->invalidateStyleForSubtree();
-            if (auto* renderer = element->renderer())
-                renderer->setNeedsLayoutAndPrefWidthsRecalc();
+            if (CheckedPtr renderer = element->renderer())
+                renderer->setNeedsLayoutAndPreferredWidthsUpdate();
         }
         break;
     case AttributeNames::classAttr:
     case AttributeNames::stepAttr:
-        if (auto* element = this->element()) {
-            if (auto* renderer = element->renderer())
-                renderer->setNeedsLayoutAndPrefWidthsRecalc();
+        if (RefPtr element = this->element()) {
+            if (CheckedPtr renderer = element->renderer())
+                renderer->setNeedsLayoutAndPreferredWidthsUpdate();
         }
         break;
     default:

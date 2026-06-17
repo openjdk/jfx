@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include "URLPatternInit.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class EncodingCallbackType : uint8_t;
 

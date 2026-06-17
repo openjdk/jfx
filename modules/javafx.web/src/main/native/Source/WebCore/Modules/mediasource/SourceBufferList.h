@@ -34,6 +34,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -62,10 +63,10 @@ public:
     void clear();
     void replaceWith(Vector<Ref<SourceBuffer>>&&);
 
-    auto begin() { return m_list.begin(); }
-    auto end() { return m_list.end(); }
-    auto begin() const { return m_list.begin(); }
-    auto end() const { return m_list.end(); }
+    auto begin() LIFETIME_BOUND { return m_list.begin(); }
+    auto end() LIFETIME_BOUND { return m_list.end(); }
+    auto begin() const LIFETIME_BOUND { return m_list.begin(); }
+    auto end() const LIFETIME_BOUND { return m_list.end(); }
     size_t size() const { return m_list.size(); }
 
     // EventTarget interface

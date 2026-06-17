@@ -100,13 +100,29 @@ ExceptionOr<Ref<XRGPUSubImage>> XRGPUBinding::getViewSubImage(XRProjectionLayer&
     if (!m_backing)
         return Exception { ExceptionCode::AbortError };
 
+    auto layerData = projectionLayer.layerData();
+    if (!layerData)
+        return Exception { ExceptionCode::AbortError, "First frame is not ready"_s };
+
+    auto setupData = layerData->layerSetup;
+    auto textureData = layerData->textureData;
+    if (!setupData || !textureData)
+        return Exception { ExceptionCode::AbortError, "Layer setup or texture data is missing"_s };
+
+    unsigned eyeIndex = xrView.eye() == XREye::Right ? 1 : 0;
+    auto physicalSize = setupData->physicalSize[eyeIndex];
+    if (!physicalSize[0] || !physicalSize[1])
+        physicalSize = setupData->physicalSize[0];
+    auto viewport = setupData->viewports[eyeIndex];
+    if (eyeIndex)
+        viewport.move(-setupData->viewports[0].width(), 0);
     RefPtr subImage = m_backing->getViewSubImage(projectionLayer.backing());
-    return XRGPUSubImage::create(subImage.releaseNonNull(), convertToBacking(xrView.eye()), m_device);
+    return XRGPUSubImage::create(subImage.releaseNonNull(), convertToBacking(xrView.eye()), WTFMove(physicalSize), WTFMove(viewport), m_device);
 }
 
 GPUTextureFormat XRGPUBinding::getPreferredColorFormat()
 {
-    return GPUTextureFormat::Bgra8unormSRGB;
+    return GPUTextureFormat::Bgra8unorm;
 }
 
 } // namespace WebCore

@@ -38,11 +38,11 @@ namespace CSS {
 
 using DeprecatedGradientPosition = SpaceSeparatedArray<NumberOrPercentage<>, 2>;
 
-using Horizontal = std::variant<Keyword::Left, Keyword::Right>;
-using Vertical   = std::variant<Keyword::Top, Keyword::Bottom>;
+using Horizontal = Variant<Keyword::Left, Keyword::Right>;
+using Vertical   = Variant<Keyword::Top, Keyword::Bottom>;
 
-using RadialGradientExtent         = std::variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
-using PrefixedRadialGradientExtent = std::variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide, Keyword::Contain, Keyword::Cover>;
+using RadialGradientExtent         = Variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide>;
+using PrefixedRadialGradientExtent = Variant<Keyword::ClosestCorner, Keyword::ClosestSide, Keyword::FarthestCorner, Keyword::FarthestSide, Keyword::Contain, Keyword::Cover>;
 
 // MARK: - Gradient Color Interpolation Definitions.
 
@@ -108,7 +108,7 @@ template<> struct Serialize<GradientDeprecatedColorStop> { void operator()(Strin
 // MARK: - LinearGradient
 
 struct LinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -132,7 +132,7 @@ template<size_t I> const auto& get(const LinearGradient& gradient)
 // MARK: - PrefixedLinearGradient
 
 struct PrefixedLinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -183,17 +183,17 @@ struct RadialGradient {
     using Extent = RadialGradientExtent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<Nonnegative>, 2>;
-        std::variant<Size, Extent> size;
+        Variant<Size, Extent> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
     struct Circle {
         using Length = CSS::Length<Nonnegative>;
-        std::variant<Length, Extent> size;
+        Variant<Length, Extent> size;
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -238,7 +238,7 @@ struct PrefixedRadialGradient {
     using Extent = PrefixedRadialGradientExtent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<Nonnegative>, 2>;
-        std::optional<std::variant<Size, Extent>> size;
+        std::optional<Variant<Size, Extent>> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
@@ -247,7 +247,7 @@ struct PrefixedRadialGradient {
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -370,7 +370,7 @@ template<size_t I> const auto& get(const ConicGradient& gradient)
 
 // MARK: - Gradient (variant)
 
-using Gradient = std::variant<
+using Gradient = Variant<
     // Linear
     FunctionNotation<CSSValueLinearGradient, LinearGradient>,
     FunctionNotation<CSSValueRepeatingLinearGradient, LinearGradient>,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include <wtf/Function.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -58,9 +59,11 @@ public:
     virtual void clearProxies() = 0;
 
     virtual WorkerDebuggerProxy* workerDebuggerProxy() const = 0;
-    virtual WorkerLoaderProxy* workerLoaderProxy() = 0;
+    virtual WorkerLoaderProxy* workerLoaderProxy() const = 0;
+    virtual CheckedPtr<WorkerLoaderProxy> checkedWorkerLoaderProxy() const;
 
     WorkerOrWorkletGlobalScope* globalScope() const { return m_globalScope.get(); }
+    RefPtr<WorkerOrWorkletGlobalScope> protectedGlobalScope() const;
     WorkerRunLoop& runLoop() { return m_runLoop; }
 
     void start(Function<void(const String&)>&& evaluateCallback = { });
@@ -98,7 +101,7 @@ private:
     Lock m_threadCreationAndGlobalScopeLock;
     RefPtr<WorkerOrWorkletGlobalScope> m_globalScope;
     RefPtr<Thread> m_thread;
-    UniqueRef<WorkerRunLoop> m_runLoop;
+    const UniqueRef<WorkerRunLoop> m_runLoop;
     Function<void(const String&)> m_evaluateCallback;
     Function<void()> m_stoppedCallback;
     BinarySemaphore m_suspensionSemaphore;

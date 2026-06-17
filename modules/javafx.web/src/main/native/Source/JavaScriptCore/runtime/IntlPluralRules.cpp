@@ -112,7 +112,10 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     m_type = intlOption<Type>(globalObject, options, vm.propertyNames->type, { { "cardinal"_s, Type::Cardinal }, { "ordinal"_s, Type::Ordinal } }, "type must be \"cardinal\" or \"ordinal\""_s, Type::Cardinal);
     RETURN_IF_EXCEPTION(scope, void());
 
-    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, IntlNotation::Standard);
+    m_notation = intlOption<IntlNotation>(globalObject, options, Identifier::fromString(vm, "notation"_s), { { "standard"_s, IntlNotation::Standard }, { "scientific"_s, IntlNotation::Scientific }, { "engineering"_s, IntlNotation::Engineering }, { "compact"_s, IntlNotation::Compact } }, "notation must be either \"standard\", \"scientific\", \"engineering\", or \"compact\""_s, IntlNotation::Standard);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    setNumberFormatDigitOptions(globalObject, this, options, 0, 3, m_notation);
     RETURN_IF_EXCEPTION(scope, void());
 
     auto locale = m_locale.utf8();
@@ -121,9 +124,9 @@ void IntlPluralRules::initializePluralRules(JSGlobalObject* globalObject, JSValu
     StringBuilder skeletonBuilder;
 
     appendNumberFormatDigitOptionsToSkeleton(this, skeletonBuilder);
+    appendNumberFormatNotationOptionsToSkeleton(this, skeletonBuilder);
 
-    String skeleton = skeletonBuilder.toString();
-    StringView skeletonView(skeleton);
+    StringView skeletonView { skeletonBuilder.toString() };
     auto upconverted = skeletonView.upconvertedCharacters();
 
     m_numberFormatter = std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter>(unumf_openForSkeletonAndLocale(upconverted.get(), skeletonView.length(), locale.data(), &status));
@@ -156,6 +159,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     JSObject* options = constructEmptyObject(globalObject);
     options->putDirect(vm, vm.propertyNames->locale, jsNontrivialString(vm, m_locale));
     options->putDirect(vm, vm.propertyNames->type, jsNontrivialString(vm, m_type == Type::Ordinal ? "ordinal"_s : "cardinal"_s));
+    options->putDirect(vm, Identifier::fromString(vm, "notation"_s), jsNontrivialString(vm, IntlNumberFormat::notationString(m_notation)));
     options->putDirect(vm, vm.propertyNames->minimumIntegerDigits, jsNumber(m_minimumIntegerDigits));
     switch (m_roundingType) {
     case IntlRoundingType::FractionDigits:
@@ -176,7 +180,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
     }
 
     JSArray* categories = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 0);
-    if (UNLIKELY(!categories)) {
+    if (!categories) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -236,7 +240,7 @@ JSValue IntlPluralRules::select(JSGlobalObject* globalObject, double value) cons
     unumf_formatDouble(m_numberFormatter.get(), value, formattedNumber.get(), &status);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
-    Vector<UChar, 32> buffer;
+    Vector<char16_t, 32> buffer;
     status = callBufferProducingFunction(uplrules_selectFormatted, m_pluralRules.get(), formattedNumber.get(), buffer);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);
@@ -262,7 +266,7 @@ JSValue IntlPluralRules::selectRange(JSGlobalObject* globalObject, double start,
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select range of plural value"_s);
 
-    Vector<UChar, 32> buffer;
+    Vector<char16_t, 32> buffer;
     status = callBufferProducingFunction(uplrules_selectForRange, m_pluralRules.get(), range.get(), buffer);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to select plural value"_s);

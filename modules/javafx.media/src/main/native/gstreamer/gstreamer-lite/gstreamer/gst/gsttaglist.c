@@ -42,8 +42,8 @@
 #include "gstinfo.h"
 #include "gstvalue.h"
 #include "gstbuffer.h"
-#include "gstquark.h"
 #include "gststructure.h"
+#include "gstidstr-private.h"
 
 #include <gobject/gvaluecollector.h>
 #include <string.h>
@@ -68,12 +68,12 @@ typedef struct
 {
   GType type;                   /* type the data is in */
 
+  GstIdStr name;
   const gchar *nick;            /* translated short description */
   const gchar *blurb;           /* translated long description  */
 
   GstTagMergeFunc merge_func;   /* functions to merge the values */
   GstTagFlag flag;              /* type of tag */
-  GQuark name_quark;            /* quark for the name */
 }
 GstTagInfo;
 
@@ -264,11 +264,15 @@ _priv_gst_tag_initialize (void)
   gst_tag_register_static (GST_TAG_SERIAL, GST_TAG_FLAG_ENCODED,
       G_TYPE_UINT, _("serial"), _("serial number of track"), NULL);
   gst_tag_register_static (GST_TAG_TRACK_GAIN, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("replaygain track gain"), _("track gain in db"), NULL);
+      G_TYPE_DOUBLE, _("replaygain track gain"), _("track gain in dB"), NULL);
+  gst_tag_register_static (GST_TAG_TRACK_GAIN_R128, GST_TAG_FLAG_META,
+      G_TYPE_DOUBLE, _("r128 track gain"), _("track gain in dB (r128)"), NULL);
   gst_tag_register_static (GST_TAG_TRACK_PEAK, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("replaygain track peak"), _("peak of the track"), NULL);
   gst_tag_register_static (GST_TAG_ALBUM_GAIN, GST_TAG_FLAG_META,
-      G_TYPE_DOUBLE, _("replaygain album gain"), _("album gain in db"), NULL);
+      G_TYPE_DOUBLE, _("replaygain album gain"), _("album gain in dB"), NULL);
+  gst_tag_register_static (GST_TAG_ALBUM_GAIN_R128, GST_TAG_FLAG_META,
+      G_TYPE_DOUBLE, _("r128 album gain"), _("album gain in dB (r128)"), NULL);
   gst_tag_register_static (GST_TAG_ALBUM_PEAK, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("replaygain album peak"), _("peak of the album"), NULL);
   gst_tag_register_static (GST_TAG_REFERENCE_LEVEL, GST_TAG_FLAG_META,
@@ -550,10 +554,10 @@ gst_tag_register_static (const gchar * name, GstTagFlag flag, GType type,
     return;
   }
 
-  info = g_new (GstTagInfo, 1);
+  info = g_new0 (GstTagInfo, 1);
   info->flag = flag;
   info->type = type;
-  info->name_quark = g_quark_from_static_string (name);
+  gst_id_str_set_static_str (&info->name, name);
   info->nick = nick;
   info->blurb = blurb;
   info->merge_func = func;
@@ -755,7 +759,7 @@ gst_tag_list_new_empty (void)
   GstStructure *s;
   GstTagList *tag_list;
 
-  s = gst_structure_new_id_empty (GST_QUARK (TAGLIST));
+  s = gst_structure_new_empty ("taglist");
   tag_list = gst_tag_list_new_internal (s, GST_TAG_SCOPE_STREAM);
   return tag_list;
 }
@@ -956,11 +960,11 @@ gst_tag_list_is_empty (const GstTagList * list)
 }
 
 static gboolean
-gst_tag_list_fields_equal (GQuark field_id, const GValue * value2,
+gst_tag_list_fields_equal (const GstIdStr * field, const GValue * value2,
     gpointer data)
 {
   const GstStructure *struct1 = (const GstStructure *) data;
-  const GValue *value1 = gst_structure_id_get_value (struct1, field_id);
+  const GValue *value1 = gst_structure_id_str_get_value (struct1, field);
   gdouble d1, d2;
 
   if (value1 == NULL) {
@@ -1017,7 +1021,8 @@ gst_tag_list_is_equal (const GstTagList * list1, const GstTagList * list2)
     return FALSE;
   }
 
-  return gst_structure_foreach (s1, gst_tag_list_fields_equal, (gpointer) s2);
+  return gst_structure_foreach_id_str (s1, gst_tag_list_fields_equal,
+      (gpointer) s2);
 }
 
 typedef struct
@@ -1033,7 +1038,7 @@ gst_tag_list_add_value_internal (GstTagList * tag_list, GstTagMergeMode mode,
 {
   GstStructure *list = GST_TAG_LIST_STRUCTURE (tag_list);
   const GValue *value2;
-  GQuark tag_quark;
+  const GstIdStr *tag_name;
 
   if (info == NULL) {
     info = gst_tag_lookup (tag);
@@ -1051,23 +1056,23 @@ gst_tag_list_add_value_internal (GstTagList * tag_list, GstTagMergeMode mode,
     return;
   }
 
-  tag_quark = info->name_quark;
+  tag_name = &info->name;
 
   if (info->merge_func
-      && (value2 = gst_structure_id_get_value (list, tag_quark)) != NULL) {
+      && (value2 = gst_structure_id_str_get_value (list, tag_name)) != NULL) {
     GValue dest = { 0, };
 
     switch (mode) {
       case GST_TAG_MERGE_REPLACE_ALL:
       case GST_TAG_MERGE_REPLACE:
-        gst_structure_id_set_value (list, tag_quark, value);
+        gst_structure_id_str_set_value (list, tag_name, value);
         break;
       case GST_TAG_MERGE_PREPEND:
         if (GST_VALUE_HOLDS_LIST (value2) && !GST_VALUE_HOLDS_LIST (value))
           gst_value_list_prepend_value ((GValue *) value2, value);
         else {
           gst_value_list_merge (&dest, value, value2);
-          gst_structure_id_take_value (list, tag_quark, &dest);
+          gst_structure_id_str_take_value (list, tag_name, &dest);
         }
         break;
       case GST_TAG_MERGE_APPEND:
@@ -1075,7 +1080,7 @@ gst_tag_list_add_value_internal (GstTagList * tag_list, GstTagMergeMode mode,
           gst_value_list_append_value ((GValue *) value2, value);
         else {
           gst_value_list_merge (&dest, value2, value);
-          gst_structure_id_take_value (list, tag_quark, &dest);
+          gst_structure_id_str_take_value (list, tag_name, &dest);
         }
         break;
       case GST_TAG_MERGE_KEEP:
@@ -1089,13 +1094,13 @@ gst_tag_list_add_value_internal (GstTagList * tag_list, GstTagMergeMode mode,
     switch (mode) {
       case GST_TAG_MERGE_APPEND:
       case GST_TAG_MERGE_KEEP:
-        if (gst_structure_id_get_value (list, tag_quark) != NULL)
+        if (gst_structure_id_str_get_value (list, tag_name) != NULL)
           break;
         /* fall through */
       case GST_TAG_MERGE_REPLACE_ALL:
       case GST_TAG_MERGE_REPLACE:
       case GST_TAG_MERGE_PREPEND:
-        gst_structure_id_set_value (list, tag_quark, value);
+        gst_structure_id_str_set_value (list, tag_name, value);
         break;
       case GST_TAG_MERGE_KEEP_ALL:
         break;
@@ -1107,13 +1112,13 @@ gst_tag_list_add_value_internal (GstTagList * tag_list, GstTagMergeMode mode,
 }
 
 static gboolean
-gst_tag_list_copy_foreach (GQuark tag_quark, const GValue * value,
+gst_tag_list_copy_foreach (const GstIdStr * field, const GValue * value,
     gpointer user_data)
 {
   GstTagCopyData *copy = (GstTagCopyData *) user_data;
   const gchar *tag;
 
-  tag = g_quark_to_string (tag_quark);
+  tag = gst_id_str_as_str (field);
   gst_tag_list_add_value_internal (copy->list, copy->mode, tag, value, NULL);
 
   return TRUE;
@@ -1143,7 +1148,7 @@ gst_tag_list_insert (GstTagList * into, const GstTagList * from,
   if (mode == GST_TAG_MERGE_REPLACE_ALL) {
     gst_structure_remove_all_fields (GST_TAG_LIST_STRUCTURE (into));
   }
-  gst_structure_foreach (GST_TAG_LIST_STRUCTURE (from),
+  gst_structure_foreach_id_str (GST_TAG_LIST_STRUCTURE (from),
       gst_tag_list_copy_foreach, &data);
 }
 
@@ -1296,6 +1301,7 @@ gst_tag_list_add_valist (GstTagList * list, GstTagMergeMode mode,
       g_warning ("unknown tag '%s'", tag);
       return;
     }
+    memset (&value, 0, sizeof (value));
     G_VALUE_COLLECT_INIT (&value, info->type, var_args, 0, &error);
     if (error) {
       g_warning ("%s: %s", G_STRLOC, error);
@@ -1400,20 +1406,20 @@ typedef struct
 TagForeachData;
 
 static int
-structure_foreach_wrapper (GQuark field_id, const GValue * value,
+structure_foreach_wrapper (const GstIdStr * field, const GValue * value,
     gpointer user_data)
 {
   TagForeachData *data = (TagForeachData *) user_data;
 
-  data->func (data->tag_list, g_quark_to_string (field_id), data->data);
+  data->func (data->tag_list, gst_id_str_as_str (field), data->data);
   return TRUE;
 }
 
 /**
  * gst_tag_list_foreach:
  * @list: list to iterate over
- * @func: (scope call): function to be called for each tag
- * @user_data: (closure): user specified data
+ * @func: (scope call) (closure user_data): function to be called for each tag
+ * @user_data: user specified data
  *
  * Calls the given function for each tag inside the tag list. Note that if there
  * is no tag, the function won't be called at all.
@@ -1430,7 +1436,7 @@ gst_tag_list_foreach (const GstTagList * list, GstTagForeachFunc func,
   data.func = func;
   data.tag_list = list;
   data.data = user_data;
-  gst_structure_foreach (GST_TAG_LIST_STRUCTURE (list),
+  gst_structure_foreach_id_str (GST_TAG_LIST_STRUCTURE (list),
       structure_foreach_wrapper, &data);
 }
 
@@ -2081,9 +2087,10 @@ gst_tag_list_get_sample_index (const GstTagList * list,
  *
  * Returns: (transfer full): the new #GstTagList
  */
-GstTagList *(gst_tag_list_copy) (const GstTagList * taglist)
+GstTagList *
+gst_tag_list_copy (const GstTagList * taglist)
 {
-  return GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
+  return (GstTagList *) (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
 }
 
 /**
@@ -2183,4 +2190,49 @@ gst_tag_list_take (GstTagList ** old_taglist, GstTagList * new_taglist)
 {
   return gst_mini_object_take ((GstMiniObject **) old_taglist,
       (GstMiniObject *) new_taglist);
+}
+
+const GstStructure *
+_gst_tag_list_structure (const GstTagList * list)
+{
+  return GST_TAG_LIST_STRUCTURE (list);
+}
+
+/**
+ * gst_tag_list_is_writable:
+ * @taglist: a #GstTagList
+ *
+ * Tests if you can safely modify @taglist. It is only safe to modify taglist when
+ * there is only one owner of the taglist - ie, the object is writable.
+ */
+gboolean
+gst_tag_list_is_writable (const GstTagList * taglist)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (taglist));
+}
+
+/**
+ * gst_tag_list_make_writable:
+ * @taglist: (transfer full): a #GstTagList
+ *
+ * Returns a writable copy of @taglist.
+ *
+ * If there is only one reference count on @taglist, the caller must be the owner,
+ * and so this function will return the taglist object unchanged. If on the other
+ * hand there is more than one reference on the object, a new taglist object will
+ * be returned. The caller's reference on @taglist will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the taglist in the argument and refs the taglist
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_tag_list_ref().
+ *
+ * Returns: (transfer full): a writable taglist which may or may not be the
+ *     same as @taglist
+ */
+GstTagList *
+gst_tag_list_make_writable (GstTagList * taglist)
+{
+  return (GstTagList
+      *) (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (taglist)));
 }

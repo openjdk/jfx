@@ -51,8 +51,7 @@ void WebGLProvokingVertex::provokingVertexWEBGL(GCGLenum provokeMode)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->provokingVertexANGLE(provokeMode);
+    protectedContext()->protectedGraphicsContextGL()->provokingVertexANGLE(provokeMode);
 }
 
 } // namespace WebCore

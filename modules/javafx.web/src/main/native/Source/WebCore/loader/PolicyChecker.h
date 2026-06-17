@@ -74,12 +74,12 @@ enum class PolicyDecisionMode { Synchronous, Asynchronous };
 
 class PolicyChecker : public CanMakeWeakPtr<PolicyChecker> {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolicyChecker, Loader);
 public:
     explicit PolicyChecker(LocalFrame&);
 
     using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
-    using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
+    using NewWindowPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
 
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, DocumentLoader*, RefPtr<FormState>&&, NavigationPolicyDecisionFunction&&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous);
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&&);

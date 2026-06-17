@@ -24,6 +24,7 @@
 #include "HTMLMarqueeElement.h"
 
 #include "Attribute.h"
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ElementInlines.h"
@@ -176,7 +177,7 @@ void HTMLMarqueeElement::setScrollDelay(unsigned scrollDelay)
 
 int HTMLMarqueeElement::loop() const
 {
-    int loopValue = getIntegralAttribute(loopAttr);
+    int loopValue = integralAttribute(loopAttr);
     return loopValue > 0 ? loopValue : -1;
 }
 

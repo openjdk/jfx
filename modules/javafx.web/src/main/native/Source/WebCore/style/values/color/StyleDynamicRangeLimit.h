@@ -42,7 +42,7 @@ namespace Style {
 
 struct DynamicRangeLimit {
     DynamicRangeLimit(CSS::Keyword::Standard);
-    DynamicRangeLimit(CSS::Keyword::ConstrainedHigh);
+    DynamicRangeLimit(CSS::Keyword::Constrained);
     DynamicRangeLimit(CSS::Keyword::NoLimit);
     DynamicRangeLimit(DynamicRangeLimitMixFunction&&);
 
@@ -61,7 +61,7 @@ struct DynamicRangeLimit {
 private:
     using Kind = CompactVariant<
        CSS::Keyword::Standard,
-       CSS::Keyword::ConstrainedHigh,
+       CSS::Keyword::Constrained,
        CSS::Keyword::NoLimit,
        UniqueRef<DynamicRangeLimitMixFunction>
     >;
@@ -76,7 +76,7 @@ inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Standard keyword)
 {
 }
 
-inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::ConstrainedHigh keyword)
+inline DynamicRangeLimit::DynamicRangeLimit(CSS::Keyword::Constrained keyword)
     : value { keyword }
 {
 }
@@ -126,7 +126,7 @@ inline DynamicRangeLimit::Kind DynamicRangeLimit::copyKind(const Kind& other)
             return Kind { keyword };
         },
         [](const UniqueRef<DynamicRangeLimitMixFunction>& mix) {
-            return Kind { WTF::makeUniqueRef<DynamicRangeLimitMixFunction>(*mix) };
+            return Kind { WTF::makeUniqueRef<DynamicRangeLimitMixFunction>(mix) };
         }
     );
 }
@@ -136,18 +136,21 @@ inline DynamicRangeLimit::Kind DynamicRangeLimit::copyKind(const Kind& other)
 template<> struct ToCSS<DynamicRangeLimit> { auto operator()(const DynamicRangeLimit&, const RenderStyle&) -> CSS::DynamicRangeLimit; };
 template<> struct ToStyle<CSS::DynamicRangeLimit> { auto operator()(const CSS::DynamicRangeLimit&, const BuilderState&) -> DynamicRangeLimit; };
 
+// `DynamicRangeLimit` is special-cased to return a `CSSDynamicRangeLimitValue`.
+template<> struct CSSValueCreation<DynamicRangeLimit> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const DynamicRangeLimit&); };
+template<> struct CSSValueConversion<DynamicRangeLimit> { auto operator()(BuilderState&, const CSSValue&) -> DynamicRangeLimit; };
+
+// MARK: Serialization
+
+template<> struct Serialize<DynamicRangeLimit> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const DynamicRangeLimit&); };
+
 // MARK: Blending
 
 template<> struct Blending<DynamicRangeLimit> {
-    constexpr auto canBlend(const DynamicRangeLimit&, const DynamicRangeLimit&) -> bool { return true; }
     auto blend(const DynamicRangeLimit&, const DynamicRangeLimit&, const BlendingContext&) -> DynamicRangeLimit;
 };
-
-// MARK: Logging
-
-TextStream& operator<<(TextStream&, const DynamicRangeLimit&);
 
 } // namespace Style
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::DynamicRangeLimit> = true;
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::DynamicRangeLimit)

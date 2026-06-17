@@ -10,9 +10,9 @@ Updating libxml in OpenJFX:
 - For windows
 4. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src/win32
-        > cscript configure.js compiler=msvc catalog=no xml_debug=no docb=no ftp=no http=no iconv=no legacy=no mem_debug=no modules=no regexps=no run_debug=no schemas=no schematron=no valid=no xinclude=no xptr=no zlib=no
-
+        > cscript configure.js compiler=msvc catalog=no xml_debug=no http=no iconv=no legacy=no modules=no regexps=no schemas=no schematron=no valid=no xinclude=no xptr=no zlib=no
         - Above command generates a header file `libxml\src\include\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
+
 4.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\win32\include\libxml\xmlversion.h'. xmlversion.h file defines several macros to control libxml features. We do not require all of the features to be enabled. Compare the generated `libxml\src\include\libxml\xmlversion.h` with existing `libxml\win32\include\libxml\xmlversion.h' and retain macro definitions from the later.
 
 4.2 Copy `libxml\src\config.h` to `libxml\win32\config.h`

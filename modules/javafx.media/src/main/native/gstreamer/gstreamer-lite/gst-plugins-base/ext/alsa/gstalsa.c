@@ -386,7 +386,7 @@ gst_alsa_detect_dsd_rates (GstObject * obj, snd_pcm_t * handle,
 
     for (i = 0; i < G_N_ELEMENTS (rates_to_test); ++i) {
       int rate_to_test = rates_to_test[i];
-      if (rate_to_test > max_rate) {
+      if (rate_to_test <= 0 || rate_to_test > max_rate) {
         keep_testing_rates = FALSE;
         break;
       }

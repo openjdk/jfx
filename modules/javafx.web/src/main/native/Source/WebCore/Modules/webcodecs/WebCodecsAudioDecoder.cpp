@@ -31,9 +31,10 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
+#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebCodecsAudioDecoderSupport.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsAudioData.h"
 #include "WebCodecsAudioDataOutputCallback.h"
 #include "WebCodecsControlMessage.h"
@@ -41,6 +42,7 @@
 #include "WebCodecsErrorCallback.h"
 #include "WebCodecsUtilities.h"
 
+#include <wtf/Scope.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -67,7 +69,7 @@ static AudioDecoder::Config createAudioDecoderConfig(const WebCodecsAudioDecoder
 {
     Vector<uint8_t> description;
     if (config.description) {
-        auto data = std::visit([](auto& buffer) {
+        auto data = WTF::visit([](auto& buffer) {
             return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, *config.description);
         if (!data.empty())
@@ -85,11 +87,11 @@ static bool isValidDecoderConfig(const WebCodecsAudioDecoderConfig& config)
 {
     // https://w3c.github.io/webcodecs/#valid-audiodecoderconfig
     // 1. If codec is empty after stripping leading and trailing ASCII whitespace, return false.
-    if (StringView(config.codec).trim(isASCIIWhitespace<UChar>).isEmpty())
+    if (StringView(config.codec).trim(isASCIIWhitespace<char16_t>).isEmpty())
         return false;
 
     // 2. If description is [detached], return false.
-    if (config.description && std::visit([](auto& view) { return view->isDetached(); }, *config.description))
+    if (config.description && WTF::visit([](auto& view) { return view->isDetached(); }, *config.description))
         return false;
 
     // FIXME: Not yet per spec https://github.com/w3c/webcodecs/issues/878
@@ -131,6 +133,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
         if (!isSupportedCodec) {
             postTaskToCodec<WebCodecsAudioDecoder>(identifier, *this, [] (auto& decoder) {
                 decoder.closeDecoder(Exception { ExceptionCode::NotSupportedError, "Codec is not supported"_s });
+                decoder.unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -147,7 +150,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
 
                 auto decodedResult = WTFMove(result).value();
                 auto audioData = WebCodecsAudioData::create(*decoder.scriptExecutionContext(), WTFMove(decodedResult.data));
-                decoder.m_output->handleEvent(WTFMove(audioData));
+                decoder.m_output->invoke(WTFMove(audioData));
             });
         });
 
@@ -155,6 +158,9 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
+            auto scopeExit = makeScopeExit([protectedThis] {
+                protectedThis->unblockControlMessageQueue();
+            });
 
             if (!result) {
                 protectedThis->closeDecoder(Exception { ExceptionCode::NotSupportedError, WTFMove(result.error()) });
@@ -162,7 +168,6 @@ ExceptionOr<void> WebCodecsAudioDecoder::configure(ScriptExecutionContext&, WebC
             }
 
             protectedThis->setInternalDecoder(WTFMove(*result));
-            protectedThis->unblockControlMessageQueue();
         });
         return WebCodecsControlMessageOutcome::Processed;
     } });
@@ -253,7 +258,7 @@ ExceptionOr<void> WebCodecsAudioDecoder::closeDecoder(Exception&& exception)
     setState(WebCodecsCodecState::Closed);
     m_internalDecoder = nullptr;
     if (exception.code() != ExceptionCode::AbortError)
-        m_error->handleEvent(DOMException::create(WTFMove(exception)));
+        m_error->invoke(DOMException::create(WTFMove(exception)));
 
     return { };
 }

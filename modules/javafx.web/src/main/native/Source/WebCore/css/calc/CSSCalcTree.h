@@ -26,24 +26,16 @@
 #pragma once
 
 #include "CSSCalcType.h"
+#include "CSSPrimitiveNumeric.h"
 #include "CSSPrimitiveNumericRange.h"
 #include "CSSUnits.h"
 #include "CSSValueKeywords.h"
-#include <variant>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
-
-namespace CQ {
-struct ContainerProgressProviding;
-}
-
-namespace MQ {
-struct MediaProgressProviding;
-}
 
 namespace Style {
 enum class AnchorSizeDimension : uint8_t;
@@ -85,9 +77,6 @@ struct Abs;
 struct Sign;
 struct Random;
 struct Progress;
-
-struct MediaProgress;
-struct ContainerProgress;
 
 // CSS Anchor Positioning functions.
 struct Anchor;
@@ -161,27 +150,54 @@ struct Symbol {
     bool operator==(const Symbol&) const = default;
 };
 
+// Tree Counting Functions - https://drafts.csswg.org/css-values-5/#tree-counting
+// NOTE: As these functions don't have any parameters, they are leaf nodes.
+
+struct SiblingCount {
+    static constexpr bool isLeaf = true;
+    static constexpr auto id = CSSValueSiblingCount;
+
+    // <sibling-count()> = sibling-count()
+    //     - INPUT: none
+    //     - OUTPUT: integer
+
+    bool operator==(const SiblingCount&) const = default;
+};
+
+struct SiblingIndex {
+    static constexpr bool isLeaf = true;
+    static constexpr auto id = CSSValueSiblingIndex;
+
+    // <sibling-index()> = sibling-index()
+    //     - INPUT: none
+    //     - OUTPUT: integer
+
+    bool operator==(const SiblingIndex&) const = default;
+};
+
 template<typename Op> struct IndirectNode {
     Type type;
     UniqueRef<Op> op;
 
     // Forward * and -> to the operation for convenience.
-    const Op& operator*() const { return *op; }
-    Op& operator*() { return *op; }
+    const Op& operator*() const { return op.get(); }
+    Op& operator*() { return op.get(); }
     const Op* operator->() const { return op.ptr(); }
     Op* operator->() { return op.ptr(); }
-    operator const Op&() const { return *op; }
-    operator Op&() { return *op; }
+    operator const Op&() const { return op.get(); }
+    operator Op&() { return op.get(); }
 
-    bool operator==(const IndirectNode<Op>& other) const { return type == other.type && op.get() == other.op.get(); }
+    bool operator==(const IndirectNode<Op>& other) const { return type == other.type && arePointingToEqualData(op, other.op); }
 };
 
-using Node = std::variant<
+using Node = Variant<
     Number,
     Percentage,
     CanonicalDimension,
     NonCanonicalDimension,
     Symbol,
+    SiblingCount,
+    SiblingIndex,
     IndirectNode<Sum>,
     IndirectNode<Product>,
     IndirectNode<Negate>,
@@ -211,8 +227,6 @@ using Node = std::variant<
     IndirectNode<Sign>,
     IndirectNode<Random>,
     IndirectNode<Progress>,
-    IndirectNode<MediaProgress>,
-    IndirectNode<ContainerProgress>,
     IndirectNode<Anchor>,
     IndirectNode<AnchorSize>
 >;
@@ -230,7 +244,7 @@ struct Child {
 };
 
 struct ChildOrNone {
-    std::variant<Child, CSS::Keyword::None> value;
+    Variant<Child, CSS::Keyword::None> value;
 
     ChildOrNone(Child&&);
     ChildOrNone(CSS::Keyword::None);
@@ -282,9 +296,6 @@ struct Tree {
 
     // `requiresConversionData` is used both to both indicate whether eager evaluation of the tree (at parse time) is possible or not and to trigger a warning in `CSSCalcValue::doubleValueDeprecated` that the evaluation results will be incorrect.
     bool requiresConversionData = false;
-
-    // `unique` is used to indicate if the calculation tree disqualifies styles it used by for style sharing.
-    bool unique = false;
 
     bool operator==(const Tree&) const = default;
 };
@@ -736,22 +747,34 @@ struct Random {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED(Random);
     static constexpr auto id = CSSValueRandom;
 
-    // <random-caching-options> = <dashed-ident> || per-element
-    struct CachingOptions {
-        AtomString identifier;
-        bool perElement { false };
+    // <random-value-sharing> = [ [ auto | <dashed-ident> ] || element-shared ] | fixed <number [0,1]>
+    struct SharingOptions {
+        struct Auto {
+            CSSPropertyID property;
+            unsigned index;
 
-        bool operator==(const CachingOptions&) const = default;
+            bool operator==(const Auto&) const = default;
     };
+        Variant<Auto, AtomString> identifier;
+        std::optional<CSS::Keyword::ElementShared> elementShared;
 
-    // <random()> = random( <random-caching-options>? , <calc-sum>, <calc-sum>, [by <calc-sum>]? )
+        bool operator==(const SharingOptions&) const = default;
+    };
+    struct SharingFixed {
+        CSS::Number<CSS::ClosedUnitRange> value;
+
+        bool operator==(const SharingFixed&) const = default;
+    };
+    using Sharing = Variant<SharingOptions, SharingFixed>;
+
+    // <random()> = random( <random-value-sharing>? , <calc-sum>, <calc-sum>, <calc-sum>? )
     //     - INPUT: "same" <number>, <dimension>, or <percentage>
     //     - OUTPUT: same type
     static constexpr auto input = AllowedTypes::Any;
     static constexpr auto merge = MergePolicy::Same;
     static constexpr auto output = OutputTransform::None;
 
-    CachingOptions cachingOptions;
+    Sharing sharing;
     Child min;
     Child max;
     std::optional<Child> step;
@@ -778,48 +801,11 @@ struct Progress {
     bool operator==(const Progress&) const = default;
 };
 
-struct MediaProgress {
-    WTF_MAKE_STRUCT_TZONE_ALLOCATED(MediaProgress);
-    static constexpr auto id = CSSValueMediaProgress;
-
-    // <media-progress()> = media-progress( <mf-name>, <calc-sum>, <calc-sum> )
-    //     - INPUT: "consistent" <number>, <dimension>, or <percentage>, dependent on type of <mf-name> feature.
-    //     - OUTPUT: <number>
-
-    // media-progress() is not a "math function", so its children do not inherit
-    // nor contribute to the type of the overall calculation tree.
-
-    const MQ::MediaProgressProviding* feature;
-    Child start;
-    Child end;
-
-    bool operator==(const MediaProgress&) const = default;
-};
-
-struct ContainerProgress {
-    WTF_MAKE_STRUCT_TZONE_ALLOCATED(ContainerProgress);
-    static constexpr auto id = CSSValueContainerProgress;
-
-    // <container-progress()> = container-progress( <mf-name> [ of <container-name> ]?, <calc-sum>, <calc-sum> )
-    //     - INPUT: "consistent" <number>, <dimension>, or <percentage>, dependent on type of <mf-name> feature.
-    //     - OUTPUT: <number>
-
-    // container-progress() is not a "math function", so its children do not inherit
-    // nor contribute to the type of the overall calculation tree.
-
-    const CQ::ContainerProgressProviding* feature;
-    AtomString container;
-    Child start;
-    Child end;
-
-    bool operator==(const ContainerProgress&) const = default;
-};
-
 // Anchor Positioning Related Functions - https://drafts.csswg.org/css-anchor-position-1/
 
 struct AnchorSide {
     // <anchor-side> = inside | outside | top | left | right | bottom | start | end | self-start | self-end | <percentage> | center
-    std::variant<CSSValueID, Child> value;
+    Variant<CSSValueID, Child> value;
 
     AnchorSide(CSSValueID);
     AnchorSide(Child&&);
@@ -873,34 +859,10 @@ template<typename Op> struct ChildConstruction {
     static Child make(Op&& op, Type type) { return Child { IndirectNode<Op> { type, makeUniqueRef<Op>(WTFMove(op)) } }; }
 };
 
-// Specialized implementation of ChildConstruction for Number, needed to avoid `makeUniqueRef`.
-template<> struct ChildConstruction<Number> {
-    static Child make(Number&& op, Type) { return Child { WTFMove(op) }; }
-    static Child make(Number&& op) { return Child { WTFMove(op) }; }
-};
-
-// Specialized implementation of ChildConstruction for Percentage, needed to avoid `makeUniqueRef`.
-template<> struct ChildConstruction<Percentage> {
-    static Child make(Percentage&& op, Type) { return Child { WTFMove(op) }; }
-    static Child make(Percentage&& op) { return Child { WTFMove(op) }; }
-};
-
-// Specialized implementation of ChildConstruction for CanonicalDimension, needed to avoid `makeUniqueRef`.
-template<> struct ChildConstruction<CanonicalDimension> {
-    static Child make(CanonicalDimension&& op, Type) { return Child { WTFMove(op) }; }
-    static Child make(CanonicalDimension&& op) { return Child { WTFMove(op) }; }
-};
-
-// Specialized implementation of ChildConstruction for NonCanonicalDimension, needed to avoid `makeUniqueRef`.
-template<> struct ChildConstruction<NonCanonicalDimension> {
-    static Child make(NonCanonicalDimension&& op, Type) { return Child { WTFMove(op) }; }
-    static Child make(NonCanonicalDimension&& op) { return Child { WTFMove(op) }; }
-};
-
-// Specialized implementation of ChildConstruction for Symbol, needed to avoid `makeUniqueRef`.
-template<> struct ChildConstruction<Symbol> {
-    static Child make(Symbol&& op, Type) { return Child { WTFMove(op) }; }
-    static Child make(Symbol&& op) { return Child { WTFMove(op) }; }
+// Specialized implementation of ChildConstruction for leaf nodes, needed to avoid `makeUniqueRef`.
+template<Leaf T> struct ChildConstruction<T> {
+    static Child make(T&& op, Type) { return Child { WTFMove(op) }; }
+    static Child make(T&& op) { return Child { WTFMove(op) }; }
 };
 
 template<typename Op> Child makeChild(Op op)
@@ -930,6 +892,8 @@ Type getType(const Percentage&);
 Type getType(const NonCanonicalDimension&);
 Type getType(const CanonicalDimension&);
 Type getType(const Symbol&);
+Type getType(const SiblingCount&);
+Type getType(const SiblingIndex&);
 
 // Gets the Type of the child node.
 Type getType(const Child&);
@@ -964,8 +928,6 @@ std::optional<Type> toType(const Abs&);
 std::optional<Type> toType(const Sign&);
 std::optional<Type> toType(const Random&);
 std::optional<Type> toType(const Progress&);
-std::optional<Type> toType(const MediaProgress&);
-std::optional<Type> toType(const ContainerProgress&);
 
 // MARK: CSSUnitType Evaluation
 
@@ -1238,7 +1200,7 @@ template<size_t I> const auto& get(const Sign& root)
 template<size_t I> const auto& get(const Random& root)
 {
     if constexpr (!I)
-        return root.cachingOptions;
+        return root.sharing;
     else if constexpr (I == 1)
         return root.min;
     else if constexpr (I == 2)
@@ -1254,28 +1216,6 @@ template<size_t I> const auto& get(const Progress& root)
     else if constexpr (I == 1)
         return root.start;
     else if constexpr (I == 2)
-        return root.end;
-}
-
-template<size_t I> const auto& get(const MediaProgress& root)
-{
-    if constexpr (!I)
-        return root.feature;
-    else if constexpr (I == 1)
-        return root.start;
-    else if constexpr (I == 2)
-        return root.end;
-}
-
-template<size_t I> const auto& get(const ContainerProgress& root)
-{
-    if constexpr (!I)
-        return root.feature;
-    else if constexpr (I == 1)
-        return root.container;
-    else if constexpr (I == 2)
-        return root.start;
-    else if constexpr (I == 3)
         return root.end;
 }
 
@@ -1441,8 +1381,6 @@ OP_TUPLE_LIKE_CONFORMANCE(Exp, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Abs, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Sign, 1);
 OP_TUPLE_LIKE_CONFORMANCE(Progress, 3);
-OP_TUPLE_LIKE_CONFORMANCE(MediaProgress, 3);
-OP_TUPLE_LIKE_CONFORMANCE(ContainerProgress, 4);
 OP_TUPLE_LIKE_CONFORMANCE(Random, 4);
 // FIXME (webkit.org/b/280798): make Anchor and AnchorSize tuple-like
 OP_TUPLE_LIKE_CONFORMANCE(Anchor, 0);

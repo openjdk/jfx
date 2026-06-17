@@ -26,7 +26,6 @@
 
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
-#include "ExceptionOr.h"
 #include "RealtimeMediaSource.h"
 #include "WritableStreamSink.h"
 #include <wtf/RefCounted.h>
@@ -36,6 +35,7 @@ namespace WebCore {
 class MediaStreamTrack;
 class ScriptExecutionContext;
 class WritableStream;
+template<typename> class ExceptionOr;
 
 class VideoTrackGenerator : public RefCounted<VideoTrackGenerator> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VideoTrackGenerator);
@@ -93,14 +93,14 @@ private:
         void error(String&&) final;
 
         bool m_muted { false };
-        Ref<Source> m_source;
+        const Ref<Source> m_source;
     };
 
     bool m_muted { false };
     bool m_hasMutedChanged { false };
-    Ref<Sink> m_sink;
-    Ref<WritableStream> m_writable;
-    Ref<MediaStreamTrack> m_track;
+    const Ref<Sink> m_sink;
+    const Ref<WritableStream> m_writable;
+    const Ref<MediaStreamTrack> m_track;
 };
 
 } // namespace WebCore

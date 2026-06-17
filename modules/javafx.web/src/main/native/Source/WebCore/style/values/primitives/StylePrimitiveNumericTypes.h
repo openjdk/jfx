@@ -36,7 +36,7 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
     using Number = Style::Number<nR, V>;
     using Percentage = Style::Percentage<pR, V>;
 
-    NumberOrPercentage(std::variant<Number, Percentage>&& value)
+    NumberOrPercentage(Variant<Number, Percentage>&& value)
     {
         WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
     }
@@ -71,11 +71,6 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
         );
     }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const NumberOrPercentage& value) { return value.isEmpty(); }
-        static NumberOrPercentage emptyValue() { return NumberOrPercentage(CSS::PrimitiveDataEmptyToken()); }
-    };
-
 private:
     NumberOrPercentage(CSS::PrimitiveDataEmptyToken token)
         : value { WTFMove(token) }
@@ -84,7 +79,7 @@ private:
 
     bool isEmpty() const { return std::holds_alternative<CSS::PrimitiveDataEmptyToken>(value); }
 
-    std::variant<CSS::PrimitiveDataEmptyToken, Number, Percentage> value;
+    Variant<CSS::PrimitiveDataEmptyToken, Number, Percentage> value;
 };
 
 template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> struct NumberOrPercentageResolvedToNumber {
@@ -119,7 +114,7 @@ using NumberAll = Number<CSS::All>;
 using NumberNonnegative = Number<CSS::Nonnegative>;
 
 // Standard Angles
-using AngleAll = Length<CSS::All>;
+using AngleAllFloat = Angle<CSS::All, float>;
 
 // Standard Lengths
 using LengthAll = Length<CSS::All>;
@@ -143,6 +138,8 @@ using LengthPercentageSpaceSeparatedPointNonnegative = SpaceSeparatedPoint<Lengt
 // Standard Sizes
 using LengthPercentageSpaceSeparatedSizeAll = SpaceSeparatedSize<LengthPercentageAll>;
 using LengthPercentageSpaceSeparatedSizeNonnegative = SpaceSeparatedSize<LengthPercentageNonnegative>;
+using LengthPercentageMinimallySerializingSpaceSeparatedSizeAll = MinimallySerializingSpaceSeparatedSize<LengthPercentageAll>;
+using LengthPercentageMinimallySerializingSpaceSeparatedSizeNonnegative = MinimallySerializingSpaceSeparatedSize<LengthPercentageNonnegative>;
 
 // MARK: CSS -> Style
 
@@ -166,5 +163,15 @@ template<auto nR, auto pR, typename V> struct ToCSSMapping<NumberOrPercentageRes
 
 } // namespace Style
 } // namespace WebCore
+
+namespace WTF {
+
+template<auto nR, auto pR, typename V>
+struct MarkableTraits<WebCore::Style::NumberOrPercentage<nR, pR, V>> {
+    static bool isEmptyValue(const WebCore::Style::NumberOrPercentage<nR, pR, V>& value) { return value.isEmpty(); }
+    static WebCore::Style::NumberOrPercentage<nR, pR, V> emptyValue() { return WebCore::Style::NumberOrPercentage<nR, pR, V>(WebCore::CSS::PrimitiveDataEmptyToken()); }
+};
+
+}
 
 template<auto nR, auto pR, typename V> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::Style::NumberOrPercentage<nR, pR, V>> = true;

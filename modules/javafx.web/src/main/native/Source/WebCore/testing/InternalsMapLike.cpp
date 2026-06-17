@@ -28,6 +28,7 @@
 
 #include "IDLTypes.h"
 #include "JSDOMMapLike.h"
+#include <ranges>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -61,14 +62,14 @@ bool InternalsMapLike::remove(const String& key)
 Vector<String> InternalsMapLike::inspectKeys() const
 {
     auto result = copyToVector(m_values.keys());
-    std::sort(result.begin(), result.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(result, WTF::codePointCompareLessThan);
     return result;
 }
 
 Vector<unsigned> InternalsMapLike::inspectValues() const
 {
     auto result = copyToVector(m_values.values());
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     return result;
 }
 

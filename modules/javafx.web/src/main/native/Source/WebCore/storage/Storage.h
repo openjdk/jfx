@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "LocalDOMWindowProperty.h"
 #include "ScriptWrappable.h"
 
 namespace WebCore {
 
 class StorageArea;
+template<typename> class ExceptionOr;
 
 class Storage final : public ScriptWrappable, public RefCounted<Storage>, public LocalDOMWindowProperty {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Storage);
@@ -57,7 +57,7 @@ public:
 private:
     Storage(LocalDOMWindow&, Ref<StorageArea>&&);
 
-    bool requiresScriptExecutionTelemetry() const;
+    bool requiresScriptTrackingPrivacyProtection() const;
 
     const Ref<StorageArea> m_storageArea;
 };

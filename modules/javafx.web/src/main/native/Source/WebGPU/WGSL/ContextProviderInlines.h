@@ -51,7 +51,7 @@ template<typename Value>
 const Value* ContextProvider<Value>::Context::add(const String& name, const Value& value)
 {
     auto result = m_map.add(name, value);
-    if (UNLIKELY(!result.isNewEntry))
+    if (!result.isNewEntry) [[unlikely]]
         return nullptr;
     return &result.iterator->value;
 }

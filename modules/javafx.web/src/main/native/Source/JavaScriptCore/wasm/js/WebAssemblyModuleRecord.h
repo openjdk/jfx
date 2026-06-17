@@ -55,6 +55,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
     static WebAssemblyModuleRecord* create(JSGlobalObject*, VM&, Structure*, const Identifier&, const Wasm::ModuleInformation&);
 
@@ -73,8 +75,6 @@ private:
 
     void finishCreation(JSGlobalObject*, VM&, const Wasm::ModuleInformation&);
     JSValue evaluateConstantExpression(JSGlobalObject*, const Vector<uint8_t>&, const Wasm::ModuleInformation&, Wasm::Type, uint64_t&);
-
-    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSWebAssemblyInstance> m_instance;
     WriteBarrier<JSObject> m_startFunction;

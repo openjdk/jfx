@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ import javafx.beans.value.WritableValue;
  * direction) specifies the interpolator to be used in the interval.
  * <p>
  * Tangent-interpolators define the interpolation to the left and to the right of
- * a {@code KeyFrame} (see {@link  Interpolator#TANGENT(javafx.util.Duration, double, javafx.util.Duration, double)
+ * a {@code KeyFrame} (see {@link  Interpolator#ofTangent(javafx.util.Duration, double, javafx.util.Duration, double)
  * Interpolator.TANGENT}).
  * <p>
  * By default, {@link Interpolator#LINEAR} is used in the interval.

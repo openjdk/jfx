@@ -67,7 +67,7 @@ public:
 
     DynamicsCompressor(float sampleRate, unsigned numberOfChannels);
 
-    void process(const AudioBus* sourceBus, AudioBus* destinationBus, unsigned framesToProcess);
+    void process(const AudioBus& sourceBus, AudioBus& destinationBus, unsigned framesToProcess);
     void reset();
     void setNumberOfChannels(unsigned);
 

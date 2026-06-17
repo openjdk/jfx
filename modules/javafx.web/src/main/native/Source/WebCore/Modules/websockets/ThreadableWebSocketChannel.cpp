@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009, 2012 Google Inc.  All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -81,21 +82,25 @@ std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChann
     if (RefPtr page = document.page()) {
         if (!page->allowsLoadFromURL(requestedURL, MainFrameMainResource::No))
             return { };
+
 #if ENABLE(CONTENT_EXTENSIONS)
         if (RefPtr documentLoader = document.loader()) {
             auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
-            if (results.summary.blockedLoad)
+            if (results.shouldBlock())
                 return { };
+
             if (results.summary.madeHTTPS) {
                 ASSERT(validatedURL.url.protocolIs("ws"_s));
                 validatedURL.url.setProtocol("wss"_s);
             }
+
             validatedURL.areCookiesAllowed = !results.summary.blockedCookies;
         }
 #else
         UNUSED_PARAM(document);
 #endif
     }
+
     return validatedURL;
 }
 
@@ -105,8 +110,9 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
     if (!validatedURL)
         return { };
 
-    ResourceRequest request { validatedURL->url };
-    request.setHTTPUserAgent(document.userAgent(validatedURL->url));
+    auto userAgent = document.userAgent(validatedURL->url);
+    ResourceRequest request { WTFMove(validatedURL->url) };
+    request.setHTTPUserAgent(userAgent);
     request.setDomainForCachePartition(document.domainForCachePartition());
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());

@@ -31,25 +31,20 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <'line-fit-edge'> consuming
 // https://drafts.csswg.org/css-inline-3/#propdef-line-fit-edge
-RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // MARK: <'text-box-edge'> consuming
 // https://drafts.csswg.org/css-inline-3/#propdef-text-box-edge
-RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange&, const CSSParserContext&);
-
-// MARK: <'-webkit-initial-letter'> consuming
-// Standard equivalent is https://drafts.csswg.org/css-inline-3/#sizing-drop-initials
-RefPtr<CSSValue> consumeWebkitInitialLetter(CSSParserTokenRange&, const CSSParserContext&);
-
-// MARK: <'-webkit-line-box-contain'> consuming
-// No standard equivalent
-RefPtr<CSSValue> consumeWebkitLineBoxContain(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

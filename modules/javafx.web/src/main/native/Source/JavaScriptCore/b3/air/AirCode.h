@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "StackAlignment.h"
 #include <wtf/HashSet.h>
 #include <wtf/IndexMap.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/SmallSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRandom.h>
@@ -80,7 +81,7 @@ extern const char* const tierName;
 
 class Code {
     WTF_MAKE_NONCOPYABLE(Code);
-    WTF_MAKE_TZONE_ALLOCATED(Code);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Code);
 public:
     ~Code();
 
@@ -143,23 +144,20 @@ public:
         ASSERT_NOT_REACHED();
     }
 
-    template<typename Func>
+    template<Bank bank, typename Func>
     void forEachTmp(const Func& func)
     {
-        for (unsigned bankIndex = 0; bankIndex < numBanks; ++bankIndex) {
-            Bank bank = static_cast<Bank>(bankIndex);
             unsigned numTmps = this->numTmps(bank);
             for (unsigned i = 0; i < numTmps; ++i)
                 func(Tmp::tmpForIndex(bank, i));
         }
-    }
 
-    template<Bank bank, typename Func>
+    template<typename Func>
     void forEachTmp(const Func& func)
     {
-        unsigned numTmps = this->numTmps(bank);
-        for (unsigned i = 0; i < numTmps; ++i)
-            func(Tmp::tmpForIndex(bank, i));
+        static_assert(numBanks == 2);
+        forEachTmp<GP>(func);
+        forEachTmp<FP>(func);
     }
 
     unsigned callArgAreaSizeInBytes() const { return m_callArgAreaSize; }
@@ -302,23 +300,14 @@ public:
         unsigned m_index;
     };
 
-    iterator begin() const { return iterator(*this, 0); }
-    iterator end() const { return iterator(*this, size()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(*this, 0); }
+    iterator end() const LIFETIME_BOUND { return iterator(*this, size()); }
 
     const SparseCollection<StackSlot>& stackSlots() const { return m_stackSlots; }
     SparseCollection<StackSlot>& stackSlots() { return m_stackSlots; }
 
     const SparseCollection<Special>& specials() const { return m_specials; }
     SparseCollection<Special>& specials() { return m_specials; }
-
-    template<typename Callback>
-    void forAllTmps(const Callback& callback) const
-    {
-        for (unsigned i = m_numGPTmps; i--;)
-            callback(Tmp::gpTmpForIndex(i));
-        for (unsigned i = m_numFPTmps; i--;)
-            callback(Tmp::fpTmpForIndex(i));
-    }
 
     void addFastTmp(Tmp);
 
@@ -422,7 +411,7 @@ private:
     RefPtr<WasmBoundsCheckGenerator> m_wasmBoundsCheckGenerator;
     const char* m_lastPhaseName;
     std::unique_ptr<Disassembler> m_disassembler;
-    Ref<PrologueGenerator> m_defaultPrologueGenerator;
+    const Ref<PrologueGenerator> m_defaultPrologueGenerator;
 };
 
 } } } // namespace JSC::B3::Air

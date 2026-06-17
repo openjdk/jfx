@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,7 @@
 
 #include "AuthenticationResponseJSON.h"
 #include "BasicCredential.h"
-#include "ExceptionOr.h"
 #include "IDLTypes.h"
-#include "JSPublicKeyCredentialRequestOptions.h"
 #include "RegistrationResponseJSON.h"
 #include <wtf/Forward.h>
 
@@ -40,16 +38,21 @@ namespace WebCore {
 enum class AuthenticatorAttachment : uint8_t;
 class AuthenticatorResponse;
 class Document;
+
 typedef IDLRecord<IDLDOMString, IDLBoolean> PublicKeyCredentialClientCapabilities;
-typedef std::variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
+typedef Variant<RegistrationResponseJSON, AuthenticationResponseJSON> PublicKeyCredentialJSON;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialCreationOptionsJSON;
 struct PublicKeyCredentialRequestOptions;
 struct PublicKeyCredentialRequestOptionsJSON;
 struct AuthenticationExtensionsClientOutputs;
+struct UnknownCredentialOptions;
+struct AllAcceptedCredentialsOptions;
+struct CurrentUserDetailsOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 class PublicKeyCredential final : public BasicCredential {
 public:
@@ -69,12 +72,16 @@ public:
 
     static ExceptionOr<PublicKeyCredentialRequestOptions> parseRequestOptionsFromJSON(PublicKeyCredentialRequestOptionsJSON&&);
 
+    static void signalUnknownCredential(Document&, UnknownCredentialOptions&&, DOMPromiseDeferred<void>&&);
+    static void signalAllAcceptedCredentials(Document&, AllAcceptedCredentialsOptions&&, DOMPromiseDeferred<void>&&);
+    static void signalCurrentUserDetails(Document&, CurrentUserDetailsOptions&&, DOMPromiseDeferred<void>&&);
+
 private:
     PublicKeyCredential(Ref<AuthenticatorResponse>&&);
 
     Type credentialType() const final { return Type::PublicKey; }
 
-    Ref<AuthenticatorResponse> m_response;
+    const Ref<AuthenticatorResponse> m_response;
 };
 
 } // namespace WebCore

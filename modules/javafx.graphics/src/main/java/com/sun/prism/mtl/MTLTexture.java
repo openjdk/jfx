@@ -202,6 +202,10 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         int srcw, int srch,
                         int srcscan, boolean skipFlush) {
 
+        if (!resource.isValid()) {
+            return;
+        }
+
         switch (format.getDataType()) {
             case PixelFormat.DataType.INT -> updateTextureInt(buffer, format,
                 dstx, dsty, srcx, srcy, srcw, srch, srcscan);
@@ -217,6 +221,10 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
 
     @Override
     public void update(MediaFrame frame, boolean skipFlush) {
+        if (!resource.isValid()) {
+            return;
+        }
+
         if (frame.getPixelFormat() == PixelFormat.MULTI_YCbCr_420 ||
             frame.getPixelFormat() != PixelFormat.BYTE_APPLE_422) {
             // Shouldn't have gotten this far

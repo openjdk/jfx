@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+
 #include "FaceDetectorInterface.h"
 #include "ImageBitmap.h"
 #include "JSDOMPromiseDeferredForward.h"
@@ -34,9 +34,10 @@
 
 namespace WebCore {
 
+class ScriptExecutionContext;
 struct FaceDetectorOptions;
 struct DetectedFace;
-class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FaceDetector : public RefCounted<FaceDetector> {
 public:
@@ -50,7 +51,7 @@ public:
 private:
     FaceDetector(Ref<ShapeDetection::FaceDetector>&&);
 
-    Ref<ShapeDetection::FaceDetector> m_backing;
+    const Ref<ShapeDetection::FaceDetector> m_backing;
 };
 
 } // namespace WebCore

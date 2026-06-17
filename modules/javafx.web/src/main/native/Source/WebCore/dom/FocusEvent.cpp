@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FocusEvent.h"
 
+#include "EventTargetInlines.h"
 #include "Node.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -54,5 +55,7 @@ FocusEvent::FocusEvent(const AtomString& type, const Init& initializer)
     , m_relatedTarget(initializer.relatedTarget)
 {
 }
+
+FocusEvent::~FocusEvent() = default;
 
 } // namespace WebCore

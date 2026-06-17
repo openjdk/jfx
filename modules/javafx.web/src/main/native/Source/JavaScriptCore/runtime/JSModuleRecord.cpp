@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,14 @@
 
 #include "BuiltinNames.h"
 #include "Interpreter.h"
+#include "JSAsyncFunction.h"
+#include "JSAsyncGeneratorFunction.h"
 #include "JSCInlines.h"
+#include "JSGeneratorFunction.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleLoader.h"
 #include "JSModuleNamespaceObject.h"
+#include "SourceProfiler.h"
 #include "UnlinkedModuleProgramCodeBlock.h"
 #include <wtf/text/MakeString.h>
 
@@ -88,12 +92,12 @@ Synchronousness JSModuleRecord::link(JSGlobalObject* globalObject, JSValue scrip
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ModuleProgramExecutable* executable = ModuleProgramExecutable::create(globalObject, sourceCode());
-    EXCEPTION_ASSERT(!!scope.exception() == !executable);
-    if (!executable) {
-        throwSyntaxError(globalObject, scope);
-        return Synchronousness::Sync;
-    }
+    if (SourceProfiler::g_profilerHook) [[unlikely]]
+        SourceProfiler::profile(SourceProfiler::Type::Module, sourceCode());
+
+    ModuleProgramExecutable* executable = ModuleProgramExecutable::tryCreate(globalObject, sourceCode());
+    RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
+
     instantiateDeclarations(globalObject, executable, scriptFetcher);
     RETURN_IF_EXCEPTION(scope, Synchronousness::Sync);
     m_moduleProgramExecutable.set(vm, this, executable);
@@ -155,7 +159,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
 
 #if CPU(ADDRESS64)
         // rdar://107531050: Speculative crash mitigation
-        if (UNLIKELY(importedModule == std::bit_cast<AbstractModuleRecord*>(encodedJSUndefined()))) {
+        if (importedModule == std::bit_cast<AbstractModuleRecord*>(encodedJSUndefined())) [[unlikely]] {
             RELEASE_ASSERT(vm.exceptionForInspection(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             RELEASE_ASSERT(vm.traps().maybeNeedHandling(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
             if (!vm.exceptionForInspection() || !vm.traps().maybeNeedHandling()) {
@@ -236,7 +240,17 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
                     unlinkedFunctionExecutable->unlinkedFunctionStart(),
                     unlinkedFunctionExecutable->unlinkedFunctionEnd());
             }
-            JSFunction* function = JSFunction::create(vm, globalObject, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
+            auto* executable = unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source());
+            SourceParseMode parseMode = executable->parseMode();
+            JSFunction* function = nullptr;
+            if (isAsyncGeneratorWrapperParseMode(parseMode))
+                function = JSAsyncGeneratorFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else if (isGeneratorWrapperParseMode(parseMode))
+                function = JSGeneratorFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else if (isAsyncFunctionWrapperParseMode(parseMode))
+                function = JSAsyncFunction::create(vm, globalObject, executable, moduleEnvironment);
+            else
+                function = JSFunction::create(vm, globalObject, executable, moduleEnvironment);
             bool putResult = false;
             symbolTablePutTouchWatchpointSet(moduleEnvironment, globalObject, unlinkedFunctionExecutable->name(), function, /* shouldThrowReadOnlyError */ false, /* ignoreReadOnlyErrors */ true, putResult);
             RETURN_IF_EXCEPTION(scope, void());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,9 +34,11 @@
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
 #include "ChannelCountMode.h"
+#include "ExceptionOr.h"
 #include "HRTFDatabaseLoader.h"
 #include "HRTFPanner.h"
 #include "ScriptExecutionContext.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -107,29 +109,25 @@ PannerNode::~PannerNode()
 
 void PannerNode::process(size_t framesToProcess)
 {
-    AudioBus* destination = output(0)->bus();
+    AudioBus& destination = output(0)->bus();
 
     if (!isInitialized() || !input(0)->isConnected()) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
-    AudioBus* source = input(0)->bus();
-    if (!source) {
-        destination->zero();
-        return;
-    }
+    AudioBus& source = input(0)->bus();
 
     // The audio thread can't block on this lock, so we use tryLock() instead.
     if (!m_processLock.tryLock()) {
         // Too bad - tryLock() failed. We must be in the middle of changing the panner.
-        destination->zero();
+        destination.zero();
         return;
     }
     Locker locker { AdoptLock, m_processLock };
 
     if (!m_panner) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
@@ -138,7 +136,7 @@ void PannerNode::process(size_t framesToProcess)
         if (context().isOfflineContext())
             m_hrtfDatabaseLoader->waitForLoaderThreadCompletion();
         else {
-            destination->zero();
+            destination.zero();
             return;
         }
     }
@@ -158,7 +156,7 @@ void PannerNode::process(size_t framesToProcess)
     double totalGain = distanceConeGain();
 
     // Apply gain in-place.
-    destination->copyWithGainFrom(*destination, totalGain);
+    destination.copyWithGainFrom(destination, totalGain);
 }
 
 void PannerNode::processOnlyAudioParams(size_t framesToProcess)
@@ -183,7 +181,7 @@ void PannerNode::processOnlyAudioParams(size_t framesToProcess)
     listener().updateValuesIfNeeded(framesToProcess);
 }
 
-void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess)
+void PannerNode::processSampleAccurateValues(AudioBus& destination, const AudioBus& source, size_t framesToProcess)
 {
     // Get the sample accurate values from all of the AudioParams, including the
     // values from the AudioListener.
@@ -236,7 +234,7 @@ void PannerNode::processSampleAccurateValues(AudioBus* destination, const AudioB
     }
 
     m_panner->panWithSampleAccurateValues(std::span { azimuth }, std::span { elevation }, source, destination, framesToProcess);
-    destination->copyWithSampleAccurateGainValuesFrom(*destination, std::span { totalGain }.first(framesToProcess));
+    destination.copyWithSampleAccurateGainValuesFrom(destination, std::span { totalGain }.first(framesToProcess));
 }
 
 bool PannerNode::hasSampleAccurateValues() const
@@ -511,7 +509,7 @@ auto PannerNode::calculateAzimuthElevation(const FloatPoint3D& position, const F
         azimuth = 450.0 - azimuth;
 
     // Elevation
-    double elevation = 90.0 - 180.0 * acos(sourceListener.dot(up)) / piDouble;
+    double elevation = 90.0 - 180.0 * acos(sourceListener.dot(up)) / std::numbers::pi;
     fixNANs(elevation); // avoid illegal values
 
     if (elevation > 90.0)

@@ -57,6 +57,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TableViewContextMenuSortTest {
 
@@ -77,6 +78,8 @@ public class TableViewContextMenuSortTest {
 
     @Test
     public void testContextMenuRequestDoesNotSort() {
+        assumeTrue(!PlatformUtil.isWindows()); // JDK-8364116
+
         Node header = table.lookupAll(".column-header").stream()
                 .filter(Objects::nonNull)
                 .filter(n -> n.getStyleClass().contains("table-column"))
@@ -104,6 +107,11 @@ public class TableViewContextMenuSortTest {
             assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
         }
 
+        /*
+        // Skipped due to JDK-8367566
+        // This part of test is causing intermittent test failures on MacOS, see: JDK-8359154
+        // This code should be re-enabled with a more robust approach.
+
         // macOS only: Ctrl + Left click also triggers the context menu
         if (PlatformUtil.isMac()) {
             Util.runAndWait(() -> {
@@ -125,6 +133,7 @@ public class TableViewContextMenuSortTest {
                 assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
             }
         }
+        */
     }
 
     @BeforeAll

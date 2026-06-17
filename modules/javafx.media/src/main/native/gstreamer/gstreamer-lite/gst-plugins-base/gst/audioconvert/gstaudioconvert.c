@@ -71,6 +71,16 @@
  * g_value_unset (&v);
  * ]|
  *
+ * The mix matrix can also be passed through a custom upstream event:
+ *
+ * |[
+ * GstStructure *s = gst_structure_new("GstRequestAudioMixMatrix", "matrix", GST_TYPE_ARRAY, &v, NULL);
+ * GstEvent *event = gst_event_new_custom (GST_EVENT_CUSTOM_UPSTREAM, s);
+ * GstPad *srcpad = gst_element_get_static_pad(audioconvert, "src");
+ * gst_pad_send_event (srcpad, event);
+ * gst_object_unref (pad);
+ * ]|
+ *
  * ## Example launch line
  * |[
  * gst-launch-1.0 audiotestsrc ! audio/x-raw, channels=4 ! audioconvert mix-matrix="<<(float)1.0, (float)0.0, (float)0.0, (float)0.0>, <(float)0.0, (float)1.0, (float)0.0, (float)0.0>>" ! audio/x-raw,channels=2 ! autoaudiosink
@@ -90,6 +100,31 @@
  * |[
  * gst-launch-1.0 -v audiotestsrc ! audio/x-raw,channels=8 ! audioconvert mix-matrix="<>" ! audio/x-raw,channels=16,channel-mask=\(bitmask\)0x0000000000000000 ! fakesink
  * ]|
+ *
+ * If input channels are unpositioned but follow a standard layout, they can be
+ * automatically positioned according to their index using one of the reorder
+ * configurations.
+ *
+ * ## Example with unpositioned input channels reordering
+ * |[
+ * gst-launch-1.0 -v audiotestsrc ! audio/x-raw,channels=6,channel-mask=\(bitmask\)0x0000000000000000 ! audioconvert input-channels-reorder-mode=unpositioned input-channels-reorder=smpte ! fakesink
+ * ]|
+ *  In this case the input channels will be automatically positioned to the
+ * SMPTE order (left, right, center, lfe, rear-left and rear-right).
+ *
+ * The input channels reorder configurations can also be used to force the
+ * repositioning of the input channels when needed, for example when channels'
+ * positions are not correctly identified in an encoded file.
+ *
+ * ## Example with the forced reordering of input channels wrongly positioned
+ * |[
+ * gst-launch-1.0 -v audiotestsrc ! audio/x-raw,channels=3,channel-mask=\(bitmask\)0x0000000000000034 ! audioconvert input-channels-reorder-mode=force input-channels-reorder=aac ! fakesink
+ * ]|
+ *  In this case the input channels are positioned upstream as center,
+ * rear-left and rear-right in this order. Using the "force" reorder mode and
+ * the "aac" order, the input channels are going to be repositioned to left,
+ * right and lfe, ignoring the actual value of the `channel-mask` in the input
+ * caps.
  */
 
 /*
@@ -158,7 +193,9 @@ enum
   PROP_DITHERING,
   PROP_NOISE_SHAPING,
   PROP_MIX_MATRIX,
-  PROP_DITHERING_THRESHOLD
+  PROP_DITHERING_THRESHOLD,
+  PROP_INPUT_CHANNELS_REORDER,
+  PROP_INPUT_CHANNELS_REORDER_MODE
 };
 
 #define DEBUG_INIT \
@@ -192,6 +229,113 @@ GST_STATIC_PAD_TEMPLATE ("sink",
 static GQuark meta_tag_audio_quark;
 
 /*** TYPE FUNCTIONS ***********************************************************/
+
+#define GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER (gst_audio_convert_input_channels_reorder_get_type ())
+
+static GType
+gst_audio_convert_input_channels_reorder_get_type (void)
+{
+  static GType reorder_type = 0;
+
+  if (g_once_init_enter (&reorder_type)) {
+    static GEnumValue reorder_types[] = {
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_GST,
+            "Reorder the input channels using the default GStreamer order",
+          "gst"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_SMPTE,
+            "Reorder the input channels using the SMPTE order",
+          "smpte"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_CINE,
+            "Reorder the input channels using the CINE order",
+          "cine"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AC3,
+            "Reorder the input channels using the AC3 order",
+          "ac3"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AAC,
+            "Reorder the input channels using the AAC order",
+          "aac"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MONO,
+            "Reorder and mix all input channels to a single mono channel",
+          "mono"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_ALTERNATE,
+            "Reorder and mix all input channels to a single left and a single right stereo channels alternately",
+          "alternate"},
+      {0, NULL, NULL},
+    };
+
+    GType type = g_enum_register_static ("GstAudioConvertInputChannelsReorder",
+        reorder_types);
+
+    g_once_init_leave (&reorder_type, type);
+  }
+
+  return reorder_type;
+}
+
+#define GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE (gst_audio_convert_input_channels_reorder_mode_get_type ())
+
+static GType
+gst_audio_convert_input_channels_reorder_mode_get_type (void)
+{
+  static GType reorder_mode_type = 0;
+
+  if (g_once_init_enter (&reorder_mode_type)) {
+    static GEnumValue reorder_mode_types[] = {
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_NONE,
+            "Never reorder the input channels",
+          "none"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_UNPOSITIONED,
+            "Reorder the input channels only if they are unpositioned",
+          "unpositioned"},
+      {GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_FORCE,
+            "Always reorder the input channels according to the selected configuration",
+          "force"},
+      {0, NULL, NULL},
+    };
+
+    GType type =
+        g_enum_register_static ("GstAudioConvertInputChannelsReorderMode",
+        reorder_mode_types);
+
+    g_once_init_leave (&reorder_mode_type, type);
+  }
+
+  return reorder_mode_type;
+}
+
+static void
+gst_audio_convert_set_mix_matrix (GstAudioConvert * this, const GValue * value);
+
+static gboolean
+gst_audio_convert_src_event (GstBaseTransform * trans, GstEvent * event)
+{
+  gboolean ret = TRUE;
+
+  switch (GST_EVENT_TYPE (event)) {
+    case GST_EVENT_CUSTOM_UPSTREAM:
+    {
+      const GstStructure *s = gst_event_get_structure (event);
+
+      if (s && gst_structure_has_name (s, "GstRequestAudioMixMatrix")) {
+        const GValue *matrix = gst_structure_get_value (s, "matrix");
+
+        if (matrix) {
+          gst_audio_convert_set_mix_matrix (GST_AUDIO_CONVERT (trans), matrix);
+          g_object_notify (G_OBJECT (trans), "mix-matrix");
+        }
+        goto done;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  ret = GST_BASE_TRANSFORM_CLASS (parent_class)->src_event (trans, event);
+
+done:
+  return ret;
+}
+
 static void
 gst_audio_convert_class_init (GstAudioConvertClass * klass)
 {
@@ -246,6 +390,53 @@ gst_audio_convert_class_init (GstAudioConvertClass * klass)
           "Threshold for the output bit depth at/below which to apply dithering.",
           0, 32, 20, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstAudioConvert:input-channels-reorder:
+   *
+   * The positions configuration to use to reorder the input channels
+   * consecutively according to their index. If a `mix-matrix` is specified,
+   * this configuration is ignored.
+   *
+   * When the input channels reordering is activated (because the
+   * `input-channels-reorder-mode` property is
+   * @GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_FORCE or the input channels
+   * are unpositioned and the reorder mode is
+   * @GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_UNPOSITIONED), input
+   * channels will be reordered consecutively according to their index
+   * independently of the `channel-mask` value in the sink pad audio caps.
+   *
+   * Since: 1.26
+   */
+  g_object_class_install_property (gobject_class,
+      PROP_INPUT_CHANNELS_REORDER,
+      g_param_spec_enum ("input-channels-reorder",
+          "Input Channels Reorder",
+          "The positions configuration to use to reorder the input channels consecutively according to their index.",
+          GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER,
+          GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_GST,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  gst_type_mark_as_plugin_api (GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER,
+      0);
+
+  /**
+   * GstAudioConvert:input-channels-reorder-mode:
+   *
+   * The input channels reordering mode used to apply the selected positions
+   * configuration.
+   *
+   * Since: 1.26
+   */
+  g_object_class_install_property (gobject_class,
+      PROP_INPUT_CHANNELS_REORDER_MODE,
+      g_param_spec_enum ("input-channels-reorder-mode",
+          "Input Channels Reorder Mode",
+          "The input channels reordering mode used to apply the selected positions configuration.",
+          GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE,
+          GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_NONE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  gst_type_mark_as_plugin_api
+      (GST_TYPE_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE, 0);
+
   gst_element_class_add_static_pad_template (element_class,
       &gst_audio_convert_src_template);
   gst_element_class_add_static_pad_template (element_class,
@@ -272,6 +463,8 @@ gst_audio_convert_class_init (GstAudioConvertClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_convert_submit_input_buffer);
   basetransform_class->prepare_output_buffer =
       GST_DEBUG_FUNCPTR (gst_audio_convert_prepare_output_buffer);
+  basetransform_class->src_event =
+      GST_DEBUG_FUNCPTR (gst_audio_convert_src_event);
 
   basetransform_class->transform_ip_on_passthrough = FALSE;
 
@@ -302,6 +495,574 @@ gst_audio_convert_dispose (GObject * obj)
   g_value_unset (&this->mix_matrix);
 
   G_OBJECT_CLASS (parent_class)->dispose (obj);
+}
+
+/*** INPUT CHANNELS REORDER FUNCTIONS *****************************************/
+
+typedef struct
+{
+  gboolean has_stereo;
+  gboolean lfe_as_last_channel;
+} GstAudioConvertInputChannelsReorderConfig;
+
+static const GstAudioConvertInputChannelsReorderConfig
+    input_channels_reorder_config[] = {
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_GST
+  {TRUE, FALSE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_SMPTE
+  {TRUE, FALSE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_CINE
+  {TRUE, TRUE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AC3
+  {TRUE, TRUE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AAC
+  {TRUE, TRUE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MONO
+  {FALSE, FALSE},
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_ALTERNATE
+  {TRUE, FALSE}
+};
+
+#define GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_NB G_N_ELEMENTS (input_channels_reorder_config)
+
+static const GstAudioChannelPosition
+    channel_position_per_reorder_config
+    [GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_NB][64] = {
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_GST
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_LFE1,
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_LFE2,
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_SMPTE (see: https://www.sis.se/api/document/preview/919377/)
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // Left front (L)
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // Right front (R)
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,        // Center front (C)
+        GST_AUDIO_CHANNEL_POSITION_LFE1,        // Low frequency enhancement (LFE)
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,   // Left surround (Ls)
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,  // Right surround (Rs)
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,        // Left front center (Lc)
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,       // Right front center (Rc)
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,       // Rear surround left (Lsr)
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,      // Rear surround right (Rsr)
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER, // Rear center (Cs)
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,   // Left side surround (Lss)
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,  // Right side surround (Rss)
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,   // Left wide front (Lw)
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,  // Right wide front (Rw)
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,      // Left front vertical height (Lv)
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,     // Right front vertical height (Rv)
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,    // Center front vertical height (Cv)
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,       // Left surround vertical height rear (Lvr)
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,      // Right surround vertical height rear (Rvr)
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,     // Center vertical height rear (Cvr)
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,       // Left vertical height side surround (Lvss)
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,      // Right vertical height side surround (Rvss)
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,  // Top center surround (Ts)
+        GST_AUDIO_CHANNEL_POSITION_LFE2,        // Low frequency enhancement 2 (LFE2)
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,   // Left front vertical bottom (Lb)
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,  // Right front vertical bottom (Rb)
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER, // Center front vertical bottom (Cb)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Left vertical height surround (Lvs)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Right vertical height surround (Rvs)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Reserved
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Reserved
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Reserved
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Reserved
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Low frequency enhancement 3 (LFE3)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Left edge of screen (Leos)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Right edge of screen (Reos)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Half-way between center of screen and left edge of screen (Hwbcal)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Half-way between center of screen and right edge of screen (Hwbcar)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Left back surround (Lbs)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,     // Right back surround (Rbs)
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_CINE
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,        // C
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,   // Ls
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,  // Rs
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,        // Lc
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,       // Rc
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,       // Lsr
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,      // Rsr
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER, // Cs
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,  // Ts
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,   // Lw
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,  // Rw
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,      // Lv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,     // Rv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,    // Cv
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,       // Lvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,      // Rvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,     // Cvr
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,   // Lss
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,  // Rss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,       // Lvss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,      // Rvss
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,   // Lb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,  // Rb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER, // Cb
+        GST_AUDIO_CHANNEL_POSITION_LFE2,        // LFE2
+        GST_AUDIO_CHANNEL_POSITION_LFE1,        // LFE1
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AC3
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,        // C
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,   // Ls
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,  // Rs
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,        // Lc
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,       // Rc
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,       // Lsr
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,      // Rsr
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER, // Cs
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,  // Ts
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,   // Lw
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,  // Rw
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,      // Lv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,     // Rv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,    // Cv
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,       // Lvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,      // Rvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,     // Cvr
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,   // Lss
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,  // Rss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,       // Lvss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,      // Rvss
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,   // Lb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,  // Rb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER, // Cb
+        GST_AUDIO_CHANNEL_POSITION_LFE2,        // LFE2
+        GST_AUDIO_CHANNEL_POSITION_LFE1,        // LFE1
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AAC
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,        // C
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,   // Ls
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,  // Rs
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,        // Lc
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,       // Rc
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,       // Lsr
+        GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,      // Rsr
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER, // Cs
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,  // Ts
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,   // Lw
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,  // Rw
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,      // Lv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,     // Rv
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,    // Cv
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,       // Lvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,      // Rvr
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,     // Cvr
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,   // Lss
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,  // Rss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,       // Lvss
+        GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,      // Rvss
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,   // Lb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,  // Rb
+        GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER, // Cb
+        GST_AUDIO_CHANNEL_POSITION_LFE2,        // LFE2
+        GST_AUDIO_CHANNEL_POSITION_LFE1,        // LFE1
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+        GST_AUDIO_CHANNEL_POSITION_INVALID,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MONO
+  {
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+        GST_AUDIO_CHANNEL_POSITION_MONO,
+      },
+  // GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_ALTERNATE
+  {
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,  // L
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, // R
+      }
+};
+
+static const gchar *gst_audio_convert_input_channels_reorder_to_string
+    (GstAudioConvertInputChannelsReorder reorder)
+{
+  switch (reorder) {
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_GST:
+      return "GST";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_SMPTE:
+      return "SMPTE";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_CINE:
+      return "CINE";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AC3:
+      return "AC3";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_AAC:
+      return "AAC";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MONO:
+      return "MONO";
+    case GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_ALTERNATE:
+      return "ALTERNATE";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+static gboolean
+gst_audio_convert_position_channels_from_reorder_configuration (gint channels,
+    GstAudioConvertInputChannelsReorder reorder,
+    GstAudioChannelPosition * position)
+{
+  g_return_val_if_fail (channels > 0, FALSE);
+  g_return_val_if_fail (reorder >= 0
+      && reorder < GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_NB, FALSE);
+  g_return_val_if_fail (position != NULL, FALSE);
+
+  GST_DEBUG ("ordering %d audio channel(s) according to the %s configuration",
+      channels, gst_audio_convert_input_channels_reorder_to_string (reorder));
+
+  if (channels == 1) {
+    position[0] = GST_AUDIO_CHANNEL_POSITION_MONO;
+    return TRUE;
+  }
+
+  if (channels == 2 && input_channels_reorder_config[reorder].has_stereo) {
+    position[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+    position[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+    return TRUE;
+  }
+
+  for (gint i = 0; i < channels; ++i) {
+    if (i < G_N_ELEMENTS (channel_position_per_reorder_config[reorder]))
+      position[i] = channel_position_per_reorder_config[reorder][i];
+    else
+      position[i] = GST_AUDIO_CHANNEL_POSITION_INVALID;
+  }
+
+  if (channels > 2
+      && input_channels_reorder_config[reorder].lfe_as_last_channel) {
+    position[channels - 1] = GST_AUDIO_CHANNEL_POSITION_LFE1;
+    if (channels == 3 && input_channels_reorder_config[reorder].has_stereo) {
+      position[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      position[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+    }
+  }
+
+  return TRUE;
 }
 
 /*** GSTREAMER FUNCTIONS ******************************************************/
@@ -352,12 +1113,14 @@ remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
 {
   guint64 mask;
   gint channels;
-  GstAudioConvert *this = GST_AUDIO_CONVERT (user_data);
+  gboolean force_removing = *(gboolean *) user_data;
 
-  /* Only remove the channels and channel-mask if a (empty) mix matrix was manually specified,
-   * if no channel-mask is specified, for non-NONE channel layouts or for a single channel layout
+  /* Only remove the channels and channel-mask if a mix matrix was manually
+   * specified or an input channels reordering is applied, or if no
+   * channel-mask is specified, for non-NONE channel layouts or for a single
+   * channel layout.
    */
-  if (this->mix_matrix_is_set ||
+  if (force_removing ||
       !gst_structure_get (s, "channel-mask", GST_TYPE_BITMASK, &mask, NULL) ||
       (mask != 0 || (gst_structure_get_int (s, "channels", &channels)
               && channels == 1))) {
@@ -373,7 +1136,8 @@ add_other_channels_to_structure (GstCapsFeatures * features, GstStructure * s,
 {
   gint other_channels = GPOINTER_TO_INT (user_data);
 
-  gst_structure_set (s, "channels", G_TYPE_INT, other_channels, NULL);
+  gst_structure_set_static_str (s, "channels", G_TYPE_INT, other_channels,
+      NULL);
 
   return TRUE;
 }
@@ -393,9 +1157,13 @@ gst_audio_convert_transform_caps (GstBaseTransform * btrans,
 
   gst_caps_map_in_place (tmp, remove_format_from_structure, NULL);
   gst_caps_map_in_place (tmp, remove_layout_from_structure, NULL);
-  gst_caps_map_in_place (tmp, remove_channels_from_structure, btrans);
 
   GST_OBJECT_LOCK (this);
+  gboolean force_removing = this->mix_matrix_is_set
+      || (direction == GST_PAD_SINK
+      && this->input_channels_reorder_mode !=
+      GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_NONE);
+  gst_caps_map_in_place (tmp, remove_channels_from_structure, &force_removing);
 
   /* We can infer the required input / output channels based on the
    * matrix dimensions */
@@ -567,7 +1335,7 @@ gst_audio_convert_fixate_format (GstBaseTransform * base, GstStructure * ins,
   }
 
   if (out_info)
-    gst_structure_set (outs, "format", G_TYPE_STRING,
+    gst_structure_set_static_str (outs, "format", G_TYPE_STRING,
         GST_AUDIO_FORMAT_INFO_NAME (out_info), NULL);
 }
 
@@ -575,6 +1343,7 @@ static void
 gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
     GstStructure * outs)
 {
+  GstAudioConvert *this = GST_AUDIO_CONVERT (base);
   gint in_chans, out_chans;
   guint64 in_mask = 0, out_mask = 0;
   gboolean has_in_mask = FALSE, has_out_mask = FALSE;
@@ -609,8 +1378,8 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
           GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
           GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT);
       has_out_mask = TRUE;
-      gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, out_mask,
-          NULL);
+      gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+          out_mask, NULL);
     }
   }
 
@@ -626,8 +1395,7 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
           GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT);
       has_in_mask = TRUE;
     } else if (in_chans > 2)
-      g_warning ("%s: Upstream caps contain no channel mask",
-          GST_ELEMENT_NAME (base));
+      GST_WARNING_OBJECT (base, "Upstream caps contain no channel mask");
   }
 
   if (!has_out_mask && out_chans == 1 && (in_chans != out_chans
@@ -638,7 +1406,8 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
     /* same number of channels and no output layout: just use input layout */
     if (!has_out_mask) {
       /* in_chans == 1 handled above already */
-      gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, in_mask, NULL);
+      gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+          in_mask, NULL);
       return;
     }
 
@@ -652,8 +1421,8 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
 
     if (n_bits_set (out_mask) < in_chans) {
       /* Not much we can do here, this shouldn't just happen */
-      g_warning ("%s: Invalid downstream channel-mask with too few bits set",
-          GST_ELEMENT_NAME (base));
+      GST_WARNING_OBJECT (base,
+          "Invalid downstream channel-mask with too few bits set");
     } else {
       guint64 intersection;
 
@@ -661,8 +1430,8 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
        * the input layout */
       intersection = in_mask & out_mask;
       if (n_bits_set (intersection) >= in_chans) {
-        gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, in_mask,
-            NULL);
+        gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+            in_mask, NULL);
         return;
       }
 
@@ -670,8 +1439,8 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
        * just pick the first possibility */
       intersection = find_suitable_mask (out_mask, out_chans);
       if (intersection) {
-        gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, intersection,
-            NULL);
+        gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+            intersection, NULL);
         return;
       }
     }
@@ -687,15 +1456,22 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
      * channel position array or something else that's not a list; we assume
      * the input if half-way sane and don't try to fall back on other list items
      * if the first one is something unexpected or non-channel-pos-array-y */
-    if (n_bits_set (out_mask) >= out_chans) {
-      intersection = find_suitable_mask (out_mask, out_chans);
-      gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, intersection,
-          NULL);
+    if (has_out_mask && out_mask == 0) {
+      gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+          out_mask, NULL);
       return;
+    } else if (n_bits_set (out_mask) >= out_chans) {
+      intersection = find_suitable_mask (out_mask, out_chans);
+      gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+          intersection, NULL);
+      return;
+    } else if (this->mix_matrix_is_set) {
+      /* Assume the matrix matches the number of in/out channels. This will be
+       * validated when creating the converter. */
+    } else {
+      /* what now?! Just ignore what we're given and use default positions */
+      GST_WARNING_OBJECT (base, "invalid or unexpected channel-positions");
     }
-
-    /* what now?! Just ignore what we're given and use default positions */
-    GST_WARNING_OBJECT (base, "invalid or unexpected channel-positions");
   }
 
   /* missing or invalid output layout and we can't use the input layout for
@@ -706,11 +1482,12 @@ gst_audio_convert_fixate_channels (GstBaseTransform * base, GstStructure * ins,
   if (out_chans > 1
       && (out_mask = gst_audio_channel_get_fallback_mask (out_chans))) {
     GST_DEBUG_OBJECT (base, "using default channel layout as fallback");
-    gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK, out_mask, NULL);
+    gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
+        out_mask, NULL);
   } else if (out_chans > 1) {
     GST_ERROR_OBJECT (base, "Have no default layout for %d channels",
         out_chans);
-    gst_structure_set (outs, "channel-mask", GST_TYPE_BITMASK,
+    gst_structure_set_static_str (outs, "channel-mask", GST_TYPE_BITMASK,
         G_GUINT64_CONSTANT (0), NULL);
   }
 }
@@ -789,7 +1566,7 @@ gst_audio_convert_ensure_converter (GstBaseTransform * base,
     goto done;
   }
 
-  config = gst_structure_new ("GstAudioConverterConfig",
+  config = gst_structure_new_static_str ("GstAudioConverterConfig",
       GST_AUDIO_CONVERTER_OPT_DITHER_METHOD, GST_TYPE_AUDIO_DITHER_METHOD,
       this->dither,
       GST_AUDIO_CONVERTER_OPT_DITHER_THRESHOLD, G_TYPE_UINT,
@@ -798,10 +1575,39 @@ gst_audio_convert_ensure_converter (GstBaseTransform * base,
       GST_TYPE_AUDIO_NOISE_SHAPING_METHOD, this->ns, NULL);
 
   if (this->mix_matrix_is_set) {
-    gst_structure_set_value (config, GST_AUDIO_CONVERTER_OPT_MIX_MATRIX,
-        &this->mix_matrix);
+    gst_structure_set_value_static_str (config,
+        GST_AUDIO_CONVERTER_OPT_MIX_MATRIX, &this->mix_matrix);
 
     this->convert = gst_audio_converter_new (0, in_info, out_info, config);
+  } else if (this->input_channels_reorder_mode !=
+      GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_NONE) {
+    GstAudioFlags in_flags;
+    GstAudioChannelPosition in_position[64];
+    gboolean restore_in = FALSE;
+
+    if (this->input_channels_reorder_mode ==
+        GST_AUDIO_CONVERT_INPUT_CHANNELS_REORDER_MODE_FORCE
+        || GST_AUDIO_INFO_IS_UNPOSITIONED (in_info)) {
+      in_flags = GST_AUDIO_INFO_FLAGS (in_info);
+      memcpy (in_position, in_info->position,
+          GST_AUDIO_INFO_CHANNELS (in_info) * sizeof (GstAudioChannelPosition));
+
+      if (gst_audio_convert_position_channels_from_reorder_configuration
+          (GST_AUDIO_INFO_CHANNELS (in_info), this->input_channels_reorder,
+              in_info->position)) {
+        GST_AUDIO_INFO_FLAGS (in_info) &= ~GST_AUDIO_FLAG_UNPOSITIONED;
+        restore_in = TRUE;
+      }
+    }
+
+    this->convert = gst_audio_converter_new (0, in_info, out_info, config);
+
+    if (restore_in) {
+      GST_AUDIO_INFO_FLAGS (in_info) = in_flags;
+      memcpy (in_info->position, in_position,
+          GST_AUDIO_INFO_CHANNELS (in_info) * sizeof (GstAudioChannelPosition));
+    }
+
   } else {
     this->convert = gst_audio_converter_new (0, in_info, out_info, config);
   }
@@ -1050,24 +1856,9 @@ gst_audio_convert_prepare_output_buffer (GstBaseTransform * base,
 static void
 gst_audio_convert_set_mix_matrix (GstAudioConvert * this, const GValue * value)
 {
-  gboolean mix_matrix_was_set;
-  GstAudioConverter *old_converter;
-  GValue old_mix_matrix = G_VALUE_INIT;
-  gboolean restore = FALSE;
-
-  g_value_init (&old_mix_matrix, GST_TYPE_ARRAY);
-
   GST_OBJECT_LOCK (this);
 
-  mix_matrix_was_set = this->mix_matrix_is_set;
-  old_converter = this->convert;
-  if (mix_matrix_was_set) {
-    g_value_copy (&this->mix_matrix, &old_mix_matrix);
-  }
-
-  if (this->convert) {
-    this->convert = NULL;
-  }
+  g_clear_pointer (&this->convert, gst_audio_converter_free);
 
   if (!gst_value_array_get_size (value)) {
     g_value_copy (value, &this->mix_matrix);
@@ -1079,40 +1870,20 @@ gst_audio_convert_set_mix_matrix (GstAudioConvert * this, const GValue * value)
       g_value_copy (value, &this->mix_matrix);
       this->mix_matrix_is_set = TRUE;
     } else {
-      g_warning ("Empty mix matrix's first row.");
-      restore = TRUE;
-      goto done;
+      GST_WARNING_OBJECT (this, "Empty mix matrix's first row.");
+      this->mix_matrix_is_set = FALSE;
     }
   }
 
   GST_OBJECT_UNLOCK (this);
 
-  /* We need to call this here already because gst_audio_convert_transform
-   * might never get called otherwise if the element was set to passthrough.
-   *
-   * In any case if this succeeds we still want to reconfigure the sink to give
-   * upstream a chance to renegotiate channels.
-   */
-  if (gst_audio_convert_ensure_converter (GST_BASE_TRANSFORM (this),
-          &this->in_info, &this->out_info)) {
-    gst_base_transform_reconfigure_sink (GST_BASE_TRANSFORM (this));
-  } else {
-    g_warning ("Cannot build converter with this mix matrix");
-    restore = TRUE;
-    goto done;
-  }
-
-done:
-  if (restore) {
-    this->mix_matrix_is_set = mix_matrix_was_set;
-    if (mix_matrix_was_set) {
-      g_value_copy (&old_mix_matrix, &this->mix_matrix);
-    }
-    this->convert = old_converter;
-  } else if (old_converter) {
-    gst_audio_converter_free (old_converter);
-  }
-  g_value_unset (&old_mix_matrix);
+  /* We can't create the converter here because the application could be setting
+   * a new mix-matrix for caps we haven't received yet (e.g. number of input
+   * channels changed). Assume for now we can't be passthrough and in-place,
+   * that will be revised once new caps or next buffer arrives. */
+  gst_base_transform_set_in_place (GST_BASE_TRANSFORM_CAST (this), FALSE);
+  gst_base_transform_set_passthrough (GST_BASE_TRANSFORM_CAST (this), FALSE);
+  gst_base_transform_reconfigure_sink (GST_BASE_TRANSFORM_CAST (this));
 }
 
 static void
@@ -1133,6 +1904,12 @@ gst_audio_convert_set_property (GObject * object, guint prop_id,
       break;
     case PROP_MIX_MATRIX:
       gst_audio_convert_set_mix_matrix (this, value);
+      break;
+    case PROP_INPUT_CHANNELS_REORDER:
+      this->input_channels_reorder = g_value_get_enum (value);
+      break;
+    case PROP_INPUT_CHANNELS_REORDER_MODE:
+      this->input_channels_reorder_mode = g_value_get_enum (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1161,6 +1938,12 @@ gst_audio_convert_get_property (GObject * object, guint prop_id,
       if (this->mix_matrix_is_set)
         g_value_copy (&this->mix_matrix, value);
       GST_OBJECT_UNLOCK (object);
+      break;
+    case PROP_INPUT_CHANNELS_REORDER:
+      g_value_set_enum (value, this->input_channels_reorder);
+      break;
+    case PROP_INPUT_CHANNELS_REORDER_MODE:
+      g_value_set_enum (value, this->input_channels_reorder_mode);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

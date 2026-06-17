@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -106,7 +106,8 @@ pas_heap_ref* createBmallocHeapRefForSize(size_t size)
 
     return new pas_heap_ref(
         BMALLOC_HEAP_REF_INITIALIZER(
-            new bmalloc_type(BMALLOC_TYPE_INITIALIZER((unsigned)size, 1, strdup(stringOut.str().c_str())))));
+            new bmalloc_type(BMALLOC_TYPE_INITIALIZER((unsigned)size, 1, strdup(stringOut.str().c_str()))),
+            pas_bmalloc_heap_ref_kind_non_compact));
 }
 #endif // PAS_ENABLE_BMALLOC
 
@@ -274,19 +275,12 @@ struct ReaderRange {
         PAS_ASSERT(size);
     }
 
-    bool operator<(ReaderRange other) const
-    {
-        if (base != other.base)
-            return base < other.base;
-        return size < other.size;
-    }
-
     void* base { nullptr };
     size_t size { 0 };
 };
 
 map<pas_enumerator_record_kind, set<RecordedRange>> recordedRanges;
-map<ReaderRange, void*> readerCache;
+ReaderRange readerPreviousBuffer;
 
 void* enumeratorReader(pas_enumerator* enumerator,
                        void* address,
@@ -296,11 +290,16 @@ void* enumeratorReader(pas_enumerator* enumerator,
     CHECK(!arg);
     CHECK(size);
 
-    ReaderRange range = ReaderRange(address, size);
-
-    auto readerCacheIter = readerCache.find(range);
-    if (readerCacheIter != readerCache.end())
-        return readerCacheIter->second;
+    // Scribble the previously returned buffer to simulate the previously mapped region
+    // being invalidated as per the specification of memory_reader_t in malloc.h:
+    //
+    // typedef kern_return_t memory_reader_t(task_t remote_task, vm_address_t remote_address, vm_size_t size, void * __sized_by(size) *local_memory);
+    //
+    // given a task, "reads" the memory at the given address and size
+    // local_memory: set to a contiguous chunk of memory; validity of local_memory is assumed to be limited (until next call)
+    //
+    if (readerPreviousBuffer.base && readerPreviousBuffer.size)
+        memset(readerPreviousBuffer.base, 0xda, readerPreviousBuffer.size);
 
     void* result = pas_enumerator_allocate(enumerator, size);
 
@@ -328,7 +327,7 @@ void* enumeratorReader(pas_enumerator* enumerator,
     }
 
     if (verbose) {
-        cout << "address = " << address << "..."
+        cout << "enumeratorReader address = " << address << "..."
              << reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(address) + size)
              << ", pageAddress = " << pageAddress << "..." << pageEndAddress
              << ", areProtectedPages = " << areProtectedPages << "\n";
@@ -346,7 +345,7 @@ void* enumeratorReader(pas_enumerator* enumerator,
         PAS_ASSERT(!systemResult);
     }
 
-    readerCache[range] = result;
+    readerPreviousBuffer = ReaderRange(result, size);
     return result;
 }
 
@@ -621,7 +620,7 @@ void testAllocationChaos(unsigned numThreads, unsigned numIsolatedHeaps,
 #endif
 
             pageRanges.clear();
-            readerCache.clear();
+            readerPreviousBuffer = ReaderRange();
             recordedRanges.clear();
 
             addPageRange(
@@ -1144,7 +1143,7 @@ void addAllTests()
             "bmalloc-gigacage",
             [] () {
                 static const bmalloc_type gigacageType = BMALLOC_TYPE_INITIALIZER(1, 1, "Gigacage");
-                gigacageHeapRef = BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&gigacageType);
+                gigacageHeapRef = BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&gigacageType, pas_bmalloc_heap_ref_kind_compact);
 
                 size_t reservationSize = 1000000000;
                 void* reservation = malloc(reservationSize);

@@ -145,17 +145,6 @@ String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType
     return values[static_cast<size_t>(command)];
 }
 
-std::unique_ptr<PlatformMediaSession> PlatformMediaSession::create(PlatformMediaSessionManager& manager, PlatformMediaSessionClient& client)
-{
-    return std::unique_ptr<PlatformMediaSession>(new PlatformMediaSession(manager, client));
-}
-
-PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionManager&, PlatformMediaSessionClient& client)
-    : m_client(client)
-    , m_mediaSessionIdentifier(MediaSessionIdentifier::generate())
-{
-}
-
 PlatformMediaSession::~PlatformMediaSession()
 {
     setActive(false);
@@ -167,10 +156,12 @@ void PlatformMediaSession::setActive(bool active)
         return;
     m_active = active;
 
+    if (RefPtr manager = sessionManager()) {
     if (m_active)
-        PlatformMediaSessionManager::singleton().addSession(*this);
+            manager->addSession(*this);
     else
-        PlatformMediaSessionManager::singleton().removeSession(*this);
+            manager->removeSession(*this);
+    }
 }
 
 void PlatformMediaSession::setState(State state)
@@ -181,8 +172,10 @@ void PlatformMediaSession::setState(State state)
     ALWAYS_LOG(LOGIDENTIFIER, state);
     m_state = state;
     if (m_state == State::Playing && canProduceAudio())
-        m_hasPlayedAudiblySinceLastInterruption = true;
-    PlatformMediaSessionManager::singleton().sessionStateChanged(*this);
+        setHasPlayedAudiblySinceLastInterruption(true);
+
+    if (RefPtr manager = sessionManager())
+        manager->sessionStateChanged(*this);
 }
 
 size_t PlatformMediaSession::activeInterruptionCount() const
@@ -277,7 +270,7 @@ bool PlatformMediaSession::clientWillBeginPlayback()
 
     SetForScope preparingToPlay(m_preparingToPlay, true);
 
-    if (!PlatformMediaSessionManager::singleton().sessionWillBeginPlayback(*this)) {
+    if (RefPtr manager = sessionManager(); manager && !manager->sessionWillBeginPlayback(*this)) {
         if (state() == State::Interrupted)
             m_stateToRestore = State::Playing;
         return false;
@@ -301,7 +294,8 @@ bool PlatformMediaSession::processClientWillPausePlayback(DelayCallingUpdateNowP
     }
 
     setState(State::Paused);
-    PlatformMediaSessionManager::singleton().sessionWillEndPlayback(*this, shouldDelayCallingUpdateNowPlaying);
+    if (RefPtr manager = sessionManager())
+        manager->sessionWillEndPlayback(*this, shouldDelayCallingUpdateNowPlaying);
     return true;
 }
 
@@ -324,71 +318,22 @@ void PlatformMediaSession::pauseSession()
     if (state() == State::Interrupted)
         m_stateToRestore = State::Paused;
 
-    m_client.suspendPlayback();
+    client().suspendPlayback();
 }
 
 void PlatformMediaSession::stopSession()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    m_client.suspendPlayback();
-    PlatformMediaSessionManager::singleton().removeSession(*this);
-}
-
-PlatformMediaSession::MediaType PlatformMediaSession::mediaType() const
-{
-    return m_client.mediaType();
-}
-
-PlatformMediaSession::MediaType PlatformMediaSession::presentationType() const
-{
-    return m_client.presentationType();
-}
-
-bool PlatformMediaSession::canReceiveRemoteControlCommands() const
-{
-    return m_client.canReceiveRemoteControlCommands();
+    client().suspendPlayback();
+    if (RefPtr manager = sessionManager())
+        manager->removeSession(*this);
 }
 
 void PlatformMediaSession::didReceiveRemoteControlCommand(RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument& argument)
 {
     ALWAYS_LOG(LOGIDENTIFIER, command);
 
-    m_client.didReceiveRemoteControlCommand(command, argument);
-}
-
-bool PlatformMediaSession::supportsSeeking() const
-{
-    return m_client.supportsSeeking();
-}
-
-bool PlatformMediaSession::isSuspended() const
-{
-    return m_client.isSuspended();
-}
-
-bool PlatformMediaSession::isPlaying() const
-{
-    return m_client.isPlaying();
-}
-
-bool PlatformMediaSession::isAudible() const
-{
-    return m_client.isAudible();
-}
-
-bool PlatformMediaSession::isEnded() const
-{
-    return m_client.isEnded();
-}
-
-MediaTime PlatformMediaSession::duration() const
-{
-    return m_client.mediaSessionDuration();
-}
-
-bool PlatformMediaSession::shouldOverrideBackgroundLoadingRestriction() const
-{
-    return m_client.shouldOverrideBackgroundLoadingRestriction();
+    client().didReceiveRemoteControlCommand(command, argument);
 }
 
 void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWireless)
@@ -398,12 +343,8 @@ void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWirel
 
     m_isPlayingToWirelessPlaybackTarget = isWireless;
 
-    PlatformMediaSessionManager::singleton().sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
-}
-
-PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
-{
-    return m_client.displayType();
+    if (RefPtr manager = sessionManager())
+        manager->sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
 }
 
 bool PlatformMediaSession::blockedBySystemInterruption() const
@@ -420,24 +361,16 @@ bool PlatformMediaSession::activeAudioSessionRequired() const
     return canProduceAudio();
 }
 
-bool PlatformMediaSession::canProduceAudio() const
-{
-    return m_client.canProduceAudio();
-}
-
-bool PlatformMediaSession::hasMediaStreamSource() const
-{
-    return m_client.hasMediaStreamSource();
-}
-
 void PlatformMediaSession::canProduceAudioChanged()
 {
-    PlatformMediaSessionManager::singleton().sessionCanProduceAudioChanged();
+    if (RefPtr manager = sessionManager())
+        manager->sessionCanProduceAudioChanged();
 }
 
 void PlatformMediaSession::clientCharacteristicsChanged(bool positionChanged)
 {
-    PlatformMediaSessionManager::singleton().clientCharacteristicsChanged(*this, positionChanged);
+    if (RefPtr manager = sessionManager())
+        manager->clientCharacteristicsChanged(*this, positionChanged);
 }
 
 static inline bool isPlayingAudio(PlatformMediaSession::MediaType mediaType)
@@ -450,7 +383,7 @@ static inline bool isPlayingAudio(PlatformMediaSession::MediaType mediaType)
 #endif
 }
 
-bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSession& otherSession) const
+bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSessionInterface& otherSession) const
 {
     auto mediaType = this->mediaType();
     auto otherMediaType = otherSession.mediaType();
@@ -462,25 +395,10 @@ bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSession& other
     if (!groupID || !otherGroupID || groupID != otherGroupID)
         return false;
 
-    return m_client.hasMediaStreamSource() || otherSession.m_client.hasMediaStreamSource();
+    return client().hasMediaStreamSource() || otherSession.client().hasMediaStreamSource();
 }
 
-bool PlatformMediaSession::shouldOverridePauseDuringRouteChange() const
-{
-    return m_client.shouldOverridePauseDuringRouteChange();
-}
-
-std::optional<NowPlayingInfo> PlatformMediaSession::nowPlayingInfo() const
-{
-    return client().nowPlayingInfo();
-}
-
-bool PlatformMediaSession::isNowPlayingEligible() const
-{
-    return client().isNowPlayingEligible();
-};
-
-WeakPtr<PlatformMediaSession> PlatformMediaSession::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>& sessions, PlaybackControlsPurpose purpose)
+WeakPtr<PlatformMediaSessionInterface> PlatformMediaSession::selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>& sessions, PlaybackControlsPurpose purpose)
 {
     return client().selectBestMediaSession(sessions, purpose);
 }
@@ -492,11 +410,6 @@ void PlatformMediaSession::setActiveNowPlayingSession(bool isActiveNowPlayingSes
 
     m_isActiveNowPlayingSession = isActiveNowPlayingSession;
     client().isActiveNowPlayingSessionChanged();
-}
-
-ProcessID PlatformMediaSession::presentingApplicationPID() const
-{
-    return client().presentingApplicationPID();
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -520,16 +433,6 @@ String PlatformMediaSession::description() const
     return makeString(convertEnumerationToString(mediaType()), ", "_s, convertEnumerationToString(state()));
 }
 #endif
-
-MediaTime PlatformMediaSessionClient::mediaSessionDuration() const
-{
-    return MediaTime::invalidTime();
-}
-
-std::optional<NowPlayingInfo> PlatformMediaSessionClient::nowPlayingInfo() const
-{
-    return { };
-}
 
 } // namespace WebCore
 

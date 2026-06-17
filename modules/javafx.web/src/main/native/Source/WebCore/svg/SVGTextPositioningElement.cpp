@@ -23,8 +23,10 @@
 #include "config.h"
 #include "SVGTextPositioningElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "NodeName.h"
+#include "RenderElementInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGText.h"
 #include "SVGAltGlyphElement.h"
@@ -111,22 +113,14 @@ void SVGTextPositioningElement::svgAttributeChanged(const QualifiedName& attrNam
     SVGTextContentElement::svgAttributeChanged(attrName);
 }
 
-SVGTextPositioningElement* SVGTextPositioningElement::elementFromRenderer(RenderBoxModelObject& renderer)
+RefPtr<SVGTextPositioningElement> SVGTextPositioningElement::elementFromRenderer(RenderBoxModelObject& renderer)
 {
     if (!is<RenderSVGText>(renderer) && !is<RenderSVGInline>(renderer))
         return nullptr;
 
     ASSERT(renderer.element());
-    SVGElement& element = downcast<SVGElement>(*renderer.element());
-
-    if (!is<SVGTextElement>(element)
-        && !is<SVGTSpanElement>(element)
-        && !is<SVGAltGlyphElement>(element)
-        && !is<SVGTRefElement>(element))
-        return nullptr;
-
-    // FIXME: This should use downcast<>().
-    return &static_cast<SVGTextPositioningElement&>(element);
+    RefPtr element = downcast<SVGElement>(renderer.element());
+    return dynamicDowncast<SVGTextPositioningElement>(WTFMove(element));
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package test.javafx.beans.property;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -49,7 +49,7 @@ public class BooleanPropertyTest {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
     @Test
@@ -57,7 +57,7 @@ public class BooleanPropertyTest {
         final BooleanProperty p = new SimpleBooleanProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
+        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test

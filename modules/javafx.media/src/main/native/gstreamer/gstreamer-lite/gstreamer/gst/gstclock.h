@@ -601,7 +601,7 @@ GST_API
 gboolean                gst_clock_set_master            (GstClock *clock, GstClock *master);
 
 GST_API
-GstClock*               gst_clock_get_master            (GstClock *clock);
+GstClock*               gst_clock_get_master            (GstClock *clock) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_clock_set_timeout           (GstClock *clock,
@@ -610,15 +610,19 @@ GST_API
 GstClockTime            gst_clock_get_timeout           (GstClock *clock);
 
 GST_API
-gboolean                gst_clock_add_observation       (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared);
+gboolean                gst_clock_add_observation       (GstClock *clock,
+                                                         GstClockTime observation_internal,
+                                                         GstClockTime observation_external,
+                                                         gdouble *r_squared);
 GST_API
-gboolean                gst_clock_add_observation_unapplied (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared,
-                                                         GstClockTime *internal,
-                                                         GstClockTime *external,
-                                                         GstClockTime *rate_num,
-                                                         GstClockTime *rate_denom);
+gboolean                gst_clock_add_observation_unapplied (GstClock *clock,
+                                                             GstClockTime observation_internal,
+                                                             GstClockTime observation_external,
+                                                             gdouble *r_squared,
+                                                             GstClockTime *internal,
+                                                             GstClockTime *external,
+                                                             GstClockTime *rate_num,
+                                                             GstClockTime *rate_denom);
 
 /* getting and adjusting internal/external time */
 
@@ -662,11 +666,11 @@ void                    gst_clock_set_synced            (GstClock * clock, gbool
 
 GST_API
 GstClockID              gst_clock_new_single_shot_id    (GstClock *clock,
-                                                         GstClockTime time);
+                                                         GstClockTime time) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstClockID              gst_clock_new_periodic_id       (GstClock *clock,
                                                          GstClockTime start_time,
-                                                         GstClockTime interval);
+                                                         GstClockTime interval) G_GNUC_WARN_UNUSED_RESULT;
 
 /* reference counting */
 

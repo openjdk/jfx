@@ -1,4 +1,4 @@
-## IBM International Components for Unicode (ICU4C) v74.2
+## IBM International Components for Unicode (ICU4C) v77.1
 
 ### ICU License
 
@@ -8,16 +8,19 @@ COPYRIGHT AND PERMISSION NOTICE
 
 ```
 
-Copyright (C) 2016 and later: Unicode, Inc. and others.
-Copyright (C) 1996-2017, International Business Machines Corporation and others. All rights reserved.
+Copyright (C) 1996-2016, International Business Machines
+Copyright (C) 1996-2017, International Business Machines Corporation
+Copyright (C) 1996-2016, International Business Machines Corporation and others. All Rights Reserved.
 Copyright (C) 2007 Google Inc. All rights reserved.
-Copyright (C) 2001 and onwards Google Inc.
+Copyright (C) 2016 and later: Unicode, Inc. and others.
+Copyright (C) 2001-2004 and onwards Google Inc.
 Copyright (C) 1999-2013 IBM Corp. All rights reserved.
 Copyright (C) IBM Corporation, 2000-2016. All rights reserved.
 Copyright (C) 2006-2012 the V8 project authors. All rights reserved.
 Copyright (C) 2001-2015 IBM and others. All rights reserved.
-Copyright (C) 2010, Yahoo! Inc.
-Copyright (C) 2008-2015, Google, International Business Machines Corporation and others. All rights reserved
+Copyright (C) 2010 , Yahoo! Inc.
+Copyright (C) 2008-2014, Google, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (C) 2008-2015, Google, International Business Machines Corporation
 
 NOTICE TO USER: Carefully read the following legal agreement. BY
 DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
@@ -53,6 +56,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
+SPDX-License-Identifier: Unicode-3.0
 ----------------------------------------------------------------------
 
 Third-Party Software Licenses
@@ -67,7 +71,7 @@ ICU License - ICU 1.8.1 to ICU 57.1
 
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright (c) 1995-2016 International Business Machines Corporation and others
+Copyright (C) 1995-2016 International Business Machines Corporation and others
 All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -156,8 +160,8 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #  ---------COPYING.libtabe ---- BEGIN--------------------
  #
  #  /*
- #   * Copyright (c) 1999 TaBE Project.
- #   * Copyright (c) 1999 Pai-Hsiang Hsiao.
+ #   * Copyright (C) 1999 TaBE Project.
+ #   * Copyright (C) 1999 Pai-Hsiang Hsiao.
  #   * All rights reserved.
  #   *
  #   * Redistribution and use in source and binary forms, with or without
@@ -189,7 +193,7 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #   */
  #
  #  /*
- #   * Copyright (c) 1999 Computer Systems and Communication Lab,
+ #   * Copyright (C) 1999 Computer Systems and Communication Lab,
  #   *                    Institute of Information Science, Academia
  #       *                    Sinica. All rights reserved.
  #   *
@@ -310,7 +314,7 @@ Lao Word Break Dictionary Data (laodict.txt)
 
  # Copyright (C) 2016 and later: Unicode, Inc. and others.
  # License & terms of use: http://www.unicode.org/copyright.html
- # Copyright (c) 2015 International Business Machines Corporation
+ # Copyright (C) 2015 International Business Machines Corporation
  # and others. All Rights Reserved.
  #
  # Project: https://github.com/rober42539/lao-dictionary
@@ -350,14 +354,14 @@ Lao Word Break Dictionary Data (laodict.txt)
 
 Burmese Word Break Dictionary Data (burmesedict.txt)
 
- #  Copyright (c) 2014 International Business Machines Corporation
+ #  Copyright (C) 2014 International Business Machines Corporation
  #  and others. All Rights Reserved.
  #
  #  This list is part of a project hosted at:
  #    github.com/kanyawtech/myanmar-karen-word-lists
  #
  #  --------------------------------------------------------------------------
- #  Copyright (c) 2013, LeRoy Benjamin Sharon
+ #  Copyright (C) 2013, LeRoy Benjamin Sharon
  #  All rights reserved.
  #
  #  Redistribution and use in source and binary forms, with or without
@@ -443,5 +447,33 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------------
+
+JSON parsing library (nlohmann/json)
+
+File: vendor/json/upstream/single_include/nlohmann/json.hpp (only for ICU4C)
+
+MIT License
+
+Copyright (C) 2013-2022 Niels Lohmann
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ```

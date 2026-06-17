@@ -114,6 +114,9 @@ public class MenuBarPage extends TestPaneBase implements HasSkinnable {
         FX.item(m2, "Submenu Item 2");
         FX.item(m2, "Submenu Item 3");
         FX.item(m2, "Submenu Item 4");
+        Menu m3 = FX.menu(m2, "Submenu (2)");
+        FX.item(m3, "Sub-submenu 1");
+        FX.item(m3, "Sub-submenu 2");
         return m;
     }
 

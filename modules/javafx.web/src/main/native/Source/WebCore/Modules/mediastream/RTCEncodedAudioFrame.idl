@@ -28,10 +28,26 @@
 [
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
 ]
 dictionary RTCEncodedAudioFrameMetadata {
     unsigned long synchronizationSource;
+    octet payloadType;
     sequence<unsigned long> contributingSources;
+    short sequenceNumber;
+    unsigned long rtpTimestamp;
+    // FIXME: add additional time metadata
+    // DOMHighResTimeStamp receiveTime;
+    // DOMHighResTimeStamp captureTime;
+    // DOMHighResTimeStamp senderCaptureTimeOffset;
+    DOMString mimeType;
+};
+
+[
+    Conditional=WEB_RTC,
+]
+dictionary RTCEncodedAudioFrameOptions {
+    RTCEncodedAudioFrameMetadata metadata;
 };
 
 // https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedAudioFrame-interface
@@ -41,6 +57,8 @@ dictionary RTCEncodedAudioFrameMetadata {
     EnabledBySetting=WebRTCEncodedTransformEnabled,
     Exposed=(Window,DedicatedWorker),
 ] interface RTCEncodedAudioFrame {
+    constructor(RTCEncodedAudioFrame originalFrame, optional RTCEncodedAudioFrameOptions options = {});
+
     readonly attribute unsigned long long timestamp;
     attribute ArrayBuffer data;
     RTCEncodedAudioFrameMetadata getMetadata();

@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
+
+import com.sun.javafx.util.Utils;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
@@ -145,7 +147,8 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
 
         return new StubStage();
     }
@@ -602,10 +605,18 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public AsyncOperation loadImageAsync(
-            AsyncOperationListener listener, String url, double width, double height,
+            AsyncOperationListener<ImageLoader> listener, String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
         return imageLoaderFactory.createAsyncImageLoader(
                 listener, url, width, height, preserveRatio, smooth);
+    }
+
+    @Override
+    public AsyncOperation loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, InputStream stream, double width, double height,
+            boolean preserveRatio, boolean smooth) {
+        return imageLoaderFactory.createAsyncImageLoader(
+                listener, stream, width, height, preserveRatio, smooth);
     }
 
     @Override
@@ -770,7 +781,7 @@ public class StubToolkit extends Toolkit {
         return false;
     }
 
-    private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
+    private KeyCode platformShortcutKey;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {
         this.platformShortcutKey = platformShortcutKey;
@@ -778,6 +789,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        if (platformShortcutKey == null) {
+            return Utils.isMac() ? KeyCode.META : KeyCode.CONTROL;
+        }
+
         return platformShortcutKey;
     }
 

@@ -152,9 +152,4 @@ template <typename T, typename U> inline bool operator==(const Handle<T>& a, U* 
     return a.get() == b;
 }
 
-template <typename T, typename U> inline bool operator==(T* a, const Handle<U>& b)
-{
-    return a == b.get();
-}
-
 } // namespace JSC

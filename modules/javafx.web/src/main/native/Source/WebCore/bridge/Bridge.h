@@ -35,7 +35,7 @@ namespace JSC  {
 namespace Bindings {
 
 class Method {
-    WTF_MAKE_NONCOPYABLE(Method); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(Method); WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Method);
 public:
     Method() = default;
     virtual int numParameters() const = 0;

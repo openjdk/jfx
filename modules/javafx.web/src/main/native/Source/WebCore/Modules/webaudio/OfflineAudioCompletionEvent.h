@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ private:
     explicit OfflineAudioCompletionEvent(Ref<AudioBuffer>&& renderedBuffer);
     OfflineAudioCompletionEvent(const AtomString& eventType, OfflineAudioCompletionEventInit&&);
 
-    Ref<AudioBuffer> m_renderedBuffer;
+    const Ref<AudioBuffer> m_renderedBuffer;
 };
 
 } // namespace WebCore

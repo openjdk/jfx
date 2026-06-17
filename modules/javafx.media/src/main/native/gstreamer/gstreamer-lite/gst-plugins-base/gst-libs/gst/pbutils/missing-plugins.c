@@ -519,6 +519,49 @@ error:
 }
 
 /**
+ * gst_missing_plugin_message_set_stream_id:
+ * @msg: A missing-plugin #GstMessage of type #GST_MESSAGE_ELEMENT
+ * @stream_id: The stream id for which an element is missing
+ *
+ * Set the stream-id of the stream for which an element is missing.
+ *
+ * Since: 1.26
+ */
+void
+gst_missing_plugin_message_set_stream_id (GstMessage * msg,
+    const gchar * stream_id)
+{
+  const GstStructure *structure;
+
+  g_return_if_fail (gst_is_missing_plugin_message (msg));
+
+  structure = gst_message_get_structure (msg);
+  gst_structure_set ((GstStructure *) structure, "stream-id", G_TYPE_STRING,
+      stream_id, NULL);
+}
+
+/**
+ * gst_missing_plugin_message_get_stream_id:
+ * @msg: A missing-plugin #GstMessage of type #GST_MESSAGE_ELEMENT
+ *
+ * Get the stream-id of the stream for which an element is missing.
+ *
+ * Since: 1.26
+ *
+ * Returns: (nullable): The stream-id or %NULL if none is specified.
+ */
+const gchar *
+gst_missing_plugin_message_get_stream_id (GstMessage * msg)
+{
+  const GstStructure *structure;
+
+  g_return_val_if_fail (gst_is_missing_plugin_message (msg), NULL);
+
+  structure = gst_message_get_structure (msg);
+  return gst_structure_get_string (structure, "stream-id");
+}
+
+/**
  * gst_missing_plugin_message_get_description:
  * @msg: a missing-plugin #GstMessage of type #GST_MESSAGE_ELEMENT
  *

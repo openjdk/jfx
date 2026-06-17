@@ -26,8 +26,9 @@
 #include "config.h"
 #include "CaretAnimator.h"
 
+#include "DocumentInlines.h"
 #include "GraphicsContext.h"
-#include "Page.h"
+#include "PageInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -42,6 +43,13 @@ bool CaretAnimator::isBlinkingSuspended() const
 #endif
     return m_isBlinkingSuspended;
 }
+
+#if ENABLE(ACCESSIBILITY_NON_BLINKING_CURSOR)
+bool CaretAnimator::determinePrefersNonBlinkingCursor() const
+{
+    return page() && page()->prefersNonBlinkingCursor();
+}
+#endif
 
 Page* CaretAnimator::page() const
 {

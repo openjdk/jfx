@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ namespace Style {
 
 struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
-    Change change { Change::None };
+    OptionSet<Change> changes { };
     bool recompositeLayer { false };
     bool mayNeedRebuildRoot { false };
 };
@@ -91,11 +91,11 @@ private:
     void addPossibleRoot(Element*);
     void addPossibleRebuildRoot(Element&, Element* parent);
 
-    Ref<Document> m_document;
+    const Ref<Document> m_document;
     ListHashSet<RefPtr<ContainerNode>> m_roots;
     ListHashSet<RefPtr<Element>> m_rebuildRoots;
-    UncheckedKeyHashMap<RefPtr<const Element>, ElementUpdate> m_elements;
-    UncheckedKeyHashMap<RefPtr<const Text>, TextUpdate> m_texts;
+    HashMap<RefPtr<const Element>, ElementUpdate> m_elements;
+    HashMap<RefPtr<const Text>, TextUpdate> m_texts;
     std::unique_ptr<RenderStyle> m_initialContainingBlockUpdate;
 };
 

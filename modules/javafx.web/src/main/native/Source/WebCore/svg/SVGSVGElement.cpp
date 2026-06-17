@@ -24,6 +24,7 @@
 #include "config.h"
 #include "SVGSVGElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "DOMMatrix2DInit.h"
 #include "DOMWrapperWorld.h"
 #include "ElementIterator.h"
@@ -33,8 +34,10 @@
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGViewportContainer.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "RenderBoxInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGViewportContainer.h"
 #include "RenderView.h"
@@ -45,6 +48,7 @@
 #include "SVGLength.h"
 #include "SVGMatrix.h"
 #include "SVGNumber.h"
+#include "SVGParsingError.h"
 #include "SVGPoint.h"
 #include "SVGRect.h"
 #include "SVGTransform.h"
@@ -193,7 +197,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         }
     }
 
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -204,7 +208,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
         break;
     case AttributeNames::widthAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a missing/removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Width, "100%"_s);
@@ -214,7 +218,7 @@ void SVGSVGElement::attributeChanged(const QualifiedName& name, const AtomString
     }
     case AttributeNames::heightAttr: {
         auto length = SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid);
-        if (parseError != NoError || newValue.isEmpty()) {
+        if (parseError != SVGParsingError::None || newValue.isEmpty()) {
             // FIXME: This is definitely the correct behavior for a removed attribute.
             // Not sure it's correct for the empty string or for something that can't be parsed.
             length = SVGLengthValue(SVGLengthMode::Height, "100%"_s);
@@ -310,25 +314,25 @@ static bool checkEnclosureWithoutUpdatingLayout(SVGElement& element, SVGRect& re
 
 Ref<NodeList> SVGSVGElement::getIntersectionList(SVGRect& rect, SVGElement* referenceElement)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkIntersectionWithoutUpdatingLayout);
 }
 
 Ref<NodeList> SVGSVGElement::getEnclosureList(SVGRect& rect, SVGElement* referenceElement)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
     return collectIntersectionOrEnclosureList(rect, referenceElement, checkEnclosureWithoutUpdatingLayout);
 }
 
 bool SVGSVGElement::checkIntersection(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element.ptr());
     return checkIntersectionWithoutUpdatingLayout(element, rect);
 }
 
 bool SVGSVGElement::checkEnclosure(Ref<SVGElement>&& element, SVGRect& rect)
 {
-    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element.ptr());
+    element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element.ptr());
     return checkEnclosureWithoutUpdatingLayout(element, rect);
 }
 
@@ -391,7 +395,7 @@ Ref<SVGTransform> SVGSVGElement::createSVGTransformFromMatrix(DOMMatrix2DInit&& 
     return SVGTransform::create(transform);
 }
 
-AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const
+AffineTransform SVGSVGElement::localCoordinateSpaceTransform(CTMScope mode) const
 {
     AffineTransform viewBoxTransform;
     if (!hasEmptyViewBox()) {
@@ -416,7 +420,7 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
     if (!isOutermostSVGSVGElement()) {
         SVGLengthContext lengthContext(this);
         transform.translate(x().value(lengthContext), y().value(lengthContext));
-    } else if (mode == SVGLocatable::ScreenScope) {
+    } else if (mode == CTMScope::ScreenScope) {
         if (CheckedPtr renderer = this->renderer()) {
             FloatPoint location;
             float zoomFactor = 1;
@@ -479,7 +483,7 @@ RenderPtr<RenderElement> SVGSVGElement::createElementRenderer(RenderStyle&& styl
     return createRenderer<LegacyRenderSVGViewportContainer>(*this, WTFMove(style));
 }
 
-bool SVGSVGElement::isReplaced(const RenderStyle&) const
+bool SVGSVGElement::isReplaced(const RenderStyle*) const
 {
     return isOutermostSVGSVGElement();
 }
@@ -723,7 +727,7 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
 
     if (fragmentIdentifier.startsWith("svgView("_s)) {
         if (!view)
-            view = &currentView(); // Create the SVGViewSpec.
+            view = currentView(); // Create the SVGViewSpec.
         if (view->parseViewSpec(fragmentIdentifier))
             m_useCurrentView = true;
         else
@@ -840,7 +844,7 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
     if (id.isNull())
         return nullptr;
 
-    if (UNLIKELY(!isInTreeScope())) {
+    if (!isInTreeScope()) [[unlikely]] {
         for (auto& element : descendantsOfType<Element>(*this)) {
             if (element.getIdAttribute() == id)
                 return &element;

@@ -95,7 +95,7 @@ HistoryItem::HistoryItem(const HistoryItem& item)
     , m_isTargetItem(item.m_isTargetItem)
     , m_itemSequenceNumber(item.m_itemSequenceNumber)
     , m_documentSequenceNumber(item.m_documentSequenceNumber)
-    , m_formData(item.m_formData ? RefPtr<FormData> { item.m_formData->copy() } : nullptr)
+    , m_formData(item.m_formData ? RefPtr<FormData> { RefPtr { item.m_formData }->copy() } : nullptr)
     , m_formContentType(item.m_formContentType)
 #if PLATFORM(IOS_FAMILY)
     , m_obscuredInsets(item.m_obscuredInsets)
@@ -221,15 +221,15 @@ void HistoryItem::setOriginalURLString(const String& urlString)
     notifyChanged();
 }
 
-void HistoryItem::setReferrer(const String& referrer)
+void HistoryItem::setReferrer(String&& referrer)
 {
-    m_referrer = referrer;
+    m_referrer = WTFMove(referrer);
     notifyChanged();
 }
 
-void HistoryItem::setTitle(const String& title)
+void HistoryItem::setTitle(String&& title)
 {
-    m_title = title;
+    m_title = WTFMove(title);
     notifyChanged();
 }
 
@@ -327,6 +327,7 @@ void HistoryItem::addChildItem(Ref<HistoryItem>&& child)
 
 void HistoryItem::setChildItem(Ref<HistoryItem>&& child)
 {
+    ASSERT(!child->isTargetItem());
     unsigned size = m_children.size();
     for (unsigned i = 0; i < size; ++i)  {
         if (m_children[i]->target() == child->target()) {
@@ -407,9 +408,9 @@ bool HistoryItem::hasSameDocumentTree(HistoryItem& otherItem) const
         return false;
 
     for (size_t i = 0; i < children().size(); i++) {
-        auto& child = children()[i].get();
-        auto* otherChild = otherItem.childItemWithDocumentSequenceNumber(child.documentSequenceNumber());
-        if (!otherChild || !child.hasSameDocumentTree(*otherChild))
+        Ref child = children()[i].get();
+        RefPtr otherChild = otherItem.childItemWithDocumentSequenceNumber(child->documentSequenceNumber());
+        if (!otherChild || !child->hasSameDocumentTree(*otherChild))
             return false;
     }
 

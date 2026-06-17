@@ -78,9 +78,7 @@ public:
 
     WEBCORE_EXPORT bool mediaAttributeMatches() const;
 
-    WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
-    WEBCORE_EXPORT void setAs(const AtomString&);
     WEBCORE_EXPORT String as() const;
 
     void dispatchPendingEvent(LinkEventSender*, const AtomString& eventType);
@@ -95,11 +93,9 @@ public:
 
     void allowPrefetchLoadAndErrorForTesting() { m_allowPrefetchLoadAndErrorForTesting = true; }
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const;
 
-    void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
     RequestPriority fetchPriority() const;
 
@@ -170,9 +166,9 @@ private:
 #if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
     URL m_environmentMapURL;
 #endif
-    std::unique_ptr<DOMTokenList> m_sizes;
-    std::unique_ptr<DOMTokenList> m_relList;
-    std::unique_ptr<DOMTokenList> m_blockingList;
+    const std::unique_ptr<DOMTokenList> m_sizes;
+    const std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_blockingList;
     std::unique_ptr<ExpectIdTargetObserver> m_expectIdTargetObserver;
     DisabledState m_disabledState;
     LinkRelAttribute m_relAttribute;

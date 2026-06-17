@@ -1,6 +1,6 @@
 /**
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -47,10 +47,10 @@ StyleSheetList::~StyleSheetList() = default;
 
 inline const Vector<RefPtr<StyleSheet>>& StyleSheetList::styleSheets() const
 {
-    if (m_document)
-        return m_document->styleScope().styleSheetsForStyleSheetList();
-    if (m_shadowRoot)
-        return m_shadowRoot->styleScope().styleSheetsForStyleSheetList();
+    if (RefPtr document = m_document.get())
+        return document->styleScope().styleSheetsForStyleSheetList();
+    if (RefPtr shadowRoot = m_shadowRoot.get())
+        return shadowRoot->checkedStyleScope()->styleSheetsForStyleSheetList();
     return m_detachedStyleSheets;
 }
 
@@ -58,18 +58,18 @@ Node* StyleSheetList::ownerNode() const
 {
     if (m_document)
         return m_document.get();
-    return m_shadowRoot;
+    return m_shadowRoot.get();
 }
 
 void StyleSheetList::detach()
 {
-    if (m_document) {
+    if (RefPtr document = m_document.get()) {
         ASSERT(!m_shadowRoot);
-        m_detachedStyleSheets = m_document->styleScope().styleSheetsForStyleSheetList();
+        m_detachedStyleSheets = document->styleScope().styleSheetsForStyleSheetList();
         m_document = nullptr;
-    } else if (m_shadowRoot) {
+    } else if (RefPtr shadowRoot = m_shadowRoot.get()) {
         ASSERT(!m_document);
-        m_detachedStyleSheets = m_shadowRoot->styleScope().styleSheetsForStyleSheetList();
+        m_detachedStyleSheets = shadowRoot->checkedStyleScope()->styleSheetsForStyleSheetList();
         m_shadowRoot = nullptr;
     } else
         ASSERT_NOT_REACHED();
@@ -89,7 +89,8 @@ StyleSheet* StyleSheetList::item(unsigned index)
 CSSStyleSheet* StyleSheetList::namedItem(const AtomString& name) const
 {
     // Support the named getter on document for backwards compatibility.
-    if (!m_document)
+    RefPtr document = m_document.get();
+    if (!document)
         return nullptr;
 
     // IE also supports retrieving a stylesheet by name, using the name/id of the <style> tag
@@ -97,7 +98,7 @@ CSSStyleSheet* StyleSheetList::namedItem(const AtomString& name) const
     // ### Bad implementation because returns a single element (are IDs always unique?)
     // and doesn't look for name attribute.
     // But unicity of stylesheet ids is good practice anyway ;)
-    if (RefPtr element = dynamicDowncast<HTMLStyleElement>(m_document->getElementById(name)))
+    if (RefPtr element = dynamicDowncast<HTMLStyleElement>(document->getElementById(name)))
         return element->sheet();
     return nullptr;
 }

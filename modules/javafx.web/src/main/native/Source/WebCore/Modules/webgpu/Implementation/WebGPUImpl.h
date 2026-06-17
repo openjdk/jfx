@@ -134,7 +134,7 @@ private:
     bool isValid(const XRView&) const final;
 
     WebGPUPtr<WGPUInstance> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU

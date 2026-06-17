@@ -33,6 +33,7 @@
 #include "FloatRect.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
+#include "PlatformDynamicRangeLimit.h"
 #include <memory>
 #include <wtf/Forward.h>
 
@@ -120,7 +121,7 @@ public:
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
@@ -134,13 +135,15 @@ public:
 
     bool needsPreparationForDisplay();
     void prepareForDisplay();
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
+    WEBCORE_EXPORT std::optional<double> getContextEffectiveDynamicRangeLimitValue() const;
 
     void setIsSnapshotting(bool isSnapshotting) { m_isSnapshotting = isSnapshotting; }
     bool isSnapshotting() const { return m_isSnapshotting; }
 
     bool isControlledByOffscreen() const;
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
 
     // ActiveDOMObject.
@@ -164,7 +167,7 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool isReplaced(const RenderStyle&) const final;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
 
     bool canContainRangeEndPoint() const final;
     bool canStartSelection() const final;
@@ -190,8 +193,8 @@ private:
     bool m_isSnapshotting { false };
 
     std::unique_ptr<CanvasRenderingContext> m_context;
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);

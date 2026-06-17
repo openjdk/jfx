@@ -178,7 +178,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             if (listView == null) return;
             listView.requestLayout();
         });
-        lh.addChangeListener(control.converterProperty(), e -> updateListViewItems());
+        lh.addChangeListener(control.converterProperty(), e -> {
+            listView.refresh();
+            updateDisplayNode();
+        });
         lh.addChangeListener(control.buttonCellProperty(), e -> {
             updateButtonCell();
             updateDisplayArea();
@@ -356,13 +359,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             T value = comboBox.getValue();
             int index = getIndexOfComboBoxValueInItemsList();
+
+            // This guarantees that the cell is cleared even when the
+            // value is null and contained in the items (which is allowed)
+            buttonCell.updateIndex(-1);
+
             if (index > -1) {
-                buttonCell.setItem(null);
                 buttonCell.updateIndex(index);
             } else {
                 // JDK-8127575 Show the ComboBox value even though it doesn't
                 // exist in the ComboBox items list (part two of fix)
-                buttonCell.updateIndex(-1);
                 boolean empty = updateDisplayText(buttonCell, value, false);
 
                 // Note that empty boolean collected above. This is used to resolve
@@ -453,6 +459,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean updateDisplayText(ListCell<T> cell, T item, boolean empty) {
         if (empty) {
             if (cell == null) return true;
+
+            if (cell == buttonCell) {
+                final String promptText = comboBox.getPromptText();
+                if (comboBox.getValue() == null
+                        && promptText != null && !promptText.isEmpty()) {
+                    cell.setGraphic(null);
+                    cell.setText(promptText);
+                    return false;
+                }
+            }
+
             cell.setGraphic(null);
             cell.setText(null);
             return true;

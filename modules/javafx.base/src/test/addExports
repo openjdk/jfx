@@ -10,4 +10,5 @@
 --add-opens javafx.base/javafx.beans.property=ALL-UNNAMED
 --add-opens javafx.base/com.sun.javafx.binding=ALL-UNNAMED
 --add-opens javafx.base/javafx.beans.value=ALL-UNNAMED
+--add-opens=javafx.base/javafx.collections.transformation=ALL-UNNAMED
 #

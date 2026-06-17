@@ -52,7 +52,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(Value);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Value);
 
 #if ASSERT_ENABLED
 namespace B3ValueInternal {
@@ -325,6 +325,16 @@ Value* Value::subConstant(Procedure&, const Value*) const
 }
 
 Value* Value::mulConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::mulHighConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::uMulHighConstant(Procedure&, const Value*) const
 {
     return nullptr;
 }
@@ -656,6 +666,8 @@ Effects Value::effects() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Neg:
     case PurifyNaN:
     case BitAnd:
@@ -720,6 +732,8 @@ Effects Value::effects() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -909,6 +923,8 @@ ValueKey Value::key() const
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:
@@ -1002,6 +1018,8 @@ ValueKey Value::key() const
     case VectorAddSat:
     case VectorSubSat:
     case VectorMul:
+    case VectorMulHigh:
+    case VectorMulLow:
     case VectorDotProduct:
     case VectorDiv:
     case VectorMin:
@@ -1088,6 +1106,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case Add:
     case Sub:
     case Mul:
+    case MulHigh:
+    case UMulHigh:
     case Div:
     case UDiv:
     case Mod:

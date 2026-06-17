@@ -25,11 +25,9 @@
 
 #pragma once
 
-#include "AnimationEffect.h"
 #include "AnimationEffectTiming.h"
 #include "BasicEffectTiming.h"
 #include "ComputedEffectTiming.h"
-#include "ExceptionOr.h"
 #include "FillMode.h"
 #include "KeyframeEffectOptions.h"
 #include "OptionalEffectTiming.h"
@@ -37,7 +35,6 @@
 #include "TimingFunction.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -56,9 +53,9 @@ public:
     virtual bool isKeyframeEffect() const { return false; }
 
     EffectTiming getBindingsTiming() const;
-    BasicEffectTiming getBasicTiming(std::optional<WebAnimationTime> = std::nullopt);
+    BasicEffectTiming getBasicTiming();
     ComputedEffectTiming getBindingsComputedTiming();
-    ComputedEffectTiming getComputedTiming(std::optional<WebAnimationTime> = std::nullopt);
+    ComputedEffectTiming getComputedTiming(UseCachedCurrentTime = UseCachedCurrentTime::Yes);
     ExceptionOr<void> bindingsUpdateTiming(Document&, std::optional<OptionalEffectTiming>);
     ExceptionOr<void> updateTiming(Document&, std::optional<OptionalEffectTiming>);
 
@@ -68,7 +65,7 @@ public:
     virtual void animationSuspensionStateDidChange(bool) { };
     virtual void animationTimelineDidChange(const AnimationTimeline*);
     virtual void animationDidFinish() { };
-    void animationPlaybackRateDidChange();
+    virtual void animationPlaybackRateDidChange();
     virtual void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&);
     void animationRangeDidChange();
 
@@ -118,7 +115,7 @@ protected:
     virtual std::optional<double> progressUntilNextStep(double) const;
 
 private:
-    AnimationEffectTiming::ResolutionData resolutionData(std::optional<WebAnimationTime>) const;
+    AnimationEffectTiming::ResolutionData resolutionData(UseCachedCurrentTime = UseCachedCurrentTime::Yes) const;
     void updateComputedTimingPropertiesIfNeeded();
 
     AnimationEffectTiming m_timing;

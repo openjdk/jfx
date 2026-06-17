@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -657,6 +657,10 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             int srcw, int srch,
             int srcscan,
             boolean skipFlush) {
+        if (!resource.isValid()) {
+            return;
+        }
+
         checkUpdateParams(pixels, format,
                 dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
@@ -774,6 +778,10 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
 
     @Override
     public void update(MediaFrame frame, boolean skipFlush) {
+        if (!resource.isValid()) {
+            return;
+        }
+
         if (!skipFlush) {
             context.flushVertexBuffer();
         }

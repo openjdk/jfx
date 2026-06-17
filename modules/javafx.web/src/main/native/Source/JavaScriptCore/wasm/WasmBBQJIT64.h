@@ -36,6 +36,11 @@
 
 namespace JSC { namespace Wasm { namespace BBQJITImpl {
 
+ALWAYS_INLINE bool BBQJIT::typeNeedsGPR2(TypeKind)
+{
+    return false;
+}
+
 template<typename Functor>
 auto BBQJIT::emitCheckAndPrepareAndMaterializePointerApply(Value pointer, uint32_t uoffset, uint32_t sizeOfOperation, Functor&& functor) -> decltype(auto)
 {
@@ -104,8 +109,9 @@ auto BBQJIT::emitCheckAndPrepareAndMaterializePointerApply(Value pointer, uint32
     }
     }
 
+    bool canUseOffsetForm = static_cast<uint64_t>(uoffset) <= static_cast<uint64_t>(std::numeric_limits<int32_t>::max()) && B3::Air::Arg::isValidAddrForm(B3::Air::Move, uoffset, Width::Width128);
 #if CPU(ARM64)
-    if (!(static_cast<uint64_t>(uoffset) > static_cast<uint64_t>(std::numeric_limits<int32_t>::max()) || !B3::Air::Arg::isValidAddrForm(B3::Air::Move, uoffset, Width::Width128)))
+    if (canUseOffsetForm)
         return functor(CCallHelpers::BaseIndex(wasmBaseMemoryPointer, pointerLocation.asGPR(), CCallHelpers::TimesOne, static_cast<int32_t>(uoffset), CCallHelpers::Extend::ZExt32));
 
     m_jit.addZeroExtend64(wasmBaseMemoryPointer, pointerLocation.asGPR(), wasmScratchGPR);
@@ -114,11 +120,11 @@ auto BBQJIT::emitCheckAndPrepareAndMaterializePointerApply(Value pointer, uint32
     m_jit.addPtr(wasmBaseMemoryPointer, wasmScratchGPR);
 #endif
 
-    if (static_cast<uint64_t>(uoffset) > static_cast<uint64_t>(std::numeric_limits<int32_t>::max()) || !B3::Air::Arg::isValidAddrForm(B3::Air::Move, uoffset, Width::Width128)) {
+    if (canUseOffsetForm)
+        return functor(Address(wasmScratchGPR, static_cast<int32_t>(uoffset)));
+
         m_jit.addPtr(TrustedImmPtr(static_cast<int64_t>(uoffset)), wasmScratchGPR);
         return functor(Address(wasmScratchGPR));
-    }
-    return functor(Address(wasmScratchGPR, static_cast<int32_t>(uoffset)));
 }
 
 #if CPU(X86_64)
@@ -284,7 +290,7 @@ void BBQJIT::emitModOrDiv(Value& lhs, Location lhsLocation, Value& rhs, Location
             }
 
             // Fall through to general case.
-        } else if (isPowerOfTwo(divisor)) {
+        } else if (isPowerOfTwo<size_t>(divisor)) {
             if constexpr (IsMod) {
                 if constexpr (isSigned) {
                     // This constructs an extra operand with log2(divisor) bits equal to the sign bit of the dividend. If the dividend
@@ -559,18 +565,18 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
     case TypeKind::Struct:
     case TypeKind::Func: {
         resultLocation = Location::fromGPR(GPRInfo::returnValueGPR);
-        ASSERT(m_validGPRs.contains(GPRInfo::returnValueGPR, IgnoreVectors));
+        ASSERT(validGPRs().contains(GPRInfo::returnValueGPR, IgnoreVectors));
         break;
     }
     case TypeKind::F32:
     case TypeKind::F64: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::V128: {
         resultLocation = Location::fromFPR(FPRInfo::returnValueFPR);
-        ASSERT(m_validFPRs.contains(FPRInfo::returnValueFPR, Width::Width128));
+        ASSERT(validFPRs().contains(FPRInfo::returnValueFPR, Width::Width128));
         break;
     }
     case TypeKind::Void:
@@ -580,9 +586,9 @@ void BBQJIT::emitCCall(Func function, const Vector<Value, N>& arguments, Value& 
 
     RegisterBinding currentBinding;
     if (resultLocation.isGPR())
-        currentBinding = m_gprBindings[resultLocation.asGPR()];
+        currentBinding = bindingFor(resultLocation.asGPR());
     else if (resultLocation.isFPR())
-        currentBinding = m_fprBindings[resultLocation.asFPR()];
+        currentBinding = bindingFor(resultLocation.asFPR());
     RELEASE_ASSERT(!currentBinding.isScratch());
 
     bind(result, resultLocation);

@@ -80,7 +80,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(SerializedImageBuffer);
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
 
-RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, GraphicsClient* graphicsClient)
+RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferFormat pixelFormat, GraphicsClient* graphicsClient)
 {
     RefPtr<ImageBuffer> imageBuffer;
 
@@ -143,7 +143,7 @@ IntSize ImageBuffer::calculateBackendSize(FloatSize logicalSize, float resolutio
 
 ImageBufferBackendParameters ImageBuffer::backendParameters(const ImageBufferParameters& parameters)
 {
-    return { calculateBackendSize(parameters.logicalSize, parameters.resolutionScale), parameters.resolutionScale, parameters.colorSpace, parameters.pixelFormat, parameters.purpose };
+    return { calculateBackendSize(parameters.logicalSize, parameters.resolutionScale), parameters.resolutionScale, parameters.colorSpace, parameters.bufferFormat, parameters.purpose };
 }
 
 bool ImageBuffer::sizeNeedsClamping(const FloatSize& size)
@@ -168,7 +168,12 @@ class DefaultSerializedImageBuffer : public SerializedImageBuffer {
 public:
     DefaultSerializedImageBuffer(ImageBuffer* image)
         : m_buffer(image)
-    { }
+    {
+#if USE(SKIA)
+        if (image->renderingMode() == RenderingMode::Accelerated)
+            image->flushDrawingContext();
+#endif
+    }
 
     RefPtr<ImageBuffer> sinkIntoImageBuffer() final
     {
@@ -246,7 +251,7 @@ static RefPtr<ImageBuffer> copyImageBuffer(Ref<ImageBuffer> source, PreserveReso
     }
     auto copySize = source->logicalSize();
     auto copyScale = preserveResolution == PreserveResolution::Yes ? source->resolutionScale() : 1.f;
-    auto copyBuffer = source->context().createImageBuffer(copySize, copyScale, source->colorSpace(), renderingMode);
+    auto copyBuffer = source->context().createImageBuffer(copySize, copyScale, source->colorSpace(), renderingMode, std::nullopt, { source->pixelFormat() });
     if (!copyBuffer)
         return nullptr;
     if (source->hasOneRef())
@@ -360,47 +365,6 @@ RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread(RefPtr<ImageBu
     ASSERT(buffer->hasOneRef());
     return buffer->sinkIntoBufferForDifferentThread();
 }
-
-#if USE(SKIA)
-RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(RefPtr<ImageBuffer> buffer)
-{
-    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
-        return buffer;
-    if (buffer->hasOneRef())
-        return buffer;
-    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Accelerated);
-}
-
-RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer> buffer, std::unique_ptr<GLFence>&& fence)
-{
-    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
-        return buffer;
-
-    auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
-    if (!glContext || !glContext->makeContextCurrent())
-        return nullptr;
-
-    if (fence)
-        fence->serverWait();
-
-    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
-    RELEASE_ASSERT(grContext);
-
-    auto* currentSurface = buffer->surface();
-    RELEASE_ASSERT(currentSurface);
-
-    auto backendRenderTarget = SkSurfaces::GetBackendRenderTarget(currentSurface, SkSurfaces::BackendHandleAccess::kFlushRead);
-
-    const auto& imageInfo = currentSurface->imageInfo();
-    auto surface = SkSurfaces::WrapBackendRenderTarget(grContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, imageInfo.colorType(), imageInfo.refColorSpace(), &currentSurface->props());
-    if (!surface || !surface->getCanvas())
-        return nullptr;
-
-    auto bufferBackendParameters = ImageBuffer::backendParameters(buffer->parameters());
-    auto backend = ImageBufferSkiaAcceleratedBackend::create(bufferBackendParameters, { }, WTFMove(surface));
-    return ImageBuffer::create<ImageBuffer>(buffer->parameters(), buffer->backendInfo(), { }, WTFMove(backend));
-}
-#endif
 
 RefPtr<ImageBuffer> ImageBuffer::sinkIntoBufferForDifferentThread()
 {
@@ -563,7 +527,7 @@ RefPtr<PixelBuffer> ImageBuffer::getPixelBuffer(const PixelBufferFormat& destina
     return destination;
 }
 
-void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationFormat)
+void ImageBuffer::putPixelBuffer(const PixelBufferSourceView& pixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationFormat)
 {
     ASSERT(resolutionScale() == 1);
     auto* backend = ensureBackend();

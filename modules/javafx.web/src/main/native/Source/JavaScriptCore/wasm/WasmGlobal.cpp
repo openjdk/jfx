@@ -62,7 +62,7 @@ JSValue Global::get(JSGlobalObject* globalObject) const
     case TypeKind::Funcref:
     case TypeKind::Ref:
     case TypeKind::RefNull: {
-        if (UNLIKELY(isExnref(m_type))) {
+        if (isExnref(m_type)) [[unlikely]] {
             throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Cannot get value of exnref global"_s));
             return { };
         }

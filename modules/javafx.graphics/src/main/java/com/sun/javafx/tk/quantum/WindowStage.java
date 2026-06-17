@@ -66,6 +66,7 @@ public class WindowStage extends GlassStage {
     private OverlayWarning warning = null;
     private boolean rtl = false;
     private boolean transparent = false;
+    private boolean darkFrame = false;
     private boolean isPrimaryStage = false;
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
@@ -85,11 +86,12 @@ public class WindowStage extends GlassStage {
         ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
                                  ".QuantumMessagesBundle", LOCALE);
 
-
-    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
+                       TKStage owner, boolean darkFrame) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
+        this.darkFrame = darkFrame;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -175,6 +177,10 @@ public class WindowStage extends GlassStage {
 
             if (modality != Modality.NONE) {
                 windowMask |= Window.MODAL;
+            }
+
+            if (darkFrame) {
+                windowMask |= Window.DARK_FRAME;
             }
 
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
@@ -902,6 +908,15 @@ public class WindowStage extends GlassStage {
     public void setPrefHeaderButtonHeight(double height) {
         if (platformWindow != null) {
             platformWindow.setPrefHeaderButtonHeight(height);
+        }
+    }
+
+    @Override
+    public void setDarkFrame(boolean value) {
+        darkFrame = value;
+
+        if (platformWindow != null) {
+            platformWindow.setDarkFrame(value);
         }
     }
 }

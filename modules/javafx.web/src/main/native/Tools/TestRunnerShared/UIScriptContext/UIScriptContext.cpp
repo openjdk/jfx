@@ -142,10 +142,14 @@ void UIScriptContext::fireCallback(unsigned callbackID)
     JSValueRef exception = nullptr;
     JSObjectRef callbackObject = JSValueToObject(m_context.get(), task.callback, &exception);
 
-    m_currentScriptCallbackID = task.parentScriptCallbackID;
+    auto currentScriptCallbackID = task.parentScriptCallbackID;
+    m_currentScriptCallbackID = currentScriptCallbackID;
 
     exception = nullptr;
     JSObjectCallAsFunction(m_context.get(), callbackObject, JSContextGetGlobalObject(m_context.get()), 0, nullptr, &exception);
+
+    m_currentScriptCallbackID = currentScriptCallbackID;
+
     // hode this function becuase of link issue
 #if !PLATFORM(JAVA) || !OS(LINUX) || !CPU(X86)
     tryToCompleteUIScriptForCurrentParentCallback();
@@ -170,7 +174,7 @@ void UIScriptContext::tryToCompleteUIScriptForCurrentParentCallback()
 
     JSStringRef result = m_uiScriptResultsPendingCompletion.take(m_currentScriptCallbackID);
 #if !PLATFORM(JAVA)
-    String scriptResult({ reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result) });
+    String scriptResult({ reinterpret_cast<const char16_t*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result) });
 #else
     auto charactersSpan = std::span<const UChar>(reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result));
     String scriptResult(charactersSpan);

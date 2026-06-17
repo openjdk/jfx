@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,11 +31,12 @@
 #include "HTMLHeadElement.h"
 #include "HTMLLinkElement.h"
 #include "LinkIconType.h"
+#include <ranges>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-const unsigned defaultTouchIconWidth = 60;
+constexpr unsigned defaultTouchIconWidth = 60;
 
 static unsigned iconSize(const LinkIcon& icon)
 {
@@ -75,21 +76,21 @@ static int compareIcons(const LinkIcon& a, const LinkIcon& b)
 
 auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vector<LinkIcon>
 {
-    RefPtr head = m_document.head();
+    RefPtr head = m_document->head();
     if (!head)
         return { };
 
     Vector<LinkIcon> icons;
 
-    for (auto& linkElement : childrenOfType<HTMLLinkElement>(*head)) {
-        if (!linkElement.iconType())
+    for (Ref linkElement : childrenOfType<HTMLLinkElement>(*head)) {
+        if (!linkElement->iconType())
             continue;
 
-        auto iconType = *linkElement.iconType();
+        auto iconType = *linkElement->iconType();
         if (!iconTypes.contains(iconType))
             continue;
 
-        auto url = linkElement.href();
+        auto url = linkElement->href();
         if (!url.protocolIsInHTTPFamily() && !url.protocolIsData())
             continue;
 
@@ -97,21 +98,21 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
         // part of the size, "60x70" becomes "60". This is for compatibility reasons
         // and is probably good enough for now.
         std::optional<unsigned> iconSize;
-        if (linkElement.sizes().length())
-            iconSize = parseIntegerAllowingTrailingJunk<unsigned>(linkElement.sizes().item(0));
+        if (linkElement->sizes().length())
+            iconSize = parseIntegerAllowingTrailingJunk<unsigned>(linkElement->sizes().item(0));
 
         Vector<std::pair<String, String>> attributes;
-        if (linkElement.hasAttributes()) {
-            auto linkAttributes = linkElement.attributes();
+        if (linkElement->hasAttributes()) {
+            auto linkAttributes = linkElement->attributes();
             attributes = WTF::map(linkAttributes, [](auto& attribute) -> std::pair<String, String> {
                 return { attribute.localName(), attribute.value() };
             });
         }
 
-        icons.append({ url, iconType, linkElement.type(), iconSize, WTFMove(attributes) });
+        icons.append({ url, iconType, linkElement->type(), iconSize, WTFMove(attributes) });
     }
 
-    std::sort(icons.begin(), icons.end(), [](auto& a, auto& b) {
+    std::ranges::sort(icons, [](auto& a, auto& b) {
         return compareIcons(a, b) < 0;
     });
 

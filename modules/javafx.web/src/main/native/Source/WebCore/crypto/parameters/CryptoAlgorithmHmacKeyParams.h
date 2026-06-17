@@ -30,7 +30,6 @@
 #include "CryptoAlgorithmParameters.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 
 namespace WebCore {
 
@@ -38,7 +37,7 @@ class CryptoAlgorithmHmacKeyParams final : public CryptoAlgorithmParameters {
     WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmHmacKeyParams);
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
     std::optional<size_t> length;
 

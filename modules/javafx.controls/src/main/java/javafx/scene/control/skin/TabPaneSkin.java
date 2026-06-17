@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -65,6 +66,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -92,6 +94,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
 import javafx.util.Pair;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.TabObservableList;
@@ -292,7 +295,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as wide as it widest content width.
         double maxw = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxw = Math.max(maxw, snapSizeX(contentRegion.prefWidth(-1)));
+            double dependentHeight = contentRegion.getContentBias() == Orientation.VERTICAL
+                ? Math.max(0, contentRegion.prefHeight(-1) - topInset - bottomInset)
+                : -1;
+
+            maxw = Math.max(maxw, snapSizeX(contentRegion.prefWidth(dependentHeight)));
         }
 
         final boolean isHorizontal = isHorizontal();
@@ -310,7 +317,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as high as it highest content height.
         double maxh = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxh = Math.max(maxh, snapSizeY(contentRegion.prefHeight(-1)));
+            double dependentWidth = contentRegion.getContentBias() == Orientation.HORIZONTAL
+                ? Math.max(0, contentRegion.prefWidth(-1) - leftInset - rightInset)
+                : -1;
+
+            maxh = Math.max(maxh, snapSizeY(contentRegion.prefHeight(dependentWidth)));
         }
 
         final boolean isHorizontal = isHorizontal();
@@ -520,7 +531,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                 };
 
-                if (Platform.isFxApplicationThread() && (closeTabAnimation.get() == TabAnimation.GROW)) {
+                if (shouldAnimate() && (closeTabAnimation.get() == TabAnimation.GROW)) {
                     tabRegion.animationState = TabAnimationState.HIDING;
                     Timeline closedTabTimeline = tabRegion.currentAnimation =
                             createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, cleanup);
@@ -569,7 +580,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             addTabContent(tab);
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
-                if (Platform.isFxApplicationThread() && (openTabAnimation.get() == TabAnimation.GROW)) {
+                if (shouldAnimate() && (openTabAnimation.get() == TabAnimation.GROW)) {
                     tabRegion.animationState = TabAnimationState.SHOWING;
                     tabRegion.animationTransition.setValue(0.0);
                     tabRegion.setVisible(true);
@@ -713,6 +724,15 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         timeline.setOnFinished(func);
         return timeline;
+    }
+
+    private boolean shouldAnimate() {
+        TabPane skinnable = getSkinnable();
+        return skinnable != null
+            && Platform.isFxApplicationThread()
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 
     private boolean isHorizontal() {
@@ -1572,6 +1592,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         };
 
         private void dispose() {
+            if (currentAnimation != null) {
+                currentAnimation.stop();
+            }
+
             tab.getStyleClass().removeListener(weakStyleClassListener);
             listener.dispose();
             setOnContextMenuRequested(null);

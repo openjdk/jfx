@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +25,8 @@
 
 #pragma once
 
-#include "CSSPropertyParser.h"
+#include "CSSPrimitiveValue.h"
+#include "CSSPropertyInitialValues.h"
 #include "ImmutableStyleProperties.h"
 #include "MutableStyleProperties.h"
 
@@ -111,4 +113,4 @@ inline std::optional<CSSValueID> longhandValueID(CSSPropertyID property, const C
     return longhandValueID(property, *value);
 }
 
-}
+} // namespace WebCore

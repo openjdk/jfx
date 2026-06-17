@@ -63,9 +63,14 @@ public:
     String valueAsString() const override;
 
 private:
-    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&);
+
+    enum class ListReplacement : bool {
+        Append,
+        Replace
+    };
+    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&, ListReplacement = ListReplacement::Append);
     bool parse(StringParsingBuffer<LChar>&);
-    bool parse(StringParsingBuffer<UChar>&);
+    bool parse(StringParsingBuffer<char16_t>&);
 };
 
 } // namespace WebCore

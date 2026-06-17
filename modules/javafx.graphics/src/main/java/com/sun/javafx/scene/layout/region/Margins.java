@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ import java.util.Objects;
 /**
  * Similar to Insets but with flag denoting values are proportional.
  * If proportional is true, then the values represent fractions or percentages
- * and are in the range 0..1, although this is not enforced.
+ * where 0 corresponds to 0%, and 1 corresponds to 100%.
  */
 public final class Margins implements Interpolatable<Margins> {
 
@@ -76,11 +76,11 @@ public final class Margins implements Interpolatable<Margins> {
     public Margins interpolate(Margins endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
-        if (t <= 0 || equals(endValue)) {
+        if (t == 0 || equals(endValue)) {
             return this;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return endValue;
         }
 
@@ -89,10 +89,10 @@ public final class Margins implements Interpolatable<Margins> {
         }
 
         return new Margins(
-            InterpolationUtils.interpolate(top, endValue.top, t),
-            InterpolationUtils.interpolate(right, endValue.right, t),
-            InterpolationUtils.interpolate(bottom, endValue.bottom, t),
-            InterpolationUtils.interpolate(left, endValue.left, t),
+            Math.max(0, InterpolationUtils.interpolate(top, endValue.top, t)),
+            Math.max(0, InterpolationUtils.interpolate(right, endValue.right, t)),
+            Math.max(0, InterpolationUtils.interpolate(bottom, endValue.bottom, t)),
+            Math.max(0, InterpolationUtils.interpolate(left, endValue.left, t)),
             proportional);
     }
 

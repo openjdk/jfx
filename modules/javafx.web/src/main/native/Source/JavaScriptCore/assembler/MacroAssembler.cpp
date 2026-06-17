@@ -37,8 +37,6 @@
 
 namespace JSC {
 
-const double MacroAssembler::twoToThe32 = (double)0x100000000ull;
-
 void MacroAssembler::jitAssert(const ScopedLambda<Jump(void)>& functor)
 {
     if (Options::useJITDebugAssertions()) {

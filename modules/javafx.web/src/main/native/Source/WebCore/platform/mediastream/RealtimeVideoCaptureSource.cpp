@@ -32,6 +32,7 @@
 #include "RealtimeMediaSourceCenter.h"
 #include "RealtimeMediaSourceSettings.h"
 #include <VideoFrame.h>
+#include <algorithm>
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
 
@@ -143,6 +144,11 @@ void RealtimeVideoCaptureSource::updateCapabilities(RealtimeMediaSourceCapabilit
             maximumFrameRate = std::max(maximumFrameRate, rate.maximum);
     }
 
+    if (!maximumWidth || !maximumHeight || !maximumFrameRate) {
+        RELEASE_LOG_ERROR(WebRTC, "RealtimeVideoCaptureSource::updateCapabilities max width, max height or max frame rate is 0");
+        return;
+    }
+
     if (canResizeVideoFrames()) {
         minimumWidth = 1;
         minimumHeight = 1;
@@ -154,8 +160,6 @@ void RealtimeVideoCaptureSource::updateCapabilities(RealtimeMediaSourceCapabilit
     capabilities.setHeight({ minimumHeight, maximumHeight });
     capabilities.setAspectRatio({ minimumAspectRatio, maximumAspectRatio });
     capabilities.setFrameRate({ minimumFrameRate, maximumFrameRate });
-    capabilities.setFrameRate({ minimumFrameRate, maximumFrameRate });
-
     capabilities.setZoom({ minimumZoom, maximumZoom });
 }
 
@@ -506,7 +510,7 @@ auto RealtimeVideoCaptureSource::takePhoto(PhotoSettings&& photoSettings) -> Ref
         setSizeFrameRateAndZoomForPhoto(WTFMove(*newPresetForPhoto));
     }
 
-    return takePhotoInternal(WTFMove(photoSettings))->whenSettled(RunLoop::protectedMain(), [this, protectedThis = Ref { *this }, configurationToRestore = WTFMove(configurationToRestore)] (auto&& result) mutable {
+    return takePhotoInternal(WTFMove(photoSettings))->whenSettled(RunLoop::mainSingleton(), [this, protectedThis = Ref { *this }, configurationToRestore = WTFMove(configurationToRestore)] (auto&& result) mutable {
 
         ASSERT(isMainThread());
 
@@ -576,7 +580,7 @@ String SizeFrameRateAndZoom::toJSONString() const
 
 bool RealtimeVideoCaptureSource::canBePowerEfficient()
 {
-    return anyOf(presets(), [] (auto& preset) { return preset.isEfficient(); }) && anyOf(presets(), [] (auto& preset) { return !preset.isEfficient(); });
+    return std::ranges::any_of(presets(), [](auto& preset) { return preset.isEfficient(); }) && std::ranges::any_of(presets(), [](auto& preset) { return !preset.isEfficient(); });
 }
 
 

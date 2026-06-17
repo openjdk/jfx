@@ -29,11 +29,11 @@
 
 #include "pas_deallocate.h"
 
-#include "pas_debug_heap.h"
 #include "pas_malloc_stack_logging.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_scavenger.h"
 #include "pas_segregated_page_inlines.h"
+#include "pas_system_heap.h"
 
 bool pas_try_deallocate_known_large(void* ptr,
                                     const pas_heap_config* config,
@@ -56,7 +56,7 @@ bool pas_try_deallocate_known_large(void* ptr,
             pas_deallocation_did_fail("Large heap did not find object", begin);
             break;
         }
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
     }
 
     pas_heap_lock_unlock();
@@ -128,11 +128,11 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
 
     if (verbose)
         pas_log("Trying to deallocate %p.\n", ptr);
-    if (PAS_UNLIKELY(pas_debug_heap_is_enabled(config_ptr->kind))) {
+    if (PAS_UNLIKELY(pas_system_heap_is_enabled(config_ptr->kind))) {
         if (verbose)
-            pas_log("Deallocating %p with debug heap.\n", ptr);
+            pas_log("Deallocating %p with system heap.\n", ptr);
         PAS_ASSERT(deallocation_mode == pas_deallocate_mode);
-        pas_debug_heap_free(ptr);
+        pas_system_heap_free(ptr);
         return true;
     }
     pas_msl_free_logging(ptr);
@@ -171,7 +171,7 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
                 begin);
             return true;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return false;
         }
     }
@@ -225,7 +225,7 @@ bool pas_try_deallocate_slow_no_cache(void* ptr,
         return pas_try_deallocate_slow(begin, config_ptr, deallocation_mode);
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

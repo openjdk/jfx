@@ -49,8 +49,8 @@ static_assert(sizeof(HeapRef) == sizeof(pas_heap_ref*));
 void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification& spec)
 {
     HeapRef heapRef = *spec.addressOfHeapRef;
-    if (BUNLIKELY(tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack)) {
-        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+    if (tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack) [[unlikely]] {
+        if (tzoneMallocFallback == TZoneMallocFallback::Undecided) [[unlikely]] {
             TZoneHeapManager::ensureSingleton();
             return tzoneAllocateNonCompactSlow(requestedSize, spec);
         }
@@ -60,7 +60,7 @@ void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification
     }
 
     // Handle TZoneMallocFallback::DoNotFallBack.
-    if (BUNLIKELY(requestedSize != spec.size))
+    if (requestedSize != spec.size) [[unlikely]]
         heapRef = tzoneHeapManager->heapRefForTZoneTypeDifferentSize(requestedSize, spec);
 
     if (!heapRef) {
@@ -73,8 +73,8 @@ void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification
 void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& spec)
 {
     HeapRef heapRef = *spec.addressOfHeapRef;
-    if (BUNLIKELY(tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack)) {
-        if (BUNLIKELY(tzoneMallocFallback == TZoneMallocFallback::Undecided)) {
+    if (tzoneMallocFallback != TZoneMallocFallback::DoNotFallBack) [[unlikely]] {
+        if (tzoneMallocFallback == TZoneMallocFallback::Undecided) [[unlikely]] {
             TZoneHeapManager::ensureSingleton();
             return tzoneAllocateCompactSlow(requestedSize, spec);
         }
@@ -84,19 +84,19 @@ void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification& s
     }
 
     // Handle TZoneMallocFallback::DoNotFallBack.
-    if (BUNLIKELY(requestedSize != spec.size))
+    if (requestedSize != spec.size) [[unlikely]]
         heapRef = tzoneHeapManager->heapRefForTZoneTypeDifferentSize(requestedSize, spec);
 
     if (!heapRef) {
         heapRef = tzoneHeapManager->heapRefForTZoneType(spec);
         *spec.addressOfHeapRef = heapRef;
     }
-    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_maybe_compact_allocation_mode);
+    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_always_compact_allocation_mode);
 }
 
 void* tzoneAllocateCompact(HeapRef heapRef)
 {
-    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_maybe_compact_allocation_mode);
+    return bmalloc_iso_allocate_inline(TO_PAS_HEAPREF(heapRef), pas_always_compact_allocation_mode);
 }
 
 void* tzoneAllocateNonCompact(HeapRef heapRef)
@@ -108,6 +108,18 @@ void tzoneFree(void* p)
 {
     bmalloc_deallocate_inline(p);
 }
+
+#if BUSE_DYNAMIC_TZONE_COMPACTION
+
+bool shouldDynamicallyCompactImpl(const TZoneSpecification& spec)
+{
+    BASSERT(TZoneHeapManager::singleton().tzoneDynamicCompactModeEnabled());
+    uint64_t key = spec.dynamicCompactionKey;
+    uint64_t signature = __builtin_popcountll(key & TZoneHeapManager::singleton().dynamicCompactionSalt());
+    return signature & 0x1;
+}
+
+#endif
 
 #undef TO_PAS_HEAPREF
 

@@ -36,8 +36,45 @@ namespace WebCore {
 
 class Page;
 
+struct SettingsValues {
+    void initialize();
+    SettingsValues isolatedCopy() const;
+
+<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
+    std::optional<<%= @setting.type %>> <%= @setting.name %>InspectorOverride;
+<%- end -%>
+
+    FontGenericFamilies fontGenericFamilies;
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
+<%- if @condition.condition -%>
+#if <%= @condition.condition %>
+<%- end -%>
+<%- for @setting in @condition.nonBoolSettingsNeedingImplementation -%>
+    <%= @setting.type %> <%= @setting.name %>;
+<%- end -%>
+<%- if @condition.condition -%>
+#endif
+<%- end -%>
+<%- end -%>
+<%- end -%>
+<%- for @condition in @allSettingsSet.conditions do -%>
+<%- if @condition.settingsNeedingImplementation.length != 0 -%>
+    <%- if @condition.condition -%>
+#if <%= @condition.condition %>
+    <%- end -%>
+    <%- for @setting in @condition.boolSettingsNeedingImplementation -%>
+    <%= @setting.type %> <%= @setting.name %> : 1;
+    <%- end -%>
+    <%- if @condition.condition -%>
+#endif
+    <%- end -%>
+<%- end -%>
+<%- end -%>
+};
+
 class Settings : public SettingsBase, public RefCounted<Settings> {
-    WTF_MAKE_NONCOPYABLE(Settings); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(Settings); WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Settings);
 public:
     WEBCORE_EXPORT static Ref<Settings> create(Page*);
     WEBCORE_EXPORT virtual ~Settings();
@@ -80,48 +117,12 @@ public:
     FontGenericFamilies& fontGenericFamilies() final { return m_values.fontGenericFamilies; }
     const FontGenericFamilies& fontGenericFamilies() const final { return m_values.fontGenericFamilies; }
 
-    struct Values {
-        void initialize();
-        Values isolatedCopy() const;
-
-<%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
-        std::optional<<%= @setting.type %>> <%= @setting.name %>InspectorOverride;
-<%- end -%>
-
-        FontGenericFamilies fontGenericFamilies;
-<%- for @condition in @allSettingsSet.conditions do -%>
-<%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
-<%- if @condition.condition -%>
-#if <%= @condition.condition %>
-<%- end -%>
-<%- for @setting in @condition.nonBoolSettingsNeedingImplementation -%>
-        <%= @setting.type %> <%= @setting.name %>;
-<%- end -%>
-<%- if @condition.condition -%>
-#endif
-<%- end -%>
-<%- end -%>
-<%- end -%>
-<%- for @condition in @allSettingsSet.conditions do -%>
-    <%- if @condition.settingsNeedingImplementation.length != 0 -%>
-        <%- if @condition.condition -%>
-#if <%= @condition.condition %>
-        <%- end -%>
-        <%- for @setting in @condition.boolSettingsNeedingImplementation -%>
-        <%= @setting.type %> <%= @setting.name %> : 1;
-        <%- end -%>
-        <%- if @condition.condition -%>
-#endif
-        <%- end -%>
-    <%- end -%>
-<%- end -%>
-    };
-    const Values& values() const { return m_values; }
+    const SettingsValues& values() const { return m_values; }
 
 private:
     WEBCORE_EXPORT explicit Settings(Page*);
 
-    Values m_values;
+    SettingsValues m_values;
 };
 
 }

@@ -342,11 +342,11 @@ public final class LinearGradient extends Paint {
 
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
-        if (t <= 0.0) {
+        if (t == 0.0) {
             return this;
         }
 
-        if (t >= 1.0) {
+        if (t == 1.0) {
             return endValue;
         }
 

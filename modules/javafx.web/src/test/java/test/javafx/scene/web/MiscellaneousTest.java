@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -190,6 +190,8 @@ public class MiscellaneousTest extends TestBase {
             // Try various intervals
             for (int i = 0; i < timer.INTERVAL_COUNT; i++) {
                 int timeout = i * (1000 / timer.INTERVAL_COUNT);
+                // Webkit recomends minimum timeout value should be 10
+                if (timeout < 10) timeout = 10;
                 webEngine.executeScript("window.setTimeout("
                                       + "timer.call.bind(timer, Date.now(),"
                                       // pass 'i' to call to test time

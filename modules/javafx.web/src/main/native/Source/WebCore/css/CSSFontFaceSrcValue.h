@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
+#include "CSSURL.h"
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
@@ -108,9 +108,9 @@ inline ASCIILiteral cssTextFromFontTech(FontTechnology tech)
 
 class CSSFontFaceSrcResourceValue final : public CSSValue {
 public:
-    static Ref<CSSFontFaceSrcResourceValue> create(ResolvedURL, String format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource = LoadedFromOpaqueSource::No);
+    static Ref<CSSFontFaceSrcResourceValue> create(CSS::URL, String format, Vector<FontTechnology>&&);
 
-    bool isEmpty() const { return m_location.specifiedURLString.isEmpty(); }
+    bool isEmpty() const { return m_location.specified.isEmpty(); }
     std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext&, bool isInitiatingElementInUserAgentShadowTree);
 
     String customCSSText(const CSS::SerializationContext&) const;
@@ -119,12 +119,11 @@ public:
     bool equals(const CSSFontFaceSrcResourceValue&) const;
 
 private:
-    explicit CSSFontFaceSrcResourceValue(ResolvedURL&&, String&& format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource);
+    explicit CSSFontFaceSrcResourceValue(CSS::URL&&, String&& format, Vector<FontTechnology>&&);
 
-    ResolvedURL m_location;
+    CSS::URL m_location;
     String m_format;
     Vector<FontTechnology> m_technologies;
-    LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
     CachedResourceHandle<CachedFont> m_cachedFont;
 };
 

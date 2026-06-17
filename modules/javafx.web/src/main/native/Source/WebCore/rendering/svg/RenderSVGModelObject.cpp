@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2020, 2021, 2022, 2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,7 +102,7 @@ auto RenderSVGModelObject::computeVisibleRectsInContainer(const RepaintRects& re
     return computeVisibleRectsInSVGContainer(rects, container, context);
 }
 
-const RenderObject* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGModelObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     ASSERT(ancestorToStopAt != this);
     ASSERT(style().position() == PositionType::Static);
@@ -182,7 +182,7 @@ void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* anc
     mapLocalToSVGContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-LayoutSize RenderSVGModelObject::offsetFromContainer(RenderElement& container, const LayoutPoint&, bool*) const
+LayoutSize RenderSVGModelObject::offsetFromContainer(const RenderElement& container, const LayoutPoint&, bool*) const
 {
     ASSERT_UNUSED(container, &container == this->container());
     ASSERT(!isInFlowPositioned());

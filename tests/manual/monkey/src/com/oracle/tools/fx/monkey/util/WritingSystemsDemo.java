@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,9 @@ package com.oracle.tools.fx.monkey.util;
  */
 public class WritingSystemsDemo {
     public static final String[] PAIRS = {
-        "Arabic", "السَّلَامُ عَلَيْكُمْ",
+        "Amharic", "አማርኛ ይጻፉ",
+        "Ancient South Arabian", "𐩣𐩯𐩬𐩵",
+        "Arabic", "السَّلَامُ عَلَيْكُمْ\ufdfd",
         "Aramaic", "Classical Syriac: ܐܪܡܝܐ, Old Aramaic: 𐤀𐤓𐤌𐤉𐤀; Imperial Aramaic: 𐡀𐡓𐡌𐡉𐡀; Jewish Babylonian Aramaic: אֲרָמִית‎",
         "Akkadian", "𒀝𒅗𒁺𒌑",
         "Armenian", "հայերէն/հայերեն",
@@ -51,6 +53,9 @@ public class WritingSystemsDemo {
         "Devanagari", "देवनागरी",
         "Dhivehi", "ދިވެހި",
         "Dhundhari", "ढूण्ढाड़ी/ઢૂણ્ઢાડ઼ી",
+        "Dinka", "Thuɔŋjäŋ",
+        "Egyptian (Ancient)", "𓅂𓁹𓁋𓁨",
+        "Emoji", "(◕‿◕)",
         "Farsi", "فارسی",
         "Garhwali", "गढ़वळि",
         "Geʽez", "ግዕዝ",
@@ -73,6 +78,7 @@ public class WritingSystemsDemo {
         "Korean", "한국어",
         "Kumaoni", "कुमाऊँनी",
         "Kurdish", "Kurdî / کوردی",
+        "Lao", "ພາສາລາວ",
         "Magahi", "𑂧𑂏𑂯𑂲/𑂧𑂏𑂡𑂲",
         "Maithili", "मैथिली",
         "Malayalam", "മലയാളം",
@@ -82,16 +88,19 @@ public class WritingSystemsDemo {
         "Meitei", "ꯃꯩꯇꯩꯂꯣꯟ",
         "Mewari", "मेवाड़ी/મેવ઼ાડ઼ી",
         "Mongolian", "ᠨᠢᠷᠤᠭᠤ",
+        "Nepali", "नेपाली गोरखा",
         "Nimadi", "निमाड़ी",
         "Odia", "ଓଡ଼ିଆ",
         "Pahari", "पहाड़ी پہاڑی ",
         "Pashto", "پښتو",
+        "Polish", "Zażółć gęślą jaźń",
         "Punjabi", "ਪੰਜਾਬੀپن٘جابی",
         "Rajasthani", "राजस्थानी",
         "Russian", "Русский",
         "Sanskrit", "संस्कृत-, संस्कृतम्",
         "Santali", "ᱥᱟᱱᱛᱟᱲᱤ",
-        "Sindhi", "سِنڌِي‎ • सिन्धी",
+        "Sindhi", "سِنڌِي‎ सिन्धी",
+        "Sinhala", "සිංහල බස",
         "Suret", "ܣܘܪܝܬ",
         "Surgujia", "सरगुजिया",
         "Surjapuri", "सुरजापुरी, সুরজাপুরী",
@@ -100,6 +109,7 @@ public class WritingSystemsDemo {
         "Thaana", "ދިވެހި",
         "Thai", "ไทย",
         "Tibetan", "བོད་",
+        "Tigrinya", "ትግርኛ",
         "Tulu", "ತುಳು",
         "Turoyo", "ܛܘܪܝܐ",
         "Ukrainian", "Українська",

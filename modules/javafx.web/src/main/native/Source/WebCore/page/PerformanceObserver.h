@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PerformanceEntry.h"
 #include "PerformanceObserverCallback.h"
+#include "dom/DOMHighResTimeStamp.h"
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -37,6 +37,7 @@ namespace WebCore {
 
 class Performance;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class PerformanceObserver : public RefCounted<PerformanceObserver> {
 public:
@@ -44,6 +45,7 @@ public:
         std::optional<Vector<String>> entryTypes;
         std::optional<String> type;
         bool buffered;
+        std::optional<DOMHighResTimeStamp> durationThreshold;
     };
 
     static Ref<PerformanceObserver> create(ScriptExecutionContext& context, Ref<PerformanceObserverCallback>&& callback)
@@ -77,7 +79,7 @@ private:
 
     RefPtr<Performance> m_performance;
     Vector<Ref<PerformanceEntry>> m_entriesToDeliver;
-    Ref<PerformanceObserverCallback> m_callback;
+    const Ref<PerformanceObserverCallback> m_callback;
     OptionSet<PerformanceEntry::Type> m_typeFilter;
     bool m_registered { false };
     bool m_isTypeObserver { false };

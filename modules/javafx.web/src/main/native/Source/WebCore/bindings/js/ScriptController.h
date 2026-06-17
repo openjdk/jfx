@@ -84,7 +84,7 @@ class ScriptController final : public CanMakeWeakPtr<ScriptController>, public C
     WTF_MAKE_TZONE_ALLOCATED(ScriptController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScriptController);
 
-    using RootObjectMap = UncheckedKeyHashMap<void*, Ref<JSC::Bindings::RootObject>>;
+    using RootObjectMap = HashMap<void*, Ref<JSC::Bindings::RootObject>>;
 
 public:
     explicit ScriptController(LocalFrame&);
@@ -131,7 +131,7 @@ public:
 
     void setEvalEnabled(bool, const String& errorMessage = String());
     void setWebAssemblyEnabled(bool, const String& errorMessage = String());
-    void setRequiresTrustedTypes(bool);
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement);
 
     static bool canAccessFromCurrentOrigin(LocalFrame*, Document& accessingDocument);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);

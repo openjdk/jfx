@@ -36,7 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "EventNames.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "MediaTrackConstraints.h"
 #include "RealtimeMediaSourceCenter.h"
@@ -80,21 +80,21 @@ public:
     };
 
     struct StreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getUserMedia(StreamConstraints&&, Promise&&);
 
     struct DisplayMediaStreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getDisplayMedia(DisplayMediaStreamConstraints&&, Promise&&);
 
     void enumerateDevices(EnumerateDevicesPromise&&);
     MediaTrackSupportedConstraints getSupportedConstraints();
 
-    String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
+    String deviceIdToPersistentId(const String&) const;
 
     void willStartMediaCapture(bool microphone, bool camera);
 
@@ -115,7 +115,7 @@ private:
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaDevices; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -125,6 +125,9 @@ private:
         Display = 1 << 2,
     };
     bool computeUserGesturePriviledge(GestureAllowedRequest);
+
+    enum class UserActivation : bool { No, Yes };
+    void queueTaskForDeviceChangeEvent(UserActivation);
 
     RunLoop::Timer m_scheduledEventTimer;
     Markable<UserMediaClient::DeviceChangeObserverToken> m_deviceChangeToken;

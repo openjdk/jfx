@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGTextPathElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "NodeName.h"
 #include "RenderSVGTextPath.h"
@@ -30,6 +31,7 @@
 #include "SVGElementInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGPathElement.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -69,7 +71,7 @@ void SVGTextPathElement::clearResourceReferences()
 
 void SVGTextPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::startOffsetAttr:

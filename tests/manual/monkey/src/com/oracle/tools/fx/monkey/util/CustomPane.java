@@ -26,6 +26,7 @@ package com.oracle.tools.fx.monkey.util;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.RadioButton;
@@ -50,7 +51,7 @@ public class CustomPane extends GridPane {
         RadioButton rb2 = new RadioButton("2");
         RadioButton rb3 = new RadioButton("3");
         new ToggleGroup().getToggles().addAll(rb1, rb2, rb3);
-        HBox spacer = new HBox(10, rb1, rb2, rb3);
+        HBox spacer = new HBox(10, rb1, rb2, rb3, new Hyperlink("hyperlink"));
 
         setPadding(new Insets(20));
         int r = 0;

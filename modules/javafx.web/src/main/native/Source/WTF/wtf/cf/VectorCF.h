@@ -125,18 +125,12 @@ template<typename CollectionType, typename MapFunctionType> RetainPtr<CFMutableA
 
 template<typename VectorElementType, typename CFType> Vector<VectorElementType> makeVector(CFArrayRef array)
 {
-    Vector<VectorElementType> vector;
-    CFIndex count = CFArrayGetCount(array);
-    vector.reserveInitialCapacity(count);
-    for (CFIndex i = 0; i < count; ++i) {
+    return Vector<VectorElementType>(CFArrayGetCount(array), [&](size_t index) -> std::optional<VectorElementType> {
         constexpr const VectorElementType* typedNull = nullptr;
-        if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
-            if (auto vectorElement = makeVectorElement(typedNull, element))
-                vector.append(WTFMove(*vectorElement));
-        }
-    }
-    vector.shrinkToFit();
-    return vector;
+        if (RetainPtr element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, index)))
+            return makeVectorElement(typedNull, element.get());
+        return std::nullopt;
+    });
 }
 
 template<typename MapLambdaType> Vector<typename LambdaTypeTraits<MapLambdaType>::returnType::value_type> makeVector(CFArrayRef array, MapLambdaType&& lambda)
@@ -147,17 +141,11 @@ template<typename MapLambdaType> Vector<typename LambdaTypeTraits<MapLambdaType>
     static_assert(std::is_same_v<typename LambdaTypeTraits<MapLambdaType>::returnType, std::optional<ElementType>>, "MapLambdaType returns std::optional<ElementType>");
     static_assert(LambdaTypeTraits<MapLambdaType>::paramCount == 1, "MapLambdaType takes a single CFTypeRef argument");
 
-    Vector<ElementType> vector;
-    CFIndex count = CFArrayGetCount(array);
-    vector.reserveInitialCapacity(count);
-    for (CFIndex i = 0; i < count; ++i) {
-        if (CFType element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, i))) {
-            if (auto vectorElement = std::invoke(std::forward<MapLambdaType>(lambda), element))
-                vector.append(WTFMove(*vectorElement));
-        }
-    }
-    vector.shrinkToFit();
-    return vector;
+    return Vector<ElementType>(CFArrayGetCount(array), [&](size_t index) -> std::optional<ElementType> {
+        if (RetainPtr element = dynamic_cf_cast<CFType>(CFArrayGetValueAtIndex(array, index)))
+            return std::invoke(std::forward<MapLambdaType>(lambda), element.get());
+        return std::nullopt;
+    });
 }
 
 inline std::span<const char> CFStringGetASCIICStringSpan(CFStringRef string)
@@ -191,6 +179,11 @@ inline RetainPtr<CFDataRef> toCFData(std::span<const uint8_t> span)
     return adoptCF(CFDataCreate(kCFAllocatorDefault, span.data(), span.size()));
 }
 
+inline RetainPtr<CFDataRef> toCFDataNoCopy(std::span<const uint8_t> span, CFAllocatorRef bytesDeallocator)
+{
+    return adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, span.data(), span.size(), bytesDeallocator));
+}
+
 inline Vector<uint8_t> makeVector(CFDataRef data)
 {
     return span(data);
@@ -219,5 +212,6 @@ using WTF::makeVector;
 using WTF::mutableSpan;
 using WTF::span;
 using WTF::toCFData;
+using WTF::toCFDataNoCopy;
 
 #endif // USE(CF)

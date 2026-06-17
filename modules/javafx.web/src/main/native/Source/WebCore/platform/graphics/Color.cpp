@@ -40,18 +40,6 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(Color);
 static constexpr auto lightenedBlack = SRGBA<uint8_t> { 84, 84, 84 };
 static constexpr auto darkenedWhite = SRGBA<uint8_t> { 171, 171, 171 };
 
-Color::Color(const Color& other)
-    : m_colorAndFlags(other.m_colorAndFlags)
-{
-    if (isOutOfLine())
-        asOutOfLine().ref();
-}
-
-Color::Color(Color&& other)
-{
-    *this = WTFMove(other);
-}
-
 Color::Color(std::optional<ColorDataForIPC>&& colorData)
 {
     if (colorData) {
@@ -100,36 +88,6 @@ std::optional<ColorDataForIPC> Color::data() const
         } };
     };
 };
-
-Color& Color::operator=(const Color& other)
-{
-    if (*this == other)
-        return *this;
-
-    if (isOutOfLine())
-        asOutOfLine().deref();
-
-    m_colorAndFlags = other.m_colorAndFlags;
-
-    if (isOutOfLine())
-        asOutOfLine().ref();
-
-    return *this;
-}
-
-Color& Color::operator=(Color&& other)
-{
-    if (*this == other)
-        return *this;
-
-    if (isOutOfLine())
-        asOutOfLine().deref();
-
-    m_colorAndFlags = other.m_colorAndFlags;
-    other.m_colorAndFlags = invalidColorAndFlags;
-
-    return *this;
-}
 
 Color Color::lightened() const
 {

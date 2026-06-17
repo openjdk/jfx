@@ -124,6 +124,8 @@ auto SectionParser::parseType() -> PartialResult
                     m_info->typeSignatures.append(signature.releaseNonNull());
             }
             }
+
+    RELEASE_ASSERT(m_info->typeSignatures.size() == m_info->rtts.size());
     return { };
 }
 
@@ -172,14 +174,14 @@ auto SectionParser::parseImport() -> PartialResult
             bool isImport = true;
             kindIndex = m_info->tables.size();
             PartialResult result = parseTableHelper(isImport);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return makeUnexpected(WTFMove(result.error()));
             break;
         }
         case ExternalKind::Memory: {
             bool isImport = true;
             PartialResult result = parseMemoryHelper(isImport);
-            if (UNLIKELY(!result))
+            if (!result) [[unlikely]]
                 return makeUnexpected(WTFMove(result.error()));
             break;
         }
@@ -292,14 +294,14 @@ auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 
     WASM_PARSER_FAIL_IF(!parseValueType(m_info, type), "can't parse Table type"_s);
     WASM_PARSER_FAIL_IF(!isRefType(type), "Table type should be a ref type, got "_s, type);
-    if (!hasInitExpr)
+    if (!hasInitExpr && !isImport)
         WASM_PARSER_FAIL_IF(!isDefaultableType(type), "Table's type must be defaultable"_s);
 
     uint32_t initial;
     std::optional<uint32_t> maximum;
     bool isShared = false;
     PartialResult limits = parseResizableLimits(initial, maximum, isShared, LimitsType::Table);
-    if (UNLIKELY(!limits))
+    if (!limits) [[unlikely]]
         return makeUnexpected(WTFMove(limits.error()));
     WASM_PARSER_FAIL_IF(initial > maxTableEntries, "Table's initial page count of "_s, initial, " is too big, maximum "_s, maxTableEntries);
 
@@ -339,7 +341,7 @@ auto SectionParser::parseTable() -> PartialResult
     for (unsigned i = 0; i < count; ++i) {
         bool isImport = false;
         PartialResult result = parseTableHelper(isImport);
-        if (UNLIKELY(!result))
+        if (!result) [[unlikely]]
             return makeUnexpected(WTFMove(result.error()));
     }
 
@@ -357,7 +359,7 @@ auto SectionParser::parseMemoryHelper(bool isImport) -> PartialResult
         uint32_t initial;
         std::optional<uint32_t> maximum;
         PartialResult limits = parseResizableLimits(initial, maximum, isShared, LimitsType::Memory);
-        if (UNLIKELY(!limits))
+        if (!limits) [[unlikely]]
             return makeUnexpected(WTFMove(limits.error()));
         ASSERT(!maximum || *maximum >= initial);
         WASM_PARSER_FAIL_IF(!PageCount::isValid(initial), "Memory's initial page count of "_s, initial, " is invalid"_s);
@@ -409,9 +411,10 @@ auto SectionParser::parseGlobal() -> PartialResult
         Type typeForInitOpcode;
         bool isExtendedConstantExpression;
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, isExtendedConstantExpression, initialBitsOrImportNumber, initVector, global.type, typeForInitOpcode));
-        if (typeForInitOpcode.isV128())
+        if (initOpcode == ExtSIMD && !isExtendedConstantExpression) {
+            RELEASE_ASSERT(typeForInitOpcode.isV128());
             global.initialBits.initialVector = initVector;
-        else
+        } else
             global.initialBits.initialBitsOrImportNumber = initialBitsOrImportNumber;
 
         if (isExtendedConstantExpression)
@@ -718,8 +721,9 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, bool& isExtendedConstantExpre
 #if ENABLE(B3_JIT)
     case ExtSIMD: {
         WASM_PARSER_FAIL_IF(!Options::useWasmSIMD(), "SIMD must be enabled"_s);
-        WASM_PARSER_FAIL_IF(!parseUInt8(opcode), "can't get init_expr's simd opcode"_s);
-        WASM_PARSER_FAIL_IF(static_cast<ExtSIMDOpType>(opcode) != ExtSIMDOpType::V128Const, "unknown init_expr simd opcode "_s, opcode);
+        uint8_t simdOpcode;
+        WASM_PARSER_FAIL_IF(!parseUInt8(simdOpcode), "can't get init_expr's simd opcode"_s);
+        WASM_PARSER_FAIL_IF(static_cast<ExtSIMDOpType>(simdOpcode) != ExtSIMDOpType::V128Const, "unknown init_expr simd opcode "_s, opcode);
         v128_t constant;
         WASM_PARSER_FAIL_IF(!parseImmByteArray16(constant), "get constant value for init_expr's v128.const"_s);
 
@@ -834,7 +838,7 @@ auto SectionParser::parseFunctionType(uint32_t position, RefPtr<TypeDefinition>&
     Vector<Type, 16> argumentTypes;
     WASM_PARSER_FAIL_IF(!argumentTypes.tryReserveInitialCapacity(argumentCount), "can't allocate enough memory for Type section's "_s, position, "th signature"_s);
 
-    argumentTypes.resize(argumentCount);
+    argumentTypes.grow(argumentCount);
     for (unsigned i = 0; i < argumentCount; ++i) {
         Type argumentType;
         WASM_PARSER_FAIL_IF(!parseValueType(m_info, argumentType), "can't get "_s, i, "th argument Type"_s);
@@ -847,7 +851,7 @@ auto SectionParser::parseFunctionType(uint32_t position, RefPtr<TypeDefinition>&
 
     Vector<Type, 16> returnTypes;
     WASM_PARSER_FAIL_IF(!returnTypes.tryReserveInitialCapacity(returnCount), "can't allocate enough memory for Type section's "_s, position, "th signature"_s);
-    returnTypes.resize(returnCount);
+    returnTypes.grow(returnCount);
     for (unsigned i = 0; i < returnCount; ++i) {
         Type value;
         WASM_PARSER_FAIL_IF(!parseValueType(m_info, value), "can't get "_s, i, "th Type's return value"_s);
@@ -893,7 +897,7 @@ auto SectionParser::parseStructType(uint32_t position, RefPtr<TypeDefinition>& s
     WASM_PARSER_FAIL_IF(fieldCount > maxStructFieldCount, "number of fields for struct type at position "_s, position, " is too big "_s, fieldCount, " maximum "_s, maxStructFieldCount);
     Vector<FieldType> fields;
     WASM_PARSER_FAIL_IF(!fields.tryReserveInitialCapacity(fieldCount), "can't allocate enough memory for struct fields "_s, fieldCount, " entries"_s);
-    fields.resize(fieldCount);
+    fields.grow(fieldCount);
 
     Checked<unsigned, RecordOverflow> structInstancePayloadSize { 0 };
     for (uint32_t fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
@@ -909,6 +913,7 @@ auto SectionParser::parseStructType(uint32_t position, RefPtr<TypeDefinition>& s
         WASM_PARSER_FAIL_IF(structInstancePayloadSize.hasOverflowed(), "struct layout is too big"_s);
     }
 
+    m_info->m_hasGCObjectTypes = true;
     structType = TypeInformation::typeDefinitionForStruct(fields);
     return { };
 }
@@ -922,6 +927,7 @@ auto SectionParser::parseArrayType(uint32_t position, RefPtr<TypeDefinition>& ar
     WASM_PARSER_FAIL_IF(!parseUInt8(mutability), position, "can't get array's mutability"_s);
     WASM_PARSER_FAIL_IF(mutability != 0x0 && mutability != 0x1, "invalid array mutability: 0x"_s, hex(mutability, 2, Lowercase));
 
+    m_info->m_hasGCObjectTypes = true;
     arrayType = TypeInformation::typeDefinitionForArray(FieldType { elementType, static_cast<Mutability>(mutability) });
     return { };
 }

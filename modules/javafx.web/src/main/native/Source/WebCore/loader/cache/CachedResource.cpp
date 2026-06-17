@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004-2011, 2014, 2018 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -64,7 +64,7 @@
 
 #undef CACHEDRESOURCE_RELEASE_LOG
 #define PAGE_ID(frame) (frame.pageID() ? frame.pageID()->toUInt64() : 0)
-#define FRAME_ID(frame) (frame.frameID().object().toUInt64())
+#define FRAME_ID(frame) (frame.frameID().toUInt64())
 #define CACHEDRESOURCE_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - CachedResource::" fmt, this, ##__VA_ARGS__)
 #define CACHEDRESOURCE_RELEASE_LOG_WITH_FRAME(fmt, frame, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] CachedResource::" fmt, this, PAGE_ID(frame), FRAME_ID(frame), ##__VA_ARGS__)
 
@@ -114,7 +114,7 @@ CachedResource::CachedResource(CachedResourceRequest&& request, Type type, PAL::
 
 // FIXME: For this constructor, we should probably mandate that the URL has no fragment identifier.
 CachedResource::CachedResource(const URL& url, Type type, PAL::SessionID sessionID, const CookieJar* cookieJar)
-    : m_resourceRequest(url)
+    : m_resourceRequest(URL { url })
     , m_sessionID(sessionID)
     , m_cookieJar(cookieJar)
     , m_fragmentIdentifierForRequest(CachedResourceRequest::splitFragmentIdentifierFromRequestURL(m_resourceRequest))
@@ -225,7 +225,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     }
 
     if (type() == Type::LinkPrefetch)
-        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Purpose, "prefetch"_s);
+        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::SecPurpose, "prefetch"_s);
     m_resourceRequest.setPriority(loadPriority());
 
     // Navigation algorithm is setting up the request before sending it to CachedResourceLoader?CachedResource.
@@ -241,7 +241,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     if (!m_fragmentIdentifierForRequest.isNull()) {
         URL url = request.url();
         url.setFragmentIdentifier(m_fragmentIdentifierForRequest);
-        request.setURL(url);
+        request.setURL(WTFMove(url));
         m_fragmentIdentifierForRequest = String();
     }
 
@@ -480,10 +480,10 @@ static bool isOpaqueRedirectResponseWithoutLocationHeader(const ResourceResponse
 }
 #endif
 
-void CachedResource::setResponse(const ResourceResponse& newResponse)
+void CachedResource::setResponse(ResourceResponse&& newResponse)
 {
     ASSERT(response().type() == ResourceResponse::Type::Default || isOpaqueRedirectResponseWithoutLocationHeader(response()));
-    mutableResponse() = newResponse;
+    mutableResponseData().m_response = WTFMove(newResponse);
     m_varyingHeaderValues = collectVaryingRequestHeaders(protectedCookieJar().get(), m_resourceRequest, response());
 
     if (response().source() == ResourceResponse::Source::ServiceWorker) {
@@ -495,11 +495,11 @@ void CachedResource::setResponse(const ResourceResponse& newResponse)
         mutableResponse().setTainting(m_responseTainting);
 }
 
-void CachedResource::responseReceived(const ResourceResponse& response)
+void CachedResource::responseReceived(ResourceResponse&& response)
 {
-    setResponse(response);
-    m_responseTimestamp = WallTime::now();
     String encoding = response.textEncodingName();
+    setResponse(WTFMove(response));
+    m_responseTimestamp = WallTime::now();
     if (!encoding.isNull())
         setEncoding(encoding);
 }
@@ -1047,7 +1047,7 @@ void CachedResource::tryReplaceEncodedData(SharedBuffer& newBuffer)
     if (*m_data != newBuffer)
         return;
 
-    m_data = &newBuffer;
+    m_data = newBuffer;
     didReplaceSharedBufferContents();
 }
 
@@ -1055,10 +1055,10 @@ void CachedResource::tryReplaceEncodedData(SharedBuffer& newBuffer)
 
 #if USE(QUICK_LOOK)
 
-void CachedResource::previewResponseReceived(const ResourceResponse& response)
+void CachedResource::previewResponseReceived(ResourceResponse&& response)
 {
     ASSERT(response.url().protocolIs(QLPreviewProtocol));
-    CachedResource::responseReceived(response);
+    CachedResource::responseReceived(WTFMove(response));
 }
 
 #endif

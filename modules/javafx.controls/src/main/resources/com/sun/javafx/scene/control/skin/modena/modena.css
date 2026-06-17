@@ -3451,7 +3451,6 @@ is being used to size a border should also be in pixels.
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: 0, 1;
     -fx-background-radius: 3, 2;
-    -fx-cursor: text;
     -fx-padding: 0;
     -fx-content-padding: 4 8 4 8;
 }
@@ -3505,4 +3504,12 @@ is being used to size a border should also be in pixels.
 
 .line-number-decorator .text {
     -fx-bounds-type: visual;
+}
+
+.rich-text-area .content {
+    -fx-cursor: text;
+}
+
+.code-area .content {
+    -fx-cursor: text;
 }

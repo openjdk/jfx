@@ -52,7 +52,7 @@ private:
     Image* findImageForRenderer(const RenderObject*) const;
     RefPtr<SVGImage> protectedSVGImage() const;
 
-    typedef UncheckedKeyHashMap<const CachedImageClient*, RefPtr<SVGImageForContainer>> ImageForContainerMap;
+    typedef HashMap<const CachedImageClient*, RefPtr<SVGImageForContainer>> ImageForContainerMap;
 
     WeakPtr<SVGImage> m_svgImage;
     ImageForContainerMap m_imageForContainerMap;

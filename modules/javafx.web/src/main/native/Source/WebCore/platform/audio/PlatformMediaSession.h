@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,249 +25,82 @@
 
 #pragma once
 
-#include "MediaSessionGroupIdentifier.h"
-#include "MediaSessionIdentifier.h"
-#include "Timer.h"
-#include <wtf/Logger.h>
-#include <wtf/LoggerHelper.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/ProcessID.h>
-#include <wtf/TZoneMalloc.h>
-#include <wtf/WeakPtr.h>
-#include <wtf/text/WTFString.h>
-
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-#include "MediaPlaybackTargetClient.h"
-#endif
-
-namespace WebCore {
-class PlatformMediaSession;
-class AudioCaptureSource;
-}
-
-namespace WTF {
-class MediaTime;
-}
+#include "PlatformMediaSessionInterface.h"
 
 namespace WebCore {
 
-class Document;
-class MediaPlaybackTarget;
-class PlatformMediaSessionClient;
-class PlatformMediaSessionManager;
-enum class DelayCallingUpdateNowPlaying : bool { No, Yes };
-struct NowPlayingInfo;
-
-enum class PlatformMediaSessionRemoteControlCommandType : uint8_t {
-    NoCommand,
-    PlayCommand,
-    PauseCommand,
-    StopCommand,
-    TogglePlayPauseCommand,
-    BeginSeekingBackwardCommand,
-    EndSeekingBackwardCommand,
-    BeginSeekingForwardCommand,
-    EndSeekingForwardCommand,
-    SeekToPlaybackPositionCommand,
-    SkipForwardCommand,
-    SkipBackwardCommand,
-    NextTrackCommand,
-    PreviousTrackCommand,
-    BeginScrubbingCommand,
-    EndScrubbingCommand,
-};
-
-enum class PlatformMediaSessionMediaType : uint8_t {
-    None,
-        Video,
-        VideoAudio,
-        Audio,
-        WebAudio,
-};
-
-enum class PlatformMediaSessionState : uint8_t {
-        Idle,
-        Autoplaying,
-        Playing,
-        Paused,
-        Interrupted,
-};
-
-enum class PlatformMediaSessionInterruptionType : uint8_t {
-        NoInterruption,
-        SystemSleep,
-        EnteringBackground,
-        SystemInterruption,
-        SuspendedUnderLock,
-        InvisibleAutoplay,
-        ProcessInactive,
-        PlaybackSuspended,
-        PageNotVisible,
-};
-
-enum class PlatformMediaSessionEndInterruptionFlags : uint8_t {
-        NoFlags = 0,
-        MayResumePlaying = 1 << 0,
-};
-
-struct PlatformMediaSessionRemoteCommandArgument {
-    std::optional<double> time;
-    std::optional<bool> fastSeek;
-};
-
-class AudioCaptureSource : public CanMakeWeakPtr<AudioCaptureSource> {
-public:
-    virtual ~AudioCaptureSource() = default;
-    virtual bool isCapturingAudio() const = 0;
-    virtual bool wantsToCaptureAudio() const = 0;
-};
-
-class PlatformMediaSession
-    : public CanMakeCheckedPtr<PlatformMediaSession>
-    , public CanMakeWeakPtr<PlatformMediaSession>
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    , public MediaPlaybackTargetClient
-#endif
-#if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
-#endif
-{
+class PlatformMediaSession : public PlatformMediaSessionInterface {
     WTF_MAKE_TZONE_ALLOCATED(PlatformMediaSession);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlatformMediaSession);
 public:
-    static std::unique_ptr<PlatformMediaSession> create(PlatformMediaSessionManager&, PlatformMediaSessionClient&);
+    static Ref<PlatformMediaSession> create(PlatformMediaSessionClient& client)
+    {
+        return adoptRef(*new PlatformMediaSession(client));
+    }
 
     virtual ~PlatformMediaSession();
 
-    void setActive(bool);
+    void setActive(bool) final;
 
-    using MediaType = WebCore::PlatformMediaSessionMediaType;
-    enum class PlaybackControlsPurpose { ControlsManager, NowPlaying, MediaSession };
+    State state() const  final { return m_state; }
+    void setState(State) final;
 
-    MediaType mediaType() const;
-    MediaType presentationType() const;
+    State stateToRestore() const final { return m_stateToRestore; }
 
-    using State = PlatformMediaSessionState;
+    InterruptionType interruptionType() const final;
 
-    State state() const { return m_state; }
-    void setState(State);
+    void clientCharacteristicsChanged(bool) override;
 
-    State stateToRestore() const { return m_stateToRestore; }
+    void beginInterruption(InterruptionType) final;
+    void endInterruption(OptionSet<EndInterruptionFlags>) final;
 
-    using InterruptionType = PlatformMediaSessionInterruptionType;
+    void clientWillBeginAutoplaying() override;
+    bool clientWillBeginPlayback() override;
+    bool clientWillPausePlayback() override;
 
-    InterruptionType interruptionType() const;
+    void clientWillBeDOMSuspended() final;
 
-    using EndInterruptionFlags = PlatformMediaSessionEndInterruptionFlags;
+    void pauseSession() final;
+    void stopSession() final;
 
-    virtual void clientCharacteristicsChanged(bool);
+    void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&) override;
 
-    void beginInterruption(InterruptionType);
-    void endInterruption(OptionSet<EndInterruptionFlags>);
+    bool isPlayingToWirelessPlaybackTarget() const override { return m_isPlayingToWirelessPlaybackTarget; }
+    void isPlayingToWirelessPlaybackTargetChanged(bool) final;
 
-    virtual void clientWillBeginAutoplaying();
-    virtual bool clientWillBeginPlayback();
-    virtual bool clientWillPausePlayback();
+    bool blockedBySystemInterruption() const final;
+    bool activeAudioSessionRequired() const final;
+    void canProduceAudioChanged() final;
 
-    void clientWillBeDOMSuspended();
-
-    void pauseSession();
-    void stopSession();
-
-    virtual void suspendBuffering() { }
-    virtual void resumeBuffering() { }
-
-    using RemoteCommandArgument = PlatformMediaSessionRemoteCommandArgument;
-
-    using RemoteControlCommandType = PlatformMediaSessionRemoteControlCommandType;
-    bool canReceiveRemoteControlCommands() const;
-    virtual void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&);
-    bool supportsSeeking() const;
-
-    enum DisplayType : uint8_t {
-        Normal,
-        Fullscreen,
-        Optimized,
-    };
-    DisplayType displayType() const;
-
-    bool isHidden() const;
-    bool isSuspended() const;
-    bool isPlaying() const;
-    bool isAudible() const;
-    bool isEnded() const;
-    WTF::MediaTime duration() const;
-
-    bool shouldOverrideBackgroundLoadingRestriction() const;
-
-    virtual bool isPlayingToWirelessPlaybackTarget() const { return m_isPlayingToWirelessPlaybackTarget; }
-    void isPlayingToWirelessPlaybackTargetChanged(bool);
-
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    // MediaPlaybackTargetClient
-    void setPlaybackTarget(Ref<MediaPlaybackTarget>&&) override { }
-    void externalOutputDeviceAvailableDidChange(bool) override { }
-    void setShouldPlayToPlaybackTarget(bool) override { }
-    void playbackTargetPickerWasDismissed() override { }
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    virtual bool requiresPlaybackTargetRouteMonitoring() const { return false; }
-#endif
-
-    bool blockedBySystemInterruption() const;
-    bool activeAudioSessionRequired() const;
-    bool canProduceAudio() const;
-    bool hasMediaStreamSource() const;
-    void canProduceAudioChanged();
-
-    virtual void resetPlaybackSessionState() { }
-    String sourceApplicationIdentifier() const;
-
-    bool hasPlayedAudiblySinceLastInterruption() const { return m_hasPlayedAudiblySinceLastInterruption; }
-    void clearHasPlayedAudiblySinceLastInterruption() { m_hasPlayedAudiblySinceLastInterruption = false; }
-
-    bool preparingToPlay() const { return m_preparingToPlay; }
+    bool preparingToPlay() const final { return m_preparingToPlay; }
 
 #if !RELEASE_LOG_DISABLED
-    const Logger& logger() const final;
-    uint64_t logIdentifier() const final;
+    const Logger& logger() const override;
+    uint64_t logIdentifier() const override;
     ASCIILiteral logClassName() const override { return "PlatformMediaSession"_s; }
-    WTFLogChannel& logChannel() const final;
+    WTFLogChannel& logChannel() const override;
 #endif
 
-    bool canPlayConcurrently(const PlatformMediaSession&) const;
-    bool shouldOverridePauseDuringRouteChange() const;
+    bool canPlayConcurrently(const PlatformMediaSessionInterface&) const final;
 
-    std::optional<NowPlayingInfo> nowPlayingInfo() const;
-    bool isNowPlayingEligible() const;
-    WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlaybackControlsPurpose);
+    WeakPtr<PlatformMediaSessionInterface> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSessionInterface>>&, PlaybackControlsPurpose) final;
 
-    virtual void updateMediaUsageIfChanged() { }
-
-    virtual bool isLongEnoughForMainContent() const { return false; }
-
-    MediaSessionIdentifier mediaSessionIdentifier() const { return m_mediaSessionIdentifier; }
-
-    bool isActiveNowPlayingSession() const { return m_isActiveNowPlayingSession; }
-    void setActiveNowPlayingSession(bool);
-
-    ProcessID presentingApplicationPID() const;
+    bool isActiveNowPlayingSession() const final { return m_isActiveNowPlayingSession; }
+    void setActiveNowPlayingSession(bool) final;
 
 #if !RELEASE_LOG_DISABLED
-    virtual String description() const;
+    String description() const override;
 #endif
 
 protected:
-    PlatformMediaSession(PlatformMediaSessionManager&, PlatformMediaSessionClient&);
-    PlatformMediaSessionClient& client() const { return m_client; }
+    PlatformMediaSession(PlatformMediaSessionClient& client)
+        : PlatformMediaSessionInterface(client)
+    {
+    }
 
 private:
     bool processClientWillPausePlayback(DelayCallingUpdateNowPlaying);
     size_t activeInterruptionCount() const;
 
-    PlatformMediaSessionClient& m_client;
-    MediaSessionIdentifier m_mediaSessionIdentifier;
     State m_state { State::Idle };
     State m_stateToRestore { State::Idle };
     struct Interruption {
@@ -278,71 +111,8 @@ private:
     bool m_active { false };
     bool m_notifyingClient { false };
     bool m_isPlayingToWirelessPlaybackTarget { false };
-    bool m_hasPlayedAudiblySinceLastInterruption { false };
     bool m_preparingToPlay { false };
     bool m_isActiveNowPlayingSession { false };
-
-    friend class PlatformMediaSessionManager;
-};
-
-class PlatformMediaSessionClient {
-    WTF_MAKE_NONCOPYABLE(PlatformMediaSessionClient);
-public:
-    PlatformMediaSessionClient() = default;
-
-    virtual PlatformMediaSession::MediaType mediaType() const = 0;
-    virtual PlatformMediaSession::MediaType presentationType() const = 0;
-    virtual PlatformMediaSession::DisplayType displayType() const { return PlatformMediaSession::Normal; }
-
-    virtual void resumeAutoplaying() { }
-    virtual void mayResumePlayback(bool shouldResume) = 0;
-    virtual void suspendPlayback() = 0;
-
-    virtual bool canReceiveRemoteControlCommands() const = 0;
-    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
-    virtual bool supportsSeeking() const = 0;
-
-    virtual bool canProduceAudio() const { return false; }
-    virtual bool isSuspended() const { return false; }
-    virtual bool isPlaying() const { return false; }
-    virtual bool isAudible() const { return false; }
-    virtual bool isEnded() const { return false; }
-    virtual WTF::MediaTime mediaSessionDuration() const;
-
-    virtual bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const = 0;
-    virtual bool shouldOverrideBackgroundLoadingRestriction() const { return false; }
-
-    virtual void wirelessRoutesAvailableDidChange() { }
-    virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
-    virtual bool isPlayingToWirelessPlaybackTarget() const { return false; }
-    virtual void setShouldPlayToPlaybackTarget(bool) { }
-    virtual void playbackTargetPickerWasDismissed() { }
-
-    virtual bool isPlayingOnSecondScreen() const { return false; }
-
-    virtual std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const = 0;
-
-    virtual bool hasMediaStreamSource() const { return false; }
-
-    virtual void processIsSuspendedChanged() { }
-
-    virtual bool shouldOverridePauseDuringRouteChange() const { return false; }
-
-    virtual bool isNowPlayingEligible() const { return false; }
-    virtual std::optional<NowPlayingInfo> nowPlayingInfo() const;
-    virtual WeakPtr<PlatformMediaSession> selectBestMediaSession(const Vector<WeakPtr<PlatformMediaSession>>&, PlatformMediaSession::PlaybackControlsPurpose) { return nullptr; }
-
-    virtual void isActiveNowPlayingSessionChanged() = 0;
-
-    virtual ProcessID presentingApplicationPID() const = 0;
-
-#if !RELEASE_LOG_DISABLED
-    virtual const Logger& logger() const = 0;
-    virtual uint64_t logIdentifier() const = 0;
-#endif
-
-protected:
-    virtual ~PlatformMediaSessionClient() = default;
 };
 
 String convertEnumerationToString(PlatformMediaSession::State);

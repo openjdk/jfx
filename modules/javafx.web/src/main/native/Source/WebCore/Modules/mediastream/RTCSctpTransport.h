@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "ActiveDOMObject.h"
 #include "Event.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "RTCSctpTransportBackend.h"
 
 namespace WebCore {
@@ -69,8 +70,8 @@ private:
     // RTCSctpTransport::Client
     void onStateChanged(RTCSctpTransportState, std::optional<double>, std::optional<unsigned short>) final;
 
-    UniqueRef<RTCSctpTransportBackend> m_backend;
-    Ref<RTCDtlsTransport> m_transport;
+    const UniqueRef<RTCSctpTransportBackend> m_backend;
+    const Ref<RTCDtlsTransport> m_transport;
     RTCSctpTransportState m_state { RTCSctpTransportState::Connecting };
     std::optional<double> m_maxMessageSize;
     std::optional<unsigned short> m_maxChannels;

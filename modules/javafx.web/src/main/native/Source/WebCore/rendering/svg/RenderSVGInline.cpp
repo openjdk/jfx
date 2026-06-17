@@ -25,6 +25,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
@@ -127,7 +128,7 @@ void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* ancestor
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderInline::pushMappingToContainer(ancestorToStopAt, geometryMap);

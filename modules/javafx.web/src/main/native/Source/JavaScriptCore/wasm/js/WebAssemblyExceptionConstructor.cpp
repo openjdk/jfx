@@ -54,7 +54,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyException, (JSGlobalObject* globa
     if (!tag)
         return throwVMTypeError(globalObject, scope, "WebAssembly.Exception constructor expects the first argument to be a WebAssembly.Tag"_s);
 
-    if (UNLIKELY(&tag->tag() == &Wasm::Tag::jsExceptionTag()))
+    if (&tag->tag() == &Wasm::Tag::jsExceptionTag()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "WebAssembly.Exception constructor does not accept WebAssembly.JSTag"_s);
 
     const auto& tagFunctionType = tag->type();
@@ -62,7 +62,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyException, (JSGlobalObject* globa
     values.ensureCapacity(tagFunctionType.argumentCount());
     forEachInIterable(globalObject, tagParameters, [&] (VM&, JSGlobalObject*, JSValue nextValue) {
         values.append(nextValue);
-        if (UNLIKELY(values.hasOverflowed()))
+        if (values.hasOverflowed()) [[unlikely]]
             throwOutOfMemoryError(globalObject, scope);
     });
     RETURN_IF_EXCEPTION(scope, { });
@@ -74,7 +74,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyException, (JSGlobalObject* globa
     FixedVector<uint64_t> payload(values.size());
     for (unsigned i = 0; i < values.size(); ++i) {
         auto type = tagFunctionType.argumentType(i);
-        if (UNLIKELY(type.kind == Wasm::TypeKind::V128 || isExnref(type)))
+        if (type.kind == Wasm::TypeKind::V128 || isExnref(type)) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "WebAssembly.Exception constructor expects payload includes neither v128 nor exnref."_s);
         payload[i] = toWebAssemblyValue(globalObject, type, values.at(i));
         RETURN_IF_EXCEPTION(scope, { });

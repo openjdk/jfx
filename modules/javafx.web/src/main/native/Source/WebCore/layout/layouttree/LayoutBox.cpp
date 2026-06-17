@@ -57,7 +57,7 @@ Box::Box(ElementAttributes&& elementAttributes, RenderStyle&& style, std::unique
 
 Box::~Box()
 {
-    if (UNLIKELY(m_hasRareData))
+    if (m_hasRareData) [[unlikely]]
         removeRareData();
     if (m_renderer)
         m_renderer->clearLayoutBox();

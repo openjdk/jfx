@@ -107,7 +107,7 @@ void FontDescription::setSpecifiedLocale(const AtomString& locale)
 {
     ASSERT(isMainThread());
     m_specifiedLocale = locale;
-    m_script = localeToScriptCodeForFontSelection(m_specifiedLocale);
+    m_script = localeToScriptCode(m_specifiedLocale);
     m_locale = m_script == USCRIPT_HAN ? specializedChineseLocale() : m_specifiedLocale;
 }
 

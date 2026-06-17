@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.SubPropertyConverter;
@@ -58,6 +59,15 @@ import java.util.Objects;
  */
 public abstract class StyleableObjectProperty<T>
     extends ObjectPropertyBase<T> implements StyleableProperty<T> {
+
+    static {
+        StyleablePropertyHelper.setObjectAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableObjectProperty<?>)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableObjectProperty}.
@@ -269,6 +279,10 @@ public abstract class StyleableObjectProperty<T>
         }
     }
 
+    private boolean equalsEndValue(Object value) {
+        return Objects.equals(value, controller != null ? controller.getTargetValue() : get());
+    }
+
     private StyleOrigin origin;
     private TransitionController<T> controller;
 
@@ -356,7 +370,7 @@ public abstract class StyleableObjectProperty<T>
         @SuppressWarnings("unchecked")
         public void onUpdate(double progress) {
             StyleableObjectProperty.super.set(
-                progress < 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
+                progress != 1 ? ((Interpolatable<T>)startValue).interpolate(endValue, progress) : endValue);
         }
     }
 
@@ -526,7 +540,7 @@ public abstract class StyleableObjectProperty<T>
         public void onUpdate(double progress) {
             Object value;
 
-            if (progress < 1) {
+            if (progress != 1) {
                 if (startValue instanceof Interpolatable[][] ov && endValue instanceof Interpolatable[][] nv) {
                     value = InterpolationUtils.interpolateArraySeriesPairwise(ov, nv, progress);
                 } else if (startValue instanceof Interpolatable[] ov && endValue instanceof Interpolatable[] nv) {

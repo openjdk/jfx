@@ -39,10 +39,10 @@ public:
 
     SubstituteData() = default;
 
-        SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, const URL& failingURL, const ResourceResponse& response, SessionHistoryVisibility shouldRevealToSessionHistory)
+    SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, URL&& failingURL, ResourceResponse&& response, SessionHistoryVisibility shouldRevealToSessionHistory)
             : m_content(WTFMove(content))
-            , m_failingURL(failingURL)
-            , m_response(response)
+        , m_failingURL(WTFMove(failingURL))
+        , m_response(WTFMove(response))
             , m_shouldRevealToSessionHistory(shouldRevealToSessionHistory)
         {
         }

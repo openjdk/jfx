@@ -83,7 +83,7 @@ public abstract non-sealed class Parent extends Node {
 
     // If set to true, generate a warning message whenever adding a node to a
     // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    private static final boolean warnOnAutoMove = Boolean.getBoolean("javafx.sg.warn");
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -1021,7 +1021,7 @@ public abstract non-sealed class Parent extends Node {
      * rendered. This is batched up asynchronously to happen once per
      * "pulse", or frame of animation.
      * <p>
-     * If this parent is either a layout root or unmanaged, then it will be
+     * If this parent is either a scene root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
      * @since JavaFX 8.0
@@ -1066,7 +1066,15 @@ public abstract non-sealed class Parent extends Node {
         if (!layoutRoot) {
             final Parent p = getParent();
             if (p != null && (!p.performingLayout || forceParentLayout)) {
-                p.requestLayout();
+
+                /*
+                 * The forceParentLayout flag must be propagated to mark all ancestors
+                 * as needing layout. Failure to do so while performingLayout is true
+                 * would stop the propagation mid-tree. This leaves some nodes as needing
+                 * layout, while its ancestors are clean, which is an inconsistent state.
+                 */
+
+                p.requestLayout(forceParentLayout);
             }
         }
     }

@@ -453,4 +453,15 @@ public class Util {
         String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
         return waylandDisplay != null && !waylandDisplay.isEmpty();
     }
+
+    /**
+     * Returns true if two pixel values are "near", i.e. the distance between them is less than
+     * an arbitrarily chosen constant (0.1).
+     * @param a the first coordinate
+     * @param b the second coordinate
+     * @return true if two coordinates are near
+     */
+    public static boolean isNear(double a, double b) {
+        return Math.abs(a - b) < 0.1;
+    }
 }

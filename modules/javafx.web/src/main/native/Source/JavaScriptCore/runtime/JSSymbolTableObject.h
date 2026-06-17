@@ -50,6 +50,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     JSSymbolTableObject(VM& vm, Structure* structure, JSScope* scope)
         : Base(vm, structure, scope)
@@ -70,8 +72,6 @@ protected:
         symbolTable->notifyCreation(vm, this, "Allocated a scope");
         m_symbolTable.set(vm, this, symbolTable);
     }
-
-    DECLARE_VISIT_CHILDREN;
 
 private:
     WriteBarrier<SymbolTable> m_symbolTable;

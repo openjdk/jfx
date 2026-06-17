@@ -31,7 +31,7 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct ResolutionValidator {
-    static constexpr std::optional<CSS::ResolutionUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::ResolutionUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
         return CSS::UnitTraits<CSS::ResolutionUnit>::validate(unitType);
     }

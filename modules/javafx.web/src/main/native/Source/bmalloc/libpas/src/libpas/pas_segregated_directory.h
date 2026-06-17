@@ -153,7 +153,7 @@ struct PAS_ALIGNED(sizeof(pas_versioned_field)) pas_segregated_directory_data {
     pas_segregated_directory_sharing_payload_ptr sharing_payload;
 };
 
-#define PAS_SEGREGATED_DIRECTORY_SHARING_PAYLOAD_IS_INITIALIZED_BIT 1lu
+#define PAS_SEGREGATED_DIRECTORY_SHARING_PAYLOAD_IS_INITIALIZED_BIT 1llu
 
 #define PAS_SEGREGATED_DIRECTORY_INITIALIZER(page_config_kind_argument, sharing_mode_argument, directory_kind_argument) \
     ((pas_segregated_directory){ \

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,29 +155,45 @@ public class StopListTest {
 
     @Test
     public void testInterpolateStop() {
-        assertSame(zerostop, zerostop.interpolate(onestop, -0.5));
         assertSame(zerostop, zerostop.interpolate(onestop, 0));
         assertSame(onestop, zerostop.interpolate(onestop, 1));
-        assertSame(onestop, zerostop.interpolate(onestop, 1.5));
         assertEquals(new Stop(0.5, color2), zerostop.interpolate(onestop, 0.5));
+        assertEquals(new Stop(0, color1.interpolate(color3, -0.5)), zerostop.interpolate(onestop, -0.5));
+        assertEquals(new Stop(1, color1.interpolate(color3, 1.5)), zerostop.interpolate(onestop, 1.5));
     }
 
     @Nested
     class ListInterpolationTest {
         @Test
-        public void returnFirstListBeforeInterval() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var firstList = List.of(new Stop(0, color1), new Stop(1, color3));
             var secondList = List.of(new Stop(0, color3), new Stop(1, color1));
             assertSame(firstList, StopShim.interpolateLists(firstList, secondList, 0));
-            assertSame(firstList, StopShim.interpolateLists(firstList, secondList, -0.5));
         }
 
         @Test
-        public void returnSecondListAfterInterval() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var firstList = List.of(new Stop(0, color1), new Stop(1, color3));
             var secondList = List.of(new Stop(0, color3), new Stop(1, color1));
             assertSame(secondList, StopShim.interpolateLists(firstList, secondList, 1));
-            assertSame(secondList, StopShim.interpolateLists(firstList, secondList, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThenZero() {
+            var firstList = List.of(new Stop(0, color1), new Stop(1, color2));
+            var secondList = List.of(new Stop(0, color2), new Stop(1, color1));
+            var expected = List.of(new Stop(0, color1.interpolate(color2, -0.5)),
+                                   new Stop(1, color2.interpolate(color1, -0.5)));
+            assertEquals(expected, StopShim.interpolateLists(firstList, secondList, -0.5));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var firstList = List.of(new Stop(0, color1), new Stop(1, color2));
+            var secondList = List.of(new Stop(0, color2), new Stop(1, color1));
+            var expected = List.of(new Stop(0, color1.interpolate(color2, 2)),
+                                   new Stop(1, color2.interpolate(color1, 2)));
+            assertEquals(expected, StopShim.interpolateLists(firstList, secondList, 2));
         }
 
         @Test

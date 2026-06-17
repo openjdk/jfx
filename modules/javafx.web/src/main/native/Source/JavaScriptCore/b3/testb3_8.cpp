@@ -26,6 +26,7 @@
 #include "config.h"
 #include "testb3.h"
 
+#include <wtf/Int128.h>
 #include <wtf/UniqueArray.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -1615,6 +1616,92 @@ void testSShrCompare64(int64_t constantValue)
     testWithOpcode(AboveEqual, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) >= constantValue; });
     testWithOpcode(Below, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) < constantValue; });
     testWithOpcode(BelowEqual, [](uint64_t shiftAmount, uint64_t constantValue, int64_t value) { return static_cast<uint64_t>(value >> shiftAmount) <= constantValue; });
+}
+
+void testMulHigh64()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
+
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, MulHigh, Origin(),
+            argumentA,
+            argumentB));
+
+    auto code = compileProc(proc);
+    for (auto a : int64Operands()) {
+        for (auto b : int64Operands())
+            CHECK_EQ(invoke<int64_t>(*code, a.value, b.value), static_cast<int64_t>((static_cast<Int128>(a.value) * static_cast<Int128>(b.value)) >> 64));
+    }
+}
+
+void testMulHigh32()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, MulHigh, Origin(),
+            arguments[0],
+            arguments[1]));
+
+    auto code = compileProc(proc);
+    for (auto a : int32Operands()) {
+        for (auto b : int32Operands())
+            CHECK_EQ(invoke<int32_t>(*code, a.value, b.value), static_cast<int32_t>((static_cast<int64_t>(a.value) * static_cast<int64_t>(b.value)) >> 32));
+    }
+}
+
+void testUMulHigh64()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint64_t, uint64_t>(proc, root);
+
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, UMulHigh, Origin(),
+            argumentA,
+            argumentB));
+
+    auto code = compileProc(proc);
+    for (auto a : int64Operands()) {
+        for (auto b : int64Operands())
+            CHECK_EQ(invoke<uint64_t>(*code, a.value, b.value), static_cast<uint64_t>((static_cast<UInt128>(static_cast<uint64_t>(a.value)) * static_cast<UInt128>(static_cast<uint64_t>(b.value))) >> 64));
+    }
+}
+
+void testUMulHigh32()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t, uint32_t>(proc, root);
+
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, UMulHigh, Origin(),
+            arguments[0],
+            arguments[1]));
+
+    auto code = compileProc(proc);
+    for (auto a : int32Operands()) {
+        for (auto b : int32Operands())
+            CHECK_EQ(invoke<uint32_t>(*code, a.value, b.value), static_cast<uint32_t>((static_cast<uint64_t>(static_cast<uint32_t>(a.value)) * static_cast<uint64_t>(static_cast<uint32_t>(b.value))) >> 32));
+    }
 }
 
 #endif // ENABLE(B3_JIT)

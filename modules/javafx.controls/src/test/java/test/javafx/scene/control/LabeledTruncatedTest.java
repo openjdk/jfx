@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,26 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.LabeledSkinBase;
 import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.control.skin.TableCellSkin;
 import javafx.scene.control.skin.TreeTableCellSkin;
+import javafx.scene.control.skin.MenuButtonSkin;
+import javafx.scene.control.skin.SplitMenuButtonSkin;
 import javafx.scene.layout.RegionShim;
+import javafx.stage.Stage;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 
@@ -55,37 +63,75 @@ public class LabeledTruncatedTest {
 
     @Test
     public void testTruncatedLabel() {
-        Label control = new Label();
-        control.setSkin(new LabelSkin(control));
-        control.setText(TEXT);
-        test(control);
+        Supplier<Label> fun = () -> {
+            Label control = new Label();
+            control.setSkin(new LabelSkin(control));
+            control.setText(TEXT);
+            return control;
+        };
+
+        testWithSkin(fun.get());
+        testTextProperty(fun.get());
     }
 
     @Test
     public void testTruncatedButton() {
-        Button control = new Button();
-        control.setSkin(new ButtonSkin(control));
-        control.setText(TEXT);
-        test(control);
+        Supplier<Labeled> fun = () -> {
+            Button control = new Button();
+            control.setSkin(new ButtonSkin(control));
+            control.setText(TEXT);
+            return control;
+        };
+        testWithSkin(fun.get());
+        testTextProperty(fun.get());
+    }
+
+    @Test
+    public void testTruncatedMenuButton() {
+        Supplier<Labeled> fun = () -> {
+            MenuButton control = new MenuButton();
+            control.setSkin(new MenuButtonSkin(control));
+            control.setText(TEXT);
+            return control;
+        };
+        testTextProperty(fun.get());
+    }
+
+    @Test
+    public void testTruncatedSplitMenuButton() {
+        Supplier<Labeled> fun = () -> {
+            SplitMenuButton control = new SplitMenuButton();
+            control.setSkin(new SplitMenuButtonSkin(control));
+            control.setText(TEXT);
+            return control;
+        };
+        testTextProperty(fun.get());
     }
 
     @Test
     public void testTruncatedTableCellSkin() {
-        TableCell<String, String> control = new TableCell<>();
-        control.setSkin(new TableCellSkin<>(control));
-        control.setText(TEXT);
-        test(control);
+        Supplier<Labeled> fun = () -> {
+            TableCell<String, String> control = new TableCell<>();
+            control.setSkin(new TableCellSkin<>(control));
+            control.setText(TEXT);
+            return control;
+        };
+        testWithSkin(fun.get());
+        testTextProperty(fun.get());
     }
 
     @Test
     public void testTruncatedTreeTableCellSkin() {
-        TreeTableCell<String, String> control = new TreeTableCell<>();
-        control.setSkin(new TreeTableCellSkin<>(control));
-        control.setText(TEXT);
-        test(control);
+        Supplier<Labeled> fun = () -> {
+            TreeTableCell<String, String> control = new TreeTableCell<>();
+            control.setSkin(new TreeTableCellSkin<>(control));
+            control.setText(TEXT);
+            return control;
+        };
+        testWithSkin(fun.get());
     }
 
-    private void test(Labeled control) {
+    private void testWithSkin(Labeled control) {
         RegionShim.setWidth(control, 1000);
         LabeledSkinBaseShim.updateDisplayedText((LabeledSkinBase)control.getSkin());
         firePulse();
@@ -113,5 +159,28 @@ public class LabeledTruncatedTest {
         firePulse();
 
         assertTrue(control.isTextTruncated());
+    }
+
+    private void testTextProperty(Labeled control) {
+        Scene scene = new Scene(control, 100, 100);
+        Stage s = new Stage();
+        s.setScene(scene);
+        s.show();
+        control.setText("A");
+        firePulse();
+        double h = control.prefHeight(-1);
+
+        assertFalse(control.isTextTruncated());
+
+        control.setText("very long text with a lots of characters");
+        control.layout();
+        firePulse();
+
+        assertTrue(control.isTextTruncated());
+
+        control.setText("A");
+        control.layout();
+        firePulse();
+        assertFalse(control.isTextTruncated());
     }
 }

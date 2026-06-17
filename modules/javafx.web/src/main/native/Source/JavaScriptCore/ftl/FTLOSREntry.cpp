@@ -130,14 +130,14 @@ void* prepareOSREntry(
     }
 
     int stackFrameSize = entryCode->common.requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()]))) {
+    if (!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()])) [[unlikely]] {
         dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
         return nullptr;
     }
 
     callFrame->setCodeBlock(entryCodeBlock);
 
-    void* result = entryCode->addressForCall(ArityCheckNotRequired).taggedPtr();
+    void* result = entryCode->addressForCall(ArityCheckMode::ArityCheckNotRequired).taggedPtr();
     dataLogLnIf(Options::verboseOSR(), "    Entry will succeed, going to address ", RawPointer(result));
 
     // At this point, we're committed to triggering an OSR entry immediately after we return. Hence, it is safe to modify stack here.

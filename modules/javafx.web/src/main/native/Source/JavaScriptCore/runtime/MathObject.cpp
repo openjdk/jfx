@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2019 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,7 @@
 #include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "MathCommon.h"
+#include <numbers>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PreciseSum.h>
@@ -83,9 +84,9 @@ void MathObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "E"_s), jsNumber(Math::exp(1.0)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "LN2"_s), jsNumber(Math::log(2.0)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "LN10"_s), jsNumber(Math::log(10.0)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "LOG2E"_s), jsNumber(1.0 / Math::log(2.0)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "LOG10E"_s), jsNumber(0.4342944819032518), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "PI"_s), jsNumber(piDouble), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "LOG2E"_s), jsNumber(Math::log2(Math::exp(1.0))), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "LOG10E"_s), jsNumber(Math::log10(Math::exp(1.0))), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "PI"_s), jsNumber(std::numbers::pi), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "SQRT1_2"_s), jsNumber(sqrt(0.5)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, Identifier::fromString(vm, "SQRT2"_s), jsNumber(sqrt(2.0)), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
@@ -199,11 +200,50 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned argsCount = callFrame->argumentCount();
+
+    if (!argsCount) [[unlikely]]
+        return JSValue::encode(jsDoubleNumber(0));
+    if (argsCount == 1) {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        return JSValue::encode(jsDoubleNumber(std::fabs(arg0)));
+    }
+    if (argsCount == 2) [[likely]] {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (std::isinf(arg0) || std::isinf(arg1))
+            return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
+        return JSValue::encode(jsDoubleNumber(std::hypot(arg0, arg1)));
+    }
+    if (argsCount == 3) [[likely]] {
+        double arg0 = callFrame->uncheckedArgument(0).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg1 = callFrame->uncheckedArgument(1).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        double arg2 = callFrame->uncheckedArgument(2).toNumber(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (std::isinf(arg0) || std::isinf(arg1) || std::isinf(arg2))
+            return JSValue::encode(jsDoubleNumber(+std::numeric_limits<double>::infinity()));
+#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 200100
+        // For libc++ versions before 20.1 (commit 72825fd, "Fix undue
+        // overflowing of std::hypot(x,y,z)"), use hypot2. Unfortunately, that
+        // introduces an LSB difference in the result when using libstdc++ on at
+        // least x86_64 and ARMv7.
+        return JSValue::encode(jsDoubleNumber(std::hypotl(std::hypotl(arg0, arg1), arg2)));
+#else
+        if (std::isnan(arg0) || std::isnan(arg1) || std::isnan(arg2))
+            return JSValue::encode(jsNaN());
+        return JSValue::encode(jsDoubleNumber(std::hypot(arg0, arg1, arg2)));
+#endif
+    }
+
     Vector<double, 8> args(argsCount, [&](size_t i) -> std::optional<double> {
         double argument = callFrame->uncheckedArgument(i).toNumber(globalObject);
         RETURN_IF_EXCEPTION(scope, std::nullopt);
         return argument;
-    });
+    }, NulloptBehavior::Abort);
         RETURN_IF_EXCEPTION(scope, { });
 
     double max = 0;
@@ -239,7 +279,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMax, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    if (UNLIKELY(!argsCount))
+    if (!argsCount) [[unlikely]]
         return JSValue::encode(jsNumber(-std::numeric_limits<double>::infinity()));
 
     double result = callFrame->uncheckedArgument(0).toNumber(globalObject);
@@ -258,7 +298,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncMin, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned argsCount = callFrame->argumentCount();
-    if (UNLIKELY(!argsCount))
+    if (!argsCount) [[unlikely]]
         return JSValue::encode(jsNumber(std::numeric_limits<double>::infinity()));
 
     double result = callFrame->uncheckedArgument(0).toNumber(globalObject);
@@ -412,20 +452,31 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncSumPrecise, (JSGlobalObject* globalObject,
     if (iterable.isUndefinedOrNull())
         return throwVMTypeError(globalObject, scope, "Math.sumPrecise requires first argument not be null or undefined"_s);
 
-    PreciseSum sum;
-
     scope.release();
+
+    const std::optional<uint64_t> length = isJSArray(iterable) ?
+        std::make_optional(static_cast<uint64_t>(jsCast<JSArray*>(iterable)->length()))
+        : std::nullopt;
+
+    auto calculatePreciseSum = [&](auto& sum) {
     forEachInIterable(globalObject, iterable, [&sum](VM& vm, JSGlobalObject* globalObject, JSValue value) {
         auto scope = DECLARE_THROW_SCOPE(vm);
         if (!value.isNumber()) {
             throwTypeError(globalObject, scope, "Math.sumPrecise was passed a non-number"_s);
             return;
         }
-
         sum.add(value.asNumber());
     });
-
     return JSValue::encode(jsNumber(sum.compute()));
+    };
+
+    if (length && length.value() > WTF::PRECISE_SUM_THRESHOLD) {
+        PreciseSum<WTF::Xsum::XsumLarge> sum;
+        return calculatePreciseSum(sum);
+    }
+
+    PreciseSum sum;
+    return calculatePreciseSum(sum);
 }
 
 } // namespace JSC

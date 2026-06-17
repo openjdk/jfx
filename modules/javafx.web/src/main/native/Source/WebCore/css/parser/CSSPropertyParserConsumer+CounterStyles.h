@@ -32,27 +32,27 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
 enum CSSValueID : uint16_t;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // https://drafts.csswg.org/css-counter-styles-3/
 
 // MARK: <counter-style> consumer
-RefPtr<CSSValue> consumeCounterStyle(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyle(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// MARK: @counter-style consumer
+AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange&, CSSParserMode = CSSParserMode::HTMLStandardMode);
 
 // MARK: @counter-style descriptor consumers
-AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange&, CSSParserMode = CSSParserMode::HTMLStandardMode);
-RefPtr<CSSValue> consumeCounterStyleName(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleSymbol(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleNegative(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStylePad(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleSymbols(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleAdditiveSymbols(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeCounterStyleSpeakAs(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeCounterStyleName(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeCounterStyleSystem(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeCounterStyleRange(CSSParserTokenRange&, CSS::PropertyParserState&);
+RefPtr<CSSValue> consumeCounterStyleAdditiveSymbols(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

@@ -485,6 +485,7 @@ class MTLContext extends BaseShaderContext {
 
     @Override
     public void dispose() {
+        disposeLCDBuffer();
         nRelease(pContext);
         state = null;
         super.dispose();

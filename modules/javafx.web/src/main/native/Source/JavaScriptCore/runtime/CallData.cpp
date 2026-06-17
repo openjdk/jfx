@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,7 +62,7 @@ JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const CallDat
     VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSValue result = call(globalObject, functionObject, callData, thisValue, args);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         returnedException = scope.exception();
         scope.clearException();
         return jsUndefined();

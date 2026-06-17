@@ -52,16 +52,13 @@ DateTimeSymbolicFieldElement::DateTimeSymbolicFieldElement(Document& document, D
 
 void DateTimeSymbolicFieldElement::adjustMinInlineSize(RenderStyle& style) const
 {
-    auto& font = style.fontCascade();
+    CheckedRef font = style.fontCascade();
 
     float inlineSize = 0;
     for (auto& symbol : m_symbols)
-        inlineSize = std::max(inlineSize, font.width(RenderBlock::constructTextRun(symbol, style)));
+        inlineSize = std::max(inlineSize, font->width(RenderBlock::constructTextRun(symbol, style)));
 
-    if (style.writingMode().isHorizontal())
-        style.setMinWidth({ inlineSize, LengthType::Fixed });
-    else
-        style.setMinHeight({ inlineSize, LengthType::Fixed });
+    style.setLogicalMinWidth(Style::MinimumSize::Fixed { inlineSize });
 }
 
 bool DateTimeSymbolicFieldElement::hasValue() const
@@ -97,9 +94,11 @@ void DateTimeSymbolicFieldElement::stepUp()
     setValueAsInteger(newValue, DispatchInputAndChangeEvents);
 }
 
-String DateTimeSymbolicFieldElement::value() const
+ValueOrReference<String> DateTimeSymbolicFieldElement::value() const
 {
-    return hasValue() ? m_symbols[m_selectedIndex] : emptyString();
+    if (hasValue())
+        return m_symbols[m_selectedIndex];
+    return emptyString();
 }
 
 String DateTimeSymbolicFieldElement::placeholderValue() const

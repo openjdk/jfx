@@ -66,7 +66,7 @@ ImageAnalysisQueue::~ImageAnalysisQueue() = default;
 
 void ImageAnalysisQueue::enqueueIfNeeded(HTMLImageElement& element)
 {
-    CheckedPtr renderer = downcast<RenderImage>(element.renderer());
+    CheckedPtr renderer = dynamicDowncast<RenderImage>(element.renderer());
     if (!renderer)
         return;
 

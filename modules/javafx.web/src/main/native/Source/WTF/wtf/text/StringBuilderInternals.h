@@ -35,7 +35,7 @@ template<typename AllocationCharacterType, typename CurrentCharacterType> void S
 {
     std::span<AllocationCharacterType> newBufferCharacters;
     auto buffer = StringImpl::tryCreateUninitialized(requiredCapacity, newBufferCharacters);
-    if (UNLIKELY(!buffer)) {
+    if (!buffer) [[unlikely]] {
         didOverflow();
         return;
     }
@@ -55,7 +55,7 @@ template<typename CharacterType> void StringBuilder::reallocateBuffer(unsigned r
         if (m_buffer->hasOneRef()) {
             CharacterType* bufferCharacters;
             auto buffer = StringImpl::tryReallocate(m_buffer.releaseNonNull(), requiredCapacity, bufferCharacters);
-            if (UNLIKELY(!buffer)) {
+            if (!buffer) [[unlikely]] {
                 didOverflow();
                 return;
             }
@@ -86,7 +86,7 @@ template<typename CharacterType> std::span<CharacterType> StringBuilder::extendB
     if (!requiredLength || hasOverflowed())
         return { };
     reallocateBuffer(expandedCapacity(capacity(), requiredLength));
-    if (UNLIKELY(hasOverflowed()))
+    if (hasOverflowed()) [[unlikely]]
         return { };
     return spanConstCast<CharacterType>(m_buffer->span<CharacterType>().subspan(std::exchange(m_length, requiredLength)));
 }

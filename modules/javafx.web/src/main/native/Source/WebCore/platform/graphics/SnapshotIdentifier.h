@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class SnapshotIdentifierType { };
+struct SnapshotIdentifierType;
 using SnapshotIdentifier = AtomicObjectIdentifier<SnapshotIdentifierType>;
 
 } // namespace WebCore

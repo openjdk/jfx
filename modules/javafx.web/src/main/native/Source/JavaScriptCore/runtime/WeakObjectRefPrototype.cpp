@@ -51,13 +51,12 @@ ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(JSGlobalObject* globalObject, J
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!value.isObject())) {
+    if (!value.isObject()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Called WeakRef function on non-object"_s);
         return nullptr;
     }
 
-    auto* ref = jsDynamicCast<JSWeakObjectRef*>(asObject(value));
-    if (LIKELY(ref))
+    if (auto* ref = jsDynamicCast<JSWeakObjectRef*>(asObject(value))) [[likely]]
         return ref;
 
     throwTypeError(globalObject, scope, "Called WeakRef function on a non-WeakRef object"_s);

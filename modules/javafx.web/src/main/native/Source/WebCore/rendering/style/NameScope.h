@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "StyleScopeOrdinal.h"
+#include <wtf/ListHashSet.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/TextStream.h>
 
@@ -34,24 +36,33 @@ struct NameScope {
     enum class Type : uint8_t { None, All, Ident };
 
     Type type { Type::None };
-    Vector<AtomString> names;
+    ListHashSet<AtomString> names;
+    Style::ScopeOrdinal scopeOrdinal { Style::ScopeOrdinal::Element };
 
-    bool operator==(const NameScope& other) const = default;
+    friend bool operator==(const NameScope&, const NameScope&);
 };
+
+inline bool operator==(const NameScope& lhs, const NameScope& rhs)
+{
+    return lhs.type == rhs.type && lhs.scopeOrdinal == rhs.scopeOrdinal
+        // Two name lists are equal if they contain the same values in the same order.
+        && (lhs.names.isEmpty() || std::equal(lhs.names.begin(), lhs.names.end(), rhs.names.begin(), rhs.names.end()));
+}
 
 inline TextStream& operator<<(TextStream& ts, const NameScope& scope)
 {
     switch (scope.type) {
     case NameScope::Type::None:
-        ts << "none";
+        ts << "none"_s;
         break;
     case NameScope::Type::All:
-        ts << "all";
+        ts << "all"_s;
         break;
     case NameScope::Type::Ident:
-        ts << "ident: " << scope.names;
+        ts << "ident: "_s << scope.names;
         break;
     }
+    ts << " (style scope: " << scope.scopeOrdinal << ")";
     return ts;
 }
 

@@ -31,13 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <'display'> consuming
 // https://drafts.csswg.org/css-display/#propdef-display
-RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeDisplay(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

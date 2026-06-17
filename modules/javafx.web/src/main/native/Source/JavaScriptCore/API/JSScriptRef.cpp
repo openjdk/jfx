@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ private:
     ~OpaqueJSScript() final { }
 
     VM& m_vm;
-    Ref<StringImpl> m_source;
+    const Ref<StringImpl> m_source;
 };
 
 static bool parseScript(VM& vm, const SourceCode& source, ParserError& error)

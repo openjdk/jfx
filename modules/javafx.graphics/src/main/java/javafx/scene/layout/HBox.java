@@ -56,7 +56,7 @@ import javafx.util.Callback;
  * HBox example:
  * <pre>{@code
  *     HBox hbox = new HBox(8); // spacing = 8
- *     hbox.getChildren().addAll(new Label("Name:), new TextBox());
+ *     hbox.getChildren().addAll(new Label("Name:"), new TextBox());
  * }</pre>
  *
  * HBox will resize children (if resizable) to their preferred widths and uses its

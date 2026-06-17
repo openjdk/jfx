@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,7 +91,7 @@ private:
 
     IDBTransactionInfo m_info;
 
-    CheckedRef<SQLiteIDBBackingStore> m_backingStore;
+    const CheckedRef<SQLiteIDBBackingStore> m_backingStore;
     CheckedPtr<SQLiteDatabase> m_sqliteDatabase;
     std::unique_ptr<SQLiteTransaction> m_sqliteTransaction;
     HashMap<IDBResourceIdentifier, std::unique_ptr<SQLiteIDBCursor>> m_cursors;

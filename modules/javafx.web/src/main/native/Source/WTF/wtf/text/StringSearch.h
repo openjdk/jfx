@@ -33,7 +33,7 @@ namespace WTF {
 
 template<typename OffsetType>
 class BoyerMooreHorspoolTable {
-    WTF_MAKE_FAST_ALLOCATED(BoyerMooreHorspoolTable);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BoyerMooreHorspoolTable);
 public:
     static constexpr unsigned size = 256;
     static constexpr unsigned maxPatternLength = std::numeric_limits<OffsetType>::max();
@@ -57,7 +57,7 @@ public:
         if (matchLength > string.length())
             return notFound;
 
-        if (UNLIKELY(!matchLength))
+        if (!matchLength) [[unlikely]]
             return 0;
 
         if (string.is8Bit()) {

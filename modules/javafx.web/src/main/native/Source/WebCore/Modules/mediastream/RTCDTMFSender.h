@@ -29,7 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "ScriptWrappable.h"
 #include "Timer.h"
 
@@ -38,6 +38,7 @@ namespace WebCore {
 class MediaStreamTrack;
 class RTCDTMFSenderBackend;
 class RTCRtpSender;
+template<typename> class ExceptionOr;
 
 class RTCDTMFSender final : public RefCounted<RTCDTMFSender>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCDTMFSender);

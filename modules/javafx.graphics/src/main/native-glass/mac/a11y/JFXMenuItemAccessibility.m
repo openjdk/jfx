@@ -33,7 +33,17 @@
 }
 
 - (NSString * _Nullable)accessibilityLabel {
-    return [super accessibilityTitle];
+    NSString *title = [super accessibilityTitle];
+    if (title == nil) {
+        NSArray *children = [super accessibilityChildren];
+        if (children != nil && [children count] != 0) {
+            if ([children[0] respondsToSelector:@selector(accessibilityValue)]) {
+                return [children[0] accessibilityValue];
+            }
+        }
+        return @"";
+    }
+    return title;
 }
 
 - (NSString * _Nullable)accessibilityTitle {

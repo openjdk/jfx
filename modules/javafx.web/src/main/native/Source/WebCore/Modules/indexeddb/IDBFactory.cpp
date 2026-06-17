@@ -26,7 +26,7 @@
 #include "config.h"
 #include "IDBFactory.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
@@ -130,7 +130,10 @@ ExceptionOr<short> IDBFactory::cmp(JSGlobalObject& execState, JSValue firstValue
     if (!second->isValid())
         return Exception { ExceptionCode::DataError, "Failed to execute 'cmp' on 'IDBFactory': The parameter is not a valid key."_s };
 
-    return first->compare(second.get());
+    auto comparison = first->compare(second.get());
+    if (is_eq(comparison))
+        return 0;
+    return is_lt(comparison) ? -1 : 1;
 }
 
 void IDBFactory::databases(ScriptExecutionContext& context, IDBDatabasesResponsePromise&& promise)

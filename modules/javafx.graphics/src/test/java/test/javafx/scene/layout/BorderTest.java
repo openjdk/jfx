@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -691,19 +691,37 @@ public class BorderTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
             var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
             var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new Border(new BorderStroke(new Color(0.5, 0.5, 0.5, 1), BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertEquals(new Border(new BorderStroke(new Color(0, 0, 0, 1), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0))),
+                         startValue.interpolate(endValue, -1));
+            assertEquals(new Border(new BorderStroke(new Color(0, 0, 0, 1), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0))),
+                         startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new Border(new BorderStroke(new Color(0.5, 0.5, 0.5, 1), BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertEquals(new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(30), new BorderWidths(30))),
+                         startValue.interpolate(endValue, 2));
+            assertEquals(new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                         startValue.interpolate(endValue, 3));
         }
     }
 }

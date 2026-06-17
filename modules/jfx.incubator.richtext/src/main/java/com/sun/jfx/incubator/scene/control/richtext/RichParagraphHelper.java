@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import com.sun.javafx.util.Utils;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
-import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * Provides access to internal methods in RichParagraph.
@@ -37,8 +36,6 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 public class RichParagraphHelper {
     public interface Accessor {
         public List<Consumer<TextCell>> getHighlights(RichParagraph p);
-
-        public List<StyledSegment> getSegments(RichParagraph p);
     }
 
     static {
@@ -56,9 +53,5 @@ public class RichParagraphHelper {
 
     public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
         return accessor.getHighlights(p);
-    }
-
-    public static List<StyledSegment> getSegments(RichParagraph p) {
-        return accessor.getSegments(p);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  *
  * Portions are Copyright (C) 2001-6 mozilla.org
  *
@@ -409,7 +409,7 @@ public:
                 m_info.src->bytes_in_buffer = 0;
                 return true;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case JPEG_START_DECOMPRESS:
             // Set parameters for decompression.
@@ -427,7 +427,7 @@ public:
 
             // If this is a progressive JPEG ...
             m_state = (m_info.buffered_image) ? JPEG_DECOMPRESS_PROGRESSIVE : JPEG_DECOMPRESS_SEQUENTIAL;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case JPEG_DECOMPRESS_SEQUENTIAL:
             if (m_state == JPEG_DECOMPRESS_SEQUENTIAL) {
@@ -439,7 +439,7 @@ public:
                 ASSERT(m_info.output_scanline == m_info.output_height);
                 m_state = JPEG_DONE;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case JPEG_DECOMPRESS_PROGRESSIVE:
             if (m_state == JPEG_DECOMPRESS_PROGRESSIVE) {
@@ -493,7 +493,7 @@ public:
 
                 m_state = JPEG_DONE;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case JPEG_DONE:
             // Finish decompression.

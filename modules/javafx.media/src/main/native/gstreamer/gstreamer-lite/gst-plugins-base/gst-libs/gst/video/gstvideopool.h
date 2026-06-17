@@ -51,7 +51,7 @@ GST_VIDEO_API
 void             gst_buffer_pool_config_set_video_alignment  (GstStructure *config, const GstVideoAlignment *align);
 
 GST_VIDEO_API
-gboolean         gst_buffer_pool_config_get_video_alignment  (GstStructure *config, GstVideoAlignment *align);
+gboolean         gst_buffer_pool_config_get_video_alignment  (const GstStructure *config, GstVideoAlignment *align);
 
 /* video bufferpool */
 typedef struct _GstVideoBufferPool GstVideoBufferPool;
@@ -79,7 +79,7 @@ GST_VIDEO_API
 GType             gst_video_buffer_pool_get_type      (void);
 
 GST_VIDEO_API
-GstBufferPool *   gst_video_buffer_pool_new           (void);
+GstBufferPool *   gst_video_buffer_pool_new           (void) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoBufferPool, gst_object_unref)
 

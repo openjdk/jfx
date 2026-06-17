@@ -205,7 +205,7 @@ void WebAssemblyModuleRecord::initializeImports(JSGlobalObject* globalObject, JS
 
             JSWebAssemblyInstance* calleeInstance = nullptr;
             WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = nullptr;
-            const uintptr_t* boxedWasmCalleeLoadLocation = &Wasm::NullWasmCallee;
+            const CalleeBits* boxedWasmCalleeLoadLocation = &Wasm::NullWasmCallee;
             JSObject* function = jsCast<JSObject*>(value);
 
             // ii. If v is an Exported Function Exotic Object:
@@ -780,7 +780,7 @@ JSValue WebAssemblyModuleRecord::evaluateConstantExpression(JSGlobalObject* glob
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto evalResult = Wasm::evaluateExtendedConstExpr(constantExpression, m_instance.get(), info, expectedType);
-    if (UNLIKELY(!evalResult.has_value()))
+    if (!evalResult.has_value()) [[unlikely]]
         return JSValue(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, makeString("couldn't evaluate constant expression: "_s, evalResult.error()))));
 
     result = evalResult.value();
@@ -870,7 +870,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
     // Validation of all element ranges comes before all Table and Memory initialization.
     forEachActiveElement([&](const Wasm::Element& element, uint32_t tableIndex, uint32_t elementIndex) {
         int64_t lastWrittenIndex = static_cast<int64_t>(elementIndex) + static_cast<int64_t>(element.initTypes.size()) - 1;
-        if (UNLIKELY(lastWrittenIndex >= m_instance->table(tableIndex)->length())) {
+        if (lastWrittenIndex >= m_instance->table(tableIndex)->length()) [[unlikely]] {
             exception = JSValue(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Element is trying to set an out of bounds table index"_s)));
             return IterationStatus::Done;
         }
@@ -879,16 +879,16 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     // Validation of all segment ranges comes before all Table and Memory initialization.
     forEachActiveDataSegment([&](uint8_t* memory, uint64_t sizeInBytes, const Wasm::Segment::Ptr& segment, uint32_t offset) {
-        if (UNLIKELY(sizeInBytes < segment->sizeInBytes)) {
+        if (sizeInBytes < segment->sizeInBytes) [[unlikely]] {
             exception = dataSegmentFail(globalObject, vm, scope, sizeInBytes, segment->sizeInBytes, offset, ", segment is too big"_s);
             return IterationStatus::Done;
         }
-        if (UNLIKELY(offset > sizeInBytes - segment->sizeInBytes)) {
+        if (offset > sizeInBytes - segment->sizeInBytes) [[unlikely]] {
             exception = dataSegmentFail(globalObject, vm, scope, sizeInBytes, segment->sizeInBytes, offset, ", segment writes outside of memory"_s);
             return IterationStatus::Done;
         }
@@ -901,7 +901,7 @@ JSValue WebAssemblyModuleRecord::evaluate(JSGlobalObject* globalObject)
         return IterationStatus::Continue;
     });
 
-    if (UNLIKELY(exception))
+    if (exception) [[unlikely]]
         return exception.value();
 
     ASSERT(!exception);

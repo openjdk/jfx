@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -58,10 +58,10 @@
 #include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
-#include "NetworkResourcesData.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
+#include "RenderObjectInlines.h"
 #include "ResourceError.h"
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"
@@ -75,7 +75,6 @@
 #include "WebCorePersistentCoders.h"
 #include "WebSocket.h"
 #include "WebSocketFrame.h"
-#include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
@@ -109,7 +108,7 @@ namespace {
 
 class InspectorThreadableLoaderClient final : public ThreadableLoaderClient {
     WTF_MAKE_NONCOPYABLE(InspectorThreadableLoaderClient);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(InspectorThreadableLoaderClient, Loader);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorThreadableLoaderClient);
 public:
     InspectorThreadableLoaderClient(RefPtr<LoadResourceCallback>&& callback)
@@ -190,18 +189,18 @@ Ref<Inspector::Protocol::Network::WebSocketFrame> buildWebSocketMessage(const We
 
 } // namespace
 
-InspectorNetworkAgent::InspectorNetworkAgent(WebAgentContext& context, uint32_t maximumResourcesContentSize)
+InspectorNetworkAgent::InspectorNetworkAgent(WebAgentContext& context, const NetworkResourcesData::Settings& networkResourcesDataSettings)
     : InspectorAgentBase("Network"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::NetworkFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::NetworkFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::NetworkBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_resourcesData(makeUnique<NetworkResourcesData>(maximumResourcesContentSize))
+    , m_resourcesData(makeUniqueRef<NetworkResourcesData>(networkResourcesDataSettings))
 {
 }
 
 InspectorNetworkAgent::~InspectorNetworkAgent() = default;
 
-void InspectorNetworkAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorNetworkAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -936,14 +935,7 @@ bool InspectorNetworkAgent::shouldIntercept(URL url, Inspector::Protocol::Networ
         return false;
 
     for (auto& intercept : m_intercepts) {
-        if (intercept.networkStage != networkStage)
-            continue;
-        if (intercept.url.isEmpty())
-            return true;
-
-        auto searchStringType = intercept.isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ExactString;
-        auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(intercept.url, intercept.caseSensitive, searchStringType);
-        if (regex.match(urlString) != -1)
+        if (intercept.matches(urlString, networkStage))
             return true;
     }
 
@@ -1020,7 +1012,7 @@ void InspectorNetworkAgent::loadResource(const Inspector::Protocol::Network::Fra
     }
 
     URL url = context->completeURL(urlString);
-    ResourceRequest request(url);
+    ResourceRequest request(WTFMove(url));
     request.setHTTPMethod("GET"_s);
     request.setHiddenFromInspector(true);
 
@@ -1334,7 +1326,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequest
         data = SharedBuffer::create(content.utf8().span());
 
     // Mimic data URL load behavior - report didReceiveResponse & didFinishLoading.
-    ResourceResponse response(pendingRequest->m_loader->url(), mimeType, data->size(), String());
+    ResourceResponse response(URL { pendingRequest->m_loader->url() }, String { mimeType }, data->size(), String());
     response.setSource(ResourceResponse::Source::InspectorOverride);
     response.setHTTPStatusCode(status);
     response.setHTTPStatusText(String { statusText });
@@ -1346,7 +1338,7 @@ Inspector::Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequest
     }
     response.setHTTPHeaderFields(WTFMove(explicitHeaders));
     response.setHTTPHeaderField(HTTPHeaderName::ContentType, response.mimeType());
-    loader->didReceiveResponse(response, [loader, buffer = data.releaseNonNull()]() {
+    loader->didReceiveResponse(WTFMove(response), [loader, buffer = data.releaseNonNull()]() {
         if (loader->reachedTerminalState())
             return;
 
@@ -1542,6 +1534,29 @@ void InspectorNetworkAgent::searchInRequest(Inspector::Protocol::ErrorString& er
 void InspectorNetworkAgent::mainFrameNavigated(DocumentLoader& loader)
 {
     m_resourcesData->clear(loaderIdentifier(&loader));
+}
+
+bool InspectorNetworkAgent::Intercept::matches(const String& url, Inspector::Protocol::Network::NetworkStage networkStage)
+{
+    if (this->networkStage != networkStage)
+        return false;
+
+    if (this->url.isEmpty())
+        return true;
+
+    if (m_knownMatchingURLs.contains(url))
+        return true;
+
+    if (!m_urlSearcher) {
+        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
+        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+        m_urlSearcher = ContentSearchUtilities::createSearcherForString(this->url, searchType, searchCaseSensitive);
+    }
+    if (!ContentSearchUtilities::searcherMatchesText(*m_urlSearcher, url))
+        return false;
+
+    m_knownMatchingURLs.add(url);
+    return true;
 }
 
 } // namespace WebCore

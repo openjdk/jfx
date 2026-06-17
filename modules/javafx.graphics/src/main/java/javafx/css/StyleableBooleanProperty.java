@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
@@ -49,6 +50,15 @@ import javafx.scene.Node;
  */
 public abstract class StyleableBooleanProperty
     extends BooleanPropertyBase implements StyleableProperty<Boolean> {
+
+    static {
+        StyleablePropertyHelper.setBooleanAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableBooleanProperty)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableBooleanProperty}.
@@ -114,6 +124,15 @@ public abstract class StyleableBooleanProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Boolean booleanValue)) {
+            return false;
+        }
+
+        boolean endValue = mediator != null ? mediator.endValue : get();
+        return booleanValue == endValue;
     }
 
     private StyleOrigin origin;

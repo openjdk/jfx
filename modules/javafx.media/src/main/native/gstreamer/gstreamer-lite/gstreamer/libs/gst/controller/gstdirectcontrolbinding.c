@@ -305,6 +305,8 @@ gst_direct_control_binding_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_CS:
+      if (self->cs)
+        gst_object_unref (self->cs);
       self->cs = g_value_dup_object (value);
       break;
     case PROP_ABSOLUTE:

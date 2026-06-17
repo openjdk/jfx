@@ -115,6 +115,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     TaggedNativeFunction nativeFunction();
@@ -131,7 +133,7 @@ public:
     FunctionRareData* ensureRareData(VM& vm)
     {
         uintptr_t executableOrRareData = m_executableOrRareData;
-        if (UNLIKELY(!(executableOrRareData & rareDataTag)))
+        if (!(executableOrRareData & rareDataTag)) [[unlikely]]
             return allocateRareData(vm);
         return std::bit_cast<FunctionRareData*>(executableOrRareData & ~rareDataTag);
     }
@@ -174,6 +176,16 @@ public:
 
     bool mayHaveNonReifiedPrototype();
 
+    // This method may be called for host functions, in which case it
+    // will return an arbitrary value. This should only be used for
+    // optimized paths in which the return value does not matter for
+    // host functions, and checking whether the function is a host
+    // function is deemed too expensive.
+    JSScope* scopeUnchecked()
+    {
+        return m_scope.get();
+    }
+
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
     JSFunction(VM&, FunctionExecutable*, JSScope*, Structure*);
@@ -192,8 +204,6 @@ protected:
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-
-    DECLARE_VISIT_CHILDREN;
 
 private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)

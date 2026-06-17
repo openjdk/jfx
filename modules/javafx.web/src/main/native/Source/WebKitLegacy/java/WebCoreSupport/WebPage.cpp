@@ -382,7 +382,7 @@ void WebPage::setRootChildLayer(GraphicsLayer* layer)
         m_rootLayer->setNeedsDisplay();
         m_rootLayer->addChild(*layer);
 
-        m_textureMapper = TextureMapper::create();
+        m_textureMapper = std::make_unique<TextureMapperJavaAdapter>();
     } else {
         m_rootLayer = nullptr;
         m_textureMapper.reset();
@@ -443,7 +443,9 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
 
     TextureMapperLayer& rootTextureMapperLayer = downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer();
 
-    static_cast<TextureMapperJava&>(*m_textureMapper).setGraphicsContext(&context);
+    if (m_textureMapper)
+        static_cast<TextureMapperJavaAdapter*>(m_textureMapper.get())->setGraphicsContext(&context);
+
     TransformationMatrix matrix;
     m_textureMapper->beginPainting();
     m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
@@ -925,7 +927,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.contextMenuClient = makeUniqueRef<ContextMenuClientJava>(jlself);
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
     pc.dragClient = makeUnique<DragClientJava>(jlself);
-    pc.inspectorClient = makeUnique<InspectorClientJava>(jlself);
+    pc.inspectorBackendClient = makeUnique<InspectorClientJava>(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
@@ -947,7 +949,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(self));
     pageStorageSessionProvider->setPage(*page);
 #if ENABLE(GEOLOCATION)
-    WebCore::provideGeolocationTo(page.get(), *new GeolocationClientMock());
+    WebCore::provideGeolocationTo(page.get(), GeolocationClientMock::create());
 #endif
     return ptr_to_jlong(new WebPage(WTFMove(page)));
 }
@@ -1208,15 +1210,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     std::span<const uint8_t> byteSpan(reinterpret_cast<const uint8_t*>(stringChars), stringLen);
     RefPtr<SharedBuffer> buffer = SharedBuffer::create(byteSpan);
 
-    static const URL emptyUrl({ }, ""_s);
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8"_s);
     FrameLoadRequest frameLoadRequest(
         *frame,
-        ResourceRequest(emptyUrl),
+        ResourceRequest(URL({ }, ""_s)),
         SubstituteData(
             WTFMove(buffer),
             URL(),
-            response,
+            WTFMove(response),
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
     );
     frameLoadRequest.setIsRequestFromClientOrUserInput();
@@ -1356,9 +1357,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     String nativePropertyValue(env, propertyValue);
     StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled"_s) {
-        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
+    if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
         settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true"_s);
     }
     else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
@@ -1470,7 +1469,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
    // settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
-    settings.setCSSOMViewScrollingAPIEnabled(true);
     settings.setRequestIdleCallbackEnabled(true);
 
     // settings.setPrivateBrowsingEnabled(false);
@@ -2548,7 +2546,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetUnloadEventListenersCou
         ASSERT(mainFrame);
         auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
 
-    return (jint)frame->document()->domWindow()->pendingUnloadEventListeners();
+    return (jint)frame->document()->window()->pendingUnloadEventListeners();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
@@ -2557,7 +2555,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
         InspectorController& ic = page->inspectorController();
-        InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+        InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
         if (icj) {
             ic.connectFrontend(*icj, false);
         }
@@ -2575,7 +2573,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
     }
 
     InspectorController& ic = page->inspectorController();
-    InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+    InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
     if (icj) {
         ic.disconnectFrontend(*icj);
     }

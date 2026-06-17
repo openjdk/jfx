@@ -191,8 +191,8 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
-        if (window == s_grabWindow) {
+    for (GlassWindow * window = self; window; window = window->owner) {
+        if (window->nsWindow == s_grabWindow) {
             return;
         }
     }
@@ -282,9 +282,10 @@ extern NSSize maxScreenDimensions;
         [self->nsWindow orderFront:nil];
     }
 
-    if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
+    // Fix up window stacking order
+    if (self->owner != nil)
     {
-        [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
+        [self->owner reorderChildWindows];
     }
     // Make sure we synchronize scale factors which could have changed while
     // we were not visible without invoking the overrides we watch.
@@ -319,6 +320,12 @@ extern NSSize maxScreenDimensions;
         // send back the actual position to notify the WindowStage,
         // as it is possible that the windowDidMove event is not triggered.
         [self _sendJavaWindowMoveEventForFrame:flipFrame];
+    }
+    if (newW != flipFrame.size.width || newH != flipFrame.size.height) {
+        // The frame may not have changed due min/max limits. In that case we
+        // need to send back the actual size since the windowDidResize
+        // notification was not triggered.
+        [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:flipFrame];
     }
 }
 

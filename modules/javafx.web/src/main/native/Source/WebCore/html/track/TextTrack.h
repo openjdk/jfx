@@ -29,6 +29,7 @@
 #if ENABLE(VIDEO)
 
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
 #include "PlatformTimeRanges.h"
 #include "TextTrackCue.h"
 #include "TrackBase.h"
@@ -95,6 +96,7 @@ public:
     virtual ExceptionOr<void> removeCue(TextTrackCue&);
 
     VTTRegionList* regions();
+    RefPtr<VTTRegionList> protectedRegions();
 
     void cueWillChange(TextTrackCue&);
     void cueDidChange(TextTrackCue&, bool);

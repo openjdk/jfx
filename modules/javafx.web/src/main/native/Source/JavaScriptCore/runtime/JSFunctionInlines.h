@@ -164,7 +164,7 @@ template<typename... StringTypes>
 ALWAYS_INLINE String makeNameWithOutOfMemoryCheck(JSGlobalObject* globalObject, ThrowScope& throwScope, ASCIILiteral messagePrefix, StringTypes... strings)
 {
     String name = tryMakeString(strings...);
-    if (UNLIKELY(!name)) {
+    if (!name) [[unlikely]] {
         throwOutOfMemoryError(globalObject, throwScope, makeString(messagePrefix, "name is too long"_s));
         return String();
     }
@@ -258,7 +258,7 @@ inline FunctionRareData* JSFunction::ensureRareDataAndObjectAllocationProfile(JS
     FunctionRareData* rareData = this->rareData();
     if (!rareData)
         return allocateAndInitializeRareData(globalObject, inlineCapacity);
-    if (UNLIKELY(!rareData->isObjectAllocationProfileInitialized()))
+    if (!rareData->isObjectAllocationProfileInitialized()) [[unlikely]]
         return initializeRareData(globalObject, inlineCapacity);
     return rareData;
 }

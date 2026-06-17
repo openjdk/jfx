@@ -55,7 +55,7 @@ static PAS_ALWAYS_INLINE pas_page_base* pas_get_page_base(void* ptr,
         return NULL;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

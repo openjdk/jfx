@@ -68,6 +68,7 @@
 
 #define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
+#include "gstidstr-private.h"
 #include <gst/gst.h>
 #include <gobject/gvaluecollector.h>
 
@@ -285,6 +286,42 @@ gst_caps_new_any (void)
 }
 
 /**
+ * gst_caps_new_id_str_empty_simple:
+ * @media_type: the media type of the structure
+ *
+ * Creates a new #GstCaps that contains one #GstStructure with name
+ * @media_type.
+ *
+ * Returns: (transfer full): the new #GstCaps
+ *
+ * Since: 1.26
+ */
+GstCaps *
+gst_caps_new_id_str_empty_simple (const GstIdStr * media_type)
+{
+  GstCaps *caps;
+  GstStructure *structure;
+
+  caps = gst_caps_new_empty ();
+  if (gst_id_str_is_equal_to_str (media_type, "ANY")) {
+    g_warning
+        ("media_type should not be ANY. Please consider using `gst_caps_new_any` or `gst_caps_from_string`.");
+  }
+  if (gst_id_str_get_len (media_type) == 0
+      || gst_id_str_is_equal_to_str (media_type, "EMPTY")
+      || gst_id_str_is_equal_to_str (media_type, "NONE")) {
+    g_warning
+        ("media_type should not be `%s`. Please consider using `gst_caps_new_empty` or `gst_caps_from_string`.",
+        gst_id_str_as_str (media_type));
+  }
+  structure = gst_structure_new_id_str_empty (media_type);
+  if (structure)
+    gst_caps_append_structure_unchecked (caps, structure, NULL);
+
+  return caps;
+}
+
+/**
  * gst_caps_new_empty_simple:
  * @media_type: the media type of the structure
  *
@@ -313,6 +350,80 @@ gst_caps_new_empty_simple (const char *media_type)
   structure = gst_structure_new_empty (media_type);
   if (structure)
     gst_caps_append_structure_unchecked (caps, structure, NULL);
+
+  return caps;
+}
+
+/**
+ * gst_caps_new_static_str_empty_simple:
+ * @media_type: the media type of the structure
+ *
+ * Creates a new #GstCaps that contains one #GstStructure with name
+ * @media_type.
+ *
+ * @media_type needs to be valid for the remaining lifetime of the process, e.g.
+ * has to be a static string.
+ *
+ * Returns: (transfer full): the new #GstCaps
+ *
+ * Since: 1.26
+ */
+GstCaps *
+gst_caps_new_static_str_empty_simple (const char *media_type)
+{
+  GstCaps *caps;
+  GstStructure *structure;
+
+  caps = gst_caps_new_empty ();
+  if (strcmp ("ANY", media_type) == 0) {
+    g_warning
+        ("media_type should not be ANY. Please consider using `gst_caps_new_any` or `gst_caps_from_string`.");
+  }
+  if (strcmp ("", media_type) == 0 || strcmp ("EMPTY", media_type) == 0
+      || strcmp ("NONE", media_type) == 0) {
+    g_warning
+        ("media_type should not be `%s`. Please consider using `gst_caps_new_empty` or `gst_caps_from_string`.",
+        media_type);
+  }
+  structure = gst_structure_new_static_str_empty (media_type);
+  if (structure)
+    gst_caps_append_structure_unchecked (caps, structure, NULL);
+
+  return caps;
+}
+
+/**
+ * gst_caps_new_id_str_simple:
+ * @media_type: the media type of the structure
+ * @fieldname: first field to set
+ * @...: additional arguments
+ *
+ * Creates a new #GstCaps that contains one #GstStructure.  The
+ * structure is defined by the arguments, which have the same format
+ * as gst_structure_new().
+ *
+ * Returns: (transfer full): the new #GstCaps
+ *
+ * Since: 1.26
+ */
+GstCaps *
+gst_caps_new_id_str_simple (const GstIdStr * media_type,
+    const GstIdStr * fieldname, ...)
+{
+  GstCaps *caps;
+  GstStructure *structure;
+  va_list var_args;
+
+  caps = gst_caps_new_empty ();
+
+  va_start (var_args, fieldname);
+  structure = gst_structure_new_id_str_valist (media_type, fieldname, var_args);
+  va_end (var_args);
+
+  if (structure)
+    gst_caps_append_structure_unchecked (caps, structure, NULL);
+  else
+    gst_caps_replace (&caps, NULL);
 
   return caps;
 }
@@ -351,8 +462,48 @@ gst_caps_new_simple (const char *media_type, const char *fieldname, ...)
 }
 
 /**
+ * gst_caps_new_static_str_simple:
+ * @media_type: the media type of the structure
+ * @fieldname: first field to set
+ * @...: additional arguments
+ *
+ * Creates a new #GstCaps that contains one #GstStructure.  The
+ * structure is defined by the arguments, which have the same format
+ * as gst_structure_new().
+ *
+ * @media_type, @fieldname and all other fieldnames need to be valid for the
+ * remaining lifetime of the process, e.g. have to be static strings.
+ *
+ * Returns: (transfer full): the new #GstCaps
+ *
+ * Since: 1.26
+ */
+GstCaps *
+gst_caps_new_static_str_simple (const char *media_type, const char *fieldname,
+    ...)
+{
+  GstCaps *caps;
+  GstStructure *structure;
+  va_list var_args;
+
+  caps = gst_caps_new_empty ();
+
+  va_start (var_args, fieldname);
+  structure =
+      gst_structure_new_static_str_valist (media_type, fieldname, var_args);
+  va_end (var_args);
+
+  if (structure)
+    gst_caps_append_structure_unchecked (caps, structure, NULL);
+  else
+    gst_caps_replace (&caps, NULL);
+
+  return caps;
+}
+
+/**
  * gst_caps_new_full:
- * @struct1: the first structure to add
+ * @struct1: (transfer full): the first structure to add
  * @...: additional structures to add
  *
  * Creates a new #GstCaps and adds all the structures listed as
@@ -376,7 +527,7 @@ gst_caps_new_full (GstStructure * struct1, ...)
 
 /**
  * gst_caps_new_full_valist:
- * @structure: the first structure to add
+ * @structure: (transfer full): the first structure to add
  * @var_args: additional structures to add
  *
  * Creates a new #GstCaps and adds all the structures listed as
@@ -657,17 +808,15 @@ gst_caps_append_structure (GstCaps * caps, GstStructure * structure)
 {
   g_return_if_fail (GST_IS_CAPS (caps));
   g_return_if_fail (IS_WRITABLE (caps));
+  g_return_if_fail (GST_IS_STRUCTURE (structure));
 
   if (CAPS_IS_ANY (caps)) {
     /* ANY caps will stay as ANY caps */
-    if (structure)
-      gst_structure_free (structure);
+    gst_structure_free (structure);
     return;
   }
 
-  if (G_LIKELY (structure)) {
-    gst_caps_append_structure_unchecked (caps, structure, NULL);
-  }
+  gst_caps_append_structure_unchecked (caps, structure, NULL);
 }
 
 /**
@@ -687,19 +836,17 @@ gst_caps_append_structure_full (GstCaps * caps, GstStructure * structure,
 {
   g_return_if_fail (GST_IS_CAPS (caps));
   g_return_if_fail (IS_WRITABLE (caps));
+  g_return_if_fail (GST_IS_STRUCTURE (structure));
 
   if (CAPS_IS_ANY (caps)) {
     /* ANY caps will stay as ANY caps */
-    if (structure)
-      gst_structure_free (structure);
+    gst_structure_free (structure);
     if (features)
       gst_caps_features_free (features);
     return;
   }
 
-  if (G_LIKELY (structure)) {
-    gst_caps_append_structure_unchecked (caps, structure, features);
-  }
+  gst_caps_append_structure_unchecked (caps, structure, features);
 }
 
 /**
@@ -1093,6 +1240,36 @@ gst_caps_truncate (GstCaps * caps)
 }
 
 /**
+ * gst_caps_id_str_set_value:
+ * @caps: a writable caps
+ * @field: name of the field to set
+ * @value: value to set the field to
+ *
+ * Sets the given @field on all structures of @caps to the given @value.
+ * This is a convenience function for calling gst_structure_set_value() on
+ * all structures of @caps.
+ *
+ * Since: 1.26
+ **/
+void
+gst_caps_id_str_set_value (GstCaps * caps, const GstIdStr * field,
+    const GValue * value)
+{
+  guint i, len;
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+  g_return_if_fail (field != NULL);
+  g_return_if_fail (G_IS_VALUE (value));
+
+  len = GST_CAPS_LEN (caps);
+  for (i = 0; i < len; i++) {
+    GstStructure *structure = gst_caps_get_structure_unchecked (caps, i);
+    gst_structure_id_str_set_value (structure, field, value);
+  }
+}
+
+/**
  * gst_caps_set_value:
  * @caps: a writable caps
  * @field: name of the field to set
@@ -1120,6 +1297,81 @@ gst_caps_set_value (GstCaps * caps, const char *field, const GValue * value)
 }
 
 /**
+ * gst_caps_set_value_static_str:
+ * @caps: a writable caps
+ * @field: name of the field to set
+ * @value: value to set the field to
+ *
+ * Sets the given @field on all structures of @caps to the given @value.
+ * This is a convenience function for calling gst_structure_set_value() on
+ * all structures of @caps.
+ *
+ * @field needs to be valid for the remaining lifetime of the process, e.g.
+ * has to be a static string.
+ *
+ * Since: 1.26
+ **/
+void
+gst_caps_set_value_static_str (GstCaps * caps, const char *field,
+    const GValue * value)
+{
+  guint i, len;
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+  g_return_if_fail (field != NULL);
+  g_return_if_fail (G_IS_VALUE (value));
+
+  len = GST_CAPS_LEN (caps);
+  for (i = 0; i < len; i++) {
+    GstStructure *structure = gst_caps_get_structure_unchecked (caps, i);
+    gst_structure_set_value_static_str (structure, field, value);
+  }
+}
+
+/**
+ * gst_caps_id_str_set_simple_valist:
+ * @caps: the #GstCaps to set
+ * @field: first field to set
+ * @varargs: additional parameters
+ *
+ * Sets fields in a #GstCaps.  The arguments must be passed in the same
+ * manner as gst_structure_id_str_set(), and be %NULL-terminated.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_id_str_set_simple_valist (GstCaps * caps, const GstIdStr * field,
+    va_list varargs)
+{
+  GValue value = { 0, };
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+
+  while (field) {
+    GType type;
+    char *err;
+
+    type = va_arg (varargs, GType);
+
+    memset (&value, 0, sizeof (value));
+    G_VALUE_COLLECT_INIT (&value, type, varargs, 0, &err);
+    if (G_UNLIKELY (err)) {
+      g_critical ("%s", err);
+      g_free (err);
+      return;
+    }
+
+    gst_caps_id_str_set_value (caps, field, &value);
+
+    g_value_unset (&value);
+
+    field = va_arg (varargs, const GstIdStr *);
+  }
+}
+
+/**
  * gst_caps_set_simple_valist:
  * @caps: the #GstCaps to set
  * @field: first field to set
@@ -1142,6 +1394,7 @@ gst_caps_set_simple_valist (GstCaps * caps, const char *field, va_list varargs)
 
     type = va_arg (varargs, GType);
 
+    memset (&value, 0, sizeof (value));
     G_VALUE_COLLECT_INIT (&value, type, varargs, 0, &err);
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
@@ -1155,6 +1408,75 @@ gst_caps_set_simple_valist (GstCaps * caps, const char *field, va_list varargs)
 
     field = va_arg (varargs, const gchar *);
   }
+}
+
+/**
+ * gst_caps_set_simple_static_str_valist:
+ * @caps: the #GstCaps to set
+ * @field: first field to set
+ * @varargs: additional parameters
+ *
+ * Sets fields in a #GstCaps.  The arguments must be passed in the same
+ * manner as gst_structure_set(), and be %NULL-terminated.
+ *
+ * @field and all other field names need to be valid for the remaining lifetime
+ * of the process, e.g. have to be static strings.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_set_simple_static_str_valist (GstCaps * caps, const char *field,
+    va_list varargs)
+{
+  GValue value = { 0, };
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+
+  while (field) {
+    GType type;
+    char *err;
+
+    type = va_arg (varargs, GType);
+
+    memset (&value, 0, sizeof (value));
+    G_VALUE_COLLECT_INIT (&value, type, varargs, 0, &err);
+    if (G_UNLIKELY (err)) {
+      g_critical ("%s", err);
+      g_free (err);
+      return;
+    }
+
+    gst_caps_set_value_static_str (caps, field, &value);
+
+    g_value_unset (&value);
+
+    field = va_arg (varargs, const gchar *);
+  }
+}
+
+/**
+ * gst_caps_id_str_set_simple:
+ * @caps: the #GstCaps to set
+ * @field: first field to set
+ * @...: additional parameters
+ *
+ * Sets fields in a #GstCaps.  The arguments must be passed in the same
+ * manner as gst_structure_id_str_set(), and be %NULL-terminated.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_id_str_set_simple (GstCaps * caps, const GstIdStr * field, ...)
+{
+  va_list var_args;
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+
+  va_start (var_args, field);
+  gst_caps_id_str_set_simple_valist (caps, field, var_args);
+  va_end (var_args);
 }
 
 /**
@@ -1176,6 +1498,33 @@ gst_caps_set_simple (GstCaps * caps, const char *field, ...)
 
   va_start (var_args, field);
   gst_caps_set_simple_valist (caps, field, var_args);
+  va_end (var_args);
+}
+
+/**
+ * gst_caps_set_simple_static_str:
+ * @caps: the #GstCaps to set
+ * @field: first field to set
+ * @...: additional parameters
+ *
+ * Sets fields in a #GstCaps.  The arguments must be passed in the same
+ * manner as gst_structure_set(), and be %NULL-terminated.
+ *
+ * @field and all other field names need to be valid for the remaining lifetime
+ * of the process, e.g. have to be static strings.
+ *
+ * Since: 1.26
+ */
+void
+gst_caps_set_simple_static_str (GstCaps * caps, const char *field, ...)
+{
+  va_list var_args;
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (IS_WRITABLE (caps));
+
+  va_start (var_args, field);
+  gst_caps_set_simple_static_str_valist (caps, field, var_args);
   va_end (var_args);
 }
 
@@ -1217,7 +1566,7 @@ gst_caps_is_empty (const GstCaps * caps)
 }
 
 static gboolean
-gst_caps_is_fixed_foreach (GQuark field_id, const GValue * value,
+gst_caps_is_fixed_foreach (const GstIdStr * field, const GValue * value,
     gpointer unused)
 {
   return gst_value_is_fixed (value);
@@ -1254,7 +1603,8 @@ gst_caps_is_fixed (const GstCaps * caps)
 
   structure = gst_caps_get_structure_unchecked (caps, 0);
 
-  return gst_structure_foreach (structure, gst_caps_is_fixed_foreach, NULL);
+  return gst_structure_foreach_id_str (structure, gst_caps_is_fixed_foreach,
+      NULL);
 }
 
 /**
@@ -1810,7 +2160,7 @@ typedef struct
 } SubtractionEntry;
 
 static gboolean
-gst_caps_structure_subtract_field (GQuark field_id, const GValue * value,
+gst_caps_structure_subtract_field (const GstIdStr * field, const GValue * value,
     gpointer user_data)
 {
   SubtractionEntry *e = user_data;
@@ -1818,7 +2168,7 @@ gst_caps_structure_subtract_field (GQuark field_id, const GValue * value,
   const GValue *other;
   GstStructure *structure;
 
-  other = gst_structure_id_get_value (e->subtract_from, field_id);
+  other = gst_structure_id_str_get_value (e->subtract_from, field);
 
   if (!other) {
     return FALSE;
@@ -1832,7 +2182,7 @@ gst_caps_structure_subtract_field (GQuark field_id, const GValue * value,
     return FALSE;
   } else {
     structure = gst_structure_copy (e->subtract_from);
-    gst_structure_id_take_value (structure, field_id, &subtraction);
+    gst_structure_id_str_take_value (structure, field, &subtraction);
     e->put_into = g_slist_prepend (e->put_into, structure);
     return TRUE;
   }
@@ -1847,7 +2197,7 @@ gst_caps_structure_subtract (GSList ** into, const GstStructure * minuend,
 
   e.subtract_from = minuend;
   e.put_into = NULL;
-  ret = gst_structure_foreach ((GstStructure *) subtrahend,
+  ret = gst_structure_foreach_id_str ((GstStructure *) subtrahend,
       gst_caps_structure_subtract_field, &e);
 
   if (ret) {
@@ -1927,7 +2277,7 @@ gst_caps_subtract (GstCaps * minuend, GstCaps * subtrahend)
       /* Same reason as above for ANY caps */
       g_return_val_if_fail (!gst_caps_features_is_any (min_f), NULL);
 
-      if (gst_structure_get_name_id (min) == gst_structure_get_name_id (sub) &&
+      if (gst_structure_has_name (min, gst_structure_get_name (sub)) &&
           gst_caps_features_is_equal (min_f, sub_f)) {
         GSList *list;
 
@@ -1972,7 +2322,8 @@ typedef struct _NormalizeForeach
 } NormalizeForeach;
 
 static gboolean
-gst_caps_normalize_foreach (GQuark field_id, const GValue * value, gpointer ptr)
+gst_caps_normalize_foreach (const GstIdStr * field, const GValue * value,
+    gpointer ptr)
 {
   NormalizeForeach *nf = (NormalizeForeach *) ptr;
   GValue val = { 0 };
@@ -1985,13 +2336,13 @@ gst_caps_normalize_foreach (GQuark field_id, const GValue * value, gpointer ptr)
       const GValue *v = gst_value_list_get_value (value, i);
       GstStructure *structure = gst_structure_copy (nf->structure);
 
-      gst_structure_id_set_value (structure, field_id, v);
+      gst_structure_id_str_set_value (structure, field, v);
       gst_caps_append_structure_unchecked (nf->caps, structure,
           gst_caps_features_copy_conditional (nf->features));
     }
 
     gst_value_init_and_copy (&val, gst_value_list_get_value (value, 0));
-    gst_structure_id_take_value (nf->structure, field_id, &val);
+    gst_structure_id_str_take_value (nf->structure, field, &val);
     return FALSE;
   }
 
@@ -2030,7 +2381,7 @@ gst_caps_normalize (GstCaps * caps)
   for (i = 0; i < gst_caps_get_size (nf.caps); i++) {
     nf.structure = gst_caps_get_structure_unchecked (nf.caps, i);
     nf.features = gst_caps_get_features_unchecked (nf.caps, i);
-    while (!gst_structure_foreach (nf.structure,
+    while (!gst_structure_foreach_id_str (nf.structure,
             gst_caps_normalize_foreach, &nf));
   }
 
@@ -2057,20 +2408,20 @@ gst_caps_compare_structures (gconstpointer one, gconstpointer two)
 
 typedef struct
 {
-  GQuark name;
+  GstIdStr name;
   GValue value;
   GstStructure *compare;
 } UnionField;
 
 static gboolean
-gst_caps_structure_figure_out_union (GQuark field_id, const GValue * value,
-    gpointer user_data)
+gst_caps_structure_figure_out_union (const GstIdStr * field,
+    const GValue * value, gpointer user_data)
 {
   UnionField *u = user_data;
-  const GValue *val = gst_structure_id_get_value (u->compare, field_id);
+  const GValue *val = gst_structure_id_str_get_value (u->compare, field);
 
   if (!val) {
-    if (u->name)
+    if (G_VALUE_TYPE (&u->value) != G_TYPE_INVALID)
       g_value_unset (&u->value);
     return FALSE;
   }
@@ -2078,12 +2429,12 @@ gst_caps_structure_figure_out_union (GQuark field_id, const GValue * value,
   if (gst_value_compare (val, value) == GST_VALUE_EQUAL)
     return TRUE;
 
-  if (u->name) {
+  if (G_VALUE_TYPE (&u->value) != G_TYPE_INVALID) {
     g_value_unset (&u->value);
     return FALSE;
   }
 
-  u->name = field_id;
+  gst_id_str_copy_into (&u->name, field);
   gst_value_union (&u->value, val, value);
 
   return TRUE;
@@ -2094,7 +2445,7 @@ gst_caps_structure_simplify (GstStructure ** result,
     GstStructure * simplify, GstStructure * compare)
 {
   GSList *list;
-  UnionField field = { 0, {0,}, NULL };
+  UnionField field = { GST_ID_STR_INIT, G_VALUE_INIT, NULL };
 
   /* try to subtract to get a real subset */
   if (gst_caps_structure_subtract (&list, simplify, compare)) {
@@ -2114,7 +2465,7 @@ gst_caps_structure_simplify (GstStructure ** result,
 
   /* try to union both structs */
   field.compare = compare;
-  if (gst_structure_foreach (simplify,
+  if (gst_structure_foreach_id_str (simplify,
           gst_caps_structure_figure_out_union, &field)) {
     gboolean ret = FALSE;
 
@@ -2122,7 +2473,7 @@ gst_caps_structure_simplify (GstStructure ** result,
      * but at most one field: field.name */
     if (G_IS_VALUE (&field.value)) {
       if (gst_structure_n_fields (simplify) == gst_structure_n_fields (compare)) {
-        gst_structure_id_take_value (compare, field.name, &field.value);
+        gst_structure_id_str_take_value (compare, &field.name, &field.value);
         *result = NULL;
         ret = TRUE;
       } else {
@@ -2208,8 +2559,7 @@ gst_caps_simplify (GstCaps * caps)
     compare_f = gst_caps_get_features_unchecked (caps, start);
     if (!compare_f)
       compare_f = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
-    if (gst_structure_get_name_id (simplify) !=
-        gst_structure_get_name_id (compare) ||
+    if (!gst_structure_has_name (simplify, gst_structure_get_name (compare)) ||
         !gst_caps_features_is_equal (simplify_f, compare_f))
       start = i;
     for (j = start; j >= 0; j--) {
@@ -2219,9 +2569,8 @@ gst_caps_simplify (GstCaps * caps)
       compare_f = gst_caps_get_features_unchecked (caps, j);
       if (!compare_f)
         compare_f = GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY;
-      if (gst_structure_get_name_id (simplify) !=
-          gst_structure_get_name_id (compare) ||
-          !gst_caps_features_is_equal (simplify_f, compare_f)) {
+      if (!gst_structure_has_name (simplify, gst_structure_get_name (compare))
+          || !gst_caps_features_is_equal (simplify_f, compare_f)) {
         break;
       }
       if (gst_caps_structure_simplify (&result, simplify, compare)) {
@@ -2556,8 +2905,8 @@ gst_caps_transform_to_string (const GValue * src_value, GValue * dest_value)
 /**
  * gst_caps_foreach:
  * @caps: a #GstCaps
- * @func: (scope call): a function to call for each field
- * @user_data: (closure): private data
+ * @func: (scope call) (closure user_data): a function to call for each field
+ * @user_data: private data
  *
  * Calls the provided function once for each structure and caps feature in the
  * #GstCaps. The function must not modify the fields.
@@ -2597,8 +2946,8 @@ gst_caps_foreach (const GstCaps * caps, GstCapsForeachFunc func,
 /**
  * gst_caps_map_in_place:
  * @caps: a #GstCaps
- * @func: (scope call): a function to call for each field
- * @user_data: (closure): private data
+ * @func: (scope call) (closure user_data): a function to call for each field
+ * @user_data: private data
  *
  * Calls the provided function once for each structure and caps feature in the
  * #GstCaps. In contrast to gst_caps_foreach(), the function may modify but not
@@ -2645,8 +2994,8 @@ gst_caps_map_in_place (GstCaps * caps, GstCapsMapFunc func, gpointer user_data)
 /**
  * gst_caps_filter_and_map_in_place:
  * @caps: a #GstCaps
- * @func: (scope call): a function to call for each field
- * @user_data: (closure): private data
+ * @func: (scope call) (closure user_data): a function to call for each field
+ * @user_data: private data
  *
  * Calls the provided function once for each structure and caps feature in the
  * #GstCaps. In contrast to gst_caps_foreach(), the function may modify the
@@ -2713,9 +3062,11 @@ gst_caps_filter_and_map_in_place (GstCaps * caps, GstCapsFilterMapFunc func,
  *
  * Returns: (transfer full): the new #GstCaps
  */
-GstCaps *(gst_caps_copy) (const GstCaps * caps)
+GstCaps *
+gst_caps_copy (const GstCaps * caps)
 {
-  return GST_CAPS (gst_mini_object_copy (GST_MINI_OBJECT_CAST (caps)));
+  return
+      GST_CAPS_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (caps)));
 }
 
 /**
@@ -2812,4 +3163,60 @@ gst_caps_take (GstCaps ** old_caps, GstCaps * new_caps)
 {
   return gst_mini_object_take ((GstMiniObject **) old_caps,
       (GstMiniObject *) new_caps);
+}
+
+/**
+ * gst_caps_steal: (skip)
+ * @old_caps: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstCaps to be stolen.
+ *
+ * Atomically replace the #GstCaps pointed to by @old_caps with %NULL and
+ * return the original caps.
+ * Since: 1.28
+ */
+GstCaps *
+gst_caps_steal (GstCaps ** old_caps)
+{
+  return GST_CAPS_CAST (gst_mini_object_steal ((GstMiniObject **)
+          old_caps));
+}
+
+/**
+ * gst_caps_is_writable:
+ * @caps: a #GstCaps
+ *
+ * Tests if you can safely modify @caps. It is only safe to modify caps when
+ * there is only one owner of the caps - ie, the object is writable.
+ */
+gboolean
+gst_caps_is_writable (const GstCaps * caps)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (caps));
+}
+
+/**
+ * gst_caps_make_writable:
+ * @caps: (transfer full): a #GstCaps
+ *
+ * Returns a writable copy of @caps.
+ *
+ * If there is only one reference count on @caps, the caller must be the owner,
+ * and so this function will return the caps object unchanged. If on the other
+ * hand there is more than one reference on the object, a new caps object will
+ * be returned. The caller's reference on @caps will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the caps in the argument and refs the caps
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_caps_ref().
+ *
+ * Returns: (transfer full): a writable caps which may or may not be the
+ *     same as @caps
+ */
+GstCaps *
+gst_caps_make_writable (GstCaps * caps)
+{
+  return
+      GST_CAPS_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (caps)));
 }

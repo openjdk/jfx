@@ -43,8 +43,8 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
   (JNIEnv*, jclass)
 {
-   auto buffer_address = &FragmentedSharedBuffer::create().get();
-   return ptr_to_jlong(new SharedBufferBuilder(std::move(buffer_address)));
+   auto buffer = SharedBuffer::create();
+   return ptr_to_jlong(new SharedBufferBuilder(WTFMove(buffer)));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize

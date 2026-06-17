@@ -44,7 +44,7 @@ public:
     RefPtr<NativeImage> copyNativeImage() override;
     RefPtr<NativeImage> createNativeImageReference() override;
     void getPixelBuffer(const IntRect&, PixelBuffer&) override;
-    void putPixelBuffer(const PixelBuffer&, const IntRect&, const IntPoint&, AlphaPremultiplication) override;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect&, const IntPoint&, AlphaPremultiplication) override;
     bool canMapBackingStore() const override;
     String debugDescription() const override;
 

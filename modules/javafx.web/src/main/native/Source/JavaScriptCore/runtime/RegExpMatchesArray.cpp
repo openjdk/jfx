@@ -39,7 +39,7 @@ JSArray* createEmptyRegExpMatchesArray(JSGlobalObject* globalObject, JSString* i
     GCDeferralContext deferralContext(vm);
     ObjectInitializationScope scope(vm);
 
-    if (UNLIKELY(globalObject->isHavingABadTime())) {
+    if (globalObject->isHavingABadTime()) [[unlikely]] {
         array = JSArray::tryCreateUninitializedRestricted(scope, &deferralContext,
             regExp->hasIndices() ? globalObject->regExpMatchesArrayWithIndicesStructure() : globalObject->regExpMatchesArrayStructure(), regExp->numSubpatterns() + 1);
         // FIXME: we should probably throw an out of memory error here, but

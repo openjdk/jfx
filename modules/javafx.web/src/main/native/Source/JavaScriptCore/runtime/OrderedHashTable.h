@@ -228,12 +228,9 @@ public:
             value = getValueFunctor();
             RETURN_IF_EXCEPTION(scope, { });
 
-            if (Helper::isObsolete(storage)) {
                 // Call to getValueFunctor can modify our state, so we need to re-check the index
-                result = Helper::find(globalObject, storageRef(), key);
-                RETURN_IF_EXCEPTION(scope, { });
-            }
-            Helper::addImpl(globalObject, this, storageRef(), key, value, result);
+            // There is a chance that callback inserts an entry for this |key|.
+            add(globalObject, key, value);
             RETURN_IF_EXCEPTION(scope, { });
         }
 

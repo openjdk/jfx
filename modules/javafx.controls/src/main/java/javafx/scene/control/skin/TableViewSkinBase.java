@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,7 +152,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private int visibleColCount;
 
-    boolean needCellsRecreated = true;
     boolean needCellsReconfigured = false;
 
     private int itemCount = -1;
@@ -297,19 +296,18 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         });
 
         final ObservableMap<Object, Object> properties = control.getProperties();
-        properties.remove(Properties.REFRESH);
         properties.remove(Properties.RECREATE);
+        properties.remove(Properties.REBUILD);
         lh.addMapChangeListener(properties, (c) -> {
             if (!c.wasAdded()) {
                 return;
             }
-            if (Properties.REFRESH.equals(c.getKey())) {
-                refreshView();
-                getSkinnable().getProperties().remove(Properties.REFRESH);
-            } else if (Properties.RECREATE.equals(c.getKey())) {
-                needCellsRecreated = true;
-                refreshView();
+            if (Properties.RECREATE.equals(c.getKey())) {
+                requestRecreateCells();
                 getSkinnable().getProperties().remove(Properties.RECREATE);
+            } else if (Properties.REBUILD.equals(c.getKey())) {
+                requestRebuildCells();
+                getSkinnable().getProperties().remove(Properties.REBUILD);
             }
         });
 
@@ -425,13 +423,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         super.layoutChildren(x, y, w, h);
 
-        if (needCellsRecreated) {
-            flow.recreateCells();
-        } else if (needCellsReconfigured) {
+        if (needCellsReconfigured) {
             flow.reconfigureCells();
         }
 
-        needCellsRecreated = false;
         needCellsReconfigured = false;
 
         final double baselineOffset = table.getLayoutBounds().getHeight() / 2;

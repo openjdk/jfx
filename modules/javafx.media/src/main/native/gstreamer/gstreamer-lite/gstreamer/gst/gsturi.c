@@ -403,7 +403,7 @@ gst_uri_is_valid (const gchar * uri)
 gchar *
 gst_uri_get_protocol (const gchar * uri)
 {
-  gchar *colon;
+  const gchar *colon;
 
   if (!gst_uri_is_valid (uri))
     return NULL;
@@ -425,7 +425,7 @@ gst_uri_get_protocol (const gchar * uri)
 gboolean
 gst_uri_has_protocol (const gchar * uri, const gchar * protocol)
 {
-  gchar *colon;
+  const gchar *colon;
 
   g_return_val_if_fail (protocol != NULL, FALSE);
 
@@ -1615,7 +1615,7 @@ _gst_uri_from_string_internal (const gchar * uri, gboolean unescape)
     }
     if (uri != NULL && uri[0] == '?') {
       /* get query */
-      gchar *eoq;
+      const gchar *eoq;
       eoq = strchr (++uri, '#');
       if (eoq == NULL) {
         uri_obj->query = _gst_uri_string_to_table (uri, "&", "=", TRUE, TRUE);
@@ -2028,8 +2028,9 @@ gst_uri_to_string_with_keys (const GstUri * uri, const GList * keys)
     g_string_append_printf (uri_str, "%s:", uri->scheme);
 
   if (uri->userinfo != NULL || uri->host != NULL ||
-      uri->port != GST_URI_NO_PORT)
+      uri->port != GST_URI_NO_PORT || !g_strcmp0 (uri->scheme, "file")) {
     g_string_append (uri_str, "//");
+  }
 
   if (uri->userinfo != NULL) {
     escaped = _gst_uri_escape_userinfo (uri->userinfo);

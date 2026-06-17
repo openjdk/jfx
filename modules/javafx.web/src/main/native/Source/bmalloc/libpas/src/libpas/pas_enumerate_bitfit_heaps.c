@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,7 +80,7 @@ static bool view_callback(pas_enumerator* enumerator,
         enumerator, (void*)page_boundary);
     PAS_ASSERT_WITH_DETAIL(page);
 
-    page = pas_enumerator_read(enumerator, page, pas_bitfit_page_header_size(*page_config));
+    page = pas_enumerator_pin_remote(enumerator, page, pas_bitfit_page_header_size(*page_config));
     if (!page)
         return false;
 
@@ -108,7 +108,7 @@ static bool view_callback(pas_enumerator* enumerator,
             uintptr_t second_offset;
 
             if (verbose)
-                pas_log("offset = %lu\n", offset);
+                pas_log("offset = %zu\n", offset);
 
             if (pas_bitvector_get(pas_bitfit_page_free_bits(page),
                                   offset >> page_config->base.min_align_shift))
@@ -141,6 +141,8 @@ static bool view_callback(pas_enumerator* enumerator,
             offset = second_offset;
         }
     }
+
+    pas_enumerator_unpin_remote(enumerator, page);
 
     return true;
 }

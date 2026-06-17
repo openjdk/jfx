@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
- * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "CacheStorageProvider.h"
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
+#include "CrossOriginMode.h"
 #include "Crypto.h"
 #include "CryptoKeyData.h"
 #include "DocumentInlines.h"
@@ -107,7 +108,7 @@ static WorkQueue& sharedFileSystemStorageQueue()
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WorkerGlobalScope);
 
 WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, WorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
-    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), params.referrerPolicy, &thread, params.noiseInjectionHashSalt, params.advancedPrivacyProtections, params.clientIdentifier)
+    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(JSC::HeapType::Medium), params.referrerPolicy, &thread, params.noiseInjectionHashSalt, params.advancedPrivacyProtections, params.clientIdentifier)
     , m_url(params.scriptURL)
     , m_ownerURL(params.ownerURL)
     , m_inspectorIdentifier(params.inspectorIdentifier)
@@ -142,7 +143,7 @@ WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParamete
 
 WorkerGlobalScope::~WorkerGlobalScope()
 {
-    ASSERT(thread().thread() == &Thread::current());
+    ASSERT(thread().thread() == &Thread::currentSingleton());
 
     {
         Locker locker { allWorkerGlobalScopeIdentifiersLock };
@@ -159,7 +160,7 @@ WorkerGlobalScope::~WorkerGlobalScope()
 
 String WorkerGlobalScope::origin() const
 {
-    auto* securityOrigin = this->securityOrigin();
+    RefPtr securityOrigin = this->securityOrigin();
     return securityOrigin ? securityOrigin->toString() : emptyString();
 }
 
@@ -267,7 +268,7 @@ void WorkerGlobalScope::resume()
 WorkerStorageConnection& WorkerGlobalScope::storageConnection()
 {
     if (!m_storageConnection)
-        m_storageConnection = WorkerStorageConnection::create(*this);
+        lazyInitialize(m_storageConnection, WorkerStorageConnection::create(*this));
 
     return *m_storageConnection;
 }
@@ -297,7 +298,7 @@ WorkerFileSystemStorageConnection* WorkerGlobalScope::fileSystemStorageConnectio
 WorkerLocation& WorkerGlobalScope::location() const
 {
     if (!m_location)
-        m_location = WorkerLocation::create(URL { m_url }, origin());
+        lazyInitialize(m_location, WorkerLocation::create(URL { m_url }, origin()));
     return *m_location;
 }
 
@@ -322,8 +323,13 @@ void WorkerGlobalScope::close()
 WorkerNavigator& WorkerGlobalScope::navigator()
 {
     if (!m_navigator)
-        m_navigator = WorkerNavigator::create(*this, m_userAgent, m_isOnline);
+        lazyInitialize(m_navigator, WorkerNavigator::create(*this, m_userAgent, m_isOnline));
     return *m_navigator;
+}
+
+Ref<WorkerNavigator> WorkerGlobalScope::protectedNavigator()
+{
+    return navigator();
 }
 
 void WorkerGlobalScope::setIsOnline(bool isOnline)
@@ -369,7 +375,7 @@ void WorkerGlobalScope::clearInterval(int timeoutId)
     DOMTimer::removeById(*this, timeoutId);
 }
 
-ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<std::variant<RefPtr<TrustedScriptURL>, String>>& urls)
+ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<Variant<RefPtr<TrustedScriptURL>, String>>& urls)
 {
     ASSERT(contentSecurityPolicy());
 
@@ -468,7 +474,7 @@ void WorkerGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMess
     }
 
     auto sessionID = this->sessionID();
-    if (UNLIKELY(settingsValues().logsPageMessagesToSystemConsoleEnabled && sessionID && !sessionID->isEphemeral()))
+    if (settingsValues().logsPageMessagesToSystemConsoleEnabled && sessionID && !sessionID->isEphemeral()) [[unlikely]]
         PageConsoleClient::logMessageToSystemConsole(*message);
 
 #if ENABLE(WEBDRIVER_BIDI)
@@ -499,25 +505,9 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
     AutomationInstrumentation::addMessageToConsole(message);
 #endif
     InspectorInstrumentation::addMessageToConsole(*this, WTFMove(message));
-}
 
+}
 #if ENABLE(WEB_CRYPTO)
-std::optional<Vector<uint8_t>> WorkerGlobalScope::wrapCryptoKey(const Vector<uint8_t>& key)
-{
-    Ref protectedThis { *this };
-    auto* workerLoaderProxy = thread().workerLoaderProxy();
-    if (!workerLoaderProxy)
-        return std::nullopt;
-
-    BinarySemaphore semaphore;
-    std::optional<Vector<uint8_t>> wrappedKey;
-    workerLoaderProxy->postTaskToLoader([&semaphore, &key, &wrappedKey](auto& context) {
-        wrappedKey = context.wrapCryptoKey(key);
-        semaphore.signal();
-    });
-    semaphore.wait();
-    return wrappedKey;
-}
 
 std::optional<Vector<uint8_t>> WorkerGlobalScope::serializeAndWrapCryptoKey(CryptoKeyData&& keyData)
 {
@@ -585,7 +575,7 @@ CacheStorageConnection& WorkerGlobalScope::cacheStorageConnection()
             RELEASE_LOG_INFO(ServiceWorker, "Creating worker dummy CacheStorageConnection");
             mainThreadConnection = CacheStorageProvider::DummyCacheStorageConnection::create();
         }
-        m_cacheStorageConnection = mainThreadConnection.releaseNonNull();
+        lazyInitialize(m_cacheStorageConnection, mainThreadConnection.releaseNonNull());
     }
     return *m_cacheStorageConnection;
 }
@@ -593,14 +583,14 @@ CacheStorageConnection& WorkerGlobalScope::cacheStorageConnection()
 MessagePortChannelProvider& WorkerGlobalScope::messagePortChannelProvider()
 {
     if (!m_messagePortChannelProvider)
-        m_messagePortChannelProvider = makeUnique<WorkerMessagePortChannelProvider>(*this);
+        lazyInitialize(m_messagePortChannelProvider, makeUnique<WorkerMessagePortChannelProvider>(*this));
     return *m_messagePortChannelProvider;
 }
 
 WorkerSWClientConnection& WorkerGlobalScope::swClientConnection()
 {
     if (!m_swClientConnection)
-        m_swClientConnection = WorkerSWClientConnection::create(*this);
+        lazyInitialize(m_swClientConnection, WorkerSWClientConnection::create(*this));
     return *m_swClientConnection;
 }
 
@@ -624,7 +614,7 @@ CSSValuePool& WorkerGlobalScope::cssValuePool()
 CSSFontSelector* WorkerGlobalScope::cssFontSelector()
 {
     if (!m_cssFontSelector)
-        m_cssFontSelector = CSSFontSelector::create(*this);
+        lazyInitialize(m_cssFontSelector, CSSFontSelector::create(*this));
     return m_cssFontSelector.get();
 }
 
@@ -681,11 +671,7 @@ void WorkerGlobalScope::deleteJSCodeAndGC(Synchronous synchronous)
         return;
     }
 #endif
-#if USE(CF) || USE(GLIB)
     vm().heap.reportAbandonedObjectGraph();
-#else
-    vm().heap.collectNow(JSC::Async, JSC::CollectionScope::Full);
-#endif
 }
 
 void WorkerGlobalScope::releaseMemoryInWorkers(Synchronous synchronous)
@@ -735,8 +721,8 @@ void WorkerGlobalScope::clearDecodedScriptData()
         m_mainScriptSourceProvider->clearDecodedData();
 
     for (auto& sourceProviders : m_importedScriptsSourceProviders.values()) {
-        for (auto& sourceProvider : sourceProviders)
-            sourceProvider.clearDecodedData();
+        for (Ref sourceProvider : sourceProviders)
+            sourceProvider->clearDecodedData();
     }
 }
 
@@ -756,8 +742,8 @@ void WorkerGlobalScope::updateSourceProviderBuffers(const ScriptBuffer& mainScri
         auto it = m_importedScriptsSourceProviders.find(pair.key);
         if (it == m_importedScriptsSourceProviders.end())
             continue;
-        for (auto& sourceProvider : it->value)
-            sourceProvider.tryReplaceScriptBuffer(pair.value);
+        for (Ref sourceProvider : it->value)
+            sourceProvider->tryReplaceScriptBuffer(pair.value);
     }
 }
 
@@ -781,7 +767,7 @@ String WorkerGlobalScope::endpointURIForToken(const String& token) const
     return reportingScope().endpointURIForToken(token);
 }
 
-void WorkerGlobalScope::sendReportToEndpoints(const URL&, const Vector<String>& /*endpointURIs*/, const Vector<String>& /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
+void WorkerGlobalScope::sendReportToEndpoints(const URL&, std::span<const String> /*endpointURIs*/, std::span<const String> /*endpointTokens*/, Ref<FormData>&&, ViolationReportType)
 {
     notImplemented();
 }

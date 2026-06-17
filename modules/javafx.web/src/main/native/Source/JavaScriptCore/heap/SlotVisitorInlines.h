@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AbstractSlotVisitorInlines.h"
+#include "HeapCellInlines.h"
 #include "MarkedBlock.h"
 #include "PreciseAllocation.h"
 #include "SlotVisitor.h"
@@ -49,16 +50,16 @@ ALWAYS_INLINE void SlotVisitor::appendUnbarriered(JSCell* cell)
         return;
 
     Dependency dependency;
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(cell->preciseAllocation().isMarked())) {
-            if (LIKELY(!m_heapAnalyzer))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (cell->preciseAllocation().isMarked()) [[likely]] {
+            if (!m_heapAnalyzer) [[likely]]
                 return;
         }
     } else {
         MarkedBlock& block = cell->markedBlock();
         dependency = block.aboutToMark(m_markingVersion, cell);
-        if (LIKELY(block.isMarked(cell, dependency))) {
-            if (LIKELY(!m_heapAnalyzer))
+        if (block.isMarked(cell, dependency)) [[likely]] {
+            if (!m_heapAnalyzer) [[likely]]
                 return;
         }
     }
@@ -87,13 +88,13 @@ ALWAYS_INLINE void SlotVisitor::appendHiddenUnbarriered(JSCell* cell)
         return;
 
     Dependency dependency;
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(cell->preciseAllocation().isMarked()))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (cell->preciseAllocation().isMarked()) [[likely]]
             return;
     } else {
         MarkedBlock& block = cell->markedBlock();
         dependency = block.aboutToMark(m_markingVersion, cell);
-        if (LIKELY(block.isMarked(cell, dependency)))
+        if (block.isMarked(cell, dependency)) [[likely]]
             return;
     }
 

@@ -124,6 +124,8 @@ public interface TKStage {
 
     public void setPrefHeaderButtonHeight(double height);
 
+    public void setDarkFrame(boolean value);
+
     // =================================================================================================================
     // Functions
 

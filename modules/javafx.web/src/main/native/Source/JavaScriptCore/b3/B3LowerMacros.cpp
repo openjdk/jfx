@@ -48,6 +48,7 @@
 #include "CCallHelpers.h"
 #include "LinkBuffer.h"
 #include <cmath>
+#include <numeric>
 #include <wtf/BitVector.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -862,7 +863,7 @@ private:
             return;
         }
 
-        unsigned medianIndex = (start + end) / 2;
+        unsigned medianIndex = std::midpoint(start, end);
 
         BasicBlock* left = m_blockInsertionSet.insertAfter(m_block);
         BasicBlock* right = m_blockInsertionSet.insertAfter(m_block);

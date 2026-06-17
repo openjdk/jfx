@@ -282,6 +282,11 @@ gst_video_frame_unmap (GstVideoFrame * frame)
 
   if ((flags & GST_VIDEO_FRAME_MAP_FLAG_NO_REF) == 0)
     gst_buffer_unref (frame->buffer);
+
+  /* Reset various fields to avoid use-after-frees.
+   * This also makes it possible to call unmap() twice. */
+  frame->buffer = NULL;
+  memset (&frame->data, 0, sizeof (frame->data));
 }
 
 /**
@@ -383,10 +388,15 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
 
     GST_CAT_DEBUG (CAT_PERFORMANCE, "copy plane %d, w:%d h:%d ", plane, w, h);
 
-    for (j = 0; j < h; j++) {
-      memcpy (dp, sp, w);
-      dp += ds;
-      sp += ss;
+    if (GST_VIDEO_INFO_PLANE_STRIDE (dinfo,
+            plane) == GST_VIDEO_INFO_PLANE_STRIDE (sinfo, plane)) {
+      memcpy (dp, sp, GST_VIDEO_INFO_PLANE_STRIDE (dinfo, plane) * h);
+    } else {
+      for (j = 0; j < h; j++) {
+        memcpy (dp, sp, w);
+        dp += ds;
+        sp += ss;
+      }
     }
   }
 
@@ -409,7 +419,7 @@ gboolean
 gst_video_frame_copy (GstVideoFrame * dest, const GstVideoFrame * src)
 {
   guint i, n_planes;
-  const GstVideoInfo *sinfo;
+  const GstVideoInfo *sinfo GST_UNUSED_CHECKS;
   GstVideoInfo *dinfo;
 
   g_return_val_if_fail (dest != NULL, FALSE);

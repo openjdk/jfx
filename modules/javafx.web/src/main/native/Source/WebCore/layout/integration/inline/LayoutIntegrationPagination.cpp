@@ -31,8 +31,6 @@
 #include "InlineIteratorLineBox.h"
 #include "PlacedFloats.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
-#include "RenderTableCell.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -58,7 +56,7 @@ std::pair<Vector<LineAdjustment>, std::optional<LayoutRestartLine>> computeAdjus
     auto lineCount = inlineContent.displayContent().lines.size();
     Vector<LineAdjustment> adjustments { lineCount };
 
-    UncheckedKeyHashMap<size_t, LayoutUnit, DefaultHash<size_t>, WTF::UnsignedWithZeroKeyHashTraits<size_t>>  lineFloatBottomMap;
+    HashMap<size_t, LayoutUnit, DefaultHash<size_t>, WTF::UnsignedWithZeroKeyHashTraits<size_t>>  lineFloatBottomMap;
     for (auto& floatBox : placedFloats.list()) {
         if (!floatBox.layoutBox())
             continue;
@@ -184,4 +182,3 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
 
 }
 }
-

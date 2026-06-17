@@ -90,7 +90,7 @@ public:
 protected:
     RefCountedBase()
         : m_refCount(1)
-#if ASSERT_ENABLED
+#if ASSERT_ENABLED && !PLATFORM(JAVA)
         , m_isOwnedByMainThread(isMainThread())
 #endif
     {
@@ -107,7 +107,7 @@ protected:
 
     void applyRefDerefThreadingCheck() const
     {
-#if ASSERT_ENABLED
+#if ASSERT_ENABLED && !PLATFORM(JAVA)
         if (m_refCount == 1) {
             // Likely an ownership transfer across threads that may be safe.
             m_isOwnedByMainThread = isMainThread();
@@ -192,7 +192,7 @@ inline RefCountedBase::~RefCountedBase()
 }
 
 template<typename T> class RefCounted : public RefCountedBase {
-    WTF_MAKE_NONCOPYABLE(RefCounted); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(RefCounted); WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RefCounted);
 public:
     void deref() const
     {

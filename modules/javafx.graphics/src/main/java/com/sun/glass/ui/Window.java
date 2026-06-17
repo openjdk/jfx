@@ -173,6 +173,11 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 10;
 
+    /**
+     * Indicates that the window should use a dark window frame.
+     */
+    @Native public static final int DARK_FRAME = 1 << 11;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -987,6 +992,8 @@ public abstract class Window {
         checkNotClosed();
         return _setBackground(this.ptr, r, g, b);
     }
+
+    public void setDarkFrame(boolean value) {}
 
     public boolean isEnabled() {
         Application.checkEventThread();

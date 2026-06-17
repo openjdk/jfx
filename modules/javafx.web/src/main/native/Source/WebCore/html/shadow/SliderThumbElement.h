@@ -61,7 +61,7 @@ private:
     explicit SliderThumbElement(Document&);
     bool isSliderThumbElement() const final { return true; }
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const final;
     bool isDisabledFormControl() const final;
     bool matchesReadWritePseudoClass() const final;
 
@@ -74,7 +74,7 @@ private:
 #endif
     void willDetachRenderers() final;
 
-    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
 
     void startDragging();
     void stopDragging();

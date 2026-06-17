@@ -40,7 +40,7 @@ concept TaggingTraits = requires (const T* ptr, typename Trait::StorageType stor
 
 template<typename T, TaggingTraits<T> Traits>
 class TaggedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TaggedPtr);
 public:
     using StorageType = typename Traits::StorageType;
     using TagType = typename Traits::TagType;
@@ -113,6 +113,37 @@ struct NoTaggingTraits {
     static StorageType wrap(const T* ptr, TagType) { return std::bit_cast<StorageType>(ptr); }
     static T* unwrapPtr(StorageType storage) { return std::bit_cast<T*>(storage); }
     static TagType unwrapTag(StorageType) { return defaultTag; }
+};
+
+class TaggedBits60 {
+public:
+TaggedBits60(uint64_t bits, uint8_t tag)
+    {
+        uint64_t bigTag = static_cast<uint64_t>(tag);
+        ASSERT((bigTag << tagShift) >> tagShift == tag);
+        ASSERT(!(bits & ~ptrMask));
+        m_bits = bits | (bigTag << tagShift);
+    }
+
+    template <typename T>
+    TaggedBits60(T* bits, uint8_t tag)
+        : TaggedBits60(std::bit_cast<uintptr_t>(bits), tag)
+    {
+    }
+
+    TaggedBits60(std::nullptr_t)
+        : m_bits(0)
+    {
+    }
+
+    uint64_t bits() const { return m_bits & ptrMask; }
+    void* ptr() const { return std::bit_cast<void*>(static_cast<uintptr_t>(bits())); }
+    uint8_t tag() const { return (m_bits & ~ptrMask) >> tagShift; }
+
+private:
+    static constexpr size_t tagShift = 60;
+    static constexpr uint64_t ptrMask = (1ull << tagShift) - 1;
+    uint64_t m_bits;
 };
 
 } // namespace WTF

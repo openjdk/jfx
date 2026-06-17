@@ -27,23 +27,41 @@
 #include "config.h"
 #include "PerfLog.h"
 
-#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#if ENABLE(ASSEMBLER)
 
 #include "Options.h"
+#include "ProfilerSupport.h"
 #include <array>
 #include <fcntl.h>
 #include <mutex>
-#include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <wtf/DataLog.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/PageBlock.h>
 #include <wtf/ProcessID.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
+
+#if OS(LINUX)
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
+#if OS(WINDOWS)
+#include <io.h>
+
+inline static int open(const char* filename, int oflag, int pmode)
+{
+    return _open(filename, oflag, pmode);
+}
+
+inline static FILE* fdopen(int fd, const char* mode)
+{
+    return _fdopen(fd, mode);
+}
+#endif
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -136,11 +154,6 @@ PerfLog& PerfLog::singleton()
     return logger.get();
 }
 
-static inline uint64_t generateTimestamp()
-{
-    return MonotonicTime::now().secondsSinceEpoch().nanosecondsAs<uint64_t>();
-}
-
 static inline uint32_t getCurrentThreadID()
 {
 #if OS(LINUX)
@@ -151,8 +164,10 @@ static inline uint32_t getCurrentThreadID()
     uint64_t thread = 0;
     pthread_threadid_np(NULL, &thread);
     return static_cast<uint32_t>(thread);
+#elif OS(WINDOWS)
+    return static_cast<uint32_t>(GetCurrentThreadId());
 #else
-#error unsupported platform
+    return 0;
 #endif
 }
 
@@ -180,17 +195,18 @@ PerfLog::PerfLog()
     }
 
     JITDump::FileHeader header;
-    header.timestamp = generateTimestamp();
+    header.timestamp = ProfilerSupport::generateTimestamp();
     header.pid = getCurrentProcessID();
 
     Locker locker { m_lock };
     write(locker, &header, sizeof(JITDump::FileHeader));
+    flush(locker);
 }
 
 void PerfLog::write(const AbstractLocker&, const void* data, size_t size)
 {
-    size_t result = fwrite(data, 1, size, m_file);
-    RELEASE_ASSERT(result == size);
+    size_t result = fwrite(data, size, 1, m_file);
+    RELEASE_ASSERT(result == 1);
 }
 
 void PerfLog::flush(const AbstractLocker&)
@@ -198,21 +214,26 @@ void PerfLog::flush(const AbstractLocker&)
     fflush(m_file);
 }
 
-void PerfLog::log(CString&& name, const uint8_t* executableAddress, size_t size)
+void PerfLog::log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag> code)
 {
+    auto timestamp = ProfilerSupport::generateTimestamp();
+    auto tid = getCurrentThreadID();
+    ProfilerSupport::singleton().queue().dispatch([name = name, code, tid, timestamp] {
+        PerfLog& logger = singleton();
+        size_t size = code.size();
+        auto* executableAddress = code.code().untaggedPtr<const uint8_t*>();
     if (!size) {
         dataLogLnIf(PerfLogInternal::verbose, "0 size record ", name, " ", RawPointer(executableAddress));
         return;
     }
 
-    PerfLog& logger = singleton();
     Locker locker { logger.m_lock };
 
     JITDump::CodeLoadRecord record;
-    record.header.timestamp = generateTimestamp();
+        record.header.timestamp = timestamp;
     record.header.totalSize = sizeof(JITDump::CodeLoadRecord) + (name.length() + 1) + size;
     record.pid = getCurrentProcessID();
-    record.tid = getCurrentThreadID();
+        record.tid = tid;
     record.vma = std::bit_cast<uintptr_t>(executableAddress);
     record.codeAddress = std::bit_cast<uintptr_t>(executableAddress);
     record.codeSize = size;
@@ -221,19 +242,14 @@ void PerfLog::log(CString&& name, const uint8_t* executableAddress, size_t size)
     logger.write(locker, &record, sizeof(JITDump::CodeLoadRecord));
     logger.write(locker, name.data(), name.length() + 1);
     logger.write(locker, executableAddress, size);
+        logger.flush(locker);
 
     dataLogLnIf(PerfLogInternal::verbose, name, " [", record.codeIndex, "] ", RawPointer(executableAddress), "-", RawPointer(executableAddress + size), " ", size);
-}
-
-void PerfLog::flush()
-{
-    PerfLog& logger = singleton();
-    Locker locker { logger.m_lock };
-    logger.flush(locker);
+    });
 }
 
 } // namespace JSC
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-#endif // ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#endif // ENABLE(ASSEMBLER)

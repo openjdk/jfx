@@ -144,7 +144,7 @@ bool IDBObjectStore::autoIncrement() const
     return m_info.autoIncrement();
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenCursor(IDBCursorDirection direction, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&& function)
+ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenCursor(IDBCursorDirection direction, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>& function)
 {
     LOG(IndexedDB, "IDBObjectStore::openCursor");
     Ref transaction = m_transaction.get();
@@ -183,7 +183,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::openCursor(JSGlobalObject& execStat
     });
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenKeyCursor(IDBCursorDirection direction, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&& function)
+ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doOpenKeyCursor(IDBCursorDirection direction, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>& function)
 {
     LOG(IndexedDB, "IDBObjectStore::openKeyCursor");
     Ref transaction = m_transaction.get();
@@ -348,7 +348,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::putOrAdd(JSGlobalObject& state, JSV
         transaction->activate();
     }
 
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return Exception { ExceptionCode::DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
 
     if (key && !key->isValid())
@@ -389,7 +389,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::deleteFunction(IDBKeyRange* keyRang
     });
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doDelete(Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&& function)
+ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doDelete(NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>& function)
 {
     LOG(IndexedDB, "IDBObjectStore::deleteFunction");
     Ref transaction = m_transaction.get();
@@ -603,7 +603,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doCount(const IDBKeyRangeData& rang
     return transaction->requestCount(*this, range);
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAll(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&& function)
+ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAll(std::optional<uint32_t> count, NOESCAPE const  Function<ExceptionOr<RefPtr<IDBKeyRange>>()>& function)
 {
     LOG(IndexedDB, "IDBObjectStore::getAll");
     Ref transaction = m_transaction.get();
@@ -641,7 +641,7 @@ ExceptionOr<Ref<IDBRequest>> IDBObjectStore::getAll(JSGlobalObject& execState, J
     });
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&& function)
+ExceptionOr<Ref<IDBRequest>> IDBObjectStore::doGetAllKeys(std::optional<uint32_t> count, NOESCAPE const Function<ExceptionOr<RefPtr<IDBKeyRange>>()>& function)
 {
     LOG(IndexedDB, "IDBObjectStore::getAllKeys");
     Ref transaction = m_transaction.get();

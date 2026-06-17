@@ -23,6 +23,10 @@
  * questions.
  */
 
+import org.gradle.process.ExecOperations
+
+def execOps = project.services.get(ExecOperations)
+
 ext.LINUX = [:]
 
 // Glass Gtk is built with GTK+ 3. It is not compatible with other major GTK versions (e.g., GTK 2 or GTK 4).
@@ -95,7 +99,7 @@ def gtk3LinkFlags = [ ];
 
 setupTools("linux_gtk3",
     { propFile ->
-        def checkGTK3Version = exec {
+        def checkGTK3Version = execOps.exec { spec ->
             commandLine "${toolchainDir}pkg-config", "--exists", "gtk+-3.0 >= " + gtk3MinVersion
             ignoreExitValue = true
         }
@@ -106,14 +110,14 @@ setupTools("linux_gtk3",
         }
 
         ByteArrayOutputStream results2 = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst", "gio-unix-2.0")
             setStandardOutput(results2);
         }
         propFile << "cflagsGTK3=" << results2.toString().trim() << "\n";
 
         ByteArrayOutputStream results4 = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst", "gio-unix-2.0")
             setStandardOutput(results4);
         }
@@ -136,14 +140,14 @@ def pangoLinkFlags = [];
 setupTools("linux_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine "${toolchainDir}pkg-config", "--cflags", "pangoft2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine "${toolchainDir}pkg-config", "--libs", "pangoft2"
             standardOutput = results
         }
@@ -167,14 +171,14 @@ def freetypeLinkFlags = []
 setupTools("linux_freetype_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine "${toolchainDir}pkg-config", "--cflags", "freetype2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
-        exec {
+        execOps.exec { spec ->
             commandLine "${toolchainDir}pkg-config", "--libs", "freetype2"
             standardOutput = results
         }

@@ -112,6 +112,8 @@ namespace JSC {
     macro(WithScopeType, SpecObjectOther) \
     /* End JSScope types. */ \
     \
+    macro(AsyncDisposableStackType, SpecObjectOther) \
+    macro(DisposableStackType, SpecObjectOther) \
     macro(ModuleNamespaceObjectType, SpecObjectOther) \
     macro(ShadowRealmType, SpecObjectOther) \
     macro(RegExpObjectType, SpecRegExpObject) \
@@ -122,8 +124,8 @@ namespace JSC {
     macro(JSArrayIteratorType, SpecObjectOther) \
     macro(JSIteratorType, SpecObjectOther) \
     macro(JSIteratorHelperType, SpecObjectOther) \
-    macro(JSMapIteratorType, SpecObjectOther) \
-    macro(JSSetIteratorType, SpecObjectOther) \
+    macro(JSMapIteratorType, SpecMapIteratorObject) \
+    macro(JSSetIteratorType, SpecSetIteratorObject) \
     macro(JSStringIteratorType, SpecObjectOther) \
     macro(JSWrapForValidIteratorType, SpecObjectOther) \
     macro(JSRegExpStringIteratorType, SpecObjectOther) \

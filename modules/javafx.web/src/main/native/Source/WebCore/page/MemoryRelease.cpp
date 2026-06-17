@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "MemoryRelease.h"
 
+#include "AsyncNodeDeletionQueueInlines.h"
 #include "BackForwardCache.h"
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"
@@ -73,6 +74,10 @@
 #include <wtf/spi/darwin/OSVariantSPI.h>
 #endif
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+#include "InteractionRegion.h"
+#endif
+
 namespace WebCore {
 
 static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
@@ -94,6 +99,7 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
         if (CheckedPtr renderView = document->renderView()) {
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
             Layout::TextBreakingPositionCache::singleton().clear();
+            renderView->layoutContext().deleteDetachedRenderersNow();
         }
     }
 
@@ -104,6 +110,9 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     HTMLNameCache::clear();
     ImmutableStyleProperties::clearDeduplicationMap();
     SVGPathElement::clearCache();
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    InteractionRegion::clearCache();
+#endif
 }
 
 static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
@@ -261,8 +270,7 @@ void logMemoryStatistics(LogMemoryStatisticsReason reason)
     auto& vm = commonVM();
     JSC::JSLockHolder locker(vm);
     RELEASE_LOG(MemoryPressure, "Live JavaScript objects at time of %" PUBLIC_LOG_STRING ":", description.characters());
-    auto typeCounts = vm.heap.objectTypeCounts();
-    for (auto& it : *typeCounts)
+    for (auto& it : vm.heap.objectTypeCounts())
         RELEASE_LOG(MemoryPressure, "  %" PUBLIC_LOG_STRING ": %d", it.key.characters(), it.value);
 }
 #endif

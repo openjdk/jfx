@@ -118,7 +118,6 @@ const TestFeatures& TestOptions::defaults()
             // should either enable them or stop exposing them (as we do with with preferences).
             // All other experimental features are automatically enabled regardless of their specified defaults.
             { "AsyncClipboardAPIEnabled", false },
-            { "CSSOMViewSmoothScrollingEnabled", false },
             { "ContactPickerAPIEnabled", false },
             { "CoreMathMLEnabled", false },
             { "DigitalCredentialsEnabled", false },
@@ -141,7 +140,6 @@ const TestFeatures& TestOptions::defaults()
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
             { "CSSInputSecurityEnabled", true },
-            { "CSSOMViewSmoothScrollingEnabled", false },
             { "CSSTextJustifyEnabled", true },
             { "CanvasColorSpaceEnabled", true },
             { "ColorFilterEnabled", false },
@@ -174,6 +172,7 @@ const TestFeatures& TestOptions::defaults()
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
             { "UseGPUProcessForWebGLEnabled", false },
 #endif
+            { "SupportHDRDisplayEnabled", true },
         };
 #if PLATFORM(WIN)
         features.uint32WebPreferenceFeatures = {

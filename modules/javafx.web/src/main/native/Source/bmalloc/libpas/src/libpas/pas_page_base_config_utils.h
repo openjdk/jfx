@@ -73,16 +73,16 @@ typedef struct {
         } \
         \
         case pas_page_header_in_table: { \
-            uintptr_t page_base; \
-            \
+            uintptr_t page_base = (uintptr_t)boundary; \
+            PAS_PROFILE(PAGE_BASE_FROM_BOUNDARY, page_base); \
             page_base = (uintptr_t)pas_page_header_table_get_for_boundary( \
-                arguments.header_table, config.page_size, boundary); \
+                arguments.header_table, config.page_size, (pas_page_base*)page_base); \
             PAS_TESTING_ASSERT(page_base); \
             PAS_PROFILE(PAGE_BASE_FROM_TABLE, page_base); \
             return (pas_page_base*)page_base; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -109,7 +109,7 @@ typedef struct {
             return boundary; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \

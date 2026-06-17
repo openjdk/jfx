@@ -45,7 +45,7 @@ class RenderLayer;
 class RenderLayerModelObject;
 class RenderObject;
 
-typedef UncheckedKeyHashMap<OverlapTestRequestClient*, IntRect> OverlapTestRequestMap;
+typedef HashMap<OverlapTestRequestClient*, IntRect> OverlapTestRequestMap;
 
 /*
  * Paint the object and its children, clipped by (x|y|w|h).

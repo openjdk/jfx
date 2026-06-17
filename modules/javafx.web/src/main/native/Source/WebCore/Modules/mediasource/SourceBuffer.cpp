@@ -40,14 +40,17 @@
 #include "BufferSource.h"
 #include "BufferedChangeEvent.h"
 #include "ContentTypeUtilities.h"
+#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "MediaDescription.h"
 #include "MediaSource.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "SourceBufferList.h"
@@ -1053,7 +1056,9 @@ Ref<MediaPromise> SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegme
         // 5.6 Set first initialization segment flag to true.
         m_receivedFirstInitializationSegment = true;
 
+#if !PLATFORM(WPE)
         if (hasVideo())
+#endif
             m_private->setMaximumBufferSize(maximumBufferSize());
     }
 
@@ -1156,6 +1161,11 @@ bool SourceBuffer::hasAudio() const
 bool SourceBuffer::hasVideo() const
 {
     return m_videoTracks && m_videoTracks->length();
+}
+
+ScriptExecutionContext* SourceBuffer::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void SourceBuffer::videoTrackSelectedChanged(VideoTrack& track)

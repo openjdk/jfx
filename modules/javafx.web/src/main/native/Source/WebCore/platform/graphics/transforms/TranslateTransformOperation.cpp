@@ -69,10 +69,10 @@ Ref<TransformOperation> TranslateTransformOperation::blend(const TransformOperat
 
 void TranslateTransformOperation::dump(TextStream& ts) const
 {
-    ts << type() << "(" << m_x << ", " << m_y << ", " << m_z << ")";
+    ts << type() << '(' << m_x << ", "_s << m_y << ", "_s << m_z << ')';
 }
 
-Ref<TransformOperation> TranslateTransformOperation::selfOrCopyWithResolvedCalculatedValues(const FloatSize& borderBoxSize)
+Ref<TransformOperation> TranslateTransformOperation::selfOrCopyWithResolvedCalculatedValues(const FloatSize& borderBoxSize) const
 {
     if (!m_x.isCalculated() && !m_y.isCalculated() && !m_z.isCalculated())
         return TransformOperation::selfOrCopyWithResolvedCalculatedValues(borderBoxSize);

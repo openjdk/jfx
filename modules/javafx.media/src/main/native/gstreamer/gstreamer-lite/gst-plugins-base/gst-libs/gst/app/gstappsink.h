@@ -23,6 +23,7 @@
 #include <gst/gst.h>
 #include <gst/base/gstbasesink.h>
 #include <gst/app/app-prelude.h>
+#include <gst/app/gstappsrc.h>
 
 G_BEGIN_DECLS
 
@@ -62,16 +63,13 @@ typedef struct _GstAppSinkPrivate GstAppSinkPrivate;
  * @new_event: Called when a new event is available.
  *       This callback is called from the streaming thread.
  *       The new event can be retrieved with
- *       gst_app_sink_pull_event() either from this callback
+ *       gst_app_sink_pull_object() either from this callback
  *       or from any other thread.
  *       The callback should return %TRUE if the event has been handled,
  *       %FALSE otherwise.
  *       Since: 1.20
   * @propose_allocation: Called when the propose_allocation query is available.
  *       This callback is called from the streaming thread.
- *       The allocation query can be retrieved with
- *       gst_app_sink_propose_allocation() either from this callback
- *       or from any other thread.
  *       Since: 1.24
  *
  * A set of callbacks that can be installed on the appsink with
@@ -87,6 +85,18 @@ typedef struct {
   /*< private >*/
   gpointer     _gst_reserved[GST_PADDING - 2];
 } GstAppSinkCallbacks;
+
+/**
+ * GstAppSinkSimpleCallbacks:
+ *
+ * A set of callbacks that can be installed on the appsink with
+ * gst_app_sink_set_simple_callbacks().
+ *
+ * Unlike GstAppSinkCallbacks this can also be used from bindings.
+ *
+ * Since: 1.28
+ */
+typedef struct _GstAppSinkSimpleCallbacks GstAppSinkSimpleCallbacks;
 
 struct _GstAppSink
 {
@@ -134,7 +144,7 @@ GST_APP_API
 void            gst_app_sink_set_caps         (GstAppSink *appsink, const GstCaps *caps);
 
 GST_APP_API
-GstCaps *       gst_app_sink_get_caps         (GstAppSink *appsink);
+GstCaps *       gst_app_sink_get_caps         (GstAppSink *appsink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
 gboolean        gst_app_sink_is_eos           (GstAppSink *appsink);
@@ -164,10 +174,25 @@ GST_APP_API
 guint64         gst_app_sink_get_max_bytes (GstAppSink *appsink);
 
 GST_APP_API
-void            gst_app_sink_set_drop         (GstAppSink *appsink, gboolean drop);
+guint64         gst_app_sink_get_current_level_bytes (GstAppSink * appsink);
 
 GST_APP_API
+guint64         gst_app_sink_get_current_level_buffers (GstAppSink * appsink);
+
+GST_APP_API
+GstClockTime    gst_app_sink_get_current_level_time (GstAppSink * appsink);
+
+GST_APP_DEPRECATED_FOR(gst_app_sink_set_leaky_type)
+void            gst_app_sink_set_drop         (GstAppSink *appsink, gboolean drop);
+
+GST_APP_DEPRECATED_FOR(gst_app_sink_get_leaky_type)
 gboolean        gst_app_sink_get_drop         (GstAppSink *appsink);
+
+GST_APP_API
+void            gst_app_sink_set_leaky_type (GstAppSink * appsink, GstAppLeakyType leaky);
+
+GST_APP_API
+GstAppLeakyType gst_app_sink_get_leaky_type (GstAppSink * appsink);
 
 GST_APP_API
 void            gst_app_sink_set_buffer_list_support  (GstAppSink *appsink, gboolean enable_lists);
@@ -182,22 +207,22 @@ GST_APP_API
 gboolean        gst_app_sink_get_wait_on_eos  (GstAppSink *appsink);
 
 GST_APP_API
-GstSample *     gst_app_sink_pull_preroll     (GstAppSink *appsink);
+GstSample *     gst_app_sink_pull_preroll     (GstAppSink *appsink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
-GstSample *     gst_app_sink_pull_sample      (GstAppSink *appsink);
+GstSample *     gst_app_sink_pull_sample      (GstAppSink *appsink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
-GstMiniObject * gst_app_sink_pull_object      (GstAppSink *appsink);
+GstMiniObject * gst_app_sink_pull_object      (GstAppSink *appsink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
-GstSample *     gst_app_sink_try_pull_preroll (GstAppSink *appsink, GstClockTime timeout);
+GstSample *     gst_app_sink_try_pull_preroll (GstAppSink *appsink, GstClockTime timeout) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
-GstSample *     gst_app_sink_try_pull_sample  (GstAppSink *appsink, GstClockTime timeout);
+GstSample *     gst_app_sink_try_pull_sample  (GstAppSink *appsink, GstClockTime timeout) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
-GstMiniObject * gst_app_sink_try_pull_object    (GstAppSink *appsink, GstClockTime timeout);
+GstMiniObject * gst_app_sink_try_pull_object    (GstAppSink *appsink, GstClockTime timeout) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_APP_API
 void            gst_app_sink_set_callbacks    (GstAppSink * appsink,
@@ -205,7 +230,137 @@ void            gst_app_sink_set_callbacks    (GstAppSink * appsink,
                                                gpointer user_data,
                                                GDestroyNotify notify);
 
+GST_APP_API
+void            gst_app_sink_set_simple_callbacks (GstAppSink * appsink,
+                                                   GstAppSinkSimpleCallbacks *cb);
+
+/**
+ * gst_app_sink_simple_callbacks_get_type:
+ *
+ * Since: 1.28
+ */
+GST_APP_API
+GType gst_app_sink_simple_callbacks_get_type (void);
+
+/**
+ * GST_TYPE_APP_SINK_SIMPLE_CALLBACKS:
+ *
+ * Since: 1.28
+ */
+#define GST_TYPE_APP_SINK_SIMPLE_CALLBACKS (gst_app_sink_simple_callbacks_get_type ())
+
+GST_APP_API
+GstAppSinkSimpleCallbacks * gst_app_sink_simple_callbacks_new (void);
+GST_APP_API
+GstAppSinkSimpleCallbacks * gst_app_sink_simple_callbacks_ref (GstAppSinkSimpleCallbacks *cb);
+GST_APP_API
+void                        gst_app_sink_simple_callbacks_unref (GstAppSinkSimpleCallbacks *cb);
+
+/**
+ * GstAppSinkEosCallback:
+ * @appsink: a #GstAppSink
+ * @user_data: callback user data
+ *
+ * Called when the end-of-stream has been reached. This callback
+ * is called from the streaming thread.
+ *
+ * Since: 1.28
+ */
+typedef void (*GstAppSinkEosCallback) (GstAppSink * appsink, gpointer user_data);
+GST_APP_API
+void gst_app_sink_simple_callbacks_set_eos (GstAppSinkSimpleCallbacks *cb,
+                                            GstAppSinkEosCallback eos_cb,
+                                            gpointer user_data,
+                                            GDestroyNotify destroy_notify);
+
+/**
+ * GstAppSinkNewPrerollCallback:
+ * @appsink: a #GstAppSink
+ * @user_data: callback user data
+ *
+ * Called when a new preroll sample is available. This callback is called from
+ * the streaming thread. The new preroll sample can be retrieved with
+ * gst_app_sink_pull_preroll() either from this callback or from any other
+ * thread.
+ *
+ * Returns: %GST_FLOW_OK on success.
+ *
+ * Since: 1.28
+ */
+typedef GstFlowReturn (*GstAppSinkNewPrerollCallback) (GstAppSink * appsink, gpointer user_data);
+GST_APP_API
+void gst_app_sink_simple_callbacks_set_new_preroll (GstAppSinkSimpleCallbacks *cb,
+                                                    GstAppSinkNewPrerollCallback new_preroll_cb,
+                                                    gpointer user_data,
+                                                    GDestroyNotify destroy_notify);
+
+/**
+ * GstAppSinkNewSampleCallback:
+ * @appsink: a #GstAppSink
+ * @user_data: callback user data
+ *
+ * Called when a new sample is available. This callback is called from the
+ * streaming thread. The new sample can be retrieved with
+ * gst_app_sink_pull_sample() either from this callback or from any other
+ * thread.
+ *
+ * Returns: %GST_FLOW_OK on success.
+ *
+ * Since: 1.28
+ */
+typedef GstFlowReturn (*GstAppSinkNewSampleCallback) (GstAppSink * appsink, gpointer user_data);
+GST_APP_API
+void gst_app_sink_simple_callbacks_set_new_sample (GstAppSinkSimpleCallbacks *cb,
+                                                   GstAppSinkNewSampleCallback new_sample_cb,
+                                                   gpointer user_data,
+                                                   GDestroyNotify destroy_notify);
+
+/**
+ * GstAppSinkNewEventCallback:
+ * @appsink: a #GstAppSink
+ * @user_data: callback user data
+ *
+ * Called when a new event is available. This callback is called from the
+ * streaming thread. The new event can be retrieved with
+ * gst_app_sink_pull_object() either from this callback or from any other thread.
+ *
+ * The callback should return %TRUE if the event has been handled, %FALSE
+ * otherwise.
+ *
+ * Returns: %TRUE when the event has been handled.
+ *
+ * Since: 1.28
+ */
+typedef gboolean (*GstAppSinkNewEventCallback) (GstAppSink * appsink, gpointer user_data);
+GST_APP_API
+void gst_app_sink_simple_callbacks_set_new_event (GstAppSinkSimpleCallbacks *cb,
+                                                  GstAppSinkNewEventCallback new_event_cb,
+                                                  gpointer user_data,
+                                                  GDestroyNotify destroy_notify);
+
+/**
+ * GstAppSinkProposeAllocationCallback:
+ * @appsink: a #GstAppSink
+ * @query: An ALLOCATION query
+ * @user_data: callback user data
+ *
+ * Called when the propose_allocation query is available. This callback is
+ * called from the streaming thread.
+ *
+ * Returns: %TRUE when the query has been handled.
+ *
+ * Since: 1.28
+ */
+typedef gboolean (*GstAppSinkProposeAllocationCallback) (GstAppSink * appsink, GstQuery *query, gpointer user_data);
+GST_APP_API
+void gst_app_sink_simple_callbacks_set_propose_allocation (GstAppSinkSimpleCallbacks *cb,
+                                                           GstAppSinkProposeAllocationCallback propose_allocation_cb,
+                                                           gpointer user_data,
+                                                           GDestroyNotify destroy_notify);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSink, gst_object_unref)
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSinkSimpleCallbacks, gst_app_sink_simple_callbacks_unref)
 
 G_END_DECLS
 

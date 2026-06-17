@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-struct SameSizeAsCSSRule : public RefCounted<SameSizeAsCSSRule> {
+struct SameSizeAsCSSRule : public RefCountedAndCanMakeWeakPtr<SameSizeAsCSSRule> {
     virtual ~SameSizeAsCSSRule();
     unsigned char bitfields;
     void* pointerUnion;
@@ -63,7 +63,7 @@ const CSSParserContext& CSSRule::parserContext() const
 
 bool CSSRule::hasStyleRuleAncestor() const
 {
-    auto current = this->parentRule();
+    RefPtr current = this->parentRule();
     while (current) {
         if (current->styleRuleType() == StyleRuleType::Style)
             return true;

@@ -35,13 +35,12 @@
 #include "WebCodecsVideoFrame.h"
 #include "WebGPUImageCopyExternalImage.h"
 #include <optional>
-#include <variant>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 struct GPUImageCopyExternalImage {
-    using SourceType = std::variant<RefPtr<ImageBitmap>,
+    using SourceType = Variant<RefPtr<ImageBitmap>,
 #if ENABLE(VIDEO) && ENABLE(WEB_CODECS)
     RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLVideoElement>, RefPtr<WebCodecsVideoFrame>,
 #endif

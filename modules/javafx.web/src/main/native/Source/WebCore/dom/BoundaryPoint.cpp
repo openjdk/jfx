@@ -27,6 +27,7 @@
 #include "BoundaryPoint.h"
 #include "ContainerNode.h"
 #include "Document.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -114,14 +115,14 @@ TextStream& operator<<(TextStream& stream, const BoundaryPoint& boundaryPoint)
 {
     TextStream::GroupScope scope(stream);
     stream << "BoundaryPoint ";
-    stream.dumpProperty("node", boundaryPoint.container->debugDescription());
-    stream.dumpProperty("offset", boundaryPoint.offset);
+    stream.dumpProperty("node"_s, boundaryPoint.container->debugDescription());
+    stream.dumpProperty("offset"_s, boundaryPoint.offset);
     return stream;
 }
 
-Ref<Document> BoundaryPoint::protectedDocument() const
+String BoundaryPoint::debugDescription() const
 {
-    return document();
+    return makeString('{', container->debugDescription().utf8(), ", offset: "_s, offset, '}');
 }
 
 }

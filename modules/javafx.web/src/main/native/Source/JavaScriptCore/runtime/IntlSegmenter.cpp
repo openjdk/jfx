@@ -123,7 +123,7 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
         return { };
     }
 
-    auto upconvertedCharacters = Box<Vector<UChar>>::create(expectedCharacters.value());
+    auto upconvertedCharacters = Box<Vector<char16_t>>::create(expectedCharacters.value());
 
     UErrorCode status = U_ZERO_ERROR;
     auto segmenter = std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>(cloneUBreakIterator(m_segmenter.get(), &status));
@@ -131,7 +131,7 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };
     }
-    ubrk_setText(segmenter.get(), upconvertedCharacters->data(), upconvertedCharacters->size(), &status);
+    ubrk_setText(segmenter.get(), upconvertedCharacters->span().data(), upconvertedCharacters->size(), &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };

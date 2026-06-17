@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package jfx.incubator.scene.control.richtext.model;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import javafx.scene.input.DataFormat;
 import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import jfx.incubator.scene.control.richtext.StyleResolver;
@@ -61,15 +61,14 @@ public class PlainTextFormatHandler extends DataFormatHandler {
 
     @Override
     public Object copy(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end) throws IOException {
-        StringBuilderStyledOutput out = new StringBuilderStyledOutput();
+        StringBuilderStyledOutput out = new StringBuilderStyledOutput(m.getLineEnding());
         m.export(start, end, out);
         return out.toString();
     }
 
     @Override
     public void save(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException {
-        Charset charset = Charset.forName("utf-8");
-        byte[] newline = System.getProperty("line.separator").getBytes(charset);
+        byte[] newline = m.getLineEnding().getText().getBytes(StandardCharsets.UTF_8);
 
         StyledOutput so = new StyledOutput() {
             @Override
@@ -80,7 +79,7 @@ public class PlainTextFormatHandler extends DataFormatHandler {
                     break;
                 case TEXT:
                     String text = seg.getText();
-                    byte[] b = text.getBytes(charset);
+                    byte[] b = text.getBytes(StandardCharsets.UTF_8);
                     out.write(b);
                     break;
                 }

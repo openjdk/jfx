@@ -29,7 +29,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameDestructionObserverInlines.h"
-#include "InspectorClient.h"
+#include "InspectorBackendClient.h"
 #include "InstrumentingAgents.h"
 #include "LocalFrame.h"
 #include "Page.h"
@@ -44,8 +44,8 @@ using namespace Inspector;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PageNetworkAgent);
 
-PageNetworkAgent::PageNetworkAgent(PageAgentContext& context, InspectorClient* client)
-    : InspectorNetworkAgent(context, context.inspectedPage->settings().inspectorMaximumResourcesContentSize())
+PageNetworkAgent::PageNetworkAgent(PageAgentContext& context, InspectorBackendClient* client)
+    : InspectorNetworkAgent(context, { context.inspectedPage->settings().inspectorMaximumResourcesContentSize(), context.inspectedPage->settings().inspectorSupportsShowingCertificate() })
     , m_inspectedPage(context.inspectedPage)
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     , m_client(client)

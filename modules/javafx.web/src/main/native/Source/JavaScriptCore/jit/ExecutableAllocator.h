@@ -198,7 +198,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 // once we know we're going to crash and thus can afford the
 // overhead.
 #define RELEASE_ASSERT_ZERO_CHECK(zeroCount, dstBuff, srcBuff, buffSize, nextIndex) do { \
-        if (UNLIKELY(zeroCount > maxZeroByteRunLength)) { \
+        if (zeroCount > maxZeroByteRunLength) [[unlikely]] { \
             size_t firstZeroIndex = nextIndex - zeroCount; \
             auto dstBuffZeroes = reinterpret_cast<const char*>(dstBuff) + firstZeroIndex; \
             auto srcBuffZeroes = reinterpret_cast<const char*>(srcBuff) + firstZeroIndex; \
@@ -223,7 +223,7 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
 
 #if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
         auto checkForZeroes = [dst, src, n] () {
-            if (UNLIKELY(Options::zeroExecutableMemoryOnFree()))
+            if (Options::zeroExecutableMemoryOnFree()) [[unlikely]]
                 return;
             // On x86-64, the maximum immediate size is 8B, no opcodes/prefixes have 0x00
             // On other architectures this could be smaller
@@ -264,7 +264,7 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
         };
 #endif
 
-        if (UNLIKELY(Options::dumpJITMemoryPath()))
+        if (Options::dumpJITMemoryPath()) [[unlikely]]
             dumpJITMemory(dst, src, n);
 
 #if ENABLE(MPROTECT_RX_TO_RWX)
@@ -314,7 +314,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 class ExecutableAllocator : private ExecutableAllocatorBase {
     // This does not need to be TZONE_ALLOCATED because it is only used as a singleton, and
     // is only allocated once long before any script is executed.
-    WTF_MAKE_FAST_ALLOCATED(ExecutableAllocator);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ExecutableAllocator);
 public:
     using Base = ExecutableAllocatorBase;
 
@@ -365,7 +365,7 @@ private:
 class ExecutableAllocator : public ExecutableAllocatorBase {
     // This does not need to be TZONE_ALLOCATED because it is only used as a singleton, and
     // is only allocated once long before any script is executed.
-    WTF_MAKE_FAST_ALLOCATED(ExecutableAllocator);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ExecutableAllocator);
 public:
     static ExecutableAllocator& singleton();
     static void initialize();

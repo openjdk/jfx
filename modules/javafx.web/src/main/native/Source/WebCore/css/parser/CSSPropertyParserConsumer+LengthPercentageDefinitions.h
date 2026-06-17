@@ -31,11 +31,11 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct LengthPercentageValidator {
-    static constexpr std::optional<CSS::LengthPercentageUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions options)
+    static constexpr std::optional<CSS::LengthPercentageUnit> validate(CSSUnitType unitType, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
     {
         // NOTE: Percentages are handled explicitly by the PercentageValidator, so this only
         // needs to be concerned with the Length units.
-        if (auto result = LengthValidator::validate(unitType, options))
+        if (auto result = LengthValidator::validate(unitType, state, options))
             return static_cast<CSS::LengthPercentageUnit>(*result);
         return std::nullopt;
     }
@@ -44,6 +44,11 @@ struct LengthPercentageValidator {
     {
         // Values other than 0 and +/-∞ are not supported for <length-percentage> numeric ranges currently.
         return isValidNonCanonicalizableDimensionValue(raw);
+    }
+
+    static bool shouldAcceptUnitlessValue(double value, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
+    {
+        return LengthValidator::shouldAcceptUnitlessValue(value, state, options);
     }
 };
 

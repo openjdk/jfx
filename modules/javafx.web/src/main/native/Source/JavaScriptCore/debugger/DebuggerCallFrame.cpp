@@ -39,6 +39,7 @@
 #include "ShadowChickenInlines.h"
 #include "StackVisitor.h"
 #include "StrongInlines.h"
+#include "VMEntryScopeInlines.h"
 
 namespace JSC {
 
@@ -59,7 +60,7 @@ private:
 
 Ref<DebuggerCallFrame> DebuggerCallFrame::create(VM& vm, CallFrame* callFrame)
 {
-    if (UNLIKELY(!callFrame)) {
+    if (!callFrame) [[unlikely]] {
         ShadowChicken::Frame emptyFrame;
         RELEASE_ASSERT(!emptyFrame.isTailDeleted);
         return adoptRef(*new DebuggerCallFrame(vm, callFrame, emptyFrame));
@@ -250,7 +251,7 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(VM& vm, const String& scri
     JSScope::collectClosureVariablesUnderTDZ(scope(vm)->jsScope(), variablesUnderTDZ, privateNameEnvironment);
 
     auto* eval = DirectEvalExecutable::create(globalObject, makeSource(script, callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted), codeBlock->ownerExecutable()->lexicallyScopedFeatures(), codeBlock->unlinkedCodeBlock()->derivedContextType(), codeBlock->unlinkedCodeBlock()->needsClassFieldInitializer(), codeBlock->unlinkedCodeBlock()->privateBrandRequirement(), codeBlock->unlinkedCodeBlock()->isArrowFunction(), codeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
-    if (UNLIKELY(catchScope.exception())) {
+    if (catchScope.exception()) [[unlikely]] {
         exception = catchScope.exception();
         catchScope.clearException();
         return jsUndefined();
@@ -262,8 +263,16 @@ JSValue DebuggerCallFrame::evaluateWithScopeExtension(VM& vm, const String& scri
         eval->setTaintedByWithScope();
     }
 
-    JSValue result = vm.interpreter.executeEval(eval, debuggerCallFrame->thisValue(vm), debuggerCallFrame->scope(vm)->jsScope());
-    if (UNLIKELY(catchScope.exception())) {
+    JSValue result;
+    {
+        auto* jsScope = debuggerCallFrame->scope(vm)->jsScope();
+        VMEntryScope entryScope(vm, jsScope->globalObject());
+        if (vm.disallowVMEntryCount) [[unlikely]]
+            result = Interpreter::checkVMEntryPermission();
+        else
+            result = vm.interpreter.executeEval(eval, debuggerCallFrame->thisValue(vm), jsScope);
+    }
+    if (catchScope.exception()) [[unlikely]] {
         exception = catchScope.exception();
         catchScope.clearException();
     }

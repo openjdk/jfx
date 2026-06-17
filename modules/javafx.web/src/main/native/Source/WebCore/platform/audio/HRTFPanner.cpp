@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -128,19 +128,18 @@ int HRTFPanner::calculateDesiredAzimuthIndexAndBlend(double azimuth, double& azi
     return desiredAzimuthIndex;
 }
 
-void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess)
 {
-    unsigned numInputChannels = inputBus ? inputBus->numberOfChannels() : 0;
+    unsigned numInputChannels = inputBus.numberOfChannels();
 
-    bool isInputGood = inputBus &&  numInputChannels >= 1 && numInputChannels <= 2;
+    bool isInputGood = numInputChannels >= 1 && numInputChannels <= 2;
     ASSERT(isInputGood);
 
-    bool isOutputGood = outputBus && outputBus->numberOfChannels() == 2 && framesToProcess <= outputBus->length();
+    bool isOutputGood = outputBus.numberOfChannels() == 2 && framesToProcess <= outputBus.length();
     ASSERT(isOutputGood);
 
     if (!isInputGood || !isOutputGood) {
-        if (outputBus)
-            outputBus->zero();
+        outputBus.zero();
         return;
     }
 
@@ -148,7 +147,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     HRTFDatabase* database = m_databaseLoader->database();
     ASSERT(database);
     if (!database) {
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
 
@@ -158,20 +157,20 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     bool isAzimuthGood = azimuth >= -180.0 && azimuth <= 180.0;
     ASSERT(isAzimuthGood);
     if (!isAzimuthGood) {
-        outputBus->zero();
+        outputBus.zero();
         return;
     }
 
     // Normally, we'll just be dealing with mono sources.
     // If we have a stereo input, implement stereo panning with left source processed by left HRTF, and right source by right HRTF.
-    const AudioChannel* inputChannelL = inputBus->channelByType(AudioBus::ChannelLeft);
-    const AudioChannel* inputChannelR = numInputChannels > 1 ? inputBus->channelByType(AudioBus::ChannelRight) : 0;
+    const AudioChannel* inputChannelL = inputBus.channelByType(AudioBus::ChannelLeft);
+    const AudioChannel* inputChannelR = numInputChannels > 1 ? inputBus.channelByType(AudioBus::ChannelRight) : 0;
 
     // Get source and destination pointers.
     auto sourceL = inputChannelL->span();
     auto sourceR = numInputChannels > 1 ? inputChannelR->span() : sourceL;
-    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
-    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
+    auto destinationL = outputBus.channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus.channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     double azimuthBlend;
     int desiredAzimuthIndex = calculateDesiredAzimuthIndexAndBlend(azimuth, azimuthBlend);
@@ -232,7 +231,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
         bool areKernelsGood = kernelL1 && kernelR1 && kernelL2 && kernelR2;
         ASSERT(areKernelsGood);
         if (!areKernelsGood) {
-            outputBus->zero();
+            outputBus.zero();
             return;
         }
 
@@ -304,7 +303,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     }
 }
 
-void HRTFPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void HRTFPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double> elevation, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess)
 {
     // Sample-accurate (a-rate) HRTF panner is not implemented, just k-rate. Just
     // grab the current azimuth/elevation and use that.

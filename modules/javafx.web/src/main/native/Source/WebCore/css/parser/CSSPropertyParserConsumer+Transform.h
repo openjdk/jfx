@@ -34,21 +34,30 @@ class CSSParserTokenRange;
 class CSSToLengthConversionData;
 class CSSValue;
 class TransformOperations;
-
 struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-// MARK: <transform> consuming (CSSValue)
-RefPtr<CSSValue> consumeTransform(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeTransformList(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeTransformFunction(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeScale(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumeRotate(CSSParserTokenRange&, const CSSParserContext&);
+// MARK: <rotate3d()> consuming (CSSValue)
+RefPtr<CSSValue> consumeRotate3dFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
+// MARK: <translate()> consuming (CSSValue)
+RefPtr<CSSValue> consumeTranslateFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
+// MARK: <translate3d()> consuming (CSSValue)
+RefPtr<CSSValue> consumeTranslate3dFunction(CSSParserTokenRange&, CSS::PropertyParserState&);
 
-// MARK: <transform> parsing (raw)
-std::optional<TransformOperations> parseTransformRaw(const String&, const CSSParserContext&, const CSSToLengthConversionData&);
+// MARK: <'translate'> consuming (CSSValue)
+RefPtr<CSSValue> consumeTranslate(CSSParserTokenRange&, CSS::PropertyParserState&);
+// MARK: <'scale'> consuming (CSSValue)
+RefPtr<CSSValue> consumeScale(CSSParserTokenRange&, CSS::PropertyParserState&);
+// MARK: <'rotate'> consuming (CSSValue)
+RefPtr<CSSValue> consumeRotate(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// MARK: <'transform'> parsing (raw)
+std::optional<TransformOperations> parseTransformRaw(const String&, const CSSParserContext&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

@@ -229,7 +229,7 @@ gst_video_is_common_aspect_ratio (gint width, gint height, gint par_n,
 
   return FALSE;
 }
-
+#endif // GSTREAMER_LITE
 
 /**
  * gst_video_alignment_reset:
@@ -252,6 +252,7 @@ gst_video_alignment_reset (GstVideoAlignment * align)
     align->stride_align[i] = 0;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_orientation_from_tag:
  * @taglist: A #GstTagList

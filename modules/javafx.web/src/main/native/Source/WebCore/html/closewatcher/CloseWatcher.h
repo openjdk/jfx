@@ -28,6 +28,7 @@
 #include "AbortSignal.h"
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>

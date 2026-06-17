@@ -160,15 +160,15 @@ size_t ModifyHeadersAction::serializedLength(std::span<const uint8_t> span)
     return deserializeLength(span, 0);
 }
 
-void ModifyHeadersAction::applyToRequest(ResourceRequest& request, UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
+void ModifyHeadersAction::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
     for (auto& info : requestHeaders)
         info.applyToRequest(request, headerNameToFirstOperationApplied);
 }
 
-void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
+void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
-    std::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
         ModifyHeadersOperationType previouslyAppliedHeaderOperation = headerNameToFirstOperationApplied.get(operation.header);
         if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Remove)
             return;
@@ -242,7 +242,7 @@ void ModifyHeadersAction::ModifyHeaderInfo::serialize(Vector<uint8_t>& vector) c
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(operation.index());
-    std::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
+    WTF::visit(WTF::makeVisitor([&] (const RemoveOperation& operation) {
         append(vector, operation.header.utf8());
     }, [&] (const auto& operation) {
         auto valueUTF8 = operation.value.utf8();
@@ -332,7 +332,7 @@ void RedirectAction::serialize(Vector<uint8_t>& vector) const
     auto beginIndex = vector.size();
     append(vector, 0);
     vector.append(action.index());
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         append(vector, action.extensionPath.utf8());
     }, [&](const RegexSubstitutionAction& action) {
         action.serialize(vector);
@@ -371,7 +371,7 @@ size_t RedirectAction::serializedLength(std::span<const uint8_t> span)
 
 void RedirectAction::applyToRequest(ResourceRequest& request, const URL& extensionBaseURL)
 {
-    std::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
+    WTF::visit(WTF::makeVisitor([&](const ExtensionPathAction& action) {
         auto url = extensionBaseURL;
         url.setPath(action.extensionPath);
         request.setURL(WTFMove(url));
@@ -445,8 +445,8 @@ void RedirectAction::RegexSubstitutionAction::applyToURL(URL& url) const
         auto string = adopt(JSValueToStringCopy(context, value, nullptr));
         size_t bufferSize = JSStringGetMaximumUTF8CStringSize(string.get());
         Vector<char> buffer(bufferSize);
-        JSStringGetUTF8CString(string.get(), buffer.data(), buffer.size());
-        return String::fromUTF8(buffer.data());
+        JSStringGetUTF8CString(string.get(), buffer.mutableSpan().data(), buffer.size());
+        return String::fromUTF8(buffer.span().data());
     };
 
     // Effectively execute this JavaScript:
@@ -593,7 +593,7 @@ void RedirectAction::URLTransformAction::serialize(Vector<uint8_t>& vector) cons
         }
     if (hasQuery) {
         vector.append(queryTransform.index());
-        std::visit(WTF::makeVisitor([&](const String&) {
+        WTF::visit(WTF::makeVisitor([&](const String&) {
             append(vector, queryStringUTF8.length());
             append(vector, queryStringUTF8);
         }, [&](const QueryTransform& transform) {
@@ -723,7 +723,7 @@ void RedirectAction::URLTransformAction::applyToURL(URL& url) const
         url.setPath(path);
     if (!!port)
         url.setPort(*port);
-    std::visit(WTF::makeVisitor([&] (const String& query) {
+    WTF::visit(WTF::makeVisitor([&] (const String& query) {
         if (!query.isNull())
             url.setQuery(query.isEmpty() ? StringView() : StringView(query));
     }, [&] (const URLTransformAction::QueryTransform& transform) {
@@ -740,12 +740,12 @@ void RedirectAction::URLTransformAction::QueryTransform::applyToURL(URL& url) co
     if (!url.hasQuery())
         return;
 
-    UncheckedKeyHashSet<String> keysToRemove;
+    HashSet<String> keysToRemove;
     for (auto& key : removeParams)
         keysToRemove.add(key);
 
     Vector<KeyValuePair<String, String>> keysToAdd;
-    UncheckedKeyHashMap<String, String> keysToReplace;
+    HashMap<String, String> keysToReplace;
     for (auto& [key, replaceOnly, value] : addOrReplaceParams) {
         if (replaceOnly)
             keysToReplace.add(key, value);

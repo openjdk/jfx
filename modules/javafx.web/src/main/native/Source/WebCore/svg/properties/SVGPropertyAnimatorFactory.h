@@ -69,10 +69,10 @@ public:
     }
 
 private:
-    // This UncheckedKeyHashMap maps an attribute name to a pair of static methods. The first one creates a shared
+    // This HashMap maps an attribute name to a pair of static methods. The first one creates a shared
     // Ref<SVGProperty> for the value type of this attribute. The second creates the animator given the
     // attribute name and the shared Ref<SVGProperty>.
-    using AttributeAnimatorCreator = UncheckedKeyHashMap<
+    using AttributeAnimatorCreator = HashMap<
         QualifiedName::QualifiedNameImpl*,
         std::pair<
             Function<Ref<SVGProperty>()>,
@@ -169,7 +169,7 @@ private:
         return map;
     }
 
-    using AttributeProperty = UncheckedKeyHashMap<QualifiedName, Ref<SVGProperty>>;
+    using AttributeProperty = HashMap<QualifiedName, Ref<SVGProperty>>;
     AttributeProperty m_attributeProperty;
 };
 

@@ -46,7 +46,7 @@ static inline const char* pas_segregated_deallocation_mode_get_string(
     case pas_segregated_deallocation_to_view_cache_mode:
         return "to_view_cache";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,22 +27,13 @@ package test.com.sun.javafx.binding;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.binding.ExpressionHelperShim;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
@@ -52,10 +43,15 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueStub;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.ExpressionHelperShim;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.WeakInvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import test.javafx.beans.value.WeakChangeListenerMock;
+import test.javafx.util.OutputRedirect;
 import test.util.memory.JMemoryBuddy;
 
 public class ExpressionHelperTest {
@@ -566,7 +562,13 @@ public class ExpressionHelperTest {
     public void testExceptionNotPropagatedFromSingleChange() {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
         observable.set(null);
-        ExpressionHelperShim.fireValueChangedEvent(helper);
+
+        OutputRedirect.suppressStderr();
+        try {
+            ExpressionHelperShim.fireValueChangedEvent(helper);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
+        }
     }
 
     @Test
@@ -576,7 +578,13 @@ public class ExpressionHelperTest {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
         observable.set(null);
-        ExpressionHelperShim.fireValueChangedEvent(helper);
+
+        OutputRedirect.suppressStderr();
+        try {
+            ExpressionHelperShim.fireValueChangedEvent(helper);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr(RuntimeException.class, RuntimeException.class);
+        }
 
         assertTrue(called.get(0));
         assertTrue(called.get(1));

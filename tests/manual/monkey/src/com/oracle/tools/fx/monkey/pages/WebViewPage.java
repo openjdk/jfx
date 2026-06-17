@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,15 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.paint.Color;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -35,6 +42,8 @@ import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.sheets.NodePropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -46,6 +55,7 @@ public class WebViewPage extends TestPaneBase {
     private final TextField addressField;
     private final WebView webView;
     private final WebEngine engine;
+    private static final SimpleStringProperty htmlContent = new SimpleStringProperty();
 
     public WebViewPage() {
         super("WebViewPage");
@@ -67,6 +77,17 @@ public class WebViewPage extends TestPaneBase {
             handleUrlEntered();
         });
 
+        Button contentButton = new Button("Edit HTML");
+        contentButton.setOnAction((ev) -> {
+            openContentEditor();
+        });
+
+        Button printButton = new Button("P");
+        FX.tooltip(printButton, "Print Page");
+        printButton.setOnAction((ev) -> {
+            FX.print(webView);
+        });
+
         OptionPane op = new OptionPane();
         op.section("WebView");
         op.option(new BooleanOption("contextMenuEnabled", "context menu enabled", webView.contextMenuEnabledProperty()));
@@ -80,20 +101,47 @@ public class WebViewPage extends TestPaneBase {
         op.option("Pref Height", Options.tabPaneConstraints("prefHeight", webView.prefHeightProperty()));
         op.option("Pref Width", Options.tabPaneConstraints("prefWidth", webView.prefWidthProperty()));
         op.option("Zoom:", DoubleOption.of("zoom", webView.zoomProperty(), 0.2, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0));
+        op.section("WebEngine");
+        op.option(new BooleanOption("javaScriptEnabled", "javaScript enabled", engine.javaScriptEnabledProperty()));
+        op.option("User Agent:", Options.textOption("userAgent", true, engine.userAgentProperty(),
+            "<null>", null,
+            "<default>", engine.getUserAgent(),
+            "Chrome", ""));
+        //op.option("User Style Sheet Location:", Options.textOption("userStyleSheetLocation", false, true, engine.userStyleSheetLocationProperty()));
         NodePropertySheet.appendTo(op, webView);
 
+        HBox tb = new HBox(
+            5,
+            addressField,
+            contentButton,
+            printButton
+        );
+        HBox.setHgrow(addressField, Priority.ALWAYS);
+        tb.setBackground(Background.fill(Color.gray(0.8)));
+        tb.setPadding(new Insets(0, 2, 2, 2));
+
         BorderPane bp = new BorderPane();
-        bp.setTop(addressField);
+        bp.setTop(tb);
         bp.setCenter(webView);
 
         setOptions(op);
         setContent(bp);
     }
 
-    protected void handleUrlEntered() {
+    private void handleUrlEntered() {
         String url = addressField.getText();
         if (!Utils.isBlank(url)) {
             engine.load(url);
         }
+    }
+
+    private void openContentEditor() {
+        String old = htmlContent.get();
+        EnterTextDialog d = new EnterTextDialog(this, old, (html) -> {
+            engine.loadContent(html);
+            htmlContent.set(html);
+        });
+        d.setTitle("Edit HTML Content");
+        d.show();
     }
 }

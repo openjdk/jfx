@@ -33,6 +33,7 @@
 #include "SQLiteFileSystem.h"
 #include "SQLiteIDBBackingStore.h"
 #include "SecurityOrigin.h"
+#include <algorithm>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Locker.h>
 #include <wtf/MainThread.h>
@@ -494,6 +495,12 @@ void IDBServer::didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier databa
         databaseConnection->didFireVersionChangeEvent(requestIdentifier, connectionClosed);
 }
 
+void IDBServer::didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey, std::optional<int64_t> recordID)
+{
+    if (RefPtr transaction = m_transactions.get(transactionIdentifier))
+        transaction->didGenerateIndexKeyForRecord(requestIdentifier, indexInfo, key, indexKey, recordID);
+}
+
 void IDBServer::openDBRequestCancelled(const IDBOpenRequestData& requestData)
 {
     LOG(IndexedDB, "IDBServer::openDBRequestCancelled");
@@ -613,7 +620,7 @@ void IDBServer::closeDatabasesForOrigins(const Vector<SecurityOriginData>& targe
     HashSet<UniqueIDBDatabase*> openDatabases;
     for (auto& database : m_uniqueIDBDatabaseMap.values()) {
         const auto& databaseOrigin = database->identifier().origin();
-        bool filtered = WTF::anyOf(targetOrigins, [&databaseOrigin, &filter](auto& targetOrigin) {
+        bool filtered = std::ranges::any_of(targetOrigins, [&databaseOrigin, &filter](auto& targetOrigin) {
             return filter(targetOrigin, databaseOrigin);
         });
         if (filtered)

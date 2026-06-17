@@ -26,32 +26,38 @@
 package test.jfx.incubator.scene.control.richtext.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
-import jfx.incubator.scene.control.richtext.model.RichTextModelShim;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 
 /**
  * Tests RichTextModel.
  */
 public class TestRichTextModel {
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap BULLET = StyleAttributeMap.builder().setBullet("x").build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final StyleAttributeMap RED = StyleAttributeMap.builder().setBackground(Color.RED).build();
 
     @Test
     public void insertLineBreak() {
         test(List.of(p()), List.of(p(), p()), (m) -> {
-            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", true);
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n");
         });
     }
 
@@ -66,7 +72,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 6), "", false);
+                m.replace(null, t(0, 0), t(0, 6), "");
             }
         );
 
@@ -79,7 +85,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 2), "", false);
+                m.replace(null, t(0, 0), t(0, 2), "");
             }
         );
 
@@ -93,7 +99,7 @@ public class TestRichTextModel {
                 p("aabb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 2), t(1, 0), "", false);
+                m.replace(null, t(0, 2), t(1, 0), "");
             }
         );
 
@@ -109,7 +115,7 @@ public class TestRichTextModel {
                 p("bb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(2, 0), t(1, 0), "", false);
+                m.replace(null, t(2, 0), t(1, 0), "");
             }
         );
     }
@@ -146,19 +152,16 @@ public class TestRichTextModel {
         for (RichParagraph par : initial) {
             if (newline) {
                 TextPos p = m.getDocumentEnd();
-                m.replace(null, p, p, "\n", false);
+                m.replace(null, p, p, "\n");
             } else {
                 newline = true;
             }
 
-            List<StyledSegment> ss = RichTextModelShim.getSegments(par);
-            if (ss == null) {
-                ss = List.of();
-            }
+            List<StyledSegment> ss = getSegments(par);
             StyledSegment[] segments = ss.toArray(StyledSegment[]::new);
             StyledInput in = new SegmentStyledInput(segments);
             TextPos p = m.getDocumentEnd();
-            m.replace(null, p, p, in, false);
+            m.replace(null, p, p, in);
         }
 
         // test operation
@@ -196,15 +199,11 @@ public class TestRichTextModel {
     private static void dump(StringBuilder sb, RichParagraph p) {
         sb.append("  {pa=").append(p.getParagraphAttributes());
         sb.append(", segments=");
-        List<StyledSegment> ss = RichTextModelShim.getSegments(p);
-        if(ss == null) {
-            sb.append("null");
-        } else {
-            sb.append("\n");
-            for(StyledSegment s: ss) {
-                sb.append("    {text=\"").append(s.getText());
-                sb.append("\", a=").append(s.getStyleAttributeMap(null)).append("\n");
-            }
+        List<StyledSegment> ss = getSegments(p);
+        sb.append("\n");
+        for (StyledSegment s : ss) {
+            sb.append("    {text=\"").append(s.getText());
+            sb.append("\", a=").append(s.getStyleAttributeMap(null)).append("\n");
         }
     }
 
@@ -229,24 +228,16 @@ public class TestRichTextModel {
                 return "paragraph attributes at ix=" + i;
             }
 
-            List<StyledSegment> lsa = RichTextModelShim.getSegments(pa);
-            List<StyledSegment> lsb = RichTextModelShim.getSegments(pb);
-            if (!((lsa != null) && (lsb != null))) {
-                if ((lsa == null) && (lsb == null)) {
-                    return null;
+            List<StyledSegment> lsa = getSegments(pa);
+            List<StyledSegment> lsb = getSegments(pb);
+            for (int j = 0; j < lsa.size(); j++) {
+                StyledSegment a = lsa.get(j);
+                StyledSegment b = lsb.get(j);
+                if (!eq(a.getText(), b.getText())) {
+                    return "segment text[" + j + "] at ix=" + i;
                 }
-                return "segment array mismatch at ix=" + i;
-            }
-            if (lsa != null) {
-                for (int j = 0; j < lsa.size(); j++) {
-                    StyledSegment a = lsa.get(j);
-                    StyledSegment b = lsb.get(j);
-                    if (!eq(a.getText(), b.getText())) {
-                        return "segment text[" + j + "] at ix=" + i;
-                    }
-                    if (!eq(a.getStyleAttributeMap(null), b.getStyleAttributeMap(null))) {
-                        return "segment attrs[" + j + "] at ix=" + i;
-                    }
+                if (!eq(a.getStyleAttributeMap(null), b.getStyleAttributeMap(null))) {
+                    return "segment attrs[" + j + "] at ix=" + i;
                 }
             }
         }
@@ -256,8 +247,42 @@ public class TestRichTextModel {
 
     private RichTextModel createModel(String text) {
         RichTextModel m = new RichTextModel();
-        m.replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, text);
         return m;
+    }
+
+    @Test
+    public void applyParagraphStyle() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertEquals(3, m.size());
+        TextPos end = m.getDocumentEnd();
+
+        // 3 paragraphs red
+        m.applyStyle(TextPos.ZERO, end, RED, false);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(RED, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(RED, m.getParagraph(2).getParagraphAttributes());
+
+        // add bullets to the second and third
+        m.applyStyle(TextPos.ofLeading(1, 0), end, BULLET, true);
+        StyleAttributeMap combined = BULLET.combine(RED);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(2).getParagraphAttributes());
+
+        // remove bullet from the second paragraph
+        StyleAttributeMap redOff = StyleAttributeMap.of(StyleAttributeMap.BULLET, null);
+        StyleAttributeMap result = StyleAttributeMap.builder().setBackground(Color.RED).setBullet(null).build();
+        m.applyStyle(TextPos.ofLeading(1, 0), TextPos.ofLeading(1, 1), redOff, true);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(result, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(2).getParagraphAttributes());
+
+        // remove all styles
+        m.applyStyle(TextPos.ZERO, end, StyleAttributeMap.EMPTY, false);
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(2).getParagraphAttributes());
     }
 
     @Test
@@ -271,5 +296,59 @@ public class TestRichTextModel {
         assertEquals(new TextPos(1, 4, 3, false), m.clamp(TextPos.ofLeading(1, 100)));
 
         assertEquals(TextPos.ofLeading(2, 0), m.clamp(TextPos.ofLeading(2, 100)));
+    }
+
+    private static List<StyledSegment> getSegments(RichParagraph p) {
+        int sz = p.getSegmentCount();
+        ArrayList<StyledSegment> ss = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            ss.add(p.getSegment(i));
+        }
+        return ss;
+    }
+
+    @Test
+    public void lineEnding() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertEquals(LineEnding.system(), m.getLineEnding());
+        assertEquals(3, m.size());
+        m.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.CR, m.getLineEnding());
+        assertEquals("1\r2\r3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.CRLF);
+        assertEquals(LineEnding.CRLF, m.getLineEnding());
+        assertEquals("1\r\n2\r\n3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.LF);
+        assertEquals(LineEnding.LF, m.getLineEnding());
+        assertEquals("1\n2\n3", RTUtil.getText(m));
+    }
+
+    @Test
+    public void lineEndingNull() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertThrows(NullPointerException.class, () -> {
+            m.setLineEnding(null);
+        });
+        assertEquals(LineEnding.system(), m.getLineEnding());
+    }
+
+    @Test
+    public void prepareParagraph() {
+        AtomicInteger counter = new AtomicInteger(0);
+        RichTextModel m = new RichTextModel() {
+            @Override
+            protected RichParagraph.Builder prepareParagraph(int index) {
+                RichParagraph.Builder b = super.prepareParagraph(index);
+                b.addSegment("yo!");
+                counter.incrementAndGet();
+                return b;
+            }
+        };
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, "1\n2\n");
+        counter.set(0);
+        RichParagraph p = m.getParagraph(0);
+        assertEquals(1, counter.get());
+        String text = p.getPlainText();
+        assertEquals("1yo!", text);
     }
 }

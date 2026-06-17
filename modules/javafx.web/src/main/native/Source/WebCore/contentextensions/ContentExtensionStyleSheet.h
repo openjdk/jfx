@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,8 +54,8 @@ public:
 private:
     ContentExtensionStyleSheet(Document&);
 
-    Ref<CSSStyleSheet> m_styleSheet;
-    UncheckedKeyHashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_addedSelectorIDs;
+    const Ref<CSSStyleSheet> m_styleSheet;
+    HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_addedSelectorIDs;
 };
 
 } // namespace ContentExtensions

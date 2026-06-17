@@ -60,7 +60,7 @@ public:
     RenderTableSection* section() const;
     RenderTable* table() const;
     unsigned rowIndex() const;
-    inline Length styleOrColLogicalWidth() const;
+    inline Style::PreferredSize styleOrColLogicalWidth() const;
     inline LayoutUnit logicalHeightForRowSizing() const;
 
     void setCellLogicalWidth(LayoutUnit constrainedLogicalWidth);
@@ -88,7 +88,7 @@ public:
     LayoutUnit cellBaselinePosition() const;
     bool isBaselineAligned() const;
 
-    void computeIntrinsicPadding(LayoutUnit rowHeight);
+    bool computeIntrinsicPadding(LayoutUnit rowHeight);
     void clearIntrinsicPadding() { setIntrinsicPadding(0, 0); }
 
     LayoutUnit intrinsicPaddingBefore() const { return m_intrinsicPaddingBefore; }
@@ -112,9 +112,6 @@ public:
 
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
-
-    static RenderPtr<RenderTableCell> createAnonymousWithParentRenderer(const RenderTableRow&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
     // Table layout always uses the table's writing mode.
     const WritingMode tableWritingMode() const { return table()->writingMode(); }
@@ -142,7 +139,7 @@ private:
 
     static RenderPtr<RenderTableCell> createTableCellWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s; }
+    ASCIILiteral renderName() const override;
 
     void willBeRemovedFromTree() override;
 
@@ -151,7 +148,7 @@ private:
     void paintBoxDecorations(PaintInfo&, const LayoutPoint&) override;
     void paintMask(PaintInfo&, const LayoutPoint&) override;
 
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const override;
     std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const override;
 
     LayoutUnit borderHalfLeft(bool outer) const;
@@ -186,7 +183,7 @@ private:
     CollapsedBorderValue computeCollapsedBeforeBorder(IncludeBorderColorOrNot = IncludeBorderColor) const;
     CollapsedBorderValue computeCollapsedAfterBorder(IncludeBorderColorOrNot = IncludeBorderColor) const;
 
-    Length logicalWidthFromColumns(RenderTableCol* firstColForThisCell, Length widthFromStyle) const;
+    Style::PreferredSize logicalWidthFromColumns(RenderTableCol* firstColForThisCell, const Style::PreferredSize& widthFromStyle) const;
 
     void updateColAndRowSpanFlags();
 
@@ -237,7 +234,7 @@ inline unsigned RenderTableCell::rowSpan() const
 
 inline void RenderTableCell::setCol(unsigned column)
 {
-    if (UNLIKELY(column > maxColumnIndex))
+    if (column > maxColumnIndex) [[unlikely]]
         column = maxColumnIndex;
     m_column = column;
 }
@@ -311,11 +308,6 @@ inline void RenderTableCell::invalidateHasEmptyCollapsedBorders()
     m_hasEmptyCollapsedAfterBorder = false;
     m_hasEmptyCollapsedStartBorder = false;
     m_hasEmptyCollapsedEndBorder = false;
-}
-
-inline RenderPtr<RenderBox> RenderTableCell::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableCell::createTableCellWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

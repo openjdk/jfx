@@ -79,6 +79,9 @@ protected:
     typename InstructionStreamType::Offset m_currentLocation { 0 };
 };
 
+extern template class BytecodeDumperBase<JSInstructionStream>;
+extern template class BytecodeDumperBase<WasmInstructionStream>;
+
 template<class Block>
 class BytecodeDumper : public BytecodeDumperBase<JSInstructionStream> {
 public:
@@ -106,6 +109,8 @@ private:
     Block* m_block;
 };
 
+extern template class BytecodeDumper<CodeBlock>;
+
 template<class Block>
 class CodeBlockBytecodeDumper final : public BytecodeDumper<Block> {
 public:
@@ -125,6 +130,9 @@ private:
 
     const Identifier& identifier(int index) const;
 };
+
+extern template class CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>;
+extern template class CodeBlockBytecodeDumper<CodeBlock>;
 
 #if ENABLE(WEBASSEMBLY)
 

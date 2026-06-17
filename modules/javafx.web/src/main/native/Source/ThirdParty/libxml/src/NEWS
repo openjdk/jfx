@@ -1,15 +1,489 @@
 NEWS file for libxml2
 
-v2.13.8: Apr 17 2025
+v2.15.3: Apr 15 2026
+
 ### Security
+
+- parser: Pass userData to SAX text callbacks in xmlParseReference (type-confusion)
+- entities: copy children in xmlCopyEntity
+- c14n: Fix Type confusion in xmlC14NProcessAttrsAxis
+- python: Do not decref string after adding to the list (double-free / use-after-free)
+- c14n: Reuse tmp_str, xmlStrcat reallocates *cur (double-free)
+
+### Improvements
+
+- schemas: Fix relative schemaLocation resolution in XSI assembly in streaming mode
+- xmlreader: propagate reader resource loaders to validator parsers
+- python: Make python bindings python2 compatible
+- xmlregexp: Fix escape-sequence character range matching
+- xmlreader: Free input in xmlReaderForFd (memory-leak)
+- xmlstring: Free cur on every error for xmlStrncat (memory-leak)
+- catalog: Free xmlCatalogResolveCache on cleanup (memory leak)
+- Fix nanohttp.c build when --without-output
+- test: fix mismatched signed/unsigned comparison
+
+### Thanks
+
+Thanks to the following new contributors:
+
+- Ariel Schon
+- Hieu Le Minh
+- James Lan
+- LCaliman
+- Yenya
+
+### Full list of commits and contributors on this release
+
+13  Daniel Garcia Moreno
+ 2  Ariel Schon
+ 2  Hieu Le Minh
+ 1  James Lan
+ 1  Jan Alexander Steffens (heftig)
+ 1  LCaliman
+ 1  Yenya
+
+
+v2.15.2: Mar 03 2026
+
+### Security
+
+- CVE-2026-1757 fix: Memory leak in xmllint Shell - shell.c
+- CVE-2026-0990 fix: Prevent infinite recursion in
+  xmlCatalogListXMLResolve
+- CVE-2026-0992 fix: Exponential behavior when handling
+- parser: Fix infinite loop in xmlCtxtParseContent
+- CVE-2025-10911 libxslt related: Ignore next/prev of documents when
+  traversing XPath
+- CVE-2026-0989 fix: Add RelaxNG include limit
+- xmlIO: use size_t for buffer size reallocation
+- uri: fix signed integer overflow in xmlBuildRelativeURISafe
+- schematron: fix memory leaks on error paths in xmlSchematronParseRule
+- catalog: fix stack overflow from self-referencing SGML CATALOG entries
+
+### Improvements
+
+- fuzz: Make fuzzy encoding match more lenient
+- Fix C14N type confusion
+- meson: Fix build with Meson < 1.3
+- xmllint: Use zlib directly
+- xmllint: New option to separate xpath results using null, --xpath0
+- autotools: Make valgrind actually check for leaks
+- meson: Add valgrind test setup
+- Fix xmlOutputBufferGetContent output when encoder is set
+- threads: don't force _WIN32_WINNT to Vista if it's set to a higher value
+- dist: Add generated documentation to the dist as "dist-doc" folder
+  to simplify downstream packaging of doc
+- Fix xmlRemoveEntity removing from wrong hash table
+- use duplicating variant in relaxng to mitigate UAF
+- Fix memory leak in xmlTextWriterStartAttributeNS on OOM
+- meson: remove hardcoded buildtype=debug default
+- Fix memory leak of prefix in xmlTextWriterStartElementNS()
+- writer: Add a few extra NULL checks to avoid memory leaks on corrupt
+  writer path.
+
+### Thanks
+
+Thanks to the following new contributors:
+
+- gabriel desharnais
+- Herman Semenoff
+- Iván Chavero
+- Jayakrishna Menon
+- Michael Heilmann
+- Michal Privoznik
+- Nathan
+- Peter Fordham
+- Petr Simecek
+- Sandino Araico Sanchez
+- Stéphane Cerveau
+- Steve Lhomme
+- Trevor Gamblin
+- ylwango613
+- Yun
+
+### Full list of commits and contributors on this release
+
+15  Daniel Garcia Moreno
+ 5  ylwango613
+ 4  Peter Fordham
+ 4  Nick Wellnhofer
+ 2  Michal Privoznik
+ 2  Iván Chavero
+ 1  gabriel desharnais
+ 1  Yun
+ 1  Trevor Gamblin
+ 1  Stéphane Cerveau
+ 1  Steve Lhomme
+ 1  Sandino Araico Sanchez
+ 1  Petr Simecek
+ 1  Niels Dossche
+ 1  Nathan
+ 1  Mike Dalessio
+ 1  Michael Heilmann
+ 1  Jayakrishna Menon
+ 1  Herman Semenoff
+ 1  Benjamin Gilbert
+
+
+v2.15.1: Oct 16 2025
+
+### Regressions
+
+- parser: Fix attribute normalization and standalone check
+
+### Build
+
+- io: Handle clashing error codes on AIX
+- Fixed compilation error on GCC versions prior to 4.5 (Lars Erik Wik)
+- meson: Fix install dir of man pages
+
+### Deprecations
+
+- tree: Undeprecate several struct members
+- io: Undeprecate xmlOutputBuffer members
+- valid: Undeprecate xmlValidGetPotentialChildren
+
+
+v2.15.0: Sep 15 2025
+
+### Major changes
+
+The API documentation is now generated with Doxygen. Building the
+documentation requires the new --with-docs configuration option as well
+as Doxygen, xsltproc and the DocBook 4 XSLT stylesheets.
+
+The Python bindings are disabled by default now. Building the bindings
+also requires Doxygen.
+
+Support for Schematron is now disabled by default.
+
+The parser option XML_PARSE_UNZIP is now required to read compressed data.
+
+HTML serialization and handling of character encodings is more in line
+with the HTML5 spec now.
+
+More accessors for xmlParserCtxt were added.
+
+### Deprecations
+
+More internal functions and struct members were deprecated.
+
+### Removals
+
+The built-in HTTP client and support for LZMA compression were removed.
+
+The custom Windows build system in `win32` was removed in favor of CMake.
+
+### Planned removals
+
+The Python bindings and support for Schematron validation are planned to
+be removed in the 2.16 release.
+
+The following features are considered for removal:
+
+- Modules API (xmlmodule.h)
+- Support for zlib compressed file I/O
+
+RELAX NG support is still in a bad state and a long-term removal
+candidate.
+
+### Thanks
+
+Thanks to the following contributors:
+
+- Alex Richardson
+- Benjamin Gilbert
+- Caolán McNamara
+- Collin Funk
+- Dag-Erling Smørgrav
+- Dan Yeaw
+- Daniel P. Berrangé
+- Francesco Pretto
+- Lovell Fuller
+- Maks Verver
+- Markus Rickert
+- Michael Mann
+- Omar Siam
+- Pavel Kopylov
+- Peter Kokot
+- Samuel Thibault
+- ThomasK
+
+
+v2.14.6: Sep 8 2025
+
+### Regressions
+
+- valid: Don't add ids when validating entity content
+- Fix initGenericErrorDefaultFunc(NULL) (Samuel Thibault)
+- valid: Undeprecate xmlAdd*Decl
+- globals: Include HTMLparser.h, fixing Windows build
+- io: Fix reading from pipes like stdin on Windows
+
+### Security
+
+- regexp: Avoid integer overflow and OOB array access
+- tree: Guard against atype corruption
+
+### Improvements
+
+- parser: Fix xmlSaturatedAddSizeT argument type
+
+
+v2.14.5: Jul 10 2025
+
+### Regressions
+
+- html: Don't abort on encoding errors
+- parser: Fix handling of invalid char refs in recovery mode
+- xmllint: Print document even in case of XInclude errors
+- xmllint: Fix --xinclude --path
+
+### Security
+
+- schematron: Fix memory safety issues in xmlSchematronReportOutput
+- Schematron: Fix null pointer dereference leading to DoS (Michael Mann)
+- Fix potential buffer overflows of interactive shell (Michael Mann)
+
+### Improvements
+
+- parser: Fix xmlCtxtIsStopped
+
+### Build systems and portability
+
+- schemas: Fix compilation with pre-C99 MSVC
+- cmake: Add missing endif() in libxml2-config.cmake.in
+- Fix CMake iconv handling after change to private dependency (Markus Rickert)
+
+
+v2.14.4: Jun 16 2025
+
+### Regressions
+
+- parser: Fix parsing of PublicIds and VersionNums
+- parser: Fix custom SAX parsers without cdataBlock handler
+- error: Fix initGenericErrorDefaultFunc compatibility macro again
+- io: Make xmlOutputBufferCreate* not free encoder on error
+- reader: Fix null deref on malloc failure
+- Revert "meson: Install libxml2.py"
+
+### Security
+
+- tree: Fix integer overflow in xmlBuildQName
+
+### Improvements
+
+- parser: Use parser context as default in resource loader
+- parser: Only validate EnumerationTypes when requested
+- parser: Undeprecate some parser context members
+
+### Build systems
+
+- cmake: Avoid overlinking with non-CMake libxml2-config.cmake
+- cmake: Make iconv a private dependency
+
+
+v2.14.3: May 13 2025
+
+### Regressions
+
+- reader: Fix reading compressed data
+- parser: Make undeclared entities in XML content fatal
+- save: Fix XML escape table
+- save: Fix xmlSave with NULL encoding
+- Revert "valid: Remove duplicate error messages when streaming"
+
+### Bug fixes
+
+- save: Fix serialization of attribute defaults containing &lt;
+- io: Fix linkage of __xml*BufferCreateFilename functions
+
+### Build systems
+
+- cmake: Fix installation directories in libxml2-config.cmake
+- meson: Install libxml2.py
+
+### Improvements
+
+- parser: Make xmlCtxtGetValidCtxt depend on VALID_ENABLED
+- html: Avoid HTML_PARSE_HTML5 clashing with XML_PARSE_NOENT
+
+
+v2.14.2: Apr 17 2025
+
+### Security
+
 - [CVE-2025-32415] schemas: Fix heap buffer overflow in
   xmlSchemaIDCFillNodeTables
 - [CVE-2025-32414] python: Read at most len/4 characters. (Maks Verver)
-v2.13.7: Mar 27 2025
+
+### Build
+
+- error: Fix initGenericErrorDefaultFunc compatibility macro
+- meson: don't link with pthreads on Windows (Benjamin Gilbert)
+- cmake, meson: Align Darwin version info with Autotools
+- globals: Fix --with-thread-alloc build
+- meson: ensure relaxng option supports minimum option (Lovell Fuller)
+
+
+v2.14.1: Apr 3 2025
+
 ### Regressions
+
+- parser: Fix XML_PARSE_NOBLANKS dropping non-whitespace text
+
+### Build systems
+
+- win32-legacy: Fix build (ThomasK)
+- meson: Fix build from tarball
+- cmake, meson: Change library filename to libxml2.so.16.0.0
+
+
+v2.14.0: Mar 27 2025
+
+### Major changes
+
+The HTML tokenizer now conforms fully to HTML5. Several non-standard
+syntax warnings were removed. Note that HTML5 tree construction isn't
+implemented yet.
+
+Binary compatibility is restricted to versions 2.14 or newer. On ELF
+systems, the soname was bumped from libxml2.so.2 to libxml2.so.16.
+
+The serialization API will now take user-provided or default encodings
+into account when serializing attribute values, matching the
+serialization of text and avoiding unnecessary escaping.
+
+The XML parser won't try to merge consecutive CDATA sections as before
+to align with web standards. Each CDATA section will create exactly one
+node or SAX callback.
+
+Support for RELAX NG can now be disabled with a new configuration
+option independently of XML Schemas support. It is still enabled by
+default.
+
+The "legacy" configuration option won't enable support for HTTP and
+LZMA anymore. These features will be removed in the next release.
+
+Parts of the xmllint executable were refactored, allowing the
+combination of more options. OOM errors should be reported reliably now.
+
+Several improvements were made to the build systems. Meson is fully
+supported now.
+
+Parts of the buffering code were reworked and simplified.
+
+Overflow checks before reallocations were hardenend.
+
+Some unprefixed symbols were renamed to avoid namespace pollution.
+
+### New features
+
+Input callbacks can now be set on a parser context and an improved API
+to create parser input is available. The following new functions,
+taking a parser input object, were added:
+
+- xmlCtxtParseDocument
+- xmlCtxtParseContent as replacement for xmlParseBalancedChunkMemory
+  and xmlParseInNodeContext
+- xmlCtxtParseDtd
+
+The xmlSave API now has additional options to replace global settings.
+
+Parser options XML_PARSE_UNZIP, XML_PARSE_NO_SYS_CATALOG and
+XML_PARSE_CATALOG_PI were added.
+
+An API function to install a custom character encoding converter is
+now available. This makes it possible to use ICU for encoding conversion
+even if libxml2 was compiled without ICU support, see example/icu.c.
+
+### Deprecations
+
+Access to many public struct members is now deprecated. Several accessor
+functions were added to use instead.
+
+More internal functions were deprecated.
+
+### Removals
+
+Metadata about the HTML4 content model was removed from the htmlElemDesc
+struct and related functions were deprecated.
+
+The FTP module and related functions were removed.
+
+Support for the range and point extensions of the xpointer() scheme
+was removed. The rest of the XPointer implementation isn't affected.
+The xpointer() scheme now behaves like the xpath1() scheme.
+
+Several legacy symbols and the functions in xmlunicode.h were removed.
+
+ELF version information was removed.
+
+The shell was moved from libxml2 to xmllint. Several related functions
+are no longer available.
+
+The libxml.m4 file containing autoconf macros was removed.
+
+The --with-tree configuration option was removed.
+
+The hack to detect single-threaded programs under glibc was removed.
+
+### Planned removals
+
+Support for HTTP and LZMA compression is planned to be removed in the
+2.15 release.
+
+The following features are considered for removal:
+
+- Modules API (xmlmodule.h)
+- Schematron support
+- Support for zlib compressed file I/O
+- Legacy Windows build system in win32
+
+RELAX NG support is still in a bad state and a long-term removal
+candidate.
+
+### Thanks
+
+Thanks to the following contributors:
+
+- Andrew Potter
+- Benjamin Gilbert
+- Chun-wei Fan
+- correctmost
+- Daniel Cheng
+- Daniel E
+- Florin Haja
+- Grzegorz Szymaszek
+- Heiko Becker
+- Himanshibansal
+- Jan Alexander Steffens (heftig)
+- Kjell Ahlstedt
+- makise-homura
+- Markus Rickert
+- Mike Dalessio
+- Miklos Vajna
+- Rosen Penev
+- Ruslan Garipov
+- Ryan Carsten Schmidt
+- Saleem Abdulrasool
+- Sam James
+- Satadru Pramanik
+- Taylor R Campbell
+- triallax
+- Yegor Yefremov
+- Zak Ridouh
+
+
+v2.13.7: Mar 27 2025
+
+### Regressions
+
 - tree: Fix xmlTextMerge with NULL args
 - io: Fix `compressed` flag for uncompressed stdin
 - parser: Fix parsing of DTD content
+
+
 v2.13.6: Feb 18 2025
 
 ### Security

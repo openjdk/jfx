@@ -249,7 +249,7 @@ EncodedJSValue JSCallbackObject<Parent>::customToPrimitive(JSGlobalObject* globa
                 return throwVMError(globalObject, scope, toJS(globalObject, exception));
             if (result) {
                 JSValue jsResult = toJS(globalObject, result);
-                if (UNLIKELY(jsResult.isObject()))
+                if (jsResult.isObject()) [[unlikely]]
                     return JSValue::encode(asObject(jsResult)->ordinaryToPrimitive(globalObject, hint));
                 return JSValue::encode(jsResult);
             }
@@ -271,7 +271,7 @@ bool JSCallbackObject<Parent>::put(JSCell* cell, JSGlobalObject* globalObject, P
     RefPtr<OpaqueJSString> propertyNameRef;
     JSValueRef valueRef = toRef(globalObject, value);
 
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
+    if (isThisValueAltered(slot, thisObject)) [[unlikely]]
         RELEASE_AND_RETURN(scope, Parent::put(thisObject, globalObject, propertyName, value, slot));
 
     if (StringImpl* name = propertyName.uid()) {
@@ -486,7 +486,7 @@ EncodedJSValue JSCallbackObject<Parent>::constructImpl(JSGlobalObject* globalObj
             JSObject* result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.data(), &exception));
+                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));
@@ -565,7 +565,7 @@ EncodedJSValue JSCallbackObject<Parent>::callImpl(JSGlobalObject* globalObject, 
             JSValue result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.data(), &exception));
+                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));

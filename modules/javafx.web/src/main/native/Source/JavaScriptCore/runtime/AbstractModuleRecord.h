@@ -159,11 +159,11 @@ public:
     WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
     WriteBarrier<Unknown> internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     AbstractModuleRecord(VM&, Structure*, const Identifier&);
     void finishCreation(JSGlobalObject*, VM&);
-
-    DECLARE_VISIT_CHILDREN;
 
     void setModuleEnvironment(JSGlobalObject*, JSModuleEnvironment*);
 

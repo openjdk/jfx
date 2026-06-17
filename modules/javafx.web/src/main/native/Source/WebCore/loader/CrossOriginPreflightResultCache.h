@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,11 +43,11 @@ class HTTPHeaderMap;
 class ResourceResponse;
 
 class CrossOriginPreflightResultCacheItem {
-    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCacheItem); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCacheItem); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CrossOriginPreflightResultCacheItem, Loader);
 public:
     static Expected<UniqueRef<CrossOriginPreflightResultCacheItem>, String> create(StoredCredentialsPolicy, const ResourceResponse&);
 
-    CrossOriginPreflightResultCacheItem(MonotonicTime, StoredCredentialsPolicy, UncheckedKeyHashSet<String>&&, UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash>&&);
+    CrossOriginPreflightResultCacheItem(MonotonicTime, StoredCredentialsPolicy, HashSet<String>&&, HashSet<String, ASCIICaseInsensitiveHash>&&);
 
     std::optional<String> validateMethodAndHeaders(const String& method, const HTTPHeaderMap&) const;
     bool allowsRequest(StoredCredentialsPolicy, const String& method, const HTTPHeaderMap&) const;
@@ -61,12 +61,12 @@ private:
     // it fires.
     MonotonicTime m_absoluteExpiryTime;
     StoredCredentialsPolicy m_storedCredentialsPolicy;
-    UncheckedKeyHashSet<String> m_methods;
-    UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> m_headers;
+    HashSet<String> m_methods;
+    HashSet<String, ASCIICaseInsensitiveHash> m_headers;
 };
 
 class CrossOriginPreflightResultCache {
-    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCache); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCache); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CrossOriginPreflightResultCache, Loader);
 public:
     WEBCORE_EXPORT static CrossOriginPreflightResultCache& singleton();
     WEBCORE_EXPORT void appendEntry(PAL::SessionID, const ClientOrigin&, const URL&, std::unique_ptr<CrossOriginPreflightResultCacheItem>);
@@ -80,7 +80,7 @@ private:
     HashMap<std::tuple<PAL::SessionID, ClientOrigin, URL>, std::unique_ptr<CrossOriginPreflightResultCacheItem>> m_preflightHashMap;
 };
 
-inline CrossOriginPreflightResultCacheItem::CrossOriginPreflightResultCacheItem(MonotonicTime absoluteExpiryTime, StoredCredentialsPolicy  storedCredentialsPolicy, UncheckedKeyHashSet<String>&& methods, UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash>&& headers)
+inline CrossOriginPreflightResultCacheItem::CrossOriginPreflightResultCacheItem(MonotonicTime absoluteExpiryTime, StoredCredentialsPolicy  storedCredentialsPolicy, HashSet<String>&& methods, HashSet<String, ASCIICaseInsensitiveHash>&& headers)
     : m_absoluteExpiryTime(absoluteExpiryTime)
     , m_storedCredentialsPolicy(storedCredentialsPolicy)
     , m_methods(WTFMove(methods))

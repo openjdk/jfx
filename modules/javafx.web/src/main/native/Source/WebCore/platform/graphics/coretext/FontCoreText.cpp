@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -128,7 +128,7 @@ void Font::platformInit()
 
     // The Open Font Format describes the OS/2 USE_TYPO_METRICS flag as follows:
     // "If set, it is strongly recommended to use OS/2.sTypoAscender - OS/2.sTypoDescender+ OS/2.sTypoLineGap as a value for default line spacing for this font."
-    // On OS X, we only apply this rule in the important case of fonts with a MATH table.
+    // On macOS, we only apply this rule in the important case of fonts with a MATH table.
     if (CTFontHasTable(getCTFont(), kCTFontTableMATH)) {
         short typoAscent, typoDescent, typoLineGap;
         if (OpenType::tryGetTypoMetrics(getCTFont(), typoAscent, typoDescent, typoLineGap)) {
@@ -197,22 +197,11 @@ void Font::platformInit()
     }
 
     if (CTFontGetSymbolicTraits(getCTFont()) & kCTFontTraitColorGlyphs) {
-#if HAVE(CTFONTCOPYCOLORGLYPHCOVERAGE)
-        // The reason this is guarded with both a preprocessor define and soft linking is that
-        // we want to get rid of the soft linking soon,
-        // once people have a chance to update to an SDK that includes it.
-        // At that point, only the preprocessor define will remain.
-        if (PAL::canLoad_CoreText_CTFontCopyColorGlyphCoverage()) {
-            if (auto cfBitVector = adoptCF(PAL::softLink_CoreText_CTFontCopyColorGlyphCoverage(getCTFont())))
+        if (RetainPtr cfBitVector = adoptCF(CTFontCopyColorGlyphCoverage(getCTFont())))
                 m_emojiType = SomeEmojiGlyphs { BitVector(cfBitVector.get()) };
             else
                 m_emojiType = NoEmojiGlyphs { };
         } else
-#endif
-        {
-            m_emojiType = AllEmojiGlyphs { };
-        }
-    } else
         m_emojiType = NoEmojiGlyphs { };
 
     m_fontMetrics.setUnitsPerEm(unitsPerEm);
@@ -778,6 +767,19 @@ FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
     boundingBox.setWidth(boundingBox.width() + m_syntheticBoldOffset);
 
     return boundingBox;
+}
+
+Vector<FloatRect, Font::inlineGlyphRunCapacity> Font::platformBoundsForGlyphs(const Vector<Glyph, inlineGlyphRunCapacity>& glyphs) const
+{
+    Vector<CGRect, inlineGlyphRunCapacity> rectsForGlyphs(glyphs.size());
+    CTFontGetBoundingRectsForGlyphs(getCTFont(), platformData().orientation() == FontOrientation::Vertical ? kCTFontOrientationVertical : kCTFontOrientationHorizontal, glyphs.span().data(), rectsForGlyphs.mutableSpan().data(), rectsForGlyphs.size());
+
+    return rectsForGlyphs.map<Vector<FloatRect, inlineGlyphRunCapacity>>([&](const auto& rect) -> auto {
+        FloatRect boundingBox(rect);
+        boundingBox.setY(-boundingBox.maxY());
+        boundingBox.setWidth(boundingBox.width() + m_syntheticBoldOffset);
+        return boundingBox;
+    });
 }
 
 Path Font::platformPathForGlyph(Glyph glyph) const

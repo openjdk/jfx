@@ -41,7 +41,7 @@ class ImageBufferAllocator {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageBufferAllocator, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT ImageBufferAllocator();
-    WEBCORE_EXPORT virtual ~ImageBufferAllocator() = default;
+    WEBCORE_EXPORT virtual ~ImageBufferAllocator();
 
     virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, const DestinationColorSpace&, RenderingMode) const;
     WEBCORE_EXPORT virtual RefPtr<PixelBuffer> createPixelBuffer(const PixelBufferFormat&, const IntSize&) const;

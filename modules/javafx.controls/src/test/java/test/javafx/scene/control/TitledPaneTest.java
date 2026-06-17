@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -296,6 +296,26 @@ public class TitledPaneTest {
         show();
 
         assertEquals(Pos.BOTTOM_RIGHT, titledPane.getAlignment());
+    }
+
+    @Test public void collapseIsImmediateWhenReducedMotionIsEnabled() {
+        Rectangle content = new Rectangle(100, 100);
+        titledPane.setContent(content);
+        titledPane.setAnimated(true);
+
+        root.getChildren().add(titledPane);
+        show();
+
+        scene.getPreferences().setReducedMotion(true);
+        tk.firePulse();
+
+        titledPane.setExpanded(false);
+        tk.firePulse();
+        assertFalse(content.isVisible());
+
+        titledPane.setExpanded(true);
+        tk.firePulse();
+        assertTrue(content.isVisible());
     }
 
     @Test public void keyboardFocusOnNonCollapsibleTitledPane_RT19660() {

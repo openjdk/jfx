@@ -33,7 +33,7 @@ namespace WebCore {
 
 struct CustomAnimationOptions : EffectTiming {
     String id;
-    std::variant<FramesPerSecond, AnimationFrameRatePreset> frameRate;
+    Variant<FramesPerSecond, AnimationFrameRatePreset> frameRate;
 };
 
 } // namespace WebCore
