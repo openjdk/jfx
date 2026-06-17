@@ -157,7 +157,7 @@ public enum ConditionalFeature {
      * <p>
      * This feature is currently supported on Windows, Linux, and macOS.
      *
-     * @since 25
+     * @since 27
      */
     EXTENDED_WINDOW,
 

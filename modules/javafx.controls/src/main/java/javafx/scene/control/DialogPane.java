@@ -434,18 +434,17 @@ public class DialogPane extends Pane {
     }
 
     // --- header bar
-    private ObjectProperty<HeaderBar> headerBar;
-
     /**
      * Specifies the {@link HeaderBar} for the dialog. The {@code HeaderBar} will be placed at the
      * top of the dialog window, and extend the entire width of the window. This property will only
      * be used if the dialog window is configured with the {@link StageStyle#EXTENDED} style; it has
      * no effect for other styles.
      *
-     * @return the {@code headerBar} property
      * @defaultValue {@code null}
-     * @since 26
+     * @since 27
      */
+    private ObjectProperty<HeaderBar> headerBar;
+
     public final ObjectProperty<HeaderBar> headerBarProperty() {
         if (headerBar == null) {
             headerBar = new SimpleObjectProperty<>(this, "headerBar") {
@@ -471,22 +470,10 @@ public class DialogPane extends Pane {
         return headerBar;
     }
 
-    /**
-     * Gets the value of the {@link #headerBarProperty() headerBar} property.
-     *
-     * @return the {@code HeaderBar}
-     * @since 26
-     */
     public final HeaderBar getHeaderBar() {
         return headerBar != null ? headerBar.get() : null;
     }
 
-    /**
-     * Sets the value of the {@link #headerBarProperty() headerBar} property.
-     *
-     * @param value the new value
-     * @since 26
-     */
     public final void setHeaderBar(HeaderBar value) {
         if (headerBar != null || value != null) {
             headerBarProperty().set(value);

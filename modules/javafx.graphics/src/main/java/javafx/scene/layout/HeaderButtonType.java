@@ -33,8 +33,8 @@ import javafx.stage.Stage;
  * with the platform window manager. For example, hovering over a {@link #MAXIMIZE} button on Windows
  * will summon snap layouts.
  *
- * @since 25
  * @see HeaderBar#setButtonType(Node, HeaderButtonType)
+ * @since 27
  */
 public enum HeaderButtonType {
 

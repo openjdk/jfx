@@ -118,7 +118,7 @@ public enum StageStyle {
      * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, for example
      * in the title of miniaturized preview windows.
      *
-     * @since 25
+     * @since 27
      */
     EXTENDED
 }

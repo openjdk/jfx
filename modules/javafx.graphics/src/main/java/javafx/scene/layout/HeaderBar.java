@@ -177,7 +177,7 @@ import javafx.util.Subscription;
  * }
  * }</pre>
  *
- * @since 25
+ * @since 27
  */
 public class HeaderBar extends Region {
 
@@ -223,7 +223,6 @@ public class HeaderBar extends Region {
      * @param child the child node
      * @return the {@code dragType} property
      * @defaultValue {@code null}
-     * @since 26
      */
     @SuppressWarnings("unchecked")
     public static ObjectProperty<HeaderDragType> dragTypeProperty(Node child) {
@@ -277,7 +276,6 @@ public class HeaderBar extends Region {
      * @param child the child node
      * @return the {@code buttonType} property
      * @defaultValue {@code null}
-     * @since 26
      */
     @SuppressWarnings("unchecked")
     public static ObjectProperty<HeaderButtonType> buttonTypeProperty(Node child) {
@@ -312,7 +310,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @param value the color scheme, or {@code null} to indicate no preference
-     * @since 27
      */
     public static void setSystemColorScheme(Stage stage, ColorScheme value) {
         AttachedProperties.of(stage).systemColorScheme.set(value);
@@ -324,7 +321,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the color scheme, or {@code null} to indicate no preference
-     * @since 27
      */
     public static ColorScheme getSystemColorScheme(Stage stage) {
         return AttachedProperties.of(stage).systemColorScheme.get();
@@ -341,7 +337,6 @@ public class HeaderBar extends Region {
      * @param stage the {@code Stage}
      * @return the {@code systemColorScheme} attached property
      * @defaultValue {@code null}
-     * @since 27
      */
     public static ObjectProperty<ColorScheme> systemColorSchemeProperty(Stage stage) {
         return AttachedProperties.of(stage).systemColorScheme;
@@ -359,7 +354,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @param height the preferred height, or 0 to hide the system-provided header buttons
-     * @since 27
      */
     public static void setSystemButtonHeight(Stage stage, double height) {
         AttachedProperties.of(stage).systemButtonHeight.set(height);
@@ -371,7 +365,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the preferred height of the system-provided header buttons
-     * @since 27
      */
     public static double getSystemButtonHeight(Stage stage) {
         return AttachedProperties.of(stage).systemButtonHeight.get();
@@ -394,7 +387,6 @@ public class HeaderBar extends Region {
      * @param stage the {@code Stage}
      * @return the {@code systemButtonHeight} attached property
      * @defaultValue {@code USE_DEFAULT_SIZE}
-     * @since 27
      */
     public static DoubleProperty systemButtonHeightProperty(Stage stage) {
         return AttachedProperties.of(stage).systemButtonHeight;
@@ -406,7 +398,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the system-recommended minimum height for the {@code HeaderBar}
-     * @since 27
      */
     public static double getSystemMinHeight(Stage stage) {
         return AttachedProperties.of(stage).systemMinHeight.get();
@@ -422,7 +413,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the {@code systemMinHeight} attached property
-     * @since 27
      */
     public static ReadOnlyDoubleProperty systemMinHeightProperty(Stage stage) {
         return AttachedProperties.of(stage).systemMinHeight.getReadOnlyProperty();
@@ -435,7 +425,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the {@code leftSystemInset} attached property
-     * @since 26
      */
     public static ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty(Stage stage) {
         return AttachedProperties.of(stage).leftSystemInset.getReadOnlyProperty();
@@ -447,7 +436,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the size of the left system-reserved inset
-     * @since 26
      */
     public static Dimension2D getLeftSystemInset(Stage stage) {
         return AttachedProperties.of(stage).leftSystemInset.get();
@@ -460,7 +448,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the {@code rightSystemInset} attached property
-     * @since 26
      */
     public static ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty(Stage stage) {
         return AttachedProperties.of(stage).rightSystemInset.getReadOnlyProperty();
@@ -472,7 +459,6 @@ public class HeaderBar extends Region {
      *
      * @param stage the {@code Stage}
      * @return the size of the right system-reserved inset
-     * @since 26
      */
     public static Dimension2D getRightSystemInset(Stage stage) {
         return AttachedProperties.of(stage).rightSystemInset.get();
@@ -556,7 +542,6 @@ public class HeaderBar extends Region {
      * The left area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
-     * @since 26
      */
     private final ObjectProperty<Node> left = new NodeProperty("left");
 
@@ -595,7 +580,6 @@ public class HeaderBar extends Region {
      * The right area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
-     * @since 26
      */
     private final ObjectProperty<Node> right = new NodeProperty("right");
 
@@ -623,7 +607,6 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #rightSystemPaddingProperty() rightSystemPadding
-     * @since 26
      */
     private final BooleanProperty leftSystemPadding = new BooleanPropertyBase(true) {
         @Override
@@ -666,7 +649,6 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #leftSystemPaddingProperty() leftSystemPadding
-     * @since 26
      */
     private final BooleanProperty rightSystemPadding = new BooleanPropertyBase(true) {
         @Override
