@@ -6220,7 +6220,7 @@ compileTargets { t ->
 }
 
 private static Set<File> collectSourceFiles(Project proj, CCTask task) {
-    Pattern pattern = task.matches ? Pattern.compile(task.matches) : null
+    def pattern = task.matches ? Pattern.compile(task.matches) : null
     def result = [] as HashSet<File>
 
     (task.sourceRoots ?: []).each { root ->
@@ -6245,15 +6245,15 @@ private static Set<File> collectSourceFiles(Project proj, CCTask task) {
 }
 
 private static Map createCompileCommand(Project proj, CCTask task, File sourceFile) {
-    String compiler = task.compiler
+    def compiler = task.compiler
     if (!compiler) {
         throw new GradleException("CCTask '${task.name}': 'compiler' not defined")
     }
 
-    String compilerName = new File(compiler).name.toLowerCase()
-    boolean isMsvc = compilerName == 'cl.exe' || compilerName == 'cl'
-    String includeArg = isMsvc ? '/I' : '-I'
-    String compileOnlyArg = isMsvc ? '/c' : '-c'
+    def compilerName = new File(compiler).name.toLowerCase()
+    def isMsvc = compilerName == 'cl.exe' || compilerName == 'cl'
+    def includeArg = isMsvc ? '/I' : '-I'
+    def compileOnlyArg = isMsvc ? '/c' : '-c'
 
     List<String> args = [compiler]
     args.addAll((task.params ?: []).collect { it.toString() })
