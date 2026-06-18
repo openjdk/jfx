@@ -258,6 +258,7 @@ class GtkWindow extends Window {
         });
 
         overlay.buttonPrefHeightProperty().bind(headerButtonHeightProperty());
+        overlay.buttonDarkStyleProperty().bind(headerButtonDarkStyleProperty());
         return overlay;
     }
 
