@@ -239,19 +239,19 @@ GstIterator*            gst_iterator_new                (guint size,
                                                          GstIteratorNextFunction next,
                                                          GstIteratorItemFunction item,
                                                          GstIteratorResyncFunction resync,
-                                                         GstIteratorFreeFunction free) G_GNUC_MALLOC;
+                                                         GstIteratorFreeFunction free) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstIterator*            gst_iterator_new_list           (GType type,
                                                          GMutex *lock,
                                                          guint32 *master_cookie,
                                                          GList **list,
                                                          GObject * owner,
-                                                         GstIteratorItemFunction item) G_GNUC_MALLOC;
+                                                         GstIteratorItemFunction item) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstIterator*            gst_iterator_new_single         (GType type,
-                                                         const GValue * object) G_GNUC_MALLOC;
+                                                         const GValue * object) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstIterator*            gst_iterator_copy               (const GstIterator *it) G_GNUC_MALLOC;
+GstIterator*            gst_iterator_copy               (const GstIterator *it) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* using iterators */
 
@@ -271,7 +271,7 @@ void                    gst_iterator_push               (GstIterator *it, GstIte
 
 GST_API
 GstIterator*            gst_iterator_filter             (GstIterator *it, GCompareFunc func,
-                                                         const GValue * user_data) G_GNUC_MALLOC;
+                                                         const GValue * user_data) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstIteratorResult       gst_iterator_fold               (GstIterator *it,
                                                          GstIteratorFoldFunction func,

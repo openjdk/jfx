@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,11 +65,11 @@ class CCTask extends NativeCompileTask {
             if (params != null) {
                 // A little hack. Only use the -std=c99 flag if compiling .c or .m
                 if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc") || sourceFile.name.endsWith(".mm")) {
-                    def stripped = params;
+                    def stripped = new ArrayList<String>(params);
                     stripped.remove("-std=c99");
                     spec.args(stripped)
                 } else {
-                    spec.args(params)
+                    spec.args(new ArrayList<String>(params));
                 }
             }
 

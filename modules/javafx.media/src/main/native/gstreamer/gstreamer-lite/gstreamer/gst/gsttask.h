@@ -172,12 +172,12 @@ GType           gst_task_get_type       (void);
 
 GST_API
 GstTask*        gst_task_new            (GstTaskFunction func,
-                                         gpointer user_data, GDestroyNotify notify);
+                                         gpointer user_data, GDestroyNotify notify) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_task_set_lock       (GstTask *task, GRecMutex *mutex);
 
 GST_API
-GstTaskPool *   gst_task_get_pool       (GstTask *task);
+GstTaskPool *   gst_task_get_pool       (GstTask *task) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_task_set_pool       (GstTask *task, GstTaskPool *pool);
