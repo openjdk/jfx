@@ -28,7 +28,7 @@ package test.javafx.css;
 import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.MediaFeaturesShim;
 import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import javafx.application.ColorScheme;
@@ -822,13 +822,13 @@ public class StylesheetTest {
 
     @Test
     void serializeStylesheetWithConditionalImport() throws IOException {
-        var oldDefault = MediaFeatures.DEFAULT;
+        var oldDefault = MediaFeaturesShim.getDefault();
 
         try {
             TriState[] testFeatureValue = new TriState[] { TriState.FALSE };
 
-            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
-                "StylesheetTest-feature1", "value", () -> testFeatureValue[0], _ -> null, null);
+            MediaFeaturesShim.setDefault((_, _) -> FunctionExpression.of(
+                "StylesheetTest-feature1", "value", () -> testFeatureValue[0], _ -> null, null));
 
             byte[] data = convertCssTextToBinary("""
                 @import url("%s") (StylesheetTest-feature1);
@@ -862,7 +862,7 @@ public class StylesheetTest {
             assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
             assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
         } finally {
-            MediaFeatures.DEFAULT = oldDefault;
+            MediaFeaturesShim.setDefault(oldDefault);
         }
     }
 }
