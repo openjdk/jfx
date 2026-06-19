@@ -344,8 +344,7 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setValue("ITEM1");
 
-        ListCell<String> cell = (ListCell<String>) ((ComboBoxListViewSkin<String>) comboBox.getSkin())
-                .getDisplayNode();
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
         assertEquals("ITEM1", cell.getText());
 
         comboBox.setConverter(new StringConverter<>() {
@@ -389,6 +388,81 @@ public class ComboBoxTest {
     }
 
     @Test
+    public void testButtonCellUpdateOnStringConverterChangeWithContainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
+        assertNull(cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", cell.getText());
+    }
+
+    @Test
+    public void testTextFieldUpdateOnStringConverterChangeWithContainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        TextField field = (TextField) getDisplayNode();
+        assertEquals("", field.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", field.getText());
+    }
+
+    @Test
+    public void testButtonCellUpdateOnStringConverterChangeWithUncontainedNullValue() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setValue(null);
+
+        ListCell<String> cell = (ListCell<String>) getDisplayNode();
+        assertNull(cell.getText());
+
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "NOT NULL";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+
+        assertEquals("NOT NULL", cell.getText());
+    }
+
+    @Test
     public void testListUpdateOnStringConverterChange() {
         sl = new StageLoader(comboBox);
         ListView<String> list = getListView();
@@ -417,6 +491,125 @@ public class ComboBoxTest {
         VirtualFlowTestUtils.assertCellTextEquals(list, 0, "item1");
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "item2");
         VirtualFlowTestUtils.assertCellTextEquals(list, 2, "item3");
+    }
+
+    @Test
+    public void testGraphicUpdateOnPromptTextChange() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(new Label(item != null ? item : "null-text"));
+            }
+        });
+
+        // Setting the button cell property might already null out the graphic
+        // if the updateDisplayNode() method is misbehaving like for JDK-8384806.
+        // Force update the cell again to have a graphic
+        // so that we can test the actual methods below
+        comboBox.getButtonCell().updateIndex(-1);
+        comboBox.getButtonCell().updateIndex(0);
+
+        comboBox.setValue(null);
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        // Calls updateDisplayNode()
+        comboBox.setPromptText("abc");
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM1");
+        assertEquals("ITEM1", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM2");
+        assertEquals("ITEM2", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+    }
+
+    @Test
+    public void testGraphicUpdateOnConverterChange() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(new Label(item != null ? item : "null-text"));
+            }
+        });
+
+        // Setting the button cell property might already null out the graphic
+        // if the updateDisplayNode() method is misbehaving like for JDK-8384806.
+        // Force update the cell again to have a graphic
+        // so that we can test the actual methods below
+        comboBox.getButtonCell().updateIndex(-1);
+        comboBox.getButtonCell().updateIndex(0);
+
+        comboBox.setValue(null);
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        // Calls updateDisplayNode()
+        comboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String object) {
+                return object != null ? object.toString() : "null-text";
+            }
+
+            @Override
+            public String fromString(String string) {
+                return "?";
+            }
+        });
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM1");
+        assertEquals("ITEM1", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM2");
+        assertEquals("ITEM2", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+    }
+
+    @Test
+    public void testGraphicUpdateOnGetDisplayNode() {
+        ObservableList<String> items = FXCollections.observableArrayList(null, "ITEM1", "ITEM2");
+        comboBox.setEditable(false);
+        comboBox.setItems(items);
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(new Label(item != null ? item : "null-text"));
+            }
+        });
+
+        // Setting the button cell property might already null out the graphic
+        // if the updateDisplayNode() method is misbehaving like for JDK-8384806.
+        // Force update the cell again to have a graphic
+        // so that we can test the actual methods below
+        comboBox.getButtonCell().updateIndex(-1);
+        comboBox.getButtonCell().updateIndex(0);
+
+        comboBox.setValue(null);
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        // A call to getDisplayNode() will call updateDisplayNode() in its implementation
+        // as that is how the skin does it
+        getDisplayNode();
+        assertNotNull(comboBox.getButtonCell().getGraphic());
+        assertEquals("null-text", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM1");
+        assertEquals("ITEM1", ((Label) comboBox.getButtonCell().getGraphic()).getText());
+
+        comboBox.setValue("ITEM2");
+        assertEquals("ITEM2", ((Label) comboBox.getButtonCell().getGraphic()).getText());
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {

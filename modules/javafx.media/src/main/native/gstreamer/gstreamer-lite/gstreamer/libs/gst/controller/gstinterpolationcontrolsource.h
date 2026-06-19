@@ -95,7 +95,7 @@ GType gst_interpolation_control_source_get_type (void);
 /* Functions */
 
 GST_CONTROLLER_API
-GstControlSource * gst_interpolation_control_source_new (void);
+GstControlSource * gst_interpolation_control_source_new (void) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstInterpolationControlSource, gst_object_unref)
 

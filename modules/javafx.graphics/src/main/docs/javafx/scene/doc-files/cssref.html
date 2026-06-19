@@ -248,6 +248,9 @@
             .left40 {
                 margin-left: 40px;
             }
+            .nowrap {
+                white-space: nowrap;
+            }
         </style>
   </head>
   <body>
@@ -864,8 +867,8 @@
                 <span class="grammar">&lt;media-feature&gt;:</span>
             </figcaption>
         </figure>
-    <h5>Evaluating Media Features in a Boolean Context</h5>
-    <p>If the colon and value is omitted, the media feature is evaluated in a boolean context.
+    <h5 id="mf-boolean-context">Evaluating Media Features in a Boolean Context</h5>
+    <p>If the colon and value are omitted, the media feature is evaluated in a boolean context.
         This is a convenient shorthand for features that have a reasonable default value. A media feature that is
         evaluated in a boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value
         <em>other</em> than the reasonable default value.
@@ -942,6 +945,12 @@
     </ul>
     <table class="csspropertytable" id="mediafeatures">
         <caption>Available media features</caption>
+        <colgroup>
+            <col style="min-width: 230px">
+            <col style="width: 30%">
+            <col style="min-width: 80px">
+            <col style="width: 70%">
+        </colgroup>
         <tbody>
             <tr>
                 <th class="propertyname subheader" scope="col">Viewport Characteristics</th>
@@ -962,7 +971,7 @@
                 <td>corresponds to <code>Scene.height</code></td>
             </tr>
             <tr>
-                <td class="value">aspect-ratio</td>
+                <td class="value nowrap">aspect-ratio</td>
                 <td class="value"><a href="#typenumber" class="typeref">&lt;number&gt;</a></td>
                 <td>range</td>
                 <td>aspect ratio = <code>width</code> / <code>height</code></td>
@@ -974,7 +983,7 @@
                 <td><code>portrait</code> if <code>height</code> &gt;= <code>width</code>, <code>landscape</code> otherwise</td>
             </tr>
             <tr>
-                <td class="value">display-mode</td>
+                <td class="value nowrap">display-mode</td>
                 <td class="value">fullscreen | standalone</td>
                 <td>discrete</td>
                 <td><code>fullscreen</code> if <code>Stage.isFullScreen()</code>, <code>standalone</code> otherwise</td>
@@ -986,34 +995,57 @@
                 <th class="subheader" scope="col">Comments</th>
             </tr>
             <tr>
-                <td class="value">prefers-color-scheme</td>
+                <td class="value nowrap">prefers-color-scheme</td>
                 <td class="value">light | dark</td>
                 <td>discrete</td>
                 <td></td>
             </tr>
             <tr>
-                <td class="value">prefers-reduced-data</td>
+                <td class="value nowrap">prefers-reduced-data</td>
                 <td class="value">no-preference | reduce</td>
                 <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
-                <td class="value">prefers-reduced-motion</td>
+                <td class="value nowrap">prefers-reduced-motion</td>
                 <td class="value">no-preference | reduce</td>
                 <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
-                <td class="value">prefers-reduced-transparency</td>
+                <td class="value nowrap">prefers-reduced-transparency</td>
                 <td class="value">no-preference | reduce</td>
                 <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
             </tr>
             <tr>
-                <td class="value">-fx-prefers-persistent-scrollbars</td>
+                <td class="value nowrap">-fx-prefers-persistent-scrollbars</td>
                 <td class="value">no-preference | persistent</td>
                 <td>discrete</td>
                 <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <th class="propertyname subheader" scope="col">Platform Features</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
+            </tr>
+            <tr>
+                <td class="value nowrap">-fx-supports-conditional-feature</td>
+                <td class="value">
+                    graphics | controls | media | web | swt | swing |
+                    fxml | scene3d | effect | <span class="nowrap">shape-clip</span> |
+                    <span class="nowrap">input-method</span> | <span class="nowrap">transparent-window</span> |
+                    <span class="nowrap">unified-window</span> | <span class="nowrap">extended-window</span> |
+                    <span class="nowrap">two-level-focus</span> | <span class="nowrap">virtual-keyboard</span> |
+                    <span class="nowrap">input-touch</span> | <span class="nowrap">input-multitouch</span> |
+                    <span class="nowrap">input-pointer</span></td>
+                <td>discrete</td>
+                <td>Evaluates to <code>true</code> if
+                    <code><a href="../../application/Platform.html#isSupported(javafx.application.ConditionalFeature)">
+                    Platform.isSupported(ConditionalFeature)</a></code> returns <code>true</code> for the specified
+                    conditional feature.<br>
+                    This media feature cannot be evaluated in a <a href="#mf-boolean-context">boolean context</a>.</td>
             </tr>
         </tbody>
     </table>

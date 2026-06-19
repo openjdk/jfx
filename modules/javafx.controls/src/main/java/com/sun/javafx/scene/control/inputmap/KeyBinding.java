@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.sun.javafx.scene.control.inputmap;
 
-import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCode;
@@ -32,7 +31,9 @@ import javafx.scene.input.KeyEvent;
 
 import java.util.Objects;
 
-import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean.*;
+import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean.ANY;
+import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean.FALSE;
+import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean.TRUE;
 
 /**
  * KeyBindings are used to describe which action should occur based on some
@@ -111,31 +112,21 @@ public class KeyBinding {
     }
 
     public final KeyBinding shortcut() {
-        if (Toolkit.getToolkit().getClass().getName().endsWith("StubToolkit")) {
-            // FIXME: We've hit the terrible StubToolkit (which only appears
-            // during testing). We will dumb down what we do here
-            if (Utils.isMac()) {
-                return meta();
-            } else {
+        switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
+            case SHIFT:
+                return shift();
+
+            case CONTROL:
                 return ctrl();
-            }
-        } else {
-            switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
-                case SHIFT:
-                    return shift();
 
-                case CONTROL:
-                    return ctrl();
+            case ALT:
+                return alt();
 
-                case ALT:
-                    return alt();
+            case META:
+                return meta();
 
-                case META:
-                    return meta();
-
-                default:
-                    return this;
-            }
+            default:
+                return this;
         }
     }
 

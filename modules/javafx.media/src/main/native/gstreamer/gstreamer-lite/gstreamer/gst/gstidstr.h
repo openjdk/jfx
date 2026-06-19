@@ -82,10 +82,10 @@ GST_API
 void gst_id_str_clear (GstIdStr *s);
 
 GST_API
-GstIdStr * gst_id_str_new (void) G_GNUC_MALLOC;
+GstIdStr * gst_id_str_new (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIdStr * gst_id_str_copy (const GstIdStr *s) G_GNUC_MALLOC;
+GstIdStr * gst_id_str_copy (const GstIdStr *s) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void gst_id_str_free (GstIdStr *s);

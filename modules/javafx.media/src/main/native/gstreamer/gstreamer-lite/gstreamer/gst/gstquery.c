@@ -2878,3 +2878,59 @@ gst_query_take (GstQuery ** old_query, GstQuery * new_query)
   return gst_mini_object_take ((GstMiniObject **) old_query,
       (GstMiniObject *) new_query);
 }
+
+/**
+ * gst_query_is_writable:
+ * @query: a #GstQuery
+ *
+ * Tests if you can safely modify @query. It is only safe to modify query when
+ * there is only one owner of the query - ie, the object is writable.
+ */
+gboolean
+gst_query_is_writable (const GstQuery * query)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (query));
+}
+
+/**
+ * gst_query_make_writable:
+ * @query: (transfer full): a #GstQuery
+ *
+ * Returns a writable copy of @query.
+ *
+ * If there is only one reference count on @query, the caller must be the owner,
+ * and so this function will return the query object unchanged. If on the other
+ * hand there is more than one reference on the object, a new query object will
+ * be returned. The caller's reference on @query will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the query in the argument and refs the query
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_query_ref().
+ *
+ * Returns: (transfer full): a writable query which may or may not be the
+ *     same as @query
+ */
+GstQuery *
+gst_query_make_writable (GstQuery * query)
+{
+  return
+      GST_QUERY_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (query)));
+}
+
+/**
+ * gst_query_steal: (skip)
+ * @old_query: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstQuery to be stolen.
+ *
+ * Atomically replace the #GstQuery pointed to by @old_query with %NULL and
+ * return the original query.
+ * Since: 1.28
+ */
+GstQuery *
+gst_query_steal (GstQuery ** old_query)
+{
+  return GST_QUERY_CAST (gst_mini_object_steal ((GstMiniObject **)
+          old_query));
+}
