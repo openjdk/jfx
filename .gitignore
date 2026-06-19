@@ -36,6 +36,7 @@ hs_err_pid*
 .idea/misc.xml
 .idea/AndroidProjectSystem.xml
 .idea/editor.xml
+.idea/encodings.xml
 
 # Generated files
 .idea/**/contentModel.xml
