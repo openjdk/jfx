@@ -6256,7 +6256,7 @@ private static Map createCompileCommand(Project proj, CCTask task, File sourceFi
     def compileOnlyArg = isMsvc ? '/c' : '-c'
 
     List<String> args = [compiler]
-    args.addAll((task.params ?: []).collect { it.toString() })
+    args.addAll((task.params ?: []).collect { it.toString() }.findAll { !it.isEmpty() })
 
     if (task.headers) {
         args << includeArg << task.headers.absolutePath
