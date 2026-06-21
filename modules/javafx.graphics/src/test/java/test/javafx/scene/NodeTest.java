@@ -26,6 +26,7 @@
 package test.javafx.scene;
 
 import javafx.scene.effect.BlendMode;
+import javafx.scene.layout.Region;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import test.javafx.scene.shape.TestUtils;
@@ -233,6 +234,26 @@ public class NodeTest {
 
         styleClass = NodeHelper.getStyleClassOrNull(node);
         assertNull(styleClass);
+    }
+
+    @Test
+    public void testNodeToString() {
+        Region node = new Region();
+        String noIdPrefix = "Region@" + Integer.toHexString(node.hashCode());
+
+        assertEquals(noIdPrefix, node.toString());
+
+        node.getStyleClass().add("myStyleClass");
+        assertEquals(noIdPrefix + "[styleClass=myStyleClass]", node.toString());
+
+        node.getStyleClass().add("mySecondStyleClass");
+        assertEquals(noIdPrefix + "[styleClass=myStyleClass mySecondStyleClass]", node.toString());
+
+        node.setId("myId");
+        assertEquals("Region[id=myId, styleClass=myStyleClass mySecondStyleClass]", node.toString());
+
+        node.getStyleClass().clear();
+        assertEquals("Region[id=myId]", node.toString());
     }
 
     @Test

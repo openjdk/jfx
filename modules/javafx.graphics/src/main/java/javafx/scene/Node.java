@@ -1353,24 +1353,6 @@ public abstract sealed class Node
                 protected void onChanged(Change<String> c) {
                     reapplyCSS();
                 }
-
-                @Override
-                public String toString() {
-                    if (size() == 0) {
-                        return "";
-                    } else if (size() == 1) {
-                        return get(0);
-                    } else {
-                        StringBuilder buf = new StringBuilder();
-                        for (int i = 0; i < size(); i++) {
-                            buf.append(get(i));
-                            if (i + 1 < size()) {
-                                buf.append(' ');
-                            }
-                        }
-                        return buf.toString();
-                    }
-                }
             };
         }
         return styleClass;
@@ -8687,7 +8669,12 @@ public abstract sealed class Node
             if (!hasId) sbuf.append('[');
             else sbuf.append(", ");
             sbuf.append("styleClass=");
-            sbuf.append(getStyleClass());
+            for (int i = 0; i < getStyleClass().size(); i++) {
+                sbuf.append(getStyleClass().get(i));
+                if (i + 1 < getStyleClass().size()) {
+                    sbuf.append(' ');
+                }
+            }
             sbuf.append("]");
         }
         return sbuf.toString();
