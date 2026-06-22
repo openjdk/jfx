@@ -59,7 +59,6 @@ public final class MediaFeatures {
         "ios", PlatformUtil::isIOS,
         "linux", PlatformUtil::isLinux,
         "macos", PlatformUtil::isMac,
-        "unix", PlatformUtil::isUnix,
         "windows", PlatformUtil::isWindows
     );
 
