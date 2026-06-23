@@ -120,4 +120,31 @@ public class Params {
 
     /** The number of paragraphs to lay out before and after the view point in VFlow. */
     public static final int SLIDING_WINDOW_EXTENT = 100;
+
+    /** Style name for text highlight (background color) 1 */
+    public static final String TEXT_HIGHLIGHT_1 = "text-highlight-1";
+
+    /** Style name for text highlight (background color) 2 */
+    public static final String TEXT_HIGHLIGHT_2 = "text-highlight-2";
+
+    /** Style name for text highlight (background color) 3 */
+    public static final String TEXT_HIGHLIGHT_3 = "text-highlight-3";
+
+    /** Style name for text highlight (background color) 4 */
+    public static final String TEXT_HIGHLIGHT_4 = "text-highlight-4";
+
+    /** Style name for text highlight (background color) 5 */
+    public static final String TEXT_HIGHLIGHT_5 = "text-highlight-5";
+
+    /** Style name for underline wavy color 1 */
+    public static final String UNDERLINE_WAVY_1 = "underline-wavy-1";
+
+    /** Style name for underline wavy color 2 */
+    public static final String UNDERLINE_WAVY_2 = "underline-wavy-2";
+
+    /** Style name for underline wavy color 3 */
+    public static final String UNDERLINE_WAVY_3 = "underline-wavy-3";
+
+    /** RichTextModel format version. */
+    public static final String VERSION_4 = "RichText-v4-incubator";
 }

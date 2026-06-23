@@ -38,17 +38,17 @@ import jfx.incubator.scene.control.richtext.TextPos;
  */
 public abstract class DataFormatHandler {
     /**
-     * Creates a StyledInput for the given input string.  When pasting, the caller may pass
+     * Creates a StyledInput for the given input data.  When pasting, the caller may pass
      * the style attributes {@code attr} at the insertion point.  This argument may be used by
      * the implementation if the format contains no styles on its own (for example, in the plain text format case).
      *
-     * @param input the input string
+     * @param input the input data, never null
      * @param attr the style attributes (can be null)
      * @return the StyledInput
      * @throws IOException when operation is not supported or an I/O error occurs
      * @throws UnsupportedOperationException if the copy operation is not supported
      */
-    public abstract StyledInput createStyledInput(String input, StyleAttributeMap attr) throws IOException;
+    public abstract StyledInput createStyledInput(Object input, StyleAttributeMap attr) throws IOException;
 
     /**
      * Creates an object to be put into the Clipboard for the given text range.
