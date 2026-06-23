@@ -27,6 +27,7 @@ package test.javafx.scene.input;
 
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.Toolkit;
+import javafx.event.EventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import test.com.sun.javafx.pgstub.StubScene;
@@ -846,7 +847,7 @@ public class ScrollEventTest {
      * has been removed from the scene graph.
      */
     @Test
-    public void testScrollInertiaRetargetedToPickedNodeWhenTargetRemovedFromScene() {
+    public void testInertiaScrollRetargetedToPickedNodeWhenTargetRemovedFromScene() {
         final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
 
         Rectangle background = new Rectangle(0, 0, 400, 400);
@@ -861,41 +862,25 @@ public class ScrollEventTest {
 
         StubScene stub = (StubScene) SceneHelper.getPeer(scene);
 
-        // 1. Start a scroll gesture over scrollTarget at (200, 200).
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL_STARTED,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        // 1. Start a scroll gesture over scrollTarget.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
 
         // 2. Send a normal scroll event.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
 
         assertEquals(1, receivedScrollEvents.size());
         assertSame(scrollTarget, receivedScrollEvents.getFirst().getTarget());
 
         // 3. Finish the scroll event.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL_FINISHED,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
 
         // 4. Remove the target.
         root.getChildren().remove(scrollTarget);
         toolkit.firePulse();
         receivedScrollEvents.clear();
 
-        // 5. Inertia scroll arrives after the original target has been removed.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, true);
+        // 5. Inertia scroll arrives after the target has been removed.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
 
         assertEquals(1, receivedScrollEvents.size(), "Inertia scroll must be delivered after the " +
                 "original target is removed from the scene");
@@ -909,7 +894,7 @@ public class ScrollEventTest {
      * has been removed from the scene graph and there is no other node to pick underneath.
      */
     @Test
-    public void testScrollInertiaRetargetedToSceneWhenTargetRemovedFromScene() {
+    public void testInertiaScrollRetargetedToSceneWhenTargetRemovedFromScene() {
         final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
 
         Rectangle background = new Rectangle(0, 0, 400, 400);
@@ -923,47 +908,124 @@ public class ScrollEventTest {
 
         StubScene stub = (StubScene) SceneHelper.getPeer(scene);
 
-        // 1. Start a scroll gesture over background at (200, 200).
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL_STARTED,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        // 1. Start a scroll gesture over background.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
 
         // 2. Send a normal scroll event.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
 
         assertEquals(1, receivedScrollEvents.size());
         assertSame(background, receivedScrollEvents.getFirst().getTarget());
 
         // 3. Finish the scroll event.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL_FINISHED,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, false);
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
 
         // 4. Remove the target.
         root.getChildren().remove(background);
         toolkit.firePulse();
         receivedScrollEvents.clear();
 
-        // 5. Inertia scroll arrives after the original target has been removed.
-        stub.getListener().scrollEvent(
-                ScrollEvent.SCROLL,
-                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                200, 200, 200, 200,
-                false, false, false, false, false, true);
+        // 5. Inertia scroll arrives after the target has been removed.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
 
         assertEquals(1, receivedScrollEvents.size(), "Inertia scroll must be delivered after the " +
                 "original target is removed from the scene");
         assertSame(scene, receivedScrollEvents.getFirst().getTarget(), "Inertia scroll should be " +
                 "retargeted to the scene");
         assertTrue(receivedScrollEvents.getFirst().isInertia());
+    }
+
+    /**
+     * Verifies that scroll events are retargeted to the picked node when the original gesture target node
+     * has been removed from the scene graph.
+     */
+    @Test
+    public void testScrollRetargetedToPickedNodeWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Rectangle scrollTarget = new Rectangle(100, 100, 200, 200);
+        Group root = new Group(background, scrollTarget);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over scrollTarget.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(scrollTarget, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Remove the target.
+        root.getChildren().remove(scrollTarget);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 4. Send another normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size(), "Scroll must be delivered after the " +
+                "original target is removed from the scene");
+        assertSame(background, receivedScrollEvents.getFirst().getTarget(), "Scroll should be " +
+                "retargeted to the node now under the cursor");
+        assertFalse(receivedScrollEvents.getFirst().isInertia());
+    }
+
+    /**
+     * Verifies that scroll events are retargeted to the Scene when the original gesture target node
+     * has been removed from the scene graph and there is no other node to pick underneath.
+     */
+    @Test
+    public void testScrollRetargetedToSceneWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Group root = new Group(background);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over background.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(background, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Remove the target.
+        root.getChildren().remove(background);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 4. Send another normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size(), "Scroll must be delivered after the " +
+                "original target is removed from the scene");
+        assertSame(scene, receivedScrollEvents.getFirst().getTarget(), "Scroll should be " +
+                "retargeted to the node now under the cursor");
+        assertFalse(receivedScrollEvents.getFirst().isInertia());
     }
 
     private Scene createScene() {
@@ -981,5 +1043,13 @@ public class ScrollEventTest {
         stage.show();
 
         return scene;
+    }
+
+    private void scrollEvent(StubScene stub, EventType<ScrollEvent> event, double x, double y, boolean inertia) {
+        stub.getListener().scrollEvent(
+                event,
+                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+                x, y, x, y,
+                false, false, false, false, false, inertia);
     }
 }
