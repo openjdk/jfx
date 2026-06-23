@@ -119,7 +119,7 @@ public class FileListFormatHandler extends DataFormatHandler {
                         if (f.length() > maxMemory) {
                             throw new Exception("File is too large: " + f);
                         }
-                        
+
                         byte[] b = Files.readAllBytes(f.toPath());
                         Image im = new Image(new ByteArrayInputStream(b), false);
                         if (!im.isError()) {

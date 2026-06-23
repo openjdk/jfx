@@ -4,7 +4,7 @@ Andy Goryachev
 
 Version 4
 
-June 17, 2026
+June 23, 2026
 
 
 
@@ -60,6 +60,9 @@ There could be only one such segment and it must be the first one.
 Example:
 
 `{@RichText-v4-incubator}`
+
+Note: the versioning mechanism is likely to change, see [JDK-8386850](https://bugs.openjdk.org/browse/JDK-8386850).
+
 
 
 ### Document Properties Segment
@@ -230,4 +233,3 @@ Example:
 {0}line2{!}
 {0}line3{!}
 ```
-
