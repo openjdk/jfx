@@ -882,10 +882,10 @@ public class ScrollEventTest {
         // 5. Inertia scroll arrives after the target has been removed.
         scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
 
-        assertEquals(1, receivedScrollEvents.size(), "Inertia scroll must be delivered after the " +
-                "original target is removed from the scene");
-        assertSame(background, receivedScrollEvents.getFirst().getTarget(), "Inertia scroll should be " +
-                "retargeted to the node now under the cursor");
+        assertEquals(1, receivedScrollEvents.size(),
+                "Inertia Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(background, receivedScrollEvents.getFirst().getTarget(),
+                "Inertia Scroll should be retargeted to the Node that was picked at the event coordinates");
         assertTrue(receivedScrollEvents.getFirst().isInertia());
     }
 
@@ -928,10 +928,10 @@ public class ScrollEventTest {
         // 5. Inertia scroll arrives after the target has been removed.
         scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
 
-        assertEquals(1, receivedScrollEvents.size(), "Inertia scroll must be delivered after the " +
-                "original target is removed from the scene");
-        assertSame(scene, receivedScrollEvents.getFirst().getTarget(), "Inertia scroll should be " +
-                "retargeted to the scene");
+        assertEquals(1, receivedScrollEvents.size(),
+                "Inertia Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(scene, receivedScrollEvents.getFirst().getTarget(),
+                "Inertia Scroll should be retargeted to the Scene as there is no Node to pick");
         assertTrue(receivedScrollEvents.getFirst().isInertia());
     }
 
@@ -975,10 +975,10 @@ public class ScrollEventTest {
         // 3. Finish the scroll event.
         scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
 
-        assertEquals(1, receivedScrollEvents.size(), "Scroll must be delivered after the " +
-                "original target is removed from the scene");
-        assertSame(background, receivedScrollEvents.getFirst().getTarget(), "Scroll should be " +
-                "retargeted to the node now under the cursor");
+        assertEquals(1, receivedScrollEvents.size(),
+                "Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(background, receivedScrollEvents.getFirst().getTarget(),
+                "Scroll should be retargeted to the Node that was picked at the event coordinates");
         assertFalse(receivedScrollEvents.getFirst().isInertia());
     }
 
@@ -1021,10 +1021,10 @@ public class ScrollEventTest {
         // 3. Finish the scroll event.
         scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
 
-        assertEquals(1, receivedScrollEvents.size(), "Scroll must be delivered after the " +
-                "original target is removed from the scene");
-        assertSame(scene, receivedScrollEvents.getFirst().getTarget(), "Scroll should be " +
-                "retargeted to the node now under the cursor");
+        assertEquals(1, receivedScrollEvents.size(),
+                "Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(scene, receivedScrollEvents.getFirst().getTarget(),
+                "Scroll should be retargeted to the Scene as there is no Node to pick");
         assertFalse(receivedScrollEvents.getFirst().isInertia());
     }
 
