@@ -3185,12 +3185,12 @@ public class GridPaneTest {
 
         @Override
         protected double computePrefWidth(double height) {
-            return height <= 0 ? 100 : AREA / height;
+            return height <= 0 ? SIDE : AREA / height;
         }
 
         @Override
         protected double computePrefHeight(double width) {
-            return width <= 0 ? 100 : AREA / width;
+            return width <= 0 ? SIDE : AREA / width;
         }
 
         void checkSize() {
