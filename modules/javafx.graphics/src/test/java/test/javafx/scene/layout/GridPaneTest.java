@@ -3171,7 +3171,8 @@ public class GridPaneTest {
     }
 
     static class FixedAreaRegion extends Region {
-        final double AREA = 100*100;
+        final double SIDE = 100;
+        final double AREA = SIDE*SIDE;
         Orientation bias;
 
         public FixedAreaRegion(Orientation bias) {
