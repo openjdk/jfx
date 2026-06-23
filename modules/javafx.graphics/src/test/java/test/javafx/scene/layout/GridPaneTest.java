@@ -3173,7 +3173,7 @@ public class GridPaneTest {
     static class FixedAreaRegion extends Region {
         final double SIDE = 100;
         final double AREA = SIDE * SIDE;
-        Orientation bias;
+        final Orientation bias;
 
         public FixedAreaRegion(Orientation bias) {
             this.bias = bias;
@@ -3193,7 +3193,7 @@ public class GridPaneTest {
             return width <= 0 ? SIDE : AREA / width;
         }
 
-        void checkSize() {
+        void assertSize() {
             // This should work when the Node is laid out properly.
             assertEquals(AREA, getWidth() * getHeight(), 20);
         }
@@ -3213,7 +3213,7 @@ public class GridPaneTest {
         gridpane.layout();
 
         assertEquals(70, fixedArea.getWidth());
-        fixedArea.checkSize();
+        fixedArea.assertSize();
     }
 
     @Test
@@ -3230,7 +3230,7 @@ public class GridPaneTest {
         gridpane.layout();
 
         assertEquals(70, fixedArea.getHeight());
-        fixedArea.checkSize();
+        fixedArea.assertSize();
     }
 
     @Test
@@ -3246,6 +3246,6 @@ public class GridPaneTest {
         gridpane.layout();
 
         assertEquals(100, fixedArea.getWidth());
-        fixedArea.checkSize();
+        fixedArea.assertSize();
     }
 }
