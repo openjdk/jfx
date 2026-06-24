@@ -920,6 +920,24 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
 
 #pragma mark --- JNI
 
+@interface NSMenu (JavaFX)
+-(NSMenuItem*)itemWithTitleRecursively:(NSString*)title;
+@end
+
+@implementation NSMenu (JavaFX)
+-(NSMenuItem*)itemWithTitleRecursively:(NSString *)title {
+    for (NSMenuItem* item in self.itemArray) {
+        if ([item.title isEqualToString: title]) {
+            return item;
+        } else if (item.submenu) {
+            NSMenuItem* found = [item.submenu itemWithTitleRecursively: title];
+            if (found) return found;
+        }
+    }
+    return nil;
+}
+@end
+
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _initIDs
@@ -1268,6 +1286,46 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1unhideAllAppli
 (JNIEnv *env, jobject japplication)
 {
     [NSApp unhideAllApplications:NSApp];
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _findItemInSystemMenuBar
+ * Signature: (Ljava/lang/String;)[Ljava/lang/String;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication__1findItemInSystemMenuBar
+(JNIEnv *env, jclass class, jstring javaTitle)
+{
+    jobjectArray pathArray = nil;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+
+    NSString* title = [GlassHelper nsStringWithJavaString: javaTitle withEnv: env];
+    NSMenuItem* item = [NSApp.mainMenu itemWithTitleRecursively: title];
+    NSMutableArray* path = [NSMutableArray array];
+    if (item != nil) {
+        while (item) {
+            [path insertObject: item.title atIndex: 0];
+            item = item.parentItem;
+        }
+    }
+
+    jclass jcls = (*env)->FindClass(env, "java/lang/String");
+    pathArray = (*env)->NewObjectArray(env, path.count, jcls, NULL);
+    GLASS_CHECK_EXCEPTION(env);
+
+    for (NSUInteger index = 0; index < path.count; ++index) {
+        NSString* component = [path objectAtIndex: index];
+        jstring string = (*env)->NewStringUTF(jEnv, component.UTF8String);
+        GLASS_CHECK_EXCEPTION(env);
+        (*env)->SetObjectArrayElement(env, pathArray, index, string);
+        GLASS_CHECK_EXCEPTION(env);
+    }
+
+    GLASS_POOL_EXIT;
+
+    return pathArray;
 }
 
 /*
