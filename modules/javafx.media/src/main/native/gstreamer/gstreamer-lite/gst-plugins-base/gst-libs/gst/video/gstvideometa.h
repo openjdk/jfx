@@ -133,8 +133,11 @@ gboolean       gst_video_meta_map        (GstVideoMeta *meta, guint plane, GstMa
 GST_VIDEO_API
 gboolean       gst_video_meta_unmap      (GstVideoMeta *meta, guint plane, GstMapInfo *info);
 
-GST_VIDEO_API
+GST_VIDEO_DEPRECATED_FOR(gst_video_meta_set_alignment_full)
 gboolean       gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment);
+
+GST_VIDEO_API
+gboolean       gst_video_meta_set_alignment_full (GstVideoMeta * meta, const GstVideoAlignment *alignment);
 
 GST_VIDEO_API
 gboolean       gst_video_meta_get_plane_size (GstVideoMeta * meta, gsize plane_size[GST_VIDEO_MAX_PLANES]);
@@ -188,11 +191,83 @@ GQuark gst_video_meta_transform_scale_get_quark (void);
  *
  * Extra data passed to a video transform #GstMetaTransformFunction such as:
  * "gst-video-scale".
+ *
+ * This transformation can not express letterbox, cropping, or rotations,
+ * use #GstVideoMetaTransformMatrix instead
  */
 typedef struct {
   GstVideoInfo *in_info;
   GstVideoInfo *out_info;
 } GstVideoMetaTransform;
+
+
+GST_VIDEO_API
+GQuark gst_video_meta_transform_matrix_get_quark (void);
+
+/**
+ * GST_VIDEO_META_TRANSFORM_IS_MATRIX:
+ *
+ * Checks if a #GType of a meta transformation is a matrix transformation
+ *
+ * Returns: TRUE if its a matrix transformation
+ *
+ * Since: 1.28
+ */
+
+#define GST_VIDEO_META_TRANSFORM_IS_MATRIX(type) ((type) == gst_video_meta_transform_matrix_get_quark())
+
+/**
+ * GstVideoMetaTransformMatrix:
+ * @in_info: the input #GstVideoInfo
+ * @in_rectangle: the input #GstVideoRectangle
+ * @out_info: the output #GstVideoInfo
+ * @out_rectangle: the output #GstVideoRectangle
+ * @matrix: a 3x3 matrix representing an homographic transformation
+ *
+ * Extra data passed to a video transform #GstMetaTransformFunction such as:
+ * "gst-video-matrix".
+ *
+ * The matrix represents a transformation that is applied to the content of
+ * @in_rectangle, and its output is put inside @out_rectangle. The coordinate
+ * system has it's (0, 0) in the top-left corner of the rectangles and
+ * goes down and right from there..
+ *
+ * It's a programming error to have a singular matrix.
+ *
+ * Since: 1.28
+ */
+typedef struct {
+  const GstVideoInfo *in_info;
+  GstVideoRectangle in_rectangle;
+
+  const GstVideoInfo *out_info;
+  GstVideoRectangle out_rectangle;
+
+  gfloat matrix[3][3];
+} GstVideoMetaTransformMatrix;
+
+GST_VIDEO_API
+void gst_video_meta_transform_matrix_init (GstVideoMetaTransformMatrix * trans,
+    const GstVideoInfo *in_info, const GstVideoRectangle * in_rectangle,
+    const GstVideoInfo *out_info, const GstVideoRectangle * out_rectangle);
+
+GST_VIDEO_API
+gboolean gst_video_meta_transform_matrix_point (const
+    GstVideoMetaTransformMatrix * transform, gint *x, gint *y);
+
+GST_VIDEO_API
+gboolean gst_video_meta_transform_matrix_point_clipped (const
+    GstVideoMetaTransformMatrix * transform, gint *x, gint *y);
+
+GST_VIDEO_API
+gboolean gst_video_meta_transform_matrix_rectangle (
+  const GstVideoMetaTransformMatrix * transform,
+  GstVideoRectangle * rect);
+
+GST_VIDEO_API
+gboolean gst_video_meta_transform_matrix_rectangle_clipped (
+  const GstVideoMetaTransformMatrix * transform,
+  GstVideoRectangle * rect);
 
 /**
  * GstVideoGLTextureType:

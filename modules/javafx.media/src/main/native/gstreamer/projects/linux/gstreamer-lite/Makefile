@@ -171,6 +171,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/libs/gst/base/gstpushsrc.c \
           gstreamer/libs/gst/base/gstqueuearray.c \
           gstreamer/libs/gst/base/gsttypefindhelper.c \
+          gst-plugins-base/gst-libs/gst/app/app-enumtypes.c \
           gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
           gst-plugins-base/gst-libs/gst/app/gstappsink.c \
           gst-plugins-base/gst-libs/gst/app/gstapputils.c \

@@ -26,7 +26,9 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaFeatures;
 import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
@@ -37,12 +39,15 @@ import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
 import com.sun.javafx.css.media.expression.LessExpression;
 import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
+import com.sun.javafx.scene.SceneContext;
 import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -334,6 +339,78 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             FunctionExpression.of("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parseSupportsConditionalFeature() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (-fx-supports-conditional-feature: ScEnE3D),
+                   (-fx-supports-conditional-feature: transparent-window),
+                   (-fx-supports-conditional-feature: media) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var context = new SceneContext(new Scene(new Group()));
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(3, mediaRule.getQueries().size());
+
+        var expected = FunctionExpression.of("-fx-supports-conditional-feature", "scene3d", _ -> null, true);
+        var actual = mediaRule.getQueries().get(0);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "transparent-window", _ -> null, true);
+        actual = mediaRule.getQueries().get(1);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "media", _ -> null, true);
+        actual = mediaRule.getQueries().get(2);
+        assertEquals(expected, actual);
+        assertEquals(TriState.FALSE, actual.evaluate());
+        assertFalse(expected.evaluate(context));
+    }
+
+    @Test
+    void invalidConditionalFeatureValueEvaluatesToFalse() {
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature: invalid-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void supportsConditionalFeatureCannotBeUsedInBooleanContext() {
+        assertThrows(IllegalArgumentException.class,
+            () -> MediaFeatures.discreteQueryExpression("-fx-supports-conditional-feature", null));
+
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test

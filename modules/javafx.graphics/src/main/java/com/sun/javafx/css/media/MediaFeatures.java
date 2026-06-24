@@ -25,11 +25,13 @@
 
 package com.sun.javafx.css.media;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
 import com.sun.javafx.css.parser.Token;
 import javafx.application.ColorScheme;
+import javafx.application.ConditionalFeature;
 import java.util.Locale;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -138,6 +140,17 @@ public final class MediaFeatures {
             case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
                 lowerCaseFeatureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
+            case "-fx-supports-conditional-feature" -> {
+                String lowerCaseFeatureValue = checkNotNullValue(lowerCaseFeatureName, lowerCaseTextValue(featureValue));
+                var feature = enumValue(ConditionalFeature::valueOf, lowerCaseFeatureName, lowerCaseFeatureValue);
+                boolean supported = PlatformImpl.isSupported(feature);
+
+                yield FunctionExpression.of(
+                    lowerCaseFeatureName, lowerCaseFeatureValue,
+                    () -> supported ? TriState.TRUE : TriState.FALSE,
+                    _ -> supported, true);
+            }
+
             default -> DEFAULT.apply(featureName, featureValue);
         };
     }
@@ -217,7 +230,7 @@ public final class MediaFeatures {
 
     private static <T extends Enum<T>> T enumValue(Function<String, T> func, String featureName, String featureValue) {
         try {
-            return func.apply(featureValue.toUpperCase(Locale.ROOT));
+            return func.apply(featureValue.toUpperCase(Locale.ROOT).replace('-', '_'));
         } catch (IllegalArgumentException e) {
             throw unknownValue(featureName, featureValue);
         }

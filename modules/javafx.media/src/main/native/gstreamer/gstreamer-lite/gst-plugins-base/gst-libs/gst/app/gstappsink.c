@@ -41,7 +41,7 @@
  * Appsink will internally use a queue to collect buffers from the streaming
  * thread. If the application is not pulling samples fast enough, this queue
  * will consume a lot of memory over time. The "max-buffers", "max-time" and "max-bytes"
- * properties can be used to limit the queue size. The "drop" property controls whether the
+ * properties can be used to limit the queue size. The "leaky-type" property controls whether the
  * streaming thread blocks or if older buffers are dropped when the maximum
  * queue size is reached. Note that blocking the streaming thread can negatively
  * affect real-time performance and should be avoided.
@@ -71,6 +71,7 @@
 
 #include <string.h>
 
+#include "gstappsrc.h"          /* for GstAppLeakyType */
 #include "gstappsink.h"
 #include "gstapputils.h"
 
@@ -109,6 +110,35 @@ callbacks_unref (Callbacks * callbacks)
   g_free (callbacks);
 }
 
+G_DEFINE_BOXED_TYPE (GstAppSinkSimpleCallbacks, gst_app_sink_simple_callbacks,
+    gst_app_sink_simple_callbacks_ref, gst_app_sink_simple_callbacks_unref);
+
+struct _GstAppSinkSimpleCallbacks
+{
+  int ref_count;
+  gboolean attached;
+
+  GstAppSinkEosCallback eos_cb;
+  gpointer eos_user_data;
+  GDestroyNotify eos_destroy_notify;
+
+  GstAppSinkNewPrerollCallback new_preroll_cb;
+  gpointer new_preroll_user_data;
+  GDestroyNotify new_preroll_destroy_notify;
+
+  GstAppSinkNewSampleCallback new_sample_cb;
+  gpointer new_sample_user_data;
+  GDestroyNotify new_sample_destroy_notify;
+
+  GstAppSinkNewEventCallback new_event_cb;
+  gpointer new_event_user_data;
+  GDestroyNotify new_event_destroy_notify;
+
+  GstAppSinkProposeAllocationCallback propose_allocation_cb;
+  gpointer propose_allocation_user_data;
+  GDestroyNotify propose_allocation_destroy_notify;
+};
+
 struct _GstAppSinkPrivate
 {
   GstCaps *caps;
@@ -116,10 +146,12 @@ struct _GstAppSinkPrivate
   guint64 max_buffers;
   GstClockTime max_time;
   guint64 max_bytes;
-  gboolean drop;
   gboolean wait_on_eos;
   GstAppSinkWaitStatus wait_status;
   GstQueueStatusInfo queue_status_info;
+  GstAppLeakyType leaky_type;
+  guint64 in, out, dropped;
+  gboolean silent;
 
   GCond cond;
   GMutex mutex;
@@ -136,6 +168,7 @@ struct _GstAppSinkPrivate
   gboolean buffer_lists_supported;
 
   Callbacks *callbacks;
+  GstAppSinkSimpleCallbacks *simple_callbacks;
 
   GstSample *sample;
 };
@@ -170,6 +203,11 @@ enum
 #define DEFAULT_PROP_DROP         FALSE
 #define DEFAULT_PROP_WAIT_ON_EOS  TRUE
 #define DEFAULT_PROP_BUFFER_LIST  FALSE
+#define DEFAULT_PROP_CURRENT_LEVEL_BYTES   0
+#define DEFAULT_PROP_CURRENT_LEVEL_BUFFERS 0
+#define DEFAULT_PROP_CURRENT_LEVEL_TIME    0
+#define DEFAULT_PROP_LEAKY_TYPE    GST_APP_LEAKY_TYPE_NONE
+#define DEFAULT_SILENT             TRUE
 
 enum
 {
@@ -183,6 +221,14 @@ enum
   PROP_BUFFER_LIST,
   PROP_MAX_TIME,
   PROP_MAX_BYTES,
+  PROP_CURRENT_LEVEL_BYTES,
+  PROP_CURRENT_LEVEL_BUFFERS,
+  PROP_CURRENT_LEVEL_TIME,
+  PROP_LEAKY_TYPE,
+  PROP_IN,
+  PROP_OUT,
+  PROP_DROPPED,
+  PROP_SILENT,
   PROP_LAST
 };
 
@@ -298,10 +344,17 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
           0, G_MAXUINT64, DEFAULT_PROP_MAX_BYTES,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstAppSink:drop:
+   *
+   * Drop old buffers when the buffer queue is filled.
+   *
+   * Deprecated: 1.28: Use "leaky-type" property instead.
+   */
   g_object_class_install_property (gobject_class, PROP_DROP,
       g_param_spec_boolean ("drop", "Drop",
           "Drop old buffers when the buffer queue is filled", DEFAULT_PROP_DROP,
-          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+          G_PARAM_DEPRECATED | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class, PROP_BUFFER_LIST,
       g_param_spec_boolean ("buffer-list", "Buffer List",
@@ -323,6 +376,109 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
           "Wait for all buffers to be processed after receiving an EOS",
           DEFAULT_PROP_WAIT_ON_EOS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:current-level-bytes:
+   *
+   * The number of currently queued bytes inside appsink.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_CURRENT_LEVEL_BYTES,
+      g_param_spec_uint64 ("current-level-bytes", "Current Level Bytes",
+          "The number of currently queued bytes",
+          0, G_MAXUINT64, DEFAULT_PROP_CURRENT_LEVEL_BYTES,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:current-level-buffers:
+   *
+   * The number of currently queued buffers inside appsink.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_CURRENT_LEVEL_BUFFERS,
+      g_param_spec_uint64 ("current-level-buffers", "Current Level Buffers",
+          "The number of currently queued buffers",
+          0, G_MAXUINT64, DEFAULT_PROP_CURRENT_LEVEL_BUFFERS,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:current-level-time:
+   *
+   * The amount of currently queued time inside appsink.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_CURRENT_LEVEL_TIME,
+      g_param_spec_uint64 ("current-level-time", "Current Level Time",
+          "The amount of currently queued time",
+          0, G_MAXUINT64, DEFAULT_PROP_CURRENT_LEVEL_TIME,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:leaky-type:
+   *
+   * When set to any other value than GST_APP_LEAKY_TYPE_NONE then the appsink
+   * will drop any buffers that are pushed into it once its internal queue is
+   * full. The selected type defines whether to drop the oldest or new
+   * buffers.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_LEAKY_TYPE,
+      g_param_spec_enum ("leaky-type", "Leaky Type",
+          "Whether to drop buffers once the internal queue is full",
+          GST_TYPE_APP_LEAKY_TYPE,
+          DEFAULT_PROP_LEAKY_TYPE,
+          G_PARAM_READWRITE | GST_PARAM_MUTABLE_PLAYING |
+          G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:in:
+   *
+   * Number of input buffers that were queued.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_IN,
+      g_param_spec_uint64 ("in", "In",
+          "Number of input buffers", 0, G_MAXUINT64, 0,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+  /**
+   * GstAppSink:out:
+   *
+   * Number of output buffers that were dequeued.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_OUT,
+      g_param_spec_uint64 ("out", "Out", "Number of output buffers", 0,
+          G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+  /**
+   * GstAppSink:dropped:
+   *
+   * Number of buffers that were dropped.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_DROPPED,
+      g_param_spec_uint64 ("dropped", "Dropped", "Number of dropped buffers", 0,
+          G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSink:silent:
+   *
+   * Don't emit notify for input, output and dropped buffers.
+   *
+   * Since: 1.28
+   */
+  g_object_class_install_property (gobject_class, PROP_SILENT,
+      g_param_spec_boolean ("silent", "silent",
+          "Don't emit notify for dropped buffers",
+          DEFAULT_SILENT,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
+          GST_PARAM_MUTABLE_PLAYING));
 
   /**
    * GstAppSink::eos:
@@ -463,7 +619,7 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
    * Note that when the application does not pull samples fast enough, the
    * queued samples could consume a lot of memory, especially when dealing with
    * raw video frames. It's possible to control the behaviour of the queue with
-   * the "drop" and "max-buffers" / "max-bytes" / "max-time" set of properties.
+   * the "leaky-type" and "max-buffers" / "max-bytes" / "max-time" set of properties.
    *
    * If an EOS event was received before any buffers, this function returns
    * %NULL. Use gst_app_sink_is_eos () to check for the EOS condition.
@@ -525,7 +681,7 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
    * Note that when the application does not pull samples fast enough, the
    * queued samples could consume a lot of memory, especially when dealing with
    * raw video frames. It's possible to control the behaviour of the queue with
-   * the "drop" and "max-buffers" / "max-bytes" / "max-time" set of properties.
+   * the "leaky-type" and "max-buffers" / "max-bytes" / "max-time" set of properties.
    *
    * If an EOS event was received before any buffers or the timeout expires,
    * this function returns %NULL. Use gst_app_sink_is_eos () to check
@@ -557,7 +713,7 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
    * Note that when the application does not pull samples fast enough, the
    * queued samples could consume a lot of memory, especially when dealing with
    * raw video frames. It's possible to control the behaviour of the queue with
-   * the "drop" and "max-buffers" / "max-bytes" / "max-time" set of properties.
+   * the "leaky-type" and "max-buffers" / "max-bytes" / "max-time" set of properties.
    *
    * This function will only pull serialized events, excluding
    * the EOS event for which this functions returns
@@ -622,10 +778,11 @@ gst_app_sink_init (GstAppSink * appsink)
   priv->max_buffers = DEFAULT_PROP_MAX_BUFFERS;
   priv->max_bytes = DEFAULT_PROP_MAX_BYTES;
   priv->max_time = DEFAULT_PROP_MAX_TIME;
-  priv->drop = DEFAULT_PROP_DROP;
   priv->wait_on_eos = DEFAULT_PROP_WAIT_ON_EOS;
   priv->buffer_lists_supported = DEFAULT_PROP_BUFFER_LIST;
   priv->wait_status = NOONE_WAITING;
+  priv->leaky_type = DEFAULT_PROP_LEAKY_TYPE;
+  priv->silent = DEFAULT_SILENT;
 }
 
 static void
@@ -635,6 +792,7 @@ gst_app_sink_dispose (GObject * obj)
   GstAppSinkPrivate *priv = appsink->priv;
   GstMiniObject *queue_obj;
   Callbacks *callbacks = NULL;
+  GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
 
   GST_OBJECT_LOCK (appsink);
   if (priv->caps) {
@@ -646,6 +804,8 @@ gst_app_sink_dispose (GObject * obj)
   g_mutex_lock (&priv->mutex);
   if (priv->callbacks)
     callbacks = g_steal_pointer (&priv->callbacks);
+  if (priv->simple_callbacks)
+    simple_callbacks = g_steal_pointer (&priv->simple_callbacks);
   while ((queue_obj = gst_vec_deque_pop_head (priv->queue)))
     gst_mini_object_unref (queue_obj);
   gst_buffer_replace (&priv->preroll_buffer, NULL);
@@ -658,6 +818,7 @@ gst_app_sink_dispose (GObject * obj)
   g_mutex_unlock (&priv->mutex);
 
   g_clear_pointer (&callbacks, callbacks_unref);
+  g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 
   G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
@@ -707,6 +868,12 @@ gst_app_sink_set_property (GObject * object, guint prop_id,
     case PROP_WAIT_ON_EOS:
       gst_app_sink_set_wait_on_eos (appsink, g_value_get_boolean (value));
       break;
+    case PROP_LEAKY_TYPE:
+      gst_app_sink_set_leaky_type (appsink, g_value_get_enum (value));
+      break;
+    case PROP_SILENT:
+      appsink->priv->silent = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -754,6 +921,38 @@ gst_app_sink_get_property (GObject * object, guint prop_id, GValue * value,
       break;
     case PROP_WAIT_ON_EOS:
       g_value_set_boolean (value, gst_app_sink_get_wait_on_eos (appsink));
+      break;
+    case PROP_CURRENT_LEVEL_BYTES:
+      g_value_set_uint64 (value,
+          gst_app_sink_get_current_level_bytes (appsink));
+      break;
+    case PROP_CURRENT_LEVEL_BUFFERS:
+      g_value_set_uint64 (value,
+          gst_app_sink_get_current_level_buffers (appsink));
+      break;
+    case PROP_CURRENT_LEVEL_TIME:
+      g_value_set_uint64 (value, gst_app_sink_get_current_level_time (appsink));
+      break;
+    case PROP_LEAKY_TYPE:
+      g_value_set_enum (value, gst_app_sink_get_leaky_type (appsink));
+      break;
+    case PROP_IN:
+      g_mutex_lock (&appsink->priv->mutex);
+      g_value_set_uint64 (value, appsink->priv->in);
+      g_mutex_unlock (&appsink->priv->mutex);
+      break;
+    case PROP_OUT:
+      g_mutex_lock (&appsink->priv->mutex);
+      g_value_set_uint64 (value, appsink->priv->out);
+      g_mutex_unlock (&appsink->priv->mutex);
+      break;
+    case PROP_DROPPED:
+      g_mutex_lock (&appsink->priv->mutex);
+      g_value_set_uint64 (value, appsink->priv->dropped);
+      g_mutex_unlock (&appsink->priv->mutex);
+      break;
+    case PROP_SILENT:
+      g_value_set_boolean (value, appsink->priv->silent);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -828,6 +1027,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
 
   gst_caps_replace (&priv->last_caps, NULL);
   g_cond_signal (&priv->cond);
+  priv->in = priv->out = priv->dropped = 0;
 }
 
 static gboolean
@@ -848,6 +1048,7 @@ gst_app_sink_start (GstBaseSink * psink)
   gst_sample_set_buffer_list (priv->sample, NULL);
   gst_sample_set_caps (priv->sample, NULL);
   gst_sample_set_segment (priv->sample, NULL);
+  priv->in = priv->out = priv->dropped = 0;
   g_mutex_unlock (&priv->mutex);
 
   return TRUE;
@@ -875,7 +1076,12 @@ gst_app_sink_stop (GstBaseSink * psink)
   gst_sample_set_buffer_list (priv->sample, NULL);
   gst_sample_set_caps (priv->sample, NULL);
   gst_sample_set_segment (priv->sample, NULL);
+  priv->in = priv->out = priv->dropped = 0;
   g_mutex_unlock (&priv->mutex);
+
+  if (!priv->silent) {
+    g_object_notify (G_OBJECT (appsink), "dropped");
+  }
 
   return TRUE;
 }
@@ -915,6 +1121,7 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
     case GST_EVENT_EOS:{
       gboolean emit = TRUE;
       Callbacks *callbacks = NULL;
+      GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
 
       g_mutex_lock (&priv->mutex);
       GST_DEBUG_OBJECT (appsink, "receiving EOS");
@@ -951,18 +1158,27 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
       if (priv->flushing)
         emit = FALSE;
 
-      if (emit && priv->callbacks)
-        callbacks = callbacks_ref (priv->callbacks);
+      if (emit) {
+        if (priv->callbacks)
+          callbacks = callbacks_ref (priv->callbacks);
+        else if (priv->simple_callbacks)
+          simple_callbacks =
+              gst_app_sink_simple_callbacks_ref (priv->simple_callbacks);
+      }
       g_mutex_unlock (&priv->mutex);
 
       if (emit) {
         /* emit EOS now */
         if (callbacks && callbacks->callbacks.eos)
           callbacks->callbacks.eos (appsink, callbacks->user_data);
+        else if (simple_callbacks && simple_callbacks->eos_cb)
+          simple_callbacks->eos_cb (appsink, simple_callbacks->eos_user_data);
         else
           g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_EOS], 0);
 
         g_clear_pointer (&callbacks, callbacks_unref);
+        g_clear_pointer (&simple_callbacks,
+            gst_app_sink_simple_callbacks_unref);
       }
 
       break;
@@ -977,6 +1193,10 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
       GST_DEBUG_OBJECT (appsink, "received FLUSH_STOP");
       gst_app_sink_flush_unlocked (appsink);
       g_mutex_unlock (&priv->mutex);
+
+      if (!priv->silent) {
+        g_object_notify (G_OBJECT (appsink), "dropped");
+      }
       break;
     default:
       break;
@@ -986,6 +1206,7 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
       && GST_EVENT_IS_SERIALIZED (event)) {
     gboolean emit;
     Callbacks *callbacks = NULL;
+    GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
     gboolean ret;
 
     g_mutex_lock (&priv->mutex);
@@ -993,6 +1214,9 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
     emit = priv->emit_signals;
     if (priv->callbacks)
       callbacks = callbacks_ref (priv->callbacks);
+    else if (priv->simple_callbacks)
+      simple_callbacks =
+          gst_app_sink_simple_callbacks_ref (priv->simple_callbacks);
 
     gst_vec_deque_push_tail (priv->queue, gst_event_ref (event));
     gst_queue_status_info_push_event (&priv->queue_status_info);
@@ -1004,6 +1228,10 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
 
     if (callbacks && callbacks->callbacks.new_event) {
       ret = callbacks->callbacks.new_event (appsink, callbacks->user_data);
+    } else if (simple_callbacks && simple_callbacks->new_event_cb) {
+      ret =
+          simple_callbacks->new_event_cb (appsink,
+          simple_callbacks->new_event_user_data);
     } else {
       ret = FALSE;
       if (emit)
@@ -1011,6 +1239,7 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
             gst_app_sink_signals[SIGNAL_NEW_SERIALIZED_EVENT], 0, &ret);
     }
     g_clear_pointer (&callbacks, callbacks_unref);
+    g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 
     if (ret) {
       gst_event_unref (event);
@@ -1029,6 +1258,7 @@ gst_app_sink_preroll (GstBaseSink * psink, GstBuffer * buffer)
   GstAppSinkPrivate *priv = appsink->priv;
   gboolean emit;
   Callbacks *callbacks = NULL;
+  GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
 
   g_mutex_lock (&priv->mutex);
   if (priv->flushing)
@@ -1043,10 +1273,17 @@ gst_app_sink_preroll (GstBaseSink * psink, GstBuffer * buffer)
   emit = priv->emit_signals;
   if (priv->callbacks)
     callbacks = callbacks_ref (priv->callbacks);
+  else if (priv->simple_callbacks)
+    simple_callbacks =
+        gst_app_sink_simple_callbacks_ref (priv->simple_callbacks);
   g_mutex_unlock (&priv->mutex);
 
   if (callbacks && callbacks->callbacks.new_preroll) {
     res = callbacks->callbacks.new_preroll (appsink, callbacks->user_data);
+  } else if (simple_callbacks && simple_callbacks->new_preroll_cb) {
+    res =
+        simple_callbacks->new_preroll_cb (appsink,
+        simple_callbacks->new_preroll_user_data);
   } else {
     res = GST_FLOW_OK;
     if (emit)
@@ -1055,6 +1292,7 @@ gst_app_sink_preroll (GstBaseSink * psink, GstBuffer * buffer)
   }
 
   g_clear_pointer (&callbacks, callbacks_unref);
+  g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 
   return res;
 
@@ -1137,6 +1375,7 @@ gst_app_sink_render_common (GstBaseSink * psink, GstMiniObject * data,
   GstAppSinkPrivate *priv = appsink->priv;
   gboolean emit;
   Callbacks *callbacks = NULL;
+  GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
 
 restart:
   g_mutex_lock (&priv->mutex);
@@ -1160,14 +1399,27 @@ restart:
 
   while (gst_queue_status_info_is_full (&priv->queue_status_info,
           priv->max_buffers, priv->max_bytes, priv->max_time)) {
-    if (priv->drop) {
+    if (priv->leaky_type == GST_APP_LEAKY_TYPE_DOWNSTREAM) {
       GstMiniObject *old;
 
       /* we need to drop the oldest buffer/list and try again */
       if ((old = dequeue_buffer (appsink))) {
         GST_DEBUG_OBJECT (appsink, "dropping old buffer/list %p", old);
+        if (GST_IS_BUFFER_LIST (old))
+          priv->dropped += gst_buffer_list_length (GST_BUFFER_LIST_CAST (old));
+        else
+          priv->dropped += 1;
+
         gst_mini_object_unref (old);
+
+        if (!priv->silent) {
+          g_mutex_unlock (&priv->mutex);
+          g_object_notify (G_OBJECT (appsink), "dropped");
+          g_mutex_lock (&priv->mutex);
+        }
       }
+    } else if (priv->leaky_type == GST_APP_LEAKY_TYPE_UPSTREAM) {
+      goto dropped;
     } else {
       GST_DEBUG_OBJECT (appsink,
           "waiting for free space: have %" G_GUINT64_FORMAT "  buffers (max %"
@@ -1197,6 +1449,11 @@ restart:
     }
   }
   /* we need to ref the buffer/list when pushing it in the queue */
+  if (is_list)
+    priv->in += gst_buffer_list_length (GST_BUFFER_LIST_CAST (data));
+  else
+    priv->in += 1;
+
   gst_vec_deque_push_tail (priv->queue, gst_mini_object_ref (data));
   gst_queue_status_info_push (&priv->queue_status_info, data,
       &priv->last_segment, GST_OBJECT_CAST (appsink));
@@ -1207,16 +1464,24 @@ restart:
   emit = priv->emit_signals;
   if (priv->callbacks)
     callbacks = callbacks_ref (priv->callbacks);
+  else if (priv->simple_callbacks)
+    simple_callbacks =
+        gst_app_sink_simple_callbacks_ref (priv->simple_callbacks);
   g_mutex_unlock (&priv->mutex);
 
   if (callbacks && callbacks->callbacks.new_sample) {
     ret = callbacks->callbacks.new_sample (appsink, callbacks->user_data);
+  } else if (simple_callbacks && simple_callbacks->new_sample_cb) {
+    ret =
+        simple_callbacks->new_sample_cb (appsink,
+        simple_callbacks->new_sample_user_data);
   } else {
     ret = GST_FLOW_OK;
     if (emit)
       g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_NEW_SAMPLE], 0, &ret);
   }
   g_clear_pointer (&callbacks, callbacks_unref);
+  g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 
   return ret;
 
@@ -1229,6 +1494,23 @@ flushing:
 stopping:
   {
     GST_DEBUG_OBJECT (appsink, "we are stopping");
+    return ret;
+  }
+dropped:
+  {
+    GST_DEBUG_OBJECT (appsink, "dropped new buffer/list %p, we are full", data);
+
+    if (is_list)
+      priv->dropped += gst_buffer_list_length (GST_BUFFER_LIST_CAST (data));
+    else
+      priv->dropped += 1;
+
+    g_mutex_unlock (&priv->mutex);
+
+    if (!priv->silent) {
+      g_object_notify (G_OBJECT (appsink), "dropped");
+    }
+
     return ret;
   }
 }
@@ -1634,6 +1916,54 @@ gst_app_sink_get_max_bytes (GstAppSink * appsink)
   GST_APP_SINK_GET_PROPERTY (max_bytes);
 }
 
+/**
+ * gst_app_sink_get_current_level_bytes:
+ * @appsink: a #GstAppSink
+ *
+ * Get the number of currently queued bytes inside @appsink.
+ *
+ * Returns: The number of currently queued bytes.
+ *
+ * Since: 1.28
+ */
+guint64
+gst_app_sink_get_current_level_bytes (GstAppSink * appsink)
+{
+  GST_APP_SINK_GET_PROPERTY (queue_status_info.queued_bytes);
+}
+
+/**
+ * gst_app_sink_get_current_level_buffers:
+ * @appsink: a #GstAppSink
+ *
+ * Get the number of currently queued buffers inside @appsink.
+ *
+ * Returns: The number of currently queued buffers.
+ *
+ * Since: 1.28
+ */
+guint64
+gst_app_sink_get_current_level_buffers (GstAppSink * appsink)
+{
+  GST_APP_SINK_GET_PROPERTY (queue_status_info.queued_buffers);
+}
+
+/**
+ * gst_app_sink_get_current_level_time:
+ * @appsink: a #GstAppSink
+ *
+ * Get the amount of currently queued time inside @appsink.
+ *
+ * Returns: The amount of currently queued time.
+ *
+ * Since: 1.28
+ */
+GstClockTime
+gst_app_sink_get_current_level_time (GstAppSink * appsink)
+{
+  GST_APP_SINK_GET_PROPERTY (queue_status_info.queued_time);
+}
+
 #undef GST_APP_SINK_GET_PROPERTY
 #undef GST_APP_SINK_SET_PROPERTY
 
@@ -1644,19 +1974,24 @@ gst_app_sink_get_max_bytes (GstAppSink * appsink)
  *
  * Instruct @appsink to drop old buffers when the maximum amount of queued
  * data is reached, that is, when any configured limit is hit (max-buffers, max-time or max-bytes).
+ *
+ * Deprecated: 1.28: Use gst_app_src_get_leaky_type() instead.
  */
 void
 gst_app_sink_set_drop (GstAppSink * appsink, gboolean drop)
 {
   GstAppSinkPrivate *priv;
+  GstAppLeakyType leaky_type;
 
   g_return_if_fail (GST_IS_APP_SINK (appsink));
 
   priv = appsink->priv;
 
+  leaky_type = drop ? GST_APP_LEAKY_TYPE_DOWNSTREAM : GST_APP_LEAKY_TYPE_NONE;
+
   g_mutex_lock (&priv->mutex);
-  if (priv->drop != drop) {
-    priv->drop = drop;
+  if (priv->leaky_type != leaky_type) {
+    priv->leaky_type = leaky_type;
     /* signal the change */
     g_cond_signal (&priv->cond);
   }
@@ -1672,6 +2007,8 @@ gst_app_sink_set_drop (GstAppSink * appsink, gboolean drop)
  *
  * Returns: %TRUE if @appsink is dropping old buffers when the queue is
  * filled.
+ *
+ * Deprecated: 1.28: Use gst_app_src_get_leaky_type() instead.
  */
 gboolean
 gst_app_sink_get_drop (GstAppSink * appsink)
@@ -1684,10 +2021,68 @@ gst_app_sink_get_drop (GstAppSink * appsink)
   priv = appsink->priv;
 
   g_mutex_lock (&priv->mutex);
-  result = priv->drop;
+  result = priv->leaky_type != GST_APP_LEAKY_TYPE_NONE;
   g_mutex_unlock (&priv->mutex);
 
   return result;
+}
+
+/**
+ * gst_app_sink_set_leaky_type:
+ * @appsink: a #GstAppSink
+ * @leaky: the #GstAppLeakyType
+ *
+ * When set to any other value than GST_APP_LEAKY_TYPE_NONE then the appsink
+ * will drop any buffers that are pushed into it once its internal queue is
+ * full. The selected type defines whether to drop the oldest or new
+ * buffers.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_set_leaky_type (GstAppSink * appsink, GstAppLeakyType leaky)
+{
+  GstAppSinkPrivate *priv;
+
+  g_return_if_fail (GST_IS_APP_SINK (appsink));
+
+  priv = appsink->priv;
+
+  g_mutex_lock (&priv->mutex);
+  if (priv->leaky_type != leaky) {
+    priv->leaky_type = leaky;
+    /* signal the change */
+    g_cond_signal (&priv->cond);
+  }
+  g_mutex_unlock (&priv->mutex);
+}
+
+/**
+ * gst_app_sink_get_leaky_type:
+ * @appsink: a #GstAppSink
+ *
+ * Returns the currently set #GstAppLeakyType. See gst_app_sink_set_leaky_type()
+ * for more details.
+ *
+ * Returns: The currently set #GstAppLeakyType.
+ *
+ * Since: 1.28
+ */
+GstAppLeakyType
+gst_app_sink_get_leaky_type (GstAppSink * appsink)
+{
+  GstAppSinkPrivate *priv;
+  GstAppLeakyType leaky_type;
+
+  g_return_val_if_fail (GST_IS_APP_SINK (appsink), GST_APP_LEAKY_TYPE_NONE);
+
+  priv = appsink->priv;
+
+  g_mutex_lock (&priv->mutex);
+  leaky_type = appsink->priv->leaky_type;
+  g_mutex_unlock (&priv->mutex);
+
+  return leaky_type;
 }
 
 /**
@@ -2137,6 +2532,7 @@ gst_app_sink_try_pull_object (GstAppSink * appsink, GstClockTime timeout)
   /* convert buffer and buffer list to sample */
   if (GST_IS_BUFFER (obj)) {
     GST_DEBUG_OBJECT (appsink, "we have a buffer %p", obj);
+    priv->out += 1;
     priv->sample = gst_sample_make_writable (priv->sample);
     gst_sample_set_buffer_list (priv->sample, NULL);
     gst_sample_set_buffer (priv->sample, GST_BUFFER_CAST (obj));
@@ -2144,6 +2540,7 @@ gst_app_sink_try_pull_object (GstAppSink * appsink, GstClockTime timeout)
     gst_mini_object_unref (obj);
   } else if (GST_IS_BUFFER_LIST (obj)) {
     GST_DEBUG_OBJECT (appsink, "we have a list %p", obj);
+    priv->out += gst_buffer_list_length (GST_BUFFER_LIST_CAST (obj));
     priv->sample = gst_sample_make_writable (priv->sample);
     gst_sample_set_buffer (priv->sample, NULL);
     gst_sample_set_buffer_list (priv->sample, GST_BUFFER_LIST_CAST (obj));
@@ -2185,7 +2582,7 @@ not_started:
 /**
  * gst_app_sink_set_callbacks: (skip)
  * @appsink: a #GstAppSink
- * @callbacks: the callbacks
+ * @callbacks: (nullable): the callbacks
  * @user_data: a user_data argument for the callbacks
  * @notify: a destroy notify function
  *
@@ -2198,16 +2595,22 @@ not_started:
  *
  * Before 1.16.3 it was not possible to change the callbacks in a thread-safe
  * way.
+ *
+ * Since 1.28.3 it is allowed to set the @callbacks to %NULL to unset them.
+ *
+ * Note that gst_app_sink_set_callbacks() and
+ * gst_app_sink_set_simple_callbacks() are mutually exclusive and setting one
+ * will unset the other.
  */
 void
 gst_app_sink_set_callbacks (GstAppSink * appsink,
     GstAppSinkCallbacks * callbacks, gpointer user_data, GDestroyNotify notify)
 {
   Callbacks *old_callbacks, *new_callbacks = NULL;
+  GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
   GstAppSinkPrivate *priv;
 
   g_return_if_fail (GST_IS_APP_SINK (appsink));
-  g_return_if_fail (callbacks != NULL);
 
   priv = appsink->priv;
 
@@ -2221,10 +2624,12 @@ gst_app_sink_set_callbacks (GstAppSink * appsink,
 
   g_mutex_lock (&priv->mutex);
   old_callbacks = g_steal_pointer (&priv->callbacks);
+  simple_callbacks = g_steal_pointer (&priv->simple_callbacks);
   priv->callbacks = g_steal_pointer (&new_callbacks);
   g_mutex_unlock (&priv->mutex);
 
   g_clear_pointer (&old_callbacks, callbacks_unref);
+  g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 }
 
 /*** GSTURIHANDLER INTERFACE *************************************************/
@@ -2276,24 +2681,300 @@ gst_app_sink_propose_allocation (GstBaseSink * bsink, GstQuery * query)
   GstAppSink *appsink = GST_APP_SINK_CAST (bsink);
   GstAppSinkPrivate *priv = appsink->priv;
   Callbacks *callbacks = NULL;
+  GstAppSinkSimpleCallbacks *simple_callbacks = NULL;
   gboolean emit;
 
   g_mutex_lock (&priv->mutex);
   emit = priv->emit_signals;
   if (priv->callbacks)
     callbacks = callbacks_ref (priv->callbacks);
+  else if (priv->simple_callbacks)
+    simple_callbacks =
+        gst_app_sink_simple_callbacks_ref (priv->simple_callbacks);
   g_mutex_unlock (&priv->mutex);
 
   if (callbacks && callbacks->callbacks.propose_allocation) {
     ret =
         callbacks->callbacks.propose_allocation (appsink, query,
         callbacks->user_data);
+  } else if (simple_callbacks && simple_callbacks->propose_allocation_cb) {
+    ret =
+        simple_callbacks->propose_allocation_cb (appsink, query,
+        simple_callbacks->propose_allocation_user_data);
   } else if (emit) {
     g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_PROPOSE_ALLOCATION], 0,
         query, &ret);
   }
 
   g_clear_pointer (&callbacks, callbacks_unref);
+  g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
 
   return ret;
+}
+
+/**
+ * gst_app_sink_set_simple_callbacks:
+ * @appsink: a #GstAppSink
+ * @cb: (transfer full) (nullable): the callbacks
+ *
+ * Set callbacks which will be executed for each new preroll, new sample and eos.
+ * This is an alternative to using the signals, it has lower overhead and is thus
+ * less expensive, but also less flexible.
+ *
+ * If callbacks are installed, no signals will be emitted for performance
+ * reasons.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Note that gst_app_sink_set_callbacks() and
+ * gst_app_sink_set_simple_callbacks() are mutually exclusive and setting one
+ * will unset the other.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_set_simple_callbacks (GstAppSink * appsink,
+    GstAppSinkSimpleCallbacks * cb)
+{
+  Callbacks *callbacks = NULL;
+  GstAppSinkSimpleCallbacks *old_callbacks = NULL;
+  GstAppSinkPrivate *priv;
+
+  g_return_if_fail (GST_IS_APP_SINK (appsink));
+
+  if (cb)
+    g_atomic_int_set (&cb->attached, TRUE);
+
+  priv = appsink->priv;
+
+  g_mutex_lock (&priv->mutex);
+  old_callbacks = g_steal_pointer (&priv->simple_callbacks);
+  callbacks = g_steal_pointer (&priv->callbacks);
+  priv->simple_callbacks = g_steal_pointer (&cb);
+  g_mutex_unlock (&priv->mutex);
+
+  g_clear_pointer (&callbacks, callbacks_unref);
+  g_clear_pointer (&old_callbacks, gst_app_sink_simple_callbacks_unref);
+}
+
+/**
+ * gst_app_sink_simple_callbacks_new:
+ *
+ * Creates a new instance of callbacks.
+ *
+ * Returns: (transfer full): New empty GstAppSinkSimpleCallbacks
+ *
+ * Since: 1.28
+ */
+GstAppSinkSimpleCallbacks *
+gst_app_sink_simple_callbacks_new (void)
+{
+  GstAppSinkSimpleCallbacks *cb = g_new0 (GstAppSinkSimpleCallbacks, 1);
+
+  cb->ref_count = 1;
+  cb->attached = FALSE;
+
+  return cb;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_ref:
+ * @cb: the callbacks
+ *
+ * Increases the reference count of @cb.
+ *
+ * Returns: (transfer full): the callbacks
+ *
+ * Since: 1.28
+ */
+GstAppSinkSimpleCallbacks *
+gst_app_sink_simple_callbacks_ref (GstAppSinkSimpleCallbacks * cb)
+{
+  g_return_val_if_fail (cb != NULL, NULL);
+
+  g_atomic_int_inc (&cb->ref_count);
+
+  return cb;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_unref:
+ * @cb: the callbacks
+ *
+ * Decreases the reference count of @cb and frees it after the
+ * last reference is dropped.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_unref (GstAppSinkSimpleCallbacks * cb)
+{
+  g_return_if_fail (cb != NULL);
+
+  if (!g_atomic_int_dec_and_test (&cb->ref_count))
+    return;
+
+  if (cb->eos_destroy_notify)
+    cb->eos_destroy_notify (cb->eos_user_data);
+  if (cb->new_preroll_destroy_notify)
+    cb->new_preroll_destroy_notify (cb->new_preroll_user_data);
+  if (cb->new_sample_destroy_notify)
+    cb->new_sample_destroy_notify (cb->new_sample_user_data);
+  if (cb->new_event_destroy_notify)
+    cb->new_event_destroy_notify (cb->new_event_user_data);
+  if (cb->propose_allocation_destroy_notify)
+    cb->propose_allocation_destroy_notify (cb->propose_allocation_user_data);
+
+  g_free (cb);
+}
+
+/**
+ * gst_app_sink_simple_callbacks_set_eos:
+ * @cb: the callbacks
+ * @eos_cb: (scope notified) (closure user_data): EOS callback
+ * @user_data: the user data
+ * @destroy_notify: #GDestroyNotify to free the user data
+ *
+ * Sets the EOS callback on @cb.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_set_eos (GstAppSinkSimpleCallbacks * cb,
+    GstAppSinkEosCallback eos_cb, gpointer user_data,
+    GDestroyNotify destroy_notify)
+{
+  g_return_if_fail (cb != NULL);
+  g_return_if_fail (!g_atomic_int_get (&cb->attached));
+
+  if (cb->eos_destroy_notify)
+    cb->eos_destroy_notify (cb->eos_user_data);
+
+  cb->eos_cb = eos_cb;
+  cb->eos_user_data = user_data;
+  cb->eos_destroy_notify = destroy_notify;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_set_new_preroll:
+ * @cb: the callbacks
+ * @new_preroll_cb: (scope notified) (closure user_data): new preroll callback
+ * @user_data: the user data
+ * @destroy_notify: #GDestroyNotify to free the user data
+ *
+ * Sets the new preroll callback on @cb.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_set_new_preroll (GstAppSinkSimpleCallbacks * cb,
+    GstAppSinkNewPrerollCallback new_preroll_cb, gpointer user_data,
+    GDestroyNotify destroy_notify)
+{
+  g_return_if_fail (cb != NULL);
+  g_return_if_fail (!g_atomic_int_get (&cb->attached));
+
+  if (cb->new_preroll_destroy_notify)
+    cb->new_preroll_destroy_notify (cb->new_preroll_user_data);
+
+  cb->new_preroll_cb = new_preroll_cb;
+  cb->new_preroll_user_data = user_data;
+  cb->new_preroll_destroy_notify = destroy_notify;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_set_new_sample:
+ * @cb: the callbacks
+ * @new_sample_cb: (scope notified) (closure user_data): new sample callback
+ * @user_data: the user data
+ * @destroy_notify: #GDestroyNotify to free the user data
+ *
+ * Sets the new sample callback on @cb.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_set_new_sample (GstAppSinkSimpleCallbacks * cb,
+    GstAppSinkNewSampleCallback new_sample_cb, gpointer user_data,
+    GDestroyNotify destroy_notify)
+{
+  g_return_if_fail (cb != NULL);
+  g_return_if_fail (!g_atomic_int_get (&cb->attached));
+
+  if (cb->new_sample_destroy_notify)
+    cb->new_sample_destroy_notify (cb->new_sample_user_data);
+
+  cb->new_sample_cb = new_sample_cb;
+  cb->new_sample_user_data = user_data;
+  cb->new_sample_destroy_notify = destroy_notify;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_set_new_event:
+ * @cb: the callbacks
+ * @new_event_cb: (scope notified) (closure user_data): new event callback
+ * @user_data: the user data
+ * @destroy_notify: #GDestroyNotify to free the user data
+ *
+ * Sets the new event callback on @cb.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_set_new_event (GstAppSinkSimpleCallbacks * cb,
+    GstAppSinkNewEventCallback new_event_cb, gpointer user_data,
+    GDestroyNotify destroy_notify)
+{
+  g_return_if_fail (cb != NULL);
+  g_return_if_fail (!g_atomic_int_get (&cb->attached));
+
+  if (cb->new_event_destroy_notify)
+    cb->new_event_destroy_notify (cb->new_event_user_data);
+
+  cb->new_event_cb = new_event_cb;
+  cb->new_event_user_data = user_data;
+  cb->new_event_destroy_notify = destroy_notify;
+}
+
+/**
+ * gst_app_sink_simple_callbacks_set_propose_allocation:
+ * @cb: the callbacks
+ * @propose_allocation_cb: (scope notified) (closure user_data): propose allocation callback
+ * @user_data: the user data
+ * @destroy_notify: #GDestroyNotify to free the user data
+ *
+ * Sets the new event callback on @cb.
+ *
+ * Once @cb is set on an #GstAppSink it is not possible anymore to change any of
+ * the callbacks inside it.
+ *
+ * Since: 1.28
+ */
+void
+gst_app_sink_simple_callbacks_set_propose_allocation (GstAppSinkSimpleCallbacks
+    * cb, GstAppSinkProposeAllocationCallback propose_allocation_cb,
+    gpointer user_data, GDestroyNotify destroy_notify)
+{
+  g_return_if_fail (cb != NULL);
+  g_return_if_fail (!g_atomic_int_get (&cb->attached));
+
+  if (cb->propose_allocation_destroy_notify)
+    cb->propose_allocation_destroy_notify (cb->propose_allocation_user_data);
+
+  cb->propose_allocation_cb = propose_allocation_cb;
+  cb->propose_allocation_user_data = user_data;
+  cb->propose_allocation_destroy_notify = destroy_notify;
 }
