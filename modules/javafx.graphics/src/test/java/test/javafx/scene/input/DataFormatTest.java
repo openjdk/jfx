@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,17 @@
 
 package test.javafx.scene.input;
 
-import java.util.stream.Stream;
-import javafx.scene.input.DataFormat;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.stream.Stream;
+import javafx.scene.input.DataFormat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class DataFormatTest {
 
@@ -69,9 +68,9 @@ public class DataFormatTest {
     @ParameterizedTest
     @MethodSource("getParams")
     public void dataFormatsShouldBeFound(DataFormat format, String mime1, String mime2) {
-        assertSame(format, DataFormat.lookupMimeType(mime1));
+        assertEquals(format, DataFormat.lookupMimeType(mime1));
         if (mime2 != null) {
-            assertSame(format, DataFormat.lookupMimeType(mime2));
+            assertEquals(format, DataFormat.lookupMimeType(mime2));
         }
     }
 
@@ -84,13 +83,26 @@ public class DataFormatTest {
 
     @ParameterizedTest
     @MethodSource("getParams")
-    public void shouldNotBePossibleToReuseMimeTypes(DataFormat format, String mime1, String mime2) {
-        assertThrows(IllegalArgumentException.class, () -> {
-            DataFormat customEqual = new DataFormat(format.getIdentifiers().toArray(
-                    new String[format.getIdentifiers().size()]));
-        });
+    public void shouldBePossibleToReuseEquivalentMimeTypes(DataFormat f, String mime1, String mime2) {
+        DataFormat customEqual = new DataFormat(f.getIdentifiers().toArray(new String[f.getIdentifiers().size()]));
+        assertEquals(f, customEqual);
     }
 
+    @Test
+    public void shouldNotBePossibleToRegisterMismatchedFormats() {
+        // using DataFormat.FILES
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("application/x-java-file-list");
+        });
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("java.file-list");
+        });
+        // using custom
+        DataFormat f1 = new DataFormat("test/foo", "test/bar");
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DataFormat("test/foo");
+        });
+    }
 
     @ParameterizedTest
     @MethodSource("getParams")
