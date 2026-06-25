@@ -684,7 +684,7 @@ check_release_datetime (const gchar * date_time)
   return (*date_time == '\0');
 }
 
-static GMutex gst_plugin_loading_mutex;
+static GRecMutex gst_plugin_loading_mutex;
 
 #define CHECK_PLUGIN_DESC_FIELD(desc,field,fn)                               \
   if (G_UNLIKELY ((desc)->field == NULL || *(desc)->field == '\0')) {        \
@@ -836,13 +836,13 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
   if (registry == NULL)
     registry = gst_registry_get ();
 
-  g_mutex_lock (&gst_plugin_loading_mutex);
+  g_rec_mutex_lock (&gst_plugin_loading_mutex);
 
   plugin = gst_registry_lookup (registry, filename);
   if (plugin) {
     if (plugin->module) {
       /* already loaded */
-      g_mutex_unlock (&gst_plugin_loading_mutex);
+      g_rec_mutex_unlock (&gst_plugin_loading_mutex);
       return plugin;
     } else if (g_strcmp0 (plugin->filename, filename) == 0) {
       /* load plugin and update fields */
@@ -1013,14 +1013,14 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
     gst_registry_add_plugin (registry, plugin);
   }
 
-  g_mutex_unlock (&gst_plugin_loading_mutex);
+  g_rec_mutex_unlock (&gst_plugin_loading_mutex);
   return plugin;
 
 return_error:
   {
     if (plugin)
       gst_object_unref (plugin);
-    g_mutex_unlock (&gst_plugin_loading_mutex);
+    g_rec_mutex_unlock (&gst_plugin_loading_mutex);
     return NULL;
   }
 }
@@ -1210,9 +1210,9 @@ gst_plugin_is_loaded (GstPlugin * plugin)
   if (plugin->filename == NULL)
     return TRUE;                /* Static plugin */
 
-  g_mutex_lock (&gst_plugin_loading_mutex);
+  g_rec_mutex_lock (&gst_plugin_loading_mutex);
   ret = (plugin->module != NULL);
-  g_mutex_unlock (&gst_plugin_loading_mutex);
+  g_rec_mutex_unlock (&gst_plugin_loading_mutex);
 
   return ret;
 }

@@ -25,10 +25,6 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifdef HAVE_ORC
-#include <orc/orc.h>
-#endif
-
 #include "audio-resampler.h"
 #include "audio-resampler-private.h"
 #include "audio-resampler-macros.h"
@@ -822,58 +818,29 @@ static ResampleFunc resample_funcs[] = {
 #define resample_gfloat_cubic_1 resample_funcs[14]
 #define resample_gdouble_cubic_1 resample_funcs[15]
 
-#if defined HAVE_ORC && !defined DISABLE_ORC
-# if defined (HAVE_ARM_NEON)
+#if defined (HAVE_ARM_NEON)
 #  define CHECK_NEON
 #  include "audio-resampler-neon.h"
-# endif
-# if defined (__i386__) || defined (__x86_64__)
+#endif
+#if defined (HAVE_SSE) || defined(HAVE_SSE2) || defined(HAVE_SSE41)
 #  define CHECK_X86
 #  include "audio-resampler-x86.h"
-# endif
 #endif
 
 static void
 audio_resampler_init (void)
 {
   static gsize init_gonce = 0;
-
   if (g_once_init_enter (&init_gonce)) {
 
     GST_DEBUG_CATEGORY_INIT (audio_resampler_debug, "audio-resampler", 0,
         "audio-resampler object");
 
-#if defined HAVE_ORC && !defined DISABLE_ORC
-    orc_init ();
-    {
-      OrcTarget *target = orc_target_get_default ();
-      gint i;
-
-      if (target) {
-        const gchar *name;
-        unsigned int flags = orc_target_get_default_flags (target);
-
-        for (i = -1; i < 32; ++i) {
-          if (i == -1) {
-            name = orc_target_get_name (target);
-            GST_DEBUG ("target %s, default flags %08x", name, flags);
-          } else if (flags & (1U << i)) {
-            name = orc_target_get_flag_name (target, i);
-            GST_DEBUG ("target flag %s", name);
-          } else
-            name = NULL;
-
-          if (name) {
 #ifdef CHECK_X86
-            audio_resampler_check_x86 (name);
+    audio_resampler_check_x86 ();
 #endif
 #ifdef CHECK_NEON
-            audio_resampler_check_neon (name);
-#endif
-          }
-        }
-      }
-    }
+    audio_resampler_check_neon ();
 #endif
     g_once_init_leave (&init_gonce, 1);
   }

@@ -3109,6 +3109,8 @@ project(":swt") {
                     into libsDir
                     from f.getParentFile()
                     include "**/*swt*.jar"
+                    exclude "**/*swt*-sources.jar"
+                    exclude "**/*swt*-javadoc.jar"
                     includeEmptyDirs = false
                     rename ".*swt.*jar", "swt-debug\\.jar"
                 }

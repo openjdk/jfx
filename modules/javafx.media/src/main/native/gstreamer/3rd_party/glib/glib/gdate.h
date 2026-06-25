@@ -182,9 +182,11 @@ void         g_date_clear                 (GDate       *date,
  * permits many formats but tries to catch common typos. If your data
  * needs to be strictly validated, it is not an appropriate function.
  */
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 void         g_date_set_parse             (GDate       *date,
                                            const gchar *str);
+#endif // GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 void         g_date_set_time_t            (GDate       *date,
              time_t       timet);

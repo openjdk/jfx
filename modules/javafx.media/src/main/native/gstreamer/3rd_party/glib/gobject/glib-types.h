@@ -255,6 +255,7 @@ typedef gsize GType;
  */
 #define G_TYPE_MARKUP_PARSE_CONTEXT (g_markup_parse_context_get_type ())
 
+#ifndef GSTREAMER_LITE
 /**
  * G_TYPE_KEY_FILE:
  *
@@ -263,6 +264,7 @@ typedef gsize GType;
  * Since: 2.32
  */
 #define G_TYPE_KEY_FILE (g_key_file_get_type ())
+#endif // GSTREAMER_LITE
 
 /**
  * G_TYPE_MAPPED_FILE:

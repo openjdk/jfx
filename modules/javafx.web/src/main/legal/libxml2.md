@@ -1,4 +1,4 @@
-## xmlsoft.org: libxml2 v2.15.2
+## xmlsoft.org: libxml2 v2.15.3
 
 ### libxml2 License
 ```
@@ -86,23 +86,9 @@ Nick Wellnhofer
 
 Thanks to the following contributors:
 
-- gabriel desharnais
-- Benjamin Gilbert
-- Daniel Garcia Moreno
-- Herman Semenoff
-- Iván Chavero
-- Jayakrishna Menon
-- Michael Heilmann
-- Michal Privoznik
-- Mike Dalessio
-- Nathan
-- Niels Dossche
-- Peter Fordham
-- Petr Simecek
-- Sandino Araico Sanchez
-- Stéphane Cerveau
-- Steve Lhomme
-- Trevor Gamblin
-- ylwango613
-- Yun
+- Ariel Schon
+- Hieu Le Minh
+- James Lan
+- LCaliman
+- Yenya
 ```

@@ -271,6 +271,7 @@ remove_junk (const gchar *str,
     return NULL;
 }
 
+#ifndef GSTREAMER_LITE
 static inline gboolean
 contains_uppercase_letters (const gchar *str,
                             gint         len)
@@ -284,6 +285,7 @@ contains_uppercase_letters (const gchar *str,
     }
   return FALSE;
 }
+#endif // GSTREAMER_LITE
 
 static inline gboolean
 contains_non_ascii (const gchar *str,
@@ -299,6 +301,7 @@ contains_non_ascii (const gchar *str,
   return FALSE;
 }
 
+#ifndef GSTREAMER_LITE
 /* RFC 3454, Appendix C. ish. */
 static inline gboolean
 idna_is_prohibited (gunichar ch)
@@ -909,3 +912,4 @@ g_hostname_is_ip_address (const gchar *hostname)
   /* If there's nothing left to parse, then it's ok. */
   return !*p;
 }
+#endif // GSTREAMER_LITE

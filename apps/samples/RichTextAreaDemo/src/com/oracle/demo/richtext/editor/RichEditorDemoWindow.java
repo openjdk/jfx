@@ -105,6 +105,7 @@ public class RichEditorDemoWindow extends Stage {
             actions.fileNameProperty()
         ));
 
+        actions.newDocument();
         editor.setContextMenu(actions.createContextMenu());
         editor.requestFocus();
         editor.select(TextPos.ZERO);
