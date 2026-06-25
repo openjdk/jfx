@@ -133,6 +133,9 @@ public class DataFormat {
             boolean isNew = true;
             synchronized (registry) {
                 for (String id : ids) {
+                    if (id == null) {
+                        throw new IllegalArgumentException("DataFormat id must not be null.");
+                    }
                     DataFormat f = registry.get(id);
                     if (f != null) {
                         if (!this.identifier.equals(f.identifier)) {

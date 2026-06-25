@@ -84,8 +84,11 @@ public class DataFormatTest {
     @ParameterizedTest
     @MethodSource("getParams")
     public void shouldBePossibleToReuseEquivalentMimeTypes(DataFormat f, String mime1, String mime2) {
-        DataFormat customEqual = new DataFormat(f.getIdentifiers().toArray(new String[f.getIdentifiers().size()]));
-        assertEquals(f, customEqual);
+        DataFormat f1 = new DataFormat(f.getIdentifiers().toArray(String[]::new));
+        assertEquals(f, f1);
+        DataFormat f2 = new DataFormat(f.getIdentifiers().toArray(String[]::new));
+        assertEquals(f, f2);
+        assertEquals(f1, f2);
     }
 
     @Test
@@ -112,5 +115,19 @@ public class DataFormatTest {
         assertEquals(format.hashCode(), format.hashCode());
         assertFalse(uniqueFormat.equals(format));
         assertFalse(uniqueFormat.hashCode() == format.hashCode());
+    }
+
+    @Test
+    public void noMoreNullMimeTypes() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            String mime = null;
+            new DataFormat(mime);
+        });
+    }
+
+    @Test
+    public void nullArrayIsAllowedForCompatibilityReasons() {
+        String[] mimes = null;
+        new DataFormat(mimes);
     }
 }
