@@ -119,7 +119,7 @@ public class DataFormatTest {
 
     @Test
     public void noMoreNullMimeTypes() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(NullPointerException.class, () -> {
             String mime = null;
             new DataFormat(mime);
         });

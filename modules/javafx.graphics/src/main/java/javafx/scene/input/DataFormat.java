@@ -25,10 +25,7 @@
 
 package javafx.scene.input;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import javafx.beans.NamedArg;
@@ -122,19 +119,20 @@ public class DataFormat {
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given ids is already
      *         assigned to another DataFormat with a different set of ids
+     * @throws NullPointerException if any of the ids is null
      */
     public DataFormat(@NamedArg("ids") String... ids) {
         if (ids == null) {
-            this.identifier = Collections.<String>emptySet();
+            this.identifier = Set.of();
             // don't care about registry
         } else {
-            this.identifier = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ids)));
+            this.identifier = Set.of(ids);
             // check for mismatched formats
             boolean isNew = true;
             synchronized (registry) {
                 for (String id : ids) {
                     if (id == null) {
-                        throw new IllegalArgumentException("DataFormat id must not be null.");
+                        throw new NullPointerException("DataFormat id must not be null.");
                     }
                     DataFormat f = registry.get(id);
                     if (f != null) {
@@ -211,10 +209,8 @@ public class DataFormat {
     public boolean equals(Object obj) {
         if (obj == this) {
             return true;
-        } else if (obj instanceof DataFormat f) {
-            return identifier.equals(f.identifier);
         }
-        return false;
+        return (obj instanceof DataFormat f) && identifier.equals(f.identifier);
     }
 
     /**
