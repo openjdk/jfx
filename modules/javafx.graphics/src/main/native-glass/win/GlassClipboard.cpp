@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 #include "common.h"
 
-#define  _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
-#include <hash_map>
-#include <hash_set>
+#include <unordered_map>
+#include <unordered_set>
+#include <string>
 
 // The following is derived from _HASH_SEED, which is an internal constant from
 // include/xhash; since this is an internal constant we define our own rather
@@ -138,16 +138,35 @@ Mime2oscfstrPair pairs[] = {
     {MS_FILE_CONTENT, CFSTR_FILECONTENTS},
 };
 
-inline size_t hash_value(const _bstr_t &_Str) {
-    return stdext::hash_value((const wchar_t *)_Str);
-}
+template<>
+struct std::hash<_bstr_t>
+{
+    std::size_t operator()(const _bstr_t& k) const noexcept
+    {
+        // TODO It would be faster to use wstring_view here, but it is in C++17 and above
+        return std::hash<std::wstring>()(std::wstring(static_cast<const wchar_t*>(k)));
+    }
+};
 
+template<>
+struct std::hash<FORMATETC>
+{
+    std::size_t operator()(const FORMATETC& k) const noexcept
+    {
+        return
+            std::hash<CLIPFORMAT>()(k.cfFormat) ^
+            std::hash<DVTARGETDEVICE*>()(k.ptd) ^
+            std::hash<DWORD>()(k.dwAspect) ^
+            std::hash<LONG>()(k.lindex) ^
+            std::hash<DWORD>()(k.tymed);
+    }
+};
 
-typedef stdext::hash_map<_bstr_t, CLIPFORMAT> MIME2OSCF;
-typedef stdext::hash_map<CLIPFORMAT, _bstr_t> OSCF2MIME;
-typedef stdext::hash_map<FORMATETC, _bstr_t> FMC2MIME;
-typedef stdext::hash_map<FORMATETC, STGMEDIUM> FMC2DATA;
-typedef stdext::hash_set<_bstr_t> HASH_STR_SET;
+typedef std::unordered_map<_bstr_t, CLIPFORMAT> MIME2OSCF;
+typedef std::unordered_map<CLIPFORMAT, _bstr_t> OSCF2MIME;
+typedef std::unordered_map<FORMATETC, _bstr_t> FMC2MIME;
+typedef std::unordered_map<FORMATETC, STGMEDIUM> FMC2DATA;
+typedef std::unordered_set<_bstr_t> HASH_STR_SET;
 
 MIME2OSCF mime2oscf;
 OSCF2MIME oscf2mime;
