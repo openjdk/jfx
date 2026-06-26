@@ -31,6 +31,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.stage.PlatformStageBackdropStyle;
 
 import javafx.geometry.Dimension2D;
@@ -235,8 +236,11 @@ final class MacWindow extends Window {
     final static public class BackdropID {
         @Native public static final int WINDOW     = 42;
         @Native public static final int SIDEBAR    = 43;
-        @Native public static final int MENU       = 44;
-        @Native public static final int CLEARGLASS = 100;
+        @Native public static final int HUD        = 44;
+        @Native public static final int MENU       = 45;
+        @Native public static final int POPOVER    = 46;
+        @Native public static final int TOOLTIP    = 47;
+        @Native public static final int CLEARGLASS = 48;
     }
 
     private static Map<String, Integer> backdropStyles = null;
@@ -245,9 +249,10 @@ final class MacWindow extends Window {
         if (backdropStyles == null) {
             backdropStyles = new HashMap<>();
 
-            backdropStyles.put("macOS.Window", BackdropID.WINDOW);
-            backdropStyles.put("macOS.Sidebar", BackdropID.SIDEBAR);
+            backdropStyles.put("macOS.HUD", BackdropID.HUD);
             backdropStyles.put("macOS.Menu", BackdropID.MENU);
+            backdropStyles.put("macOS.Popover", BackdropID.POPOVER);
+            backdropStyles.put("macOS.Tooltip", BackdropID.TOOLTIP);
 
             // Support for NSGlassEffectView must wait for the macOS 26 SDK
             // try {
@@ -298,19 +303,18 @@ final class MacWindow extends Window {
 
     final static public class BackdropOptionID {
         @Native public static final int CORNER_RADIUS = 80;
-        @Native public static final int TINT_COLOR    = 93;
+        @Native public static final int TINT_COLOR    = 81;
     }
 
     private native void _setBackdropOption(long ptr, int optionID, double r, double g, double b, double a);
 
     @Override
     public void setBackdropOption(String name, Object option) {
-        if (name == "TintColor" && option instanceof Color) {
-            Color c = (Color)option;
-            _setBackdropOption(getRawHandle(), BackdropOptionID.TINT_COLOR, c.getRed(), c.getGreen(), c.getBlue(), c.getOpacity());
-        } else if (name == "CornerRadius" && option instanceof Number) {
-            Number n = (Number)option;
-            _setBackdropOption(getRawHandle(), BackdropOptionID.CORNER_RADIUS, n.doubleValue(), 0.0, 0.0, 0.0);
+        if (name == "TintColor" && option instanceof Color color) {
+            _setBackdropOption(getRawHandle(), BackdropOptionID.TINT_COLOR, color.getRed(), color.getGreen(),
+                color.getBlue(), color.getOpacity());
+        } else if (name == "CornerRadius" && option instanceof Number radius) {
+            _setBackdropOption(getRawHandle(), BackdropOptionID.CORNER_RADIUS, radius.doubleValue(), 0.0, 0.0, 0.0);
         }
     }
 }

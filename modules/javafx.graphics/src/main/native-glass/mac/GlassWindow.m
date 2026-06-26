@@ -607,8 +607,17 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             case com_sun_glass_ui_mac_MacWindow_BackdropID_SIDEBAR:
                 [window->hostView setBackdrop: NSVisualEffectMaterialSidebar];
                 break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_HUD:
+                [window->hostView setBackdrop: NSVisualEffectMaterialHUDWindow];
+                break;
             case com_sun_glass_ui_mac_MacWindow_BackdropID_MENU:
                 [window->hostView setBackdrop: NSVisualEffectMaterialMenu];
+                break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_POPOVER:
+                [window->hostView setBackdrop: NSVisualEffectMaterialPopover];
+                break;
+            case com_sun_glass_ui_mac_MacWindow_BackdropID_TOOLTIP:
+                [window->hostView setBackdrop: NSVisualEffectMaterialToolTip];
                 break;
             case com_sun_glass_ui_mac_MacWindow_BackdropID_CLEARGLASS:
                 [window->hostView setGlassBackdrop: YES];
