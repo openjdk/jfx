@@ -54,8 +54,6 @@ public final class MediaFeatures {
     // Supported values for the -fx-platform media query.
     static Map<String, BooleanSupplier> PLATFORMS = Map.of(
         "android", PlatformUtil::isAndroid,
-        "embedded", PlatformUtil::isEmbedded,
-        "headless", PlatformUtil::isHeadless,
         "ios", PlatformUtil::isIOS,
         "linux", PlatformUtil::isLinux,
         "macos", PlatformUtil::isMac,
