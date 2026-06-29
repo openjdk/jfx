@@ -123,31 +123,28 @@ public class DataFormat {
      */
     public DataFormat(@NamedArg("ids") String... ids) {
         if (ids == null) {
-            this.identifier = Set.of();
-            // don't care about registry
-        } else {
-            this.identifier = Set.of(ids);
-            // check for mismatched formats
-            boolean isNew = true;
-            synchronized (registry) {
-                for (String id : ids) {
-                    if (id == null) {
-                        throw new NullPointerException("DataFormat id must not be null.");
-                    }
-                    DataFormat f = registry.get(id);
-                    if (f != null) {
-                        if (!this.identifier.equals(f.identifier)) {
-                            throw new IllegalArgumentException("DataFormat '" + id + "' already exists.");
-                        }
-                        isNew = false;
-                    }
-                }
+            identifier = Set.of();
+            return;
+        }
 
-                // add to the registry if new
-                if (isNew) {
-                    for (String id : ids) {
-                        registry.put(id, this);
+        identifier = Set.of(ids);
+        // check for mismatched formats
+        boolean isNew = true;
+        synchronized (registry) {
+            for (String id : identifier) {
+                DataFormat f = registry.get(id);
+                if (f != null) {
+                    if (!identifier.equals(f.identifier)) {
+                        throw new IllegalArgumentException("DataFormat '" + id + "' already exists.");
                     }
+                    isNew = false;
+                }
+            }
+
+            // add to the registry if new
+            if (isNew) {
+                for (String id : ids) {
+                    registry.put(id, this);
                 }
             }
         }
