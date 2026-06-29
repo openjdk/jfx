@@ -55,7 +55,7 @@ public final class MediaFeatures {
     static Map<String, BooleanSupplier> PLATFORMS = Map.of(
         "android", PlatformUtil::isAndroid,
         "ios", PlatformUtil::isIOS,
-        "linux", PlatformUtil::isLinux,
+        "linux", PlatformUtil::isUnix, // for our purposes, "linux" means "unix but not macOS"
         "macos", PlatformUtil::isMac,
         "windows", PlatformUtil::isWindows
     );
