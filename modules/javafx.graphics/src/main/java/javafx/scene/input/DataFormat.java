@@ -92,7 +92,7 @@ public class DataFormat {
      * A set of identifiers, typically mime types, for this DataFormat.
      * In most cases this will be a single String.
      */
-    private final Set<String> identifier;
+    private final Set<String> identifiers;
 
     /**
      * Create a new DataFormat, specifying the set of ids that are associated with
@@ -122,19 +122,19 @@ public class DataFormat {
      * @throws NullPointerException if any of the ids is null
      */
     public DataFormat(@NamedArg("ids") String... ids) {
-        if (ids == null) {
-            identifier = Set.of();
+        if ((ids == null) || (ids.length == 0)) {
+            identifiers = Set.of();
             return;
         }
 
-        identifier = Set.of(ids);
+        identifiers = Set.of(ids);
         // check for mismatched formats
         boolean isNew = true;
         synchronized (registry) {
-            for (String id : identifier) {
+            for (String id : identifiers) {
                 DataFormat f = registry.get(id);
                 if (f != null) {
-                    if (!identifier.equals(f.identifier)) {
+                    if (!identifiers.equals(f.identifiers)) {
                         throw new IllegalArgumentException("DataFormat '" + id + "' already exists.");
                     }
                     isNew = false;
@@ -155,7 +155,7 @@ public class DataFormat {
      * @return an unmodifiable set that is never null.
      */
     public final Set<String> getIdentifiers() {
-        return identifier;
+        return identifiers;
     }
 
     /**
@@ -163,15 +163,15 @@ public class DataFormat {
      * @return a string representation of this {@code DataFormat} object.
      */
     @Override public String toString() {
-        if (identifier.isEmpty()) {
+        if (identifiers.isEmpty()) {
             return "[]";
-        } else if (identifier.size() == 1) {
+        } else if (identifiers.size() == 1) {
             StringBuilder sb = new StringBuilder("[");
-            sb.append(identifier.iterator().next());
+            sb.append(identifiers.iterator().next());
             return (sb.append("]").toString());
         } else {
             StringBuilder b = new StringBuilder("[");
-            Iterator<String> itr = identifier.iterator();
+            Iterator<String> itr = identifiers.iterator();
             while (itr.hasNext()) {
                 b = b.append(itr.next());
                 if (itr.hasNext()) {
@@ -190,7 +190,7 @@ public class DataFormat {
     @Override public int hashCode() {
         int hash = 7;
 
-        for (String id : identifier) {
+        for (String id : identifiers) {
             hash = 31 * hash + id.hashCode();
         }
 
@@ -207,7 +207,7 @@ public class DataFormat {
         if (obj == this) {
             return true;
         }
-        return (obj instanceof DataFormat f) && identifier.equals(f.identifier);
+        return (obj instanceof DataFormat f) && identifiers.equals(f.identifiers);
     }
 
     /**

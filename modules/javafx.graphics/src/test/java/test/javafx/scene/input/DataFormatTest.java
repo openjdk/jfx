@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -119,8 +120,8 @@ public class DataFormatTest {
 
     @Test
     public void noMoreNullMimeTypes() {
+        String mime = null;
         assertThrows(NullPointerException.class, () -> {
-            String mime = null;
             new DataFormat(mime);
         });
     }
@@ -128,6 +129,8 @@ public class DataFormatTest {
     @Test
     public void nullArrayIsAllowedForCompatibilityReasons() {
         String[] mimes = null;
-        new DataFormat(mimes);
+        assertDoesNotThrow(() -> {
+            new DataFormat(mimes);
+        });
     }
 }
