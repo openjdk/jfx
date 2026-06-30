@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -623,7 +623,12 @@ public class MenuItem implements EventTarget, Styleable {
             if (!hasId) sbuf.append('[');
             else sbuf.append(", ");
             sbuf.append("styleClass=");
-            sbuf.append(getStyleClass());
+            for (int i = 0; i < getStyleClass().size(); i++) {
+                sbuf.append(getStyleClass().get(i));
+                if (i + 1 < getStyleClass().size()) {
+                    sbuf.append(' ');
+                }
+            }
             sbuf.append("]");
         }
         return sbuf.toString();
