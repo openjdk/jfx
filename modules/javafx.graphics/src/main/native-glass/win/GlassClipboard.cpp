@@ -79,18 +79,22 @@ bool operator == (const FORMATETC &fr, const FORMATETC &fl) {
          && fr.tymed    == fl.tymed;
 }
 
-size_t hash_value(const FORMATETC &fr)
+template<>
+struct std::hash<FORMATETC>
 {
-    size_t _Val = size_t(fr.cfFormat) << 21;
-    _Val += size_t(fr.dwAspect);
-    _Val <<= 5;
-    _Val += size_t(fr.lindex);
-    _Val <<= 7;
-    _Val += size_t(fr.ptd);
-    _Val >>= 13;
-    _Val += size_t(fr.tymed);
-    return _Val ^ GLASS_HASH_SEED;
-}
+    std::size_t operator()(const FORMATETC& fr) const noexcept
+    {
+        size_t _Val = size_t(fr.cfFormat) << 21;
+        _Val += size_t(fr.dwAspect);
+        _Val <<= 5;
+        _Val += size_t(fr.lindex);
+        _Val <<= 7;
+        _Val += size_t(fr.ptd);
+        _Val >>= 13;
+        _Val += size_t(fr.tymed);
+        return _Val ^ GLASS_HASH_SEED;
+    }
+};
 
 //NB! There are two suffixes for mimes:
 // ";locale" - the ASCII/UTF8 version of mime type that is not transferred to Java
@@ -145,20 +149,6 @@ struct std::hash<_bstr_t>
     {
         // TODO It would be faster to use wstring_view here, but it is in C++17 and above
         return std::hash<std::wstring>()(std::wstring(static_cast<const wchar_t*>(k)));
-    }
-};
-
-template<>
-struct std::hash<FORMATETC>
-{
-    std::size_t operator()(const FORMATETC& k) const noexcept
-    {
-        return
-            std::hash<CLIPFORMAT>()(k.cfFormat) ^
-            std::hash<DVTARGETDEVICE*>()(k.ptd) ^
-            std::hash<DWORD>()(k.dwAspect) ^
-            std::hash<LONG>()(k.lindex) ^
-            std::hash<DWORD>()(k.tymed);
     }
 };
 
