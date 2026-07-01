@@ -29,6 +29,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.HeaderAreaType;
 import com.sun.javafx.tk.TKSceneListener;
 import java.lang.reflect.Method;
+import javafx.application.ColorScheme;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -52,7 +53,6 @@ import test.com.sun.javafx.pgstub.StubScene;
 import test.javafx.util.ReflectionUtils;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings("deprecation")
 public class HeaderBarTest {
 
     Stage stage;
@@ -92,13 +92,13 @@ public class HeaderBarTest {
     }
 
     @Test
-    void minHeight_correspondsToMinSystemHeight_ifNotSetByUser() {
-        DoubleProperty minSystemHeight = getAttachedProperty("minSystemHeight");
-        minSystemHeight.set(100);
+    void minHeight_correspondsToSystemMinHeight_ifNotSetByUser() {
+        DoubleProperty systemMinHeight = getAttachedProperty("systemMinHeight");
+        systemMinHeight.set(100);
         assertEquals(100, headerBar.minHeight(-1));
 
         headerBar.setMinHeight(50);
-        minSystemHeight.set(200);
+        systemMinHeight.set(200);
         assertEquals(50, headerBar.minHeight(-1));
     }
 
@@ -125,13 +125,23 @@ public class HeaderBarTest {
     }
 
     @Test
-    void prefButtonHeight_attachedProperty() {
+    void systemButtonHeight_attachedProperty() {
         var minHeight = new double[1];
-        assertEquals(HeaderBar.USE_DEFAULT_SIZE, HeaderBar.getPrefButtonHeight(stage));
-        HeaderBar.prefButtonHeightProperty(stage).subscribe(v -> minHeight[0] = v.doubleValue());
-        HeaderBar.prefButtonHeightProperty(stage).set(123);
+        assertEquals(HeaderBar.USE_DEFAULT_SIZE, HeaderBar.getSystemButtonHeight(stage));
+        HeaderBar.systemButtonHeightProperty(stage).subscribe(v -> minHeight[0] = v.doubleValue());
+        HeaderBar.systemButtonHeightProperty(stage).set(123);
         assertEquals(123, minHeight[0]);
-        assertEquals(123, HeaderBar.getPrefButtonHeight(stage));
+        assertEquals(123, HeaderBar.getSystemButtonHeight(stage));
+    }
+
+    @Test
+    void systemColorScheme_attachedProperty() {
+        var colorScheme = new ColorScheme[1];
+        assertNull(HeaderBar.getSystemColorScheme(stage));
+        HeaderBar.systemColorSchemeProperty(stage).subscribe(v -> colorScheme[0] = v);
+        HeaderBar.systemColorSchemeProperty(stage).set(ColorScheme.DARK);
+        assertEquals(ColorScheme.DARK, colorScheme[0]);
+        assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
     }
 
     @Nested

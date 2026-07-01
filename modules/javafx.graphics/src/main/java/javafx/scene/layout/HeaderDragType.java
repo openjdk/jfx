@@ -46,11 +46,9 @@ import javafx.stage.StageStyle;
  *       so they do not obstruct existing draggable areas.
  * </ul>
  *
- * @since 25
- * @deprecated This is a preview feature which may be changed or removed in a future release.
  * @see HeaderBar#setDragType(Node, HeaderDragType)
+ * @since 27
  */
-@Deprecated(since = "25")
 public enum HeaderDragType {
 
     /**
@@ -112,8 +110,6 @@ public enum HeaderDragType {
      * This drag type does not apply to descendants of the node on which it is set. However, it does
      * not stop an inherited {@link #TRANSPARENT_SUBTREE} drag type from being inherited by descendants
      * of the node.
-     *
-     * @since 26
      */
     TRANSPARENT,
 
@@ -135,8 +131,6 @@ public enum HeaderDragType {
      * mouse events in incompatible ways.
      * <p>
      * This drag type is inherited by descendants of the node until a descendant specifies {@link #NONE}.
-     *
-     * @since 26
      */
     TRANSPARENT_SUBTREE
 }
