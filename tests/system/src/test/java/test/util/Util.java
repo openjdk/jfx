@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.Node;
@@ -47,18 +48,54 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.junit.jupiter.api.Assertions;
 import com.sun.javafx.PlatformUtil;
+import javafx.beans.value.ChangeListener;
 
 /**
  * Utility methods for life-cycle testing
  */
 public class Util {
+    public static final String PARAMETERIZED_TEST_DISPLAY = "{displayName} [{index}] {arguments}";
+
     /** Default startup timeout value in seconds */
     public static final int STARTUP_TIMEOUT = 15;
     /** Test timeout value in milliseconds */
     public static final int TIMEOUT = 10000;
+
+    /**
+     * Time in milliseconds to wait for window geometry changes (resize, move)
+     * to be processed. On Linux, these operations are asynchronous.
+     * The native side may adjust values after Glass has applied them on the Java side.
+     * <p>
+     */
+    public static final long GEOMETRY_DELAY = 300;
+
+    /**
+     * Time in milliseconds to wait for window state changes
+     * (e.g. iconify, maximize, fullscreen animations) to be processed.
+     * On Linux, these operations are asynchronous.
+     * The native side may adjust values after Glass has applied them on the Java side.
+     * <p>
+     */
+    public static final long STATE_DELAY =  500;
+
+    /**
+     * Time in milliseconds to wait for focus changes to be processed.
+     * On Linux, these operations are asynchronous.
+     * The native side may adjust values after Glass has applied them on the Java side.
+     * <p>
+     */
+    public static final long FOCUS_DELAY = 300;
+
+    /**
+     * Default timeout in milliseconds for waiting on an observable property
+     * to reach an expected value.
+     * <p>
+     */
+    public static final long PROPERTY_VALUE_TIMEOUT = 1000;
 
     private static interface Future {
         public abstract boolean await(long timeout, TimeUnit unit);
@@ -335,6 +372,52 @@ public class Util {
     }
 
     /**
+     * Waits for a boolean property to reach the expected value.
+     * If the property already has the expected value, returns immediately.
+     * <p>
+     * Uses {@link #PROPERTY_VALUE_TIMEOUT} as the default timeout.
+     *
+     * NOTE: some Stage properties are set immediately, so this method will not work.
+     * For example, {@code Stage#isMaximized()} returns true immediately after
+     * calling {@code Stage#setMaximized(true)}, even though the native side may still be
+     * processing the change.
+     *
+     * @param property the property to observe
+     * @param expected the expected value
+     */
+    public static void waitForBoolean(ReadOnlyBooleanProperty property, boolean expected) {
+        if (property.get() == expected) {
+            return;
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ChangeListener<Boolean> listener = (_, _, newVal) -> {
+            if (newVal == expected) {
+                latch.countDown();
+            }
+        };
+
+        runAndWait(() -> {
+            if (property.get() == expected) {
+                latch.countDown();
+            }
+            property.addListener(listener);
+        });
+
+        try {
+            boolean result = latch.await(PROPERTY_VALUE_TIMEOUT, TimeUnit.MILLISECONDS);
+            Assertions.assertTrue(result,
+                    "Timeout waiting for " + property.getName() + " to become " + expected);
+        } catch (InterruptedException e) {
+            fail(e);
+        } finally {
+            runAndWait(() -> property.removeListener(listener));
+        }
+    }
+
+
+    /**
      * Makes double click of the mouse left button.
      */
     public static void doubleClick(Robot robot) {
@@ -463,5 +546,23 @@ public class Util {
      */
     public static boolean isNear(double a, double b) {
         return Math.abs(a - b) < 0.1;
+    }
+
+
+    /**
+     * Finds the {@link Screen} where the top-left corner of the given {@link Stage} is located.
+     *
+     * @param stage the {@link Stage} to check
+     * @return the {@link Screen} containing the stage's top-left corner or {@link Screen#getPrimary()}
+     */
+    public static Screen getScreen(Stage stage) {
+        for (Screen screen : Screen.getScreens()) {
+            Rectangle2D bounds = screen.getVisualBounds();
+            if (bounds.contains(stage.getX(), stage.getY())) {
+                return screen;
+            }
+        }
+
+        return Screen.getPrimary();
     }
 }

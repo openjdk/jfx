@@ -28,10 +28,10 @@
 #include <jni.h>
 
 #include <stdint.h>
-#include <X11/Xlib.h>
 #include <gdk/gdk.h>
-#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
+#include <cstdio>
+#include <string>
 
 #include "wrapped.h"
 
@@ -43,6 +43,10 @@
 
 #define GDK_FILTERED_EVENTS_MASK static_cast<GdkEventMask>(GDK_ALL_EVENTS_MASK \
                 & ~GDK_TOUCH_MASK)
+
+#define ALPHA_CHANNEL_ERROR_MSG \
+    "Cannot create a transparent stage because the screen does not support an alpha channel " \
+    "without enabling the XComposite extension.\n"
 
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
@@ -235,7 +239,44 @@ private:
     extern jclass jColorCls; // javafx.scene.paint.Color
     extern jmethodID jColorRgb; // javafx.scene.paint.Color#rgb(IIID)Ljavafx/scene/paint/Color;
 
+
 #ifdef VERBOSE
+
+#define SIZE      (1u << 0)
+#define POSITION  (1u << 1)
+#define FOCUS     (1u << 2)
+#define STATE     (1u << 3)
+#define LIFECYCLE (1u << 4)
+#define INPUT     (1u << 5)
+#define DIALOG    (1u << 6)
+#define ALL       (0xFFFFFFFFu)
+
+extern unsigned int glass_log_flags;
+
+void glass_gtk_log_init(const char* categories);
+
+extern "C" { extern jboolean gtk_verbose; }
+
+template<typename... Args>
+inline void log(int category,
+                const char* categoryName,
+                const std::string& artifact,
+                const char* fmt,
+                Args... args) {
+    if (gtk_verbose && (glass_log_flags & category)) {
+        std::printf("[%s %.30s] ", categoryName, artifact.c_str());
+        if constexpr (sizeof...(args) == 0) {
+            std::fputs(fmt, stdout);
+        } else {
+            std::printf(fmt, args...);
+        }
+        std::fflush(stdout);
+    }
+}
+
+#define LOG(category, artifact, fmt, ...) \
+    log(category, #category, artifact, fmt, ##__VA_ARGS__)
+
 #define LOG0(msg) {printf(msg);fflush(stdout);}
 #define LOG1(msg, param) {printf(msg, param);fflush(stdout);}
 #define LOG2(msg, param1, param2) {printf(msg, param1, param2);fflush(stdout);}
@@ -250,7 +291,13 @@ private:
 #define ERROR2(msg, param1, param2) {fprintf(stderr, msg, param1, param2);fflush(stderr);}
 #define ERROR3(msg, param1, param2, param3) {fprintf(stderr, msg, param1, param2, param3);fflush(stderr);}
 #define ERROR4(msg, param1, param2, param3, param4) {fprintf(stderr, msg, param1, param2, param3, param4);fflush(stderr);}
+
 #else
+
+#define LOG(...) do {} while(0)
+
+static void glass_gtk_log_init(const char*) {}
+
 #define LOG0(msg)
 #define LOG1(msg, param)
 #define LOG2(msg, param1, param2)
@@ -265,26 +312,27 @@ private:
 #define ERROR2(msg, param1, param2)
 #define ERROR3(msg, param1, param2, param3)
 #define ERROR4(msg, param1, param2, param3, param4)
-#endif
+
+#endif // VERBOSE
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
-    gchar* get_application_name();
-    void glass_throw_exception(JNIEnv * env,
-            const char * exceptionClass,
-            const char * exceptionMessage);
-    int glass_throw_oom(JNIEnv * env, const char * exceptionMessage);
-    void dump_jstring_array(JNIEnv*, jobjectArray);
+gchar* get_application_name();
+void glass_throw_exception(JNIEnv * env,
+        const char * exceptionClass,
+        const char * exceptionMessage);
+int glass_throw_oom(JNIEnv * env, const char * exceptionMessage);
+void dump_jstring_array(JNIEnv*, jobjectArray);
 
-    guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
+guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
-    gboolean check_and_clear_exception(JNIEnv *env);
+gboolean check_and_clear_exception(JNIEnv *env);
 
-    jboolean is_display_valid();
+jboolean is_display_valid();
 
-    gsize get_files_count(gchar **uris);
+gsize get_files_count(gchar **uris);
 
-    jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
+jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
 
 
 #ifdef __cplusplus
@@ -299,9 +347,6 @@ glass_widget_set_visual (GtkWidget *widget, GdkVisual *visual);
 gint
 glass_gdk_visual_get_depth (GdkVisual * visual);
 
-GdkScreen *
-glass_gdk_window_get_screen(GdkWindow * gdkWindow);
-
 gboolean
 glass_gdk_mouse_devices_grab(GdkWindow * gdkWindow);
 
@@ -310,12 +355,6 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *curso
 
 void
 glass_gdk_mouse_devices_ungrab();
-
-void
-glass_gdk_master_pointer_grab(GdkEvent *event, GdkWindow *window, GdkCursor *cursor);
-
-void
-glass_gdk_master_pointer_ungrab(GdkEvent *event);
 
 void
 glass_gdk_master_pointer_get_position(gint *x, gint *y);
@@ -330,20 +369,11 @@ GdkWindow *
 glass_gdk_device_get_window_at_position(
                GdkDevice *device, gint *x, gint *y);
 
-void
-glass_gtk_configure_transparency_and_realize(GtkWidget *window,
-                                                  gboolean transparent);
 
 const guchar *
 glass_gtk_selection_data_get_data_with_length(
         GtkSelectionData * selectionData,
         gint * length);
-
-void
-glass_gtk_window_configure_from_visual(GtkWidget *widget, GdkVisual *visual);
-
-void
-glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h);
 
 void
 glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y);
@@ -359,12 +389,6 @@ glass_pixbuf_from_window(GdkWindow *window,
     gint srcx, gint srcy,
     gint width, gint height);
 
-void
-glass_window_apply_shape_mask(GdkWindow *window,
-    void* data, uint width, uint height);
-
-void
-glass_window_reset_input_shape_mask(GdkWindow *window);
 
 GdkWindow *
 glass_gdk_drag_context_get_dest_window (GdkDragContext * context);
