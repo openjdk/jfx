@@ -36,7 +36,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -49,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TextInputControlCaspianTest {
-    private String userAgentStylesheet;
+    private static String userAgentStylesheet;
     private Stage stage;
 
     private static Collection<Class<? extends TextInputControl>> parameters() {
@@ -60,19 +62,23 @@ public class TextInputControlCaspianTest {
         );
     }
 
-    @BeforeEach
-    public void setup() {
+    @BeforeAll
+    public static void setup() {
         userAgentStylesheet = Application.getUserAgentStylesheet();
         Application.setUserAgentStylesheet(Application.STYLESHEET_CASPIAN);
     }
 
+    @AfterAll
+    public static void cleanup() {
+        Application.setUserAgentStylesheet(userAgentStylesheet);
+    }
+
     @AfterEach
-    public void cleanup() {
+    public void cleanupTest() {
         if (stage != null) {
             stage.hide();
             stage = null;
         }
-        Application.setUserAgentStylesheet(userAgentStylesheet);
     }
 
     @ParameterizedTest
