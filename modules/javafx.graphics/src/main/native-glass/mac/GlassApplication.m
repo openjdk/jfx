@@ -926,12 +926,15 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
 
 @implementation NSMenu (JavaFX)
 -(NSMenuItem*)itemWithTitleRecursively:(NSString *)title {
+    // Looking for a non-separator leaf node.
     for (NSMenuItem* item in self.itemArray) {
-        if ([item.title isEqualToString: title]) {
-            return item;
+        if (item.isSeparatorItem) {
+            continue;
         } else if (item.submenu) {
             NSMenuItem* found = [item.submenu itemWithTitleRecursively: title];
             if (found) return found;
+        } else if ([item.title isEqualToString: title]) {
+            return item;
         }
     }
     return nil;
@@ -1311,14 +1314,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication__1findIt
         }
     }
 
-    jclass jcls = (*env)->FindClass(env, "java/lang/String");
-    pathArray = (*env)->NewObjectArray(env, path.count, jcls, NULL);
+    jclass stringClass = (*env)->FindClass(env, "java/lang/String");
+    pathArray = (*env)->NewObjectArray(env, path.count, stringClass, NULL);
     GLASS_CHECK_EXCEPTION(env);
 
     for (NSUInteger index = 0; index < path.count; ++index) {
         NSString* component = [path objectAtIndex: index];
         jstring string = (*env)->NewStringUTF(jEnv, component.UTF8String);
-        GLASS_CHECK_EXCEPTION(env);
         (*env)->SetObjectArrayElement(env, pathArray, index, string);
         GLASS_CHECK_EXCEPTION(env);
     }

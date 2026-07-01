@@ -35,13 +35,11 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -147,6 +145,7 @@ public class CommonSystemMenusTest {
         return menuItemPresent(additionalSystemMenuBarData.menuItem);
     }
 
+    // This should never show up in the system menu bar
     private boolean standardMenuBarPresent() {
         return menuItemPresent(standardMenuBarData.menuItem);
     }
@@ -209,12 +208,14 @@ public class CommonSystemMenusTest {
         }
     }
 
-    // Test that we can set the common menus to null dynamically.
+    // Test that we can set the common menus to null dynamically. This should
+    // bring the default application menu back.
     private void testNullCommonMenus(StageData data) {
         testRemoveCommonMenus(data, null);
     }
 
     // Test that we can set the common menus to an empty list dynamically.
+    // This should bring the default application menu back.
     private void testEmptyCommonMenus(StageData data) {
         testRemoveCommonMenus(data, FXCollections.<Menu>observableArrayList());
     }
@@ -244,21 +245,6 @@ public class CommonSystemMenusTest {
         assertTrue(menuItemRemoved, "Temporary menu item not removed");
     }
 
-    private void runTestForStage(StageData stageData) {
-        focusStage(stageData);
-        assertTrue(commonMenuPresent(), "Common menu not present at start");
-        assertFalse(defaultApplicationMenuPresent(), "Default application menu present at start");
-        testAddRemoveMenu(commonMenus);
-        testAddRemoveMenuItem(commonMenus.get(0));
-        testNullCommonMenus(stageData);
-        testEmptyCommonMenus(stageData);
-
-        if (stageData.menuBar != null && stageData.menuBar.isUseSystemMenuBar()) {
-            testAddRemoveMenu(stageData.menuBar.getMenus());
-            testAddRemoveMenuItem(stageData.menuBar.getMenus().get(0));
-        }
-    }
-
     @BeforeEach
     public void setupTest() {
         Util.runAndWait(() -> {
@@ -272,6 +258,21 @@ public class CommonSystemMenusTest {
                 MenuBar.setCommonSystemMenus(commonMenus);
             }
         });
+    }
+
+    private void runTestForStage(StageData stageData) {
+        focusStage(stageData);
+        assertTrue(commonMenuPresent(), "Common menu not present at start");
+        assertFalse(defaultApplicationMenuPresent(), "Default application menu present at start");
+        testAddRemoveMenu(commonMenus);
+        testAddRemoveMenuItem(commonMenus.get(0));
+        testNullCommonMenus(stageData);
+        testEmptyCommonMenus(stageData);
+
+        if (stageData.menuBar != null && stageData.menuBar.isUseSystemMenuBar()) {
+            testAddRemoveMenu(stageData.menuBar.getMenus());
+            testAddRemoveMenuItem(stageData.menuBar.getMenus().get(0));
+        }
     }
 
     @Test
@@ -306,11 +307,13 @@ public class CommonSystemMenusTest {
     @Test
     public void allIconifiedTest() {
         focusStage(systemMenuBarData);
-        focusStage(additionalSystemMenuBarData);
         Util.runAndWait(() -> {
             systemMenuBarData.stage.setIconified(true);
-            additionalSystemMenuBarData.stage.setIconified(true);
             standardMenuBarData.stage.setIconified(true);
+            // The menu associated with the last focused window should be
+            // active. And iconifying a stage focuses it so this is the
+            // expected active menu.
+            additionalSystemMenuBarData.stage.setIconified(true);
         });
         assertFalse(systemMenuBarPresent(), "System menu bar present for non-focused window");
         assertTrue(additionalSystemMenuBarPresent(), "System menu bar absent for focused window");
