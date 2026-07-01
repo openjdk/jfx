@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,37 @@
 
 package javafx.util.converter;
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.Locale;
+import javafx.util.StringConverter;
 
-public class LocalDateTimeStringConverterShim {
+/// A base class containing common implementations for `StringConverter`s as noted in the @implNote of `StringConverter`.
+abstract class BaseStringConverter<T> extends StringConverter<T> {
 
-    public static DateTimeFormatter getldtConverterParser(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.parser;
+    @Override
+    public T fromString(String string) {
+        if (string == null) {
+            return null;
+        }
+        string = string.trim();
+        if (string.isEmpty()) {
+            return null;
+        }
+        return fromNonEmptyString(string);
     }
 
-    public static DateTimeFormatter getldtConverterFormatter(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.formatter;
+    /// Returns an object parsed from a non-`null` non-empty string.
+    ///
+    /// Treat as protected (implementing classes are public so they can't add a new protected method).
+    abstract T fromNonEmptyString(String string);
+
+    @Override
+    public String toString(T object) {
+        return object == null ? "" : toStringFromNonNull(object);
     }
 
-    public static Locale getldtConverterLocale(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.locale;
+    /// Returns a string from a non-`null` reference.
+    ///
+    /// Treat as protected (implementing classes are public so they can't add a new protected method).
+    String toStringFromNonNull(T object) {
+        return object.toString();
     }
-
-    public static FormatStyle getldtConverterTimeStyle(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.timeStyle;
-    }
-
-    public static FormatStyle getldtConverterDateStyle(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.dateStyle;
-    }
-
 }

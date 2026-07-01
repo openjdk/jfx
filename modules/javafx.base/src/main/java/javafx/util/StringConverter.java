@@ -25,35 +25,36 @@
 
 package javafx.util;
 
-/**
- * Converter defines conversion behavior between strings and objects.
- * The type of objects and formats of strings are defined by the subclasses
- * of Converter.
- *
- * @param <T> the type of the object being converted
- * @since JavaFX 2.0
- */
+/// Defines conversion behaviors between `String` and other types. Each subclass defines a formatting (type to string)
+/// and a parsing (string to type) behaviors. `StringConverter`s are usually used in controls for converting between the
+/// underlying model (represented by type `T`) and the visual `String` representation.
+///
+/// Subclasses are provided for primitive wrapper types, numbers, dates and times, and custom formats.
+///
+/// @implNote
+/// JavaFX's implementations follow these behaviors, which are not required by implementing classes:
+/// - Except for `DefaultStringConverter`, formatting `null` returns an empty string, otherwise the type's `toString` is
+/// used if it is suitable; parsing `null` or an empty string returns `null`.
+/// - Immutable (the same converter can be reused, except for `DateTimeStringConverter`s that can only be reused on the
+///   same thread).
+///
+/// @param <T> the type associated with the string conversions
+/// @since JavaFX 2.0
 public abstract class StringConverter<T> {
 
-    /**
-     * Creates a default {@code StringConverter}.
-     */
+    /// Creates a default {@code StringConverter}.
     public StringConverter() {
     }
 
-    /**
-    * Converts the object provided into its string form.
-    * Format of the returned string is defined by the specific converter.
-    * @param object the object of type {@code T} to convert
-    * @return a string representation of the object passed in
-    */
+    /// Converts an object to a string form. The format of the returned string is defined by the specific converter.
+    ///
+    /// @param object the object of type `T` to convert
+    /// @return a string representation of the object passed in
     public abstract String toString(T object);
 
-    /**
-    * Converts the string provided into an object defined by the specific converter.
-    * Format of the string and type of the resulting object is defined by the specific converter.
-    * @param string the {@code String} to convert
-    * @return an object representation of the string passed in.
-    */
+    /// Converts a string to an object. The parsing mechanism is defined by the specific converter.
+    ///
+    /// @param string the `String` to convert
+    /// @return an object of type `T` created from the string passed in.
     public abstract T fromString(String string);
 }
