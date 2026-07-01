@@ -82,6 +82,13 @@ public class FX {
         return m;
     }
 
+    public static Menu menu(Menu b, String text) {
+        Menu m = new Menu(text);
+        applyMnemonic(m);
+        b.getItems().add(m);
+        return m;
+    }
+
     public static Menu menu(ContextMenu b, String text) {
         Menu m = new Menu(text);
         applyMnemonic(m);
@@ -199,6 +206,12 @@ public class FX {
     public static SeparatorMenuItem separator(MenuBar b) {
         SeparatorMenuItem s = new SeparatorMenuItem();
         lastMenu(b).getItems().add(s);
+        return s;
+    }
+
+    public static SeparatorMenuItem separator(Menu m) {
+        SeparatorMenuItem s = new SeparatorMenuItem();
+        m.getItems().add(s);
         return s;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -43,6 +43,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * RichTextArea demo model.
@@ -50,6 +51,20 @@ import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
  * @author Andy Goryachev
  */
 public class DemoModel extends SimpleViewOnlyStyledModel {
+    private static final StyleAttributeMap OVERLAP1 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
+        setFontSize(16).
+        build();
+    private static final StyleAttributeMap OVERLAP2 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
+        setFontSize(16).
+        build();
+    private static final StyleAttributeMap OVERLAP3 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
+        setFontSize(16).
+        build();
+
     private final SimpleStringProperty textField = new SimpleStringProperty();
 
     public DemoModel() {
@@ -132,6 +147,37 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addSegment("Styled with CSS");
         addWavyUnderline(0, 6, "squiggly-css");
         highlight(12, 3, "highlight1", "highlight2");
+        nl();
+        addSegment("Highlighting with StyleAttributes:");
+        nl();
+        addSegment("-----");
+        addSegment("wavy1", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_1, Boolean.TRUE));
+        addSegment("wavy1", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_1, Boolean.TRUE));
+        addSegment("-no-break", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_1, Boolean.TRUE));
+        addSegment("wavy2", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_2, Boolean.TRUE));
+        addSegment("wavy3", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_3, Boolean.TRUE));
+        addSegment(" ");
+        addSegment("high1", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE));
+        addSegment("high2", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_2, Boolean.TRUE));
+        addSegment("high3", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE));
+        addSegment("high4", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_4, Boolean.TRUE));
+        addSegment("high5", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_5, Boolean.TRUE));
+        nl();
+        addSegment("-----");
+        addSegment("w1", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_1, Boolean.TRUE));
+        addSegment("w11", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_1, Boolean.TRUE));
+        addSegment("w2", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_2, Boolean.TRUE));
+        addSegment("w3", StyleAttributeMap.of(StyleAttributeMap.UNDERLINE_WAVY_3, Boolean.TRUE));
+        addSegment("---");
+        addSegment("11", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE));
+        addSegment("22", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_2, Boolean.TRUE));
+        addSegment("33", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE));
+        addSegment("44", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_4, Boolean.TRUE));
+        addSegment("55", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_5, Boolean.TRUE));
+        nl();
+        addSegment("over", OVERLAP1);
+        addSegment("lapping high", OVERLAP2);
+        addSegment("lights", OVERLAP3);
         nl(2);
 
         addParagraph(this::createRect);

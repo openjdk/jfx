@@ -244,13 +244,22 @@ public abstract class StyledTextModel {
 
     /**
      * Returns the {@link StyleAttributeMap} of the character at the specified position's {@code charIndex}.
-     * When at the end of the document, returns the attributes of the last character.
+     * <p>
+     * When the position points to the boundary between two text segments with different attributes,
+     * the value of {@code forInsert} determines which segment will be used: when {@code true}, the preceding
+     * segment's attributes will be returned so inserted/typed text has the same style as
+     * preceding text.  When {@code forInsert} is {@code false}, the returned attributes correspond exactly
+     * to the symbol indicated by the specified position.
+     * <p>
+     * This method returns the attributes of the last character at the end of the document.
      *
      * @param resolver the style resolver
      * @param pos the text position
+     * @param forInsert whether to pick preceding style at the segment boundary
      * @return the style attributes, non-null
+     * @since 27
      */
-    public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos);
+    public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos, boolean forInsert);
 
     /**
      * Returns the set of attributes supported attributes.  When this method returns a non-null set,
@@ -684,7 +693,7 @@ public abstract class StyledTextModel {
      * <p>
      * This is a convenience method which eventually calls
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput)}
-     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
+     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos, boolean)} at the
      * {@code start} position.
      * It creates an undo/redo entry if
      * {@link #isUndoRedoEnabled()} returns {@code true}.
@@ -699,8 +708,16 @@ public abstract class StyledTextModel {
     public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text) {
         checkWritable();
 
-        // TODO pick the lowest from start,end.  Possibly add (end) argument to getStyleAttributes?
-        StyleAttributeMap a = getStyleAttributeMap(resolver, start);
+        start = clamp(start);
+        end = clamp(end);
+        int cmp = start.compareTo(end);
+        if (cmp > 0) {
+            TextPos p = start;
+            start = end;
+            end = p;
+        }
+
+        StyleAttributeMap a = getStyleAttributeMap(resolver, start, true);
         StyledInput in = StyledInput.of(text, a);
         return replace(resolver, start, end, in);
     }
@@ -726,6 +743,7 @@ public abstract class StyledTextModel {
 
     // only UndoableChange is allowed to disable undo/redo records
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
+        RichUtils.log("start={0} end={1}", start, end);
         checkWritable();
 
         // clamp and normalize
@@ -753,6 +771,7 @@ public abstract class StyledTextModel {
 
         StyledSegment seg;
         while ((seg = input.nextSegment()) != null) {
+            RichUtils.log("seg={0}", seg);
             switch (seg.getType()) {
             case LINE_BREAK:
                 insertLineBreak(index, offset);
@@ -772,12 +791,13 @@ public abstract class StyledTextModel {
                 insertParagraph(index, gen);
                 break;
             case TEXT:
+            case INLINE_NODE:
                 String text = seg.getText();
                 StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
                 if (a == null) {
                     a = StyleAttributeMap.EMPTY;
                 } else {
-                    a = filterUnsupportedAttributes(a);
+                    a = RichUtils.filterUnsupportedAttributes(a, getSupportedAttributes());
                 }
                 int len = insertTextSegment(index, offset, text, a);
                 if (index == start.index()) {
@@ -837,7 +857,7 @@ public abstract class StyledTextModel {
             end = p;
         }
 
-        attrs = filterUnsupportedAttributes(attrs);
+        attrs = RichUtils.filterUnsupportedAttributes(attrs, getSupportedAttributes());
 
         TextPos evStart;
         TextPos evEnd;
@@ -898,27 +918,6 @@ public abstract class StyledTextModel {
                 add(ch, end);
             }
         }
-    }
-
-    /**
-     * Removes unsupported attributes per {@link #getSupportedAttributes()}.
-     *
-     * @param attrs the input attributes
-     * @return the attributes that exclude unsupported ones
-     */
-    private StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap attrs) {
-        Set<StyleAttribute<?>> supported = getSupportedAttributes();
-        if (supported == null) {
-            return attrs;
-        }
-
-        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        for (StyleAttribute a : attrs.getAttributes()) {
-            if (supported.contains(a)) {
-                b.set(a, attrs.get(a));
-            }
-        }
-        return b.build();
     }
 
     /**
