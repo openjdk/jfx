@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,12 +38,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javafx.beans.NamedArg;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 import javafx.util.Builder;
 import com.sun.javafx.reflect.ConstructorUtil;
 import com.sun.javafx.reflect.ReflectUtil;
@@ -180,12 +185,44 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
     }
 
-    // This is used to support read-only collection property.
+    // This is used to support read-only collection/map property.
     private Object getReadOnlyProperty(String propName) {
-        // return ArrayListWrapper now and convert it to proper type later
-        // during the build - once we know which constructor we will use
-        // and what types it accepts
-        return new ArrayListWrapper<>();
+        Method getter = findGetter(propName);
+        if (getter != null) {
+            Class<?> retType = getter.getReturnType();
+
+            if (ObservableList.class.isAssignableFrom(retType)) {
+                return FXCollections.observableArrayList();
+            }
+            if (ObservableSet.class.isAssignableFrom(retType)) {
+                return FXCollections.observableSet();
+            }
+            if (ObservableMap.class.isAssignableFrom(retType)) {
+                return FXCollections.observableHashMap();
+            }
+
+            if (Map.class.isAssignableFrom(retType)) {
+                return new LinkedHashMap<>();
+            }
+            if (Set.class.isAssignableFrom(retType)) {
+                return new LinkedHashSet<>();
+            }
+            if (Collection.class.isAssignableFrom(retType)) {
+                return new ArrayListWrapper<>();
+            }
+        }
+        return null;
+    }
+
+    private Method findGetter(String propName) {
+        String getterName = GETTER_PREFIX
+                + Character.toUpperCase(propName.charAt(0))
+                + propName.substring(1);
+        LinkedList<Method> candidates = getClassMethodCache(type).get(getterName);
+        if (candidates != null && !candidates.isEmpty()) {
+            return candidates.getFirst();
+        }
+        return null;
     }
 
     @Override
@@ -520,6 +557,9 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     Class<?> argType[] = m.getParameterTypes();
                     if (Collection.class.isAssignableFrom(retType) && argType.length == 0) {
                         strsMap.put(propName, new Getter(m, retType));
+                    } else if (Map.class.isAssignableFrom(retType) && argType.length == 0
+                            && !strsMap.containsKey(propName)) {
+                        strsMap.put(propName, new MapGetter(m, retType));
                     }
                 }
             }
@@ -572,6 +612,22 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                 to.addAll(from);
             } else {
                 to.add(argStr);
+            }
+        }
+    }
+
+    private static class MapGetter extends Property {
+
+        public MapGetter(Method m, Class<?> t) {
+            super(m, t);
+        }
+
+        @Override
+        public void invoke(Object obj, Object argStr) throws Exception {
+            // we know that this.method returns a Map otherwise it wouldn't be here
+            Map to = (Map) ModuleHelper.invoke(method, obj, new Object[]{});
+            if (argStr instanceof Map) {
+                to.putAll((Map) argStr);
             }
         }
     }
