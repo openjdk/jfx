@@ -73,9 +73,11 @@ import java.util.concurrent.Future
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import java.util.regex.Pattern
 import java.lang.Runtime.Version
 
 import org.gradle.process.ExecOperations
+import groovy.json.JsonOutput
 
 def execOps = project.services.get(ExecOperations)
 
@@ -4247,13 +4249,6 @@ project(":systemTests") {
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
 
-    dependencies {
-        testImplementation project(":graphics").sourceSets.test.output
-        testImplementation project(":base").sourceSets.test.output
-        testImplementation project(":controls").sourceSets.test.output
-        testImplementation project(":swing").sourceSets.test.output
-    }
-
     def dependentProjects = [
         'base',
         'graphics',
@@ -4272,6 +4267,17 @@ project(":systemTests") {
         'fxml'
     ]
     commonModuleSetup(project, dependentProjects)
+
+    dependencies {
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":swing").sourceSets.test.output
+
+        dependentProjects.each { e ->
+            testImplementation project(":${e}")
+        }
+    }
 
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
 
@@ -6210,6 +6216,91 @@ compileTargets { t ->
 
             jmods.dependsOn(jmodTask)
         }
+    }
+}
+
+private static Set<File> collectSourceFiles(Project proj, CCTask task) {
+    def pattern = task.matches ? Pattern.compile(task.matches) : null
+    def result = [] as HashSet<File>
+
+    (task.sourceRoots ?: []).each { root ->
+        File rootFile = proj.file(root)
+
+        if (!rootFile.exists()) {
+            return
+        }
+
+        def candidates = rootFile.isDirectory()
+                ? proj.fileTree(rootFile).files
+                : [rootFile]
+
+        candidates.each { file ->
+            if (pattern == null || pattern.matcher(file.name).matches()) {
+                result << file
+            }
+        }
+    }
+
+    result
+}
+
+private static Map createCompileCommand(Project proj, CCTask task, File sourceFile) {
+    def compiler = task.compiler
+    if (!compiler) {
+        throw new GradleException("CCTask '${task.name}': 'compiler' not defined")
+    }
+
+    def compilerName = new File(compiler).name.toLowerCase()
+    def isMsvc = compilerName == 'cl.exe' || compilerName == 'cl'
+    def includeArg = isMsvc ? '/I' : '-I'
+    def compileOnlyArg = isMsvc ? '/c' : '-c'
+
+    List<String> args = [compiler]
+    args.addAll((task.params ?: []).collect { it.toString() }.findAll { !it.isEmpty() })
+
+    if (task.headers) {
+        args << includeArg << task.headers.absolutePath
+    }
+
+    (task.sourceRoots ?: []).each { root ->
+        File dir = proj.file(root)
+        if (dir.isDirectory()) {
+            args << includeArg << dir.absolutePath
+        }
+    }
+
+    if (!args.contains('-c') && !args.contains('/c')) {
+        args << compileOnlyArg
+    }
+
+    args << sourceFile.absolutePath
+
+    return [
+        directory: sourceFile.parentFile.absolutePath,
+        arguments: args,
+        file     : sourceFile.absolutePath
+    ]
+}
+
+tasks.register('generateCompileCommands') {
+    group = 'Development'
+    description = 'Generates compile_commands.json for C/C++ development.'
+
+    doLast {
+        def commands = project.allprojects.collectMany { proj ->
+            proj.tasks.withType(CCTask).collectMany { task ->
+                collectSourceFiles(proj, task).collect { sourceFile ->
+                    createCompileCommand(proj, task, sourceFile)
+                }
+            }
+        }
+
+        def outputFile = file("$projectDir/compile_commands.json")
+        outputFile.text = JsonOutput.prettyPrint(
+                JsonOutput.toJson(commands)
+        )
+
+        println "Generated compile_commands.json with ${commands.size()} entries."
     }
 }
 
