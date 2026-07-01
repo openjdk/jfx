@@ -222,7 +222,7 @@ public class NodeTest {
         List<String> styleClass = NodeHelper.getStyleClassOrNull(node);
         assertNull(styleClass);
 
-        Group g = new Group();
+        Group g = new Group(node);
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();

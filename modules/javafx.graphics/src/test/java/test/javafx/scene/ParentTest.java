@@ -110,7 +110,7 @@ public class ParentTest {
         List<String> stylesheets = ParentHelper.getStylesheetsOrNull(node);
         assertNull(stylesheets);
 
-        Group g = new Group();
+        Group g = new Group(node);
         Scene s = new Scene(g);
         stage.setScene(s);
         stage.show();
