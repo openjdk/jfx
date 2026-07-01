@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,46 +42,65 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlySetWrapper}
+     * The constructor of {@code ReadOnlySetWrapper}.
      */
     public ReadOnlySetWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlySetWrapper}
+     * The constructor of {@code ReadOnlySetWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlySetWrapper(ObservableSet<E> initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlySetWrapper}
+     * The constructor of {@code ReadOnlySetWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlySetWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlySetWrapper}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlySetWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlySetWrapper}
+     * The constructor of {@code ReadOnlySetWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlySetWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlySetWrapper}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlySetWrapper(Object bean, String name,
                               ObservableSet<E> initialValue) {
         super(bean, name, initialValue);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlySetWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlySetWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlySetWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlySetWrapper(Object bean, Class<?> declaringClass, String name, ObservableSet<E> initialValue) {
+        super(bean, declaringClass, name, initialValue);
     }
 
     /**
@@ -92,7 +111,9 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
      */
     public ReadOnlySetProperty<E> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -137,6 +158,11 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlySetWrapper.this.getDeclaringClass();
+        }
+
+        @Override
         public ReadOnlyIntegerProperty sizeProperty() {
             return ReadOnlySetWrapper.this.sizeProperty();
         }
@@ -144,6 +170,14 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
         @Override
         public ReadOnlyBooleanProperty emptyProperty() {
             return ReadOnlySetWrapper.this.emptyProperty();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlySetWrapper.this).getTargetClass();
         }
     }
 }
