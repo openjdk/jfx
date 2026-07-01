@@ -33,20 +33,10 @@
 #include <dlfcn.h>
 
 #ifdef STATIC_BUILD
-JNIEXPORT jint JNICALL
-JNI_OnLoad_javafx_font_pango(JavaVM * vm, void * reserved) {
-#ifdef JNI_VERSION_1_8
-    JNIEnv *env;
-    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
-        return JNI_VERSION_1_4;
-    }
+JNIEXPORT jint JNICALL JNI_OnLoad_javafx_font_pango(JavaVM * vm, void * reserved) {
     return JNI_VERSION_1_8;
-#else
-    return JNI_VERSION_1_4;
-#endif
 }
-#endif
-
+#endif // STATIC_BUILD
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSPango_##func
 
