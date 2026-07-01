@@ -2141,9 +2141,8 @@ allprojects {
     if (project == rootProject) {
        return
     }
-    if (project.path.startsWith(":apps")) {
-        // Lets handle the apps tree differently, as it is a collection of ant builds,
-        // and the ant importer collides with the 'apply plugin:java'
+    // Lets handle ant builds differently, since the ant importer collides with the 'apply plugin:java'
+    if (project.path.startsWith(":apps") || project.path.startsWith(":manualApps")) {
         return
     }
 
@@ -4895,6 +4894,16 @@ task apps() {
     dependsOn(copyAppsArtifacts)
 }
 
+task manualappsjar() {
+    dependsOn(sdk)
+    // Note: the jar dependencies get added elsewhere see project(":manualApps")
+}
+
+task manualApps {
+    dependsOn(sdk)
+    dependsOn(manualappsjar)
+}
+
 task findbugs() {
     dependsOn(sdk)
 
@@ -4936,7 +4945,7 @@ task zips() {
 }
 
 task all() {
-    dependsOn(sdk, shims, publicExports, apps, perf, zips)
+    dependsOn(sdk, shims, publicExports, manualApps, apps, perf, zips)
 }
 
 
@@ -5049,6 +5058,39 @@ project(":apps") {
             }
         }
         rootProject.clean.dependsOn(appsClean)
+    }
+}
+
+project(":manualApps") {
+    // This build is Ant based, we will exec ant from gradle.
+
+    compileTargets { t ->
+        List<String> params = []
+        params << "-DtargetBld=$t.name"
+        params << "-Dcompile.patch=@${rootProject.buildDir}/${COMPILEARGSFILE}"
+        params << "-Drun.patch=@${rootProject.buildDir}/${RUNARGSFILE}"
+
+        def manualAppsJar = project.task("manualAppsJar${t.capital}") {
+            dependsOn(sdk)
+
+            doLast() {
+                ant(t.name,
+                    projectDir.path,
+                    "build-all",
+                    params);
+            }
+        }
+        rootProject.manualappsjar.dependsOn(manualAppsJar)
+
+        def manualAppsClean = project.task("clean${t.capital}") {
+            doLast() {
+                ant(t.name,
+                    projectDir.path,
+                    "clean",
+                    params);
+            }
+        }
+        rootProject.clean.dependsOn(manualAppsClean)
     }
 }
 
