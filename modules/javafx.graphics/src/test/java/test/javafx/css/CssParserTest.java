@@ -27,7 +27,7 @@ package test.javafx.css;
 
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.RuleHelper;
-import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.MediaFeaturesShim;
 import com.sun.javafx.css.media.SizeQueryType;
 import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
@@ -357,11 +357,11 @@ public class CssParserTest {
 
     @Test
     public void stylesheetImport_withAlwaysFalseMediaQueryList_isNotImported() {
-        var oldDefault = MediaFeatures.DEFAULT;
+        var oldDefault = MediaFeaturesShim.getDefault();
 
         try {
-            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
-                "CssParserTest-feature1", "value", () -> TriState.FALSE, _ -> null, null);
+            MediaFeaturesShim.setDefault((_, _) -> FunctionExpression.of(
+                "CssParserTest-feature1", "value", () -> TriState.FALSE, _ -> null, null));
 
             String importedStylesheet = Base64.getEncoder().encodeToString("""
                 .rule1 { foo: bar; }
@@ -378,17 +378,17 @@ public class CssParserTest {
             assertEquals(1, stylesheet.getRules().size());
             assertNull(RuleHelper.getMediaRule(stylesheet.getRules().getFirst()));
         } finally {
-            MediaFeatures.DEFAULT = oldDefault;
+            MediaFeaturesShim.setDefault(oldDefault);
         }
     }
 
     @Test
     public void stylesheetImport_withAlwaysTrueMediaQueryList_isImportedUnconditionally() {
-        var oldDefault = MediaFeatures.DEFAULT;
+        var oldDefault = MediaFeaturesShim.getDefault();
 
         try {
-            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
-                "CssParserTest-feature2", "value", () -> TriState.TRUE, _ -> null, null);
+            MediaFeaturesShim.setDefault((_, _) -> FunctionExpression.of(
+                "CssParserTest-feature2", "value", () -> TriState.TRUE, _ -> null, null));
 
             String importedStylesheet = Base64.getEncoder().encodeToString("""
                 .rule1 { foo: bar; }
@@ -413,7 +413,7 @@ public class CssParserTest {
             Rule rule3 = stylesheet.getRules().get(2);
             assertNull(RuleHelper.getMediaRule(rule3));
         } finally {
-            MediaFeatures.DEFAULT = oldDefault;
+            MediaFeaturesShim.setDefault(oldDefault);
         }
     }
 
