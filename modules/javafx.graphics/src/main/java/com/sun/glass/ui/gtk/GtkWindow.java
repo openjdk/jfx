@@ -45,7 +45,7 @@ class GtkWindow extends Window {
     }
 
     @Override
-    protected native long _createWindow(long ownerPtr, long screenPtr, int mask);
+    protected native long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID);
 
     @Override
     protected native boolean _close(long ptr);

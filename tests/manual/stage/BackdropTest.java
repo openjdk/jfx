@@ -1,0 +1,357 @@
+/*
+ * Copyright (c) 2026 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.application.ColorScheme;
+import javafx.geometry.Pos;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.paint.Color;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.StageBackdropStyle;
+import javafx.stage.Window;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+
+public class BackdropTest extends Application {
+    public static void main(String[] args) {
+        launch(BackdropTest.class, args);
+    }
+
+    private enum StageStyleChoice {
+        DECORATED("Decorated", StageStyle.DECORATED),
+        UNDECORATED("Undecorated", StageStyle.UNDECORATED),
+        EXTENDED("Extended", StageStyle.EXTENDED),
+        UTILITY("Utility", StageStyle.UTILITY),
+        TRANSPARENT("Transparent", StageStyle.TRANSPARENT),
+        UNIFIED("Unified", StageStyle.UNIFIED);
+
+        private String label;
+        private StageStyle stageStyle;
+
+        StageStyleChoice(String label, StageStyle style) {
+            this.label = label;
+            this.stageStyle = style;
+        }
+
+        public StageStyle getStageStyle() {
+            return stageStyle;
+        }
+
+        public String toString() {
+            return label;
+        }
+    }
+
+    private class StageBackdropStyleChoice {
+        StageBackdropStyleChoice(StageBackdropStyle style) {
+            this.backdropStyle = style;
+            this.label = (style == null ? "None" : style.getName());
+        }
+
+        private String label;
+        private StageBackdropStyle backdropStyle;
+
+        public StageBackdropStyle getBackdropStyle() {
+            return backdropStyle;
+        }
+
+        public String toString() {
+            return label;
+        }
+    }
+
+    private List<StageBackdropStyleChoice> backdropStyles = new ArrayList<>();
+
+    void initBackdropStyleList() {
+        backdropStyles.add(new StageBackdropStyleChoice(null));
+        backdropStyles.add(new StageBackdropStyleChoice(StageBackdropStyle.WINDOW));
+        backdropStyles.add(new StageBackdropStyleChoice(StageBackdropStyle.PARTIAL));
+        var names = new ArrayList<>(StageBackdropStyle.getPlatformStyleNames());
+        names.sort(null);
+        names.forEach(m -> {
+            var style = StageBackdropStyle.style(m);
+            backdropStyles.add(new StageBackdropStyleChoice(style));
+        });
+    }
+
+    private enum FillChoice {
+        NONE("None", null),
+        TRANSPARENT("Transparent", Color.TRANSPARENT),
+        BLUE("Light blue", Color.LIGHTBLUE),
+        TRANSLUCENT_RED("Red (50% opaque)", new Color(1.0, 0.0, 0.0, 0.5)),
+        TRANSLUCENT_GREEN("Green (20% opaque)", new Color(0.0, 1.0, 0.0, 0.2));
+
+        private String label;
+        private Color color;
+
+        FillChoice(String label, Color color) {
+            this.label = label;
+            this.color = color;
+        }
+
+        Color getFill() {
+            return color;
+        }
+
+        public String toString() {
+            return label;
+        }
+    }
+
+    private enum ColorSchemeChoice {
+        LIGHT("Light", ColorScheme.LIGHT),
+        DARK("Dark", ColorScheme.DARK);
+
+        private String label;
+        private ColorScheme scheme;
+
+        ColorSchemeChoice(String label, ColorScheme scheme) {
+            this.label = label;
+            this.scheme = scheme;
+        }
+
+        ColorScheme getColorScheme() {
+            return scheme;
+        }
+
+        public String toString() {
+            return label;
+        }
+    }
+
+    private enum OpacityChoice {
+        P100("100%", 1.0),
+        P75("75%", 0.75),
+        P50("50%", 0.50);
+
+        private String label;
+        private double opacity;
+
+        OpacityChoice(String label, double opacity) {
+            this.label = label;
+            this.opacity = opacity;
+        }
+
+        double getOpacity() {
+            return opacity;
+        }
+
+        public String toString() {
+            return label;
+        }
+    }
+
+    private ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
+
+    private void updateTextColor(Stage stage, ObjectProperty<Color> textColor) {
+        if (stage.getBackdropStyle() == null) {
+            textColor.set(Color.BLACK);
+        } else if (stage.getScene().getPreferences().getColorScheme() == ColorScheme.DARK) {
+            textColor.set(Color.WHITE);
+        } else {
+            textColor.set(Color.BLACK);
+        }
+    }
+
+    private Label newLabel(String text, ObjectProperty<Color> textColor) {
+        var label = new Label(text);
+        label.textFillProperty().bind(textColor);
+        return label;
+    }
+
+    private Parent labeledSection(String text, ObjectProperty<Color> textColor, Parent section) {
+        var label = newLabel(text, textColor);
+        VBox box = new VBox(label, section);
+        box.setSpacing(5);
+        return box;
+    }
+
+    private Parent labeledSection(String text, ObjectProperty<Color> textColor) {
+        var label = newLabel(text, textColor);
+        VBox box = new VBox(label);
+        box.setSpacing(5);
+        return box;
+    }
+
+    private void buildScene(Stage stage, StageStyleChoice stageStyle, StageBackdropStyleChoice backdropStyle) {
+
+        var iconifyButton = new Button("Iconify");
+        iconifyButton.setOnAction(e -> {
+            stage.setIconified(!stage.isIconified());
+        });
+
+        var maximizeButton = new Button("Maximize");
+        maximizeButton.setOnAction(e -> {
+            stage.setMaximized(!stage.isMaximized());
+        });
+
+        var fullscreenButton = new Button("Fullscreen");
+        fullscreenButton.setOnAction(e -> {
+            stage.setFullScreen(!stage.isFullScreen());
+        });
+
+        var closeButton = new Button("Close");
+        closeButton.setOnAction(e -> {
+            stage.close();
+        });
+
+        var actionButtons = new HBox(fullscreenButton, maximizeButton, iconifyButton, closeButton);
+        actionButtons.setSpacing(5);
+        actionButtons.setAlignment(Pos.BASELINE_RIGHT);
+
+        ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
+
+        // For creating new stages
+        var styleLabel = newLabel("Style", textColor);
+        ChoiceBox<StageStyleChoice> stageStyleChoice = new ChoiceBox<>();
+        stageStyleChoice.getItems().setAll(StageStyleChoice.values());
+        stageStyleChoice.setValue(stageStyle);
+
+        var backdropStyleLabel = newLabel("backdrop style", textColor);
+        ChoiceBox<StageBackdropStyleChoice> backdropStyleChoice = new ChoiceBox<>();
+        backdropStyleChoice.getItems().setAll(backdropStyles);
+        backdropStyleChoice.setValue(backdropStyle);
+
+        Button createButton = new Button("Create!");
+        createButton.setOnAction(e -> {
+            createAndShowStage(stageStyleChoice.getValue(), backdropStyleChoice.getValue());
+        });
+
+        HBox stageCreationControls = new HBox(styleLabel, stageStyleChoice, backdropStyleLabel, backdropStyleChoice, createButton);
+        stageCreationControls.setAlignment(Pos.BASELINE_LEFT);
+        stageCreationControls.setSpacing(10);
+
+        ChoiceBox<FillChoice> fillChoice = new ChoiceBox<>();
+        fillChoice.getItems().setAll(FillChoice.values());
+
+        ChoiceBox<ColorSchemeChoice> schemeChoice = new ChoiceBox<>();
+        schemeChoice.getItems().setAll(ColorSchemeChoice.values());
+
+        ChoiceBox<OpacityChoice> opacityChoice = new ChoiceBox<>();
+        opacityChoice.getItems().setAll(OpacityChoice.values());
+
+        // Pull it together
+        VBox controls = new VBox(
+            labeledSection("This stage is " + stageStyle + " and the backdrop style is " + backdropStyle, textColor),
+            labeledSection("New stage", textColor, stageCreationControls),
+            labeledSection("Fill color for this stage", textColor, fillChoice),
+            labeledSection("Color scheme for this stage", textColor, schemeChoice),
+            labeledSection("Opacity of this stage", textColor, opacityChoice)
+        );
+
+        controls.setAlignment(Pos.BASELINE_LEFT);
+        controls.setSpacing(10);
+        controls.setPadding(new Insets(10, 10, 10, 10));
+
+        var borderPane = new BorderPane();
+        borderPane.setTop(actionButtons);
+        borderPane.setCenter(controls);
+        borderPane.setBackground(null);
+        borderPane.setPadding(new Insets(10, 10, 10, 10));
+        borderPane.setOnMousePressed(pressEvent -> {
+            borderPane.setOnMouseDragged(dragEvent -> {
+                stage.setX(dragEvent.getScreenX() - pressEvent.getSceneX());
+                stage.setY(dragEvent.getScreenY() - pressEvent.getSceneY());
+            });
+        });
+
+        Parent root = borderPane;
+        if (stage.getStyle() == StageStyle.EXTENDED) {
+            var headerBar = new HeaderBar();
+            var label = new Label(stage.getTitle());
+            label.textFillProperty().bind(textColor);
+            headerBar.setCenter(label);
+            var box = new VBox(headerBar, borderPane);
+            box.setBackground(null);
+            root = box;
+        }
+
+        Scene scene = new Scene(root, 640, 480, Color.TRANSPARENT);
+        stage.setScene(scene);
+
+        fillChoice.setOnAction(e -> {
+            scene.setFill(fillChoice.getValue().getFill());
+            updateTextColor(stage, textColor);
+        });
+        schemeChoice.setOnAction(e -> {
+            scene.getPreferences().setColorScheme(schemeChoice.getValue().getColorScheme());
+            updateTextColor(stage, textColor);
+        });
+        opacityChoice.setOnAction(e -> {
+            stage.setOpacity(opacityChoice.getValue().getOpacity());
+        });
+
+        fillChoice.setValue(FillChoice.TRANSPARENT);
+        if (Platform.getPreferences().getColorScheme() == ColorScheme.LIGHT) {
+            schemeChoice.setValue(ColorSchemeChoice.LIGHT);
+        } else {
+            schemeChoice.setValue(ColorSchemeChoice.DARK);
+        }
+        opacityChoice.setValue(OpacityChoice.P100);
+
+        updateTextColor(stage, textColor);
+    }
+
+    private void showStage(Stage stage, StageStyleChoice style, StageBackdropStyleChoice backdropStyle)
+    {
+        stage.setTitle(style.toString());
+        stage.initStyle(style.getStageStyle());
+        stage.initBackdropStyle(backdropStyle.getBackdropStyle());
+        var backdrop = stage.getBackdrop();
+        if (backdrop != null) {
+            backdrop.setOption("TintColor", Color.RED);
+        }
+        buildScene(stage, style, backdropStyle);
+        stage.show();
+    }
+
+    private void createAndShowStage(StageStyleChoice style, StageBackdropStyleChoice backdropStyle)
+    {
+        Stage stage = new Stage();
+        showStage(stage, style, backdropStyle);
+    }
+
+    @Override
+    public void start(Stage stage) {
+        initBackdropStyleList();
+        showStage(stage, StageStyleChoice.EXTENDED, backdropStyles.get(0));
+    }
+}

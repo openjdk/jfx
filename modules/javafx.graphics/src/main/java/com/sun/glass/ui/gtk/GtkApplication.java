@@ -330,7 +330,7 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
+    public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
         return new GtkWindow(owner, screen, styleMask);
     }
 

@@ -92,7 +92,7 @@ public class HeadlessApplication extends Application {
     }
 
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
+    public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
         HeadlessWindow window = new HeadlessWindow(windowManager, owner, screen, frameBuffer, styleMask);
         if (this.activeRobot != null) {
             activeRobot.windowAdded(window);

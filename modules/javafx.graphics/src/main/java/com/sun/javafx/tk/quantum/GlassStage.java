@@ -80,6 +80,9 @@ abstract class GlassStage implements TKStage {
     @Override
     public void setDarkFrame(boolean value) {}
 
+    @Override
+    public void setBackdropOption(String name, Object option) {}
+
     protected final GlassScene getScene() {
         return scene;
     }
