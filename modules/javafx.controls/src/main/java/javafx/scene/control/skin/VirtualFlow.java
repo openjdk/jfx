@@ -299,6 +299,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean sizeChanged = false;
     private final BitSet dirtyCells = new BitSet();
 
+    // Tracks index that needs to be made fully visible after layout
+    int pendingScrollToIndex = -1;
+    // Position captured when pendingScrollToIndex was armed. Used to tell the
+    // engine's own sub-pixel re-clamp of that position apart from a genuine
+    // intervening scroll.
+    double pendingScrollToPosition = -1;
+    // Position deltas at or below this are floating-point clamp noise, not a real scroll.
+    private static final double PENDING_SCROLL_EPSILON = 1e-9;
+
     Timeline sbTouchTimeline;
     KeyFrame sbTouchKF1;
     KeyFrame sbTouchKF2;
@@ -937,6 +946,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         @Override protected void invalidated() {
             super.invalidated();
+            // A genuine intervening scroll (scrollbar drag, wheel, external
+            // setPosition, property binding) supersedes a pending scrollToTop/
+            // scrollTo target. But while arming that target the engine also
+            // re-clamps the very position we just set by a sub-pixel amount,
+            // and that self-inflicted change must NOT cancel the pending
+            // correction, otherwise the post-layout visibility check never runs.
+            if (pendingScrollToIndex >= 0
+                    && Math.abs(get() - pendingScrollToPosition) > PENDING_SCROLL_EPSILON) {
+                pendingScrollToIndex = -1;
+            }
             adjustAbsoluteOffset();
             requestLayout();
         }
@@ -1361,6 +1380,22 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         lastPosition = getPosition();
         recalculateEstimatedSize();
         cleanPile();
+
+        // Ensure pending scroll target is fully visible after layout.
+        // Only adjust if the cell is cut off at the bottom of the viewport.
+        if (pendingScrollToIndex >= 0) {
+            T cell = getVisibleCell(pendingScrollToIndex);
+            if (cell != null) {
+                double cellPosition = getCellPosition(cell);
+                double cellLength = getCellLength(pendingScrollToIndex);
+                double viewportLength = getViewportLength();
+                // Only adjust if cell extends beyond viewport and is smaller than viewport
+                if (cellPosition + cellLength > viewportLength && cellLength <= viewportLength) {
+                    scrollTo(cell);
+                }
+            }
+            pendingScrollToIndex = -1;
+        }
     }
 
     /**
@@ -1571,6 +1606,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             adjustPositionToIndex(index);
             addAllToPile();
+
+            // Same offset-estimation caveat as scrollToTop(int): re-verify
+            // full visibility after layout, once real cell sizes are known.
+            pendingScrollToIndex = index;
+            pendingScrollToPosition = getPosition();
+
             requestLayout();
         }
     }
@@ -1623,6 +1664,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (! posSet) {
             adjustPositionToIndex(index);
         }
+
+        // Mark this index to be checked for full visibility after layout
+        pendingScrollToIndex = index;
+        pendingScrollToPosition = getPosition();
 
         requestLayout();
     }
