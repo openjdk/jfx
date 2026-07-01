@@ -50,6 +50,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import javafx.util.converter.LocalDateStringConverter;
@@ -425,8 +427,17 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<>(this, "editor");
             editor.set(new FakeFocusTextField());
+            setFocusDelegate(editor.get());
         }
         return editor.getReadOnlyProperty();
+    }
+
+    @Override
+    protected boolean shouldDelegateEvent(KeyEvent event) {
+        if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.ESCAPE) {
+            return false;
+        }
+        return true;
     }
 
     /** {@inheritDoc} */

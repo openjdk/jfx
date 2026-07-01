@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 import java.util.List;
 
 import javafx.css.PseudoClass;
+import javafx.event.Event;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
@@ -41,10 +42,13 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
+import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -189,28 +193,17 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
                 // This and the additional check of isIncDecKeyEvent in
                 // textField's event filter fix JDK-8185937.
-                if (isIncDecKeyEvent(ke)) return;
+                if (isIncDecKeyEvent(ke)) {
+                    System.out.println("Not touching the event in the filter");
+                    return;
+                }
 
                 // Fix for the regression noted in a comment in JDK-8115009.
                 // This forwards the event down into the TextField when
                 // the key event is actually received by the Spinner.
-                textField.fireEvent(ke.copyFor(textField, textField));
-
-                if (ke.getCode() == KeyCode.ENTER) return;
-
-                ke.consume();
-            }
-        });
-
-        // This event filter is to enable keyboard events being delivered to the
-        // spinner when the user has mouse clicked into the TextField area of the
-        // Spinner control. Without this the up/down/left/right arrow keys don't
-        // work when you click inside the TextField area (but they do in the case
-        // of tabbing in).
-        lh.addEventFilter(textField, KeyEvent.ANY, (ke) -> {
-            if (! control.isEditable() || isIncDecKeyEvent(ke)) {
-                control.fireEvent(ke.copyFor(control, control));
-                ke.consume();
+                if (dispatchToNode(ke, textField) && ke.getCode() != KeyCode.ENTER) {
+                    ke.consume();
+                }
             }
         });
 
@@ -256,6 +249,14 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             // Stop spinning when sceneProperty is modified
             behavior.stopSpinning();
         });
+    }
+
+    private static boolean dispatchToNode(Event event, Node node) {
+        var dispatcher = node.getEventDispatcher();
+        if (dispatcher == null) return false;
+        var chain = new EventDispatchChainImpl();
+        chain.append(dispatcher);
+        return (chain.dispatchEvent(event.copyFor(node, node)) == null);
     }
 
     private boolean isIncDecKeyEvent(KeyEvent ke) {
