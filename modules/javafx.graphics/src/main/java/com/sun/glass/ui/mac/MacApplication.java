@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
@@ -37,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -221,6 +223,24 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _hideOtherApplications();
     native private void _unhideAllApplications();
 
+    @Override
+    public void hideApplication() {
+        checkEventThread();
+        _hide();
+    }
+
+    @Override
+    public void hideOtherApplications() {
+        checkEventThread();
+        _hideOtherApplications();
+    }
+
+    @Override
+    public void showAllApplications() {
+        checkEventThread();
+        _unhideAllApplications();
+    }
+
     public void installAppleMenu(MenuBar menubar) {
         this.appleMenu = createMenu("Apple");
 
@@ -265,7 +285,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }, 'q', KeyEvent.MODIFIER_COMMAND);
         this.appleMenu.add(quitMenu);
 
-        menubar.add(this.appleMenu);
+        menubar.insert(this.appleMenu, 0);
     }
 
     public Menu getAppleMenu() {
@@ -276,6 +296,24 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         installAppleMenu(menubar);
     }
 
+    /**
+     * Searches through NSApp.mainMenu looking for an NSMenuItem with the
+     * given title. If found returns an array of strings containing the
+     * titles of the parent NSMenuItems starting at the top-most item and
+     * ending with the title of the found NSMenuItem. If no item is found
+     * returns an empty array.
+     */
+    public static native String[] _findItemInSystemMenuBar(String title);
+    public static String[] findItemInSystemMenuBar(String title) {
+        AtomicReference<String[]> path = new AtomicReference<>(new String[0]);
+
+        PlatformImpl.runAndWait(() -> {
+            var result = _findItemInSystemMenuBar(title);
+            path.set(result);
+        });
+
+        return path.get();
+    }
 
     // FACTORY METHODS
 

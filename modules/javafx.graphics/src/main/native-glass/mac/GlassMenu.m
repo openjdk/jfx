@@ -53,13 +53,6 @@ static jfieldID  jPixelsHeightField = 0;
 static jfieldID  jPixelsScaleXField = 0;
 static jfieldID  jPixelsScaleYField = 0;
 
-@interface NSMenuItem (SPI)
-
-// Apple's SPI
-- setAppleMenu:(NSMenuItem*)item;
-
-@end
-
 @implementation GlassMenubar
 
 - (id)init
@@ -353,12 +346,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
         [menubar->menu setSubmenu:glassmenu->menu forItem:glassmenu->item];
 
         [glassmenu->menu setAutoenablesItems:YES];
-
-        if ([[glassmenu->item title] compare:@"Apple"] == NSOrderedSame)
-        {
-            LOG("calling setAppleMenu");
-            [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
-        }
 
         [[NSApp mainMenu] update];
     }

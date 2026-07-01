@@ -25,13 +25,6 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface NSApplication (NiblessAdditions)
-
--(void)setAppleMenu:(NSMenu *)aMenu;
-
-@end
-
-
 /*
  * NSApplicationFX is a subclass of NSApplication that we use when we
  * initialize the application.
