@@ -289,13 +289,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double superPrefWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        double listViewWidth = listView.prefWidth(height);
-        double pw = Math.max(superPrefWidth, listViewWidth);
-
         reconfigurePopup();
-
-        return pw;
+        double superPrefWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        // reconfigurePopup() calls setPrefSize(newWidth, newHeight) on the listView to
+        // stabilise the popup's displayed size while it is open (relates to JDK-8116801, JDK-8123876).
+        // That call pins listView.prefWidth() to the popup's current pixel width. Once the
+        // popup closes, the pinned value is stale: a parent layout container (like a GridPane)
+        // that re measures this ComboBox will read the inflated popup width instead of the
+        // natural control width, producing asymmetric column widths ( related to JDK-8210037).
+        // To avoid this, bypass the potentially pinned prefWidth when the popup is not
+        // showing and compute the natural list view width directly instead.
+        double listViewWidth;
+        if (comboBox.isShowing()) {
+            listViewWidth = listView.prefWidth(height);
+        } else {
+            listViewWidth = computeListViewPrefWidth(height);
+            if (listView.getItems().isEmpty() && listView.getPlaceholder() != null) {
+                listViewWidth = Math.max(listView.getPlaceholder().prefWidth(height), listViewWidth);
+            }
+        }
+        return Math.max(superPrefWidth, listViewWidth);
     }
 
     /** {@inheritDoc} */
@@ -386,6 +399,39 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     /** {@inheritDoc} */
     @Override ComboBoxBaseBehavior getBehavior() {
         return behavior;
+    }
+
+    /**
+     * Computes the preferred width of the popup {@link ListView} by directly
+     * measuring cell content.
+     *
+     * <p>{@link Region#prefWidth(double)} short circuits to return a pinned value
+     * when {@code setPrefSize()} has been called, as {@link #reconfigurePopup()}
+     * does while the popup is showing. Calling this method directly bypasses that
+     * short circuit and returns a new measurement. Used by
+     * {@link #computePrefWidth} when the popup is not visible to prevent the pinned
+     * popup width from affecting parent layout containers such as {@code GridPane}
+     * (JDK-8210037).
+     *
+     * @param height the height hint forwarded to the skin when no ListViewSkin is present
+     * @return the dynamically computed preferred width based on cell content
+     */
+    private double computeListViewPrefWidth(double height) {
+        double pw;
+        if (listView.getSkin() instanceof ListViewSkin<?> skin) {
+            if (itemCountDirty) {
+                skin.updateItemCount();
+                itemCountDirty = false;
+            }
+            int rowsToMeasure = -1;
+            if (comboBox.getProperties().containsKey(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY)) {
+                rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
+            }
+            pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
+        } else {
+            pw = Math.max(100, comboBox.getWidth());
+        }
+        return Math.max(50, pw);
     }
 
     private void updateComboBoxItems() {
@@ -545,31 +591,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
 
             @Override protected double computePrefWidth(double height) {
-                double pw;
-                if (getSkin() instanceof ListViewSkin) {
-                    ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
-                    if (itemCountDirty) {
-                        skin.updateItemCount();
-                        itemCountDirty = false;
-                    }
-
-                    int rowsToMeasure = -1;
-                    if (comboBox.getProperties().containsKey(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY)) {
-                        rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
-                    }
-
-                    pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
-                } else {
-                    pw = Math.max(100, comboBox.getWidth());
-                }
-
+                double pw = computeListViewPrefWidth(height);
                 // need to check the ListView pref height in the case that the
                 // placeholder node is showing
                 if (getItems().isEmpty() && getPlaceholder() != null) {
                     pw = Math.max(super.computePrefWidth(height), pw);
                 }
-
-                return Math.max(50, pw);
+                return pw;
             }
 
             @Override protected double computePrefHeight(double width) {
