@@ -49,10 +49,12 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -66,6 +68,7 @@ import javafx.scene.text.TextBoundsType;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.MnemonicInfo;
+import com.sun.javafx.event.EventDispatchChainImpl;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
@@ -991,5 +994,15 @@ public class Utils {
 
     public static URL getResource(String str) {
         return Utils.class.getResource(str);
+    }
+
+    // Dispatches the event only to the Node's dispatcher, not its entire
+    // dispatch chain. Returns true if the event was consumed.
+    public static boolean dispatchToNode(Event event, Node node) {
+        var dispatcher = node.getEventDispatcher();
+        if (dispatcher == null) return false;
+        var chain = new EventDispatchChainImpl();
+        chain.append(dispatcher);
+        return (chain.dispatchEvent(event.copyFor(node, node)) == null);
     }
 }

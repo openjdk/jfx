@@ -64,6 +64,7 @@ import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.SpinnerValueFactoryShim;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
@@ -75,6 +76,9 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import com.sun.javafx.util.Utils;
+import com.sun.javafx.event.EventUtil;
 
 import static javafx.scene.control.SpinnerValueFactoryShim.*;
 
@@ -1648,6 +1652,34 @@ public class SpinnerTest {
         assertTrue(escapeCancelPass, canMsg);
     }
 
+    // Test to ensure shortcut key press is not consumed
+    @Test public void testShortcutNotConsumed() {
+        Assumptions.assumeTrue(Utils.isMac());
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
+        intSpinner.setEditable(true);
+
+        VBox root = new VBox(intSpinner);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.setWidth(200);
+        stage.setHeight(200);
+
+        stage.show();
+        intSpinner.requestFocus();
+        tk.firePulse();
+
+        var event = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.Q, false, false, false, true);
+        boolean consumed = (EventUtil.fireEvent(intSpinner, event) == null);
+
+        assertFalse(consumed, "Initial shortcut event was consumed");
+        stage.hide();
+    }
+
+
     @Test public void spinnerDelayTest() {
         Spinner<Double> spinner = new Spinner<>(-100, 100, 2.5, 0.5);
 
@@ -1694,7 +1726,7 @@ public class SpinnerTest {
             spinner.requestFocus();
             tk.firePulse();
 
-            KeyEventFirer keyboard = new KeyEventFirer(spinner.getEditor());
+            KeyEventFirer keyboard = new KeyEventFirer(spinner);
             keyboard.doKeyPress(KeyCode.UP);
             tk.firePulse();
 
