@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
@@ -53,6 +54,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -73,6 +75,53 @@ public class ParentTest {
     @AfterEach
     public void tearDown() {
         stage.close();
+    }
+
+    /**
+     * Stylesheets list is lazily initialized.
+     * So if it is never accessed, it is null.
+     */
+    @Test
+    public void testStyleClassInitiallyNull() {
+        MockParent node = new MockParent();
+
+        List<String> stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        stylesheets = node.getStylesheets();
+        assertNotNull(stylesheets);
+
+        // Should not return null anymore as we accessed the property above.
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNotNull(stylesheets);
+
+        stylesheets.add("dummy");
+        assertEquals(1, stylesheets.size());
+    }
+
+    /**
+     * Stylesheets list is lazily initialized.
+     * CSS processing should not initialize it when null.
+     */
+    @Test
+    public void testCssProcessingDoesNotInitializeStylesheets() {
+        MockParent node = new MockParent();
+
+        List<String> stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        Group g = new Group(node);
+        Scene s = new Scene(g);
+        stage.setScene(s);
+        stage.show();
+
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        toolkit.firePulse();
+
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
     }
 
     @Test

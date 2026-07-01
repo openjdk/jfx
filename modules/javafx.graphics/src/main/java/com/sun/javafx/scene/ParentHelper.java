@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,23 @@ public class ParentHelper extends NodeHelper {
 
     public static List<String> getAllParentStylesheets(Parent parent) {
         return ((ParentHelper) getHelper(parent)).getAllParentStylesheetsImpl(parent);
+    }
+
+    /**
+     * Returns the stylesheets or null if the node stylesheets list is not initialized.
+     * <p>
+     * If the stylesheets of a {@link Parent} were never accessed (and therefore used),
+     * it is null as it will be lazily initialized only when accessed
+     * for the first time by the developer or JavaFX code.
+     * <p>
+     * Stylesheets on individual parent nodes are very rarely set (usually, stylesheets are set on the Scene).
+     * So we save an allocation by returning null when the stylesheets are not initialized.
+     *
+     * @param parent the parent
+     * @return the stylesheets or null
+     */
+    public static List<String> getStylesheetsOrNull(Parent parent) {
+        return parentAccessor.getStylesheetsOrNull(parent);
     }
 
     @Override
@@ -140,6 +157,7 @@ public class ParentHelper extends NodeHelper {
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
+        List<String> getStylesheetsOrNull(Parent parent);
     }
 
 }

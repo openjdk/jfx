@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,9 @@
 package test.javafx.scene;
 
 import javafx.scene.effect.BlendMode;
+import javafx.scene.layout.Region;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import test.javafx.scene.shape.TestUtils;
 import test.javafx.scene.shape.CircleTest;
 import com.sun.javafx.geom.PickRay;
@@ -63,6 +66,7 @@ import javafx.scene.transform.Transform;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 import javafx.scene.Group;
@@ -98,6 +102,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *
  */
 public class NodeTest {
+
+    private StubToolkit toolkit;
+    private Stage stage;
+
+    @BeforeEach
+    public void setUp() {
+        toolkit = (StubToolkit) Toolkit.getToolkit();
+        stage = new Stage();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        stage.close();
+    }
 
     // Things to test:
         // When parent is changed, should cursor on toolkit change as well if
@@ -170,6 +188,73 @@ public class NodeTest {
      *                              Basic Node Tests                           *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * StyleClass list is lazily initialized.
+     * So if it is never accessed, it is null.
+     */
+    @Test
+    public void testStyleClassInitiallyNull() {
+        Rectangle node = new Rectangle();
+
+        List<String> styleClass = NodeHelper.getStyleClassOrNull(node);
+        assertNull(styleClass);
+
+        styleClass = node.getStyleClass();
+        assertNotNull(styleClass);
+
+        // Should not return null anymore as we accessed the property above.
+        styleClass = NodeHelper.getStyleClassOrNull(node);
+        assertNotNull(styleClass);
+
+        styleClass.add("dummy");
+        assertEquals(1, styleClass.size());
+    }
+
+    /**
+     * StyleClass list is lazily initialized.
+     * CSS processing should not initialize it when null.
+     */
+    @Test
+    public void testCssProcessingDoesNotInitializeStyleClass() {
+        Rectangle node = new Rectangle();
+
+        List<String> styleClass = NodeHelper.getStyleClassOrNull(node);
+        assertNull(styleClass);
+
+        Group g = new Group(node);
+        Scene s = new Scene(g);
+        stage.setScene(s);
+        stage.show();
+
+        styleClass = NodeHelper.getStyleClassOrNull(node);
+        assertNull(styleClass);
+
+        toolkit.firePulse();
+
+        styleClass = NodeHelper.getStyleClassOrNull(node);
+        assertNull(styleClass);
+    }
+
+    @Test
+    public void testNodeToString() {
+        Region node = new Region();
+        String noIdPrefix = "Region@" + Integer.toHexString(node.hashCode());
+
+        assertEquals(noIdPrefix, node.toString());
+
+        node.getStyleClass().add("myStyleClass");
+        assertEquals(noIdPrefix + "[styleClass=myStyleClass]", node.toString());
+
+        node.getStyleClass().add("mySecondStyleClass");
+        assertEquals(noIdPrefix + "[styleClass=myStyleClass mySecondStyleClass]", node.toString());
+
+        node.setId("myId");
+        assertEquals("Region[id=myId, styleClass=myStyleClass mySecondStyleClass]", node.toString());
+
+        node.getStyleClass().clear();
+        assertEquals("Region[id=myId]", node.toString());
+    }
 
     @Test
     public void testGetPseudoClassStatesShouldReturnSameSet() {

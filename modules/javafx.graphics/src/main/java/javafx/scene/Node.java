@@ -713,6 +713,11 @@ public abstract sealed class Node
             public MediaQueryContext getMediaQueryContext(Node node) {
                 return node.getMediaQueryContext();
             }
+
+            @Override
+            public List<String> getStyleClassOrNull(Node node) {
+                return node.styleClass != null ? node.getStyleClass() : null;
+            }
         });
     }
 
@@ -1326,42 +1331,30 @@ public abstract sealed class Node
     }
 
     /**
-     * A list of String identifiers which can be used to logically group
+     * A list of String identifiers that can be used to logically group
      * Nodes, specifically for an external style engine. This variable is
      * analogous to the "class" attribute on an HTML element and, as such,
      * each element of the list is a style class to which this Node belongs.
+     * <p>
+     * Lazily initialized on the first access, so we usually call this method
+     * via {@link NodeHelper#getStyleClassOrNull(Node)} from CSS code to not initialize this when not needed.
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      * @defaultValue null
      */
-    private ObservableList<String> styleClass = new TrackableObservableList<>() {
-        @Override
-        protected void onChanged(Change<String> c) {
-            reapplyCSS();
-        }
-
-        @Override
-        public String toString() {
-            if (size() == 0) {
-                return "";
-            } else if (size() == 1) {
-                return get(0);
-            } else {
-                StringBuilder buf = new StringBuilder();
-                for (int i = 0; i < size(); i++) {
-                    buf.append(get(i));
-                    if (i + 1 < size()) {
-                        buf.append(' ');
-                    }
-                }
-                return buf.toString();
-            }
-        }
-    };
+    private ObservableList<String> styleClass;
 
     @Override
     public final ObservableList<String> getStyleClass() {
+        if (styleClass == null) {
+            styleClass = new TrackableObservableList<>() {
+                @Override
+                protected void onChanged(Change<String> c) {
+                    reapplyCSS();
+                }
+            };
+        }
         return styleClass;
     }
 
@@ -8662,7 +8655,7 @@ public abstract sealed class Node
         String simpleName = klassName.substring(klassName.lastIndexOf('.')+1);
         StringBuilder sbuf = new StringBuilder(simpleName);
         boolean hasId = id != null && !"".equals(getId());
-        boolean hasStyleClass = !getStyleClass().isEmpty();
+        boolean hasStyleClass = styleClass != null && !getStyleClass().isEmpty();
 
         if (!hasId) {
             sbuf.append('@');
@@ -8676,7 +8669,12 @@ public abstract sealed class Node
             if (!hasId) sbuf.append('[');
             else sbuf.append(", ");
             sbuf.append("styleClass=");
-            sbuf.append(getStyleClass());
+            for (int i = 0; i < getStyleClass().size(); i++) {
+                sbuf.append(getStyleClass().get(i));
+                if (i + 1 < getStyleClass().size()) {
+                    sbuf.append(' ');
+                }
+            }
             sbuf.append("]");
         }
         return sbuf.toString();
