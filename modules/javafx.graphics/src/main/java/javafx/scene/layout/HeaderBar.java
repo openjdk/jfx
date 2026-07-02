@@ -27,29 +27,22 @@ package javafx.scene.layout;
 
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
-import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import javafx.application.ColorScheme;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -181,7 +174,6 @@ import javafx.util.Subscription;
  */
 public class HeaderBar extends Region {
 
-    private static final Dimension2D EMPTY = new Dimension2D(0, 0);
     private static final String ALIGNMENT = "headerbar-alignment";
     private static final String MARGIN = "headerbar-margin";
 
@@ -312,7 +304,7 @@ public class HeaderBar extends Region {
      * @param value the color scheme, or {@code null} to indicate no preference
      */
     public static void setSystemColorScheme(Stage stage, ColorScheme value) {
-        AttachedProperties.of(stage).systemColorScheme.set(value);
+        StageHelper.getExtendedProperties(stage).systemColorSchemeProperty().set(value);
     }
 
     /**
@@ -320,26 +312,29 @@ public class HeaderBar extends Region {
      * attached property for the specified {@code Stage}.
      *
      * @param stage the {@code Stage}
-     * @return the color scheme, or {@code null} to indicate no preference
+     * @return the color scheme
      */
     public static ColorScheme getSystemColorScheme(Stage stage) {
-        return AttachedProperties.of(stage).systemColorScheme.get();
+        return StageHelper.getExtendedProperties(stage).systemColorSchemeProperty().get();
     }
 
     /**
-     * Specifies the preferred color scheme of the system-provided header buttons for the specified {@code Stage}.
+     * Specifies the color scheme of the system-provided header buttons for the specified {@code Stage}.
      * <p>
-     * The value {@code null} indicates "no preference", in which case the color scheme of the system-provided
-     * header buttons defaults to the {@linkplain Scene.Preferences#colorSchemeProperty() scene color scheme}.
+     * This is a <em>null-coalescing</em> property: if set to {@code null} (using the setter method,
+     * {@link Property#setValue(Object)}, or with a binding), the property evaluates to the value of
+     * {@link Scene.Preferences#colorSchemeProperty()}. Likewise, specifying a non-null value will
+     * override the scene-provided value.
      * <p>
      * The specified color scheme is only a hint for the platform window toolkit and may be ignored.
      *
      * @param stage the {@code Stage}
      * @return the {@code systemColorScheme} attached property
-     * @defaultValue {@code null}
+     * @defaultValue {@link Scene.Preferences#getColorScheme()}
+     * @see Scene.Preferences#colorSchemeProperty()
      */
     public static ObjectProperty<ColorScheme> systemColorSchemeProperty(Stage stage) {
-        return AttachedProperties.of(stage).systemColorScheme;
+        return StageHelper.getExtendedProperties(stage).systemColorSchemeProperty();
     }
 
     /**
@@ -356,7 +351,7 @@ public class HeaderBar extends Region {
      * @param height the preferred height, or 0 to hide the system-provided header buttons
      */
     public static void setSystemButtonHeight(Stage stage, double height) {
-        AttachedProperties.of(stage).systemButtonHeight.set(height);
+        StageHelper.getExtendedProperties(stage).systemButtonHeightProperty().set(height);
     }
 
     /**
@@ -367,7 +362,7 @@ public class HeaderBar extends Region {
      * @return the preferred height of the system-provided header buttons
      */
     public static double getSystemButtonHeight(Stage stage) {
-        return AttachedProperties.of(stage).systemButtonHeight.get();
+        return StageHelper.getExtendedProperties(stage).systemButtonHeightProperty().get();
     }
 
     /**
@@ -389,7 +384,7 @@ public class HeaderBar extends Region {
      * @defaultValue {@code USE_DEFAULT_SIZE}
      */
     public static DoubleProperty systemButtonHeightProperty(Stage stage) {
-        return AttachedProperties.of(stage).systemButtonHeight;
+        return StageHelper.getExtendedProperties(stage).systemButtonHeightProperty();
     }
 
     /**
@@ -400,7 +395,7 @@ public class HeaderBar extends Region {
      * @return the system-recommended minimum height for the {@code HeaderBar}
      */
     public static double getSystemMinHeight(Stage stage) {
-        return AttachedProperties.of(stage).systemMinHeight.get();
+        return StageHelper.getExtendedProperties(stage).systemMinHeightProperty().get();
     }
 
     /**
@@ -415,7 +410,7 @@ public class HeaderBar extends Region {
      * @return the {@code systemMinHeight} attached property
      */
     public static ReadOnlyDoubleProperty systemMinHeightProperty(Stage stage) {
-        return AttachedProperties.of(stage).systemMinHeight.getReadOnlyProperty();
+        return StageHelper.getExtendedProperties(stage).systemMinHeightProperty();
     }
 
     /**
@@ -427,7 +422,7 @@ public class HeaderBar extends Region {
      * @return the {@code leftSystemInset} attached property
      */
     public static ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty(Stage stage) {
-        return AttachedProperties.of(stage).leftSystemInset.getReadOnlyProperty();
+        return StageHelper.getExtendedProperties(stage).leftSystemInsetProperty();
     }
 
     /**
@@ -438,7 +433,7 @@ public class HeaderBar extends Region {
      * @return the size of the left system-reserved inset
      */
     public static Dimension2D getLeftSystemInset(Stage stage) {
-        return AttachedProperties.of(stage).leftSystemInset.get();
+        return StageHelper.getExtendedProperties(stage).leftSystemInsetProperty().get();
     }
 
     /**
@@ -450,7 +445,7 @@ public class HeaderBar extends Region {
      * @return the {@code rightSystemInset} attached property
      */
     public static ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty(Stage stage) {
-        return AttachedProperties.of(stage).rightSystemInset.getReadOnlyProperty();
+        return StageHelper.getExtendedProperties(stage).rightSystemInsetProperty();
     }
 
     /**
@@ -461,7 +456,7 @@ public class HeaderBar extends Region {
      * @return the size of the right system-reserved inset
      */
     public static Dimension2D getRightSystemInset(Stage stage) {
-        return AttachedProperties.of(stage).rightSystemInset.get();
+        return StageHelper.getExtendedProperties(stage).rightSystemInsetProperty().get();
     }
 
     /**
@@ -711,14 +706,14 @@ public class HeaderBar extends Region {
             : null;
 
         if (stage != null) {
-            var attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
             } else {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
             }
         }
 
@@ -798,14 +793,14 @@ public class HeaderBar extends Region {
             : null;
 
         if (stage != null) {
-            AttachedProperties attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
             } else {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
             }
         }
 
@@ -931,10 +926,10 @@ public class HeaderBar extends Region {
         subscriptions.unsubscribe();
 
         if (stage != null) {
-            var attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             subscriptions = Subscription.combine(
-                attachedProperties.systemMinHeight.subscribe(height -> {
+                properties.systemMinHeightProperty().subscribe(height -> {
                     var minHeight = (StyleableDoubleProperty)minHeightProperty();
 
                     // Only change minHeight if it was not set by a stylesheet or application code.
@@ -942,7 +937,7 @@ public class HeaderBar extends Region {
                         minHeight.applyStyle(null, height);
                     }
                 }),
-                attachedProperties.subscribeLayoutInvalidated(this::requestLayout)
+                properties.subscribeLayoutInvalidated(this::requestLayout)
             );
         }
     }
@@ -976,105 +971,6 @@ public class HeaderBar extends Region {
             if (value != null) {
                 getChildren().add(value);
             }
-        }
-    }
-
-    /**
-     * This class holds attached properties that are defined on {@code HeaderBar}, but associated
-     * with and stored per {@code Stage}. {@code HeaderBar} uses these properties for layout purposes,
-     * and also subscribes to invalidation notifications that cause {@code HeaderBar} to request a
-     * new layout pass.
-     */
-    private static final class AttachedProperties {
-
-        private final Stage stage;
-        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
-        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
-        private final ReadOnlyDoubleWrapper systemMinHeight;
-        private final DoubleProperty systemButtonHeight;
-        private final ObjectProperty<ColorScheme> systemColorScheme;
-        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
-
-        private boolean currentFullScreen;
-        private HeaderButtonMetrics currentMetrics;
-
-        AttachedProperties(Stage stage) {
-            this.stage = stage;
-            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
-            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
-            this.systemMinHeight = new ReadOnlyDoubleWrapper(stage, "systemMinHeight");
-
-            this.systemButtonHeight = new SimpleDoubleProperty(
-                stage, "systemButtonHeight", StageHelper.getHeaderButtonHeight(stage)) {
-                    @Override
-                    protected void invalidated() {
-                        StageHelper.setHeaderButtonHeight(stage, get());
-                    }
-                };
-
-            this.systemColorScheme = new SimpleObjectProperty<>(
-                stage, "systemColorScheme", StageHelper.getHeaderButtonColorScheme(stage)) {
-                    @Override
-                    protected void invalidated() {
-                        StageHelper.setHeaderButtonColorScheme(stage, get());
-                    }
-                };
-
-            StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
-            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
-            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
-        }
-
-        public static AttachedProperties of(Stage stage) {
-            var instance = (AttachedProperties)Objects.requireNonNull(stage, "Stage cannot be null")
-                .getProperties()
-                .get(AttachedProperties.class);
-
-            if (instance == null) {
-                instance = new AttachedProperties(stage);
-                stage.getProperties().put(AttachedProperties.class, instance);
-            }
-
-            return instance;
-        }
-
-        public Subscription subscribeLayoutInvalidated(Runnable listener) {
-            layoutInvalidatedListeners.add(listener);
-            return () -> layoutInvalidatedListeners.remove(listener);
-        }
-
-        private void onMetricsChanged(HeaderButtonMetrics metrics) {
-            currentMetrics = metrics;
-
-            updateInsets(stage.getScene() instanceof Scene scene
-                ? scene.getEffectiveNodeOrientation()
-                : NodeOrientation.LEFT_TO_RIGHT);
-        }
-
-        private void onFullScreenChanged(boolean fullScreen) {
-            currentFullScreen = fullScreen;
-
-            updateInsets(stage.getScene() instanceof Scene scene
-                ? scene.getEffectiveNodeOrientation()
-                : NodeOrientation.LEFT_TO_RIGHT);
-        }
-
-        private void updateInsets(NodeOrientation orientation) {
-            if (currentFullScreen || currentMetrics == null) {
-                leftSystemInset.set(EMPTY);
-                rightSystemInset.set(EMPTY);
-                systemMinHeight.set(0);
-            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-                leftSystemInset.set(currentMetrics.leftInset());
-                rightSystemInset.set(currentMetrics.rightInset());
-                systemMinHeight.set(currentMetrics.minHeight());
-            } else {
-                leftSystemInset.set(currentMetrics.rightInset());
-                rightSystemInset.set(currentMetrics.leftInset());
-                systemMinHeight.set(currentMetrics.minHeight());
-            }
-
-            layoutInvalidatedListeners.forEach(Runnable::run);
         }
     }
 }

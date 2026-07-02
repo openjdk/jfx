@@ -28,14 +28,22 @@ package javafx.stage;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.stage.ExtendedStageProperties;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.Dimension2D;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -59,6 +67,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 /**
  * The JavaFX {@code Stage} class is the top level JavaFX container.
@@ -195,11 +204,6 @@ public class Stage extends Window {
             }
 
             @Override
-            public void notifyColorSchemeChanged(Stage stage) {
-                stage.updateHeaderButtonDarkStyle();
-            }
-
-            @Override
             public void setPrimary(Stage stage, boolean primary) {
                 stage.setPrimary(primary);
             }
@@ -210,28 +214,8 @@ public class Stage extends Window {
             }
 
             @Override
-            public void setHeaderButtonHeight(Stage stage, double height) {
-                stage.setHeaderButtonHeight(height);
-            }
-
-            @Override
-            public double getHeaderButtonHeight(Stage stage) {
-                return stage.getHeaderButtonHeight();
-            }
-
-            @Override
-            public void setHeaderButtonColorScheme(Stage stage, ColorScheme colorScheme) {
-                stage.setHeaderButtonColorScheme(colorScheme);
-            }
-
-            @Override
-            public ColorScheme getHeaderButtonColorScheme(Stage stage) {
-                return stage.getHeaderButtonColorScheme();
-            }
-
-            @Override
-            public ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
-                return stage.headerButtonMetricsProperty();
+            public ExtendedStageProperties getExtendedProperties(Stage stage) {
+                return stage.getExtendedProperties();
             }
         });
     }
@@ -265,7 +249,7 @@ public class Stage extends Window {
 
         @Override
         public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
-            stage.headerButtonMetricsProperty().set(metrics);
+            stage.getExtendedProperties().setHeaderButtonMetrics(metrics);
         }
     };
 
@@ -1135,8 +1119,13 @@ public class Stage extends Window {
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
-            getPeer().setHeaderButtonHeight(getHeaderButtonHeight());
-            getPeer().setHeaderButtonDarkStyle(isHeaderButtonDarkStyle());
+
+            if (style == StageStyle.EXTENDED) {
+                var extendedProperties = getExtendedProperties();
+                getPeer().setHeaderButtonHeight(extendedProperties.systemButtonHeightProperty().get());
+                getPeer().setHeaderButtonDarkStyle(extendedProperties.systemColorSchemeProperty().get() == ColorScheme.DARK);
+            }
+
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1303,52 +1292,154 @@ public class Stage extends Window {
         return fullScreenExitHint;
     }
 
-    private ObjectProperty<HeaderButtonMetrics> headerButtonMetrics;
+    private ExtendedPropertiesImpl extendedProperties;
 
-    private ObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
-        if (headerButtonMetrics == null) {
-            headerButtonMetrics = new SimpleObjectProperty<>(this, "headerButtonMetrics");
+    private ExtendedPropertiesImpl getExtendedProperties() {
+        if (extendedProperties == null) {
+            extendedProperties = new ExtendedPropertiesImpl(this);
         }
 
-        return headerButtonMetrics;
+        return extendedProperties;
     }
 
-    private double headerButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
+    /**
+     * This class holds attached properties for the {@link StageStyle#EXTENDED} style that are defined on
+     * {@code HeaderBar}, but associated with and stored per {@code Stage}. {@code HeaderBar} uses these
+     * properties for layout purposes, and also subscribes to invalidation notifications that cause
+     * {@code HeaderBar} to request a new layout pass.
+     */
+    private static final class ExtendedPropertiesImpl implements ExtendedStageProperties {
 
-    private double getHeaderButtonHeight() {
-        return headerButtonHeight;
-    }
+        private static final Dimension2D EMPTY = new Dimension2D(0, 0);
 
-    private void setHeaderButtonHeight(double height) {
-        headerButtonHeight = height;
+        private final Stage stage;
+        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
+        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
+        private final ReadOnlyDoubleWrapper systemMinHeight;
+        private final DoubleProperty systemButtonHeight;
+        private final NullCoalescingPropertyBase<ColorScheme> systemColorScheme;
+        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
 
-        if (getPeer() instanceof TKStage peer) {
-            peer.setHeaderButtonHeight(height);
+        private boolean currentFullScreen;
+        private HeaderButtonMetrics currentMetrics;
+
+        public ExtendedPropertiesImpl(Stage stage) {
+            this.stage = stage;
+            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
+            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
+            this.systemMinHeight = new ReadOnlyDoubleWrapper(stage, "systemMinHeight");
+
+            this.systemButtonHeight = new SimpleDoubleProperty(
+                    stage, "systemButtonHeight", HeaderBar.USE_DEFAULT_SIZE) {
+                @Override
+                protected void invalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonHeight(get());
+                    }
+                }
+            };
+
+            this.systemColorScheme = new NullCoalescingPropertyBase<>(
+                    stage.sceneProperty()
+                        .map(Scene::getPreferences)
+                        .flatMap(Scene.Preferences::colorSchemeProperty)
+                        .orElse(ColorScheme.LIGHT)) {
+                {
+                    connect();
+                }
+
+                @Override
+                public Object getBean() {
+                    return stage;
+                }
+
+                @Override
+                public String getName() {
+                    return "systemColorScheme";
+                }
+
+                @Override
+                protected void onInvalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonDarkStyle(get() == ColorScheme.DARK);
+                    }
+                }
+            };
+
+            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
+            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
         }
-    }
 
-    private ColorScheme headerButtonColorScheme;
-
-    private ColorScheme getHeaderButtonColorScheme() {
-        return headerButtonColorScheme;
-    }
-
-    private void setHeaderButtonColorScheme(ColorScheme colorScheme) {
-        headerButtonColorScheme = colorScheme;
-        updateHeaderButtonDarkStyle();
-    }
-
-    private void updateHeaderButtonDarkStyle() {
-        if (getPeer() instanceof TKStage peer) {
-            peer.setHeaderButtonDarkStyle(isHeaderButtonDarkStyle());
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
+            return leftSystemInset.getReadOnlyProperty();
         }
-    }
 
-    private boolean isHeaderButtonDarkStyle() {
-        return headerButtonColorScheme != null
-            ? headerButtonColorScheme == ColorScheme.DARK
-            : getScene() instanceof Scene s && s.getPreferences().getColorScheme() instanceof ColorScheme cs
-                ? cs == ColorScheme.DARK
-                : PlatformImpl.getPlatformPreferences().getColorScheme() == ColorScheme.DARK;
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
+            return rightSystemInset.getReadOnlyProperty();
+        }
+
+        @Override
+        public ReadOnlyDoubleProperty systemMinHeightProperty() {
+            return systemMinHeight.getReadOnlyProperty();
+        }
+
+        @Override
+        public DoubleProperty systemButtonHeightProperty() {
+            return systemButtonHeight;
+        }
+
+        @Override
+        public ObjectProperty<ColorScheme> systemColorSchemeProperty() {
+            return systemColorScheme;
+        }
+
+        @Override
+        public Subscription subscribeLayoutInvalidated(Runnable listener) {
+            layoutInvalidatedListeners.add(listener);
+            return () -> layoutInvalidatedListeners.remove(listener);
+        }
+
+        private void setHeaderButtonMetrics(HeaderButtonMetrics metrics) {
+            currentMetrics = metrics;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void onFullScreenChanged(boolean fullScreen) {
+            currentFullScreen = fullScreen;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void updateInsets(NodeOrientation orientation) {
+            if (currentFullScreen || currentMetrics == null) {
+                leftSystemInset.set(EMPTY);
+                rightSystemInset.set(EMPTY);
+                systemMinHeight.set(0);
+            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
+                leftSystemInset.set(currentMetrics.leftInset());
+                rightSystemInset.set(currentMetrics.rightInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            } else {
+                leftSystemInset.set(currentMetrics.rightInset());
+                rightSystemInset.set(currentMetrics.leftInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            }
+
+            for (Runnable listener : layoutInvalidatedListeners) {
+                try {
+                    listener.run();
+                } catch (Throwable ex) {
+                    Thread currentThread = Thread.currentThread();
+                    currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+                }
+            }
+        }
     }
 }
