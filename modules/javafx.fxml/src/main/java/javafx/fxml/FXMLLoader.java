@@ -142,7 +142,7 @@ public class FXMLLoader {
 
         @SuppressWarnings("unchecked")
         public void add(Object element) {
-            // If value is a list, add element to it; otherwise, get the value
+            // If value is a collection, add element to it; otherwise, get the value
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
             Collection<Object> collection;
@@ -153,8 +153,8 @@ public class FXMLLoader {
                 DefaultProperty defaultProperty = type.getAnnotation(DefaultProperty.class);
                 String defaultPropertyName = defaultProperty.value();
 
-                // Get the list value
-                collection = (List<Object>)getProperties().get(defaultPropertyName);
+                // Get the collection value
+                collection = (Collection<Object>)getProperties().get(defaultPropertyName);
 
                 // Coerce the element to the list item type
                 if (!Map.class.isAssignableFrom(type)) {
