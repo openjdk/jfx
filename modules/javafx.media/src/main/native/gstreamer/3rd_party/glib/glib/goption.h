@@ -364,6 +364,7 @@ GLIB_AVAILABLE_IN_ALL
 void            g_option_context_add_main_entries (GOptionContext      *context,
                const GOptionEntry  *entries,
                const gchar         *translation_domain);
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean        g_option_context_parse            (GOptionContext      *context,
                gint                *argc,
@@ -373,6 +374,7 @@ GLIB_AVAILABLE_IN_2_40
 gboolean        g_option_context_parse_strv       (GOptionContext      *context,
                                                    gchar             ***arguments,
                                                    GError             **error);
+#endif // GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_set_translate_func (GOptionContext     *context,
                  GTranslateFunc      func,
@@ -390,10 +392,12 @@ void          g_option_context_set_main_group (GOptionContext *context,
                  GOptionGroup   *group);
 GLIB_AVAILABLE_IN_ALL
 GOptionGroup *g_option_context_get_main_group (GOptionContext *context);
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar        *g_option_context_get_help       (GOptionContext *context,
                                                gboolean        main_help,
                                                GOptionGroup   *group);
+#endif // GSTREAMER_LITE
 
 GLIB_AVAILABLE_IN_ALL
 GOptionGroup *g_option_group_new                    (const gchar        *name,

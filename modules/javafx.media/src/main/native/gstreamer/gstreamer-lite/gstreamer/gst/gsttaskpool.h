@@ -22,6 +22,7 @@
 #ifndef __GST_TASK_POOL_H__
 #define __GST_TASK_POOL_H__
 
+#include <gst/gstcontext.h>
 #include <gst/gstobject.h>
 
 G_BEGIN_DECLS
@@ -100,14 +101,14 @@ GST_API
 GType           gst_task_pool_get_type    (void);
 
 GST_API
-GstTaskPool *   gst_task_pool_new         (void);
+GstTaskPool *   gst_task_pool_new         (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_task_pool_prepare     (GstTaskPool *pool, GError **error);
 
 GST_API
 gpointer        gst_task_pool_push        (GstTaskPool *pool, GstTaskPoolFunction func,
-                                           gpointer user_data, GError **error);
+                                           gpointer user_data, GError **error) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_task_pool_join        (GstTaskPool *pool, gpointer id);
 
@@ -116,6 +117,28 @@ void            gst_task_pool_dispose_handle (GstTaskPool *pool, gpointer id);
 
 GST_API
 void            gst_task_pool_cleanup     (GstTaskPool *pool);
+
+/**
+ * GST_TASK_POOL_CONTEXT_TYPE:
+ *
+ * The well-known context type for sharing a #GstTaskPool between elements
+ * in a pipeline.
+ *
+ * Elements that support this context will post a %GST_MESSAGE_NEED_CONTEXT
+ * message on the bus when they need a task pool. Applications can respond
+ * by setting the context on the element or the pipeline. Elements will not
+ * query neighbors for this context type as the task pool is optional and
+ * elements will fall back to their default behavior if no pool is provided.
+ *
+ * Since: 1.28
+ */
+#define GST_TASK_POOL_CONTEXT_TYPE "gst.task.pool"
+
+GST_API
+void            gst_context_set_task_pool (GstContext * context, GstTaskPool * pool);
+
+GST_API
+gboolean        gst_context_get_task_pool (GstContext * context, GstTaskPool ** pool);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTaskPool, gst_object_unref)
 
@@ -170,7 +193,9 @@ GST_API
 guint           gst_shared_task_pool_get_max_threads (GstSharedTaskPool *pool);
 
 GST_API
-GstTaskPool *   gst_shared_task_pool_new             (void);
+GstTaskPool *   gst_shared_task_pool_new             (void) G_GNUC_WARN_UNUSED_RESULT;
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstSharedTaskPool, gst_object_unref)
 
 G_END_DECLS
 

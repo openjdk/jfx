@@ -138,6 +138,16 @@ G_BEGIN_DECLS
 #define GST_VALUE_HOLDS_ARRAY(x)        ((gpointer)(x) != NULL && G_VALUE_TYPE(x) == _gst_value_array_type)
 
 /**
+ * GST_VALUE_HOLDS_UNIQUE_LIST:
+ * @x: the #GValue to check
+ *
+ * Checks if the given #GValue contains a #GstValueUniqueList value.
+ *
+ * Since: 1.28
+ */
+#define GST_VALUE_HOLDS_UNIQUE_LIST(x)         ((gpointer)(x) != NULL && G_VALUE_TYPE(x) == _gst_value_unique_list_type)
+
+/**
  * GST_VALUE_HOLDS_CAPS:
  * @x: the #GValue to check
  *
@@ -332,6 +342,31 @@ GST_EXPORT GType _gst_value_list_type;
 #define GST_TYPE_LIST                    (_gst_value_list_type)
 
 #ifndef GSTREAMER_LITE
+GST_API GType _gst_value_unique_list_type;
+#else // GSTREAMER_LITE
+GST_EXPORT GType _gst_value_unique_list_type;
+#endif // GSTREAMER_LITE
+
+/**
+ * GstValueUniqueList:
+ *
+ * A fundamental type that describes a set of #GValue
+ *
+ * Since: 1.28
+ */
+
+/**
+ * GST_TYPE_UNIQUE_LIST:
+ *
+ * a #GValue type that represents a set of #GValue values.
+ *
+ * Returns: the #GType of GstValueUniqueList
+ *
+ * Since: 1.28
+ */
+#define GST_TYPE_UNIQUE_LIST           (_gst_value_unique_list_type)
+
+#ifndef GSTREAMER_LITE
 GST_API GType _gst_value_array_type;
 #else // GSTREAMER_LITE
 GST_EXPORT GType _gst_value_array_type;
@@ -523,6 +558,19 @@ typedef gboolean (* GstValueDeserializeWithPSpecFunc) (GValue       *dest,
                                                        const gchar  *s,
                                                        GParamSpec   *pspec);
 
+/**
+ * GstValueHashFunc:
+ * @value: a #GValue
+ * @res: (out): a location to store the hash value
+ *
+ * Used by gst_value_hash() to calculate a hash of @value.
+ *
+ * Returns: %TRUE, or %FALSE if @value cannot be hashed.
+ *
+ * Since: 1.28
+ */
+typedef gboolean (* GstValueHashFunc) (const GValue *value,
+                                       guint *res);
 
 typedef struct _GstValueTable GstValueTable;
 /**
@@ -550,8 +598,17 @@ struct _GstValueTable {
    */
   GstValueDeserializeWithPSpecFunc deserialize_with_pspec;
 
+  /**
+   * GstValueTable.hash:
+   *
+   * a #GstValueHashFunc
+   *
+   * Since: 1.28
+   */
+  GstValueHashFunc hash;
+
   /*< private >*/
-  gpointer _gst_reserved [GST_PADDING - 1];
+  gpointer _gst_reserved [GST_PADDING - 2];
 };
 
 GST_API
@@ -574,6 +631,9 @@ GType gst_value_list_get_type (void);
 
 GST_API
 GType gst_value_array_get_type (void);
+
+GST_API
+GType gst_value_unique_list_get_type (void);
 
 GST_API
 GType gst_bitmask_get_type (void);
@@ -604,6 +664,10 @@ GST_API
 gboolean        gst_value_deserialize_with_pspec (GValue               *dest,
                                                  const gchar           *src,
                                                  GParamSpec            *pspec);
+
+GST_API
+gboolean        gst_value_hash                  (const GValue * value,
+                                                 guint * res);
 
 /* list */
 
@@ -654,6 +718,27 @@ const GValue *  gst_value_array_get_value       (const GValue   *value,
 GST_API
 GValue *        gst_value_array_init            (GValue *value,
                          guint prealloc);
+
+/* unique list */
+GST_API
+void            gst_value_unique_list_append_value     (GValue         *value,
+                                                 const GValue   *append_value);
+GST_API
+void            gst_value_unique_list_append_and_take_value (GValue    *value,
+                                                 GValue   *append_value);
+GST_API
+void            gst_value_unique_list_prepend_value    (GValue         *value,
+                                                 const GValue   *prepend_value);
+GST_API
+void            gst_value_unique_list_concat           (GValue         *dest,
+                                                 const GValue   *value1,
+                                                 const GValue   *value2);
+GST_API
+guint           gst_value_unique_list_get_size         (const GValue   *value);
+
+GST_API
+const GValue *  gst_value_unique_list_get_value        (const GValue   *value,
+                                                 guint          index);
 
 /* int range */
 

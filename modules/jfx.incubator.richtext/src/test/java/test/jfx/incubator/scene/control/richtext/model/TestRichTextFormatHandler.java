@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,35 @@
 
 package test.jfx.incubator.scene.control.richtext.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledOutput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * Tests RichTextFormatHandler.
@@ -48,8 +62,8 @@ public class TestRichTextFormatHandler {
     private static boolean DEBUG = false;
 
     @Test
-    public void testBasicAttributes() throws IOException {
-        testRoundTrip(
+    public void testStandardAttributes() throws IOException {
+        StyledSegment[] segments = {
             s("bold", StyleAttributeMap.BOLD),
             s("font family", a(StyleAttributeMap.FONT_FAMILY, "Arial")),
             s("font size", a(StyleAttributeMap.FONT_SIZE, 12.0)),
@@ -59,7 +73,8 @@ public class TestRichTextFormatHandler {
                 a(StyleAttributeMap.BULLET, "⌘"),
                 a(StyleAttributeMap.FIRST_LINE_INDENT, 10.0),
                 a(StyleAttributeMap.LINE_SPACING, 11.0),
-                a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT)
+                a(StyleAttributeMap.PARAGRAPH_DIRECTION, ParagraphDirection.RIGHT_TO_LEFT),
+                a(StyleAttributeMap.TAB_STOPS, TabStops.of(100, 200))
             ),
             nl(),
 
@@ -78,7 +93,75 @@ public class TestRichTextFormatHandler {
 
             s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
             nl()
-        );
+        };
+        testRoundTrip(segments);
+        checkAll(segments);
+    }
+
+    /// Make sure all attributes declared in StyleAttributeMap are included.
+    private static void checkAll(StyledSegment[] segments) {
+        Set<StyleAttribute<?>> declared = new HashSet<>();
+        int mask = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
+        for (Field f : StyleAttributeMap.class.getDeclaredFields()) {
+            int mod = f.getModifiers();
+            if ((mod & mask) == mask) {
+                Class<?> type = f.getType();
+                if (type.isAssignableFrom(StyleAttribute.class)) {
+                    try {
+                        declared.add((StyleAttribute<?>)f.get(null));
+                    } catch (Exception e) {
+                        fail(e);
+                    }
+                }
+            }
+        }
+
+        for (StyledSegment seg : segments) {
+            StyleAttributeMap attr = seg.getStyleAttributeMap(null);
+            if (attr != null) {
+                for (StyleAttribute<?> a : attr.getAttributes()) {
+                    declared.remove(a);
+                }
+            }
+        }
+
+        assertTrue(declared.isEmpty(), "round trip test missed " + declared);
+    }
+
+    @Test
+    public void testDocumentProperties() throws IOException {
+        docp(Map.of(), 0, null);
+        docp(Map.of("{}%|\"", "{}%|\""), 1, "{@RichText-v2-incubator}{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}");
+        docp(Map.of("title", ""), 1, "{@RichText-v2-incubator}{#title|}{}{!}");
+    }
+
+    private void docp(Map<String,String> props, int expectedCount, String expectedSave) throws IOException {
+        RichTextModel m = new RichTextModel() {
+            @Override
+            protected Map<String,String> documentProperties() {
+                return props;
+             }
+        };
+
+        String s = save(m);
+        if (expectedSave != null) {
+            assertEquals(expectedSave, s);
+        }
+
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        int count = 0;
+        StyledInput in = h.createStyledInput(s, null);
+        StyledSegment seg;
+        while ((seg = in.nextSegment()) != null) {
+            switch (seg.getType()) {
+            case DOCUMENT_PROPERTIES:
+                count++;
+                Map<String,String> dp = seg.getDocumentProperties();
+                assertEquals(props, dp);
+                break;
+            }
+        }
+        assertEquals(expectedCount, count, "missing document segment");
     }
 
     // JDK-8357393
@@ -173,7 +256,7 @@ public class TestRichTextFormatHandler {
 
     private static void checkParagraphType(StyleAttributeMap attrs, boolean forParagraph) {
         for (StyleAttribute a : attrs.getAttributes()) {
-            Assertions.assertEquals(forParagraph, a.isParagraphAttribute(), "wrong isParagraph: " + a);
+            Assertions.assertTrue(StyleAttributeMapHelper.isAcceptable(a, forParagraph), "wrong type: " + a);
         }
     }
 
@@ -276,5 +359,45 @@ public class TestRichTextFormatHandler {
             }
         }
         return a;
+    }
+
+    @Test
+    public void save() throws IOException {
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(155);
+        String s = save(m);
+        assertEquals(TestRichTextModel.VERSION + "{#tabs|155.0}{}{!}", s); // verify tab stops are saved
+
+        m.setDefaultTabStops(77);
+        s = save(m);
+        assertEquals(TestRichTextModel.VERSION + "{#tabs|77.0}{}{!}", s); // verify tab stops are saved
+    }
+
+    private static String save(RichTextModel m) throws IOException {
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        h.save(m, null, TextPos.ZERO, m.getDocumentEnd(), out);
+        byte[] b = out.toByteArray();
+        return new String(b, StandardCharsets.UTF_8);
+    }
+
+    @Test
+    public void load() {
+        RichTextModel m = new RichTextModel();
+        assertEquals(0.0, m.getDefaultTabStops());
+
+        String input =
+            """
+            {#tabs|156.0|version|v2}{ff}{tc}1{!}
+            {0}2{!}
+            {0}3{!}
+            {!}
+            """;
+        RichTextFormatHandler h = RichTextFormatHandler.getInstance();
+        StyledInput in = h.createStyledInput(input, null);
+        m.replace(null, TextPos.ZERO, m.getDocumentEnd(), in);
+
+        assertEquals(5, m.size());
+        assertEquals(156.0, m.getDefaultTabStops()); // verify tab stops are loaded
     }
 }

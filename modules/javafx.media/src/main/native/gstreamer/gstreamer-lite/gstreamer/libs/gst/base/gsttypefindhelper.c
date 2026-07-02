@@ -448,9 +448,10 @@ gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
 
   *caps = result;
   if (helper.flow_ret == GST_FLOW_EOS) {
-    /* Some typefinder might've tried to read too much, if we
-     * didn't get any meaningful caps because of that this is
-     * just a normal error */
+    /* Some typefinder might've tried to read too much, especially if
+     * dealing with small sources or with limited num-buffers. In
+     * this case, EOS is received, and it is converted to ERROR
+     * because the downstream peer is not yet connected to send it. */
     helper.flow_ret = GST_FLOW_ERROR;
   }
 

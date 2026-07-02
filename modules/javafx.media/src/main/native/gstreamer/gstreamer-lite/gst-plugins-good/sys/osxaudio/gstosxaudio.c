@@ -33,7 +33,7 @@
 #ifndef GSTREAMER_LITE
 #include "gstatdec.h"
 #include "gstatenc.h"
-#ifndef HAVE_IOS
+#if TARGET_OS_OSX
 #include "gstosxaudiodeviceprovider.h"
 #endif
 #endif // GSTREAMER_LITE
@@ -57,7 +57,7 @@ plugin_init (GstPlugin * plugin)
 #ifndef GSTREAMER_LITE
   ret |= GST_ELEMENT_REGISTER (atdec, plugin);
   ret |= GST_ELEMENT_REGISTER (atenc, plugin);
-#ifndef HAVE_IOS
+#if TARGET_OS_OSX
   ret |= GST_DEVICE_PROVIDER_REGISTER (osxaudiodeviceprovider, plugin);
 #endif
 #endif // GSTREAMER_LITE

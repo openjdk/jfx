@@ -52,7 +52,7 @@ GST_BASE_API
 GType                   gst_adapter_get_type            (void);
 
 GST_BASE_API
-GstAdapter *            gst_adapter_new                 (void) G_GNUC_MALLOC;
+GstAdapter *            gst_adapter_new                 (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void                    gst_adapter_clear               (GstAdapter *adapter);
@@ -71,36 +71,36 @@ void                    gst_adapter_copy                (GstAdapter *adapter, gp
                                                          gsize offset, gsize size);
 GST_BASE_API
 GBytes *                gst_adapter_copy_bytes          (GstAdapter *adapter,
-                                                         gsize offset, gsize size);
+                                                         gsize offset, gsize size) G_GNUC_WARN_UNUSED_RESULT;
 GST_BASE_API
 void                    gst_adapter_flush               (GstAdapter *adapter, gsize flush);
 
 GST_BASE_API
-gpointer                gst_adapter_take                (GstAdapter *adapter, gsize nbytes);
+gpointer                gst_adapter_take                (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer*              gst_adapter_take_buffer         (GstAdapter *adapter, gsize nbytes);
+GstBuffer*              gst_adapter_take_buffer         (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GList*                  gst_adapter_take_list           (GstAdapter *adapter, gsize nbytes);
+GList*                  gst_adapter_take_list           (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer *             gst_adapter_take_buffer_fast    (GstAdapter *adapter, gsize nbytes);
+GstBuffer *             gst_adapter_take_buffer_fast    (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBufferList *         gst_adapter_take_buffer_list    (GstAdapter *adapter, gsize nbytes);
+GstBufferList *         gst_adapter_take_buffer_list    (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer*              gst_adapter_get_buffer          (GstAdapter *adapter, gsize nbytes);
+GstBuffer*              gst_adapter_get_buffer          (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GList*                  gst_adapter_get_list            (GstAdapter *adapter, gsize nbytes);
+GList*                  gst_adapter_get_list            (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer *             gst_adapter_get_buffer_fast     (GstAdapter *adapter, gsize nbytes);
+GstBuffer *             gst_adapter_get_buffer_fast     (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBufferList *         gst_adapter_get_buffer_list     (GstAdapter *adapter, gsize nbytes);
+GstBufferList *         gst_adapter_get_buffer_list     (GstAdapter *adapter, gsize nbytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 gsize                   gst_adapter_available           (GstAdapter *adapter);
