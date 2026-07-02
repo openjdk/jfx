@@ -32,6 +32,7 @@ import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
 import com.sun.javafx.stage.ExtendedStageProperties;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
@@ -1339,11 +1340,7 @@ public class Stage extends Window {
                 }
             };
 
-            this.systemColorScheme = new NullCoalescingPropertyBase<>(
-                    stage.sceneProperty()
-                        .map(Scene::getPreferences)
-                        .flatMap(Scene.Preferences::colorSchemeProperty)
-                        .orElse(ColorScheme.LIGHT)) {
+            this.systemColorScheme = new NullCoalescingPropertyBase<>(new ColorSchemeBinding(stage)) {
                 {
                     connect();
                 }
@@ -1439,6 +1436,35 @@ public class Stage extends Window {
                     Thread currentThread = Thread.currentThread();
                     currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
                 }
+            }
+        }
+
+        private static final class ColorSchemeBinding extends ObjectBinding<ColorScheme> {
+            private final Stage stage;
+            private ObservableValue<? extends ColorScheme> source;
+
+            ColorSchemeBinding(Stage stage) {
+                this.stage = stage;
+                bind(stage.sceneProperty());
+            }
+
+            @Override
+            protected ColorScheme computeValue() {
+                ObservableValue<? extends ColorScheme> newSource =
+                    stage.getScene() instanceof Scene scene
+                        ? scene.getPreferences().colorSchemeProperty()
+                        : PlatformImpl.getPlatformPreferences().colorSchemeProperty();
+
+                if (source != newSource) {
+                    if (source != null) {
+                        unbind(source);
+                    }
+
+                    source = newSource;
+                    bind(source);
+                }
+
+                return source.getValue();
             }
         }
     }

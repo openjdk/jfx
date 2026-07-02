@@ -25,12 +25,15 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.HeaderAreaType;
 import com.sun.javafx.tk.TKSceneListener;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javafx.application.ColorScheme;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -43,6 +46,7 @@ import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
@@ -57,12 +61,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class HeaderBarTest {
 
+    private static final String TEST_FOREGROUND_COLOR = "HeaderBarTest.foregroundColor";
+    private static final String TEST_BACKGROUND_COLOR = "HeaderBarTest.backgroundColor";
+
     Stage stage;
     Scene scene;
     HeaderBar headerBar;
 
     @BeforeEach
     void setup() {
+        initializePlatformColorScheme(ColorScheme.LIGHT);
         headerBar = new HeaderBar();
         scene = new Scene(headerBar);
         stage = new Stage();
@@ -73,6 +81,23 @@ public class HeaderBarTest {
     @AfterEach
     void teardown() {
         stage.close();
+        setPlatformColorScheme(ColorScheme.LIGHT);
+    }
+
+    void initializePlatformColorScheme(ColorScheme colorScheme) {
+        PlatformImpl.getPlatformPreferences().initialize(
+            Map.of(TEST_FOREGROUND_COLOR, Color.class,
+                   TEST_BACKGROUND_COLOR, Color.class),
+            Map.of(TEST_FOREGROUND_COLOR, new PreferenceMapping<>("foregroundColor", Color.class),
+                   TEST_BACKGROUND_COLOR, new PreferenceMapping<>("backgroundColor", Color.class)));
+
+        setPlatformColorScheme(colorScheme);
+    }
+
+    void setPlatformColorScheme(ColorScheme colorScheme) {
+        PlatformImpl.getPlatformPreferences().update(Map.of(
+            TEST_FOREGROUND_COLOR, colorScheme == ColorScheme.DARK ? Color.WHITE : Color.BLACK,
+            TEST_BACKGROUND_COLOR, colorScheme == ColorScheme.DARK ? Color.BLACK : Color.WHITE));
     }
 
     <T> T getAttachedProperty(String name) {
@@ -203,12 +228,35 @@ public class HeaderBarTest {
         }
 
         @Test
-        void usesLightFallbackWithoutScene() {
+        void followsPlatformColorSchemeWithoutScene() {
             scene.getPreferences().setColorScheme(ColorScheme.DARK);
             assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
 
+            setPlatformColorScheme(ColorScheme.LIGHT);
             stage.setScene(null);
             assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            setPlatformColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void observesPlatformColorSchemeChangesWithoutScene() {
+            setPlatformColorScheme(ColorScheme.LIGHT);
+            stage.setScene(null);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            ObjectProperty<ColorScheme> systemColorScheme = HeaderBar.systemColorSchemeProperty(stage);
+            List<ColorScheme> changes = new ArrayList<>();
+            systemColorScheme.addListener((_, _, value) -> changes.add(value));
+
+            setPlatformColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+            assertEquals(List.of(ColorScheme.DARK), changes);
+
+            setPlatformColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+            assertEquals(List.of(ColorScheme.DARK, ColorScheme.LIGHT), changes);
         }
 
         @Test
