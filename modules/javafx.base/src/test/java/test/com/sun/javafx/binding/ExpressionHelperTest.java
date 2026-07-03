@@ -812,7 +812,7 @@ public class ExpressionHelperTest {
             newValueRef.set(newValue);
         };
         final ChangeListener<Object> listenerA = (observable, oldValue, newValue) ->
-                ExpressionHelper.removeListener(helper, listenerB);
+                helper = ExpressionHelper.removeListener(helper, listenerB);
 
         helper = ExpressionHelper.addListener(helper, observable, listenerA);
         helper = ExpressionHelper.addListener(helper, observable, listenerB);
@@ -838,7 +838,7 @@ public class ExpressionHelperTest {
                 list.add(newValue);
 
         final ChangeListener<Object> listenerA = (observable, oldValue, newValue) ->
-                ExpressionHelper.removeListener(helper, listenerB);
+                helper = ExpressionHelper.removeListener(helper, listenerB);
 
         helper = ExpressionHelper.addListener(helper, observable, listenerA);
         helper = ExpressionHelper.addListener(helper, observable, listenerB);
