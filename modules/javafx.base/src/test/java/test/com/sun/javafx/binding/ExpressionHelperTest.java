@@ -821,8 +821,8 @@ public class ExpressionHelperTest {
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
 
-        assertEquals(DATA_1, oldValueRef.get(), "ListenerC should observer the old value");
-        assertEquals(DATA_2, newValueRef.get(), "ListenerC should observer the new value");
+        assertEquals(DATA_1, oldValueRef.get(), "ListenerC should observe the old value");
+        assertEquals(DATA_2, newValueRef.get(), "ListenerC should observe the new value");
     }
 
     @Test
