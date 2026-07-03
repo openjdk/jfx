@@ -154,7 +154,7 @@ public abstract non-sealed class Parent extends Node {
 
             @Override
             public List<String> getStylesheetsOrNull(Parent parent) {
-                return parent.stylesheets != null ? parent.getStylesheets() : null;
+                return parent.stylesheets;
             }
         });
     }

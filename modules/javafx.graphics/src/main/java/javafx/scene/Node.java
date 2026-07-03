@@ -716,7 +716,7 @@ public abstract sealed class Node
 
             @Override
             public List<String> getStyleClassOrNull(Node node) {
-                return node.styleClass != null ? node.getStyleClass() : null;
+                return node.styleClass;
             }
         });
     }
