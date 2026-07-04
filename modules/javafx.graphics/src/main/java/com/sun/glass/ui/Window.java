@@ -311,11 +311,16 @@ public abstract class Window {
      * Implementations should choose a sensible default height for their header button visualization if
      * {@link HeaderBar#USE_DEFAULT_SIZE} is specified.
      */
-    private final ReadOnlyDoubleWrapper headerButtonHeight =
-        new ReadOnlyDoubleWrapper(this, "headerButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
+    private ReadOnlyDoubleWrapper headerButtonHeight;
+
+    private ReadOnlyDoubleWrapper headerButtonHeightPropertyImpl() {
+        return headerButtonHeight == null
+            ? headerButtonHeight = new ReadOnlyDoubleWrapper(this, "headerButtonHeight", HeaderBar.USE_DEFAULT_SIZE)
+            : headerButtonHeight;
+    }
 
     public final ReadOnlyDoubleProperty headerButtonHeightProperty() {
-        return headerButtonHeight.getReadOnlyProperty();
+        return headerButtonHeightPropertyImpl().getReadOnlyProperty();
     }
 
     /**
@@ -325,18 +330,23 @@ public abstract class Window {
      *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
      */
     public final void setHeaderButtonHeight(double height) {
-        headerButtonHeight.set(height);
+        headerButtonHeightPropertyImpl().set(height);
     }
 
     /**
      * Specifies whether header buttons are displayed in a style appropriate for dark mode.
      * Sub-classes can use this value in their header button visualization, but they are not required to do so.
      */
-    private final ReadOnlyBooleanWrapper headerButtonDarkStyle =
-        new ReadOnlyBooleanWrapper(this, "headerButtonDarkStyle");
+    private ReadOnlyBooleanWrapper headerButtonDarkStyle;
+
+    private ReadOnlyBooleanWrapper headerButtonDarkStylePropertyImpl() {
+        return headerButtonDarkStyle == null
+            ? headerButtonDarkStyle = new ReadOnlyBooleanWrapper(this, "headerButtonDarkStyle")
+            : headerButtonDarkStyle;
+    }
 
     public final ReadOnlyBooleanProperty headerButtonDarkStyleProperty() {
-        return headerButtonDarkStyle.getReadOnlyProperty();
+        return headerButtonDarkStylePropertyImpl().getReadOnlyProperty();
     }
 
     /**
@@ -346,7 +356,7 @@ public abstract class Window {
      *       It is only invoked by the toolkit's {@link com.sun.javafx.tk.TKStage} implementation.
      */
     public final void setHeaderButtonDarkStyle(boolean darkStyle) {
-        headerButtonDarkStyle.set(darkStyle);
+        headerButtonDarkStylePropertyImpl().set(darkStyle);
     }
 
     /**
