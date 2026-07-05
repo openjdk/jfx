@@ -324,7 +324,9 @@ public class HeaderBar extends Region {
      * This is a <em>null-coalescing</em> property: if set to {@code null} (using the setter method,
      * {@link Property#setValue(Object)}, or with a binding), the property evaluates to the value of
      * {@link Scene.Preferences#colorSchemeProperty()}. Likewise, specifying a non-null value will
-     * override the scene-provided value.
+     * override the scene-provided value. Overriding the scene-provided color scheme is usually only
+     * necessary in the rare case when an application needs different color schemes for header buttons
+     * and the window content (bright title bar in dark mode, or a dark title bar in light mode).
      * <p>
      * The specified color scheme is only a hint for the platform window toolkit and may be ignored.
      *
