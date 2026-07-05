@@ -538,18 +538,24 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> left = new NodeProperty("left");
+    private ObjectProperty<Node> left;
 
     public final ObjectProperty<Node> leftProperty() {
+        if (left == null) {
+            left = new NodeProperty("left");
+        }
+
         return left;
     }
 
     public final Node getLeft() {
-        return left.get();
+        return left != null ? left.get() : null;
     }
 
     public final void setLeft(Node value) {
-        left.set(value);
+        if (left != null || value != null) {
+            leftProperty().set(value);
+        }
     }
 
     /**
@@ -557,18 +563,24 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> center = new NodeProperty("center");
+    private ObjectProperty<Node> center;
 
     public final ObjectProperty<Node> centerProperty() {
+        if (center == null) {
+            center = new NodeProperty("center");
+        }
+
         return center;
     }
 
     public final Node getCenter() {
-        return center.get();
+        return center != null ? center.get() : null;
     }
 
     public final void setCenter(Node value) {
-        center.set(value);
+        if (center != null || value != null) {
+            centerProperty().set(value);
+        }
     }
 
     /**
@@ -576,18 +588,24 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> right = new NodeProperty("right");
+    private ObjectProperty<Node> right;
 
     public final ObjectProperty<Node> rightProperty() {
+        if (right == null) {
+            right = new NodeProperty("right");
+        }
+
         return right;
     }
 
     public final Node getRight() {
-        return right.get();
+        return right != null ? right.get() : null;
     }
 
     public final void setRight(Node value) {
-        right.set(value);
+        if (right != null || value != null) {
+            rightProperty().set(value);
+        }
     }
 
     /**
@@ -603,33 +621,39 @@ public class HeaderBar extends Region {
      * @defaultValue {@code true}
      * @see #rightSystemPaddingProperty() rightSystemPadding
      */
-    private final BooleanProperty leftSystemPadding = new BooleanPropertyBase(true) {
-        @Override
-        public Object getBean() {
-            return HeaderBar.this;
-        }
-
-        @Override
-        public String getName() {
-            return "leftSystemPadding";
-        }
-
-        @Override
-        protected void invalidated() {
-            requestLayout();
-        }
-    };
+    private BooleanProperty leftSystemPadding;
 
     public final BooleanProperty leftSystemPaddingProperty() {
+        if (leftSystemPadding == null) {
+            leftSystemPadding = new BooleanPropertyBase(true) {
+                @Override
+                public Object getBean() {
+                    return HeaderBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "leftSystemPadding";
+                }
+
+                @Override
+                protected void invalidated() {
+                    requestLayout();
+                }
+            };
+        }
+
         return leftSystemPadding;
     }
 
     public final boolean isLeftSystemPadding() {
-        return leftSystemPadding.get();
+        return leftSystemPadding == null || leftSystemPadding.get();
     }
 
     public final void setLeftSystemPadding(boolean value) {
-        leftSystemPadding.set(value);
+        if (leftSystemPadding != null || !value) {
+            leftSystemPaddingProperty().set(value);
+        }
     }
 
     /**
@@ -645,33 +669,39 @@ public class HeaderBar extends Region {
      * @defaultValue {@code true}
      * @see #leftSystemPaddingProperty() leftSystemPadding
      */
-    private final BooleanProperty rightSystemPadding = new BooleanPropertyBase(true) {
-        @Override
-        public Object getBean() {
-            return HeaderBar.this;
-        }
-
-        @Override
-        public String getName() {
-            return "rightSystemPadding";
-        }
-
-        @Override
-        protected void invalidated() {
-            requestLayout();
-        }
-    };
+    private BooleanProperty rightSystemPadding;
 
     public final BooleanProperty rightSystemPaddingProperty() {
+        if (rightSystemPadding == null) {
+            rightSystemPadding = new BooleanPropertyBase(true) {
+                @Override
+                public Object getBean() {
+                    return HeaderBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "rightSystemPadding";
+                }
+
+                @Override
+                protected void invalidated() {
+                    requestLayout();
+                }
+            };
+        }
+
         return rightSystemPadding;
     }
 
     public final boolean isRightSystemPadding() {
-        return rightSystemPadding.get();
+        return rightSystemPadding == null || rightSystemPadding.get();
     }
 
     public final void setRightSystemPadding(boolean value) {
-        rightSystemPadding.set(value);
+        if (rightSystemPadding != null || !value) {
+            rightSystemPaddingProperty().set(value);
+        }
     }
 
     @Override

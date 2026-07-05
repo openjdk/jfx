@@ -96,7 +96,9 @@ public enum HeaderDragType {
      * <p>
      * In contrast to {@link #DRAGGABLE}, which positively identifies a node as a draggable part of the
      * {@code HeaderBar}, this option excludes a node from draggable-area hit testing: the header bar
-     * behaves as if the node was not present and continues hit testing unimpeded.
+     * behaves as if the node was not present and continues hit testing unimpeded. The next eligible node
+     * behind the transparent node is then considered for determining whether the location is part of a
+     * draggable header area.
      * <p>
      * This drag type can be used not only on descendants of the header bar, but also on other nodes that
      * may overlap it (for example, a sibling shown on top of the header bar). In that case, the overlapping
@@ -119,7 +121,8 @@ public enum HeaderDragType {
      * In contrast to {@link #DRAGGABLE_SUBTREE}, which positively identifies a node and its descendants
      * as a draggable part of the {@code HeaderBar}, this option excludes a node and its descendants from
      * draggable-area hit testing: the header bar behaves as if the node and its descendants were not
-     * present and continues hit testing unimpeded.
+     * present and continues hit testing unimpeded. The next eligible node behind the transparent node is
+     * then considered for determining whether the location is part of a draggable header area.
      * <p>
      * This drag type can be used not only on descendants of the header bar, but also on other nodes that
      * may overlap it (for example, a sibling shown on top of the header bar). In that case, the overlapping

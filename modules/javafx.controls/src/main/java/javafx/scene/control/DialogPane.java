@@ -448,11 +448,11 @@ public class DialogPane extends Pane {
     public final ObjectProperty<HeaderBar> headerBarProperty() {
         if (headerBar == null) {
             headerBar = new SimpleObjectProperty<>(this, "headerBar") {
-                WeakReference<HeaderBar> wref = new WeakReference<>(null);
+                WeakReference<HeaderBar> currentValue = new WeakReference<>(null);
 
                 @Override
                 protected void invalidated() {
-                    HeaderBar oldValue = wref.get();
+                    HeaderBar oldValue = currentValue.get();
                     if (oldValue != null) {
                         getChildren().remove(oldValue);
                     }
@@ -462,7 +462,7 @@ public class DialogPane extends Pane {
                         getChildren().add(newValue);
                     }
 
-                    wref = new WeakReference<>(newValue);
+                    currentValue = new WeakReference<>(newValue);
                 }
             };
         }

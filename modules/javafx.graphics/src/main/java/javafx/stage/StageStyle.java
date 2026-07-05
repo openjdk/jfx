@@ -112,11 +112,11 @@ public enum StageStyle {
      * }
      * }</pre>
      *
-     * <h4>Title text</h4>
-     * An extended stage has no title text. Applications that require title text need to provide their own
-     * implementation by placing a {@code Label} or a similar control in the custom header bar.
-     * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, for example
-     * in the title of miniaturized preview windows.
+     * <h4>Title text and application icon</h4>
+     * In an extended stage, the platform does not provide title text or an application icon in the header bar area.
+     * Applications that require either or both need to provide their own implementation, for example by placing a
+     * {@code Label} or a similar control in the custom header bar. Note that the value of {@link Stage#titleProperty()}
+     * may still be used by the platform, for example in the title of miniaturized preview windows.
      *
      * @since 27
      */
