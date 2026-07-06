@@ -53,6 +53,8 @@
     jboolean        jTaskBarApp;
     jlong           jshareContextPtr;
 
+    NSMutableArray<NSURL *> *bufferedURLs;
+
     // local and intra-app event monitoring
     //
     // id              localMonitor;
