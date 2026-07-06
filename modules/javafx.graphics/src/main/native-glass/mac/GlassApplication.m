@@ -77,8 +77,8 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
-// Custom event that is emitted by AWT to let libraries like JavaFX 
-// know that it is ready to receive embedded events. Until this event is 
+// Custom event that is emitted by AWT to let libraries like JavaFX
+// know that it is ready to receive embedded events. Until this event is
 // emitted libraries should buffer the already received events.
 static NSString* awtEmbeddedEventReady = @"AWTEmbeddedEventReady";
 
@@ -221,12 +221,11 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     awtEmbeddedEventReadyReceived = true;
     id delegate = [NSApp delegate];
 
-    if ([delegate isKindOfClass:[GlassApplication class]]) 
-    {
+    if ([delegate isKindOfClass:[GlassApplication class]]) {
         GlassApplication* glassApplication = (GlassApplication *)delegate;
 
         [glassApplication application:NSApp openURLs:glassApplication->bufferedURLs];
-        [glassApplication->bufferedURLs removeAllObjects];  
+        [glassApplication->bufferedURLs removeAllObjects];
     }
 }
 
@@ -533,8 +532,7 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 - (void)application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
 {
     for (NSURL* url in urls) {
-        if (awtEmbeddedEventReadyReceived) 
-        {
+        if (awtEmbeddedEventReadyReceived) {
                 NSDictionary *userInfo = @{
                     @"name": @"openURL",
                     @"url": url.absoluteString
