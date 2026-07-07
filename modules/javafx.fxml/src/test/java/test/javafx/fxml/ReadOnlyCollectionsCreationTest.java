@@ -27,6 +27,7 @@ package test.javafx.fxml;
 
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.fxml.builder.ClassWithPlainCollectionAndScalarArg;
 
 import java.io.IOException;
 
@@ -66,6 +67,16 @@ public class ReadOnlyCollectionsCreationTest {
 
 //        assertEquals(3, widget.getNames().length);
 //        assertEquals(3, widget.getRatios().length);
+    }
+
+    @Test
+    public void testArrayListWrapperUnwrapsFirstElementViaFxml() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("array_list_wrapper_scalar_arg.fxml"));
+        ClassWithPlainCollectionAndScalarArg result = fxmlLoader.load();
+
+        assertEquals("hello", result.child,
+                "FXMLLoader must unwrap the single ArrayListWrapper element "
+                + "and pass it as the scalar @NamedArg constructor argument");
     }
 
 }
