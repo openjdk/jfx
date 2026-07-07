@@ -972,7 +972,7 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesWithPseudoClassAndIntermediatePane() {
-        var errors = StyleManager.errorsProperty();
+        var errors = CssParser.errorsProperty();
         errors.clear();
 
         String theme = toDataURL("""
@@ -1006,7 +1006,7 @@ public class CssStyleHelperTest {
      */
     @Test
     void testColorLookupClassCastExceptionWhenStylesheetNotOnRoot() {
-        var errors = StyleManager.errorsProperty();
+        var errors = CssParser.errorsProperty();
         errors.clear();
 
         String themeA = toDataURL("""
@@ -1038,7 +1038,7 @@ public class CssStyleHelperTest {
      */
     @Test
     void testColorLookupClassCastExceptionAfterNewRootSwap() {
-        var errors = StyleManager.errorsProperty();
+        var errors = CssParser.errorsProperty();
         errors.clear();
 
         String themeA = toDataURL("""
@@ -1072,7 +1072,7 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesAfterRootTransitionToStateRootSwap() {
-        var errors = StyleManager.errorsProperty();
+        var errors = CssParser.errorsProperty();
         errors.clear();
 
         String theme = toDataURL("""
@@ -1115,7 +1115,7 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesAfterChildTransitionToStateRootSwap() {
-        var errors = StyleManager.errorsProperty();
+        var errors = CssParser.errorsProperty();
         errors.clear();
 
         String theme = toDataURL("""
