@@ -37,11 +37,9 @@ import java.util.Properties;
 public class PlatformUtil {
 
     private static final String os = System.getProperty("os.name");
-    private static final String version = System.getProperty("os.version");
     private static final boolean embedded;
     private static final String embeddedType;
     private static final boolean useEGL;
-    private static final boolean doEGLCompositing;
     // a property used to denote a non-default impl for this host
     private static String javafxPlatform;
 
@@ -53,18 +51,10 @@ public class PlatformUtil {
         embedded = Boolean.getBoolean("com.sun.javafx.isEmbedded");
         embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
         useEGL = Boolean.getBoolean("use.egl");
-
-        if (useEGL) {
-            doEGLCompositing = Boolean.getBoolean("doNativeComposite");
-        } else {
-            doEGLCompositing = false;
-        }
     }
 
     private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
     private static final boolean WINDOWS = os.startsWith("Windows");
-    private static final boolean WINDOWS_VISTA_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.0f);
-    private static final boolean WINDOWS_7_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.1f);
     private static final boolean MAC = os.startsWith("Mac");
     private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
@@ -73,41 +63,10 @@ public class PlatformUtil {
     private static final boolean HEADLESS = "headless".equals(embeddedType);
 
     /**
-     * Utility method used to determine whether the version number as
-     * reported by system properties is greater than or equal to a given
-     * value.
-     *
-     * @param value The value to test against.
-     * @return false if the version number cannot be parsed as a float,
-     *         otherwise the comparison against value.
-     */
-    private static boolean versionNumberGreaterThanOrEqualTo(float value) {
-        try {
-            return Float.parseFloat(version) >= value;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
      * Returns true if the operating system is a form of Windows.
      */
     public static boolean isWindows(){
         return WINDOWS;
-    }
-
-    /**
-     * Returns true if the operating system is at least Windows Vista(v6.0).
-     */
-    public static boolean isWinVistaOrLater(){
-        return WINDOWS_VISTA_OR_LATER;
-    }
-
-    /**
-     * Returns true if the operating system is at least Windows 7(v6.1).
-     */
-    public static boolean isWin7OrLater(){
-        return WINDOWS_7_OR_LATER;
     }
 
     /**
@@ -126,25 +85,6 @@ public class PlatformUtil {
 
     public static boolean useEGL() {
         return useEGL;
-    }
-
-    public static boolean useEGLWindowComposition() {
-        return doEGLCompositing;
-    }
-
-    public static boolean useGLES2() {
-        String useGles2 = System.getProperty("use.gles2");
-        if ("true".equals(useGles2))
-            return true;
-        else
-            return false;
-    }
-
-    /**
-     * Returns true if the operating system is a form of Unix, including Linux.
-     */
-    public static boolean isSolaris(){
-        return SOLARIS;
     }
 
     /**
@@ -180,6 +120,10 @@ public class PlatformUtil {
      */
     public static boolean isIOS(){
         return IOS;
+    }
+
+    public static boolean isAndroid() {
+        return ANDROID;
     }
 
     /**
@@ -281,11 +225,6 @@ public class PlatformUtil {
                                                  File.separator + propertyFilename);
         if (javafxRuntimePathProperties.exists()) {
            loadPropertiesFromFile(javafxRuntimePathProperties);
-           return;
         }
-    }
-
-    public static boolean isAndroid() {
-       return ANDROID;
     }
 }

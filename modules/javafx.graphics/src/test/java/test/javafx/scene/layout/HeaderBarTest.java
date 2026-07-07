@@ -25,10 +25,16 @@
 
 package test.javafx.scene.layout;
 
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.HeaderAreaType;
 import com.sun.javafx.tk.TKSceneListener;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import javafx.application.ColorScheme;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -40,6 +46,7 @@ import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
@@ -52,8 +59,10 @@ import test.com.sun.javafx.pgstub.StubScene;
 import test.javafx.util.ReflectionUtils;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings("deprecation")
 public class HeaderBarTest {
+
+    private static final String TEST_FOREGROUND_COLOR = "HeaderBarTest.foregroundColor";
+    private static final String TEST_BACKGROUND_COLOR = "HeaderBarTest.backgroundColor";
 
     Stage stage;
     Scene scene;
@@ -61,6 +70,7 @@ public class HeaderBarTest {
 
     @BeforeEach
     void setup() {
+        initializePlatformColorScheme(ColorScheme.LIGHT);
         headerBar = new HeaderBar();
         scene = new Scene(headerBar);
         stage = new Stage();
@@ -71,14 +81,30 @@ public class HeaderBarTest {
     @AfterEach
     void teardown() {
         stage.close();
+        setPlatformColorScheme(ColorScheme.LIGHT);
+    }
+
+    void initializePlatformColorScheme(ColorScheme colorScheme) {
+        PlatformImpl.getPlatformPreferences().initialize(
+            Map.of(TEST_FOREGROUND_COLOR, Color.class,
+                   TEST_BACKGROUND_COLOR, Color.class),
+            Map.of(TEST_FOREGROUND_COLOR, new PreferenceMapping<>("foregroundColor", Color.class),
+                   TEST_BACKGROUND_COLOR, new PreferenceMapping<>("backgroundColor", Color.class)));
+
+        setPlatformColorScheme(colorScheme);
+    }
+
+    void setPlatformColorScheme(ColorScheme colorScheme) {
+        PlatformImpl.getPlatformPreferences().update(Map.of(
+            TEST_FOREGROUND_COLOR, colorScheme == ColorScheme.DARK ? Color.WHITE : Color.BLACK,
+            TEST_BACKGROUND_COLOR, colorScheme == ColorScheme.DARK ? Color.BLACK : Color.WHITE));
     }
 
     <T> T getAttachedProperty(String name) {
         try {
-            Class<?> propertiesClass = Class.forName(HeaderBar.class.getName() + "$AttachedProperties");
-            Method method = propertiesClass.getMethod("of", Stage.class);
+            Method method = Stage.class.getDeclaredMethod("getExtendedProperties");
             method.setAccessible(true);
-            return ReflectionUtils.getFieldValue(method.invoke(null, stage), name);
+            return ReflectionUtils.getFieldValue(method.invoke(stage), name);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -92,13 +118,13 @@ public class HeaderBarTest {
     }
 
     @Test
-    void minHeight_correspondsToMinSystemHeight_ifNotSetByUser() {
-        DoubleProperty minSystemHeight = getAttachedProperty("minSystemHeight");
-        minSystemHeight.set(100);
+    void minHeight_correspondsToSystemMinHeight_ifNotSetByUser() {
+        DoubleProperty systemMinHeight = getAttachedProperty("systemMinHeight");
+        systemMinHeight.set(100);
         assertEquals(100, headerBar.minHeight(-1));
 
         headerBar.setMinHeight(50);
-        minSystemHeight.set(200);
+        systemMinHeight.set(200);
         assertEquals(50, headerBar.minHeight(-1));
     }
 
@@ -125,13 +151,128 @@ public class HeaderBarTest {
     }
 
     @Test
-    void prefButtonHeight_attachedProperty() {
+    void systemButtonHeight_attachedProperty() {
         var minHeight = new double[1];
-        assertEquals(HeaderBar.USE_DEFAULT_SIZE, HeaderBar.getPrefButtonHeight(stage));
-        HeaderBar.prefButtonHeightProperty(stage).subscribe(v -> minHeight[0] = v.doubleValue());
-        HeaderBar.prefButtonHeightProperty(stage).set(123);
+        assertEquals(HeaderBar.USE_DEFAULT_SIZE, HeaderBar.getSystemButtonHeight(stage));
+        HeaderBar.systemButtonHeightProperty(stage).subscribe(v -> minHeight[0] = v.doubleValue());
+        HeaderBar.systemButtonHeightProperty(stage).set(123);
         assertEquals(123, minHeight[0]);
-        assertEquals(123, HeaderBar.getPrefButtonHeight(stage));
+        assertEquals(123, HeaderBar.getSystemButtonHeight(stage));
+    }
+
+    @Nested
+    class SystemColorSchemeTest {
+        @Test
+        void attachedPropertyPublishesExplicitValue() {
+            var colorScheme = new ColorScheme[1];
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+            HeaderBar.systemColorSchemeProperty(stage).subscribe(v -> colorScheme[0] = v);
+            HeaderBar.systemColorSchemeProperty(stage).set(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, colorScheme[0]);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void inheritsSceneColorSchemeWhenUnset() {
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void usesExplicitValueInsteadOfSceneColorScheme() {
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            HeaderBar.setSystemColorScheme(stage, ColorScheme.DARK);
+
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void settingNullRestoresSceneColorSchemeInheritance() {
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            HeaderBar.setSystemColorScheme(stage, ColorScheme.LIGHT);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            HeaderBar.setSystemColorScheme(stage, null);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void followsReplacementSceneColorScheme() {
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            var oldScene = scene;
+            var newScene = new Scene(new StackPane());
+            newScene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            stage.setScene(newScene);
+
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            newScene.getPreferences().setColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            oldScene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void followsPlatformColorSchemeWithoutScene() {
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+
+            setPlatformColorScheme(ColorScheme.LIGHT);
+            stage.setScene(null);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            setPlatformColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+        }
+
+        @Test
+        void observesPlatformColorSchemeChangesWithoutScene() {
+            setPlatformColorScheme(ColorScheme.LIGHT);
+            stage.setScene(null);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+
+            ObjectProperty<ColorScheme> systemColorScheme = HeaderBar.systemColorSchemeProperty(stage);
+            List<ColorScheme> changes = new ArrayList<>();
+            systemColorScheme.addListener((_, _, value) -> changes.add(value));
+
+            setPlatformColorScheme(ColorScheme.DARK);
+            assertEquals(ColorScheme.DARK, HeaderBar.getSystemColorScheme(stage));
+            assertEquals(List.of(ColorScheme.DARK), changes);
+
+            setPlatformColorScheme(ColorScheme.LIGHT);
+            assertEquals(ColorScheme.LIGHT, HeaderBar.getSystemColorScheme(stage));
+            assertEquals(List.of(ColorScheme.DARK, ColorScheme.LIGHT), changes);
+        }
+
+        @Test
+        void ignoresScenePreferenceChangesWhileExplicitValueIsSet() {
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            ObjectProperty<ColorScheme> systemColorScheme = HeaderBar.systemColorSchemeProperty(stage);
+            List<ColorScheme> changes = new ArrayList<>();
+            systemColorScheme.addListener((_, _, value) -> changes.add(value));
+
+            systemColorScheme.set(ColorScheme.DARK);
+            assertEquals(List.of(ColorScheme.DARK), changes);
+
+            scene.getPreferences().setColorScheme(ColorScheme.DARK);
+            scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+            assertEquals(List.of(ColorScheme.DARK), changes);
+        }
     }
 
     @Nested
