@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,32 +23,28 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+package com.sun.javafx.css.media;
 
-#import "GlassWindow.h"
+import com.sun.javafx.css.parser.Token;
+import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 
-@interface GlassWindow (Java)
+public final class MediaFeaturesShim {
 
-- (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded;
-- (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
-- (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
-- (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale;
+    public static BiFunction<String, Token, MediaQuery> getDefault() {
+        return MediaFeatures.DEFAULT;
+    }
 
-- (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
-- (void)_ungrabFocus;
-+ (void)_resetGrab;
-+ (BOOL)_hasGrab;
-- (void)_checkUngrab;
-- (void)_grabFocus;
-- (void)_setResizable:(bool)resizable;
-- (NSRect)_constrainFrame:(NSRect)frame;
-- (void)_setVisible;
-- (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch;
-- (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate;
-- (NSScreen*)_getScreen;
+    public static void setDefault(BiFunction<String, Token, MediaQuery> value) {
+        MediaFeatures.DEFAULT = value;
+    }
 
-- (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag;
-- (NSRect)_flipFrame;
+    public static Map<String, BooleanSupplier> getPlatforms() {
+        return MediaFeatures.PLATFORMS;
+    }
 
-@end
+    public static void setPlatforms(Map<String, BooleanSupplier> value) {
+        MediaFeatures.PLATFORMS = value;
+    }
+}
