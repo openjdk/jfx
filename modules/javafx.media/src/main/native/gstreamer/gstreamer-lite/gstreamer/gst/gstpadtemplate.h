@@ -213,30 +213,30 @@ GType     gst_static_pad_template_get_type  (void);
 GST_API
 GstPadTemplate*   gst_pad_template_new      (const gchar *name_template,
                                  GstPadDirection direction, GstPadPresence presence,
-                                 GstCaps *caps) G_GNUC_MALLOC;
+                                 GstCaps *caps) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstPadTemplate*   gst_pad_template_new_with_gtype   (const gchar *name_template,
                                  GstPadDirection direction, GstPadPresence presence,
-                                 GstCaps *caps, GType pad_type) G_GNUC_MALLOC;
+                                 GstCaps *caps, GType pad_type) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstPadTemplate *  gst_static_pad_template_get             (GstStaticPadTemplate *pad_template);
 
 GST_API
 GstPadTemplate * gst_pad_template_new_from_static_pad_template_with_gtype (
     GstStaticPadTemplate * pad_template,
-    GType pad_type);
+    GType pad_type) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCaps*    gst_static_pad_template_get_caps  (GstStaticPadTemplate *templ);
+GstCaps*    gst_static_pad_template_get_caps  (GstStaticPadTemplate *templ) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstCaps*    gst_pad_template_get_caps   (GstPadTemplate *templ);
+GstCaps*    gst_pad_template_get_caps   (GstPadTemplate *templ) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void        gst_pad_template_set_documentation_caps (GstPadTemplate *templ, GstCaps *caps);
 
 GST_API
-GstCaps*    gst_pad_template_get_documentation_caps (GstPadTemplate *templ);
+GstCaps*    gst_pad_template_get_documentation_caps (GstPadTemplate *templ) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_pad_template_pad_created            (GstPadTemplate * templ, GstPad * pad);

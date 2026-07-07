@@ -501,9 +501,9 @@ gst_caps_features_new_id_str_valist (const GstIdStr * feature1, va_list varargs)
 }
 
 /**
- * gst_caps_features_set_parent_refcount:
+ * gst_caps_features_set_parent_refcount: (skip):
  * @features: a #GstCapsFeatures
- * @refcount: (in): a pointer to the parent's refcount
+ * @refcount: (type gpointer) (nullable): a pointer to the parent's refcount
  *
  * Sets the parent_refcount field of #GstCapsFeatures. This field is used to
  * determine whether a caps features is mutable or not. This function should only be

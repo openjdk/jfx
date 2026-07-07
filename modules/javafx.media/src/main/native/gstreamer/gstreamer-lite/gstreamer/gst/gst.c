@@ -392,8 +392,8 @@ gst_get_main_executable_path (void)
 
 /**
  * gst_init_check:
- * @argc: (inout) (allow-none): pointer to application's argc
- * @argv: (inout) (array length=argc) (allow-none): pointer to application's argv
+ * @argc: (inout) (optional): pointer to application's argc
+ * @argv: (inout) (array length=argc) (optional): pointer to application's argv
  * @error: pointer to a #GError to which a message will be posted on error
  *
  * Initializes the GStreamer library, setting up internal path lists,
@@ -453,8 +453,8 @@ gst_init_check (int *argc, char **argv[], GError ** error)
 
 /**
  * gst_init:
- * @argc: (inout) (allow-none): pointer to application's argc
- * @argv: (inout) (array length=argc) (allow-none): pointer to application's argv
+ * @argc: (inout) (optional): pointer to application's argc
+ * @argv: (inout) (array length=argc) (optional): pointer to application's argv
  *
  * Initializes the GStreamer library, setting up internal path lists,
  * registering built-in elements, and loading standard plugins.
@@ -906,12 +906,13 @@ gst_debug_help (void)
   /* FIXME this is gross.  why don't debug have categories PluginFeatures? */
   for (g = list2; g; g = g_list_next (g)) {
     GstPlugin *plugin = GST_PLUGIN_CAST (g->data);
+    GstPlugin *loaded_plugin;
     GList *features, *orig_features;
 
     if (GST_OBJECT_FLAG_IS_SET (plugin, GST_PLUGIN_FLAG_BLACKLISTED))
       continue;
 
-    gst_plugin_load (plugin);
+    loaded_plugin = gst_plugin_load (plugin);
     /* Now create one of each feature so the class_init functions
      * are called, as that's where most debug categories are
      * registered. FIXME: If debug categories were a plugin feature,
@@ -941,6 +942,7 @@ gst_debug_help (void)
     }
 
     gst_plugin_feature_list_free (orig_features);
+    gst_clear_object (&loaded_plugin);
   }
   g_list_free (list2);
 
@@ -1348,6 +1350,39 @@ gst_version_string (void)
   else
     return g_strdup_printf ("GStreamer %d.%d.%d (prerelease)", major, minor,
         micro);
+}
+
+/**
+ * gst_check_version:
+ * @major: Major version number
+ * @minor: Minor version number
+ * @micro: Micro version number
+ *
+ * Applications might want to check if the runtime GStreamer version is greater
+ * or equal to the version specified using @major, @minor and @micro.
+ *
+ * Returns: %TRUE if the GStreamer version is greater or equal to
+ * @major\.@minor\.@micro, %FALSE otherwise. Also this function returns %FALSE
+ * when checking for a different @major version to the current one, as major
+ * version bumps are ABI breaks anyway.
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_check_version (guint major, guint minor, guint micro)
+{
+  if (GST_VERSION_MAJOR != major)
+    return FALSE;
+
+  if (GST_VERSION_MINOR < minor)
+    return FALSE;
+  if (GST_VERSION_MINOR > minor)
+    return TRUE;
+
+  if (GST_VERSION_MICRO < micro)
+    return FALSE;
+
+  return TRUE;
 }
 
 /**

@@ -1283,6 +1283,25 @@ public class TabPaneTest {
     }
 
     @Test
+    public void testTabRemovalUpdatesHeadersImmediatelyWhenReducedMotionIsEnabled() {
+        tabPane.getTabs().addAll(tab1, tab2);
+
+        root.getChildren().add(tabPane);
+        show();
+
+        assertEquals(2, TabPaneSkinShim.getTabHeaders(tabPane).size());
+
+        scene.getPreferences().setReducedMotion(true);
+        tk.firePulse();
+
+        tabPane.getTabs().remove(0);
+        tk.firePulse();
+
+        assertEquals(1, tabPane.getTabs().size());
+        assertEquals(1, TabPaneSkinShim.getTabHeaders(tabPane).size());
+    }
+
+    @Test
     public void testTabsReorderPermutationReflectedInFilteredList() {
         Tab other = new Tab("other");
         Tab lib1 = new Tab("lib1");

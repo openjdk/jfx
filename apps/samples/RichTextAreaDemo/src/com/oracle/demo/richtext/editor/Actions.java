@@ -43,6 +43,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
@@ -52,6 +53,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
@@ -64,12 +66,12 @@ import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
-import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * This is a bit of hack.  JavaFX has no actions (yet), so here we are using FxActions from
@@ -111,15 +113,19 @@ public class Actions {
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+    private final SimpleBooleanProperty rulerVisible = new SimpleBooleanProperty(true);
 
     private final RichEditorToolbar toolbar;
     private final RichTextArea editor;
+    private final TabStopPolicy tabPolicy = new TabStopPolicy();
+    private final StyledTextModel.Listener changeListener = (ch) -> handleEdit();
 
     public Actions(RichEditorToolbar tb, RichTextArea ed) {
         this.toolbar = tb;
         this.editor = ed;
 
         // undo/redo actions
+
         redo.disabledProperty().bind(editor.redoableProperty().not());
         undo.disabledProperty().bind(editor.undoableProperty().not());
 
@@ -135,10 +141,12 @@ public class Actions {
 
         // editor
 
-        editor.getModel().addListener(new StyledTextModel.Listener() {
-            @Override
-            public void onContentChange(ContentChange ch) {
-                handleEdit();
+        editor.modelProperty().subscribe((prev, m) -> {
+            if (prev != null) {
+                prev.removeListener(changeListener);
+            }
+            if (m != null) {
+                m.addListener(changeListener);
             }
         });
 
@@ -212,8 +220,11 @@ public class Actions {
             toolbar.setTextStyle(c);
         });
 
+        rulerVisible.subscribe(this::updateRuler);
+
         // settings
         Settings.endKey.subscribe(this::setEndKey);
+        Settings.contentPadding.bindBidirectional(editor.contentPaddingProperty());
 
         // defaults
         highlightCurrentLine.setSelected(true, false);
@@ -253,13 +264,14 @@ public class Actions {
         FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
         FX.separator(m);
         FX.item(m, "Paragraph...", paragraphStyle);
+        FX.item(m, "Tabs...", this::openTabs);
 
         // view
         FX.menu(m, "View");
         FX.checkItem(m, "Highlight Current Paragraph", highlightCurrentLine);
         FX.checkItem(m, "Show Line Numbers", lineNumbers);
+        FX.checkItem(m, "Show Ruler", rulerVisible);
         FX.checkItem(m, "Wrap Text", wrapText);
-        // TODO line spacing
 
         // tools
         FX.menu(m, "Tools");
@@ -286,6 +298,14 @@ public class Actions {
         FX.separator(m);
         // TODO Font...
         FX.item(m, "Paragraph...", paragraphStyle);
+        return m;
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Clear Tabs", this::clearTabs);
+        FX.separator(m);
+        FX.item(m, "Hide Ruler", this::hideRuler);
         return m;
     }
 
@@ -317,6 +337,10 @@ public class Actions {
         return file.get();
     }
 
+    private final void setFile(File f) {
+        file.set(f);
+    }
+
     private void handleEdit() {
         setModified(true);
     }
@@ -326,8 +350,10 @@ public class Actions {
         cut.setEnabled(sel);
         copy.setEnabled(sel);
 
-        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
-        toolbar.updateStyles(a);
+        if (!sel) {
+            StyleAttributeMap a = editor.getActiveStyleAttributeMap();
+            toolbar.updateStyles(a);
+        }
     }
 
     public void setFontSize(Double size) {
@@ -342,11 +368,14 @@ public class Actions {
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
-    private void newDocument() {
+    public void newDocument() {
         if (askToSave()) {
             return;
         }
-        editor.setModel(new RichTextModel());
+        setFile(null);
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(Settings.DEFAULT_TAB_STOPS);
+        editor.setModel(m);
         setModified(false);
     }
 
@@ -366,6 +395,7 @@ public class Actions {
         File f = ch.showOpenDialog(parentWindow());
         if (f != null) {
             try {
+                newDocument();
                 DataFormat fmt = guessFormat(f);
                 readFile(f, fmt);
             } catch (Exception e) {
@@ -383,7 +413,7 @@ public class Actions {
             }
         }
 
-        file.set(f);
+        setFile(f);
         try {
             writeFile(f);
         } catch (Exception e) {
@@ -394,7 +424,7 @@ public class Actions {
     private boolean saveAs() {
         File f = chooseFileForSave();
         if (f != null) {
-            file.set(f);
+            setFile(f);
             try {
                 writeFile(f);
                 return true;
@@ -425,7 +455,7 @@ public class Actions {
     private void readFile(File f, DataFormat fmt) throws Exception {
         try (FileInputStream in = new FileInputStream(f)) {
             editor.read(fmt, in);
-            file.set(f);
+            setFile(f);
             editor.setEditable(f.canWrite());
             setModified(false);
         }
@@ -435,7 +465,7 @@ public class Actions {
         DataFormat fmt = guessFormat(f);
         try (FileOutputStream out = new FileOutputStream(f)) {
             editor.write(fmt, out);
-            file.set(f);
+            setFile(f);
             setModified(false);
         }
     }
@@ -693,15 +723,29 @@ public class Actions {
 
     private StyleAttributeMap getInsertStyles() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        b.
-            setBold(bold.isSelected()).
-            setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem()).
-            setItalic(italic.isSelected()).
-            setStrikeThrough(strikeThrough.isSelected()).
-            setTextColor(toolbar.textColor.getValue()).
-            setUnderline(underline.isSelected());
-        if (toolbar.fontSize.getSelectionModel().getSelectedItem() != null) {
-            b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+        if (bold.isSelected()) {
+            b.setBold(true);
+        }
+        String s = toolbar.fontFamily.getSelectionModel().getSelectedItem();
+        if (s != null) {
+            b.setFontFamily(s);
+        }
+        if (italic.isSelected()) {
+            b.setItalic(true);
+        }
+        if (strikeThrough.isSelected()) {
+            b.setStrikeThrough(true);
+        }
+        Color c = toolbar.textColor.getValue();
+        if (c != null) {
+            b.setTextColor(c);
+        }
+        if (underline.isSelected()) {
+            b.setUnderline(true);
+        }
+        Double v = toolbar.fontSize.getSelectionModel().getSelectedItem();
+        if (v != null) {
+            b.setFontSize(v);
         }
         return b.build();
     }
@@ -717,5 +761,41 @@ public class Actions {
     private void openSettings() {
         Window w = FX.getParentWindow(editor);
         new SettingsWindow(w).show();
+    }
+
+    private void openTabs() {
+        new TabsDialog(editor).show();
+    }
+
+    private void updateRuler(boolean on) {
+        Ruler r = toolbar.setRulerFor(on ? editor : null);
+        if (r != null) {
+            r.setOnChange(this::handleTabStopChange);
+            r.setTabStopPolicy(tabPolicy);
+            FX.setPopupMenu(r, this::createRulerPopupMenu);
+        }
+    }
+
+    private void handleTabStopChange() {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            TabStops stops = new TabStops(tabPolicy.tabStops());
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, stops).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
+                editor.applyStyle(p, p, a);
+            }
+        }
+    }
+
+    private void clearTabs() {
+        tabPolicy.tabStops().clear();
+        handleTabStopChange();
+    }
+
+    private void hideRuler() {
+        rulerVisible.set(false);
     }
 }

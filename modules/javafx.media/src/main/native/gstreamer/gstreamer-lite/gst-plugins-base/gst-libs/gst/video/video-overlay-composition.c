@@ -207,7 +207,7 @@ static gboolean
 gst_video_overlay_composition_meta_transform (GstBuffer * dest, GstMeta * meta,
     GstBuffer * buffer, GQuark type, gpointer data)
 {
-  GstVideoOverlayCompositionMeta *dmeta, *smeta;
+  GstVideoOverlayCompositionMeta *dmeta = NULL, *smeta;
 
   smeta = (GstVideoOverlayCompositionMeta *) meta;
 
@@ -221,6 +221,51 @@ gst_video_overlay_composition_meta_transform (GstBuffer * dest, GstMeta * meta,
       return FALSE;
 
     dmeta->overlay = gst_video_overlay_composition_ref (smeta->overlay);
+  } else if (GST_VIDEO_META_TRANSFORM_IS_MATRIX (type)) {
+    GstVideoMetaTransformMatrix *trans = data;
+    GstVideoOverlayComposition *new_comp;
+    guint n_rectangles;
+    gboolean have_rect = FALSE;
+
+    new_comp = gst_video_overlay_composition_new (NULL);
+    n_rectangles = gst_video_overlay_composition_n_rectangles (smeta->overlay);
+    for (guint i = 0; i < n_rectangles; i++) {
+      GstVideoOverlayRectangle *rect =
+          gst_video_overlay_composition_get_rectangle (smeta->overlay, i);
+      GstVideoOverlayRectangle *new_rect =
+          gst_video_overlay_rectangle_copy (rect);
+      GstVideoRectangle render_rect;
+      guint width = G_MAXINT;
+      guint height = G_MAXINT;
+
+      gst_video_overlay_rectangle_get_render_rectangle (rect, &render_rect.x,
+          &render_rect.y, &width, &height);
+      render_rect.w = MIN (width, G_MAXINT);
+      render_rect.h = MIN (height, G_MAXINT);
+
+      GstVideoRectangle orig_render_rect = render_rect;
+
+      if (gst_video_meta_transform_matrix_rectangle (trans, &render_rect)) {
+
+        GST_DEBUG ("overlay rectangle %u (seqnum: %d) (%dx%d)x(%dx%d)"
+            " -> (%dx%d)->(%dx%d)", i,
+            gst_video_overlay_rectangle_get_seqnum (rect), orig_render_rect.x,
+            orig_render_rect.y, orig_render_rect.w, orig_render_rect.h,
+            render_rect.x, render_rect.y, render_rect.w, render_rect.h);
+
+        gst_video_overlay_rectangle_set_render_rectangle (new_rect,
+            render_rect.x, render_rect.y, render_rect.w, render_rect.h);
+        gst_video_overlay_composition_add_rectangle (new_comp, new_rect);
+        have_rect = TRUE;
+      }
+      gst_video_overlay_rectangle_unref (new_rect);
+    }
+
+    if (have_rect)
+      dmeta = gst_buffer_add_video_overlay_composition_meta (dest, new_comp);
+    gst_video_overlay_composition_unref (new_comp);
+    if (!have_rect || !dmeta)
+      return FALSE;
   } else if (GST_VIDEO_META_TRANSFORM_IS_SCALE (type)) {
     GstVideoMetaTransform *trans = data;
     GstVideoOverlayComposition *new_comp;
@@ -234,8 +279,6 @@ gst_video_overlay_composition_meta_transform (GstBuffer * dest, GstMeta * meta,
 
     GST_DEBUG ("scaling video overlay composition metadata %dx%d -> %dx%d", ow,
         oh, nw, nh);
-
-    smeta = (GstVideoOverlayCompositionMeta *) meta;
 
     new_comp = gst_video_overlay_composition_new (NULL);
     n_rectangles = gst_video_overlay_composition_n_rectangles (smeta->overlay);
@@ -587,6 +630,11 @@ gst_video_overlay_composition_blend (GstVideoOverlayComposition * comp,
  * actual overlay pixel data buffers contained in the rectangles are not
  * copied.
  *
+ * This should be avoided unless rectangles need to be modified because it
+ * invalidates caching in sinks and compositor elements. To add extra rectangles
+ * it is rather recommended to add an extra composition meta using
+ * gst_buffer_add_video_overlay_composition_meta().
+ *
  * Returns: (transfer full): a new #GstVideoOverlayComposition equivalent
  *     to @comp.
  */
@@ -624,6 +672,11 @@ gst_video_overlay_composition_copy (GstVideoOverlayComposition * comp)
  * new writable copy of @comp and unref @comp itself. All the contained
  * rectangles will also be copied, but the actual overlay pixel data buffers
  * contained in the rectangles are not copied.
+ *
+ * This should be avoided unless rectangles need to be modified because it
+ * invalidates caching in sinks and compositor elements. To add extra rectangles
+ * it is rather recommended to add an extra composition meta using
+ * gst_buffer_add_video_overlay_composition_meta().
  *
  * Returns: (transfer full): a writable #GstVideoOverlayComposition
  *     equivalent to @comp.
@@ -702,6 +755,7 @@ gst_video_overlay_rectangle_free (GstMiniObject * mini_obj)
   g_free (rect);
 }
 
+#ifndef G_DISABLE_CHECKS
 static inline gboolean
 gst_video_overlay_rectangle_check_flags (GstVideoOverlayFormatFlags flags)
 {
@@ -709,6 +763,7 @@ gst_video_overlay_rectangle_check_flags (GstVideoOverlayFormatFlags flags)
   return (flags & ~(GST_VIDEO_OVERLAY_FORMAT_FLAG_PREMULTIPLIED_ALPHA |
           GST_VIDEO_OVERLAY_FORMAT_FLAG_GLOBAL_ALPHA)) == 0;
 }
+#endif
 
 static gboolean
 gst_video_overlay_rectangle_is_same_alpha_type (GstVideoOverlayFormatFlags
@@ -1065,13 +1120,15 @@ gst_video_overlay_rectangle_apply_global_alpha (GstVideoOverlayRectangle * rect,
   GstVideoFrame frame;
   gint i, j, w, h, stride;
   gint argb_a, argb_r, argb_g, argb_b;
-  gint alpha_offset;
+  gint alpha_offset GST_UNUSED_CHECKS;
 
   g_assert (!(rect->applied_global_alpha != 1.0
           && rect->initial_alpha == NULL));
 
+#ifndef G_DISABLE_CHECKS
   alpha_offset = GST_VIDEO_INFO_COMP_POFFSET (&rect->info, 3);
   g_return_if_fail (alpha_offset == 0 || alpha_offset == 3);
+#endif
 
   if (global_alpha == rect->applied_global_alpha)
     return;
