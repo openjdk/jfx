@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.NamedArg;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.StageStyle;
@@ -348,6 +350,102 @@ public class ProxyBuilderTest {
         assertEquals("expectedValue", result.child,
                 "ProxyBuilder must unwrap the first ArrayListWrapper element "
                 + "and pass it as the scalar @NamedArg constructor argument");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableIntegerArrayProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        assertTrue(pb.containsKey("intArray"),
+                "containsKey should be true for a getter-backed ObservableIntegerArray property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableFloatArrayProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        assertTrue(pb.containsKey("floatArray"),
+                "containsKey should be true for a getter-backed ObservableFloatArray property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testReadOnlyObservableIntegerArray() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+
+        @SuppressWarnings("unchecked")
+        List<Integer> container = (List<Integer>) pb.get("intArray");
+        container.add(10);
+        container.add(20);
+        container.add(30);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        ObservableIntegerArray intArray = result.getIntArray();
+        assertEquals(3, intArray.size(), "ObservableIntegerArray should contain 3 elements");
+        int[] actual = new int[intArray.size()];
+        intArray.toArray(actual);
+        assertArrayEquals(new int[]{10, 20, 30}, actual);
+    }
+
+    @Test
+    public void testReadOnlyObservableFloatArray() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+
+        @SuppressWarnings("unchecked")
+        List<Float> container = (List<Float>) pb.get("floatArray");
+        container.add(1.5f);
+        container.add(2.5f);
+        container.add(3.5f);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        ObservableFloatArray floatArray = result.getFloatArray();
+        assertEquals(3, floatArray.size(), "ObservableFloatArray should contain 3 elements");
+        float[] actual = new float[floatArray.size()];
+        floatArray.toArray(actual);
+        assertArrayEquals(new float[]{1.5f, 2.5f, 3.5f}, actual, 1e-5f);
+    }
+
+    @Test
+    public void testReadOnlyObservableIntegerArrayWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        pb.put("label", "testLabel");
+
+        @SuppressWarnings("unchecked")
+        List<Integer> container = (List<Integer>) pb.get("intArray");
+        container.add(7);
+        container.add(8);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        assertEquals("testLabel", result.label, "NamedArg value must be set");
+        ObservableIntegerArray intArray = result.getIntArray();
+        assertEquals(2, intArray.size(), "ObservableIntegerArray should contain 2 elements");
+        int[] actual = new int[intArray.size()];
+        intArray.toArray(actual);
+        assertArrayEquals(new int[]{7, 8}, actual);
+    }
+
+    @Test
+    public void testReadOnlyObservableFloatArrayWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        pb.put("label", "testLabel");
+
+        @SuppressWarnings("unchecked")
+        List<Float> container = (List<Float>) pb.get("floatArray");
+        container.add(0.1f);
+        container.add(0.2f);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        assertEquals("testLabel", result.label, "NamedArg value must be set");
+        ObservableFloatArray floatArray = result.getFloatArray();
+        assertEquals(2, floatArray.size(), "ObservableFloatArray should contain 2 elements");
+        float[] actual = new float[floatArray.size()];
+        floatArray.toArray(actual);
+        assertArrayEquals(new float[]{0.1f, 0.2f}, actual, 1e-5f);
     }
 
     @Test

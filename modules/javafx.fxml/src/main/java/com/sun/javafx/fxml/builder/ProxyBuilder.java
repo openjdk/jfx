@@ -46,6 +46,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableArray;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
@@ -199,6 +202,9 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             }
             if (ObservableMap.class.isAssignableFrom(retType)) {
                 return FXCollections.observableHashMap();
+            }
+            if (ObservableArray.class.isAssignableFrom(retType)) {
+                return new ArrayListWrapper<>();
             }
 
             if (Map.class.isAssignableFrom(retType)) {
@@ -484,8 +490,33 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             }
         }
 
+        // ObservableIntegerArray needs special treatment
+        if (ObservableIntegerArray.class.isAssignableFrom(type)) {
+            if (val instanceof int[] primitiveInts) {
+                return FXCollections.observableIntegerArray(primitiveInts);
+            }
+            List<?> list = (List<?>) val;
+            int[] ints = new int[list.size()];
+            for (int idx = 0; idx < list.size(); idx++) {
+                ints[idx] = BeanAdapter.coerce(list.get(idx), Integer.class).intValue();
+            }
+            return FXCollections.observableIntegerArray(ints);
+        }
+
+        // ObservableFloatArray needs special treatment
+        if (ObservableFloatArray.class.isAssignableFrom(type)) {
+            if (val instanceof float[] primitiveFloats) {
+                return FXCollections.observableFloatArray(primitiveFloats);
+            }
+            List<?> list = (List<?>) val;
+            float[] floats = new float[list.size()];
+            for (int idx = 0; idx < list.size(); idx++) {
+                floats[idx] = BeanAdapter.coerce(list.get(idx), Float.class).floatValue();
+            }
+            return FXCollections.observableFloatArray(floats);
+        }
+
         if (ArrayListWrapper.class.equals(val.getClass())) {
-            // user given value is an ArrayList but the constructor doesn't
             // accept an ArrayList so the ArrayList comes from
             // the getTemporaryContainer method
             // we take the first argument
@@ -560,6 +591,8 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     } else if (Map.class.isAssignableFrom(retType) && argType.length == 0
                             && !strsMap.containsKey(propName)) {
                         strsMap.put(propName, new MapGetter(m, retType));
+                    } else if (ObservableArray.class.isAssignableFrom(retType) && argType.length == 0) {
+                        strsMap.put(propName, new ObservableArrayGetter(m, retType));
                     }
                 }
             }
@@ -628,6 +661,23 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             Map to = (Map) ModuleHelper.invoke(method, obj, new Object[]{});
             if (argStr instanceof Map) {
                 to.putAll((Map) argStr);
+            }
+        }
+    }
+
+    private static class ObservableArrayGetter extends Property {
+
+        public ObservableArrayGetter(Method m, Class<?> t) {
+            super(m, t);
+        }
+
+        @Override
+        public void invoke(Object obj, Object argStr) throws Exception {
+            Object to = ModuleHelper.invoke(method, obj, new Object[]{});
+            if (to instanceof ObservableIntegerArray toInt && argStr instanceof ObservableIntegerArray src) {
+                toInt.addAll(src);
+            } else if (to instanceof ObservableFloatArray toFloat && argStr instanceof ObservableFloatArray src) {
+                toFloat.addAll(src);
             }
         }
     }
