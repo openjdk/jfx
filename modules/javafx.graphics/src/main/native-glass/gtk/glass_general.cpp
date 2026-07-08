@@ -889,3 +889,30 @@ guint glass_settings_get_guint_opt (const gchar *schema_name,
 
     return g_settings_get_uint(gset, key_name);
 }
+
+/*
+ * Convert from jstring to standard UTF-8 using GLib
+ * utility method g_utf16_to_utf8.
+ *
+ * GetStringUTFChars returns a modified UTF-8 string
+ * that encodes supplementary characters differently
+ * from standard UTF-8, so emojis may not be handled
+ * as expected by GTK or other Linux desktop
+ * components that expect standard UTF-8.
+ */
+ gchar* jstring_to_utf8(JNIEnv *env, jstring jstr) {
+    if (jstr == nullptr) {
+        return nullptr;
+    }
+
+    const jchar *jchars = env->GetStringChars(jstr, nullptr);
+    if (jchars == nullptr) {
+        return nullptr;
+    }
+
+    jsize len = env->GetStringLength(jstr);
+    gchar *result = g_utf16_to_utf8(jchars, len, nullptr, nullptr, nullptr);
+    env->ReleaseStringChars(jstr, jchars);
+
+    return result;
+}

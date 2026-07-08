@@ -1974,7 +1974,7 @@ private:
 
             for (unsigned i = m_graph.varArgNumChildren(node); i--;) {
                 node->setIndexingType(
-                    leastUpperBoundOfIndexingTypeAndType(
+                    leastUpperBoundOfIndexingTypeAndTypeForSpeculation(
                         node->indexingType(), m_graph.varArgChild(node, i)->prediction()));
             }
             switch (node->indexingType()) {
@@ -2061,11 +2061,6 @@ private:
         case NewArrayWithSizeAndStructure: {
             watchHavingABadTime(node);
             fixEdge<Int32Use>(node->child1());
-            break;
-        }
-
-        case NewArrayWithConstantSize: {
-            watchHavingABadTime(node);
             break;
         }
 
@@ -2664,8 +2659,11 @@ private:
         case Int52Constant:
         case Identity: // This should have been cleaned up.
         case BooleanToNumber:
+        case NewArrayWithButterfly:
+        case NewButterflyWithSize:
         case PhantomNewObject:
-        case PhantomNewArrayWithConstantSize:
+        case PhantomNewButterflyWithSize:
+        case PhantomNewArrayWithButterfly:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -2687,7 +2685,7 @@ private:
         case CheckStructureOrEmpty:
         case CheckArrayOrEmpty:
         case MaterializeNewObject:
-        case MaterializeNewArrayWithConstantSize:
+        case MaterializeNewArrayWithButterfly:
         case MaterializeCreateActivation:
         case MaterializeNewInternalFieldObject:
         case PutStack:

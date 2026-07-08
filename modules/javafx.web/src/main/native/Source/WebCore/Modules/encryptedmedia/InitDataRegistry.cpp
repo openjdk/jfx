@@ -203,7 +203,9 @@ bool isPlayReadySanitizedInitializationData(const SharedBuffer& buffer)
         return false;
 
     auto xmlPayload = buffer.span().subspan(startTag);
-    xmlDocPtr protectionDataXML = xmlReadMemory(reinterpret_cast<const char*>(xmlPayload.data()), xmlPayload.size_bytes(), "protectionData", "utf-16", 0);
+    if (xmlPayload.size_bytes() > std::numeric_limits<int>::max())
+        return false;
+    xmlDocPtr protectionDataXML = xmlReadMemory(reinterpret_cast<const char*>(xmlPayload.data()), static_cast<int>(xmlPayload.size_bytes()), "protectionData", "utf-16", 0);
     if (!protectionDataXML)
         return false;
 

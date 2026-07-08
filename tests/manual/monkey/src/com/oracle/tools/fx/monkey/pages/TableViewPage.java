@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,6 +38,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
 import javafx.scene.control.SelectionMode;
@@ -47,6 +49,7 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.ResizeFeatures;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
@@ -72,6 +75,7 @@ import com.oracle.tools.fx.monkey.util.Utils;
  */
 public class TableViewPage extends TestPaneBase implements HasSkinnable {
     private final TableView<DataRow> control;
+    private static final Label measurer = createMeasurer();
 
     public TableViewPage() {
         super("TableViewPage");
@@ -109,7 +113,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         op.option("Placeholder:", Options.placeholderNode("placeholder", control.placeholderProperty()));
         op.option("Row Factory:", createRowFactoryOptions("rowFactory", control.rowFactoryProperty()));
         op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
-        op.option("Sort Policy: TODO", null); // TODO
+        op.option("Sort Policy:", createSortPolicyOptions("sortPolicy", control.sortPolicyProperty()));
         op.option(new BooleanOption("tableMenuButtonVisible", "table menu button visible", control.tableMenuButtonVisibleProperty()));
         op.separator();
         op.option(refresh);
@@ -129,6 +133,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         FX.separator(m);
         Menu m2 = FX.menu(m, "Cell Factory");
         FX.item(m2, "Default", () -> tc.setCellFactory(TableColumn.DEFAULT_CELL_FACTORY));
+        FX.item(m2, "Default w/Focus Tracking", () -> tc.setCellFactory(createFocusTrackingCellFactory()));
         FX.item(m2, "Canvas", () -> tc.setCellFactory(new Callback<TableColumn<?,?>, TableCell<?,?>>() {
             @Override
             public TableCell call(TableColumn param) {
@@ -161,6 +166,37 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         FX.separator(m);
         FX.item(m, "Properties...", () -> TableColumnPropertySheet.open(this, tc));
         return m;
+    }
+
+    private Callback createFocusTrackingCellFactory() {
+        return new Callback<TableColumn<?, ?>, TableCell<?, ?>>() {
+            @Override
+            public TableCell<?, ?> call(TableColumn<?, ?> param) {
+                var c = new TextFieldTableCell<>() {
+                    @Override
+                    public void commitEdit(Object v) {
+                        System.out.println("commitEdit: " + v);
+                        super.commitEdit(v);
+                    }
+
+                    @Override
+                    public void startEdit() {
+                        System.out.println("startEdit");
+                        super.startEdit();
+                    }
+
+                    @Override
+                    public void cancelEdit() {
+                        System.out.println("startEdit");
+                        super.cancelEdit();
+                    }
+                };
+                c.focusedProperty().addListener((_,_,v) -> {
+                    System.out.println("focused: " + v);
+                });
+                return c;
+            }
+        };
     }
 
     private TableColumn<DataRow, Object> newColumn() {
@@ -313,6 +349,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
 
     private Node createColumnResizePolicy(String name, ObjectProperty<Callback<ResizeFeatures, Boolean>> p) {
         ObjectOption<Callback<ResizeFeatures, Boolean>> s = new ObjectOption<>(name, p);
+        s.setPrefWidth(150);
         s.addChoice("AUTO_RESIZE_FLEX_NEXT_COLUMN", TableView.CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN);
         s.addChoice("AUTO_RESIZE_FLEX_LAST_COLUMN", TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         s.addChoice("AUTO_RESIZE_ALL_COLUMNS", TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
@@ -366,6 +403,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoiceSupplier("100 Rows", () -> createRows(100));
         s.addChoiceSupplier("1,000 Rows", () -> createRows(1000));
         s.addChoiceSupplier("10,000 Rows", () -> createRows(10_000));
+        s.addChoiceSupplier("500,000 Rows", () -> createRows(500_000));
         s.addChoiceSupplier("<empty>", () -> createRows(0));
         return s;
     }
@@ -388,10 +426,18 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         };
     }
 
+    private static Label createMeasurer() {
+        Label m = new Label();
+        m.setSkin(new LabelSkin(m));
+        return m;
+    }
+
     private static Canvas createCanvas(Labeled r, String text) {
         Font f = r.getFont();
-        double w = r.getWidth() - r.snappedLeftInset() - r.snappedRightInset();
-        double h = r.getHeight() - r.snappedTopInset() - r.snappedBottomInset();
+        measurer.setFont(f);
+        measurer.setText(text);
+        double w = measurer.prefWidth(-1);
+        double h = measurer.prefHeight(-1);
         Canvas c = new Canvas(w, h);
         GraphicsContext g = c.getGraphicsContext2D();
         g.setFill(Color.rgb(0, 255, 0, 0.1));
@@ -409,6 +455,44 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoice("Red Background", createRowFactory(Color.RED));
         s.addChoice("Green Background", createRowFactory(Color.GREEN));
         s.addChoice("Canvas-based", createCanvasRowFactory());
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
+    }
+
+    private Node createSortPolicyOptions(String name, ObjectProperty<Callback<TableView<DataRow>, Boolean>> p) {
+        Callback<TableView<DataRow>, Boolean> defaultValue = p.get();
+        ObjectOption<Callback<TableView<DataRow>, Boolean>> s = new ObjectOption<>(name, p);
+        s.addChoice("<default>", defaultValue);
+        s.addChoice("String Sorting", new Callback<TableView<DataRow>, Boolean>() {
+            @Override
+            public Boolean call(TableView<DataRow> t) {
+                List<TableColumn<DataRow, ?>> order = t.getSortOrder();
+                if (!order.isEmpty()) {
+                    FXCollections.sort(t.getItems(), new Comparator<DataRow>() {
+                        @Override
+                        public int compare(DataRow a, DataRow b) {
+                            for (var tc: order) {
+                                Object va = tc.getCellData(a);
+                                Object vb = tc.getCellData(b);
+                                int d = compareValues(va, vb);
+                                if (d != 0) {
+                                    return tc.getSortType() == TableColumn.SortType.ASCENDING ? d : -d;
+                                }
+                            }
+                            return 0;
+                        }
+
+                        private int compareValues(Object a, Object b) {
+                            String sa = (a == null) ? "" : a.toString();
+                            String sb = (b == null) ? "" : b.toString();
+                            return sa.compareTo(sb);
+                        }
+                    });
+                }
+                return Boolean.TRUE;
+            }
+        });
         s.addChoice("<null>", null);
         s.selectFirst();
         return s;

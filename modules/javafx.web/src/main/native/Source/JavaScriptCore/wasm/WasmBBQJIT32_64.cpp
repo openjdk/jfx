@@ -3386,19 +3386,19 @@ void BBQJIT::materializeVectorConstant(v128_t, Location)
     UNREACHABLE_FOR_PLATFORM();
 }
 
-ExpressionType BBQJIT::addConstant(v128_t)
+ExpressionType BBQJIT::addSIMDConstant(v128_t)
 {
     UNREACHABLE_FOR_PLATFORM();
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addExtractLane(SIMDInfo, uint8_t, Value, Value&)
+PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDExtractLane(SIMDInfo, uint8_t, Value, Value&)
 {
     UNREACHABLE_FOR_PLATFORM();
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addReplaceLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType, ExpressionType&)
+PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDReplaceLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType, ExpressionType&)
 {
     UNREACHABLE_FOR_PLATFORM();
     return { };

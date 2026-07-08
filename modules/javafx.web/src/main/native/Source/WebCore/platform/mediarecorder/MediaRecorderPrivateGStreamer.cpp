@@ -323,7 +323,16 @@ GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfi
     if (scanner.isContentTypeSupported(GStreamerRegistryScanner::Configuration::Encoding, contentType, { }) == MediaPlayerEnums::SupportsType::IsNotSupported)
         return nullptr;
 
-    auto mp4Variant = isGStreamerPluginAvailable("fmp4"_s) ? "iso-fragmented"_s : "iso"_s;
+    static bool isobmffPluginFound = false;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] {
+        static const std::array<ASCIILiteral, 2> isobmffPluginNames = { "isobmff"_s, "fmp4"_s };
+        isobmffPluginFound = std::any_of(isobmffPluginNames.begin(), isobmffPluginNames.end(), [](auto& name) {
+            return isGStreamerPluginAvailable(name);
+        });
+    });
+
+    auto mp4Variant = isobmffPluginFound ? "iso-fragmented"_s : "iso"_s;
     StringBuilder containerCapsDescriptionBuilder;
     auto containerType = contentType.containerType();
     if (containerType.endsWith("mp4"_s))
@@ -344,7 +353,7 @@ GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfi
         if (mp4Variant == "iso-fragmented"_s)
             propertiesBuilder.append("isofmp4mux,fragment-duration=100000000,write-mfra=1"_s);
         else {
-            GST_WARNING("isofmp4mux (shipped by gst-plugins-rs) is not available, falling back to mp4mux, duration on resulting file will be invalid");
+            GST_WARNING("isofmp4mux (shipped by gst-plugins-rs fmp4 (deprecated) and isobmff plugins) is not available, falling back to mp4mux, duration on resulting file will be invalid");
             propertiesBuilder.append("mp4mux,fragment-duration=1000,fragment-mode=0,streamable=0,force-create-timecode-trak=1"_s);
         }
         propertiesBuilder.append("]}"_s);

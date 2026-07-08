@@ -223,23 +223,33 @@ std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferDM
         return nullptr;
 
     CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace yuvToRgbColorSpace;
-    switch (m_dmabuf->colorSpace().value_or(DMABufBuffer::ColorSpace::BT601)) {
-    case DMABufBuffer::ColorSpace::BT601:
-        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT601;
+    switch (m_dmabuf->colorSpace().value_or(DMABufBuffer::ColorSpace::Bt601)) {
+    case DMABufBuffer::ColorSpace::Bt601:
+        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt601;
         break;
-    case DMABufBuffer::ColorSpace::BT709:
-        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT709;
+    case DMABufBuffer::ColorSpace::Bt709:
+        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt709;
         break;
-    case DMABufBuffer::ColorSpace::BT2020:
-        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::BT2020;
+    case DMABufBuffer::ColorSpace::Bt2020:
+        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Bt2020;
         break;
-    case DMABufBuffer::ColorSpace::SMPTE240M:
-        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::SMPTE240M;
+    case DMABufBuffer::ColorSpace::Smpte240M:
+        yuvToRgbColorSpace = CoordinatedPlatformLayerBufferYUV::YuvToRgbColorSpace::Smpte240M;
+        break;
+    }
+
+    CoordinatedPlatformLayerBufferYUV::TransferFunction transferFunction;
+    switch (m_dmabuf->transferFunction().value_or(DMABufBuffer::TransferFunction::Bt709)) {
+    case DMABufBuffer::TransferFunction::Bt709:
+        transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Bt709;
+        break;
+    case DMABufBuffer::TransferFunction::Pq:
+        transferFunction = CoordinatedPlatformLayerBufferYUV::TransferFunction::Pq;
         break;
     }
 
     unsigned numberOfPlanes = textures.size();
-    return CoordinatedPlatformLayerBufferYUV::create(numberOfPlanes, WTFMove(textures), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, m_size, m_flags, nullptr);
+    return CoordinatedPlatformLayerBufferYUV::create(numberOfPlanes, WTFMove(textures), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, transferFunction, m_size, m_flags, nullptr);
 }
 
 std::unique_ptr<CoordinatedPlatformLayerBuffer> CoordinatedPlatformLayerBufferDMABuf::importDMABuf(TextureMapper& textureMapper) const

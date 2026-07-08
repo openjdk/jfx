@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2026 Apple Inc. All rights reserved.
  * Copyright (C) 2014-2016 Google Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -322,12 +322,16 @@ void RenderBlockFlow::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth,
     if (needAdjustIntrinsicLogicalWidthsForColumns)
     adjustIntrinsicLogicalWidthsForColumns(minLogicalWidth, maxLogicalWidth);
 
-    if (!style().autoWrap() && childrenInline()) {
-        // A horizontal marquee with inline children has no minimum width.
-        CheckedPtr scrollableArea = layer() ? layer()->scrollableArea() : nullptr;
-        if (scrollableArea && scrollableArea->marquee() && scrollableArea->marquee()->isHorizontal())
-            minLogicalWidth = 0;
-    }
+    auto resetMinimumWidthForMarqueeIfApplicable = [&] {
+        if (style().autoWrap() || !layer())
+            return;
+        CheckedPtr scrollableArea = layer()->scrollableArea();
+        if (!scrollableArea || !scrollableArea->marquee() || !scrollableArea->marquee()->isHorizontal())
+            return;
+        // A horizontal marquee has no minimum width.
+        minLogicalWidth = { };
+    };
+    resetMinimumWidthForMarqueeIfApplicable();
 
     if (auto* cell = dynamicDowncast<RenderTableCell>(*this)) {
         auto tableCellWidth = cell->styleOrColLogicalWidth();

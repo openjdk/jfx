@@ -4553,8 +4553,13 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case NewArrayWithConstantSize: {
-        compileNewArrayWithConstantSize(node);
+    case NewButterflyWithSize: {
+        compileNewButterflyWithSize(node);
+        break;
+    }
+
+    case NewArrayWithButterfly: {
+        compileNewArrayWithButterfly(node);
         break;
     }
 
@@ -6004,10 +6009,6 @@ void SpeculativeJIT::compile(Node* node)
         compileMaterializeNewObject(node);
         break;
 
-    case MaterializeNewArrayWithConstantSize:
-        compileMaterializeNewArrayWithConstantSize(node);
-        break;
-
     case CallDOM:
         compileCallDOM(node);
         break;
@@ -6577,7 +6578,8 @@ void SpeculativeJIT::compile(Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
-    case PhantomNewArrayWithConstantSize:
+    case PhantomNewArrayWithButterfly:
+    case PhantomNewButterflyWithSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -6590,6 +6592,7 @@ void SpeculativeJIT::compile(Node* node)
     case GetVectorLength:
     case PutHint:
     case CheckStructureImmediate:
+    case MaterializeNewArrayWithButterfly:
     case MaterializeCreateActivation:
     case MaterializeNewInternalFieldObject:
     case PutStack:

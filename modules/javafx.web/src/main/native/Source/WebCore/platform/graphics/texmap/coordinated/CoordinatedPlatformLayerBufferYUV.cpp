@@ -31,33 +31,35 @@
 
 namespace WebCore {
 
-std::unique_ptr<CoordinatedPlatformLayerBufferYUV> CoordinatedPlatformLayerBufferYUV::create(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
+std::unique_ptr<CoordinatedPlatformLayerBufferYUV> CoordinatedPlatformLayerBufferYUV::create(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, TransferFunction transferFunction, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
 {
-    return makeUnique<CoordinatedPlatformLayerBufferYUV>(planeCount, WTFMove(planes), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, size, flags, WTFMove(fence));
+    return makeUnique<CoordinatedPlatformLayerBufferYUV>(planeCount, WTFMove(planes), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, transferFunction, size, flags, WTFMove(fence));
 }
 
-std::unique_ptr<CoordinatedPlatformLayerBufferYUV> CoordinatedPlatformLayerBufferYUV::create(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
+std::unique_ptr<CoordinatedPlatformLayerBufferYUV> CoordinatedPlatformLayerBufferYUV::create(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, TransferFunction transferFunction, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
 {
-    return makeUnique<CoordinatedPlatformLayerBufferYUV>(planeCount, WTFMove(textures), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, size, flags, WTFMove(fence));
+    return makeUnique<CoordinatedPlatformLayerBufferYUV>(planeCount, WTFMove(textures), WTFMove(yuvPlane), WTFMove(yuvPlaneOffset), yuvToRgbColorSpace, transferFunction, size, flags, WTFMove(fence));
 }
 
-CoordinatedPlatformLayerBufferYUV::CoordinatedPlatformLayerBufferYUV(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
+CoordinatedPlatformLayerBufferYUV::CoordinatedPlatformLayerBufferYUV(unsigned planeCount, std::array<unsigned, 4>&& planes, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, TransferFunction transferFunction, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
     : CoordinatedPlatformLayerBuffer(Type::YUV, size, flags, WTFMove(fence))
     , m_planeCount(planeCount)
     , m_planes(WTFMove(planes))
     , m_yuvPlane(WTFMove(yuvPlane))
     , m_yuvPlaneOffset(WTFMove(yuvPlaneOffset))
     , m_yuvToRgbColorSpace(yuvToRgbColorSpace)
+    , m_transferFunction(transferFunction)
 {
 }
 
-CoordinatedPlatformLayerBufferYUV::CoordinatedPlatformLayerBufferYUV(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
+CoordinatedPlatformLayerBufferYUV::CoordinatedPlatformLayerBufferYUV(unsigned planeCount, Vector<RefPtr<BitmapTexture>, 4>&& textures, std::array<unsigned, 4>&& yuvPlane, std::array<unsigned, 4>&& yuvPlaneOffset, YuvToRgbColorSpace yuvToRgbColorSpace, TransferFunction transferFunction, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
     : CoordinatedPlatformLayerBuffer(Type::YUV, size, flags, WTFMove(fence))
     , m_planeCount(planeCount)
     , m_textures(WTFMove(textures))
     , m_yuvPlane(WTFMove(yuvPlane))
     , m_yuvPlaneOffset(WTFMove(yuvPlaneOffset))
     , m_yuvToRgbColorSpace(yuvToRgbColorSpace)
+    , m_transferFunction(transferFunction)
 {
     for (unsigned i = 0; i < m_textures.size(); ++i)
         m_planes[i] = m_textures[i] ? m_textures[i]->id() : 0;
@@ -96,38 +98,48 @@ void CoordinatedPlatformLayerBufferYUV::paintToTextureMapper(TextureMapper& text
 
     const std::array<GLfloat, 16>& yuvToRgbMatrix = [&] {
         switch (m_yuvToRgbColorSpace) {
-        case YuvToRgbColorSpace::BT601:
+        case YuvToRgbColorSpace::Bt601:
             return s_bt601ConversionMatrix;
-        case YuvToRgbColorSpace::BT709:
+        case YuvToRgbColorSpace::Bt709:
             return s_bt709ConversionMatrix;
-        case YuvToRgbColorSpace::BT2020:
+        case YuvToRgbColorSpace::Bt2020:
             return s_bt2020ConversionMatrix;
-        case YuvToRgbColorSpace::SMPTE240M:
+        case YuvToRgbColorSpace::Smpte240M:
             return s_smpte240MConversionMatrix;
         }
         RELEASE_ASSERT_NOT_REACHED();
     }();
 
+    TextureMapper::TransferFunction textureMapperTransferFunction;
+    switch (m_transferFunction) {
+    case TransferFunction::Bt709:
+        textureMapperTransferFunction = TextureMapper::TransferFunction::Bt709;
+        break;
+    case TransferFunction::Pq:
+        textureMapperTransferFunction = TextureMapper::TransferFunction::Pq;
+        break;
+    }
+
     switch (m_planeCount) {
     case 1:
         ASSERT(m_yuvPlane[0] == m_yuvPlane[1] && m_yuvPlane[1] == m_yuvPlane[2]);
         ASSERT(m_yuvPlaneOffset[0] == 2 && m_yuvPlaneOffset[1] == 1 && !m_yuvPlaneOffset[2]);
-        textureMapper.drawTexturePackedYUV(m_planes[m_yuvPlane[0]], yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity);
+        textureMapper.drawTexturePackedYUV(m_planes[m_yuvPlane[0]], yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, textureMapperTransferFunction);
         break;
     case 2:
         ASSERT(!m_yuvPlaneOffset[0]);
         textureMapper.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { m_planes[m_yuvPlane[0]], m_planes[m_yuvPlane[1]] }, !!m_yuvPlaneOffset[1],
-            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity);
+            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, textureMapperTransferFunction);
         break;
     case 3:
         ASSERT(!m_yuvPlaneOffset[0] && !m_yuvPlaneOffset[1] && !m_yuvPlaneOffset[2]);
         textureMapper.drawTexturePlanarYUV(std::array<GLuint, 3> { m_planes[m_yuvPlane[0]], m_planes[m_yuvPlane[1]], m_planes[m_yuvPlane[2]] },
-            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, std::nullopt);
+            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, std::nullopt, textureMapperTransferFunction);
         break;
     case 4:
         ASSERT(!m_yuvPlaneOffset[0] && !m_yuvPlaneOffset[1] && !m_yuvPlaneOffset[2]);
         textureMapper.drawTexturePlanarYUV(std::array<GLuint, 3> { m_planes[m_yuvPlane[0]], m_planes[m_yuvPlane[1]], m_planes[m_yuvPlane[2]] },
-            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, m_planes[m_yuvPlane[3]]);
+            yuvToRgbMatrix, m_flags, targetRect, modelViewMatrix, opacity, m_planes[m_yuvPlane[3]], textureMapperTransferFunction);
         break;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -186,12 +186,12 @@ public:
         set(descriptor, nullptr);
     }
 
-    IndexingType indexingType()
+    IndexingType indexingType() const
     {
         return m_indexingType;
     }
 
-    unsigned length()
+    unsigned length() const
     {
         return m_length;
     }
@@ -257,11 +257,6 @@ public:
         return m_kind == Kind::Array;
     }
 
-    bool isArrayButterfly() const
-    {
-        return m_kind == Kind::ArrayButterfly;
-    }
-
     bool isObjectAllocation() const
     {
         return m_kind == Kind::Object;
@@ -307,15 +302,12 @@ public:
         out.print(")"_s);
     }
 
-    unsigned arrayButterflyId() { return m_arrayButterflyId++; }
-
 private:
     Node* m_identifier; // This is the actual node that created the allocation
     Kind m_kind;
     Fields m_fields;
     IndexingType m_indexingType { NoIndexingShape };
     unsigned m_length { 0 };
-    unsigned m_arrayButterflyId { 0 };
 
     // This set of structures is the intersection of structures seen at control flow edges. It's used
     // for checks and speculation since it can't be widened.
@@ -846,6 +838,8 @@ private:
                 m_heapAtHead[block].setReached();
                 m_heap = m_heapAtHead[block];
 
+                dataLogLnIf(Options::verboseObjectAllocationSinking(), "LocalHeap of ", block, " at head: ", m_heap);
+
                 for (Node* node : *block) {
                     handleNode(
                         node,
@@ -855,6 +849,7 @@ private:
                         });
                 }
 
+                dataLogLnIf(Options::verboseObjectAllocationSinking(), "LocalHeap of ", block, " at tail: ", m_heap);
                 if (m_heap == m_heapAtTail[block])
                     continue;
 
@@ -876,6 +871,7 @@ private:
                 // non-dominating allocation in the successor will
                 // trigger an escape and get pruned during the merge.
                 m_heap.pruneByLiveness(m_combinedLiveness.liveAtTail[block]);
+                dataLogLnIf(Options::verboseObjectAllocationSinking(), "LocalHeap of ", block, " after pruning by liveness: ", m_heap);
 
                 for (BasicBlock* successorBlock : block->successors()) {
                     // FIXME: Maybe we should:
@@ -914,6 +910,23 @@ private:
         }).iterator->value;
     }
 
+    bool isReasonableArraySinkingCandidate(Node* node)
+    {
+        if (!m_graph.isWatchingArrayPrototypeChainIsSaneWatchpoint(node))
+            return false;
+
+        if (hasAnyArrayStorage(node->indexingType()) || hasUndecided(node->indexingType()))
+            return false;
+
+        if (!node->child1()->isInt32Constant())
+            return false;
+        unsigned arraySize = node->child1()->asInt32();
+
+        if (arraySize >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH)
+            return false;
+        return true;
+    }
+
     template<typename WriteFunctor, typename ResolveFunctor>
     void handleNode(
         Node* node,
@@ -928,116 +941,55 @@ private:
         PromotedLocationDescriptor exactRead;
 
         switch (node->op()) {
-        case NewArrayWithConstantSize:
-            //    D@1 Array()
-            //    D@2 GetButterfly(D@1)
-            //    D@3 GetArrayLength(D@1, D@2) <- others
-            //    D@4 CheckInBounds(@index, D@3)
-            //    D@5 PutByVal(D@1, @index, @value, D@2, D@4)
-            //    D@6 GetByVal(D@1, @index, D@2, D@4)
+        // We model sinking of Arrays by splitting the allocation of the Butterfly and the Array itself into two nodes.
+        // This is necessary because this phase only considers one allocation per Node and the butterfly is not an implementation
+        // detail in FTL (i.e. the GetButterfly Node exists). This phase tries to faithfully represent the real memory layout of
+        // Arrays in the heap as it can. Thus, the length and indexed properties are stored as fields of the butterfly and the
+        // only field on the Array itself is the butterfly.
             //
-            //               D@1
-            //        -----------------
-            //         ^      ^      ^
-            //         |      |      |
-            //         |     D@2 <- D@3 <- others
-            //         |      ^      ^
-            //         |      |      |
-            //         |      |     D@4
-            //         |      |      ^
-            //         |      |      |
-            //        -----------------
-            //            D@5   D@6
+        // We have to be careful no node escapes the Butterfly without also escaping the Array. this is subtly important, since we
+        // don't want to end up storing/reading from a Butterfly if the Array has been eliminated. If we did, the following could
+        // lead to a UAF since the GC doesn't scan Butterflies it finds on the stack (only when they're part of an object).
             //
-            // This is the dependency graph for an array with common usage patterns in the wild.
-            // Before converting D@1 (NewArrayWithConstantSize) into a phantom node, we must
-            // first lower its dependent nodes to ensure correctness.
-            //
-            // 1. D@5 (PutByVal) and D@6 (GetByVal) are leaf nodes and the only ones that reference
-            //    D@2 (GetButterfly) and D@4 (CheckInBounds). These must be lowered first.
-            //    - For the first implementation, we only handle in-bounds reads and writes with constant
-            //      index access, since these guarantee no array hole accesses.
-            //    - Every in-bounds read with a constant index can be safely replaced with its resolved value.
-            //
-            // 2. Since only D@5 and D@6 reference D@4, D@4 (CheckInBounds) must be removed when lowering them.
-            //
-            // 3. D@3 (GetArrayLength) may be referenced by other nodes, so we replace it with a constant size node.
-            //    - This is valid because we only sink arrays where all accesses are in-bounds,
-            //      ensuring that the array size remains a known constant.
-            //
-            // 4. Since D@2 (GetButterfly) is only referenced by D@5 and D@6, it will be eliminated
-            //    once those nodes are lowered.
-            //
-            // 5. Once all dependent nodes have been properly handled, D@1 can be safely converted
-            //    into a phantom node.
-            //
-            // 6. **If any other node in the program uses D@1 as an input (other than the cases listed above),**
-            //    **sinking will be disabled.** This ensures that no other operation:
-            //    - Adds new properties to the array.
-            //    - Modifies the array’s length.
-            //    - Updates any existing fields in a way that would break our assumptions about the array.
-            //    If such an operation exists, we **must not** sink the allocation, as it would lead to
-            //    incorrect behavior.
+        // Consider:
+        // 1: NewButterflyWithSize
+        // 2: PhantomNewArrayWithButterfly
+        // 3: NewObject
+        // -: PutByVal(@2, 1, @3, @1)
+        // ... GC
+        // 4: GetByVal(@2, 1, @1)
+        // -: Use(@4) <-- UAF
+        case NewButterflyWithSize: {
             if (Options::useArrayAllocationSinking()) {
-                if (!m_graph.isWatchingArrayPrototypeChainIsSaneWatchpoint(node))
+                if (!isReasonableArraySinkingCandidate(node))
                     goto escapeChildren;
-                unsigned arraySize = node->newArraySize();
+
+                unsigned arraySize = node->child1()->asInt32();
+                target = &m_heap.newAllocation(node, Allocation::Kind::ArrayButterfly, node->indexingType(), arraySize);
+                writes.add(PromotedLocationDescriptor(ArrayButterflyPublicLengthPLoc), LazyNode(ensureConstant(arraySize)));
+            }
+            break;
+        }
+
+        case NewArrayWithButterfly:
+            if (Options::useArrayAllocationSinking()) {
+                if (!isReasonableArraySinkingCandidate(node))
+                    goto escapeChildren;
+
+                unsigned arraySize = node->child1()->asInt32();
                 target = &m_heap.newAllocation(node, Allocation::Kind::Array, node->indexingType(), arraySize);
-                writes.add(PromotedLocationDescriptor(ArrayLengthPropertyPLoc), LazyNode(ensureConstant(arraySize)));
+                writes.add(PromotedLocationDescriptor(ArrayButterflyPLoc), LazyNode(node->child2().node()));
+                // FIXME: We don't bother tracking writes to initialize holes in the array. Maybe we should because
+                // there's probably code that reads from the holes before initializing each entry.
             } else
                 goto escapeChildren;
             break;
 
         case GetButterfly: {
-            // D@2 (GetButterfly) is subtle because PutByVal/GetByVal can cause the associated Array to escape and be materialized.
-            // In such cases, GetButterfly must also be materialized at the same site as the Array, since it depends on the materialized Array.
-            // That is, when PutByVal/GetByVal triggers materialization, GetButterfly must be lowered at the same location and maintain
-            // a dependency on the materialized Array to ensure correctness.
-            //
-            // Below, we enumerate all possible interaction cases between GetButterfly and Array:
-            //
-            //         GetButterfly state (rows) vs Array state (columns)
-            //
-            //                   |     S     |    SEM    |     E     |
-            //           ---------------------------------------------
-            //            S      |    OK     |    OK     |    OK     |
-            //           SEM     |   Error   |    OK     |    OK     |
-            //            E      |    n/a    |   Error   |    OK     |
-            //
-            // Allocation Kinds:
-            //   Sink-only (S): Allocation is purely local and can be eliminated during optimization.
-            //   Escape-only (E): Allocation escapes the local context; cannot be sunk.
-            //   Sink + Escape + Materialize (SEM):
-            //      Allocation starts as sinkable but later escapes; it must be materialized at a specific point
-            //      while preserving dependency ordering.
-            //
-            // Cases: GetButterfly-State/Array-State
-            //  (1)     S\S S\SEM: Fine. Let it sink. (e.g. [2])
-            //  (2) S\E SEM\E E/E: Fine. But not profitable to sink GetButterfly.
-            //  (3)       SEM\SEM: Fine iff they materialize at the same site due to PutByVal/GetByVal. (e.g. [1])
-            //
-            //  (4)         SEM\S: Not fine since GetButterfly(Array). (e.g. [4])
-            //  (5)         E\SEM: Not fine similar to (4). (e.g. [3])
-            //  (6)           E\S: Not possible since PutByVal/GetByVal can escape-only GetButterfly.
-            //
-            //
-            // [1] array-allocation-sink-escape-materialize-1.js
-            // [2] array-allocation-sink-escape-materialize-2.js
-            // [3] array-allocation-sink-escape-materialize-3.js
-            // [4] array-allocation-sink-upsilon-with-double-value.js
             Node* base = node->child1().node();
-            Allocation* array = m_heap.onlyLocalAllocation(base);
-            if (array && array->isArrayAllocation()) {
-                // Treat GetButterfly as a separate allocation to track its dependency on the Array.
-                // 1. If PutByVal/GetByVal cause escape, materialize both at the same site.
-                // 2. If the Array escapes, also escape the ArrayButterfly since sinking it isn't beneficial.
-                m_heap.newAllocation(node, Allocation::Kind::ArrayButterfly);
-
-                // Re-get the array after potential HashMap modifications in above newAllocation() call which
-                // can trigger HashMap rehash in m_allocations.
-                array = m_heap.onlyLocalAllocation(base);
-                ASSERT(array && array->isArrayAllocation());
-                array->set(PromotedLocationDescriptor(ArrayButterflyPropertyPLoc, array->arrayButterflyId()), node);
+            target = m_heap.onlyLocalAllocation(base);
+            if (target && target->kind() == Allocation::Kind::Array) {
+                exactRead = ArrayButterflyPLoc;
             } else
                 goto escapeChildren;
             break;
@@ -1045,9 +997,13 @@ private:
 
         case GetArrayLength: {
             Node* base = node->child1().node();
-            target = m_heap.onlyLocalAllocation(base);
-            if (target && target->isArrayAllocation())
-                    exactRead = PromotedLocationDescriptor(ArrayLengthPropertyPLoc);
+            Allocation* baseAllocation = m_heap.onlyLocalAllocation(base);
+            if (!baseAllocation || baseAllocation->kind() != Allocation::Kind::Array)
+                goto escapeChildren;
+
+            target = m_heap.onlyLocalAllocation(node->child2().node());
+            if (target && target->kind() == Allocation::Kind::ArrayButterfly)
+                exactRead = PromotedLocationDescriptor(ArrayButterflyPublicLengthPLoc);
             else
                 goto escapeChildren;
             break;
@@ -1058,8 +1014,17 @@ private:
             ArrayMode arrayMode = node->arrayMode();
             Node* base = m_graph.varArgChild(node, 0).node();
             Node* index = m_graph.varArgChild(node, 1).node();
-            target = m_heap.onlyLocalAllocation(base);
+            Node* storage = m_graph.varArgChild(node, node->storageChildIndex()).node();
 
+            if (!storage)
+                goto escapeChildren;
+
+            Allocation* butterflyAllocation = m_heap.onlyLocalAllocation(storage);
+            if (!butterflyAllocation || butterflyAllocation->kind() != Allocation::Kind::ArrayButterfly)
+                goto escapeChildren;
+
+            // FIXME: Do we actually need this? For PutByVal the useKindEnsuresValidityForIndexingType check should
+            // ensure validity. For GetByVal subsequent uses do any UseKind type checking.
             auto matchesIndexingTypeWithArrayMode = [&](IndexingType indexingType, Array::Type type) {
                 switch (indexingType) {
                 case ALL_DOUBLE_INDEXING_TYPES:
@@ -1074,17 +1039,20 @@ private:
                 }
             };
 
-            auto isWithinBounds = [&](int32_t index, unsigned length) {
-                return index >= 0 && static_cast<unsigned>(index) < length;
+            auto isWithinBounds = [](int32_t index, unsigned length) {
+                return 0 <= index && static_cast<unsigned>(index) < length;
             };
 
-            if (target && target->isArrayAllocation()
+            target = m_heap.onlyLocalAllocation(base);
+            if (target && target->kind() == Allocation::Kind::Array
                 && arrayMode.isInBounds()
                 && matchesIndexingTypeWithArrayMode(target->indexingType(), arrayMode.type())
                 && index->isInt32Constant()
                 && isWithinBounds(index->asInt32(), target->length())) {
                 if (node->op() == PutByVal) {
                     Edge value = m_graph.varArgChild(node, 2);
+                    if (!isProvenValidTypeForIndexingShapeStorage(target->indexingType(), typeFilterFor(value.useKind())))
+                        goto escapeChildren;
                     writes.add(PromotedLocationDescriptor(ArrayIndexedPropertyPLoc, index->asInt32()), LazyNode(value.node()));
                 } else
                     exactRead = PromotedLocationDescriptor(ArrayIndexedPropertyPLoc, index->asInt32());
@@ -1452,6 +1420,7 @@ escapeChildren:
         m_materializationSiteToMaterializations.clear();
         m_materializationSiteToRecoveries.clear();
         m_materializationSiteToHints.clear();
+        dataLogLnIf(Options::verboseObjectAllocationSinking(), "Determining sink candidates");
 
         // Logically we wish to consider every allocation and sink
         // it. However, it is probably not profitable to sink an
@@ -1498,6 +1467,7 @@ escapeChildren:
         bool hasUnescapedReads = false;
         for (BasicBlock* block : m_graph.blocksInPreOrder()) {
             m_heap = m_heapAtHead[block];
+            dataLogLnIf(Options::verboseObjectAllocationSinking(), "LocalHeap of ", block, " at head: ", m_heap);
 
             for (Node* node : *block) {
                 handleNode(
@@ -1532,33 +1502,7 @@ escapeChildren:
             }
         }
 
-        auto fixGetButterflyEscapees = [&](auto& escapees) {
-            // Case (4): Remove GetButterfly if its base Array didn’t escape.
-            escapees.removeIf([&] (const auto& entry) {
-                return entry.key->op() == GetButterfly && !escapees.contains(entry.key->child1().node());
-            });
-
-            // Case (5): Ensure ArrayButterfly SEM when its parent Array does.
-            Vector<std::pair<Node*, Allocation*>> toAdd;
-            for (const auto& entry : escapees) {
-                if (entry.value.kind() != Allocation::Kind::Array)
-                    continue;
-                for (const auto& field : entry.value.fields()) {
-                    if (field.key.kind() != ArrayButterflyPropertyPLoc)
-                        continue;
-                    if (Allocation* allocation = m_heap.onlyLocalAllocation(field.value))
-                        toAdd.append({ field.value, allocation });
-                }
-            }
-
-            for (const auto& pair : toAdd) {
-                m_sinkCandidates.add(pair.first);
-                Allocation allocation = *pair.second;
-                if (allocation.isEscapedAllocation())
-                    allocation = Allocation(allocation.identifier(), Allocation::Kind::ArrayButterfly);
-                escapees.add(pair.first, WTFMove(allocation));
-            }
-        };
+        dataLogLnIf(Options::verboseObjectAllocationSinking(), "Initial candidates: ", listDump(m_sinkCandidates));
 
         auto forEachEscapee = [&] (auto callback) {
             for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
@@ -1574,7 +1518,6 @@ escapeChildren:
                         });
                     auto escapees = m_heap.takeEscapees();
                     escapees.removeIf([&] (const auto& entry) { return !m_sinkCandidates.contains(entry.key); });
-                    fixGetButterflyEscapees(escapees);
                     callback(escapees, node);
                 }
 
@@ -1596,7 +1539,6 @@ escapeChildren:
                         if (mustEscape && m_sinkCandidates.contains(entry.key))
                             escapingOnEdge.add(entry.key, entry.value);
                     }
-                    fixGetButterflyEscapees(escapingOnEdge);
                     callback(escapingOnEdge, block->terminal());
                 }
             }
@@ -1618,8 +1560,10 @@ escapeChildren:
                     InlineCallFrame* inlineCallFrame = allocation->origin.semantic.inlineCallFrame();
                     if (!inlineCallFrame)
                         continue;
-                    if ((inlineCallFrame->isClosureCall || inlineCallFrame->isVarargs()) && inlineCallFrame != where->origin.semantic.inlineCallFrame())
+                    if ((inlineCallFrame->isClosureCall || inlineCallFrame->isVarargs()) && inlineCallFrame != where->origin.semantic.inlineCallFrame()) {
+                        dataLogLnIf(Options::verboseObjectAllocationSinking(), "Removing candidate because it escapes from a frame that has a closure: ", allocation);
                         m_sinkCandidates.remove(allocation);
+                }
                 }
             });
         }
@@ -1696,13 +1640,13 @@ escapeChildren:
         // (vertex) feedback set problem. Unfortunately, this is a
         // NP-hard problem, which we don't want to solve exactly.
         //
-        // Instead, we use a simple greedy procedure, that procedes as
+        // Instead, we use a simple greedy procedure, that proceeds as
         // follow:
         //  - While there is at least one node with no outgoing edge
         //    amongst the remaining materializations, materialize it
         //    first
         //
-        //  - Similarily, while there is at least one node with no
+        //  - Similarly, while there is at least one node with no
         //    incoming edge amongst the remaining materializations,
         //    materialize it last.
         //
@@ -1722,36 +1666,16 @@ escapeChildren:
         UncheckedKeyHashMap<Node*, NodeSet> dependencies;
         UncheckedKeyHashMap<Node*, NodeSet> reverseDependencies;
         UncheckedKeyHashMap<Node*, NodeSet> forMaterialization;
-        auto addDependency = [&](Node* a, Node* b, bool neededForMaterialization) {
-            dependencies.add(a, NodeSet()).iterator->value.addVoid(b);
-            reverseDependencies.add(b, NodeSet()).iterator->value.addVoid(a);
-            if (neededForMaterialization)
-                forMaterialization.add(a, NodeSet()).iterator->value.addVoid(b);
-        };
-
-        // FIXME: A better model for materialized Array and ArrayButterfly would be:
-        //     D@x MaterializeButterfly(...)
-        //     D@y MaterializeNewArrayWithConstantSize(@x)
-        // In this model, D@x materializes the actual butterfly, and D@y wraps D@x.
-        // They then behave like regular GetButterfly and Array nodes. Additionally, PutByVal/GetByVal
-        // would conceptually operate on the Butterfly’s abstract Allocation rather than the Array’s.
-        // In that case, requiresReverseDependency would no longer be necessary.
-        auto requiresReverseDependency = [&] (Allocation::Kind allocationKind, PromotedLocationKind fieldKind) {
-            return allocationKind == Allocation::Kind::Array && fieldKind == ArrayButterflyPropertyPLoc;
-        };
-
-        for (auto& [escape, escapeAllocation] : escapees) {
-            dependencies.add(escape, NodeSet());
-            forMaterialization.add(escape, NodeSet());
-            reverseDependencies.add(escape, NodeSet());
-            for (auto& [fieldLocation, field] : escapeAllocation.fields()) {
-                if (escapees.contains(field) && field != escape) {
-                    Node* from = escape;
-                    Node* to = field;
-                    // Swap to ensure that Array is materialized before ArrayButterfly.
-                    if (requiresReverseDependency(escapeAllocation.kind(), fieldLocation.kind()))
-                        std::swap(from, to);
-                    addDependency(from, to, fieldLocation.neededForMaterialization());
+        for (const auto& entry : escapees) {
+            auto& myDependencies = dependencies.add(entry.key, NodeSet()).iterator->value;
+            auto& myDependenciesForMaterialization = forMaterialization.add(entry.key, NodeSet()).iterator->value;
+            reverseDependencies.add(entry.key, NodeSet());
+            for (const auto& field : entry.value.fields()) {
+                if (escapees.contains(field.value) && field.value != entry.key) {
+                    myDependencies.addVoid(field.value);
+                    reverseDependencies.add(field.value, NodeSet()).iterator->value.addVoid(entry.key);
+                    if (field.key.neededForMaterialization())
+                        myDependenciesForMaterialization.addVoid(field.value);
                 }
             }
         }
@@ -1861,13 +1785,8 @@ escapeChildren:
             escaped.addVoid(allocation.identifier());
         for (const Allocation& allocation : toMaterialize) {
             for (const auto& field : allocation.fields()) {
-                if (escaped.contains(field.value) && !materialized.contains(field.value)) {
-                    // Skip recovery for ArrayButterfly fields since they have reverse dependencies
-                    // and will be handled by their parent Array's materialization
-                    if (requiresReverseDependency(allocation.kind(), field.key.kind()))
-                        continue;
+                if (escaped.contains(field.value) && !materialized.contains(field.value))
                     toRecover.append(PromotedHeapLocation(allocation.identifier(), field.key));
-            }
             }
             materialized.addVoid(allocation.identifier());
         }
@@ -1901,18 +1820,17 @@ escapeChildren:
         case Allocation::Kind::Array: {
             Node* node = allocation.identifier();
             ObjectMaterializationData* data = m_graph.m_objectMaterializationData.add();
-            data->m_newArraySize = node->newArraySize();
-
             return m_graph.addNode(
-                node->prediction(), Node::VarArg, MaterializeNewArrayWithConstantSize,
+                node->prediction(), Node::VarArg, MaterializeNewArrayWithButterfly,
                 where->origin.withSemantic(node->origin.semantic),
                 OpInfo(node->indexingType()), OpInfo(data), 0, 0);
         }
 
         case Allocation::Kind::ArrayButterfly: {
             Node* node = allocation.identifier();
-            return m_graph.addNode(node->prediction(), GetButterfly,
-                where->origin.withSemantic(node->origin.semantic), node->child1());
+
+            return m_graph.addNode(node->prediction(),  NewButterflyWithSize,
+                where->origin.withSemantic(node->origin.semantic), OpInfo(node->indexingType()));
         }
 
         case Allocation::Kind::Object: {
@@ -2337,8 +2255,12 @@ escapeChildren:
 
                 if (m_sinkCandidates.contains(node) || doLower) {
                     switch (node->op()) {
-                    case NewArrayWithConstantSize:
-                        node->convertToPhantomNewArrayWithConstantSize();
+                    case NewButterflyWithSize:
+                        node->convertToPhantomNewButterflyWithSize();
+                        break;
+
+                    case NewArrayWithButterfly:
+                        node->convertToPhantomNewArrayWithButterfly();
                         break;
 
                     case NewObject:
@@ -2415,6 +2337,9 @@ escapeChildren:
 
             m_insertionSet.execute(block);
         }
+
+        // Materializations can insert constants (e.g. for PutByVal)
+        m_rootInsertionSet.execute(m_graph.block(0));
     }
 
     NEVER_INLINE Node* resolve(BasicBlock* block, PromotedHeapLocation location)
@@ -2534,22 +2459,28 @@ escapeChildren:
     {
         Allocation& allocation = m_heap.getAllocation(escapee);
         switch (node->op()) {
-        case MaterializeNewArrayWithConstantSize: {
+        case MaterializeNewArrayWithButterfly: {
             ObjectMaterializationData& data = node->objectMaterializationData();
-            unsigned firstChild = m_graph.m_varArgChildren.size();
+            unsigned lengthChild = m_graph.m_varArgChildren.size();
+            // Save space for it in case it's not the first value we find.
+            m_graph.m_varArgChildren.append(m_bottom);
 
-            auto useKind = [&](IndexingType indexingType) {
-                switch (indexingType) {
+            unsigned butterflyChild = m_graph.m_varArgChildren.size();
+            m_graph.m_varArgChildren.append(m_bottom);
+
+            auto useKind = [&]() {
+                switch (node->indexingType()) {
                 case ALL_DOUBLE_INDEXING_TYPES:
+                    // FIXME: There's no KnownDoubleRepRealUse
                     return DoubleRepRealUse;
                 case ALL_INT32_INDEXING_TYPES:
-                    return Int32Use;
+                    return KnownInt32Use;
                 default:
                     return UntypedUse;
                 }
-            };
+            }();
 
-            Vector<PromotedHeapLocation> locations = m_locationsForAllocation.get(escapee);
+            const Vector<PromotedHeapLocation>& locations = m_locationsForAllocation.get(escapee);
             for (PromotedHeapLocation location : locations) {
                 switch (location.kind()) {
                 case ArrayIndexedPropertyPLoc: {
@@ -2559,27 +2490,41 @@ escapeChildren:
                     if (m_sinkCandidates.contains(value))
                         m_graph.m_varArgChildren.append(m_bottom);
                     else
-                        m_graph.m_varArgChildren.append(Edge(value, useKind(node->indexingType())));
+                        m_graph.m_varArgChildren.append(Edge(value, useKind));
                     break;
                 }
-                case ArrayLengthPropertyPLoc:
-                    // No need to do anything here since it's used for read only.
+                case ArrayButterflyPLoc: {
+                    Node* butterfly = resolve(block, location);
+                    m_graph.m_varArgChildren[butterflyChild] = Edge(butterfly);
+
+                    ASSERT(butterfly->op() == NewButterflyWithSize);
+                    m_graph.m_varArgChildren[lengthChild] = butterfly->child1();
                     break;
+                }
                 default:
                     DFG_CRASH(m_graph, node, "Bad location kind");
                 }
             }
 
+            ASSERT(m_graph.m_varArgChildren.size() - lengthChild == locations.size() + 1);
             node->children = AdjacencyList(
                 AdjacencyList::Variable,
-                firstChild, m_graph.m_varArgChildren.size() - firstChild);
+                lengthChild, m_graph.m_varArgChildren.size() - lengthChild);
+
+            // Right now this is constant. If we ever support out-of-bounds insertion we will need to remove this assert.
+            ASSERT(m_graph.varArgChild(node, 0)->asInt32() == escapee->child1()->asInt32());
             break;
         }
 
-        case GetButterfly: {
-            Edge& base = node->child1();
-            base.setNode(resolve(block, base.node()));
-            ASSERT(base->op() == MaterializeNewArrayWithConstantSize);
+        case NewButterflyWithSize: {
+            const auto& locations = m_locationsForAllocation.get(escapee);
+            ASSERT(locations.size() == 1);
+            ASSERT(locations[0].kind() == ArrayButterflyPublicLengthPLoc);
+            Node* size = resolve(block, locations[0]);
+            // Right now this is constant. If we ever support out-of-bounds insertion we will need to remove this assert
+            // and figure out how to teach handleNode's PutByVal case to have more than one write target.
+            ASSERT(size->isInt32Constant());
+            node->child1() = Edge(size, KnownInt32Use);
             break;
         }
 
@@ -2587,7 +2532,7 @@ escapeChildren:
             ObjectMaterializationData& data = node->objectMaterializationData();
             unsigned firstChild = m_graph.m_varArgChildren.size();
 
-            Vector<PromotedHeapLocation> locations = m_locationsForAllocation.get(escapee);
+            const Vector<PromotedHeapLocation>& locations = m_locationsForAllocation.get(escapee);
 
             PromotedHeapLocation structure(StructurePLoc, allocation.identifier());
             ASSERT(locations.contains(structure));
@@ -2849,6 +2794,49 @@ escapeChildren:
                 value->defaultEdge());
         }
 
+        case ArrayIndexedPropertyPLoc: {
+            Node* butterfly = resolve(block, PromotedHeapLocation(ArrayButterflyPLoc, location.base()));
+
+            unsigned index = location.info();
+
+            ArrayMode mode = [&] {
+                switch (base->indexingType()) {
+                case ALL_INT32_INDEXING_TYPES: return ArrayMode(Array::Int32, Array::Write);
+                case ALL_DOUBLE_INDEXING_TYPES: return ArrayMode(Array::Double, Array::Write);
+                case ALL_CONTIGUOUS_INDEXING_TYPES: return ArrayMode(Array::Contiguous, Array::Write);
+                default: break;
+                }
+                RELEASE_ASSERT_NOT_REACHED();
+            }();
+
+            auto useKind = [&]() {
+                switch (base->indexingType()) {
+                case ALL_DOUBLE_INDEXING_TYPES:
+                    // FIXME: There's no KnownDoubleRepRealUse
+                    return DoubleRepRealUse;
+                case ALL_INT32_INDEXING_TYPES:
+                    return KnownInt32Use;
+                default:
+                    return UntypedUse;
+                }
+            }();
+
+            unsigned start = m_graph.m_varArgChildren.size();
+            m_graph.m_varArgChildren.append(Edge(base, KnownCellUse));
+            m_graph.m_varArgChildren.append(Edge(ensureConstant(index), KnownInt32Use));
+            m_graph.m_varArgChildren.append(Edge(value, useKind));
+            m_graph.m_varArgChildren.append(Edge(butterfly));
+            m_graph.m_varArgChildren.append(Edge()); // length, unused by Arrays.
+
+            // We should have a sane chain so this doesn't matter.
+            ECMAMode strict = ECMAMode::strict();
+
+            return m_graph.addNode(Node::VarArg, PutByVal, origin.takeValidExit(canExit),
+                OpInfo(mode.asWord()), OpInfo(strict),
+                start, m_graph.m_varArgChildren.size() - start);
+        }
+
+
         case ClosureVarPLoc: {
             return m_graph.addNode(
                 PutClosureVar,
@@ -2933,29 +2921,10 @@ escapeChildren:
                     break;
                 }
 
-                case MaterializeNewArrayWithConstantSize: {
-                    for (unsigned i = 0; i < node->numChildren(); ++i) {
-                        switch (node->indexingType()) {
-                        case ALL_DOUBLE_INDEXING_TYPES:
-                            m_graph.child(node, i).setUseKind(DoubleRepRealUse);
-                            break;
-                        case ALL_INT32_INDEXING_TYPES:
-                            m_graph.child(node, i).setUseKind(Int32Use);
-                            break;
-                        case ALL_CONTIGUOUS_INDEXING_TYPES:
-                            m_graph.child(node, i).setUseKind(UntypedUse);
-                            break;
                         default:
                             break;
                         }
                     }
-                    break;
-                }
-
-                default:
-                    break;
-                }
-            }
 
             m_insertionSet.execute(block);
         }
@@ -2989,7 +2958,9 @@ escapeChildren:
 
     UncheckedKeyHashMap<JSCell*, bool> m_validInferredValues;
 
+    // This maps from a MaterializeXYZ node to the allocation identifier.
     UncheckedKeyHashMap<Node*, Node*> m_materializationToEscapee;
+    // This maps from the node where an allocation escapes to the various MaterializeXYZ nodes.
     UncheckedKeyHashMap<Node*, Vector<Node*>> m_materializationSiteToMaterializations;
     UncheckedKeyHashMap<Node*, Vector<PromotedHeapLocation>> m_materializationSiteToRecoveries;
     UncheckedKeyHashMap<Node*, Vector<std::pair<PromotedHeapLocation, Node*>>> m_materializationSiteToHints;

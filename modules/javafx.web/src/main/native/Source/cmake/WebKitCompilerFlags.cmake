@@ -210,6 +210,16 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-subobject-linkage)
     endif ()
 
+    # Older GCC versions sometimes miscompile switches with that flag on.
+    # Observed in testMoveConditionallyFloatingPointSameArg (testmasm), turn it
+    # off throughout to avoid hard-to-diagnose bugs.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+      # This and later versions don't seem to exhibit the issue.
+      if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "14.0.1")
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fno-unswitch-loops)
+      endif ()
+    endif ()
+
     WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-noexcept-type)
 
     # These GCC warnings produce too many false positives to be useful. We'll

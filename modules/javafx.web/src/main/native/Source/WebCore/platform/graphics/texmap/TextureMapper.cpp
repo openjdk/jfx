@@ -632,12 +632,14 @@ static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTr
     }
 }
 
-void TextureMapper::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, std::optional<GLuint> alphaPlane, AllEdgesExposed allEdgesExposed)
+void TextureMapper::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, std::optional<GLuint> alphaPlane, TextureMapper::TransferFunction transferFunction, AllEdgesExposed allEdgesExposed)
 {
 #if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = alphaPlane ? TextureMapperShaderProgram::TextureYUVA : TextureMapperShaderProgram::TextureYUV;
+    if (transferFunction == TextureMapper::TransferFunction::Pq)
+        options.add(TextureMapperShaderProgram::ToneMapPQ);
     if (opacity < 1)
         options.add(TextureMapperShaderProgram::Opacity);
     if (useAntialiasing) {
@@ -688,13 +690,15 @@ void TextureMapper::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, 
 #endif
 }
 
-void TextureMapper::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textures, bool uvReversed, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, AllEdgesExposed allEdgesExposed)
+void TextureMapper::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textures, bool uvReversed, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, TextureMapper::TransferFunction transferFunction, AllEdgesExposed allEdgesExposed)
 {
 #if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = uvReversed ?
         TextureMapperShaderProgram::TextureNV21 : TextureMapperShaderProgram::TextureNV12;
+    if (transferFunction == TextureMapper::TransferFunction::Pq)
+        options.add(TextureMapperShaderProgram::ToneMapPQ);
     if (opacity < 1)
         options.add(TextureMapperShaderProgram::Opacity);
     if (useAntialiasing) {
@@ -738,12 +742,14 @@ void TextureMapper::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textur
 #endif
 }
 
-void TextureMapper::drawTexturePackedYUV(GLuint texture, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, AllEdgesExposed allEdgesExposed)
+void TextureMapper::drawTexturePackedYUV(GLuint texture, const std::array<GLfloat, 16>& yuvToRgbMatrix, OptionSet<TextureMapperFlags> flags, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, TextureMapper::TransferFunction transferFunction, AllEdgesExposed allEdgesExposed)
 {
 #if !PLATFORM(JAVA)
     bool useAntialiasing = allEdgesExposed == AllEdgesExposed::Yes && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TexturePackedYUV;
+    if (transferFunction == TextureMapper::TransferFunction::Pq)
+        options.add(TextureMapperShaderProgram::ToneMapPQ);
     if (opacity < 1)
         options.add(TextureMapperShaderProgram::Opacity);
     if (useAntialiasing) {

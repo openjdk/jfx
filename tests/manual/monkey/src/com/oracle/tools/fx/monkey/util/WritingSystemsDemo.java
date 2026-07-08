@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ public class WritingSystemsDemo {
     public static final String[] PAIRS = {
         "Amharic", "አማርኛ ይጻፉ",
         "Ancient South Arabian", "𐩣𐩯𐩬𐩵",
-        "Arabic", "السَّلَامُ عَلَيْكُمْ",
+        "Arabic", "السَّلَامُ عَلَيْكُمْ\ufdfd",
         "Aramaic", "Classical Syriac: ܐܪܡܝܐ, Old Aramaic: 𐤀𐤓𐤌𐤉𐤀; Imperial Aramaic: 𐡀𐡓𐡌𐡉𐡀; Jewish Babylonian Aramaic: אֲרָמִית‎",
         "Akkadian", "𒀝𒅗𒁺𒌑",
         "Armenian", "հայերէն/հայերեն",

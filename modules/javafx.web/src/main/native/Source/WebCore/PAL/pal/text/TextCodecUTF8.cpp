@@ -294,6 +294,7 @@ void TextCodecUTF8::handlePartialSequence(std::span<char16_t>& destination, std:
         }
 
         m_partialSequenceSize -= count;
+        memmoveSpan(std::span { m_partialSequence }, std::span { m_partialSequence }.subspan(count, m_partialSequenceSize));
         if (std::exchange(m_shouldStripByteOrderMark, false) && character == byteOrderMark)
             continue;
         destination = appendCharacter(destination, character);

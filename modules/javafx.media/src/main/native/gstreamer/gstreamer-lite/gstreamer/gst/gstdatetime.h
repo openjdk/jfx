@@ -104,16 +104,16 @@ gfloat          gst_date_time_get_time_zone_offset    (const GstDateTime * datet
 /* constructors */
 
 GST_API
-GstDateTime *   gst_date_time_new_from_unix_epoch_local_time (gint64 secs) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_from_unix_epoch_local_time (gint64 secs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_from_unix_epoch_utc   (gint64 secs) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_from_unix_epoch_utc   (gint64 secs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_from_unix_epoch_local_time_usecs (gint64 usecs) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_from_unix_epoch_local_time_usecs (gint64 usecs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_from_unix_epoch_utc_usecs (gint64 usecs) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_from_unix_epoch_utc_usecs (gint64 usecs) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstDateTime *   gst_date_time_new_local_time            (gint year,
@@ -121,40 +121,40 @@ GstDateTime *   gst_date_time_new_local_time            (gint year,
                                                          gint day,
                                                          gint hour,
                                                          gint minute,
-                                                         gdouble seconds) G_GNUC_MALLOC;
+                                                         gdouble seconds) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstDateTime *   gst_date_time_new_y                     (gint year) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_y                     (gint year) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstDateTime *   gst_date_time_new_ym                    (gint year,
-                                                         gint month) G_GNUC_MALLOC;
+                                                         gint month) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstDateTime *   gst_date_time_new_ymd                   (gint year,
                                                          gint month,
-                                                         gint day) G_GNUC_MALLOC;
+                                                         gint day) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstDateTime *   gst_date_time_new                       (gfloat tzoffset,
                                                          gint year, gint month,
                                                          gint day, gint hour,
                                                          gint minute,
-                                                         gdouble seconds) G_GNUC_MALLOC;
+                                                         gdouble seconds) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstDateTime *   gst_date_time_new_now_local_time (void) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_now_local_time (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_now_utc        (void) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_now_utc        (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar *         gst_date_time_to_iso8601_string  (GstDateTime * datetime) G_GNUC_MALLOC;
+gchar *         gst_date_time_to_iso8601_string  (GstDateTime * datetime) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_from_iso8601_string  (const gchar * string) G_GNUC_MALLOC;
+GstDateTime *   gst_date_time_new_from_iso8601_string  (const gchar * string) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GDateTime *     gst_date_time_to_g_date_time       (GstDateTime * datetime);
+GDateTime *     gst_date_time_to_g_date_time       (GstDateTime * datetime) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstDateTime *   gst_date_time_new_from_g_date_time (GDateTime * dt);
+GstDateTime *   gst_date_time_new_from_g_date_time (GDateTime * dt) G_GNUC_WARN_UNUSED_RESULT;
 
 /* refcounting */
 

@@ -129,7 +129,7 @@ void NavigateEvent::processScrollBehavior(Document& document)
         document.frame()->loader().history().restoreScrollPositionAndViewState();
     else if (!document.frame()->view()->scrollToFragment(document.url())) {
         if (!document.url().hasFragmentIdentifier())
-            document.frame()->view()->scrollTo({ 0, 0 });
+            document.frame()->view()->setScrollPosition({ 0, 0 });
     }
 }
 

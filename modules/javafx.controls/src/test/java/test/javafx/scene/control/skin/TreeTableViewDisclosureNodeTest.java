@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,7 @@ public class TreeTableViewDisclosureNodeTest {
         TreeTableRow<?> grandChildTableRow = getTableRow(rowIndex);
         // single column == single child cell
         TreeTableCell<?, ?> cell = (TreeTableCell<?, ?>) grandChildTableRow.lookup(".tree-table-cell");
-        MouseEventFirer mouse = new MouseEventFirer(cell, true);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
         // target to hit disclosure
         double targetX = - cell.getWidth() / 2; // compensate default center offset to zero
         mouse.fireMousePressAndRelease(1, targetX, 0);

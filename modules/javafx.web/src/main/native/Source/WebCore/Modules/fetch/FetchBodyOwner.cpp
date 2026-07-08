@@ -69,7 +69,7 @@ void FetchBodyOwner::stop()
 
     if (m_blobLoader) {
         bool isUniqueReference = hasOneRef();
-        if (CheckedPtr loader = m_blobLoader->loader.get())
+        if (RefPtr loader = m_blobLoader->loader.get())
             loader->stop();
         // After that point, 'this' may be destroyed, since unsetPendingActivity should have been called.
         ASSERT_UNUSED(isUniqueReference, isUniqueReference || !m_blobLoader);
@@ -275,13 +275,15 @@ void FetchBodyOwner::loadBlob(const Blob& blob, FetchBodyConsumer* consumer)
         return;
     }
 
-    m_blobLoader.emplace(*this);
-    m_blobLoader->loader = makeUnique<FetchLoader>(CheckedRef { *m_blobLoader }.get(), consumer);
+    Ref blobLoader = BlobLoader::create(*this);
+    m_blobLoader = blobLoader.copyRef();
+    Ref loader = FetchLoader::create(blobLoader.get(), consumer);
+    blobLoader->loader = loader.copyRef();
 
-    CheckedRef { *m_blobLoader->loader }->start(*protectedScriptExecutionContext(), blob);
-    if (!m_blobLoader->loader->isStarted()) {
+    loader->start(*protectedScriptExecutionContext(), blob);
+    if (!loader->isStarted()) {
         m_body->loadingFailed(Exception { ExceptionCode::TypeError, "Blob loading failed"_s });
-        m_blobLoader = std::nullopt;
+        m_blobLoader = nullptr;
         return;
     }
 }
@@ -290,7 +292,7 @@ void FetchBodyOwner::finishBlobLoading()
 {
     ASSERT(m_blobLoader);
 
-    m_blobLoader = std::nullopt;
+    m_blobLoader = nullptr;
 }
 
 void FetchBodyOwner::blobLoadingSucceeded()
@@ -325,10 +327,17 @@ void FetchBodyOwner::blobChunk(const SharedBuffer& buffer)
         stop();
 }
 
+Ref<FetchBodyOwner::BlobLoader> FetchBodyOwner::BlobLoader::create(FetchBodyOwner& owner)
+{
+    return adoptRef(*new BlobLoader(owner));
+}
+
 FetchBodyOwner::BlobLoader::BlobLoader(FetchBodyOwner& owner)
-    : owner(owner)
+    : m_owner(owner)
 {
 }
+
+FetchBodyOwner::BlobLoader::~BlobLoader() = default;
 
 void FetchBodyOwner::BlobLoader::didReceiveResponse(const ResourceResponse& response)
 {
@@ -339,13 +348,22 @@ void FetchBodyOwner::BlobLoader::didReceiveResponse(const ResourceResponse& resp
 void FetchBodyOwner::BlobLoader::didFail(const ResourceError&)
 {
     // didFail might be called within FetchLoader::start call.
-    if (loader->isStarted())
-        protectedOwner()->blobLoadingFailed();
+    if (loader->isStarted()) {
+        if (RefPtr owner = m_owner.get())
+            owner->blobLoadingFailed();
+    }
 }
 
 void FetchBodyOwner::BlobLoader::didSucceed(const NetworkLoadMetrics&)
 {
-    protectedOwner()->blobLoadingSucceeded();
+    if (RefPtr owner = m_owner.get())
+        owner->blobLoadingSucceeded();
+}
+
+void FetchBodyOwner::BlobLoader::didReceiveData(const SharedBuffer& buffer)
+{
+    if (RefPtr owner = m_owner.get())
+        owner->blobChunk(buffer);
 }
 
 ExceptionOr<RefPtr<ReadableStream>> FetchBodyOwner::readableStream(JSC::JSGlobalObject& state)

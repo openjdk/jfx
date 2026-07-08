@@ -102,16 +102,16 @@ GType gst_audio_info_get_type                (void);
 #define GST_AUDIO_INFO_POSITION(info,c)      ((info)->position[c])
 
 GST_AUDIO_API
-GstAudioInfo * gst_audio_info_new         (void);
+GstAudioInfo * gst_audio_info_new         (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
-GstAudioInfo * gst_audio_info_new_from_caps (const GstCaps * caps);
+GstAudioInfo * gst_audio_info_new_from_caps (const GstCaps * caps) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 void           gst_audio_info_init        (GstAudioInfo *info);
 
 GST_AUDIO_API
-GstAudioInfo * gst_audio_info_copy        (const GstAudioInfo *info);
+GstAudioInfo * gst_audio_info_copy        (const GstAudioInfo *info) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 void           gst_audio_info_free        (GstAudioInfo *info);
@@ -125,7 +125,7 @@ GST_AUDIO_API
 gboolean       gst_audio_info_from_caps   (GstAudioInfo *info, const GstCaps *caps);
 
 GST_AUDIO_API
-GstCaps *      gst_audio_info_to_caps     (const GstAudioInfo *info);
+GstCaps *      gst_audio_info_to_caps     (const GstAudioInfo *info) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 gboolean       gst_audio_info_convert     (const GstAudioInfo * info,

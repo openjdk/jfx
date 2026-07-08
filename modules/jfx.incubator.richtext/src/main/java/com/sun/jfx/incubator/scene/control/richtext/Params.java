@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,14 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import javafx.geometry.Insets;
 import javafx.util.Duration;
 
 /**
  * Various constants.
  */
 public class Params {
-    /** number of paragraph for accessibility window */
-    public static final int ACCESSIBILITY_WINDOW_SIZE = 64;
+    /** max number of paragraphs for accessible selected text */
+    public static final int ACCESSIBILITY_TEXT_MAX_PARAGRAPHS = 64;
 
     /** autoscroll animation period, milliseconds. */
     public static final int AUTO_SCROLL_PERIOD = 100;

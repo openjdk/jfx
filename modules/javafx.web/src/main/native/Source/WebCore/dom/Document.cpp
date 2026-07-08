@@ -824,7 +824,7 @@ Document::~Document()
 
     removeAllEventListeners();
 
-    if (RefPtr eventLoop = m_eventLoop)
+    if (RefPtr eventLoop = std::exchange(m_eventLoop, nullptr))
         eventLoop->removeAssociatedContext(*this);
 
     // Currently we believe that Document can never outlive the parser.

@@ -53,19 +53,19 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpSender);
 
-Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpSenderBackend>&& backend)
+Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, Ref<MediaStreamTrack>&& track, Ref<RTCRtpSenderBackend>&& backend)
 {
     auto sender = adoptRef(*new RTCRtpSender(connection, String(track->kind()), WTFMove(backend)));
     sender->setTrack(WTFMove(track));
     return sender;
 }
 
-Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&& backend)
+Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, String&& trackKind, Ref<RTCRtpSenderBackend>&& backend)
 {
     return adoptRef(*new RTCRtpSender(connection, WTFMove(trackKind), WTFMove(backend)));
 }
 
-RTCRtpSender::RTCRtpSender(RTCPeerConnection& connection, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&& backend)
+RTCRtpSender::RTCRtpSender(RTCPeerConnection& connection, String&& trackKind, Ref<RTCRtpSenderBackend>&& backend)
     : m_trackKind(WTFMove(trackKind))
     , m_backend(WTFMove(backend))
     , m_connection(connection)

@@ -28,6 +28,7 @@ package com.sun.javafx.css.media.expression;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
+import com.sun.javafx.css.media.TriState;
 import java.util.List;
 import java.util.Objects;
 
@@ -84,6 +85,23 @@ public final class ConjunctionExpression implements MediaQuery {
     }
 
     @Override
+    public TriState evaluate() {
+        return switch (left.evaluate()) {
+            case TRUE -> right.evaluate();
+            case FALSE -> TriState.FALSE;
+            case UNKNOWN -> switch (right.evaluate()) {
+                case TRUE, UNKNOWN -> TriState.UNKNOWN;
+                case FALSE -> TriState.FALSE;
+            };
+        };
+    }
+
+    @Override
+    public boolean evaluate(MediaQueryContext context) {
+        return left.evaluate(context) && right.evaluate(context);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         return obj instanceof ConjunctionExpression other
             && left.equals(other.left)
@@ -93,11 +111,6 @@ public final class ConjunctionExpression implements MediaQuery {
     @Override
     public int hashCode() {
         return Objects.hash(ConjunctionExpression.class, left, right);
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return left.evaluate(context) && right.evaluate(context);
     }
 
     @Override

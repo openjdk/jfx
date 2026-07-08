@@ -59,7 +59,9 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GError, g_error_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GHashTable, g_hash_table_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GHmac, g_hmac_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GIOChannel, g_io_channel_unref)
+#ifndef GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GKeyFile, g_key_file_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GList, g_list_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GArray, g_array_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GPtrArray, g_ptr_array_unref)
@@ -109,8 +111,8 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GVariantType, g_variant_type_free)
 G_DEFINE_AUTO_CLEANUP_FREE_FUNC(GStrv, g_strfreev, NULL)
 #ifndef GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRefString, g_ref_string_release)
-#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GUri, g_uri_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (GPathBuf, g_path_buf_free)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (GPathBuf, g_path_buf_clear)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,10 +62,10 @@ public class ChoiceBoxPage extends TestPaneBase implements HasSkinnable {
 
         OptionPane op = new OptionPane();
         op.section("ChoiceBox");
-        op.option("Converter: TODO", null); // TODO
+        //op.option("Converter: TODO", null); // TODO
         op.option("Items:", createItemsOption("items", control.getItems()));
         op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
-        op.option("Value: TODO", null); // TODO
+        //op.option("Value: TODO", null); // TODO
 
         ControlPropertySheet.appendTo(op, control);
 
@@ -81,7 +81,6 @@ public class ChoiceBoxPage extends TestPaneBase implements HasSkinnable {
         return ss;
     }
 
-    // TODO duplicate code in ListView and some other classes - move to utils?
     private String newItem(Object n) {
         return n + "." + SequenceNumber.next();
     }
@@ -116,7 +115,8 @@ public class ChoiceBoxPage extends TestPaneBase implements HasSkinnable {
         s.addChoiceSupplier("1 Row", createItems(1, this::newItem));
         s.addChoiceSupplier("10 Rows", createItems(10, this::newItem));
         s.addChoiceSupplier("200 Rows", createItems(200, this::newItem));
-        //s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
+        s.addChoiceSupplier("1,000 Rows", createItems(1_000, this::newItem));
+        s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
         s.addChoiceSupplier("10 Variable Height Rows", createItems(10, this::newVariableItem));
         s.addChoiceSupplier("200 Variable HeightRows", createItems(200, this::newVariableItem));
         s.addChoice("<empty>", List.of());

@@ -30,11 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Locale;
 import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogShim;
 import javafx.scene.control.HeavyweightDialogShim;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.AfterEach;
@@ -326,5 +328,47 @@ public class AlertTest {
         Locale.setDefault(defaultLocale);
         assertEquals("Cancel", englishStr);
         assertEquals("Avbryt", swedishStr);
+    }
+
+    @Test public void alert_owner_noScene() {
+        dialog = new Alert(Alert.AlertType.NONE, "Hello World!");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
+        dialog.initOwner(new Stage());
+        assertResultValue(ButtonType.CANCEL, dialog, true);
+        assertCloseRequestAccepted(dialog, true);
+    }
+
+    @Test public void alert_owner_iconifiedCentering() {
+        dialog = new Alert(Alert.AlertType.NONE, "Hello World!");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
+        Stage owner = new Stage();
+        owner.setScene(new Scene(new Region()));
+        owner.setIconified(true);
+        owner.show();
+        dialog.initOwner(owner);
+        dialog.setWidth(960);
+        dialog.setHeight(500);
+        dialog.show();
+        var x = dialog.getX();
+        var y = dialog.getY();
+        dialog.hide();
+        assertEquals(480.0, x);
+        assertEquals(224.0, y);
+    }
+
+    @Test public void alert_owner_hiddenCentering() {
+        dialog = new Alert(Alert.AlertType.NONE, "Hello World!");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
+        Stage owner = new Stage();
+        owner.setScene(new Scene(new Region()));
+        dialog.initOwner(owner);
+        dialog.setWidth(960);
+        dialog.setHeight(500);
+        dialog.show();
+        var x = dialog.getX();
+        var y = dialog.getY();
+        dialog.hide();
+        assertEquals(480.0, x);
+        assertEquals(224.0, y);
     }
 }

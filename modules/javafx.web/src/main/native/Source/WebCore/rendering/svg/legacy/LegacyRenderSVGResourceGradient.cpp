@@ -322,11 +322,11 @@ auto LegacyRenderSVGResourceGradient::applyResource(RenderElement& renderer, con
 #if USE(CG)
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToText)) {
         // PDF does not support some CompositeOperation
-        if (context->renderingMode() == RenderingMode::PDFDocument)
-            m_gradientApplier = makeUnique<TextGradientClipper>();
-        else
+        if (context->renderingMode() != RenderingMode::PDFDocument && style.paintOrder() == Style::SVGPaintOrder::Type::FillStrokeMarkers)
             m_gradientApplier = makeUnique<TextGradientCompositor>();
-            }
+        else
+            m_gradientApplier = makeUnique<TextGradientClipper>();
+    }
 #endif
 
     if (!m_gradientApplier)

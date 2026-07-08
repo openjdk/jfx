@@ -552,6 +552,8 @@ public:
     LayoutRect visualOverflowRectForPropagation(const WritingMode) const;
     LayoutRect logicalLayoutOverflowRectForPropagation(const WritingMode) const;
     LayoutRect layoutOverflowRectForPropagation(const WritingMode) const;
+    LayoutRect applyPaintGeometryTransformToRect(LayoutRect) const;
+    LayoutRect convertRectToParentWritingMode(LayoutRect, const WritingMode parentWritingMode) const;
 
     bool hasRenderOverflow() const { return !!m_overflow; }
     bool hasVisualOverflow() const { return m_overflow && !borderBoxRect().contains(m_overflow->visualOverflowRect()); }

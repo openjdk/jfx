@@ -50,6 +50,7 @@
 #include "WebCodecsUtilities.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -185,11 +186,12 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
                 RefPtr protectedThis = weakThis.get();
                 if (!protectedThis)
                     return;
+                auto scopeExit = makeScopeExit([protectedThis] {
+                    protectedThis->unblockControlMessageQueue();
+                });
 
                 if (protectedThis->state() == WebCodecsCodecState::Closed || !protectedThis->scriptExecutionContext())
                     return;
-
-                protectedThis->unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         } });
@@ -203,6 +205,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
         if (!isSupportedCodec) {
             postTaskToCodec<WebCodecsAudioEncoder>(identifier, *this, [] (auto& encoder) {
                 encoder.closeEncoder(Exception { ExceptionCode::NotSupportedError, "Codec is not supported"_s });
+                encoder.unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -211,6 +214,7 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
         if (encoderConfig.hasException()) {
             postTaskToCodec<WebCodecsAudioEncoder>(identifier, *this, [message = encoderConfig.releaseException().message()] (auto& encoder) mutable {
                 encoder.closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(message) });
+                encoder.unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -242,6 +246,9 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
+            auto scopeExit = makeScopeExit([protectedThis] {
+                protectedThis->unblockControlMessageQueue();
+            });
 
             if (!result) {
                 protectedThis->closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(result.error()) });
@@ -249,7 +256,6 @@ ExceptionOr<void> WebCodecsAudioEncoder::configure(ScriptExecutionContext&, WebC
             }
             protectedThis->setInternalEncoder(WTFMove(*result));
             protectedThis->m_hasNewActiveConfiguration = true;
-            protectedThis->unblockControlMessageQueue();
         });
 
         return WebCodecsControlMessageOutcome::Processed;

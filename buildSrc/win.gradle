@@ -123,7 +123,7 @@ def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
 // Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR",
-        "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
@@ -141,9 +141,6 @@ if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
 if (sourceDateEpoch != null) {
     linkFlags.add("/experimental:deterministic")
 }
-
-// Remove C++ static linking
-ccFlags -= ["/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB"]
 
 ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,

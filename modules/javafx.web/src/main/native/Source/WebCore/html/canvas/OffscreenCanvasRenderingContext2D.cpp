@@ -139,6 +139,11 @@ RefPtr<ImageBuffer> OffscreenCanvasRenderingContext2D::transferToImageBuffer()
     // by buffer(), to avoid resetting the context state, we have to make a copy and
     // clear the original buffer rather than returning the original buffer.
     RefPtr result = buffer->clone();
+#if USE(SKIA)
+    // Ensure GPU commands are flushed before the ImageBuffer may be transferred cross-thread.
+    if (result)
+        result->flushDrawingContext();
+#endif
     clearCanvas();
     return result;
 }

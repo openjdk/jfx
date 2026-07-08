@@ -210,19 +210,6 @@ inline unsigned arrayIndexFromIndexingType(IndexingType indexingType)
     return (indexingType & IndexingShapeMask) >> IndexingShapeShift;
 }
 
-inline bool isNewArrayWithConstantSizeIndexingType(IndexingType indexingType)
-{
-    switch (indexingType) {
-    case ALL_DOUBLE_INDEXING_TYPES:
-    case ALL_INT32_INDEXING_TYPES:
-    case ALL_CONTIGUOUS_INDEXING_TYPES: {
-        return true;
-    }
-    default:
-        return false;
-    }
-}
-
 inline IndexingType indexingTypeForValue(JSValue value)
 {
     if (value.isInt32())
@@ -237,7 +224,8 @@ inline IndexingType indexingTypeForValue(JSValue value)
 // Return an indexing type that can handle all of the elements of both indexing types.
 IndexingType leastUpperBoundOfIndexingTypes(IndexingType, IndexingType);
 
-IndexingType leastUpperBoundOfIndexingTypeAndType(IndexingType, SpeculatedType);
+bool isProvenValidTypeForIndexingShapeStorage(IndexingType, SpeculatedType);
+IndexingType leastUpperBoundOfIndexingTypeAndTypeForSpeculation(IndexingType, SpeculatedType);
 IndexingType leastUpperBoundOfIndexingTypeAndValue(IndexingType, JSValue);
 
 void dumpIndexingType(PrintStream&, IndexingType);

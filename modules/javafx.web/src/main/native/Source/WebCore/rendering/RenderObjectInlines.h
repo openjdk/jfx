@@ -115,9 +115,9 @@ inline Ref<Page> RenderObject::protectedPage() const
     return page();
 }
 
-inline Settings& RenderObject::settings() const
+inline const Settings& RenderObject::settings() const
 {
-    return page().settings();
+    return document().settings();
 }
 
 inline bool RenderObject::renderTreeBeingDestroyed() const

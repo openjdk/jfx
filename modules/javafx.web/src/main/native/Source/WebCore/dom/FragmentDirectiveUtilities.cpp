@@ -29,8 +29,24 @@
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "RenderStyleInlines.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+TextStream& operator<<(TextStream& ts, const ParsedTextDirective& directive)
+{
+    ts << "ParsedTextDirective [";
+    if (!directive.prefix.isEmpty())
+        ts << "prefix: " << directive.prefix << "; ";
+    if (!directive.startText.isEmpty())
+        ts << "startText: " << directive.startText << "; ";
+    if (!directive.endText.isEmpty())
+        ts << "endText: " << directive.endText << "; ";
+    if (!directive.suffix.isEmpty())
+        ts << "suffix: " << directive.suffix << "; ";
+    ts << "]";
+    return ts;
+}
 
 namespace FragmentDirectiveUtilities {
 

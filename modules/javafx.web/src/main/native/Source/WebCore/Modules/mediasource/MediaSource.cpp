@@ -399,6 +399,7 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         m_seekTargetPromise->reject(PlatformMediaError::Cancelled);
     }
     m_seekTargetPromise.emplace(PlatformMediaError::SourceRemoved);
+    Ref promise = m_seekTargetPromise->promise();
     m_pendingSeekTarget = target;
 
     // Run the following steps as part of the "Wait until the user agent has established whether or not the
@@ -416,11 +417,10 @@ Ref<MediaTimePromise> MediaSource::waitForTarget(const SeekTarget& target)
         // than HAVE_METADATA.
         monitorSourceBuffers();
 
-        return m_seekTargetPromise->promise();
+        return promise;
     }
     // ↳ Otherwise
     // Continue
-    auto promise = m_seekTargetPromise->promise();
     completeSeek();
     return promise;
 }

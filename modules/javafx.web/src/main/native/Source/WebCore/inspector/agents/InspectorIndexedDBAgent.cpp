@@ -59,6 +59,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameInlines.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/InjectedScript.h>
@@ -557,6 +558,11 @@ static bool getDocumentAndIDBFactoryFromFrameOrSendFailure(LocalFrame* frame, Do
     Inspector::Protocol::ErrorStringOr<Document*> document = documentFromFrame(frame);
     if (!document.has_value()) {
         callback.sendFailure(document.error());
+        return false;
+    }
+
+    if (!frame->settings().indexedDBAPIEnabled()) {
+        callback.sendFailure("IndexedDB is disabled"_s);
         return false;
     }
 

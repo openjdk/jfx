@@ -110,6 +110,19 @@ private:
 };
 #endif
 
+RepaintBlocker::RepaintBlocker(Document& document)
+    : m_document(document)
+{
+    if (CheckedPtr view = m_document->view())
+        view->layoutContext().blockRepaints();
+}
+
+RepaintBlocker::~RepaintBlocker()
+{
+    if (CheckedPtr view = m_document->view())
+        view->layoutContext().allowRepaints();
+}
+
 class LayoutScope {
 public:
     LayoutScope(LocalFrameViewLayoutContext& layoutContext)

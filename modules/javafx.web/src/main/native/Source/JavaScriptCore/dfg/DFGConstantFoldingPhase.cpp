@@ -1110,10 +1110,14 @@ private:
                 if (m_graph.isWatchingHavingABadTimeWatchpoint(node)) {
                     if (node->child1().useKind() == Int32Use && node->child1()->isInt32Constant()) {
                         int32_t length = node->child1()->asInt32();
-                        if (length >= 0
+                        if (0 <= length
                             && length < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH
-                            && isNewArrayWithConstantSizeIndexingType(node->indexingType())) {
-                                node->convertToNewArrayWithConstantSize(m_graph, length);
+                            && !hasAnyArrayStorage(node->indexingType())) {
+                                m_interpreter.execute(indexInBlock); // Push CFA over this node after we get the state before.
+                                alreadyHandled = true; // Don't allow the default constant folder to do things to this.
+
+                                Node* butterfly = m_insertionSet.insertNode(indexInBlock, SpecNone, NewButterflyWithSize, node->origin, OpInfo(node->indexingType()), node->child1());
+                                node->convertToNewArrayWithButterfly(m_graph, butterfly);
                                 changed = true;
                         }
                     }
@@ -1680,7 +1684,8 @@ private:
             }
 
             case PhantomNewObject:
-            case PhantomNewArrayWithConstantSize:
+            case PhantomNewArrayWithButterfly:
+            case PhantomNewButterflyWithSize:
             case PhantomNewFunction:
             case PhantomNewGeneratorFunction:
             case PhantomNewAsyncGeneratorFunction:

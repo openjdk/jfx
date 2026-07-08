@@ -255,12 +255,14 @@ ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::~ClipboardItemTypeLoad
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFinishLoading()
 {
     ASSERT(m_blobLoader);
-    CheckedRef blobLoader = *m_blobLoader;
-    auto stringResult = readTypeForMIMEType(m_type) == FileReaderLoader::ReadAsText ? blobLoader->stringResult() : nullString();
-    if (!stringResult.isNull())
-        m_data = { stringResult };
-    else if (auto arrayBuffer = blobLoader->arrayBufferResult())
-        m_data = { SharedBuffer::create(arrayBuffer->span()) };
+    {
+        CheckedRef blobLoader = *m_blobLoader;
+        auto stringResult = readTypeForMIMEType(m_type) == FileReaderLoader::ReadAsText ? blobLoader->stringResult() : nullString();
+        if (!stringResult.isNull())
+            m_data = { stringResult };
+        else if (auto arrayBuffer = blobLoader->arrayBufferResult())
+            m_data = { SharedBuffer::create(arrayBuffer->span()) };
+    }
     m_blobLoader = nullptr;
     invokeCompletionHandler();
 }

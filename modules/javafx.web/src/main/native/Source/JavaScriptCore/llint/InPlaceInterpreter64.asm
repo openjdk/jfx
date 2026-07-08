@@ -3449,7 +3449,9 @@ ipintOp(_array_len, macro()
     bqeq t0, ValueNull, .nullArray
     loadi JSWebAssemblyArray::m_size[t0], t0
     pushInt32(t0)
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 
 .nullArray:
@@ -3462,9 +3464,9 @@ ipintOp(_array_fill, macro()
 
     addp 4*StackValueSize, sp
 
-    loadb IPInt::ArrayFillMetadata::length[MC], t0
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
-    advanceMC(constexpr (sizeof(IPInt::ArrayFillMetadata)))
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
@@ -3474,9 +3476,9 @@ ipintOp(_array_copy, macro()
 
     addp 5*StackValueSize, sp
 
-    loadb IPInt::ArrayFillMetadata::length[MC], t0
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
     advancePCByReg(t0)
-    advanceMC(constexpr (sizeof(IPInt::ArrayCopyMetadata)))
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
@@ -3600,13 +3602,17 @@ ipintOp(_any_convert_extern, macro()
     popQuad(a1)
     operationCall(macro() cCall2(_ipint_extern_any_convert_extern) end)
     pushQuad(r0)
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
 ipintOp(_extern_convert_any, macro()
     # do nothing
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
@@ -3617,7 +3623,9 @@ ipintOp(_ref_i31, macro()
     orq TagNumber, t0
     pushQuad(t0)
 
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
@@ -3626,7 +3634,9 @@ ipintOp(_i31_get_s, macro()
     bqeq t0, ValueNull, .i31_get_throw
     pushInt32(t0)
 
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 .i31_get_throw:
     throwException(NullI31Get)
@@ -3638,7 +3648,9 @@ ipintOp(_i31_get_u, macro()
     andq 0x7fffffff, t0
     pushInt32(t0)
 
-    advancePC(2)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 .i31_get_throw:
     throwException(NullI31Get)
@@ -4061,7 +4073,9 @@ ipintOp(_simd_v128_const, macro()
     # v128.const
     loadv 2[PC], v0
     pushv v0
-    advancePC(18)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 
@@ -4106,7 +4120,9 @@ ipintOp(_simd_i32x4_extract_lane, macro()
     end
 _simd_i32x4_extract_lane_end:
     pushInt32(t0)
-    advancePC(3)
+    loadb IPInt::InstructionLengthMetadata::length[MC], t0
+    advancePCByReg(t0)
+    advanceMC(constexpr (sizeof(IPInt::InstructionLengthMetadata)))
     nextIPIntInstruction()
 end)
 

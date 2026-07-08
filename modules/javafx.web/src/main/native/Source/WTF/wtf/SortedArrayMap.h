@@ -249,7 +249,7 @@ template<typename CharacterType> inline bool lessThanASCIICaseFolding(std::span<
         if (lowercaseCharacter != literalCharacter)
             return lowercaseCharacter < literalCharacter;
     }
-    return literalWithNoUppercase.length() < characters.size();
+    return characters.size() < literalWithNoUppercase.length();
 }
 
 inline bool lessThanASCIICaseFolding(StringView string, ASCIILiteral literalWithNoUppercase)

@@ -413,11 +413,14 @@ default_stop (GstBufferPool * pool)
   g_mutex_lock (&priv->queue_lock);
   while ((buffer = gst_vec_deque_pop_head (priv->queue))) {
     g_mutex_unlock (&priv->queue_lock);
+    GST_TRACER_POOL_BUFFER_DEQUEUED (pool, buffer);
+
     do_free_buffer (pool, buffer);
     g_mutex_lock (&priv->queue_lock);
   }
   cleared = priv->cur_buffers == 0;
   g_mutex_unlock (&priv->queue_lock);
+
   return cleared;
 }
 
@@ -1106,6 +1109,7 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
     g_mutex_unlock (&priv->queue_lock);
 
     if (G_LIKELY (*buffer)) {
+      GST_TRACER_POOL_BUFFER_DEQUEUED (pool, *buffer);
       result = GST_FLOW_OK;
       GST_LOG_OBJECT (pool, "acquired buffer %p", *buffer);
       break;
@@ -1292,6 +1296,8 @@ default_release_buffer (GstBufferPool * pool, GstBuffer * buffer)
   gst_vec_deque_push_tail (pool->priv->queue, buffer);
   g_cond_signal (&pool->priv->queue_cond);
   g_mutex_unlock (&pool->priv->queue_lock);
+
+  GST_TRACER_POOL_BUFFER_QUEUED (pool, buffer);
 
   return;
 

@@ -76,8 +76,6 @@ static Vector<double> doubleOperands()
     };
 }
 
-
-#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
 static Vector<float> floatOperands()
 {
     return Vector<float> {
@@ -95,7 +93,6 @@ static Vector<float> floatOperands()
         -std::numeric_limits<float>::infinity(),
     };
 }
-#endif
 
 static Vector<int32_t> int32Operands()
 {
@@ -5248,6 +5245,72 @@ void testAndOrDouble()
     }
 }
 
+void testNegateDouble()
+{
+    double arg = 0;
+
+    auto negateDoubleDifferentRegs = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadDouble(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::fpRegT1);
+        jit.negateDouble(FPRInfo::fpRegT1, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto negateDoubleSameReg = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadDouble(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::returnValueFPR);
+        jit.negateDouble(FPRInfo::returnValueFPR, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto operands = doubleOperands();
+    for (auto value : operands) {
+        arg = value;
+        double resultDifferent = invoke<double>(negateDoubleDifferentRegs);
+        double resultSame = invoke<double>(negateDoubleSameReg);
+        uint64_t expectedBits = std::bit_cast<uint64_t>(value) ^ 0x8000000000000000ULL; // Flip sign bit
+        uint64_t resultDifferentBits = std::bit_cast<uint64_t>(resultDifferent);
+        uint64_t resultSameBits = std::bit_cast<uint64_t>(resultSame);
+        CHECK_EQ(resultDifferentBits, expectedBits);
+        CHECK_EQ(resultSameBits, expectedBits);
+    }
+}
+
+void testNegateFloat()
+{
+    float arg = 0;
+
+    auto negateFloatDifferentRegs = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadFloat(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::fpRegT1);
+        jit.negateFloat(FPRInfo::fpRegT1, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto negateFloatSameReg = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadFloat(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::returnValueFPR);
+        jit.negateFloat(FPRInfo::returnValueFPR, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto operands = floatOperands();
+    for (auto value : operands) {
+        arg = value;
+        float resultDifferent = invoke<float>(negateFloatDifferentRegs);
+        float resultSame = invoke<float>(negateFloatSameReg);
+        uint32_t expectedBits = std::bit_cast<uint32_t>(value) ^ 0x80000000U; // Flip sign bit
+        uint32_t resultDifferentBits = std::bit_cast<uint32_t>(resultDifferent);
+        uint32_t resultSameBits = std::bit_cast<uint32_t>(resultSame);
+        CHECK_EQ(resultDifferentBits, expectedBits);
+        CHECK_EQ(resultSameBits, expectedBits);
+    }
+}
+
 void testByteSwap()
 {
 #if CPU(X86_64) || CPU(ARM64)
@@ -6352,6 +6415,10 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testOrImmMem());
 
     RUN(testAndOrDouble());
+
+    RUN(testNegateDouble());
+
+    RUN(testNegateFloat());
 
     RUN(testGPRInfoConsistency());
 

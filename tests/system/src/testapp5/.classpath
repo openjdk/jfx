@@ -15,6 +15,11 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/jsobject">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/web">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -26,5 +31,5 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" output="bin" path="java/mymod"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="output" path="bin"/>	
 </classpath>

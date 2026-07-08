@@ -1074,28 +1074,25 @@ Vector<String> numberingSystemsForLocale(const String& locale)
         availableNumberingSystems.construct();
         ASSERT(availableNumberingSystems->isEmpty());
         UErrorCode status = U_ZERO_ERROR;
-        UEnumeration* numberingSystemNames = unumsys_openAvailableNames(&status);
+        auto numberingSystemNames = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(unumsys_openAvailableNames(&status));
         ASSERT(U_SUCCESS(status));
 
         int32_t resultLength;
         // Numbering system names are always ASCII, so use char[].
-        while (const char* result = uenum_next(numberingSystemNames, &resultLength, &status)) {
+        while (const char* result = uenum_next(numberingSystemNames.get(), &resultLength, &status)) {
             ASSERT(U_SUCCESS(status));
-            auto numsys = unumsys_openByName(result, &status);
+            auto numsys = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_openByName(result, &status));
             ASSERT(U_SUCCESS(status));
             // Only support algorithmic if it is the default fot the locale, handled below.
-            if (!unumsys_isAlgorithmic(numsys))
+            if (!unumsys_isAlgorithmic(numsys.get()))
                 availableNumberingSystems->append(String(StringImpl::createStaticStringImpl({ result, static_cast<size_t>(resultLength) })));
-            unumsys_close(numsys);
         }
-        uenum_close(numberingSystemNames);
     });
 
     UErrorCode status = U_ZERO_ERROR;
-    UNumberingSystem* defaultSystem = unumsys_open(locale.utf8().data(), &status);
+    auto defaultSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_open(locale.utf8().data(), &status));
     ASSERT(U_SUCCESS(status));
-    auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem));
-    unumsys_close(defaultSystem);
+    auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem.get()));
 
     Vector<String> numberingSystems({ defaultSystemName });
     numberingSystems.appendVector(availableNumberingSystems.get());

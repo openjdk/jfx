@@ -1288,13 +1288,30 @@ public:
 
     void negateDouble(FPRegisterID src, FPRegisterID dst)
     {
-        ASSERT(src != dst);
-        static constexpr double negativeZeroConstant = -0.0;
-        loadDouble(TrustedImmPtr(&negativeZeroConstant), dst);
+        alignas(16) static constexpr double negativeZeroConstants[] = { -0.0, -0.0 };
+        static_assert(sizeof(negativeZeroConstants) == 16);
+        move(TrustedImmPtr(negativeZeroConstants), scratchRegister());
         if (supportsAVX())
-            m_assembler.vxorpd_rrr(src, dst, dst);
-        else
-            m_assembler.xorpd_rr(src, dst);
+            m_assembler.vxorpd_mrr(0, scratchRegister(), src, dst);
+        else {
+            if (src != dst)
+                moveDouble(src, dst);
+            m_assembler.xorpd_mr(0, scratchRegister(), dst);
+        }
+    }
+
+    void negateFloat(FPRegisterID src, FPRegisterID dst)
+    {
+        alignas(16) static constexpr float negativeZeroConstants[] = { -0.0f, -0.0f, -0.0f, -0.0f };
+        static_assert(sizeof(negativeZeroConstants) == 16);
+        move(TrustedImmPtr(negativeZeroConstants), scratchRegister());
+        if (supportsAVX())
+            m_assembler.vxorps_mrr(0, scratchRegister(), src, dst);
+        else {
+            if (src != dst)
+                moveDouble(src, dst);
+            m_assembler.xorps_mr(0, scratchRegister(), dst);
+        }
     }
 
     void ceilDouble(FPRegisterID src, FPRegisterID dst)

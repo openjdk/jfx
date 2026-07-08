@@ -36,6 +36,7 @@
 #include "RenderChildIterator.h"
 #include "RenderCombineText.h"
 #include "RenderCounter.h"
+#include "RenderElementInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderImage.h"
 #include "RenderLineBreak.h"

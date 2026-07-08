@@ -237,8 +237,19 @@ WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 
 EncodedDataStatus ImageDecoderJava::encodedDataStatus() const
 {
-    if (isSizeAvailable())
+    if (m_encodedDataStatus == EncodedDataStatus::Complete)
+    {
+        return m_encodedDataStatus;
+    }
+
+    if (m_isAllDataReceived)
+    {
+        m_encodedDataStatus = EncodedDataStatus::Complete;
+    }
+    else if (isSizeAvailable())
+    {
         m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
+    }
 
     return m_encodedDataStatus;
 }
@@ -290,7 +301,7 @@ bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
-        return { };
+        return false;
     }
     static jmethodID midGetFrameIsComplete = env->GetMethodID(
         PG_GetGraphicsImageDecoderClass(env),

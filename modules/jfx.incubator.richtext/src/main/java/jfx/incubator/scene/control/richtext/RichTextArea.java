@@ -36,6 +36,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -47,6 +49,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.InsetsConverter;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
@@ -302,6 +306,7 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
     private ReadOnlyBooleanWrapper redoable;
+    private ReadOnlyObjectWrapper<Bounds> documentArea;
     // styleables
     private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
     private SimpleStyleableObjectProperty<Insets> contentPadding;
@@ -321,6 +326,11 @@ public class RichTextArea extends Control {
             @Override
             public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
                 return t.getText(start, end, sb, limit);
+            }
+
+            @Override
+            public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+                t.setDocumentArea(minX, minY, width, height);
             }
         });
     }
@@ -344,28 +354,6 @@ public class RichTextArea extends Control {
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
         setAccessibleRoleDescription("Rich Text Area");
-
-        selectionModel.selectionProperty().addListener((s, old, cur) -> {
-            TextPos min0 = old == null ? null : old.getMin();
-            TextPos max0 = old == null ? null : old.getMax();
-            TextPos min2 = cur == null ? null : cur.getMin();
-            TextPos max2 = cur == null ? null : cur.getMax();
-
-            if (accessibilityHelper != null) {
-                if (accessibilityHelper.handleSelectionChange(cur)) {
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                }
-            }
-
-            if (!Objects.equals(min0, min2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
-            }
-
-            if (!Objects.equals(max0, max2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
-            }
-        });
-
         setModel(model);
     }
 
@@ -688,17 +676,6 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
-                // TODO does this create a memory leak?  should we bind or weak listen?
-                private final StyledTextModel.Listener li = (ch) -> {
-                    if (ch.isEdit()) {
-                        if (accessibilityHelper != null) {
-                            if (accessibilityHelper.handleTextUpdate(ch.getStart(), ch.getEnd())) {
-                                // TODO check the timing, may be runLater?
-                                notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                            }
-                        }
-                    }
-                };
                 private StyledTextModel old;
 
                 @Override
@@ -729,18 +706,21 @@ public class RichTextArea extends Control {
                     }
 
                     if (old != null) {
-                        old.removeListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.unregisterModel(old);
+                        }
                     }
                     if (m != null) {
-                        m.addListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.registerModel(m);
+                        }
                     }
                     old = m;
 
+                    selectionModel.clear();
                     if (accessibilityHelper != null) {
                         accessibilityHelper.handleModelChange();
                     }
-                    selectionModel.clear();
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
                 }
             };
         }
@@ -2493,6 +2473,10 @@ public class RichTextArea extends Control {
     private RTAccessibilityHelper accessibilityHelper() {
         if(accessibilityHelper == null) {
             accessibilityHelper = new RTAccessibilityHelper(this);
+            StyledTextModel m = getModel();
+            if (m != null) {
+                accessibilityHelper.registerModel(m);
+            }
         }
         return accessibilityHelper;
     }
@@ -2549,6 +2533,41 @@ public class RichTextArea extends Control {
             return accessibilityHelper().caretOffset();
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    /**
+     * Provides the bounds to the document area in local coordinates.
+     * The bounds are determined by the skin, and may be {@code null}.
+     *
+     * @return the document area
+     * @defaultValue null
+     * @since 27
+     */
+    public final ReadOnlyObjectProperty<Bounds> documentAreaProperty() {
+        return documentAreaPropertyImpl().getReadOnlyProperty();
+    }
+
+    private final ReadOnlyObjectWrapper<Bounds> documentAreaPropertyImpl() {
+        if (documentArea == null) {
+            VFlow f = vflow();
+            Bounds v = (f == null) ? null : f.getDocumentArea();
+            documentArea = new ReadOnlyObjectWrapper<>(this, "documentArea", v);
+        }
+        return documentArea;
+    }
+
+    public final Bounds getDocumentArea() {
+        if (documentArea == null) {
+            return null;
+        }
+        return documentArea.get();
+    }
+
+    private final void setDocumentArea(double minX, double minY, double width, double height) {
+        if (documentArea != null) {
+            BoundingBox b = new BoundingBox(minX, minY, width, height);
+            documentAreaPropertyImpl().set(b);
         }
     }
 }

@@ -26,6 +26,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 
@@ -42,7 +43,7 @@ struct RTCRtpSendParameters;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
-class RTCRtpSenderBackend {
+class RTCRtpSenderBackend : public AbstractRefCounted {
 public:
     virtual ~RTCRtpSenderBackend() = default;
 

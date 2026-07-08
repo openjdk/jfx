@@ -106,14 +106,14 @@ void IntlDateTimeFormat::setBoundFormat(VM& vm, JSBoundFunction* format)
 static String availableNamedTimeZoneIdentifier(StringView timeZoneName)
 {
     UErrorCode status = U_ZERO_ERROR;
-    UEnumeration* timeZones = ucal_openTimeZones(&status);
+    auto timeZones = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZones(&status));
     ASSERT(U_SUCCESS(status));
 
     do {
         status = U_ZERO_ERROR;
         int32_t ianaTimeZoneLength;
         // Time zone names are represented as char16_t[] in all related ICU APIs.
-        const char16_t* ianaTimeZone = uenum_unext(timeZones, &ianaTimeZoneLength, &status);
+        const char16_t* ianaTimeZone = uenum_unext(timeZones.get(), &ianaTimeZoneLength, &status);
         ASSERT(U_SUCCESS(status));
 
         // End of enumeration.
@@ -125,7 +125,6 @@ static String availableNamedTimeZoneIdentifier(StringView timeZoneName)
             continue;
         return ianaTimeZoneView.toString();
     } while (true);
-    uenum_close(timeZones);
 
     return String();
 }
@@ -136,11 +135,11 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
     switch (key) {
     case RelevantExtensionKey::Ca: {
         UErrorCode status = U_ZERO_ERROR;
-        UEnumeration* calendars = ucal_getKeywordValuesForLocale("calendar", locale.utf8().data(), false, &status);
+        auto calendars = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_getKeywordValuesForLocale("calendar", locale.utf8().data(), false, &status));
         ASSERT(U_SUCCESS(status));
 
         int32_t nameLength;
-        while (const char* availableName = uenum_next(calendars, &nameLength, &status)) {
+        while (const char* availableName = uenum_next(calendars.get(), &nameLength, &status)) {
             ASSERT(U_SUCCESS(status));
             String calendar = String(unsafeMakeSpan(availableName, static_cast<size_t>(nameLength)));
             // Adding "islamicc" candidate for backward compatibility.
@@ -161,7 +160,6 @@ Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExte
                     keyLocaleData.append(WTFMove(calendar));
         }
         }
-        uenum_close(calendars);
         break;
     }
     case RelevantExtensionKey::Hc:

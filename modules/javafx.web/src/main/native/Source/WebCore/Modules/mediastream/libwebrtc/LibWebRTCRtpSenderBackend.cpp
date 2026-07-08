@@ -43,6 +43,16 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpSenderBackend);
 
+Ref<LibWebRTCRtpSenderBackend> LibWebRTCRtpSenderBackend::create(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender, Source&& source)
+{
+    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTFMove(rtcSender), WTFMove(source)));
+}
+
+Ref<LibWebRTCRtpSenderBackend> LibWebRTCRtpSenderBackend::create(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender)
+{
+    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTFMove(rtcSender)));
+}
+
 LibWebRTCRtpSenderBackend::LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender)
     : m_peerConnectionBackend(backend)
     , m_rtcSender(WTFMove(rtcSender))
@@ -65,14 +75,15 @@ LibWebRTCRtpSenderBackend::~LibWebRTCRtpSenderBackend()
 void LibWebRTCRtpSenderBackend::startSource()
 {
     // We asynchronously start the sources to guarantee media goes through the transform if a transform is set when creating the track.
-    callOnMainThread([this, weakThis = WeakPtr { *this }, source = m_source]() mutable {
-        if (!weakThis)
+    callOnMainThread([weakThis = WeakPtr { *this }, source = m_source]() mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
-        switchOn(source, [this](Ref<RealtimeOutgoingAudioSource>& source) {
-            if (auto* currentSource = std::get_if<Ref<RealtimeOutgoingAudioSource>>(&m_source); currentSource && currentSource->ptr() == source.ptr())
+        switchOn(source, [&](Ref<RealtimeOutgoingAudioSource>& source) {
+            if (auto* currentSource = std::get_if<Ref<RealtimeOutgoingAudioSource>>(&protectedThis->m_source); currentSource && currentSource->ptr() == source.ptr())
                 source->start();
-        }, [this](Ref<RealtimeOutgoingVideoSource>& source) {
-            if (auto* currentSource = std::get_if<Ref<RealtimeOutgoingVideoSource>>(&m_source); currentSource && currentSource->ptr() == source.ptr())
+        }, [&](Ref<RealtimeOutgoingVideoSource>& source) {
+            if (auto* currentSource = std::get_if<Ref<RealtimeOutgoingVideoSource>>(&protectedThis->m_source); currentSource && currentSource->ptr() == source.ptr())
                 source->start();
         }, [](std::nullptr_t&) {
         });

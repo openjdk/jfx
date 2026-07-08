@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1144,7 +1144,7 @@ public class FXMLLoader {
             fxmlLoader.setClassLoader(cl);
             fxmlLoader.setStaticLoad(staticLoad);
 
-            Object value = fxmlLoader.loadImpl(callerClass);
+            Object value = fxmlLoader.loadImpl();
 
             if (fx_id != null) {
                 String id = this.fx_id + CONTROLLER_SUFFIX;
@@ -2424,7 +2424,7 @@ public class FXMLLoader {
      */
     public ClassLoader getClassLoader() {
         if (classLoader == null) {
-            return getDefaultClassLoader(null);
+            return getDefaultClassLoader();
         }
         return classLoader;
     }
@@ -2500,7 +2500,7 @@ public class FXMLLoader {
      * @since JavaFX 2.1
      */
     public <T> T load() throws IOException {
-        return loadImpl(null);
+        return loadImpl();
     }
 
     /**
@@ -2513,15 +2513,10 @@ public class FXMLLoader {
      * @return the loaded object hierarchy
      */
     public <T> T load(InputStream inputStream) throws IOException {
-        return loadImpl(inputStream, null);
+        return loadImpl(inputStream);
     }
 
-    // TODO: JDK-8344109: Consider removing this field and all
-    // occurrences of callerClass arguments from the various load* methods
-    // (callerClass is always null now)
-    private Class<?> callerClass;
-
-    private <T> T loadImpl(final Class<?> callerClass) throws IOException {
+    private <T> T loadImpl() throws IOException {
         if (location == null) {
             throw new IllegalStateException("Location is not set.");
         }
@@ -2530,7 +2525,7 @@ public class FXMLLoader {
         T value;
         try {
             inputStream = location.openStream();
-            value = loadImpl(inputStream, callerClass);
+            value = loadImpl(inputStream);
         } finally {
             if (inputStream != null) {
                 inputStream.close();
@@ -2541,14 +2536,11 @@ public class FXMLLoader {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T loadImpl(InputStream inputStream,
-                           Class<?> callerClass) throws IOException {
+    private <T> T loadImpl(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream is null.");
         }
 
-        this.callerClass = callerClass;
-        controllerAccessor.setCallerClass(callerClass);
         try {
             clearImports();
 
@@ -2669,7 +2661,6 @@ public class FXMLLoader {
         } catch (final Exception exception) {
             throw constructLoadException(exception);
         } finally {
-            controllerAccessor.setCallerClass(null);
             // Clear controller accessor caches
             controllerAccessor.reset();
             // Clear the parser
@@ -3142,20 +3133,16 @@ public class FXMLLoader {
         return Class.forName(className, true, getDefaultClassLoader());
     }
 
-    private static ClassLoader getDefaultClassLoader(Class caller) {
-        if (defaultClassLoader == null) {
-            return Thread.currentThread().getContextClassLoader();
-        }
-        return defaultClassLoader;
-    }
-
     /**
      * Returns the default class loader.
      * @return the default class loader
      * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
-        return getDefaultClassLoader(null);
+        if (defaultClassLoader == null) {
+            return Thread.currentThread().getContextClassLoader();
+        }
+        return defaultClassLoader;
     }
 
     /**
@@ -3183,12 +3170,12 @@ public class FXMLLoader {
      * @return the loaded object hierarchy
      */
     public static <T> T load(URL location) throws IOException {
-        return loadImpl(location, null);
+        return loadImpl(location);
     }
 
-    private static <T> T loadImpl(URL location, Class<?> callerClass)
+    private static <T> T loadImpl(URL location)
             throws IOException {
-        return loadImpl(location, null, callerClass);
+        return loadImpl(location, null);
     }
 
     /**
@@ -3203,13 +3190,11 @@ public class FXMLLoader {
      */
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
-        return loadImpl(location, resources, null);
+        return loadImpl(location, resources);
     }
 
-    private static <T> T loadImpl(URL location, ResourceBundle resources,
-                                  Class<?> callerClass) throws IOException {
-        return loadImpl(location, resources,  null,
-                        callerClass);
+    private static <T> T loadImpl(URL location, ResourceBundle resources) throws IOException {
+        return loadImpl(location, resources,  null);
     }
 
     /**
@@ -3226,13 +3211,12 @@ public class FXMLLoader {
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
                                      throws IOException {
-        return loadImpl(location, resources, builderFactory, null);
+        return loadImpl(location, resources, builderFactory);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
-                                  BuilderFactory builderFactory,
-                                  Class<?> callerClass) throws IOException {
-        return loadImpl(location, resources, builderFactory, null, callerClass);
+                                  BuilderFactory builderFactory) throws IOException {
+        return loadImpl(location, resources, builderFactory, null);
     }
 
     /**
@@ -3253,16 +3237,14 @@ public class FXMLLoader {
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory)
                                      throws IOException {
-        return loadImpl(location, resources, builderFactory, controllerFactory,
-                        null);
+        return loadImpl(location, resources, builderFactory, controllerFactory);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
                                   BuilderFactory builderFactory,
-                                  Callback<Class<?>, Object> controllerFactory,
-                                  Class<?> callerClass) throws IOException {
+                                  Callback<Class<?>, Object> controllerFactory) throws IOException {
         return loadImpl(location, resources, builderFactory, controllerFactory,
-                        Charset.forName(DEFAULT_CHARSET_NAME), callerClass);
+                        Charset.forName(DEFAULT_CHARSET_NAME));
     }
 
     /**
@@ -3285,13 +3267,13 @@ public class FXMLLoader {
                              Callback<Class<?>, Object> controllerFactory,
                              Charset charset) throws IOException {
         return loadImpl(location, resources, builderFactory, controllerFactory,
-                        charset, null);
+                        charset);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
                                   BuilderFactory builderFactory,
                                   Callback<Class<?>, Object> controllerFactory,
-                                  Charset charset, Class<?> callerClass)
+                                  Charset charset)
                                           throws IOException {
         if (location == null) {
             throw new NullPointerException("Location is required.");
@@ -3301,7 +3283,7 @@ public class FXMLLoader {
                 new FXMLLoader(location, resources, builderFactory,
                                controllerFactory, charset);
 
-        return fxmlLoader.<T>loadImpl(callerClass);
+        return fxmlLoader.loadImpl();
     }
 
     /**
@@ -3399,7 +3381,6 @@ public class FXMLLoader {
         private static final int FIELDS = 1;
 
         private Object controller;
-        private ClassLoader callerClassLoader;
 
         private Map<String, List<Field>> controllerFields;
         private Map<SupportedType, Map<String, Method>> controllerMethods;
@@ -3407,16 +3388,6 @@ public class FXMLLoader {
         void setController(final Object controller) {
             if (this.controller != controller) {
                 this.controller = controller;
-                reset();
-            }
-        }
-
-        void setCallerClass(final Class<?> callerClass) {
-            final ClassLoader newCallerClassLoader =
-                    (callerClass != null) ? callerClass.getClassLoader()
-                                          : null;
-            if (callerClassLoader != newCallerClassLoader) {
-                callerClassLoader = newCallerClassLoader;
                 reset();
             }
         }
@@ -3456,20 +3427,11 @@ public class FXMLLoader {
         }
 
         private void addAccessibleMembers(final Class<?> type,
-                                          final int prevAllowedClassAccess,
-                                          final int prevAllowedMemberAccess,
+                                          final int allowedClassAccess,
+                                          final int allowedMemberAccess,
                                           final int membersType) {
             if (type == Object.class) {
                 return;
-            }
-
-            int allowedClassAccess = prevAllowedClassAccess;
-            int allowedMemberAccess = prevAllowedMemberAccess;
-            if ((callerClassLoader != null)
-                    && (type.getClassLoader() != callerClassLoader)) {
-                // restrict further access
-                allowedClassAccess &= PUBLIC;
-                allowedMemberAccess &= PUBLIC;
             }
 
             final int classAccess = getAccess(type.getModifiers());

@@ -82,7 +82,7 @@ void NotificationResourcesLoader::start(CompletionHandler<void(RefPtr<Notificati
                 if (m_stopped)
                     return;
 
-                if (image) {
+                if (image && !image->size().isEmpty()) {
                     if (!m_resources)
                         m_resources = NotificationResources::create();
                     m_resources->setIcon(WTFMove(image));

@@ -1015,7 +1015,7 @@ auto FunctionParser<Context>::simd(SIMDLaneOperation op, SIMDLane lane, SIMDSign
             return { };
 
         if constexpr (Context::tierSupportsSIMD) {
-            m_expressionStack.constructAndAppend(Types::V128, m_context.addConstant(constant));
+            m_expressionStack.constructAndAppend(Types::V128, m_context.addSIMDConstant(constant));
             return { };
         } else
             return pushUnreachable(Types::V128);
@@ -1302,7 +1302,7 @@ auto FunctionParser<Context>::simd(SIMDLaneOperation op, SIMDLane lane, SIMDSign
 
         if constexpr (Context::tierSupportsSIMD) {
             ExpressionType result;
-            WASM_TRY_ADD_TO_CONTEXT(addExtractLane(SIMDInfo { lane, signMode }, laneIdx, v, result));
+            WASM_TRY_ADD_TO_CONTEXT(addSIMDExtractLane(SIMDInfo { lane, signMode }, laneIdx, v, result));
             m_expressionStack.constructAndAppend(simdScalarType(lane), result);
             return { };
         } else
@@ -1324,7 +1324,7 @@ auto FunctionParser<Context>::simd(SIMDLaneOperation op, SIMDLane lane, SIMDSign
 
         if constexpr (Context::tierSupportsSIMD) {
             ExpressionType result;
-            WASM_TRY_ADD_TO_CONTEXT(addReplaceLane(SIMDInfo { lane, signMode }, laneIdx, v, s, result));
+            WASM_TRY_ADD_TO_CONTEXT(addSIMDReplaceLane(SIMDInfo { lane, signMode }, laneIdx, v, s, result));
             m_expressionStack.constructAndAppend(Types::V128, result);
             return { };
         } else
@@ -3793,6 +3793,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         WASM_VALIDATOR_FAIL_IF(!ControlType::isIf(data.controlData), "else block isn't associated to an if");
         WASM_TRY_ADD_TO_CONTEXT(addElseToUnreachable(data.controlData));
         m_expressionStack = WTFMove(data.elseBlockStack);
+        resetLocalInitStackToHeight(data.localInitStackHeight);
         return { };
     }
 
@@ -3824,6 +3825,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
             }
             m_expressionStack.constructAndAppend(argumentType, results[i]);
         }
+        resetLocalInitStackToHeight(data.localInitStackHeight);
         return { };
     }
 
@@ -3836,6 +3838,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         m_expressionStack = { };
         WASM_VALIDATOR_FAIL_IF(!isTryOrCatch(data.controlData), "catch block isn't associated to a try");
         WASM_TRY_ADD_TO_CONTEXT(addCatchAllToUnreachable(data.controlData));
+        resetLocalInitStackToHeight(data.localInitStackHeight);
         return { };
     }
 
@@ -3856,6 +3859,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
             Stack emptyStack;
             WASM_TRY_ADD_TO_CONTEXT(addEndToUnreachable(controlEntry, emptyStack));
             m_expressionStack.swap(controlEntry.enclosedExpressionStack);
+            resetLocalInitStackToHeight(controlEntry.localInitStackHeight);
         }
         m_unreachableBlocks--;
         return { };
@@ -3875,6 +3879,8 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
             }
 
             m_expressionStack.swap(data.enclosedExpressionStack);
+            if (!ControlType::isTopLevel(data.controlData))
+                resetLocalInitStackToHeight(data.localInitStackHeight);
         }
         m_unreachableBlocks--;
         return { };

@@ -402,13 +402,15 @@ namespace JSC { namespace DFG {
     macro(NewObject, NodeResultJS) \
     macro(NewGenerator, NodeResultJS) \
     macro(NewAsyncGenerator, NodeResultJS) \
+    /* FIXME: A lot of these could likely be consolidated but there's some subtle differences between them, particularly when having a bad time. */ \
     macro(NewArray, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpread, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpecies, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayWithSize, NodeResultJS | NodeMustGenerate) \
-    macro(NewArrayWithConstantSize, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayWithSizeAndStructure, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayBuffer, NodeResultJS) \
+    macro(NewArrayWithButterfly, NodeResultJS) \
+    macro(NewButterflyWithSize, NodeResultStorage) \
     macro(NewInternalFieldObject, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
     macro(NewTypedArrayBuffer, NodeResultJS | NodeMustGenerate) \
@@ -424,8 +426,10 @@ namespace JSC { namespace DFG {
     \
     macro(Spread, NodeResultJS | NodeMustGenerate) \
     /* Support for allocation sinking. */\
-    macro(PhantomNewArrayWithConstantSize, NodeResultJS | NodeMustGenerate) \
-    macro(MaterializeNewArrayWithConstantSize, NodeResultJS | NodeHasVarArgs) \
+    macro(PhantomNewButterflyWithSize, NodeResultStorage | NodeMustGenerate) \
+    /* PhantomNewButterflyWithSize can materialize back to NewButterflyWithSize since it doesn't track any properties */ \
+    macro(PhantomNewArrayWithButterfly, NodeResultJS | NodeMustGenerate) \
+    macro(MaterializeNewArrayWithButterfly, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomNewObject, NodeResultJS | NodeMustGenerate) \
     macro(PutHint, NodeMustGenerate) \
     macro(CheckStructureImmediate, NodeMustGenerate) \
@@ -584,7 +588,7 @@ namespace JSC { namespace DFG {
     macro(MapStorageOrSentinel, NodeResultJS) /* If the map storage is not materialized, return the sentinel. */ \
     macro(MapIterationNext, NodeResultJS) \
     macro(MapIterationEntry, NodeResultJS) \
-    macro(MapIterationEntryKey, NodeResultInt32) \
+    macro(MapIterationEntryKey, NodeResultJS) \
     macro(MapIterationEntryValue, NodeResultJS) \
     macro(SetAdd, NodeMustGenerate) \
     macro(MapSet, NodeMustGenerate | NodeHasVarArgs) \

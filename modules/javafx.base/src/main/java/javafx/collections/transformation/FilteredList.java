@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,6 +135,8 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
     @Override
     protected void sourceChanged(Change<? extends E> c) {
+        ensureSize(getSource().size());
+
         beginChange();
         while (c.next()) {
             if (c.wasPermutated()) {
@@ -236,7 +238,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
     private void addRemove(Change<? extends E> c) {
         Predicate<? super E> pred = getPredicateImpl();
-        ensureSize(getSource().size());
         final int from = findPosition(c.getFrom());
         final int to = findPosition(c.getFrom() + c.getRemovedSize());
 
@@ -269,6 +270,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
             // Add the remaining elements
             while (it.nextIndex() < c.getTo()) {
                 if (pred.test(it.next())) {
+                    ensureSize(size + 1);
                     System.arraycopy(filtered, fpos, filtered, fpos + 1, size - fpos);
                     filtered[fpos] = it.previousIndex();
                     nextAdd(fpos, fpos + 1);
@@ -282,7 +284,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
 
     private void update(Change<? extends E> c) {
         Predicate<? super E> pred = getPredicateImpl();
-        ensureSize(getSource().size());
         int sourceFrom = c.getFrom();
         int sourceTo = c.getTo();
         int filterFrom = findPosition(sourceFrom);

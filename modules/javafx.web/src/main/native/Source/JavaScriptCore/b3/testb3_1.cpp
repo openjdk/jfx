@@ -366,6 +366,7 @@ void run(const TestConfig* config)
     RUN(testIToDReducedToIToF32Arg());
     RUN_UNARY(testInt52RoundTripUnary, int32Operands());
     RUN(testInt52RoundTripBinary());
+    RUN(testTruncSShrAddUnalignedConstant());
 
 #if !CPU(ARM)
     RUN_UNARY(testCheckAddRemoveCheckWithSExt8, int8Operands());

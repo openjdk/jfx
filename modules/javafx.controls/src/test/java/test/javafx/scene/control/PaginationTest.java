@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -319,6 +320,30 @@ public class PaginationTest {
             fail();
         }
         assertEquals(1, pagination.getCurrentPageIndex());
+    }
+
+    @Test public void pageSwitchIsImmediateWhenReducedMotionIsEnabled() {
+        pagination.setPageCount(3);
+        pagination.setPageFactory(index -> {
+            Label label = new Label("page " + index);
+            label.setId("page-" + index);
+            return label;
+        });
+
+        root.getChildren().add(pagination);
+        show();
+
+        scene.getPreferences().setReducedMotion(true);
+        tk.firePulse();
+
+        pagination.setCurrentPageIndex(1);
+        tk.firePulse();
+
+        var pages = pagination.lookupAll(".page");
+        assertEquals(2, pages.size());
+        assertEquals(1, pages.stream().filter(Node::isVisible).count());
+        assertTrue(pages.stream().allMatch(page -> page.getTranslateX() == 0));
+        assertNotNull(pagination.lookup("#page-1"));
     }
 
     public VBox createPage(int pageIndex) {
