@@ -3543,14 +3543,14 @@ is being used to size a border should also be in pixels.
     -fx-stroke-width: 0;
 }
 
-.rich-text-area .underline-wavy-1 {
+.rich-text-area .wavy-underline-1 {
     -fx-stroke: red;
 }
 
-.rich-text-area .underline-wavy-2 {
+.rich-text-area .wavy-underline-2 {
     -fx-stroke: green;
 }
 
-.rich-text-area .underline-wavy-3 {
+.rich-text-area .wavy-underline-3 {
     -fx-stroke: blue;
 }

@@ -2559,21 +2559,21 @@ public class RichTextArea extends Control {
             }
         });
 
-        b.setSegHandler(StyleAttributeMap.UNDERLINE_WAVY_1, (cc, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_1, (cc, cx, v) -> {
             if (v) {
-                cx.decorateRun(StyleAttributeMap.UNDERLINE_WAVY_1, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_UNDERLINE_WAVY_1);
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_1, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_1);
             }
         });
 
-        b.setSegHandler(StyleAttributeMap.UNDERLINE_WAVY_2, (cc, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_2, (cc, cx, v) -> {
             if (v) {
-                cx.decorateRun(StyleAttributeMap.UNDERLINE_WAVY_2, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_UNDERLINE_WAVY_2);
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_2, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_2);
             }
         });
 
-        b.setSegHandler(StyleAttributeMap.UNDERLINE_WAVY_3, (cc, cx, v) -> {
+        b.setSegHandler(StyleAttributeMap.WAVY_UNDERLINE_3, (cc, cx, v) -> {
             if (v) {
-                cx.decorateRun(StyleAttributeMap.UNDERLINE_WAVY_3, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_UNDERLINE_WAVY_3);
+                cx.decorateRun(StyleAttributeMap.WAVY_UNDERLINE_3, CellContext.RunDecor.WAVY_UNDERLINE, Params.STYLE_WAVY_UNDERLINE_3);
             }
         });
 

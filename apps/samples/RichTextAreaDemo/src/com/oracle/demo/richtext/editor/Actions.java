@@ -324,9 +324,9 @@ public class Actions {
         FX.item(m2, "Color 4", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_4));
         FX.item(m2, "Color 5", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_5));
         m2 = FX.menu(m, "Wavy Underline");
-        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.UNDERLINE_WAVY_1));
-        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.UNDERLINE_WAVY_2));
-        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.UNDERLINE_WAVY_3));
+        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_1));
+        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_2));
+        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_3));
         FX.item(m, "Paragraph...", paragraphStyle);
         if (im != null) {
             m2 = FX.menu(m, "Image");

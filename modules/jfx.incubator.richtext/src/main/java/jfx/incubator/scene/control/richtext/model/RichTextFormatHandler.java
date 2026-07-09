@@ -172,9 +172,9 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandlerBoolean(StyleAttributeMap.TEXT_HIGHLIGHT_4, "hi4");
         addHandlerBoolean(StyleAttributeMap.TEXT_HIGHLIGHT_5, "hi5");
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
-        addHandlerBoolean(StyleAttributeMap.UNDERLINE_WAVY_1, "uw1");
-        addHandlerBoolean(StyleAttributeMap.UNDERLINE_WAVY_2, "uw2");
-        addHandlerBoolean(StyleAttributeMap.UNDERLINE_WAVY_3, "uw3");
+        addHandlerBoolean(StyleAttributeMap.WAVY_UNDERLINE_1, "uw1");
+        addHandlerBoolean(StyleAttributeMap.WAVY_UNDERLINE_2, "uw2");
+        addHandlerBoolean(StyleAttributeMap.WAVY_UNDERLINE_3, "uw3");
     }
 
     /**

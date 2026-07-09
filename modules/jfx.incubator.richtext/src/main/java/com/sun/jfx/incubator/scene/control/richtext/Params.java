@@ -136,15 +136,15 @@ public class Params {
     /** Style name for text highlight (background color) 5 */
     public static final String STYLE_TEXT_HIGHLIGHT_5 = "text-highlight-5";
 
-    /** Style name for underline wavy color 1 */
-    public static final String STYLE_UNDERLINE_WAVY_1 = "underline-wavy-1";
+    /** Style name for wavy underline color 1 */
+    public static final String STYLE_WAVY_UNDERLINE_1 = "wavy-underline-1";
 
-    /** Style name for underline wavy color 2 */
-    public static final String STYLE_UNDERLINE_WAVY_2 = "underline-wavy-2";
+    /** Style name for wavy underline color 2 */
+    public static final String STYLE_WAVY_UNDERLINE_2 = "wavy-underline-2";
 
-    /** Style name for underline wavy color 3 */
-    public static final String STYLE_UNDERLINE_WAVY_3 = "underline-wavy-3";
+    /** Style name for wavy underline color 3 */
+    public static final String STYLE_WAVY_UNDERLINE_3 = "wavy-underline-3";
 
     /** RichTextModel format version. */
-    public static final String VERSION_4 = "RichText-v4-incubator";
+    public static final String VERSION_3 = "RichText-v3-Incubator";
 }

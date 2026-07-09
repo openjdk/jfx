@@ -2,9 +2,9 @@
 
 Andy Goryachev
 
-Version 4
+Version 3
 
-June 23, 2026
+July 9, 2026
 
 
 
@@ -38,7 +38,7 @@ As an example, the following rich text
 is represented by the following file:
 
 ```
-{@RichText-v4-incubator}{#tabs|99.5}{ff|System}{fs|12.0}tabs:	1	2	3{!tabs|149.0,190.0,229.0}
+{@RichText-v3-Incubator}{#tabs|99.5}{ff|System}{fs|12.0}tabs:	1	2	3{!tabs|149.0,190.0,229.0}
 {0}default tabs:	1	2	3{!}
 {ff|System}{fs|12.0}{tc|669966}green{!}
 {b}{ff|System}{fs|12.0}bold {ff|System}{fs|12.0}{i}italic {ff|System}{fs|12.0}{ss}strikethrough{4} {ff|System}{fs|12.0}{u}underline{!}
@@ -59,7 +59,7 @@ There could be only one such segment and it must be the first one.
 
 Example:
 
-`{@RichText-v4-incubator}`
+`{@RichText-v3-Incubator}`
 
 Note: the versioning mechanism is likely to change, see [JDK-8386850](https://bugs.openjdk.org/browse/JDK-8386850).
 
@@ -124,9 +124,9 @@ Example:
 |ss      |STRIKE_THROUGH        |boolean     |Strike through
 |tc      |TEXT_COLOR            |Color       |Text color (Note 3)
 |u       |UNDERLINE             |boolean     |Underline
-|uw1     |UNDERLINE_WAVY_1      |boolean     |Wavy underline color 1
-|uw2     |UNDERLINE_WAVY_2      |boolean     |Wavy underline color 2
-|uw3     |UNDERLINE_WAVY_3      |boolean     |Wavy underline color 3
+|uw1     |WAVY_UNDERLINE_1      |boolean     |Wavy underline color 1
+|uw2     |WAVY_UNDERLINE_2      |boolean     |Wavy underline color 2
+|uw3     |WAVY_UNDERLINE_3      |boolean     |Wavy underline color 3
 
 
 Notes:
@@ -160,7 +160,7 @@ Notes:
 
 Example:
 
-`{img|w,138.0,h,102.0,tw,-1.0,th,-1.0,a,true,b,iVBORw0KGgoAAA...}`
+`{img|w,138.0,h,102.0,tw,-1.0,th,0.0,a,true,b,iVBORw0KGgoAAA...}`
 
 
 ### Text Segment

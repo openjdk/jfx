@@ -101,9 +101,9 @@ public class TestRichTextFormatHandler {
             s("highlight3", StyleAttributeMap.TEXT_HIGHLIGHT_3),
             s("highlight4", StyleAttributeMap.TEXT_HIGHLIGHT_4),
             s("highlight5", StyleAttributeMap.TEXT_HIGHLIGHT_5),
-            s("wavy1", StyleAttributeMap.UNDERLINE_WAVY_1),
-            s("wavy2", StyleAttributeMap.UNDERLINE_WAVY_2),
-            s("wavy3", StyleAttributeMap.UNDERLINE_WAVY_3),
+            s("wavy1", StyleAttributeMap.WAVY_UNDERLINE_1),
+            s("wavy2", StyleAttributeMap.WAVY_UNDERLINE_2),
+            s("wavy3", StyleAttributeMap.WAVY_UNDERLINE_3),
             nl()
         };
         testRoundTrip(segments);

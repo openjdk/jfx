@@ -281,7 +281,7 @@ public class RichTextModel extends StyledTextModel {
 
     @Override
     protected String versionString() {
-        return Params.VERSION_4;
+        return Params.VERSION_3;
     }
 
     @Override

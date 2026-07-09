@@ -140,24 +140,24 @@ public final class StyleAttributeMap {
 
     /**
      * Wavy underline character attribute using the color specified by the
-     * {@code underline-wavy-1} CSS style.
+     * {@code wavy-underline-1} CSS style.
      * @since 27
      */
-    public static final StyleAttribute<Boolean> UNDERLINE_WAVY_1 = StyleAttribute.character("UNDERLINE_WAVY_1", Boolean.class);
+    public static final StyleAttribute<Boolean> WAVY_UNDERLINE_1 = StyleAttribute.character("WAVY_UNDERLINE_1", Boolean.class);
 
     /**
      * Wavy underline character attribute using the color specified by the
-     * {@code underline-wavy-2} CSS style.
+     * {@code wavy-underline-2} CSS style.
      * @since 27
      */
-    public static final StyleAttribute<Boolean> UNDERLINE_WAVY_2 = StyleAttribute.character("UNDERLINE_WAVY_2", Boolean.class);
+    public static final StyleAttribute<Boolean> WAVY_UNDERLINE_2 = StyleAttribute.character("WAVY_UNDERLINE_2", Boolean.class);
 
     /**
      * Wavy underline character attribute using the color specified by the
-     * {@code underline-wavy-3} CSS style.
+     * {@code wavy-underline-3} CSS style.
      * @since 27
      */
-    public static final StyleAttribute<Boolean> UNDERLINE_WAVY_3 = StyleAttribute.character("UNDERLINE_WAVY_3", Boolean.class);
+    public static final StyleAttribute<Boolean> WAVY_UNDERLINE_3 = StyleAttribute.character("WAVY_UNDERLINE_3", Boolean.class);
 
     /** Empty attribute set. */
     public static final StyleAttributeMap EMPTY = new StyleAttributeMap(Collections.emptyMap());
