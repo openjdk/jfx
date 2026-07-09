@@ -80,7 +80,8 @@ public class FileListFormatHandler extends DataFormatHandler {
     }
 
     /**
-     * Inserts the dropped files as inline images into the {@link RichTextArea}.
+     * This convenience method
+     * inserts the dropped files as inline images into the {@link RichTextArea}.
      * If a file cannot be loaded as an image, the file name is inserted instead.
      * This method clears the existing selection.
      *

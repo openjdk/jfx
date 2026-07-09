@@ -247,11 +247,9 @@ public abstract class StyledTextModel {
      * <p>
      * When the position points to the boundary between two text segments with different attributes,
      * the value of {@code forInsert} determines which segment will be used: when {@code true}, the preceding
-     * segment's attributes will be returned so inserted/typed text has the same style as
+     * segment's attributes will be returned so inserted/typed text has the same style as the
      * preceding text.  When {@code forInsert} is {@code false}, the returned attributes correspond exactly
      * to the symbol indicated by the specified position.
-     * <p>
-     * This method returns the attributes of the last character at the end of the document.
      *
      * @param resolver the style resolver
      * @param pos the text position
@@ -693,8 +691,8 @@ public abstract class StyledTextModel {
      * <p>
      * This is a convenience method which eventually calls
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput)}
-     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos, boolean)} at the
-     * {@code start} position.
+     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos, boolean)}
+     * (with {@code forInsert} parameter set to {@code true}) at the {@code start} position.
      * It creates an undo/redo entry if
      * {@link #isUndoRedoEnabled()} returns {@code true}.
      *

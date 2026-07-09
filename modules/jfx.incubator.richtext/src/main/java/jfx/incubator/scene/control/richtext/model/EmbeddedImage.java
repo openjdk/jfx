@@ -88,6 +88,7 @@ public final class EmbeddedImage {
     private final boolean keepAspectRatio;
 
     /// Private constructor that DOES NOT make a defensive copy of the bytes.
+    /// The only public method is EmbeddedImage.of() which does.
     private EmbeddedImage(
         byte[] bytes,
         double width,

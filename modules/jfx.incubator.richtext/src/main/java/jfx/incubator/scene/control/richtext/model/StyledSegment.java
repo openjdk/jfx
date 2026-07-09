@@ -290,6 +290,7 @@ public abstract class StyledSegment {
      * @param generator the code to create a Node instance
      * @param a the segment styles, can be null
      * @return the StyledSegment instance
+     * @since 27
      */
     public static StyledSegment ofInlineNode(Supplier<Node> generator, StyleAttributeMap a) {
         return new StyledSegment() {

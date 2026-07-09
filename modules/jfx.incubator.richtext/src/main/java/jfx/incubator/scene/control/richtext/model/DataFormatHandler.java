@@ -47,6 +47,8 @@ public abstract class DataFormatHandler {
      * @return the StyledInput
      * @throws IOException when operation is not supported or an I/O error occurs
      * @throws UnsupportedOperationException if the copy operation is not supported
+     * @throws ClassCastException if the input data type is not supported by the handler
+     * @since 27
      */
     public abstract StyledInput createStyledInput(Object input, StyleAttributeMap attr) throws IOException;
 

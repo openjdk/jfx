@@ -422,7 +422,6 @@ public class RichTextModel extends StyledTextModel {
          * @param leading the leading/trailing bias
          * @param forInsert whether to pick preceding style at the segment boundary
          * @return the style attributes, non-null
-         * @since 27
          */
         public StyleAttributeMap getStyleAttributeMap(int charIndex, boolean leading, boolean forInsert) {
             int pos = 0;

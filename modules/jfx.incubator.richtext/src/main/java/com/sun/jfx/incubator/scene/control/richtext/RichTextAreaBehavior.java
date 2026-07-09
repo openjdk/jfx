@@ -1185,7 +1185,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             try (StyledInput in = h.createStyledInput(data, a)) {
                 TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 control.errorFeedback();
             }
         }

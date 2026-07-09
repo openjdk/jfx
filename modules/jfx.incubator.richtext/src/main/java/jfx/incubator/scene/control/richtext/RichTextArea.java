@@ -523,7 +523,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * This property indicates the target text position during the drag-and-drop operations.
+     * This property indicates the target text position during drag-and-drop operations.
      *
      * @return the drop target property
      * @defaultValue null
@@ -1490,7 +1490,7 @@ public class RichTextArea extends Control {
      *
      * @param pos the text position
      * @param forInsert whether to pick preceding style at the segment boundary
-     * @return the style attributes, non-null
+     * @return the style attributes, never null
      * @since 27
      */
     public final StyleAttributeMap getStyleAttributeMap(TextPos pos, boolean forInsert) {
