@@ -287,8 +287,8 @@ public abstract class StyledSegment {
 
     /**
      * Creates a StyledSegment which consists of a single inline Node
-     * with the specified styles (the styles can be {@code null} which is equivalent
-     * to {@link StyleAttributeMap#EMPTY}.
+     * with the specified styles (the styles can be {@code null}, which is equivalent
+     * to {@link StyleAttributeMap#EMPTY}).
      *
      * @param generator the code to create a Node instance
      * @param attr the segment styles, can be null
