@@ -49,10 +49,10 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 public class ListenerListBaseTest {
-    private final InvalidationListener il1 = obs -> {};
-    private final ChangeListener<?> cl1 = (obs, o, n) -> {};
-    private final InvalidationListener il2 = obs -> {};
-    private final ChangeListener<?> cl2 = (obs, o, n) -> {};
+    private final InvalidationListener il1 = _ -> {};
+    private final ChangeListener<?> cl1 = (_, _, _) -> {};
+    private final InvalidationListener il2 = _ -> {};
+    private final ChangeListener<?> cl2 = (_, _, _) -> {};
 
     private static class AccessibleListenerListBase extends ListenerListBase {
         AccessibleListenerListBase(Object listener1, Object listener2) {
@@ -486,7 +486,7 @@ public class ListenerListBaseTest {
         assertListeners(list, List.of(il2, cl2));
     }
 
-    private void assertListenerSeparation(AccessibleListenerListBase list) {
+    private static void assertListenerSeparation(AccessibleListenerListBase list) {
         boolean foundChange = false;
 
         for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
@@ -499,7 +499,7 @@ public class ListenerListBaseTest {
         }
     }
 
-    private void assertListeners(AccessibleListenerListBase list, List<Object> expectedListeners) {
+    private static void assertListeners(AccessibleListenerListBase list, List<Object> expectedListeners) {
         assertListenerSeparation(list);
 
         int j = 0;

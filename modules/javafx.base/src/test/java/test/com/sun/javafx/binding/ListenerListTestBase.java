@@ -71,10 +71,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public abstract class ListenerListTestBase<L extends ListenerListBase> {
     private final List<String> records = new ArrayList<>();
-    private final InvalidationListener il1 = obs -> records.add("IL1: invalidated");
-    private final InvalidationListener il2 = obs -> records.add("IL2: invalidated");
-    private final ChangeListener<?> cl1 = (obs, o, n) -> records.add("CL1: changed from " + o + " to " + n);
-    private final ChangeListener<?> cl2 = (obs, o, n) -> records.add("CL2: changed from " + o + " to " + n);
+    private final InvalidationListener il1 = _ -> records.add("IL1: invalidated");
+    private final InvalidationListener il2 = _ -> records.add("IL2: invalidated");
+    private final ChangeListener<?> cl1 = (_, o, n) -> records.add("CL1: changed from " + o + " to " + n);
+    private final ChangeListener<?> cl2 = (_, o, n) -> records.add("CL2: changed from " + o + " to " + n);
 
     private int getterCalled;
 
@@ -121,10 +121,10 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
     @Test
     void shouldNotifyAllListenersEvenWhenTheyThrowExceptions() {
-        InvalidationListener il1 = obs -> { records.add("IL1: invalidated"); throw new RuntimeException(); };
-        InvalidationListener il2 = obs -> { records.add("IL2: invalidated"); throw new RuntimeException(); };
-        ChangeListener<?> cl1 = (obs, o, n) -> { records.add("CL1: changed from " + o + " to " + n); throw new RuntimeException(); };
-        ChangeListener<?> cl2 = (obs, o, n) -> { records.add("CL2: changed from " + o + " to " + n); throw new RuntimeException(); };
+        InvalidationListener il1 = _ -> { records.add("IL1: invalidated"); throw new RuntimeException(); };
+        InvalidationListener il2 = _ -> { records.add("IL2: invalidated"); throw new RuntimeException(); };
+        ChangeListener<?> cl1 = (_, o, n) -> { records.add("CL1: changed from " + o + " to " + n); throw new RuntimeException(); };
+        ChangeListener<?> cl2 = (_, o, n) -> { records.add("CL2: changed from " + o + " to " + n); throw new RuntimeException(); };
 
         L list = create(cl1, il1);
 
@@ -136,7 +136,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
         try {
             AtomicInteger exceptions = new AtomicInteger();
-            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.addAndGet(1));
+            Thread.currentThread().setUncaughtExceptionHandler((_, _) -> exceptions.addAndGet(1));
 
             property.set("A");
             notifyListeners(list, property, "-");
@@ -162,8 +162,8 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
         void shouldNotNotifyListenersThatWereRemovedBeforeBeingCalled() {
             L list = create(cl1, il1);
 
-            list.add((InvalidationListener) obs -> list.remove(cl2));
-            list.add((InvalidationListener) obs -> list.remove(il2));
+            list.add((InvalidationListener) _ -> list.remove(cl2));
+            list.add((InvalidationListener) _ -> list.remove(il2));
             list.add(cl2);
             list.add(il2);
 
@@ -182,8 +182,8 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             list.add(cl2);
             list.add(il2);
-            list.add((ChangeListener<String>) (obs, o, n) -> list.remove(cl2));
-            list.add((ChangeListener<String>) (obs, o, n) -> list.remove(il2));
+            list.add((ChangeListener<String>) (_, _, _) -> list.remove(cl2));
+            list.add((ChangeListener<String>) (_, _, _) -> list.remove(il2));
 
             property.set("A");
             notifyListeners(list, property, "-");
@@ -208,8 +208,8 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
         void shouldNotNotifyAnyListenersAddedUntilNextNotification() {
             L list = create(cl1, il1);
 
-            list.add((InvalidationListener) obs -> list.add((ChangeListener<String>) (obs2, o, n) -> records.add("CL3: changed from " + o + " to " + n)));
-            list.add((InvalidationListener) obs -> list.add((InvalidationListener) obs2 -> records.add("IL3: invalidated")));
+            list.add((InvalidationListener) _ -> list.add((ChangeListener<String>) (_, o, n) -> records.add("CL3: changed from " + o + " to " + n)));
+            list.add((InvalidationListener) _ -> list.add((InvalidationListener) _ -> records.add("IL3: invalidated")));
             list.add(cl2);
             list.add(il2);
 
@@ -257,7 +257,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     void shouldNotGetCurrentValueWhenChangeListenersWereRemovedBeforeBeingCalled() {
         L list = create(il1, cl1);
 
-        list.add((InvalidationListener) obs -> list.remove(cl1));
+        list.add((InvalidationListener) _ -> list.remove(cl1));
 
         assertEquals(0, getterCalled);
 
@@ -279,11 +279,11 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+            list.add((ChangeListener<Boolean>) (_, o, n) -> {
                 records.add("CL1: changed from " + o + " to " + n);
             });
 
-            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+            list.add((ChangeListener<Boolean>) (_, o, n) -> {
                 records.add("CL2: changed from " + o + " to " + n);
 
                 if (n) {  // This check is normally done by the property
@@ -292,7 +292,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Boolean>) (obs, o, n) -> {
+            list.add((ChangeListener<Boolean>) (_, o, n) -> {
                 records.add("CL3: changed from " + o + " to " + n);
             });
 
@@ -311,11 +311,11 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<String>) (obs, o, n) -> {
+            list.add((ChangeListener<String>) (_, o, n) -> {
                 records.add("CL1: changed from " + o + " to " + n);
             });
 
-            list.add((ChangeListener<String>) (obs, o, n) -> {
+            list.add((ChangeListener<String>) (_, o, n) -> {
                 records.add("CL2: changed from " + o + " to " + n);
 
                 if (!n.equals("A")) {  // This check is normally done by the property
@@ -324,7 +324,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<String>) (obs, o, n) -> {
+            list.add((ChangeListener<String>) (_, o, n) -> {
                 records.add("CL3: changed from " + o + " to " + n);
             });
 
@@ -354,7 +354,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL1: changed from " + o + " to " + n);
@@ -365,7 +365,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL2: changed from " + o + " to " + n);
@@ -376,7 +376,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 records.add("CL3: changed from " + o + " to " + n);
             });
 
@@ -404,7 +404,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL1: changed from " + o + " to " + n);
@@ -415,7 +415,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL2: changed from " + o + " to " + n);
@@ -426,7 +426,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL3: changed from " + o + " to " + n);
@@ -461,7 +461,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL1: changed from " + o + " to " + n);
@@ -472,7 +472,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL2: changed from " + o + " to " + n);
@@ -483,7 +483,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL3: changed from " + o + " to " + n);
@@ -494,7 +494,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 records.add("CL4: changed from " + o + " to " + n);
             });
 
@@ -522,7 +522,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
 
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL1: changed from " + o + " to " + n);
@@ -547,7 +547,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
             LongProperty property = new SimpleLongProperty(1);
             L list = create(il1, il2);
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL1: changed from " + o + " to " + n);
@@ -558,7 +558,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL2: changed from " + o + " to " + n);
@@ -569,7 +569,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL3: changed from " + o + " to " + n);
@@ -580,7 +580,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL4: changed from " + o + " to " + n);
@@ -608,7 +608,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
             LongProperty property = new SimpleLongProperty(1);
             L list = create(il1, il2);
 
-            list.add((InvalidationListener) obs -> {
+            list.add((InvalidationListener) _ -> {
                 long v = property.get();  // act as change listener
 
                 records.add("IL3: current value " + v);
@@ -619,7 +619,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((InvalidationListener) obs -> {
+            list.add((InvalidationListener) _ -> {
                 long v = property.get();  // act as change listener
 
                 records.add("IL4: current value " + v);
@@ -630,7 +630,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL3: changed from " + o + " to " + n);
@@ -641,7 +641,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 }
             });
 
-            list.add((ChangeListener<Number>) (obs, o, n) -> {
+            list.add((ChangeListener<Number>) (_, o, n) -> {
                 long v = n.longValue();
 
                 records.add("CL4: changed from " + o + " to " + n);

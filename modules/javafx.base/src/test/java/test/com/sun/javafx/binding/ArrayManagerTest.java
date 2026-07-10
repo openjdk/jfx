@@ -68,7 +68,7 @@ public class ArrayManagerTest {
         }
     };
 
-    private BiFunction<ArrayManagerTest, String[], Integer> compacter = (instance, array) -> 0;
+    private BiFunction<ArrayManagerTest, String[], Integer> compacter = (_, _) -> 0;
     private String[] array;
     private int size;
 
@@ -128,7 +128,7 @@ public class ArrayManagerTest {
 
         @Test
         void removeIfShouldNotRemoveAnything() {
-            assertFalse(manager.removeIf(ArrayManagerTest.this, s -> true));
+            assertFalse(manager.removeIf(ArrayManagerTest.this, _ -> true));
 
             assertEquals(0, size);
         }
@@ -148,7 +148,7 @@ public class ArrayManagerTest {
         void compactShouldBeCalledWhenGrowingANonEmptyArray() {
             AtomicBoolean called = new AtomicBoolean();
 
-            compacter = (instance, array) -> { called.set(true); return 0; };
+            compacter = (_, _) -> { called.set(true); return 0; };
 
             manager.add(ArrayManagerTest.this, "A");
 
@@ -291,7 +291,7 @@ public class ArrayManagerTest {
             void shouldShrinkArrayWhenCompactionIsVeryEffective() {
                 AtomicBoolean called = new AtomicBoolean();
 
-                compacter = (instance, array) -> { called.set(true); return 7; };  // 7 out of 7 compacted
+                compacter = (_, _) -> { called.set(true); return 7; };  // 7 out of 7 compacted
 
                 assertEquals(7, array.length);
 
@@ -308,7 +308,7 @@ public class ArrayManagerTest {
             void shouldKeepArrayWhenCompactionReclaimsSpace() {
                 AtomicBoolean called = new AtomicBoolean();
 
-                compacter = (instance, array) -> { called.set(true); return 1; };
+                compacter = (_, _) -> { called.set(true); return 1; };
 
                 assertEquals(7, array.length);
 
