@@ -36,7 +36,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.DataFormat;
 import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -77,22 +76,6 @@ public class FileListFormatHandler extends DataFormatHandler {
     @Override
     public void save(StyledTextModel model, StyleResolver r, TextPos start, TextPos end, OutputStream out) throws IOException {
         throw new UnsupportedOperationException();
-    }
-
-    /**
-     * This convenience method
-     * inserts the dropped files as inline images into the {@link RichTextArea}.
-     * If a file cannot be loaded as an image, the file name is inserted instead.
-     * This method clears the existing selection.
-     *
-     * @param t the target control
-     * @param p the text position
-     * @param files the list of files to be inserted
-     */
-    public static void handleDrop(RichTextArea t, TextPos p, List<File> files) {
-        FileListStyledInput in = new FileListStyledInput(files);
-        t.clearSelection();
-        t.replaceText(p, p, in);
     }
 
     private static class FileListStyledInput implements StyledInput {
