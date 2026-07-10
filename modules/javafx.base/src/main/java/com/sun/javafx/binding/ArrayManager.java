@@ -45,7 +45,8 @@ public abstract class ArrayManager<I, E> {
 
     /**
      * The minimum array size. (3 is a good number considering it would use exactly 24 bytes
-     * with compressed oops without wasted space due to alignment issues).
+     * with compact object headers and compressed object pointers without wasted space due to
+     * alignment issues).
      */
     private static final int MINIMUM_SIZE = 3;
 
