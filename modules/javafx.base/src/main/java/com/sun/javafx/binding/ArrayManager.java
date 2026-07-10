@@ -283,13 +283,15 @@ public abstract class ArrayManager<I, E> {
             }
             else if (shift > 0) {
                 array[i - shift] = array[i];
-                array[i] = null;
             }
         }
 
         if (shift == 0) {
             return false;
         }
+
+        // null out any elements that have become unused:
+        Arrays.fill(array, occupiedSlots - shift, occupiedSlots, null);
 
         int newLength = calculateOptimalSize(array.length, occupiedSlots - shift);
 
