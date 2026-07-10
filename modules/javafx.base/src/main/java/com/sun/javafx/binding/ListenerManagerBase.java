@@ -60,9 +60,42 @@ public sealed abstract class ListenerManagerBase<T, I extends ObservableValue<? 
      */
     protected abstract void setData(I instance, Object data);
 
+    /**
+     * Adds an invalidation listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to add, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
     protected abstract void addInvalidationListener(I instance, InvalidationListener listener);
+
+    /**
+     * Adds a change listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to add, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
     protected abstract void addChangeListener(I instance, ChangeListener<? super T> listener);
+
+    /**
+     * Removes an invalidation listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to remove, cannot be {@code null}
+     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
+     * @throws NullPointerException when any argument is {@code null}
+     */
     protected abstract boolean removeInvalidationListener(I instance, InvalidationListener listener);
+
+    /**
+     * Removes a change listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to remove, cannot be {@code null}
+     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
+     * @throws NullPointerException when any argument is {@code null}
+     */
     protected abstract boolean removeChangeListener(I instance, ChangeListener<? super T> listener);
 
     /**
