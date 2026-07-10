@@ -48,29 +48,27 @@ import javafx.beans.value.ObservableValue;
  */
 public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? extends T>> extends ListenerManagerBase<T, I> {
 
-    /**
-     * Adds an invalidation listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public void addListener(I instance, InvalidationListener listener) {
-        addListenerInternal(instance, listener);
+    @Override
+    protected final void addInvalidationListener(I instance, InvalidationListener listener) {
+        addAnyListener(instance, listener);
     }
 
-    /**
-     * Adds a change listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public void addListener(I instance, ChangeListener<? super T> listener) {
-        addListenerInternal(instance, listener);
+    @Override
+    protected final void addChangeListener(I instance, ChangeListener<? super T> listener) {
+        addAnyListener(instance, listener);
     }
 
-    private void addListenerInternal(I instance, Object listener) {
+    @Override
+    protected final boolean removeInvalidationListener(I instance, InvalidationListener listener) {
+        return removeAnyListener(instance, listener);
+    }
+
+    @Override
+    protected final boolean removeChangeListener(I instance, ChangeListener<? super T> listener) {
+        return removeAnyListener(instance, listener);
+    }
+
+    private void addAnyListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
 
         instance.getValue();  // always trigger validation when adding a listener (required by tests for all types of listeners)
@@ -82,24 +80,12 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
         }
     }
 
-    /**
-     * Removes a listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to remove, cannot be {@code null}
-     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public boolean removeListener(I instance, Object listener) {
+    private boolean removeAnyListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
 
         Object data = getData(instance);
 
-        if (data == null) {
-            return true;
-        }
-
-        if (data.equals(listener)) {
+        if (data == null || data.equals(listener)) {
             setData(instance, null);
 
             return true;
@@ -125,7 +111,7 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
      *   can be {@code null} which means there are no listeners to notify
      * @throws NullPointerException when {@code instance} is {@code null}
      */
-    public void fireValueChanged(I instance, T oldValue, Object listenerData) {
+    public final void fireValueChanged(I instance, T oldValue, Object listenerData) {
         if (listenerData instanceof ListenerList) {
             @SuppressWarnings("unchecked")
             ListenerList<T> list = (ListenerList<T>)listenerData;

@@ -56,14 +56,8 @@ import javafx.beans.value.ObservableValue;
  */
 public non-sealed abstract class OldValueCachingListenerManager<T, I extends ObservableValue<? extends T>> extends ListenerManagerBase<T, I> {
 
-    /**
-     * Adds an invalidation listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public void addListener(I instance, InvalidationListener listener) {
+    @Override
+    protected final void addInvalidationListener(I instance, InvalidationListener listener) {
         Objects.requireNonNull(listener);
 
         instance.getValue();  // always trigger validation when adding an invalidation listener (required by tests)
@@ -81,14 +75,8 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         }
     }
 
-    /**
-     * Adds a change listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to add, cannot be {@code null}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public void addListener(I instance, ChangeListener<? super T> listener) {
+    @Override
+    protected final void addChangeListener(I instance, ChangeListener<? super T> listener) {
         Objects.requireNonNull(listener);
 
         switch (getData(instance)) {
@@ -120,29 +108,56 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         }
     }
 
-    /**
-     * Removes a listener.
-     *
-     * @param instance the instance to which the listeners belong, cannot be {@code null}
-     * @param listener a listener to remove, cannot be {@code null}
-     * @throws NullPointerException when any argument is {@code null}
-     */
-    public void removeListener(I instance, Object listener) {
+    @Override
+    protected final boolean removeInvalidationListener(I instance, InvalidationListener listener) {
         Objects.requireNonNull(listener);
 
         Object data = getData(instance);
 
-        if (data == null || data.equals(listener) || (data instanceof ChangeListenerWrapper<?> wrapper && wrapper.listener.equals(listener))) {
-            setData(instance, null);  // TODO not needed when already null
+        if (data == null || data.equals(listener)) {
+            setData(instance, null);
+
+            return true;
         }
-        else if (data instanceof OldValueCachingListenerList) {
+
+        if (data instanceof OldValueCachingListenerList) {
             @SuppressWarnings("unchecked")
             OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) data;
 
             list.remove(listener);
 
             updateAfterRemoval(instance, list);
+
+            return list.totalListeners() == 0;
         }
+
+        return false;
+    }
+
+    @Override
+    protected final boolean removeChangeListener(I instance, ChangeListener<? super T> listener) {
+        Objects.requireNonNull(listener);
+
+        Object data = getData(instance);
+
+        if (data == null || data.equals(listener) || (data instanceof ChangeListenerWrapper<?> wrapper && wrapper.listener.equals(listener))) {
+            setData(instance, null);
+
+            return true;
+        }
+
+        if (data instanceof OldValueCachingListenerList) {
+            @SuppressWarnings("unchecked")
+            OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) data;
+
+            list.remove(listener);
+
+            updateAfterRemoval(instance, list);
+
+            return list.totalListeners() == 0;
+        }
+
+        return false;
     }
 
     /**
@@ -153,7 +168,7 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
      *   can be {@code null} which means there are no listeners to notify
      * @throws NullPointerException when {@code instance} is {@code null}
      */
-    public void fireValueChanged(I instance, Object listenerData) {
+    public final void fireValueChanged(I instance, Object listenerData) {
         if (listenerData instanceof OldValueCachingListenerList) {
             @SuppressWarnings("unchecked")
             OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) listenerData;

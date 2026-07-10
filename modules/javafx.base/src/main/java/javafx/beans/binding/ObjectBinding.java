@@ -103,19 +103,18 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
         observed = !LISTENER_MANAGER.removeListener(this, listener);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void addListener(ChangeListener<? super T> listener) {
         observed = observed || listener != null;
 
-        @SuppressWarnings("unchecked")
-        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
-
-        LISTENER_MANAGER.addListener(this, castListener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        observed = !LISTENER_MANAGER.removeListener(this, listener);
+        observed = !LISTENER_MANAGER.removeListener(this, (ChangeListener<Object>) listener);
     }
 
     /**

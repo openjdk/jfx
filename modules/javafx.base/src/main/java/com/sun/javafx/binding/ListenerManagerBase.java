@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
@@ -59,4 +60,126 @@ public sealed abstract class ListenerManagerBase<T, I extends ObservableValue<? 
      */
     protected abstract void setData(I instance, Object data);
 
+    protected abstract void addInvalidationListener(I instance, InvalidationListener listener);
+    protected abstract void addChangeListener(I instance, ChangeListener<? super T> listener);
+    protected abstract boolean removeInvalidationListener(I instance, InvalidationListener listener);
+    protected abstract boolean removeChangeListener(I instance, ChangeListener<? super T> listener);
+
+    /**
+     * Adds an invalidation listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to add, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    public final void addListener(I instance, InvalidationListener listener) {
+        addInvalidationListener(instance, wrapIfDualPurpose(listener));
+    }
+
+    /**
+     * Adds a change listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to add, cannot be {@code null}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    public final void addListener(I instance, ChangeListener<? super T> listener) {
+        addChangeListener(instance, wrapIfDualPurpose(listener));
+    }
+
+    /**
+     * Removes an invalidation listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to remove, cannot be {@code null}
+     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    public final boolean removeListener(I instance, InvalidationListener listener) {
+        return removeInvalidationListener(instance, wrapIfDualPurpose(listener));
+    }
+
+    /**
+     * Removes a change listener.
+     *
+     * @param instance the instance to which the listeners belong, cannot be {@code null}
+     * @param listener a listener to remove, cannot be {@code null}
+     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
+     * @throws NullPointerException when any argument is {@code null}
+     */
+    public final boolean removeListener(I instance, ChangeListener<? super T> listener) {
+        return removeChangeListener(instance, wrapIfDualPurpose(listener));
+    }
+
+    /*
+     * These two functions wrap listeners that implement both ChangeListener and
+     * InvalidationListener. Since the permitted classes and the underlying ListenerList use
+     * instanceof checks to distinguish the exact types, wrapping is necessary to
+     * ensure the dual purpose listener is not mistaken for the incorrect type.
+     *
+     * The wrappers delegate equals/hashCode to the delegate to ensure a wrapped
+     * listener is also removable again.
+     */
+
+    private static <T> ChangeListener<? super T> wrapIfDualPurpose(ChangeListener<? super T> changeListener) {
+        if (changeListener instanceof InvalidationListener) {
+            return new WrappedChangeListener<>(changeListener);
+        }
+
+        return changeListener;
+    }
+
+    private static InvalidationListener wrapIfDualPurpose(InvalidationListener invalidationListener) {
+        if (invalidationListener instanceof ChangeListener) {
+            return new WrappedInvalidationListener(invalidationListener);
+        }
+
+        return invalidationListener;
+    }
+
+    private static final class WrappedChangeListener<T> implements ChangeListener<T> {
+        final ChangeListener<? super T> delegate;
+
+        WrappedChangeListener(ChangeListener<? super T> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
+            delegate.changed(observable, oldValue, newValue);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof WrappedChangeListener<?> w && delegate.equals(w.delegate);
+        }
+
+        @Override
+        public int hashCode() {
+            return delegate.hashCode();
+        }
+    }
+
+    private static final class WrappedInvalidationListener implements InvalidationListener {
+        final InvalidationListener delegate;
+
+        WrappedInvalidationListener(InvalidationListener delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void invalidated(Observable observable) {
+            delegate.invalidated(observable);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof WrappedInvalidationListener w && delegate.equals(w.delegate);
+        }
+
+        @Override
+        public int hashCode() {
+            return delegate.hashCode();
+        }
+    }
 }

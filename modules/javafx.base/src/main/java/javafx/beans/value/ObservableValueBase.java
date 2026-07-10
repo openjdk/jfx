@@ -73,12 +73,10 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        @SuppressWarnings("unchecked")
-        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
-
-        LISTENER_MANAGER.addListener(this, castListener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     /**
@@ -92,9 +90,10 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener(this, listener);
+        LISTENER_MANAGER.removeListener(this, (ChangeListener<Object>) listener);
     }
 
     /**

@@ -71,17 +71,16 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
         LISTENER_MANAGER.removeListener(this, listener);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        @SuppressWarnings("unchecked")
-        ChangeListener<Object> castListener = (ChangeListener<Object>) listener;
-
-        LISTENER_MANAGER.addListener(this, castListener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener(this, listener);
+        LISTENER_MANAGER.removeListener(this, (ChangeListener<Object>) listener);
     }
 
     /**
