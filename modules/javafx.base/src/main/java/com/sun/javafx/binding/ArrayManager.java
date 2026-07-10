@@ -259,7 +259,7 @@ public abstract class ArrayManager<I, E> {
      * Removes all of the elements of the array provided by the given instance
      * that satisfy the given predicate. If the predicate throws errors or
      * exceptions, these are relayed to the caller, and the state of the array
-     * will be undefined.
+     * will be unspecified.
      *
      * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param filter a predicate which returns {@code true} for elements to be removed
@@ -314,9 +314,9 @@ public abstract class ArrayManager<I, E> {
      * must be the last slots in the array after this call
      * completes.<p>
      *
-     * Note: it is not allowed to change the array fields during this call;
-     * doing so will result in undefined behavior. Only the array's content
-     * may be changed.<p>
+     * Note: do not call {@link #setArray(Object, Object[])} or {@link #setOccupiedSlots(Object, int)}
+     * from this method. Only the contents of the supplied array may be
+     * modified. These values will be updated after this method returns.
      *
      * By default, no compaction takes place and this method returns
      * 0 to indicate no slots were reclaimed.<p>
