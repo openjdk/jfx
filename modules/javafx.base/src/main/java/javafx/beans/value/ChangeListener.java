@@ -47,15 +47,23 @@ public interface ChangeListener<T> {
     /**
      * Called when the value of an {@link ObservableValue} changes.
      * <p>
-     * In general, it is considered bad practice to modify the observed value in
-     * this method.
+     * When this method is invoked, {@code newValue} represents the current value of the {@code observable};
+     * that is, it is equal to {@code observable.getValue()} at the time of invocation. The {@code oldValue}
+     * is the value that was reported as {@code newValue} in the previous notification delivered to the same
+     * listener.
+     * <p>
+     * If a change listener modifies the observable value in its callback, other registered change listeners
+     * that have not been notified at that point will receive the newly-modified value. This ensures that a
+     * change listener will always observe the effective change from its last-observed {@code oldValue} to
+     * the current value of the {@code observable} at the time the listener is invoked.
+     * <p>
+     * However, it is usually considered bad practice to modify the observable value from a listener callback
+     * because the order of listener registrations is often not strictly enforceable. This gives earlier
+     * listeners an order-dependent veto over the values that later listeners will observe.
      *
-     * @param observable
-     *            The {@code ObservableValue} which value changed
-     * @param oldValue
-     *            The old value
-     * @param newValue
-     *            The new value
+     * @param observable the changed {@code ObservableValue}
+     * @param oldValue the last value that was observed by this listener
+     * @param newValue the current value of the {@code observable}
      */
     void changed(ObservableValue<? extends T> observable, T oldValue, T newValue);
 }

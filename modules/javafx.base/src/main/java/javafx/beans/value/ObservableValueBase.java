@@ -98,10 +98,6 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
     /**
      * Notify the currently registered observers of a value change.
-     *
-     * This implementation will ignore all adds and removes of observers that
-     * are done while a notification is processed. The changes take effect in
-     * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
         LISTENER_MANAGER.fireValueChanged(this, listenerData);

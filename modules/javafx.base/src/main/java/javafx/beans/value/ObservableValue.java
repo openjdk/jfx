@@ -114,6 +114,10 @@ public interface ObservableValue<T> extends Observable {
      * listener by calling {@link #removeListener(ChangeListener)
      * removeListener} after use or to use an instance of
      * {@link WeakChangeListener} avoid this situation.
+     * <p>
+     * If this method is called from a listener callback while a change notification
+     * is in progress, the added listener will not be notified as part of the ongoing
+     * notification.
      *
      * @see #removeListener(ChangeListener)
      *
@@ -132,6 +136,11 @@ public interface ObservableValue<T> extends Observable {
      * never added) then this method call is a no-op. If it had been previously
      * added then it will be removed. If it had been added more than once, then
      * only the first occurrence will be removed.
+     * <p>
+     * If this method is called from a listener callback while a change notification
+     * is in progress, the removal takes effect immediately and the removed listener
+     * will not be notified as part of the ongoing notification if it has not been
+     * notified so far.
      *
      * @see #addListener(ChangeListener)
      *
