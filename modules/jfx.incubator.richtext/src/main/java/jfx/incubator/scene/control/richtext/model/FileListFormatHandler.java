@@ -62,6 +62,11 @@ public class FileListFormatHandler extends DataFormatHandler {
         return instance;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The type of {@code input} must be {@code List<File>}.
+     */
     @Override
     public StyledInput createStyledInput(Object input, StyleAttributeMap attr) throws IOException {
         List<File> files = (List<File>)input;
