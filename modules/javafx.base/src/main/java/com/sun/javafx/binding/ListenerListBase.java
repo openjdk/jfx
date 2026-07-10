@@ -369,8 +369,8 @@ public abstract class ListenerListBase {
              *   clean-up code later); this goes through the normal add/removeListener channel
              * - The notification ends
              * - While unlocking, a weak listener is determined to be expired
-             *   - Removing this weak listener would not go through proper channels and thus
-             *     code that overrides add/removeListener would be unaware of the change
+             * - Removing this weak listener would not go through proper channels and thus
+             *   code that overrides add/removeListener would be unaware of the change
              *
              * Therefore, weak listeners will only be actively removed when another listener
              * is being added or removed as the caller will then be expecting a change in the
