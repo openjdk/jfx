@@ -82,7 +82,8 @@ public abstract class ArrayManager<I, E> {
     protected abstract void setArray(I instance, E[] array);
 
     /**
-     * Gets the occupied slots of the array under management.
+     * Gets the number of elements currently stored in the array under management.
+     * Only indices {@code [0, occupiedSlots)} contain valid elements.
      *
      * @param instance the instance it is located in, cannot be {@code null}
      * @return the occupied slots of the array under management
@@ -90,7 +91,8 @@ public abstract class ArrayManager<I, E> {
     protected abstract int getOccupiedSlots(I instance);
 
     /**
-     * Sets the occupied slots of the array under management.
+     * Sets the number of elements currently stored in the array under management.
+     * Only indices {@code [0, occupiedSlots)} contain valid elements.
      *
      * @param instance the instance it is located in, cannot be {@code null}
      * @param occupiedSlots the occupied slots of the array to set
