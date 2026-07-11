@@ -26,8 +26,9 @@
 package test.javafx.fxml;
 
 import javafx.fxml.FXMLLoader;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ClassWithDefaultPropertyTest {
 
@@ -36,7 +37,7 @@ public class ClassWithDefaultPropertyTest {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("class_with_default_list_property.fxml"));
         ClassWithDefaultListProperty classWithDefaultProperty = fxmlLoader.load();
 
-        Assertions.assertEquals(1, classWithDefaultProperty.getItems().size());
+        assertEquals(1, classWithDefaultProperty.getItems().size());
 //        Coma separated values are currently not supported in default list properties
 //        Assertions.assertEquals(3, classWithDefaultProperty.getItems().size());
     }
@@ -46,7 +47,7 @@ public class ClassWithDefaultPropertyTest {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("class_with_default_set_property.fxml"));
         ClassWithDefaultSetProperty classWithDefaultProperty = fxmlLoader.load();
 
-        Assertions.assertEquals(1, classWithDefaultProperty.getItems().size());
+        assertEquals(1, classWithDefaultProperty.getItems().size());
 //        Coma separated values are currently not supported in default list properties
 //        Assertions.assertEquals(3, classWithDefaultProperty.getItems().size());
     }

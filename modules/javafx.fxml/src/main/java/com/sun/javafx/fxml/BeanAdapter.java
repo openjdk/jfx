@@ -652,7 +652,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     /**
-     * Determines the type of a list or set item.
+     * Determines the type of a collection.
      *
      * @param collectionType
      */

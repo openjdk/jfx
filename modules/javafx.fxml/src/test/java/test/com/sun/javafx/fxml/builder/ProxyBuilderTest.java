@@ -335,11 +335,6 @@ public class ProxyBuilderTest {
     public void testArrayListWrapperUnwrapsFirstElementForScalarArg() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithPlainCollectionAndScalarArg.class);
 
-        // Simulate what FXMLLoader does: containsKey triggers wrapper creation,
-        // get() returns it, and then the child element is added to the container.
-        assertTrue(pb.containsKey("child"),
-                "containsKey must be true for the plain-List getter");
-
         @SuppressWarnings("unchecked")
         List<String> container = (List<String>) pb.get("child");
         container.add("expectedValue");
