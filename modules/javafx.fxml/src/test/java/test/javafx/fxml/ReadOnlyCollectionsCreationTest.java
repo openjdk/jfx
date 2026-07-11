@@ -27,7 +27,8 @@ package test.javafx.fxml;
 
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.fxml.builder.ClassWithPlainCollectionAndScalarArg;
+import test.com.sun.javafx.fxml.builder.ClassWithPlainListAndScalarArg;
+import test.com.sun.javafx.fxml.builder.ClassWithPlainSetAndScalarArg;
 
 import java.io.IOException;
 
@@ -70,13 +71,20 @@ public class ReadOnlyCollectionsCreationTest {
     }
 
     @Test
-    public void testArrayListWrapperUnwrapsFirstElementViaFxml() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("array_list_wrapper_scalar_arg.fxml"));
-        ClassWithPlainCollectionAndScalarArg result = fxmlLoader.load();
+    public void testArrayListUnwrapsFirstElementViaFxml() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("array_list_scalar_arg.fxml"));
+        ClassWithPlainListAndScalarArg result = fxmlLoader.load();
 
         assertEquals("hello", result.child,
-                "FXMLLoader must unwrap the single ArrayListWrapper element "
-                + "and pass it as the scalar @NamedArg constructor argument");
+                "FXMLLoader must unwrap the single ArrayList element and pass it as the scalar @NamedArg constructor argument");
     }
 
+    @Test
+    public void testHashSetUnwrapsFirstElementViaFxml() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("hash_set_scalar_arg.fxml"));
+        ClassWithPlainSetAndScalarArg result = fxmlLoader.load();
+
+        assertEquals("hello", result.child,
+                "FXMLLoader must unwrap the single HashSet element and pass it as the scalar @NamedArg constructor argument");
+    }
 }

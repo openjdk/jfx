@@ -182,12 +182,6 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
         return o;
     }
 
-    // Wrapper for ArrayList which we use to store read-only collection
-    // properties in
-    private static class ArrayListWrapper<T> extends ArrayList<T> {
-
-    }
-
     // This is used to support read-only collection/map property.
     private Object getReadOnlyProperty(String propName) {
         Method getter = findGetter(propName);
@@ -204,7 +198,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                 return FXCollections.observableHashMap();
             }
             if (ObservableArray.class.isAssignableFrom(retType)) {
-                return new ArrayListWrapper<>();
+                return new ArrayList<>();
             }
 
             if (Map.class.isAssignableFrom(retType)) {
@@ -214,7 +208,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                 return new LinkedHashSet<>();
             }
             if (Collection.class.isAssignableFrom(retType)) {
-                return new ArrayListWrapper<>();
+                return new ArrayList<>();
             }
         }
         return null;
@@ -515,13 +509,9 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             }
             return FXCollections.observableFloatArray(floats);
         }
-
-        if (ArrayListWrapper.class.equals(val.getClass())) {
-            // accept an ArrayList so the ArrayList comes from
-            // the getTemporaryContainer method
-            // we take the first argument
-            List l = (List) val;
-            return l.get(0);
+        if (Collection.class.isAssignableFrom(val.getClass())) {
+            Collection<?> col = (Collection<?>) val;
+            return col.iterator().next();
         }
 
         return val;
@@ -658,9 +648,9 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
         @Override
         public void invoke(Object obj, Object argStr) throws Exception {
             // we know that this.method returns a Map otherwise it wouldn't be here
-            Map to = (Map) ModuleHelper.invoke(method, obj, new Object[]{});
-            if (argStr instanceof Map) {
-                to.putAll((Map) argStr);
+            Map<?, ?> to = (Map<?, ?>) ModuleHelper.invoke(method, obj, new Object[]{});
+            if (argStr instanceof Map argMap) {
+                to.putAll(argMap);
             }
         }
     }

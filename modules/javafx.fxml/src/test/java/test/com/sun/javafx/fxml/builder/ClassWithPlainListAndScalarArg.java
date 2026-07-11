@@ -48,12 +48,12 @@ import java.util.List;
  * </ClassWithPlainCollectionAndScalarArg>
  * }</pre>
  */
-public class ClassWithPlainCollectionAndScalarArg {
+public class ClassWithPlainListAndScalarArg {
 
     public final String child;
     private final List<String> childList = new ArrayList<>();
 
-    public ClassWithPlainCollectionAndScalarArg(@NamedArg("child") String child) {
+    public ClassWithPlainListAndScalarArg(@NamedArg("child") String child) {
         this.child = child;
     }
 

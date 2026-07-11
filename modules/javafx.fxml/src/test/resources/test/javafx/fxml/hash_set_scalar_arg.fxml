@@ -25,17 +25,17 @@ questions.
 -->
 
 <!--
-    Exercises the ArrayListWrapper unwrapping path in ProxyBuilder.getUserValue.
+    Exercises the HashSet unwrapping path in ProxyBuilder.getUserValue.
 
     The class has a plain List<String> getter named "child" (not ObservableList),
-    so ProxyBuilder creates an ArrayListWrapper as the temporary accumulation container.
+    so ProxyBuilder creates an HashSet as the temporary accumulation container.
     The @NamedArg constructor parameter "child" has type String (a scalar), so
-    getUserValue must detect the ArrayListWrapper and extract its first element.
+    getUserValue must detect the HashSet and extract its first element.
 -->
 <?import java.lang.String?>
-<?import test.com.sun.javafx.fxml.builder.ClassWithPlainCollectionAndScalarArg?>
-<ClassWithPlainCollectionAndScalarArg xmlns:fx="http://javafx.com/fxml">
+<?import test.com.sun.javafx.fxml.builder.ClassWithPlainSetAndScalarArg?>
+<ClassWithPlainSetAndScalarArg xmlns:fx="http://javafx.com/fxml">
     <child>
         <String fx:value="hello"/>
     </child>
-</ClassWithPlainCollectionAndScalarArg>
+</ClassWithPlainSetAndScalarArg>
