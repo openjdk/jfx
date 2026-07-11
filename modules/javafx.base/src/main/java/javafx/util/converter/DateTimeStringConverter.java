@@ -39,14 +39,18 @@ import java.util.Locale;
 /// @since JavaFX 2.1
 public class DateTimeStringConverter extends BaseStringConverter<Date> {
 
-    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
+    /// Reads the default locale at the time of creation. If the default locale is changed during the application's life,
+    /// new converters will use the new default locale.
+    private static final Locale defaultLocale() {
+        return Locale.getDefault(Locale.Category.FORMAT);
+    }
 
     private final DateFormat dateFormat;
 
     /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for both date and
     /// time styles, and the user's [Locale].
     public DateTimeStringConverter() {
-        this(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        this(defaultLocale(), DateFormat.DEFAULT, DateFormat.DEFAULT);
     }
 
     /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given date and time styles, and
@@ -57,7 +61,7 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     ///
     /// @since JavaFX 8u40
     public DateTimeStringConverter(int dateStyle, int timeStyle) {
-        this(DEFAULT_LOCALE, dateStyle, timeStyle);
+        this(defaultLocale(), dateStyle, timeStyle);
     }
 
     /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for both date and
@@ -86,7 +90,7 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     /// @param pattern the pattern describing the date and time format. If `null`, [DateFormat#DEFAULT] will be used for
     ///        both date and time.
     public DateTimeStringConverter(String pattern) {
-        this(DEFAULT_LOCALE, pattern);
+        this(defaultLocale(), pattern);
     }
 
     /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given pattern and `Locale`.
@@ -104,11 +108,11 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     ///        `null`, a default formatter/parser will be used.
     public DateTimeStringConverter(DateFormat dateFormat) {
         this.dateFormat = dateFormat != null ? dateFormat :
-                create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null);
+                create(defaultLocale(), DateFormat.DEFAULT, DateFormat.DEFAULT, null);
     }
 
     private DateFormat create(Locale locale, int dateStyle, int timeStyle, String pattern) {
-        locale = locale != null ? locale : DEFAULT_LOCALE;
+        locale = locale != null ? locale : defaultLocale();
         DateFormat dateFormat = pattern == null ?
                 getSpecializedDateFormat(dateStyle, timeStyle, locale) :
                 new SimpleDateFormat(pattern, locale);

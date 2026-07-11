@@ -39,14 +39,19 @@ import java.util.Objects;
 /// Base class for the java.time types converters.
 abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStringConverter<T> {
 
-    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
+    /// Reads the default locale at the time of creation. If the default locale is changed during the application's life,
+    /// new converters will use the new default locale.
+    private static final Locale defaultLocale() {
+        return Locale.getDefault(Locale.Category.FORMAT);
+    }
+
     private static final Chronology DEFAULT_CHRONO = IsoChronology.INSTANCE;
 
     private final DateTimeFormatter formatter;
     private final DateTimeFormatter parser;
 
     protected BaseTemporalStringConverter(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
-        locale = Objects.requireNonNullElse(locale, DEFAULT_LOCALE);
+        locale = Objects.requireNonNullElse(locale, defaultLocale());
         chrono = Objects.requireNonNullElse(chrono, DEFAULT_CHRONO);
         formatter = createFormatter(dateStyle, timeStyle, locale, chrono);
         parser = createParser(dateStyle, timeStyle, locale, chrono);
@@ -55,10 +60,10 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
     protected BaseTemporalStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser,
             FormatStyle dateStyle, FormatStyle timeStyle) {
         this.formatter = formatter != null ? formatter :
-                createFormatter(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
+                createFormatter(dateStyle, timeStyle, defaultLocale(), DEFAULT_CHRONO);
         this.parser = parser != null ? parser :
                 formatter != null ? formatter :
-                    createParser(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
+                    createParser(dateStyle, timeStyle, defaultLocale(), DEFAULT_CHRONO);
     }
 
     private final DateTimeFormatter createParser(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
