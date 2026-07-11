@@ -38,8 +38,6 @@ public class ClassWithDefaultPropertyTest {
         ClassWithDefaultListProperty classWithDefaultProperty = fxmlLoader.load();
 
         assertEquals(1, classWithDefaultProperty.getItems().size());
-//        Coma separated values are currently not supported in default list properties
-//        Assertions.assertEquals(3, classWithDefaultProperty.getItems().size());
     }
 
     @Test
@@ -48,8 +46,6 @@ public class ClassWithDefaultPropertyTest {
         ClassWithDefaultSetProperty classWithDefaultProperty = fxmlLoader.load();
 
         assertEquals(1, classWithDefaultProperty.getItems().size());
-//        Coma separated values are currently not supported in default list properties
-//        Assertions.assertEquals(3, classWithDefaultProperty.getItems().size());
     }
 
 }
