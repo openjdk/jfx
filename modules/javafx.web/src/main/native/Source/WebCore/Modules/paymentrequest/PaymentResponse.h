@@ -30,6 +30,8 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include "PaymentAddress.h"
 #include <wtf/WeakPtr.h>

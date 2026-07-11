@@ -28,6 +28,7 @@
 
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoKeyOKP.h"
+#include "ExceptionOr.h"
 #include "NotImplemented.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>

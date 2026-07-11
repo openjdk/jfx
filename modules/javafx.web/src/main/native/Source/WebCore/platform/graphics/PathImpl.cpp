@@ -40,7 +40,7 @@ void PathImpl::addLinesForRect(const FloatRect& rect)
     add(PathCloseSubpath { });
 }
 
-void PathImpl::addBeziersForRoundedRect(const FloatRoundedRect& roundedRect)
+Vector<PathSegment, 10> PathImpl::beziersForRoundedRect(const FloatRoundedRect& roundedRect)
 {
     const auto& radii = roundedRect.radii();
     const auto& rect = roundedRect.rect();
@@ -50,37 +50,42 @@ void PathImpl::addBeziersForRoundedRect(const FloatRoundedRect& roundedRect)
     const auto& bottomLeftRadius = radii.bottomLeft();
     const auto& bottomRightRadius = radii.bottomRight();
 
-    add(PathMoveTo { FloatPoint(rect.x() + topLeftRadius.width(), rect.y()) });
+    Vector<PathSegment, 10> segments;
+    segments.append(PathSegment(PathMoveTo { FloatPoint(rect.x() + topLeftRadius.width(), rect.y()) }));
 
-    add(PathLineTo { FloatPoint(rect.maxX() - topRightRadius.width(), rect.y()) });
+    segments.append(PathSegment(PathLineTo { FloatPoint(rect.maxX() - topRightRadius.width(), rect.y()) }));
     if (topRightRadius.width() > 0 || topRightRadius.height() > 0) {
-        add(PathBezierCurveTo { FloatPoint(rect.maxX() - topRightRadius.width() * circleControlPoint(), rect.y()),
+        segments.append(PathSegment(PathBezierCurveTo { FloatPoint(rect.maxX() - topRightRadius.width() * circleControlPoint(), rect.y()),
             FloatPoint(rect.maxX(), rect.y() + topRightRadius.height() * circleControlPoint()),
-            FloatPoint(rect.maxX(), rect.y() + topRightRadius.height()) });
+            FloatPoint(rect.maxX(), rect.y() + topRightRadius.height()) }));
     }
 
-    add(PathLineTo { FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height()) });
+    segments.append(PathSegment(PathLineTo { FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height()) }));
+
     if (bottomRightRadius.width() > 0 || bottomRightRadius.height() > 0) {
-        add(PathBezierCurveTo { FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height() * circleControlPoint()),
+        segments.append(PathSegment(PathBezierCurveTo { FloatPoint(rect.maxX(), rect.maxY() - bottomRightRadius.height() * circleControlPoint()),
             FloatPoint(rect.maxX() - bottomRightRadius.width() * circleControlPoint(), rect.maxY()),
-            FloatPoint(rect.maxX() - bottomRightRadius.width(), rect.maxY()) });
+            FloatPoint(rect.maxX() - bottomRightRadius.width(), rect.maxY()) }));
     }
 
-    add(PathLineTo { FloatPoint(rect.x() + bottomLeftRadius.width(), rect.maxY()) });
+    segments.append(PathSegment(PathLineTo { FloatPoint(rect.x() + bottomLeftRadius.width(), rect.maxY()) }));
     if (bottomLeftRadius.width() > 0 || bottomLeftRadius.height() > 0) {
-        add(PathBezierCurveTo { FloatPoint(rect.x() + bottomLeftRadius.width() * circleControlPoint(), rect.maxY()),
+        segments.append(PathSegment(PathBezierCurveTo { FloatPoint(rect.x() + bottomLeftRadius.width() * circleControlPoint(), rect.maxY()),
             FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height() * circleControlPoint()),
-            FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height()) });
+            FloatPoint(rect.x(), rect.maxY() - bottomLeftRadius.height()) }));
     }
 
-    add(PathLineTo { FloatPoint(rect.x(), rect.y() + topLeftRadius.height()) });
+    segments.append(PathSegment(PathLineTo { FloatPoint(rect.x(), rect.y() + topLeftRadius.height()) }));
+
     if (topLeftRadius.width() > 0 || topLeftRadius.height() > 0) {
-        add(PathBezierCurveTo { FloatPoint(rect.x(), rect.y() + topLeftRadius.height() * circleControlPoint()),
+        segments.append(PathSegment(PathBezierCurveTo { FloatPoint(rect.x(), rect.y() + topLeftRadius.height() * circleControlPoint()),
             FloatPoint(rect.x() + topLeftRadius.width() * circleControlPoint(), rect.y()),
-            FloatPoint(rect.x() + topLeftRadius.width(), rect.y()) });
+            FloatPoint(rect.x() + topLeftRadius.width(), rect.y()) }));
     }
 
-    add(PathCloseSubpath { });
+    segments.append(PathSegment(PathCloseSubpath { }));
+    ASSERT(segments.size() <= 10); // Update the preallocated vector size and call sites if the amount changes.
+    return segments;
 }
 
 void PathImpl::applySegments(const PathSegmentApplier& applier) const

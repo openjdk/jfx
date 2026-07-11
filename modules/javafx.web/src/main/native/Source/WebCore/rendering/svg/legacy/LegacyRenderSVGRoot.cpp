@@ -61,9 +61,6 @@ const int defaultHeight = 150;
 
 LegacyRenderSVGRoot::LegacyRenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
     : RenderReplaced(Type::LegacySVGRoot, element, WTFMove(style), ReplacedFlag::UsesBoundaryCaching)
-    , m_isLayoutSizeChanged(false)
-    , m_needsBoundariesOrTransformUpdate(true)
-    , m_hasBoxDecorations(false)
 {
     ASSERT(isLegacyRenderSVGRoot());
     LayoutSize intrinsicSize(calculateIntrinsicSize());
@@ -96,21 +93,20 @@ FloatSize LegacyRenderSVGRoot::calculateIntrinsicSize() const
     return FloatSize(floatValueForLength(svgSVGElement().intrinsicWidth(), 0), floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
 }
 
-void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
+std::pair<FloatSize, FloatSize> LegacyRenderSVGRoot::computeIntrinsicSizeAndPreferredAspectRatio() const
 {
     ASSERT(!shouldApplySizeContainment());
 
     // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
-    intrinsicSize = calculateIntrinsicSize();
+    auto intrinsicSize = calculateIntrinsicSize();
 
-    if (style().aspectRatioType() == AspectRatioType::Ratio) {
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
-        return;
-    }
+    if (style().aspectRatio().isRatio())
+        return { intrinsicSize, FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value) };
 
     std::optional<FloatSize> intrinsicRatioValue;
+    FloatSize preferredAspectRatio;
     if (!intrinsicSize.isEmpty())
-        intrinsicRatio = { intrinsicSize.width(), intrinsicSize.height() };
+        preferredAspectRatio = { intrinsicSize.width(), intrinsicSize.height() };
     else {
         FloatSize viewBoxSize = svgSVGElement().viewBox().size();
         if (!viewBoxSize.isEmpty()) {
@@ -120,9 +116,10 @@ void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicS
     }
 
     if (intrinsicRatioValue)
-        intrinsicRatio = *intrinsicRatioValue;
-    else if (style().aspectRatioType() == AspectRatioType::AutoAndRatio)
-        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
+        preferredAspectRatio = *intrinsicRatioValue;
+    else if (style().aspectRatio().isAutoAndRatio())
+        preferredAspectRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth().value, style().aspectRatioLogicalHeight().value);
+    return { intrinsicSize, preferredAspectRatio };
 }
 
 bool LegacyRenderSVGRoot::isEmbeddedThroughSVGImage() const
@@ -191,7 +188,7 @@ void LegacyRenderSVGRoot::layout()
     if (!m_resourcesNeedingToInvalidateClients.isEmptyIgnoringNullReferences()) {
         // Invalidate resource clients, which may mark some nodes for layout.
         for (auto& resource :  m_resourcesNeedingToInvalidateClients) {
-            resource.removeAllClientsFromCache();
+            resource.removeAllClientsFromCacheAndMarkForInvalidation();
             SVGResourcesCache::clientStyleChanged(resource, StyleDifference::Layout, nullptr, resource.style());
         }
 
@@ -241,6 +238,8 @@ bool LegacyRenderSVGRoot::shouldApplyViewportClip() const
 
 void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     // An empty viewport disables rendering.
     bool clipViewport = shouldApplyViewportClip();
     if (clipViewport && contentBoxSize().isEmpty())
@@ -456,7 +455,7 @@ void LegacyRenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* ance
     RenderReplaced::mapLocalToContainer(ancestorContainer, transformState, mode | ApplyContainerFlip, wasFixed);
 }
 
-const RenderObject* LegacyRenderSVGRoot::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* LegacyRenderSVGRoot::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     return RenderReplaced::pushMappingToContainer(ancestorToStopAt, geometryMap);
 }
@@ -466,11 +465,14 @@ void LegacyRenderSVGRoot::updateCachedBoundaries()
     m_strokeBoundingBox = std::nullopt;
     m_repaintBoundingBox = { };
     m_accurateRepaintBoundingBox = std::nullopt;
-    FloatRect repaintBoundingBox;
-    SVGRenderSupport::computeContainerBoundingBoxes(*this, m_objectBoundingBox, m_objectBoundingBoxValid, repaintBoundingBox);
-    SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox);
-    repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-    m_repaintBoundingBox = repaintBoundingBox;
+
+    auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this);
+    m_objectBoundingBox = boundingBoxes.objectBoundingBox;
+
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox);
+    boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+    m_repaintBoundingBox = boundingBoxes.repaintBoundingBox;
 }
 
 FloatRect LegacyRenderSVGRoot::strokeBoundingBox() const
@@ -493,13 +495,12 @@ FloatRect LegacyRenderSVGRoot::repaintRectInLocalCoordinates(RepaintRectCalculat
     if (!m_accurateRepaintBoundingBox) {
         // Initialize m_accurateRepaintBoundingBox before calling computeContainerBoundingBoxes, since recursively referenced markers can cause us to re-enter here.
         m_accurateRepaintBoundingBox = FloatRect { };
-        FloatRect objectBoundingBox;
-        FloatRect repaintBoundingBox;
-        bool objectBoundingBoxValid = true;
-        SVGRenderSupport::computeContainerBoundingBoxes(*this, objectBoundingBox, objectBoundingBoxValid, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintBoundingBox, RepaintRectCalculation::Accurate);
-        repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
-        m_accurateRepaintBoundingBox = repaintBoundingBox;
+
+        auto boundingBoxes = SVGRenderSupport::computeContainerBoundingBoxes(*this, RepaintRectCalculation::Accurate);
+        SVGRenderSupport::intersectRepaintRectWithResources(*this, boundingBoxes.repaintBoundingBox, RepaintRectCalculation::Accurate);
+        boundingBoxes.repaintBoundingBox.inflate(horizontalBorderAndPaddingExtent());
+
+        m_accurateRepaintBoundingBox = boundingBoxes.repaintBoundingBox;
     }
     return *m_accurateRepaintBoundingBox;
 }

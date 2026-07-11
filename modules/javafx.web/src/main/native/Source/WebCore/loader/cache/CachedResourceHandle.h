@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,10 +78,6 @@ public:
 };
 
 template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, const RR* res)
-{
-    return h.get() == res;
-}
-template <class R, class RR> bool operator==(const RR* res, const CachedResourceHandle<R>& h)
 {
     return h.get() == res;
 }

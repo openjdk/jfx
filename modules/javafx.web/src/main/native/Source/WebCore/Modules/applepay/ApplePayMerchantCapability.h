@@ -28,9 +28,10 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySessionPaymentRequest.h"
-#include "ExceptionOr.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class ApplePayMerchantCapability {
     Supports3DS,

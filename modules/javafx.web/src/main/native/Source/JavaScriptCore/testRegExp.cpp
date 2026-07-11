@@ -218,7 +218,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
     bool escape = false;
 
     for (int i = 0; i < bufferLength; ++i) {
-        UChar c = buffer[i];
+        char16_t c = buffer[i];
 
         if (escape) {
             switch (c) {
@@ -258,7 +258,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
                 unsigned int charValue;
                 if (sscanf(buffer+i+1, "%04x", &charValue) != 1)
                     return -1;
-                c = static_cast<UChar>(charValue);
+                c = static_cast<char16_t>(charValue);
                 i += 4;
                 break;
             }
@@ -406,7 +406,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
         unsigned int lineNumber = 0;
         const char* regexpError = nullptr;
 
-        while ((linePtr = fgets(lineBuffer.data(), MaxLineLength, testCasesFile))) {
+        while ((linePtr = fgets(lineBuffer.mutableSpan().data(), MaxLineLength, testCasesFile))) {
             lineLength = strlen(linePtr);
             if (linePtr[lineLength - 1] == '\n') {
                 linePtr[lineLength - 1] = '\0';
@@ -463,7 +463,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
 
 #define RUNNING_FROM_XCODE 0
 
-static NO_RETURN void printUsageStatement(bool help = false)
+[[noreturn]] static void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: regexp_test [options] file\n");
     fprintf(stderr, "  -h|--help  Prints this help message\n");

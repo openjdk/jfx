@@ -27,6 +27,7 @@
 
 #include "DeferGC.h"
 #include <wtf/Lock.h>
+#include <wtf/Locker.h>
 #include <wtf/NoLock.h>
 
 namespace JSC {

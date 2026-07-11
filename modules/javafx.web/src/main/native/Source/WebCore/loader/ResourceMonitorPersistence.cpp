@@ -79,21 +79,36 @@ static ContinuousApproximateTime doubleToContinuousApproximateTime(double timest
 void ResourceMonitorPersistence::reportSQLError(ASCIILiteral method, ASCIILiteral action)
 {
     RELEASE_LOG_ERROR(ResourceMonitoring, "ResourceMonitorPersistence::%" PUBLIC_LOG_STRING ": Failed to %" PUBLIC_LOG_STRING " (%d) - %" PUBLIC_LOG_STRING, method.characters(), action.characters(), m_sqliteDB->lastError(), m_sqliteDB->lastErrorMsg());
+#if RELEASE_LOG_DISABLED
+    UNUSED_PARAM(method);
+    UNUSED_PARAM(action);
+#endif
 }
 
-bool ResourceMonitorPersistence::openDatabase(String&& path)
+static String databasePath(const String& directoryPath)
+{
+    if (directoryPath.isEmpty())
+        return SQLiteDatabase::inMemoryPath();
+    return FileSystem::pathByAppendingComponent(directoryPath, "ResourceMonitorPersistence.db"_s);
+}
+
+bool ResourceMonitorPersistence::openDatabase(String&& directoryPath)
 {
     ASSERT(!isMainThread());
 
-    FileSystem::makeAllDirectories(FileSystem::parentPath(path));
+    FileSystem::makeAllDirectories(directoryPath);
 
     m_sqliteDB = makeUnique<SQLiteDatabase>();
+    // This database is accessed from serial queue ResourceMonitorThrottlerHolder::sharedWorkQueueSingleton().
+    m_sqliteDB->disableThreadingChecks();
 
     auto reportErrorAndCloseDatabase = [&](ASCIILiteral action) {
         reportSQLError("openDatabase"_s, action);
         closeDatabase();
         return false;
     };
+
+    const auto path = databasePath(directoryPath);
 
     if (!m_sqliteDB->open(path, SQLiteDatabase::OpenMode::ReadWriteCreate, SQLiteDatabase::OpenOptions::CanSuspendWhileLocked))
         return reportErrorAndCloseDatabase("open database"_s);

@@ -25,7 +25,9 @@
 #include "AudioBus.h"
 #include "GStreamerAudioData.h"
 #include "GStreamerAudioStreamDescription.h"
+#include "GStreamerCommon.h"
 #include "Logging.h"
+#include <wtf/MediaTime.h>
 
 namespace WebCore {
 
@@ -36,7 +38,7 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
         return;
     }
 
-    MediaTime mediaTime((m_numberOfFrames * G_USEC_PER_SEC) / m_currentSettings.sampleRate(), G_USEC_PER_SEC);
+    WTF::MediaTime mediaTime((m_numberOfFrames * G_USEC_PER_SEC) / m_currentSettings.sampleRate(), G_USEC_PER_SEC);
     m_numberOfFrames += numberOfFrames;
 
     // Lazily initialize caps, the settings don't change so this is OK.
@@ -46,19 +48,16 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
         m_caps = adoptGRef(gst_audio_info_to_caps(&m_info));
     }
 
-    auto buffer = adoptGRef(gst_buffer_new());
+    auto channels = bus.numberOfChannels();
+    auto buffer = adoptGRef(gst_buffer_new_and_alloc(sizeof(float) * numberOfFrames * channels));
     GST_BUFFER_PTS(buffer.get()) = toGstClockTime(mediaTime);
     GST_BUFFER_FLAG_SET(buffer.get(), GST_BUFFER_FLAG_LIVE);
 
-    for (size_t channelIndex = 0; channelIndex < bus.numberOfChannels(); ++channelIndex) {
-        auto& channel = *bus.channel(channelIndex);
-        auto dataSize = sizeof(float) * channel.length();
-
-        bus.ref();
-        gst_buffer_append_memory(buffer.get(), gst_memory_new_wrapped(GST_MEMORY_FLAG_READONLY, channel.mutableData(), dataSize, 0, dataSize, &bus, reinterpret_cast<GDestroyNotify>(+[](gpointer data) {
-            auto bus = reinterpret_cast<AudioBus*>(data);
-            bus->deref();
-        })));
+    {
+        GstMappedBuffer map(buffer, GST_MAP_WRITE);
+        auto dest = map.mutableSpan<float>();
+        for (size_t channel = 0; channel < channels; ++channel)
+            memcpySpan(dest.subspan(channel * numberOfFrames, numberOfFrames), bus.channel(channel)->span());
     }
 
     gst_buffer_add_audio_meta(buffer.get(), &m_info, numberOfFrames, nullptr);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ namespace WebCore {
 
     // Once disabled via one or more more calls to disableSuddenTermination(), fast shutdown
     // is not valid until enableSuddenTermination() has been called an equal number of times.
-    // On Mac, these are thin wrappers around Mac OS X functions of the same name.
+    // On Mac, these are thin wrappers around macOS functions of the same name.
 #if PLATFORM(MAC)
     WEBCORE_EXPORT void disableSuddenTermination();
     WEBCORE_EXPORT void enableSuddenTermination();

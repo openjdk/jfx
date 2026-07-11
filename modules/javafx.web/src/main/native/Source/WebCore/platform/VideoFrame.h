@@ -36,7 +36,9 @@
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-typedef struct __CVBuffer *CVPixelBufferRef;
+#if PLATFORM(COCOA)
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
+#endif
 
 namespace WebCore {
 
@@ -108,6 +110,7 @@ public:
 #endif
 #if PLATFORM(COCOA)
     virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
+    RetainPtr<CVPixelBufferRef> protectedPixelBuffer() const { return pixelBuffer(); }
 #endif
     WEBCORE_EXPORT virtual void setOwnershipIdentity(const ProcessIdentity&) { }
 
@@ -116,6 +119,9 @@ public:
     void draw(GraphicsContext&, const FloatRect&, ImageOrientation, bool shouldDiscardAlpha);
 
     const PlatformVideoColorSpace& colorSpace() const { return m_colorSpace; }
+
+    bool hasNoTransformation() const { return m_rotation == VideoFrameRotation::None && !m_isMirrored; }
+    bool has90DegreeRotation() const { return m_rotation == VideoFrameRotation::Left || m_rotation == VideoFrameRotation::Right; }
 
 protected:
     WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation, PlatformVideoColorSpace&& = { });

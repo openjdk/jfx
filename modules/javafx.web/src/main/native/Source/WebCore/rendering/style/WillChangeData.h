@@ -103,7 +103,7 @@ private:
             case Feature::Property:
                 ASSERT(willChangeProperty != CSSPropertyInvalid);
                 m_cssPropertyID = willChangeProperty;
-                FALLTHROUGH;
+                [[fallthrough]];
             case Feature::ScrollPosition:
             case Feature::Contents:
                 m_feature = willChange;

@@ -180,7 +180,7 @@ template<> struct Converter<IDLFloat> : DefaultConverter<IDLFloat> {
 
     static inline Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, double number)
     {
-        if (UNLIKELY(!std::isfinite(number))) {
+        if (!std::isfinite(number)) [[unlikely]] {
             throwNonFiniteTypeError(lexicalGlobalObject, scope);
             return Result::exception();
         }
@@ -193,11 +193,11 @@ template<> struct Converter<IDLFloat> : DefaultConverter<IDLFloat> {
         auto scope = DECLARE_THROW_SCOPE(vm);
         double number = value.toNumber(&lexicalGlobalObject);
         RETURN_IF_EXCEPTION(scope, Result::exception());
-        if (UNLIKELY(!std::isfinite(number))) {
+        if (!std::isfinite(number)) [[unlikely]] {
             throwNonFiniteTypeError(lexicalGlobalObject, scope);
             return Result::exception();
     }
-        if (UNLIKELY(number < std::numeric_limits<float>::lowest() || number > std::numeric_limits<float>::max())) {
+        if (number < std::numeric_limits<float>::lowest() || number > std::numeric_limits<float>::max()) [[unlikely]] {
             throwTypeError(&lexicalGlobalObject, scope, "The provided value is outside the range of a float"_s);
             return Result::exception();
         }
@@ -222,9 +222,9 @@ template<> struct Converter<IDLUnrestrictedFloat> : DefaultConverter<IDLUnrestri
 
         RETURN_IF_EXCEPTION(scope, Result::exception());
 
-        if (UNLIKELY(number < std::numeric_limits<float>::lowest()))
+        if (number < std::numeric_limits<float>::lowest()) [[unlikely]]
             return -std::numeric_limits<float>::infinity();
-        if (UNLIKELY(number > std::numeric_limits<float>::max()))
+        if (number > std::numeric_limits<float>::max()) [[unlikely]]
             return std::numeric_limits<float>::infinity();
         return static_cast<float>(number);
     }
@@ -235,7 +235,7 @@ template<> struct Converter<IDLDouble> : DefaultConverter<IDLDouble> {
 
     static inline Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, double number)
     {
-        if (UNLIKELY(!std::isfinite(number))) {
+        if (!std::isfinite(number)) [[unlikely]] {
             throwNonFiniteTypeError(lexicalGlobalObject, scope);
             return Result::exception();
         }
@@ -251,7 +251,7 @@ template<> struct Converter<IDLDouble> : DefaultConverter<IDLDouble> {
 
         RETURN_IF_EXCEPTION(scope, Result::exception());
 
-        if (UNLIKELY(!std::isfinite(number))) {
+        if (!std::isfinite(number)) [[unlikely]] {
             throwNonFiniteTypeError(lexicalGlobalObject, scope);
             return Result::exception();
         }

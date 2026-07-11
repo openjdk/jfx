@@ -51,7 +51,7 @@ class GlyphDisplayListCacheEntry : public RefCounted<GlyphDisplayListCacheEntry>
     friend struct GlyphDisplayListCacheKeyTranslator;
     friend void add(Hasher&, const GlyphDisplayListCacheEntry&);
 public:
-    static Ref<GlyphDisplayListCacheEntry> create(std::unique_ptr<DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
+    static Ref<GlyphDisplayListCacheEntry> create(Ref<const DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
     {
         return adoptRef(*new GlyphDisplayListCacheEntry(WTFMove(displayList), textRun, font, context));
     }
@@ -66,20 +66,19 @@ public:
             && m_shouldSubpixelQuantizeFont == other.m_shouldSubpixelQuantizeFont;
     }
 
-    DisplayList::DisplayList& displayList() { return *m_displayList.get(); }
+    const DisplayList::DisplayList& displayList() const { return m_displayList.get(); }
 
 private:
-    GlyphDisplayListCacheEntry(std::unique_ptr<DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
+    GlyphDisplayListCacheEntry(Ref<const DisplayList::DisplayList>&& displayList, const TextRun& textRun, const FontCascade& font, GraphicsContext& context)
         : m_displayList(WTFMove(displayList))
         , m_textRun(textRun.isolatedCopy())
         , m_scaleFactor(context.scaleFactor())
         , m_fontCascadeGeneration(font.generation())
         , m_shouldSubpixelQuantizeFont(context.shouldSubpixelQuantizeFonts())
     {
-        ASSERT(m_displayList.get());
     }
 
-    std::unique_ptr<DisplayList::DisplayList> m_displayList;
+    Ref<const DisplayList::DisplayList> m_displayList;
 
     TextRun m_textRun;
     FloatSize m_scaleFactor;
@@ -109,11 +108,11 @@ public:
 
     static GlyphDisplayListCache& singleton();
 
-    DisplayList::DisplayList* get(const LegacyInlineTextBox&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
-    DisplayList::DisplayList* get(const InlineDisplay::Box&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    RefPtr<const DisplayList::DisplayList> get(const LegacyInlineTextBox&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    RefPtr<const DisplayList::DisplayList> get(const InlineDisplay::Box&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
 
-    DisplayList::DisplayList* getIfExists(const LegacyInlineTextBox&);
-    DisplayList::DisplayList* getIfExists(const InlineDisplay::Box&);
+    RefPtr<const DisplayList::DisplayList> getIfExists(const LegacyInlineTextBox&);
+    RefPtr<const DisplayList::DisplayList> getIfExists(const InlineDisplay::Box&);
 
     void remove(const LegacyInlineTextBox& run) { remove(&run); }
     void remove(const InlineDisplay::Box& run) { remove(&run); }
@@ -129,12 +128,14 @@ public:
 private:
     static bool canShareDisplayList(const DisplayList::DisplayList&);
 
-    template<typename LayoutRun> DisplayList::DisplayList* getDisplayList(const LayoutRun&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
-    template<typename LayoutRun> DisplayList::DisplayList* getIfExistsImpl(const LayoutRun&);
+    template<typename LayoutRun>
+    RefPtr<const DisplayList::DisplayList> getDisplayList(const LayoutRun&, const FontCascade&, GraphicsContext&, const TextRun&, const PaintInfo&);
+    template<typename LayoutRun>
+    RefPtr<const DisplayList::DisplayList> getIfExistsImpl(const LayoutRun&);
     void remove(const void* run);
 
-    UncheckedKeyHashMap<const void*, Ref<GlyphDisplayListCacheEntry>> m_entriesForLayoutRun;
-    UncheckedKeyHashSet<SingleThreadWeakRef<GlyphDisplayListCacheEntry>> m_entries;
+    HashMap<const void*, Ref<GlyphDisplayListCacheEntry>> m_entriesForLayoutRun;
+    HashSet<SingleThreadWeakRef<GlyphDisplayListCacheEntry>> m_entries;
     bool m_forceUseGlyphDisplayListForTesting { false };
 };
 

@@ -31,6 +31,7 @@
 #include "Image.h"
 #include "Editor.h"
 #include "ElementInlines.h"
+#include "ContainerNodeInlines.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "LocalFrame.h"

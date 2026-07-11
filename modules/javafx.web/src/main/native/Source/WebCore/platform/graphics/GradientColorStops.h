@@ -28,6 +28,7 @@
 #include "GradientColorStop.h"
 #include <algorithm>
 #include <optional>
+#include <ranges>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -71,9 +72,7 @@ public:
         if (m_isSorted)
             return;
 
-        std::stable_sort(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
-            return a.offset < b.offset;
-        });
+        std::ranges::stable_sort(m_stops, { }, &GradientColorStop::offset);
         m_isSorted = true;
     }
 
@@ -86,8 +85,8 @@ public:
     size_t size() const { return m_stops.size(); }
     bool isEmpty() const { return m_stops.isEmpty(); }
 
-    StopVector::const_iterator begin() const { return m_stops.begin(); }
-    StopVector::const_iterator end() const { return m_stops.end(); }
+    StopVector::const_iterator begin() const LIFETIME_BOUND { return m_stops.begin(); }
+    StopVector::const_iterator end() const LIFETIME_BOUND { return m_stops.end(); }
 
     template<typename MapFunction> GradientColorStops mapColors(MapFunction&& mapFunction) const
     {
@@ -111,9 +110,7 @@ private:
 #if ASSERT_ENABLED
     bool validateIsSorted() const
     {
-        return std::is_sorted(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
-            return a.offset < b.offset;
-        });
+        return std::ranges::is_sorted(m_stops, { }, &GradientColorStop::offset);
     }
 #endif
 

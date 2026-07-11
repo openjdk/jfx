@@ -35,6 +35,7 @@
 #include "CSSSerializationContext.h"
 #include "Element.h"
 #include "HTMLParserIdioms.h"
+#include <ranges>
 #include <wtf/ListHashSet.h>
 #include <wtf/URL.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -128,7 +129,7 @@ static bool parseDescriptors(Vector<StringView>& descriptors, DescriptorParsingR
         if (descriptor.isEmpty())
             continue;
         unsigned descriptorCharPosition = descriptor.length() - 1;
-        UChar descriptorChar = descriptor[descriptorCharPosition];
+        char16_t descriptorChar = descriptor[descriptorCharPosition];
         descriptor = descriptor.left(descriptorCharPosition);
         if (descriptorChar == 'x') {
             if (result.hasDensity() || result.hasHeight() || result.hasWidth())
@@ -213,7 +214,7 @@ Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(StringView attrib
     if (attribute.is8Bit())
         return parseImageCandidatesFromSrcsetAttribute<LChar>(attribute.span8());
     else
-        return parseImageCandidatesFromSrcsetAttribute<UChar>(attribute.span16());
+        return parseImageCandidatesFromSrcsetAttribute<char16_t>(attribute.span16());
 }
 
 void getURLsFromSrcsetAttribute(const Element& element, StringView attribute, ListHashSet<URL>& urls)
@@ -271,7 +272,7 @@ static ImageCandidate pickBestImageCandidate(float deviceScaleFactor, Vector<Ima
             candidate.density = DefaultDensityValue;
     }
 
-    std::stable_sort(imageCandidates.begin(), imageCandidates.end(), compareByDensity);
+    std::ranges::stable_sort(imageCandidates, compareByDensity);
 
     unsigned i;
     for (i = 0; i < imageCandidates.size() - 1; ++i) {
@@ -294,7 +295,7 @@ static ImageCandidate pickBestImageCandidate(float deviceScaleFactor, Vector<Ima
     return imageCandidates[winner];
 }
 
-ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const AtomString& srcAttribute, StringView srcsetAttribute, float sourceSize, Function<bool(const ImageCandidate&)>&& shouldIgnoreCandidateCallback)
+ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const AtomString& srcAttribute, StringView srcsetAttribute, float sourceSize, NOESCAPE const Function<bool(const ImageCandidate&)>& shouldIgnoreCandidateCallback)
 {
     if (srcsetAttribute.isNull()) {
         if (srcAttribute.isNull())

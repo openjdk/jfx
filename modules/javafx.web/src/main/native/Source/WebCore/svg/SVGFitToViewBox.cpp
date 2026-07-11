@@ -25,6 +25,7 @@
 #include "AffineTransform.h"
 #include "Document.h"
 #include "FloatRect.h"
+#include "NodeInlines.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
@@ -100,7 +101,7 @@ std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringParsingBuffer<LChar
     return parseViewBoxGeneric(buffer, validate);
 }
 
-std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringParsingBuffer<UChar>& buffer, bool validate)
+std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringParsingBuffer<char16_t>& buffer, bool validate)
 {
     return parseViewBoxGeneric(buffer, validate);
 }
@@ -117,7 +118,7 @@ template<typename CharacterType> std::optional<FloatRect> SVGFitToViewBox::parse
     auto height = parseNumber(buffer, SuffixSkippingPolicy::DontSkip);
 
     if (validate) {
-        Ref document = m_viewBox->contextElement()->document();
+        Ref document = Ref { m_viewBox }->contextElement()->document();
 
         if (!x || !y || !width || !height) {
             document->checkedSVGExtensions()->reportWarning(makeString("Problem parsing viewBox=\""_s, stringToParse, "\""_s));

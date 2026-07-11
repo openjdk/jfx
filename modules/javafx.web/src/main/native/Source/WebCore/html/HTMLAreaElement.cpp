@@ -23,6 +23,7 @@
 #include "HTMLAreaElement.h"
 
 #include "AffineTransform.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
@@ -103,29 +104,26 @@ bool HTMLAreaElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size
 }
 
 // FIXME: We should use RenderElement* instead of RenderObject* once we upstream iOS's DOMUIKitExtensions.{h, mm}.
-Path HTMLAreaElement::computePath(RenderObject* obj) const
+Path HTMLAreaElement::computePath(const RenderElement& renderer) const
 {
-    if (!obj)
-        return Path();
-
     // FIXME: This doesn't work correctly with transforms.
-    FloatPoint absPos = obj->localToAbsolute();
+    FloatPoint absPos = renderer.localToAbsolute();
 
     // Default should default to the size of the containing object.
     LayoutSize size = m_lastSize;
     if (isDefault())
-        size = obj->absoluteOutlineBounds().size();
+        size = renderer.absoluteOutlineBounds().size();
 
-    Path p = getRegion(size);
-    float zoomFactor = obj->style().usedZoom();
+    auto path = getRegion(size);
+    float zoomFactor = renderer.style().usedZoom();
     if (zoomFactor != 1.0f) {
         AffineTransform zoomTransform;
         zoomTransform.scale(zoomFactor);
-        p.transform(zoomTransform);
+        path.transform(zoomTransform);
     }
 
-    p.translate(toFloatSize(absPos));
-    return p;
+    path.translate(toFloatSize(absPos));
+    return path;
 }
 
 Path HTMLAreaElement::computePathForFocusRing(const LayoutSize& elementSize) const
@@ -134,9 +132,16 @@ Path HTMLAreaElement::computePathForFocusRing(const LayoutSize& elementSize) con
 }
 
 // FIXME: Use RenderElement* instead of RenderObject* once we upstream iOS's DOMUIKitExtensions.{h, mm}.
-LayoutRect HTMLAreaElement::computeRect(RenderObject* obj) const
+LayoutRect HTMLAreaElement::computeRect(const RenderObject* renderer) const
 {
-    return enclosingLayoutRect(computePath(obj).fastBoundingRect());
+    if (!renderer)
+        return { };
+
+    if (is<RenderText>(renderer)) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
+    return enclosingLayoutRect(computePath(downcast<RenderElement>(*renderer)).fastBoundingRect());
 }
 
 Path HTMLAreaElement::getRegion(const LayoutSize& size) const
@@ -185,7 +190,7 @@ RefPtr<HTMLImageElement> HTMLAreaElement::imageElement() const
         return nullptr;
 }
 
-bool HTMLAreaElement::isKeyboardFocusable(KeyboardEvent*) const
+bool HTMLAreaElement::isKeyboardFocusable(const FocusEventData&) const
 {
     return isFocusable();
 }

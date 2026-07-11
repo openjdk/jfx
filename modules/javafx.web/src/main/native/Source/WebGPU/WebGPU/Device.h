@@ -27,6 +27,7 @@
 
 #import "API.h"
 #import "Adapter.h"
+#import "BindableResource.h"
 #import "HardwareCapabilities.h"
 #import "Queue.h"
 #import "WebGPU.h"
@@ -39,6 +40,10 @@
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Function.h>
+#import <wtf/HashIterators.h>
+#import <wtf/HashMap.h>
+#import <wtf/HashTable.h>
+#import <wtf/KeyValuePair.h>
 #import <wtf/Ref.h>
 #import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
@@ -80,6 +85,20 @@ using GPUShaderValidation = MTLShaderValidation;
 #else
 using GPUShaderValidation = uint32_t;
 #endif
+
+#define WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawIndexedPrimitivesIndirectArguments { \
+    MTLDrawIndexedPrimitivesIndirectArguments args;         \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDEXED_INDIRECT_STRUCT_TYPE
+
+#define WEBKIT_DRAW_INDIRECT_STRUCT_TYPE \
+struct WebKitMTLDrawPrimitivesIndirectArguments { \
+    MTLDrawPrimitivesIndirectArguments args;                \
+    unsigned lostOrOOBRead;                                 \
+};
+WEBKIT_DRAW_INDIRECT_STRUCT_TYPE
 
 // https://gpuweb.github.io/gpuweb/#gpudevice
 class Device : public WGPUDeviceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
@@ -146,6 +165,7 @@ public:
 #else
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
 #endif
+    bool isShaderValidationEnabled() const { return m_shaderValidationEnabled; }
 
     uint32_t maxBuffersPlusVertexBuffersForVertexStage() const
     {
@@ -162,13 +182,14 @@ public:
         return WGSL::vertexBufferIndexForBindGroup(groupIndex, maxBuffersPlusVertexBuffersForVertexStage() - 1);
     }
 
-    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions) const;
-    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions) const;
+    id<MTLBuffer> newBufferWithBytes(const void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
+    id<MTLBuffer> newBufferWithBytesNoCopy(void*, size_t, MTLResourceOptions, bool skipMemoryAttribution = false) const;
     id<MTLTexture> newTextureWithDescriptor(MTLTextureDescriptor *, IOSurfaceRef = nullptr, NSUInteger plane = 0) const;
 
     static bool isStencilOnlyFormat(MTLPixelFormat);
     bool shouldStopCaptureAfterSubmit();
     id<MTLBuffer> placeholderBuffer() const { return m_placeholderBuffer; }
+    uint64_t placeholderBufferUniqueId() const { return m_placeholderBuffer.gpuAddress; }
 
     id<MTLTexture> placeholderTexture(WGPUTextureFormat) const;
     bool isDestroyed() const;
@@ -181,8 +202,15 @@ public:
     id<MTLRenderPipelineState> icbCommandClampPipeline(MTLIndexType, NSUInteger rasterSampleCount);
     id<MTLFunction> icbCommandClampFunction(MTLIndexType);
     id<MTLRenderPipelineState> copyIndexIndirectArgsPipeline(NSUInteger rasterSampleCount);
-    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
-    id<MTLBuffer> safeCreateBuffer(NSUInteger) const;
+    id<MTLBuffer> safeCreateBuffer(NSUInteger length, MTLStorageMode, bool skipMemoryAttribution = false, MTLCPUCacheMode = MTLCPUCacheModeDefaultCache, MTLHazardTrackingMode = MTLHazardTrackingModeDefault) const;
+    id<MTLBuffer> safeCreateBuffer(NSUInteger, bool skipMemoryAttribution = false) const;
+    template<typename T>
+    id<MTLBuffer> safeCreateBufferWithData(const T& data) const
+    {
+        id<MTLBuffer> buffer = [m_device newBufferWithBytes:static_cast<const void*>(&data) length:sizeof(data) options:MTLResourceStorageModeShared];
+        setOwnerWithIdentity(buffer);
+        return buffer;
+    }
     void loseTheDevice(WGPUDeviceLostReason);
     int bufferIndexForICBContainer() const;
     void setOwnerWithIdentity(id<MTLResource>) const;
@@ -207,6 +235,33 @@ public:
     id<MTLSharedEvent> resolveTimestampsSharedEvent();
     uint32_t maxVerticesPerDrawCall() const { return m_maxVerticesPerDrawCall; }
     void trackTimestampsBuffer(id<MTLCommandBuffer>, id<MTLCounterSampleBuffer>);
+
+    const CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier) const
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    CommandEncoder* commandEncoderFromIdentifier(uint64_t identifier)
+    {
+        return m_commandEncoderMap.get(identifier);
+    }
+    void removeCommandEncoder(uint64_t identifier)
+    {
+        m_commandEncoderMap.remove(identifier);
+    }
+    bool supportsResidencySets() { return m_capabilities.baseCapabilities.supportsResidencySets; }
+    bool isCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void setCachedCompatibile(const BindGroupLayout&, const BindGroupLayout&) const;
+    void removeCachedBindGroupLayout(const BindGroupLayout&) const;
+    static constexpr uint64_t maxPipelines = (1ull << (64 - 5));
+    static constexpr uint64_t maxBindGroups = (1ull << 5);
+    Buffer* lookupBuffer(uint64_t address)
+    {
+        if (auto it = m_bufferMap.find(address); it != m_bufferMap.end())
+            return it->value;
+        return nullptr;
+    }
+    void removeBufferFromCache(uint64_t address) { m_bufferMap.remove(address); }
+    uint32_t appleGPUFamily() const { return m_appleGPUFamily; }
 
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
@@ -253,7 +308,7 @@ private:
 
     HardwareCapabilities m_capabilities { };
 
-    id<MTLBuffer> m_placeholderBuffer { nil };
+    id<MTLBuffer> m_placeholderBuffer { };
     id<MTLTexture> m_placeholderTexture { nil };
     id<MTLTexture> m_placeholderDepthStencilTexture { nil };
     id<MTLBuffer> m_dispatchCallBuffer { nil };
@@ -275,9 +330,6 @@ private:
     id<MTLRenderPipelineState> m_icbCommandClampUintPSOMS { nil };
     id<MTLRenderPipelineState> m_icbCommandClampUshortPSOMS { nil };
 
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSO { nil };
-    id<MTLRenderPipelineState> m_copyIndexedIndirectArgsPSOMS { nil };
-
     const Ref<Adapter> m_adapter;
     const ThreadSafeWeakPtr<Instance> m_instance;
 #if HAVE(COREVIDEO_METAL_SUPPORT)
@@ -286,10 +338,21 @@ private:
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLCounterSampleBuffer>>*>* m_sampleCounterBuffers;
     NSMapTable<id<MTLCommandBuffer>, NSMutableArray<id<MTLBuffer>>*>* m_resolvedSampleCounterBuffers;
     id<MTLSharedEvent> m_resolveTimestampsSharedEvent { nil };
+    HashMap<uint64_t, CommandEncoder*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_commandEncoderMap;
+    HashMap<uint64_t, Buffer*, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bufferMap;
+    mutable HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_bindGroupCompatibilityCache;
     uint64_t m_commandEncoderId { 0 };
+    uint64_t m_pipelineLayoutId { 0 };
+    uint64_t m_renderPipelineId { 0 };
+    uint64_t m_computePipelineId { 0 };
+    uint32_t m_bindGroupLayoutId { 0 };
+    uint32_t m_bindGroupId { 0 };
+    uint32_t m_appleGPUFamily { 0 };
     bool m_supressAllErrors { false };
     const uint32_t m_maxVerticesPerDrawCall { 0 };
-} SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
+    bool m_shaderValidationEnabled { true };
+// FIXME: remove @safe once rdar://151039766 lands
+} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refDevice, derefDevice);
 
 } // namespace WebGPU
 

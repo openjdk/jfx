@@ -28,6 +28,7 @@
 #include <utility>
 #include <wtf/FastMalloc.h>
 #include <wtf/MallocCommon.h>
+#include <wtf/Mmap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeTraits.h>
@@ -38,6 +39,7 @@ namespace WTF {
 
 template<typename T, typename Malloc = FastMalloc> class MallocSpan {
     WTF_MAKE_NONCOPYABLE(MallocSpan);
+    WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
 public:
     MallocSpan() = default;
 

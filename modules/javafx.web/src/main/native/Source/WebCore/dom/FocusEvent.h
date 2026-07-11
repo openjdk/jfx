@@ -46,6 +46,8 @@ public:
         return adoptRef(*new FocusEvent);
     }
 
+    ~FocusEvent();
+
     struct Init : UIEventInit {
         RefPtr<EventTarget> relatedTarget;
     };

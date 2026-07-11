@@ -30,7 +30,7 @@
 
 namespace WTF {
 
-template<typename T>
+template<typename T, size_t alignment = std::alignment_of_v<T>>
 class AlignedStorage {
 public:
     AlignedStorage() = default;
@@ -39,8 +39,8 @@ public:
     AlignedStorage& operator=(AlignedStorage&&) = delete;
     AlignedStorage& operator=(const AlignedStorage&) = delete;
 
-    T* get() { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<T*>(&m_storage); }
-    const T* get() const { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<const T*>(&m_storage); }
+    T* get() LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<T*>(&m_storage); }
+    const T* get() const LIFETIME_BOUND { SUPPRESS_MEMORY_UNSAFE_CAST return reinterpret_cast_ptr<const T*>(&m_storage); }
 
     T& operator*() { return *get(); }
     T* operator->() { return get(); }
@@ -48,7 +48,7 @@ public:
     const T* operator->() const { return get(); }
 
 private:
-    struct alignas(T) Storage {
+    struct alignas(alignment) Storage {
         std::byte data[sizeof(T)];
     } m_storage;
 };

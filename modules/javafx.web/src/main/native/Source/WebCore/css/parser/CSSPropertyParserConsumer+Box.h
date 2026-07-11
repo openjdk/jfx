@@ -31,19 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
 
-enum CSSPropertyID : uint16_t;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-// MARK: <margin-physical> consuming
-// https://drafts.csswg.org/css-box/#margin-physical
-RefPtr<CSSValue> consumeMarginPhysical(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID currentShorthand);
-
 // MARK: <'margin-trim'> consuming
 // https://drafts.csswg.org/css-box/#margin-trim
-RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

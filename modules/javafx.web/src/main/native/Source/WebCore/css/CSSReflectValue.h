@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,8 +57,8 @@ private:
     CSSReflectValue(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask);
 
     CSSValueID m_direction;
-    Ref<CSSPrimitiveValue> m_offset;
-    RefPtr<CSSValue> m_mask;
+    const Ref<CSSPrimitiveValue> m_offset;
+    const RefPtr<CSSValue> m_mask;
 };
 
 } // namespace WebCore

@@ -52,9 +52,9 @@
 namespace WebCore {
 using namespace WebCore::Adwaita;
 
-RefPtr<ControlFactory> ControlFactory::create()
+Ref<ControlFactory> ControlFactory::create()
 {
-    return adoptRef(new ControlFactoryAdwaita());
+    return adoptRef(*new ControlFactoryAdwaita());
 }
 
 ControlFactoryAdwaita& ControlFactoryAdwaita::shared()

@@ -132,6 +132,12 @@ MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterSIMDEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterCatchEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterCatchAllEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterTableCatchEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterTableCatchRefEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterTableCatchAllEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterTableCatchAllrefEntryThunk();
 #endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

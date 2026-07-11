@@ -31,8 +31,6 @@
 #include "Chrome.h"
 #include "CredentialRequestCoordinator.h"
 #include "CredentialRequestOptions.h"
-#include "DigitalCredentialRequestOptions.h"
-#include "DigitalCredentialsRequestData.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ExceptionOr.h"
@@ -42,6 +40,7 @@
 #include "LocalFrame.h"
 #include "MediationRequirement.h"
 #include "Page.h"
+#include "PermissionsPolicy.h"
 #include "VisibilityState.h"
 #include <Logging.h>
 #include <wtf/JSONValues.h>
@@ -64,29 +63,51 @@ DigitalCredential::DigitalCredential(JSC::Strong<JSC::JSObject>&& data, Identity
 {
 }
 
-static ExceptionOr<DigitalCredentialRequestTypes> jsToCredentialRequest(const Document& document, const DigitalCredentialRequest& request)
+static ExceptionOr<UnvalidatedDigitalCredentialRequest> jsToCredentialRequest(const Document& document, const DigitalCredentialRequest& request)
 {
     auto scope = DECLARE_THROW_SCOPE(document.globalObject()->vm());
     auto* globalObject = document.globalObject();
 
+    // Check that the object is JSON stringifiable.
+    JSC::JSONStringify(globalObject, request.data.get(), 0);
+    if (scope.exception()) [[unlikely]]
+        return Exception { ExceptionCode::ExistingExceptionError };
+
     switch (request.protocol) {
     case IdentityCredentialProtocol::OrgIsoMdoc: {
         auto result = convertDictionary<MobileDocumentRequest>(*globalObject, request.data.get());
-        if (result.hasException(scope))
+        if (result.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
-        return DigitalCredentialRequestTypes { std::in_place_type<MobileDocumentRequest>, result.releaseReturnValue() };
+        return DigitalCredentialRequestTypes { WTF::InPlaceType<MobileDocumentRequest>, result.releaseReturnValue() };
     }
     case IdentityCredentialProtocol::Openid4vp: {
         auto result = convertDictionary<OpenID4VPRequest>(*globalObject, request.data.get());
-        if (result.hasException(scope))
+        if (result.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
-        return DigitalCredentialRequestTypes { std::in_place_type<OpenID4VPRequest>, result.releaseReturnValue() };
+        return DigitalCredentialRequestTypes { WTF::InPlaceType<OpenID4VPRequest>, result.releaseReturnValue() };
     }
     default:
         ASSERT_NOT_REACHED();
         return Exception { ExceptionCode::TypeError, "Unsupported protocol."_s };
     }
 }
+
+ExceptionOr<Vector<UnvalidatedDigitalCredentialRequest>> DigitalCredential::convertObjectsToDigitalPresentationRequests(const Document& document, const Vector<DigitalCredentialRequest>& requests)
+{
+    Vector<UnvalidatedDigitalCredentialRequest> results;
+    for (auto& request : requests) {
+        auto resultOrException = jsToCredentialRequest(document, request);
+        if (resultOrException.hasException())
+            return resultOrException.releaseException();
+        results.append(resultOrException.releaseReturnValue());
+    }
+
+    if (results.isEmpty())
+        return Exception { ExceptionCode::TypeError, "At least one request must present."_s };
+
+    return results;
+}
+
 
 void DigitalCredential::discoverFromExternalSource(const Document& document, CredentialPromise&& promise, CredentialRequestOptions&& options)
 {
@@ -102,15 +123,15 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         return;
     }
 
-    RefPtr frame = document.protectedFrame();
-    RefPtr window = document.protectedWindow();
+    RefPtr frame = document.frame();
+    RefPtr window = document.window();
     if (!frame || !window) {
         LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
         promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);
         return;
     }
 
-    RefPtr page = frame->protectedPage();
+    RefPtr page = frame->page();
     if (!page) {
         LOG(DigitalCredentials, "Preconditions for DigitalCredential.get() are not met");
         promise.reject(ExceptionCode::InvalidStateError, "Preconditions for calling .get() are not met."_s);
@@ -132,35 +153,20 @@ void DigitalCredential::discoverFromExternalSource(const Document& document, Cre
         return;
     }
 
-    if (!window->consumeTransientActivation()) {
-        promise.reject(Exception { ExceptionCode::NotAllowedError, "Calling get() needs to be triggered by an activation triggering user event."_s });
+    auto presentationRequestsOrException = convertObjectsToDigitalPresentationRequests(document, options.digital->requests);
+    if (presentationRequestsOrException.hasException()) {
+        promise.reject(presentationRequestsOrException.releaseException());
         return;
     }
 
-    DigitalCredentialsRequestData requestData;
-    for (auto& request : options.digital->requests) {
-        auto resultOrException = jsToCredentialRequest(document, request);
-        if (resultOrException.hasException()) {
-            promise.reject(resultOrException.releaseException());
+    if (!window->consumeTransientActivation()) {
+        promise.reject(Exception { ExceptionCode::NotAllowedError, "Calling get() needs to be triggered by an activation triggering user event."_s });
             return;
         }
 
-        DigitalCredentialRequestTypes credentialVariant = resultOrException.releaseReturnValue();
-        std::visit(
-            [&](auto& credential) { requestData.requests.append(credential); },
-            credentialVariant);
-    }
-    RefPtr topOrigin = document.protectedTopOrigin();
-    RefPtr documentOrigin = document.protectedSecurityOrigin();
-    if (!topOrigin || !documentOrigin) {
-        promise.reject(Exception { ExceptionCode::SecurityError, "Required document origin is not available."_s });
-        return;
-    }
-    requestData.topOrigin = topOrigin->data().isolatedCopy();
-    requestData.documentOrigin = documentOrigin->data().isolatedCopy();
 #if HAVE(DIGITAL_CREDENTIALS_UI)
     Ref coordinator = page->credentialRequestCoordinator();
-    coordinator->presentPicker(WTFMove(promise), WTFMove(requestData), options.signal);
+    coordinator->presentPicker(document, WTFMove(promise), presentationRequestsOrException.releaseReturnValue(), options.signal);
 #else
     promise.reject(Exception { ExceptionCode::NotSupportedError, "Digital credentials are not supported."_s });
 #endif

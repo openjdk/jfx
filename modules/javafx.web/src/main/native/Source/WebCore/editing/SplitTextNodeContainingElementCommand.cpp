@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SplitTextNodeContainingElementCommand.h"
 
+#include "ContainerNodeInlines.h"
 #include "Element.h"
 #include "ElementInlines.h"
 #include "RenderElement.h"

@@ -39,7 +39,7 @@ namespace WebCore {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleBackgroundData);
 class StyleBackgroundData : public RefCounted<StyleBackgroundData> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleBackgroundData);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleBackgroundData, StyleBackgroundData);
 public:
     static Ref<StyleBackgroundData> create() { return adoptRef(*new StyleBackgroundData); }
     Ref<StyleBackgroundData> copy() const;
@@ -61,6 +61,8 @@ public:
 private:
     StyleBackgroundData();
     StyleBackgroundData(const StyleBackgroundData&);
+
+    bool containsCurrentColor() const;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleBackgroundData&);

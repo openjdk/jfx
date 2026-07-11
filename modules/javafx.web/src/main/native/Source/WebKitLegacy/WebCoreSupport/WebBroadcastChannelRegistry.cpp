@@ -24,7 +24,9 @@
  */
 
 #include "WebBroadcastChannelRegistry.h"
-
+#if PLATFORM(JAVA)
+#include "ContextDestructionObserverInlines.h"
+#endif
 #include <WebCore/BroadcastChannel.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <wtf/CallbackAggregator.h>

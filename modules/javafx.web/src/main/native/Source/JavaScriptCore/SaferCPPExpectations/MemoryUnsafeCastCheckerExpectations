@@ -53,7 +53,6 @@ interpreter/StackVisitor.cpp
 jit/JITOperations.cpp
 jit/JITThunks.cpp
 jsc.cpp
-llint/LLIntSlowPaths.cpp
 parser/ASTBuilder.h
 parser/NodesAnalyzeModule.cpp
 runtime/ArrayStorage.h
@@ -149,14 +148,12 @@ wasm/WasmOSREntryPlan.cpp
 wasm/WasmOperations.cpp
 wasm/WasmSlowPaths.cpp
 wasm/WasmStreamingCompiler.cpp
-wasm/js/JSWebAssemblyArray.cpp
 wasm/js/JSWebAssemblyException.cpp
 wasm/js/JSWebAssemblyGlobal.cpp
 wasm/js/JSWebAssemblyHelpers.h
 wasm/js/JSWebAssemblyInstance.cpp
 wasm/js/JSWebAssemblyMemory.cpp
 wasm/js/JSWebAssemblyModule.cpp
-wasm/js/JSWebAssemblyStruct.cpp
 wasm/js/JSWebAssemblyTable.cpp
 wasm/js/JSWebAssemblyTag.cpp
 wasm/js/WebAssemblyFunction.cpp

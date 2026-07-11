@@ -36,7 +36,7 @@ namespace WebCore {
 
 class AccessibilityMediaObject final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityMediaObject> create(AXID, RenderObject&);
+    static Ref<AccessibilityMediaObject> create(AXID, RenderObject&, AXObjectCache&);
     virtual ~AccessibilityMediaObject();
 
     void enterFullscreen() const;
@@ -49,7 +49,7 @@ public:
     bool isMuted() const;
 
 private:
-    explicit AccessibilityMediaObject(AXID, RenderObject&);
+    explicit AccessibilityMediaObject(AXID, RenderObject&, AXObjectCache&);
 
     enum class AXSeekDirection : bool { Backward, Forward };
     bool computeIsIgnored() const final;

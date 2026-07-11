@@ -58,10 +58,10 @@ private:
     String platformTopPrivatelyControlledDomain(StringView host) const;
 
     mutable Lock m_HostTopPrivatelyControlledDomainCacheLock;
-    mutable UncheckedKeyHashMap<String, String, ASCIICaseInsensitiveHash> m_hostTopPrivatelyControlledDomainCache WTF_GUARDED_BY_LOCK(m_HostTopPrivatelyControlledDomainCacheLock);
+    mutable HashMap<String, String, ASCIICaseInsensitiveHash> m_hostTopPrivatelyControlledDomainCache WTF_GUARDED_BY_LOCK(m_HostTopPrivatelyControlledDomainCacheLock);
 #if PLATFORM(COCOA)
     mutable Lock m_publicSuffixCacheLock;
-    std::optional<UncheckedKeyHashSet<PublicSuffix>> m_publicSuffixCache WTF_GUARDED_BY_LOCK(m_publicSuffixCacheLock);
+    std::optional<HashSet<PublicSuffix>> m_publicSuffixCache WTF_GUARDED_BY_LOCK(m_publicSuffixCacheLock);
 #endif
 };
 

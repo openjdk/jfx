@@ -1,16 +1,16 @@
-## Independent JPEG Group (IJG) JPEG version 9f
+## Independent JPEG Group (IJG) JPEG version 10
 
 ### IJG License
 ```
 Copyright (C) 1991-1998, Thomas G. Lane.
-Copyright (C) 1991-2024, Thomas G. Lane, Guido Vollbeding.
+Copyright (C) 1991-2026, Thomas G. Lane, Guido Vollbeding.
 
 The authors make NO WARRANTY or representation, either express or implied,
 with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2024, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2026, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this

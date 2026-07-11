@@ -56,7 +56,7 @@ PAS_BEGIN_EXTERN_C;
    ((uint8_t*)bits)[-1] will see that bit. This preserves the property that the bitvector can be
    reinterpreted using any word width. The compiler will use the heck out of this capability: it
    will load 64-bit words. */
-#define PAS_BACKWARD_BITVECTOR_WORD_INDEX(bit_index) (-1lu - PAS_BITVECTOR_WORD_INDEX(bit_index))
+#define PAS_BACKWARD_BITVECTOR_WORD_INDEX(bit_index) (-1llu - PAS_BITVECTOR_WORD_INDEX(bit_index))
 #define PAS_BACKWARD_BITVECTOR_BIT_MASK(bit_index) (0x80000000 >> ((bit_index) & 31))
 
 /* This crazy functionality is for optimized accesses to the pxi_pre_header. */

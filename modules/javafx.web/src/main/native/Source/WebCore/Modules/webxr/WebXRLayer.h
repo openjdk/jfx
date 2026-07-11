@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "PlatformXR.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
@@ -52,7 +53,7 @@ protected:
     explicit WebXRLayer(ScriptExecutionContext*);
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget

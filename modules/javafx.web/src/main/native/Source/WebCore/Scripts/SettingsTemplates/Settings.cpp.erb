@@ -79,7 +79,7 @@ Settings::Settings(Page* page)
     m_page = page;
 }
 
-void Settings::Values::initialize()
+void SettingsValues::initialize()
 {
 <%- for @condition in @allSettingsSet.conditions do -%>
 <%- if @condition.nonBoolSettingsNeedingImplementation.length != 0 -%>
@@ -109,7 +109,7 @@ void Settings::Values::initialize()
 <%- end -%>
 }
 
-Settings::Values Settings::Values::isolatedCopy() const
+SettingsValues SettingsValues::isolatedCopy() const
 {
     return {
 <%- for @setting in @allSettingsSet.inspectorOverrideSettings do -%>
@@ -197,7 +197,7 @@ void Settings::disableFeaturesForLockdownMode()
 <%= @setting.parameterType %> Settings::<%= @setting.getterFunctionName %>() const
 {
 <%- if @setting.hasInspectorOverride? -%>
-    if (UNLIKELY(m_values.<%= @setting.name %>InspectorOverride)) {
+    if (m_values.<%= @setting.name %>InspectorOverride) [[unlikely]] {
         ASSERT(InspectorInstrumentation::hasFrontends());
         return m_values.<%= @setting.name %>InspectorOverride.value();
     }

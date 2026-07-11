@@ -65,7 +65,7 @@ void AutomationInstrumentation::clearClient()
 
 void AutomationInstrumentation::addMessageToConsole(const std::unique_ptr<ConsoleMessage>& message)
 {
-    if (LIKELY(!automationClient()))
+    if (!automationClient()) [[likely]]
         return;
 
     WTF::ensureOnMainThread([source = message->source(), type = message->type(), level = message->level(), messageText = message->message(), timestamp = message->timestamp()] {

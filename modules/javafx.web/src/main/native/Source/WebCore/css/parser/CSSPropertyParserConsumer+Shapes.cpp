@@ -39,6 +39,7 @@
 #include "CSSPropertyParserConsumer+Position.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
@@ -83,14 +84,14 @@ static std::optional<CSS::FillRule> consumeFillRule(CSSParserTokenRange& range)
     return result;
 }
 
-template<typename Container> static std::optional<Container> consumePair(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyParserOptions options)
+template<typename Container> static std::optional<Container> consumePair(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     auto rangeCopy = range;
 
-    auto p1 = MetaConsumer<typename Container::value_type>::consume(rangeCopy, context, { }, options);
+    auto p1 = MetaConsumer<typename Container::value_type>::consume(rangeCopy, state);
     if (!p1)
         return { };
-    auto p2 = MetaConsumer<typename Container::value_type>::consume(rangeCopy, context, { }, options);
+    auto p2 = MetaConsumer<typename Container::value_type>::consume(rangeCopy, state);
     if (!p2)
         return { };
 
@@ -98,20 +99,15 @@ template<typename Container> static std::optional<Container> consumePair(CSSPars
     return Container { WTFMove(*p1), WTFMove(*p2) };
 }
 
-static std::optional<CSS::CoordinatePair> consumeCoordinatePair(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::CoordinatePair> consumeCoordinatePair(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <coordinate-pair> = <length-percentage>{2}
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-coordinate-pair
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-
-    return consumePair<CSS::CoordinatePair>(range, context, options);
+    return consumePair<CSS::CoordinatePair>(range, state);
 }
 
-static std::optional<CSS::RelativeControlPoint> consumeRelativeControlPoint(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::RelativeControlPoint> consumeRelativeControlPoint(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <relative-control-point> = [<coordinate-pair> [from [start | end | origin]]?]
     // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
@@ -127,7 +123,7 @@ static std::optional<CSS::RelativeControlPoint> consumeRelativeControlPoint(CSSP
 
     auto rangeCopy = range;
 
-    auto offset = consumeCoordinatePair(rangeCopy, context);
+    auto offset = consumeCoordinatePair(rangeCopy, state);
     if (!offset)
         return { };
 
@@ -146,7 +142,7 @@ static std::optional<CSS::RelativeControlPoint> consumeRelativeControlPoint(CSSP
     };
 }
 
-static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <to-control-point> = [<position> | <relative-control-point>]
     // Specified https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
@@ -154,10 +150,10 @@ static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSP
     // FIXME: [<length-percentage> <length-percentage>] is valid for both <position> and <relative-control-point>.
     // We currently try <relative-control-point> first, but this ambiguity should probably be explicitly resolved in the spec.
 
-    if (auto relativeControlPoint = consumeRelativeControlPoint(range, context)) {
+    if (auto relativeControlPoint = consumeRelativeControlPoint(range, state)) {
         return CSS::AbsoluteControlPoint {
             .offset = CSS::Position {
-                CSS::TwoComponentPosition {
+                CSS::TwoComponentPositionHorizontalVertical {
                     { relativeControlPoint->offset.x() },
                     { relativeControlPoint->offset.y() }
                 }
@@ -165,7 +161,7 @@ static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSP
             .anchor = relativeControlPoint->anchor
         };
     }
-    if (auto position = consumePositionUnresolved(range, context)) {
+    if (auto position = consumePositionUnresolved(range, state)) {
         return CSS::AbsoluteControlPoint {
             .offset = WTFMove(*position),
             .anchor = std::nullopt
@@ -174,7 +170,7 @@ static std::optional<CSS::AbsoluteControlPoint> consumeAbsoluteControlPoint(CSSP
     return { };
 }
 
-static CSS::Circle::RadialSize consumeCircleRadialSize(CSSParserTokenRange& range, const CSSParserContext& context)
+static CSS::Circle::RadialSize consumeCircleRadialSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // NOTE: For circle(), it uses a modified <radial-size> as the two `length-percentage` values are invalid as expressed in the text.
     // <radial-size>    = <radial-extent> | <length [0,∞]>
@@ -207,27 +203,23 @@ static CSS::Circle::RadialSize consumeCircleRadialSize(CSSParserTokenRange& rang
         return defaultValue();
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    auto length = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, context, { }, options);
+    auto length = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, state);
     if (!length)
         return defaultValue();
 
     return CSS::Circle::RadialSize { *length };
 }
 
-static std::optional<CSS::Circle> consumeBasicShapeCircleFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Circle> consumeBasicShapeCircleFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <circle()> = circle( <radial-size>? [ at <position> ]? )
     // https://drafts.csswg.org/css-shapes/#funcdef-basic-shape-circle
 
-    auto radius = consumeCircleRadialSize(args, context);
+    auto radius = consumeCircleRadialSize(args, state);
 
     std::optional<CSS::Position> position;
     if (consumeIdent<CSSValueAt>(args)) {
-        position = consumePositionUnresolved(args, context);
+        position = consumePositionUnresolved(args, state);
         if (!position)
             return { };
     }
@@ -238,7 +230,7 @@ static std::optional<CSS::Circle> consumeBasicShapeCircleFunctionParameters(CSSP
     };
 }
 
-static std::optional<CSS::Ellipse::RadialSize> consumeEllipseRadialSize(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::Ellipse::RadialSize> consumeEllipseRadialSize(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <radial-size>    = <radial-extent> | <length [0,∞]> | <length-percentage [0,∞]>{2}
     // <radial-extent>  = closest-corner | closest-side | farthest-corner | farthest-side
@@ -264,19 +256,14 @@ static std::optional<CSS::Ellipse::RadialSize> consumeEllipseRadialSize(CSSParse
         return std::nullopt;
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-
-    auto length = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, context, { }, options);
+    auto length = MetaConsumer<CSS::LengthPercentage<CSS::Nonnegative>>::consume(range, state);
     if (!length)
         return std::nullopt;
 
     return CSS::Ellipse::RadialSize { *length };
 }
 
-static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <ellipse()>      = ellipse( <radial-size>? [ at <position> ]? )
     // <radial-size>    = <radial-extent> | <length [0,∞]> | <length-percentage [0,∞]>{2}
@@ -291,8 +278,8 @@ static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CS
     // Default to `closest-side closest-side` if no radial-size is provided.
 
     auto consumeRadialSizePair = [&] -> std::optional<SpaceSeparatedPair<CSS::Ellipse::RadialSize>> {
-        if (auto radiusX = consumeEllipseRadialSize(args, context)) {
-            auto radiusY = consumeEllipseRadialSize(args, context);
+        if (auto radiusX = consumeEllipseRadialSize(args, state)) {
+            auto radiusY = consumeEllipseRadialSize(args, state);
             if (!radiusY)
                 return std::nullopt;
             return SpaceSeparatedPair<CSS::Ellipse::RadialSize> { WTFMove(*radiusX), WTFMove(*radiusY) };
@@ -309,7 +296,7 @@ static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CS
 
     std::optional<CSS::Position> position;
     if (consumeIdent<CSSValueAt>(args)) {
-        position = consumePositionUnresolved(args, context);
+        position = consumePositionUnresolved(args, state);
         if (!position)
             return { };
     }
@@ -320,7 +307,7 @@ static std::optional<CSS::Ellipse> consumeBasicShapeEllipseFunctionParameters(CS
     };
 }
 
-static std::optional<CSS::Polygon> consumeBasicShapePolygonFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Polygon> consumeBasicShapePolygonFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <polygon()> = polygon( <'fill-rule'>? [ round <length> ]? , [<length-percentage> <length-percentage>]# )
     // https://drafts.csswg.org/css-shapes/#funcdef-basic-shape-polygon
@@ -336,14 +323,9 @@ static std::optional<CSS::Polygon> consumeBasicShapePolygonFunctionParameters(CS
             return { };
     }
 
-    const auto verticesOptions = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-
-    CSS::Polygon::Vertices::Vector vertices;
+    CSS::Polygon::Vertices::Container vertices;
     do {
-        auto vertex = consumePair<CSS::Polygon::Vertex>(args, context, verticesOptions);
+        auto vertex = consumePair<CSS::Polygon::Vertex>(args, state);
         if (!vertex)
             return { };
         vertices.append(WTFMove(*vertex));
@@ -355,7 +337,7 @@ static std::optional<CSS::Polygon> consumeBasicShapePolygonFunctionParameters(CS
     };
 }
 
-static std::optional<CSS::Path> consumeBasicShapePathFunctionParameters(CSSParserTokenRange& args, const CSSParserContext&, OptionSet<PathParsingOption> options)
+static std::optional<CSS::Path> consumeBasicShapePathFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState&, OptionSet<PathParsingOption> options)
 {
     // <path()> = path( <'fill-rule'>? , <string> )
     // https://drafts.csswg.org/css-shapes/#funcdef-basic-shape-path
@@ -386,7 +368,7 @@ static std::optional<CSS::Path> consumeBasicShapePathFunctionParameters(CSSParse
     };
 }
 
-static std::optional<CSS::CommandAffinity> consumeShapeCommandAffinity(CSSParserTokenRange& range, const CSSParserContext&)
+static std::optional<CSS::CommandAffinity> consumeShapeCommandAffinity(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <by-to> = by | to
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-by-to
@@ -400,19 +382,19 @@ static std::optional<CSS::CommandAffinity> consumeShapeCommandAffinity(CSSParser
     return consumeIdentUsingMapping(range, affinityMap);
 }
 
-static std::optional<CSS::MoveCommand> consumeShapeMoveCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::MoveCommand> consumeShapeMoveCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <move-command> = move [to <position>] | [by <coordinate-pair>]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-move-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::MoveCommand> {
-            auto position = consumePositionUnresolved(range, context);
+            auto position = consumePositionUnresolved(range, state);
             if (!position)
                 return std::nullopt;
             return CSS::MoveCommand {
@@ -420,7 +402,7 @@ static std::optional<CSS::MoveCommand> consumeShapeMoveCommand(CSSParserTokenRan
             };
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::MoveCommand> {
-            auto coordinatePair = consumeCoordinatePair(range, context);
+            auto coordinatePair = consumeCoordinatePair(range, state);
             if (!coordinatePair)
                 return std::nullopt;
             return CSS::MoveCommand {
@@ -430,19 +412,19 @@ static std::optional<CSS::MoveCommand> consumeShapeMoveCommand(CSSParserTokenRan
     );
 }
 
-static std::optional<CSS::LineCommand> consumeShapeLineCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::LineCommand> consumeShapeLineCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <line-command> = line [to <position>] | [by <coordinate-pair>]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-line-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::LineCommand> {
-            auto position = consumePositionUnresolved(range, context);
+            auto position = consumePositionUnresolved(range, state);
             if (!position)
                 return { };
             return CSS::LineCommand {
@@ -450,7 +432,7 @@ static std::optional<CSS::LineCommand> consumeShapeLineCommand(CSSParserTokenRan
             };
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::LineCommand> {
-            auto coordinatePair = consumeCoordinatePair(range, context);
+            auto coordinatePair = consumeCoordinatePair(range, state);
             if (!coordinatePair)
                 return { };
             return CSS::LineCommand {
@@ -460,18 +442,18 @@ static std::optional<CSS::LineCommand> consumeShapeLineCommand(CSSParserTokenRan
     );
 }
 
-static std::optional<CSS::HLineCommand> consumeShapeHLineCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::HLineCommand> consumeShapeHLineCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <horizontal-line-command> = hline [ to [ <length-percentage> | left | center | right | x-start | x-end ] | by <length-percentage> ]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-hv-line-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2426552611
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::HLineCommand> {
-            auto offset = consumeTwoComponentPositionHorizontalUnresolved(range, context);
+            auto offset = consumeTwoComponentPositionHorizontalUnresolved(range, state);
             if (!offset)
                 return { };
             return CSS::HLineCommand {
@@ -479,11 +461,7 @@ static std::optional<CSS::HLineCommand> consumeShapeHLineCommand(CSSParserTokenR
             };
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::HLineCommand> {
-            const auto options = CSSPropertyParserOptions {
-                .parserMode = context.mode,
-                .unitlessZero = UnitlessZeroQuirk::Allow
-            };
-            auto offset = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, options);
+            auto offset = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state);
             if (!offset)
                 return { };
             return CSS::HLineCommand {
@@ -493,18 +471,18 @@ static std::optional<CSS::HLineCommand> consumeShapeHLineCommand(CSSParserTokenR
     );
 }
 
-static std::optional<CSS::VLineCommand> consumeShapeVLineCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::VLineCommand> consumeShapeVLineCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <hv-line-command> = [... | vline] <by-to> <length-percentage>
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-hv-line-command
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::VLineCommand> {
-            auto offset = consumeTwoComponentPositionVerticalUnresolved(range, context);
+            auto offset = consumeTwoComponentPositionVerticalUnresolved(range, state);
             if (!offset)
                 return { };
             return CSS::VLineCommand {
@@ -512,11 +490,7 @@ static std::optional<CSS::VLineCommand> consumeShapeVLineCommand(CSSParserTokenR
             };
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::VLineCommand> {
-            const auto options = CSSPropertyParserOptions {
-                .parserMode = context.mode,
-                .unitlessZero = UnitlessZeroQuirk::Allow
-            };
-            auto offset = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, options);
+            auto offset = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state);
             if (!offset)
                 return { };
             return CSS::VLineCommand {
@@ -526,32 +500,32 @@ static std::optional<CSS::VLineCommand> consumeShapeVLineCommand(CSSParserTokenR
     );
 }
 
-static std::optional<CSS::CurveCommand> consumeShapeCurveCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::CurveCommand> consumeShapeCurveCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <curve-command> = curve [to <position> with <to-control-point> [/ <to-control-point>]?]
     //                       | [by <coordinate-pair> with <relative-control-point> [/ <relative-control-point>]?]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-curve-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::CurveCommand> {
-            auto position = consumePositionUnresolved(range, context);
+            auto position = consumePositionUnresolved(range, state);
             if (!position)
                 return { };
 
             if (!consumeIdent<CSSValueWith>(range))
                 return { };
 
-            auto controlPoint1 = consumeAbsoluteControlPoint(range, context);
+            auto controlPoint1 = consumeAbsoluteControlPoint(range, state);
             if (!controlPoint1)
                 return { };
 
             if (consumeSlashIncludingWhitespace(range)) {
-                auto controlPoint2 = consumeAbsoluteControlPoint(range, context);
+                auto controlPoint2 = consumeAbsoluteControlPoint(range, state);
                 if (!controlPoint2)
                     return { };
 
@@ -573,19 +547,19 @@ static std::optional<CSS::CurveCommand> consumeShapeCurveCommand(CSSParserTokenR
             }
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::CurveCommand> {
-            auto coordinatePair = consumeCoordinatePair(range, context);
+            auto coordinatePair = consumeCoordinatePair(range, state);
             if (!coordinatePair)
                 return { };
 
             if (!consumeIdent<CSSValueWith>(range))
                 return { };
 
-            auto controlPoint1 = consumeRelativeControlPoint(range, context);
+            auto controlPoint1 = consumeRelativeControlPoint(range, state);
             if (!controlPoint1)
                 return { };
 
             if (consumeSlashIncludingWhitespace(range)) {
-                auto controlPoint2 = consumeRelativeControlPoint(range, context);
+                auto controlPoint2 = consumeRelativeControlPoint(range, state);
                 if (!controlPoint2)
                     return { };
 
@@ -609,25 +583,25 @@ static std::optional<CSS::CurveCommand> consumeShapeCurveCommand(CSSParserTokenR
     );
 }
 
-static std::optional<CSS::SmoothCommand> consumeShapeSmoothCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::SmoothCommand> consumeShapeSmoothCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <smooth-command> = smooth [to <position> [with <to-control-point>]?]
     //                         | [by <coordinate-pair> [with <relative-control-point>]?]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-smooth-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
     return WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<CSS::SmoothCommand> {
-            auto position = consumePositionUnresolved(range, context);
+            auto position = consumePositionUnresolved(range, state);
             if (!position)
                 return { };
 
             if (consumeIdent<CSSValueWith>(range)) {
-                auto controlPoint = consumeAbsoluteControlPoint(range, context);
+                auto controlPoint = consumeAbsoluteControlPoint(range, state);
                 if (!controlPoint)
                     return { };
 
@@ -647,12 +621,12 @@ static std::optional<CSS::SmoothCommand> consumeShapeSmoothCommand(CSSParserToke
             }
         },
         [&](CSS::Keyword::By) -> std::optional<CSS::SmoothCommand> {
-            auto coordinatePair = consumeCoordinatePair(range, context);
+            auto coordinatePair = consumeCoordinatePair(range, state);
             if (!coordinatePair)
                 return { };
 
             if (consumeIdent<CSSValueWith>(range)) {
-                auto controlPoint = consumeRelativeControlPoint(range, context);
+                auto controlPoint = consumeRelativeControlPoint(range, state);
                 if (!controlPoint)
                     return { };
 
@@ -674,26 +648,26 @@ static std::optional<CSS::SmoothCommand> consumeShapeSmoothCommand(CSSParserToke
     );
 }
 
-static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <arc-command> = arc [to <position>] | [by <coordinate-pair>] of <length-percentage>{1,2} [<arc-sweep>? || <arc-size>? || [rotate <angle>]?]
     // https://drafts.csswg.org/css-shapes-2/#typedef-shape-arc-command
     // Modified by https://github.com/w3c/csswg-drafts/issues/10649#issuecomment-2412816773
 
-    auto affinity = consumeShapeCommandAffinity(range, context);
+    auto affinity = consumeShapeCommandAffinity(range, state);
     if (!affinity)
         return { };
 
-    using ToBy = std::variant<CSS::ArcCommand::To, CSS::ArcCommand::By>;
+    using ToBy = Variant<CSS::ArcCommand::To, CSS::ArcCommand::By>;
     auto toBy = WTF::switchOn(*affinity,
         [&](CSS::Keyword::To) -> std::optional<ToBy> {
-            auto position = consumePositionUnresolved(range, context);
+            auto position = consumePositionUnresolved(range, state);
             if (!position)
                 return { };
             return ToBy { CSS::ArcCommand::To { WTFMove(*position) } };
         },
         [&](CSS::Keyword::By) -> std::optional<ToBy> {
-            auto coordinatePair = consumeCoordinatePair(range, context);
+            auto coordinatePair = consumeCoordinatePair(range, state);
             if (!coordinatePair)
                 return { };
             return ToBy { CSS::ArcCommand::By { WTFMove(*coordinatePair) } };
@@ -705,14 +679,10 @@ static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange
     if (!consumeIdent<CSSValueOf>(range))
         return { };
 
-    const auto lengthOptions = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    auto length1 = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, lengthOptions);
+    auto length1 = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state);
     if (!length1)
         return { };
-    auto length2 = MetaConsumer<CSS::LengthPercentage<>>::consume(range, context, { }, lengthOptions);
+    auto length2 = MetaConsumer<CSS::LengthPercentage<>>::consume(range, state);
     if (!length2)
         length2 = length1; // Copy `length1` to `length2` if there is only one length consumed.
 
@@ -757,7 +727,7 @@ static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange
             if (angle)
                 return { };
 
-            angle = MetaConsumer<CSS::Angle<>>::consume(range, context, { }, { .parserMode = context.mode });
+            angle = MetaConsumer<CSS::Angle<>>::consume(range, state);
             if (!angle)
                 return { };
             break;
@@ -776,7 +746,7 @@ static std::optional<CSS::ArcCommand> consumeShapeArcCommand(CSSParserTokenRange
     };
 }
 
-static std::optional<CSS::ShapeCommand> consumeShapeCommand(CSSParserTokenRange& range, const CSSParserContext& context)
+static std::optional<CSS::ShapeCommand> consumeShapeCommand(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().type() != IdentToken)
         return { };
@@ -784,37 +754,37 @@ static std::optional<CSS::ShapeCommand> consumeShapeCommand(CSSParserTokenRange&
     auto id = range.consumeIncludingWhitespace().id();
     switch (id) {
     case CSSValueMove:
-        if (auto command = consumeShapeMoveCommand(range, context))
+        if (auto command = consumeShapeMoveCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueLine:
-        if (auto command = consumeShapeLineCommand(range, context))
+        if (auto command = consumeShapeLineCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueHline:
-        if (auto command = consumeShapeHLineCommand(range, context))
+        if (auto command = consumeShapeHLineCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueVline:
-        if (auto command = consumeShapeVLineCommand(range, context))
+        if (auto command = consumeShapeVLineCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueCurve:
-        if (auto command = consumeShapeCurveCommand(range, context))
+        if (auto command = consumeShapeCurveCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueSmooth:
-        if (auto command = consumeShapeSmoothCommand(range, context))
+        if (auto command = consumeShapeSmoothCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
     case CSSValueArc:
-        if (auto command = consumeShapeArcCommand(range, context))
+        if (auto command = consumeShapeArcCommand(range, state))
             return CSS::ShapeCommand { WTFMove(*command) };
         break;
 
@@ -828,12 +798,12 @@ static std::optional<CSS::ShapeCommand> consumeShapeCommand(CSSParserTokenRange&
     return { };
 }
 
-static std::optional<CSS::Shape> consumeBasicShapeShapeFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Shape> consumeBasicShapeShapeFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // shape() = shape( <'fill-rule'>? from <coordinate-pair>, <shape-command># )
     // https://drafts.csswg.org/css-shapes-2/#shape-function
 
-    if (!context.cssShapeFunctionEnabled)
+    if (!state.context.cssShapeFunctionEnabled)
         return { };
 
     auto fillRule = consumeFillRule(args);
@@ -842,16 +812,16 @@ static std::optional<CSS::Shape> consumeBasicShapeShapeFunctionParameters(CSSPar
         return { };
 
     // FIXME: The spec says this should be a <coordinate-pair>, but the tests and some comments indicate it has changed to position.
-    auto startingPoint = consumePositionUnresolved(args, context);
+    auto startingPoint = consumePositionUnresolved(args, state);
     if (!startingPoint)
         return { };
 
     if (!consumeCommaIncludingWhitespace(args))
         return { };
 
-    CSS::Shape::Commands::Vector commands;
+    CSS::Shape::Commands::Container commands;
     do {
-        auto command = consumeShapeCommand(args, context);
+        auto command = consumeShapeCommand(args, state);
         if (!command)
             return { };
 
@@ -867,7 +837,7 @@ static std::optional<CSS::Shape> consumeBasicShapeShapeFunctionParameters(CSSPar
 
 // MARK: - <rect()>
 
-static std::optional<CSS::Rect::Edge> consumeBasicShapeRectEdge(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Rect::Edge> consumeBasicShapeRectEdge(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <rect-edge> = [ <length-percentage> | auto ]
 
@@ -879,47 +849,43 @@ static std::optional<CSS::Rect::Edge> consumeBasicShapeRectEdge(CSSParserTokenRa
         return { };
     }
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    if (auto edge = MetaConsumer<CSS::LengthPercentage<>>::consume(args, context, { }, options))
+    if (auto edge = MetaConsumer<CSS::LengthPercentage<>>::consume(args, state))
         return { WTFMove(*edge) };
 
     return { };
 }
 
-static std::optional<SpaceSeparatedRectEdges<CSS::Rect::Edge>> consumeBasicShapeRectEdges(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<SpaceSeparatedRectEdges<CSS::Rect::Edge>> consumeBasicShapeRectEdges(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <rect-edges> = <rect-edge>{4}
 
-    auto top = consumeBasicShapeRectEdge(args, context);
+    auto top = consumeBasicShapeRectEdge(args, state);
     if (!top)
         return { };
-    auto right = consumeBasicShapeRectEdge(args, context);
+    auto right = consumeBasicShapeRectEdge(args, state);
     if (!right)
         return { };
-    auto bottom = consumeBasicShapeRectEdge(args, context);
+    auto bottom = consumeBasicShapeRectEdge(args, state);
     if (!bottom)
         return { };
-    auto left = consumeBasicShapeRectEdge(args, context);
+    auto left = consumeBasicShapeRectEdge(args, state);
     if (!left)
         return { };
     return SpaceSeparatedRectEdges<CSS::Rect::Edge> { WTFMove(*top), WTFMove(*right), WTFMove(*bottom), WTFMove(*left) };
 }
 
-static std::optional<CSS::Rect> consumeBasicShapeRectFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Rect> consumeBasicShapeRectFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <rect()> = rect( [ <length-percentage> | auto ]{4} [ round <'border-radius'> ]? )
     // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-rect
 
-    auto edges = consumeBasicShapeRectEdges(args, context);
+    auto edges = consumeBasicShapeRectEdges(args, state);
     if (!edges)
         return { };
 
     std::optional<CSS::BorderRadius> radii;
     if (consumeIdent<CSSValueRound>(args)) {
-        radii = consumeUnresolvedBorderRadius(args, context);
+        radii = consumeUnresolvedBorderRadius(args, state);
         if (!radii)
             return { };
     }
@@ -932,26 +898,21 @@ static std::optional<CSS::Rect> consumeBasicShapeRectFunctionParameters(CSSParse
 
 // MARK: - <xywh()>
 
-static std::optional<CSS::Xywh> consumeBasicShapeXywhFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Xywh> consumeBasicShapeXywhFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <xywh()> = xywh( <length-percentage>{2} <length-percentage [0,∞]>{2} [ round <'border-radius'> ]? )
     // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-xywh
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-
-    auto location = consumePair<CSS::Xywh::Location>(args, context, options);
+    auto location = consumePair<CSS::Xywh::Location>(args, state);
     if (!location)
         return { };
-    auto size = consumePair<CSS::Xywh::Size>(args, context, options);
+    auto size = consumePair<CSS::Xywh::Size>(args, state);
     if (!size)
         return { };
 
     std::optional<CSS::BorderRadius> radii;
     if (consumeIdent<CSSValueRound>(args)) {
-        radii = consumeUnresolvedBorderRadius(args, context);
+        radii = consumeUnresolvedBorderRadius(args, state);
         if (!radii)
             return { };
     }
@@ -965,45 +926,41 @@ static std::optional<CSS::Xywh> consumeBasicShapeXywhFunctionParameters(CSSParse
 
 // MARK: - <inset()>
 
-static std::optional<CSS::Inset::Insets> consumeBasicShapeInsetInsets(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Inset::Insets> consumeBasicShapeInsetInsets(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <insets> = <length-percentage>{1,4}
 
-    const auto options = CSSPropertyParserOptions {
-        .parserMode = context.mode,
-        .unitlessZero = UnitlessZeroQuirk::Allow
-    };
-    auto inset1 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, context, { }, options);
+    auto inset1 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, state);
     if (!inset1)
         return { };
 
-    auto inset2 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, context, { }, options);
+    auto inset2 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, state);
     if (!inset2)
         return completeQuad<CSS::Inset::Insets>(WTFMove(*inset1));
 
-    auto inset3 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, context, { }, options);
+    auto inset3 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, state);
     if (!inset3)
         return completeQuad<CSS::Inset::Insets>(WTFMove(*inset1), WTFMove(*inset2));
 
-    auto inset4 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, context, { }, options);
+    auto inset4 = MetaConsumer<CSS::LengthPercentage<>>::consume(args, state);
     if (!inset4)
         return completeQuad<CSS::Inset::Insets>(WTFMove(*inset1), WTFMove(*inset2), WTFMove(*inset3));
 
     return CSS::Inset::Insets { WTFMove(*inset1), WTFMove(*inset2), WTFMove(*inset3), WTFMove(*inset4) };
 }
 
-static std::optional<CSS::Inset> consumeBasicShapeInsetFunctionParameters(CSSParserTokenRange& args, const CSSParserContext& context)
+static std::optional<CSS::Inset> consumeBasicShapeInsetFunctionParameters(CSSParserTokenRange& args, CSS::PropertyParserState& state)
 {
     // <inset()> = inset( <length-percentage>{1,4} [ round <'border-radius'> ]? )
     // https://drafts.csswg.org/css-shapes-1/#funcdef-basic-shape-inset
 
-    auto insets = consumeBasicShapeInsetInsets(args, context);
+    auto insets = consumeBasicShapeInsetInsets(args, state);
     if (!insets)
         return { };
 
     std::optional<CSS::BorderRadius> radii;
     if (consumeIdent<CSSValueRound>(args)) {
-        radii = consumeUnresolvedBorderRadius(args, context);
+        radii = consumeUnresolvedBorderRadius(args, state);
         if (!radii)
             return { };
     }
@@ -1016,7 +973,7 @@ static std::optional<CSS::Inset> consumeBasicShapeInsetFunctionParameters(CSSPar
 
 // MARK: - <basic-shape>
 
-RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange& range, const CSSParserContext& context, OptionSet<PathParsingOption> options)
+RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<PathParsingOption> options)
 {
     // <basic-shape> = <circle()> | <ellipse() | <inset()> | <path()> | <polygon()> | <rect()> | <shape()> | <xywh()>
     // https://drafts.csswg.org/css-shapes/#typedef-basic-shape
@@ -1031,21 +988,21 @@ RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange& range, const CSSParserCo
 
     std::optional<CSS::BasicShape> result;
     if (id == CSSValueCircle)
-        result = toBasicShape<CSSValueCircle>(consumeBasicShapeCircleFunctionParameters(args, context));
+        result = toBasicShape<CSSValueCircle>(consumeBasicShapeCircleFunctionParameters(args, state));
     else if (id == CSSValueEllipse)
-        result = toBasicShape<CSSValueEllipse>(consumeBasicShapeEllipseFunctionParameters(args, context));
+        result = toBasicShape<CSSValueEllipse>(consumeBasicShapeEllipseFunctionParameters(args, state));
     else if (id == CSSValuePolygon)
-        result = toBasicShape<CSSValuePolygon>(consumeBasicShapePolygonFunctionParameters(args, context));
+        result = toBasicShape<CSSValuePolygon>(consumeBasicShapePolygonFunctionParameters(args, state));
     else if (id == CSSValueInset)
-        result = toBasicShape<CSSValueInset>(consumeBasicShapeInsetFunctionParameters(args, context));
+        result = toBasicShape<CSSValueInset>(consumeBasicShapeInsetFunctionParameters(args, state));
     else if (id == CSSValueRect)
-        result = toBasicShape<CSSValueRect>(consumeBasicShapeRectFunctionParameters(args, context));
+        result = toBasicShape<CSSValueRect>(consumeBasicShapeRectFunctionParameters(args, state));
     else if (id == CSSValueXywh)
-        result = toBasicShape<CSSValueXywh>(consumeBasicShapeXywhFunctionParameters(args, context));
+        result = toBasicShape<CSSValueXywh>(consumeBasicShapeXywhFunctionParameters(args, state));
     else if (id == CSSValuePath)
-        result = toBasicShape<CSSValuePath>(consumeBasicShapePathFunctionParameters(args, context, options));
+        result = toBasicShape<CSSValuePath>(consumeBasicShapePathFunctionParameters(args, state, options));
     else if (id == CSSValueShape)
-        result = toBasicShape<CSSValueShape>(consumeBasicShapeShapeFunctionParameters(args, context));
+        result = toBasicShape<CSSValueShape>(consumeBasicShapeShapeFunctionParameters(args, state));
 
     if (!result || !args.atEnd())
         return { };
@@ -1054,7 +1011,7 @@ RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange& range, const CSSParserCo
     return CSSBasicShapeValue::create(WTFMove(*result));
 }
 
-RefPtr<CSSValue> consumePath(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumePath(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <path()> = path( <'fill-rule'>? , <string> )
     // https://drafts.csswg.org/css-shapes/#funcdef-basic-shape-path
@@ -1065,7 +1022,7 @@ RefPtr<CSSValue> consumePath(CSSParserTokenRange& range, const CSSParserContext&
         return nullptr;
 
     auto args = consumeFunction(range);
-    auto result = consumeBasicShapePathFunctionParameters(args, context, { });
+    auto result = consumeBasicShapePathFunctionParameters(args, state, { });
     if (!result || !args.atEnd())
         return nullptr;
 
@@ -1076,12 +1033,12 @@ RefPtr<CSSValue> consumePath(CSSParserTokenRange& range, const CSSParserContext&
     );
 }
 
-RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'shape-outside'> = none | [ <basic-shape> || <shape-box> ] | <image>
     // https://drafts.csswg.org/css-shapes-1/#propdef-shape-outside
 
-    if (auto imageOrNoneValue = consumeImageOrNone(range, context))
+    if (auto imageOrNoneValue = consumeImageOrNone(range, state))
         return imageOrNoneValue;
 
     CSSValueListBuilder list;
@@ -1089,7 +1046,7 @@ RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange& range, const CSSParser
     bool hasShapeValue = false;
 
     // FIXME: The spec says we should allows `path()` functions.
-    if (RefPtr basicShape = consumeBasicShape(range, context, PathParsingOption::RejectPath)) {
+    if (RefPtr basicShape = consumeBasicShape(range, state, PathParsingOption::RejectPath)) {
         list.append(basicShape.releaseNonNull());
         hasShapeValue = true;
     }

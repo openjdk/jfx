@@ -6,6 +6,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2016-2017 Google Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,14 +39,17 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCellInlines.h"
 #include "RenderTableCol.h"
 #include "RenderTableInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleBoxShadow.h"
 #include "StyleProperties.h"
 #include "TransformState.h"
+#include <ranges>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -100,6 +104,11 @@ RenderTableCell::RenderTableCell(Document& document, RenderStyle&& style)
 }
 
 RenderTableCell::~RenderTableCell() = default;
+
+ASCIILiteral RenderTableCell::renderName() const
+{
+    return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)"_s : "RenderTableCell"_s;
+}
 
 void RenderTableCell::willBeRemovedFromTree()
 {
@@ -159,12 +168,12 @@ void RenderTableCell::colSpanOrRowSpanChanged()
 
     // FIXME: I suspect that we could return early here if !m_hasColSpan && !m_hasRowSpan.
 
-    setNeedsLayoutAndPrefWidthsRecalc();
+    setNeedsLayoutAndPreferredWidthsUpdate();
     if (parent() && section())
         section()->setNeedsCellRecalc();
 }
 
-Length RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisCell, Length widthFromStyle) const
+Style::PreferredSize RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisCell, const Style::PreferredSize& widthFromStyle) const
 {
     ASSERT(firstColForThisCell && firstColForThisCell == table()->colElement(col()));
     RenderTableCol* tableCol = firstColForThisCell;
@@ -172,17 +181,19 @@ Length RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisC
     unsigned colSpanCount = colSpan();
     LayoutUnit colWidthSum;
     for (unsigned i = 1; i <= colSpanCount; i++) {
-        Length colWidth = tableCol->style().logicalWidth();
+        auto& colWidth = tableCol->style().logicalWidth();
+
+        auto fixedColWidth = colWidth.tryFixed();
 
         // Percentage value should be returned only for colSpan == 1.
         // Otherwise we return original width for the cell.
-        if (!colWidth.isFixed()) {
+        if (!fixedColWidth) {
             if (colSpanCount > 1)
                 return widthFromStyle;
             return colWidth;
         }
 
-        colWidthSum += colWidth.value();
+        colWidthSum += fixedColWidth->value;
         tableCol = tableCol->nextColumn();
         // If no next <col> tag found for the span we just return what we have for now.
         if (!tableCol)
@@ -192,8 +203,8 @@ Length RenderTableCell::logicalWidthFromColumns(RenderTableCol* firstColForThisC
     // Column widths specified on <col> apply to the border box of the cell, see bug 8126.
     // FIXME: Why is border/padding ignored in the negative width case?
     if (colWidthSum > 0)
-        return Length(std::max<LayoutUnit>(0, colWidthSum - borderAndPaddingLogicalWidth()), LengthType::Fixed);
-    return Length(colWidthSum, LengthType::Fixed);
+        return Style::PreferredSize::Fixed { std::max<LayoutUnit>(0, colWidthSum - borderAndPaddingLogicalWidth()) };
+    return Style::PreferredSize::Fixed { colWidthSum };
 }
 
 void RenderTableCell::computePreferredLogicalWidths()
@@ -217,14 +228,13 @@ void RenderTableCell::computePreferredLogicalWidths()
     if (!element() || !style().autoWrap() || !element()->hasAttributeWithoutSynchronization(nowrapAttr))
         return;
 
-    Length w = styleOrColLogicalWidth();
-    if (w.isFixed()) {
+    if (auto fixedLogicalWidth = styleOrColLogicalWidth().tryFixed()) {
         // Nowrap is set, but we didn't actually use it because of the
         // fixed width set on the cell. Even so, it is a WinIE/Moz trait
         // to make the minwidth of the cell into the fixed width. They do this
         // even in strict mode, so do not make this a quirk. Affected the top
         // of hiptop.com.
-        m_minPreferredLogicalWidth = std::max(LayoutUnit(w.value()), m_minPreferredLogicalWidth);
+        m_minPreferredLogicalWidth = std::max(LayoutUnit(fixedLogicalWidth->value), m_minPreferredLogicalWidth);
     }
 }
 
@@ -239,58 +249,71 @@ LayoutRect RenderTableCell::frameRectForStickyPositioning() const
     return returnValue;
 }
 
-void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
+bool RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
 {
     LayoutUnit oldIntrinsicPaddingBefore = intrinsicPaddingBefore();
     LayoutUnit oldIntrinsicPaddingAfter = intrinsicPaddingAfter();
     LayoutUnit logicalHeightWithoutIntrinsicPadding = logicalHeight() - oldIntrinsicPaddingBefore - oldIntrinsicPaddingAfter;
 
     auto intrinsicPaddingBefore = oldIntrinsicPaddingBefore;
-    VerticalAlign alignment = style().verticalAlign();
+    auto alignment = style().verticalAlign();
     if (auto alignContent = style().alignContent(); !alignContent.isNormal()) {
         // align-content overrides vertical-align
         if (alignContent.position() == ContentPosition::Baseline)
-            alignment = VerticalAlign::Baseline;
+            alignment = CSS::Keyword::Baseline { };
         else if (alignContent.isCentered())
-            alignment = VerticalAlign::Middle;
+            alignment = CSS::Keyword::Middle { };
         else if (alignContent.isStartward())
-            alignment = VerticalAlign::Top;
+            alignment = CSS::Keyword::Top { };
         else if (alignContent.isEndward())
-            alignment = VerticalAlign::Bottom;
+            alignment = CSS::Keyword::Bottom { };
     }
-    switch (alignment) {
-    case VerticalAlign::Sub:
-    case VerticalAlign::Super:
-    case VerticalAlign::TextTop:
-    case VerticalAlign::TextBottom:
-    case VerticalAlign::Length:
-    case VerticalAlign::Baseline: {
+
+    auto applyStandard = [&] {
         auto baseline = cellBaselinePosition();
         auto needsIntrinsicPadding = baseline > borderAndPaddingBefore() || !logicalHeight();
         if (needsIntrinsicPadding)
             intrinsicPaddingBefore = section()->rowBaseline(rowIndex()) - (baseline - oldIntrinsicPaddingBefore);
-        break;
-    }
-    case VerticalAlign::Top:
-        break;
-    case VerticalAlign::Middle:
+    };
+
+    WTF::switchOn(alignment,
+        [&](const CSS::Keyword::Sub&) {
+            applyStandard();
+        },
+        [&](const CSS::Keyword::Super&) {
+            applyStandard();
+        },
+        [&](const CSS::Keyword::TextTop&) {
+            applyStandard();
+        },
+        [&](const CSS::Keyword::TextBottom&) {
+            applyStandard();
+        },
+        [&](const CSS::Keyword::Baseline&) {
+            applyStandard();
+        },
+        [&](const CSS::Keyword::Top&) {
+            // Do nothing.
+        },
+        [&](const CSS::Keyword::Middle&) {
         intrinsicPaddingBefore = (rowHeight - logicalHeightWithoutIntrinsicPadding) / 2;
-        break;
-    case VerticalAlign::Bottom:
+        },
+        [&](const CSS::Keyword::Bottom&) {
         intrinsicPaddingBefore = rowHeight - logicalHeightWithoutIntrinsicPadding;
-        break;
-    case VerticalAlign::BaselineMiddle:
-        break;
+        },
+        [&](const CSS::Keyword::WebkitBaselineMiddle&) {
+            // Do nothing.
+        },
+        [&](const Style::VerticalAlign::Length&) {
+            applyStandard();
     }
+    );
 
     LayoutUnit intrinsicPaddingAfter = rowHeight - logicalHeightWithoutIntrinsicPadding - intrinsicPaddingBefore;
     setIntrinsicPaddingBefore(intrinsicPaddingBefore);
     setIntrinsicPaddingAfter(intrinsicPaddingAfter);
 
-    // FIXME: Changing an intrinsic padding shouldn't trigger a relayout as it only shifts the cell inside the row but
-    // doesn't change the logical height.
-    if (intrinsicPaddingBefore != oldIntrinsicPaddingBefore || intrinsicPaddingAfter != oldIntrinsicPaddingAfter)
-        setNeedsLayout(MarkOnlyThis);
+    return intrinsicPaddingBefore != oldIntrinsicPaddingBefore || intrinsicPaddingAfter != oldIntrinsicPaddingAfter;
 }
 
 void RenderTableCell::updateLogicalWidth()
@@ -408,7 +431,7 @@ void RenderTableCell::setOverridingLogicalHeightFromRowHeight(LayoutUnit rowHeig
     setOverridingBorderBoxLogicalHeight(rowHeight);
 }
 
-LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
+LayoutSize RenderTableCell::offsetFromContainer(const RenderElement& container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
 {
     ASSERT(&container == this->container());
 
@@ -497,7 +520,7 @@ static inline void markCellDirtyWhenCollapsedBorderChanges(RenderTableCell* cell
 {
     if (!cell)
         return;
-    cell->setNeedsLayoutAndPrefWidthsRecalc();
+    cell->setNeedsLayoutAndPreferredWidthsUpdate();
 }
 
 void RenderTableCell::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -847,10 +870,10 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
     RenderTable* table = this->table();
     if (!table)
         return result;
-    RenderTableCell* prevCell = table->cellAbove(this);
-    if (prevCell) {
+    RenderTableCell* previousCell = table->cellAbove(this);
+    if (previousCell) {
         // (2) A before cell's after border.
-        result = chooseBorder(CollapsedBorderValue(prevCell->style().borderAfter(), includeColor ? prevCell->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Cell), result);
+        result = chooseBorder(CollapsedBorderValue(previousCell->style().borderAfter(), includeColor ? previousCell->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Cell), result);
         if (!result.exists())
             return result;
     }
@@ -861,15 +884,15 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
         return result;
 
     // (4) The previous row's after border.
-    if (prevCell) {
-        RenderObject* prevRow = 0;
-        if (prevCell->section() == section())
-            prevRow = parent()->previousSibling();
+    if (previousCell) {
+        RenderTableRow* previousRow = nullptr;
+        if (previousCell->section() == section())
+            previousRow = dynamicDowncast<RenderTableRow>(parent()->previousSibling());
         else
-            prevRow = prevCell->section()->lastRow();
+            previousRow = previousCell->section()->lastRow();
 
-        if (prevRow) {
-            result = chooseBorder(CollapsedBorderValue(prevRow->style().borderAfter(), includeColor ? prevRow->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Row), result);
+        if (previousRow) {
+            result = chooseBorder(CollapsedBorderValue(previousRow->style().borderAfter(), includeColor ? previousRow->style().visitedDependentColorWithColorFilter(afterColorProperty) : Color(), BorderPrecedence::Row), result);
             if (!result.exists())
                 return result;
         }
@@ -1256,7 +1279,7 @@ void RenderTableCell::collectBorderValues(RenderTable::CollapsedBorderValues& bo
 
 void RenderTableCell::sortBorderValues(RenderTable::CollapsedBorderValues& borderValues)
 {
-    std::sort(borderValues.begin(), borderValues.end(), compareBorders);
+    std::ranges::sort(borderValues, compareBorders);
 }
 
 void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1438,12 +1461,12 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     adjustBorderBoxRectForPainting(paintRect);
 
     BackgroundPainter backgroundPainter { *this, paintInfo };
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Normal);
 
     // Paint our cell background.
     paintBackgroundsBehindCell(paintInfo, paintOffset, this, paintOffset);
 
-    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBoxShadow(paintRect, style(), Style::ShadowStyle::Inset);
 
     if (!style().hasBorder() || table->collapseBorders())
         return;
@@ -1479,7 +1502,7 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         return;
 
     // Shrink our intrinsic padding as much as possible to accommodate the scrollbar.
-    if ((style().verticalAlign() == VerticalAlign::Middle && style().alignContent().isNormal())
+    if ((WTF::holdsAlternative<CSS::Keyword::Middle>(style().verticalAlign()) && style().alignContent().isNormal())
         || style().alignContent().isCentered()) {
         LayoutUnit totalHeight = logicalHeight();
         LayoutUnit heightWithoutIntrinsicPadding = totalHeight - intrinsicPaddingBefore() - intrinsicPaddingAfter();
@@ -1490,18 +1513,6 @@ void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool ve
         setIntrinsicPaddingAfter(newAfterPadding);
     } else
         setIntrinsicPaddingAfter(intrinsicPaddingAfter() - scrollbarHeight);
-}
-
-RenderPtr<RenderTableCell> RenderTableCell::createTableCellWithStyle(Document& document, const RenderStyle& style)
-{
-    auto cell = createRenderer<RenderTableCell>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableCell));
-    cell->initializeStyle();
-    return cell;
-}
-
-RenderPtr<RenderTableCell> RenderTableCell::createAnonymousWithParentRenderer(const RenderTableRow& parent)
-{
-    return RenderTableCell::createTableCellWithStyle(parent.document(), parent.style());
 }
 
 bool RenderTableCell::hasLineIfEmpty() const

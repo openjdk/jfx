@@ -72,7 +72,7 @@ ExceptionOr<Ref<ReadableStream>> MediaStreamTrackProcessor::readable(JSC::JSGlob
 {
     if (!m_readable) {
         if (!m_readableStreamSource)
-        m_readableStreamSource = makeUniqueWithoutRefCountedCheck<Source>(m_track->privateTrack(), *this);
+            lazyInitialize(m_readableStreamSource, makeUniqueWithoutRefCountedCheck<Source>(m_track->privateTrack(), *this));
         auto readableOrException = ReadableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(&globalObject), *m_readableStreamSource);
         if (readableOrException.hasException()) {
             m_readableStreamSource->setAsCancelled();
@@ -177,11 +177,13 @@ RefPtr<WebCodecsVideoFrame> MediaStreamTrackProcessor::VideoFrameObserver::takeV
         videoFrame = m_videoFrames.takeFirst();
     }
 
-    WebCodecsVideoFrame::BufferInit init;
-    init.codedWidth = videoFrame->presentationSize().width();
-    init.codedHeight = videoFrame->presentationSize().height();
-    init.colorSpace = videoFrame->colorSpace();
-    init.timestamp = Seconds(videoFrame->presentationTime().toDouble()).microseconds();
+    WebCodecsVideoFrame::BufferInit init {
+        .format = convertVideoFramePixelFormat(videoFrame->pixelFormat()),
+        .codedWidth = static_cast<size_t>(videoFrame->presentationSize().width()),
+        .codedHeight = static_cast<size_t>(videoFrame->presentationSize().height()),
+        .timestamp = Seconds(videoFrame->presentationTime().toDouble()).microsecondsAs<int64_t>(),
+        .colorSpace = videoFrame->colorSpace()
+    };
 
     return WebCodecsVideoFrame::create(context, videoFrame.releaseNonNull(), WTFMove(init));
 }

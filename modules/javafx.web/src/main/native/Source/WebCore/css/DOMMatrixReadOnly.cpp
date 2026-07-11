@@ -26,7 +26,8 @@
 #include "config.h"
 #include "DOMMatrixReadOnly.h"
 
-#include "CSSParser.h"
+#include "CSSParserContext.h"
+#include "CSSParserMode.h"
 #include "CSSPropertyParserConsumer+Transform.h"
 #include "CSSToLengthConversionData.h"
 #include "DOMMatrix.h"
@@ -48,7 +49,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMMatrixReadOnly);
 
 // https://drafts.fxtf.org/geometry/#dom-dommatrixreadonly-dommatrixreadonly
-ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<std::variant<String, Vector<double>>>&& init)
+ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<Variant<String, Vector<double>>>&& init)
 {
     if (!init)
         return adoptRef(*new DOMMatrixReadOnly);
@@ -229,8 +230,7 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
     if (string.isEmpty())
         return AbstractMatrix { };
 
-    CSSToLengthConversionData conversionData;
-    auto operations = CSSPropertyParserHelpers::parseTransformRaw(string, CSSParserContext(HTMLStandardMode), conversionData);
+    auto operations = CSSPropertyParserHelpers::parseTransformRaw(string, CSSParserContext(HTMLStandardMode));
     if (!operations)
         return Exception { ExceptionCode::SyntaxError };
 

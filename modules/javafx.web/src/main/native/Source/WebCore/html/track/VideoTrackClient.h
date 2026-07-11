@@ -50,6 +50,7 @@ public:
     virtual void videoTrackLabelChanged(VideoTrack&) { }
     virtual void videoTrackLanguageChanged(VideoTrack&) { }
     virtual void videoTrackSelectedChanged(VideoTrack&) { }
+    virtual void videoTrackConfigurationChanged(VideoTrack&) { }
     virtual void willRemoveVideoTrack(VideoTrack&) { }
 };
 

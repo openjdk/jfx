@@ -2341,7 +2341,7 @@ void testComplex(unsigned numVars, unsigned numConstructs)
                     proc, Load, Int32, Origin(),
                     loopBody->appendNew<Value>(
                         proc, Add, Origin(),
-                        loopBody->appendNew<ConstPtrValue>(proc, Origin(), varSlots.data()),
+                        loopBody->appendNew<ConstPtrValue>(proc, Origin(), varSlots.span().data()),
                         loopBody->appendNew<Value>(
                             proc, Shl, Origin(),
                             andValue,

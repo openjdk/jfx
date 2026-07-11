@@ -27,21 +27,24 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ExceptionOr.h"
 #include "PaymentSessionBase.h"
 
 namespace WebCore {
 
+class CertificateInfo;
 class Document;
+class DocumentLoader;
 class Payment;
 class PaymentContact;
 class PaymentMethod;
 class PaymentSessionError;
 class ScriptExecutionContext;
 struct ApplePayShippingMethod;
+template<typename> class ExceptionOr;
 
 class PaymentSession : public virtual PaymentSessionBase {
 public:
+    WEBCORE_EXPORT static bool isSecureForSession(const URL&, const std::optional<const CertificateInfo>&);
     static ExceptionOr<void> canCreateSession(Document&);
 
     virtual unsigned version() const = 0;

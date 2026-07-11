@@ -108,7 +108,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
         }
 
     private:
-        NO_RETURN void threadBody()
+        [[noreturn]] void threadBody()
         {
             while (true) {
                 const WTF::Function<void ()>* function;
@@ -172,7 +172,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
 }
 #endif
 
-WorkQueue& WorkQueue::main()
+WorkQueue& WorkQueue::mainSingleton()
 {
     static NeverDestroyed<RefPtr<WorkQueue>> mainWorkQueue;
     static std::once_flag onceKey;

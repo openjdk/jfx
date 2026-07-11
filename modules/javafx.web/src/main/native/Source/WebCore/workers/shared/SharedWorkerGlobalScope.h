@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "EventTargetInterfaces.h"
 #include "TransferredMessagePort.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/TZoneMalloc.h>

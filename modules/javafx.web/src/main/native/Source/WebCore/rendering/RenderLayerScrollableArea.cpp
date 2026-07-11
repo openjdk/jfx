@@ -49,6 +49,7 @@
 
 #include "AnchorPositionEvaluator.h"
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "DebugPageOverlays.h"
 #include "DocumentInlines.h"
 #include "Editor.h"
@@ -62,6 +63,7 @@
 #include "InspectorInstrumentation.h"
 #include "LineClampValue.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
@@ -69,10 +71,13 @@
 #include "RenderGeometryMap.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
+#include "RenderLayerInlines.h"
 #include "RenderMarquee.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderScrollbarPart.h"
 #include "RenderStyleInlines.h"
+#include "RenderTheme.h"
 #include "RenderView.h"
 #include "ScrollAnimator.h"
 #include "ScrollbarTheme.h"
@@ -103,10 +108,10 @@ void RenderLayerScrollableArea::clear()
 {
     auto& renderer = m_layer.renderer();
     if (m_registeredScrollableArea)
-        renderer.view().protectedFrameView()->removeScrollableArea(this);
+        renderer.view().frameView().removeScrollableArea(this);
 
     if (m_isRegisteredForAnimatedScroll) {
-        renderer.view().protectedFrameView()->removeScrollableAreaForAnimatedScroll(this);
+        renderer.view().frameView().removeScrollableAreaForAnimatedScroll(this);
         m_isRegisteredForAnimatedScroll = false;
     }
 
@@ -363,10 +368,8 @@ void RenderLayerScrollableArea::scrollTo(const ScrollPosition& position)
     // Update the positions of our child layers (if needed as only fixed layers should be impacted by a scroll).
     // We don't update compositing layers, because we need to do a deep update from the compositing ancestor.
     if (!view.frameView().layoutContext().isInRenderTreeLayout()) {
-        Style::AnchorPositionEvaluator::updateSnapshottedScrollOffsets(m_layer.renderer().protectedDocument());
-
         // If we're in the middle of layout, we'll just update layers once layout has finished.
-        view.protectedFrameView()->updateLayerPositionsAfterOverflowScroll(m_layer);
+        view.frameView().updateLayerPositionsAfterOverflowScroll(m_layer);
 
         if (!m_updatingMarqueePosition) {
             // Avoid updating compositing layers if, higher on the stack, we're already updating layer
@@ -409,14 +412,14 @@ void RenderLayerScrollableArea::scrollTo(const ScrollPosition& position)
         requiresRepaint = m_layer.backing()->needsRepaintOnCompositedScroll();
     }
 
-    auto isScrolledBy = [](RenderObject& renderer, RenderLayer& scrollableLayer) {
-        auto layer = renderer.enclosingLayer();
-        return layer && layer->ancestorLayerIsInContainingBlockChain(scrollableLayer);
-    };
-
     // Just schedule a full repaint of our object.
     if (requiresRepaint) {
         renderer.repaintUsingContainer(repaintContainer.get(), rectForRepaint);
+
+        auto isScrolledBy = [](auto& renderer, auto& scrollableLayer) {
+            auto layer = renderer.enclosingLayer();
+            return layer && layer->ancestorLayerIsInContainingBlockChain(scrollableLayer);
+        };
 
         // We also have to repaint any descendant composited layers that have fixed backgrounds.
         if (auto slowRepaintObjects = view.frameView().slowRepaintObjects()) {
@@ -428,14 +431,25 @@ void RenderLayerScrollableArea::scrollTo(const ScrollPosition& position)
     }
 
     // Schedule the scroll and scroll-related DOM events.
-    if (RefPtr element = renderer.element())
+    if (RefPtr element = renderer.element()) {
+        setIsAwaitingScrollend(true);
         element->protectedDocument()->addPendingScrollEventTarget(*element);
+    }
 
     if (scrollsOverflow())
-        view.protectedFrameView()->didChangeScrollOffset();
+        view.frameView().didChangeScrollOffset();
 
-    view.protectedFrameView()->viewportContentsChanged();
+    view.frameView().viewportContentsChanged();
     frame->protectedEditor()->renderLayerDidScroll(m_layer);
+}
+
+void RenderLayerScrollableArea::scrollDidEnd()
+{
+    if (!isAwaitingScrollend())
+        return;
+    setIsAwaitingScrollend(false);
+    if (RefPtr element = m_layer.renderer().element())
+        element->protectedDocument()->addPendingScrollendEventTarget(*element);
 }
 
 void RenderLayerScrollableArea::updateCompositingLayersAfterScroll()
@@ -509,8 +523,8 @@ bool RenderLayerScrollableArea::canUseCompositedScrolling() const
     if (renderer.settings().asyncOverflowScrollingEnabled())
         return isVisible && scrollsOverflow() && !m_layer.isInsideSVGForeignObject();
 
-#if PLATFORM(IOS_FAMILY) && ENABLE(OVERFLOW_SCROLLING_TOUCH)
-    return isVisible && scrollsOverflow() && renderer.style().useTouchOverflowScrolling();
+#if PLATFORM(IOS_FAMILY) && ENABLE(WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY)
+    return isVisible && scrollsOverflow() && renderer.style().overflowScrolling() == Style::WebkitOverflowScrolling::Touch;
 #else
     return false;
 #endif
@@ -601,13 +615,13 @@ IntRect RenderLayerScrollableArea::convertFromScrollbarToContainingView(const Sc
     auto& renderer = m_layer.renderer();
     IntRect rect = scrollbarRect;
     rect.move(scrollbarOffset(scrollbar));
-    return renderer.view().protectedFrameView()->convertFromRendererToContainingView(&renderer, rect);
+    return renderer.view().frameView().convertFromRendererToContainingView(&renderer, rect);
 }
 
 IntRect RenderLayerScrollableArea::convertFromContainingViewToScrollbar(const Scrollbar& scrollbar, const IntRect& parentRect) const
 {
     auto& renderer = m_layer.renderer();
-    IntRect rect = renderer.view().protectedFrameView()->convertFromContainingViewToRenderer(&renderer, parentRect);
+    IntRect rect = renderer.view().frameView().convertFromContainingViewToRenderer(&renderer, parentRect);
     rect.move(-scrollbarOffset(scrollbar));
     return rect;
 }
@@ -617,13 +631,13 @@ IntPoint RenderLayerScrollableArea::convertFromScrollbarToContainingView(const S
     auto& renderer = m_layer.renderer();
     IntPoint point = scrollbarPoint;
     point.move(scrollbarOffset(scrollbar));
-    return renderer.view().protectedFrameView()->convertFromRendererToContainingView(&renderer, point);
+    return renderer.view().frameView().convertFromRendererToContainingView(&renderer, point);
 }
 
 IntPoint RenderLayerScrollableArea::convertFromContainingViewToScrollbar(const Scrollbar& scrollbar, const IntPoint& parentPoint) const
 {
     auto& renderer = m_layer.renderer();
-    IntPoint point = renderer.view().protectedFrameView()->convertFromContainingViewToRenderer(&renderer, parentPoint);
+    IntPoint point = renderer.view().frameView().convertFromContainingViewToRenderer(&renderer, parentPoint);
     point.move(-scrollbarOffset(scrollbar));
     return point;
 }
@@ -666,7 +680,7 @@ void RenderLayerScrollableArea::availableContentSizeChanged(AvailableSizeChangeR
 bool RenderLayerScrollableArea::shouldSuspendScrollAnimations() const
 {
     auto& renderer = m_layer.renderer();
-    return renderer.view().protectedFrameView()->shouldSuspendScrollAnimations();
+    return renderer.view().frameView().shouldSuspendScrollAnimations();
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -884,7 +898,7 @@ Ref<Scrollbar> RenderLayerScrollableArea::createScrollbar(ScrollbarOrientation o
         if (Ref page = m_layer.page(); page->isMonitoringWheelEvents())
             scrollAnimator().setWheelEventTestMonitor(page->wheelEventTestMonitor());
     }
-    renderer.view().protectedFrameView()->addChild(*widget);
+    renderer.view().frameView().addChild(*widget);
     return widget.releaseNonNull();
 }
 
@@ -895,7 +909,7 @@ void RenderLayerScrollableArea::destroyScrollbar(ScrollbarOrientation orientatio
         return;
 
     if (!scrollbar->isCustomScrollbar())
-        willRemoveScrollbar(scrollbar.get(), orientation);
+        willRemoveScrollbar(*scrollbar, orientation);
 
     scrollbar->removeFromParent();
     scrollbar = nullptr;
@@ -984,7 +998,7 @@ int RenderLayerScrollableArea::verticalScrollbarWidth(OverlayScrollbarSizeReleva
     if (vBar && vBar->isOverlayScrollbar() && (relevancy == OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize || !vBar->shouldParticipateInHitTesting()))
         return 0;
 
-    if (!vBar && isHorizontalWritingMode && !(scrollbarGutterStyle().isAuto || ScrollbarTheme::theme().usesOverlayScrollbars()))
+    if (!vBar && isHorizontalWritingMode && !(scrollbarGutterStyle().isAuto() || ScrollbarTheme::theme().usesOverlayScrollbars()))
         return ScrollbarTheme::theme().scrollbarThickness(scrollbarWidthStyle());
 
     if (!vBar || !showsOverflowControls())
@@ -999,7 +1013,7 @@ int RenderLayerScrollableArea::horizontalScrollbarHeight(OverlayScrollbarSizeRel
     if (hBar && hBar->isOverlayScrollbar() && (relevancy == OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize || !hBar->shouldParticipateInHitTesting()))
         return 0;
 
-    if (!hBar && !isHorizontalWritingMode && !(scrollbarGutterStyle().isAuto || ScrollbarTheme::theme().usesOverlayScrollbars()))
+    if (!hBar && !isHorizontalWritingMode && !(scrollbarGutterStyle().isAuto() || ScrollbarTheme::theme().usesOverlayScrollbars()))
         return ScrollbarTheme::theme().scrollbarThickness(scrollbarWidthStyle());
 
     if (!hBar || !showsOverflowControls())
@@ -1036,11 +1050,11 @@ Color RenderLayerScrollableArea::scrollbarTrackColorStyle() const
     return { };
 }
 
-ScrollbarGutter RenderLayerScrollableArea::scrollbarGutterStyle()  const
+Style::ScrollbarGutter RenderLayerScrollableArea::scrollbarGutterStyle()  const
 {
     if (auto* renderer = m_layer.renderBox())
         return renderer->style().scrollbarGutter();
-    return { };
+    return CSS::Keyword::Auto { };
 }
 
 ScrollbarWidth RenderLayerScrollableArea::scrollbarWidthStyle()  const
@@ -1279,6 +1293,14 @@ void RenderLayerScrollableArea::updateScrollbarsAfterStyleChange(const RenderSty
 
     if (!m_scrollDimensionsDirty)
         updateScrollableAreaSet(hasScrollableHorizontalOverflow() || hasScrollableVerticalOverflow());
+
+    const auto scrollbarsHaveDarkAppearance = useDarkAppearanceForScrollbars();
+    if (scrollbarsHaveDarkAppearance != m_useDarkAppearanceForScrollbars) {
+        m_useDarkAppearanceForScrollbars = scrollbarsHaveDarkAppearance;
+        m_layer.setNeedsCompositingGeometryUpdate();
+        // The scroll corner must be repainted to match the new scrollbar appearance.
+        invalidateScrollCorner(scrollCornerRect());
+    }
 }
 
 void RenderLayerScrollableArea::updateScrollbarsAfterLayout()
@@ -1431,7 +1453,7 @@ bool RenderLayerScrollableArea::showsOverflowControls() const
     return true;
 }
 
-void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, const IntPoint& paintOffset, const IntRect& damageRect, bool paintingOverlayControls)
+void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, OptionSet<PaintBehavior> paintBehavior, const IntPoint& paintOffset, const IntRect& damageRect, bool paintingOverlayControls)
 {
     // Don't do anything if we have no overflow.
     auto& renderer = m_layer.renderer();
@@ -1481,12 +1503,12 @@ void RenderLayerScrollableArea::paintOverflowControls(GraphicsContext& context, 
     positionOverflowControls(toIntSize(adjustedPaintOffset));
 
     // Now that we're sure the scrollbars are in the right place, paint them.
-    if (RefPtr hBar = m_hBar; hBar && !layerForHorizontalScrollbar())
+    if (RefPtr hBar = m_hBar; hBar && (!layerForHorizontalScrollbar() || (paintBehavior & PaintBehavior::FlattenCompositingLayers)))
         hBar->paint(context, damageRect);
-    if (RefPtr vBar = m_vBar; vBar && !layerForVerticalScrollbar())
+    if (RefPtr vBar = m_vBar; vBar && (!layerForVerticalScrollbar() || (paintBehavior & PaintBehavior::FlattenCompositingLayers)))
         vBar->paint(context, damageRect);
 
-    if (layerForScrollCorner())
+    if (layerForScrollCorner() && !(paintBehavior & PaintBehavior::FlattenCompositingLayers))
         return;
 
     // We fill our scroll corner with white if we have a scrollbar that doesn't run all the way up to the
@@ -1520,39 +1542,6 @@ void RenderLayerScrollableArea::paintScrollCorner(GraphicsContext& context, cons
         ScrollbarTheme::theme().paintScrollCorner(*this, context, absRect);
 }
 
-void RenderLayerScrollableArea::drawPlatformResizerImage(GraphicsContext& context, const LayoutRect& resizerCornerRect)
-{
-    auto& renderer = m_layer.renderer();
-    RefPtr<Image> resizeCornerImage;
-    FloatSize cornerResizerSize;
-    Ref document = renderer.document();
-    if (document->deviceScaleFactor() >= 2) {
-        static NeverDestroyed<Image*> resizeCornerImageHiRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner@2x").leakRef());
-        resizeCornerImage = resizeCornerImageHiRes;
-        cornerResizerSize = resizeCornerImage->size();
-        cornerResizerSize.scale(0.5f);
-    } else {
-        static NeverDestroyed<Image*> resizeCornerImageLoRes(&ImageAdapter::loadPlatformResource("textAreaResizeCorner").leakRef());
-        resizeCornerImage = resizeCornerImageLoRes;
-        cornerResizerSize = resizeCornerImage->size();
-    }
-
-    if (shouldPlaceVerticalScrollbarOnLeft()) {
-        context.save();
-        context.translate(resizerCornerRect.x() + cornerResizerSize.width(), resizerCornerRect.y() + resizerCornerRect.height() - cornerResizerSize.height());
-        context.scale(FloatSize(-1.0, 1.0));
-        if (resizeCornerImage)
-            context.drawImage(*resizeCornerImage, FloatRect(FloatPoint(), cornerResizerSize));
-        context.restore();
-        return;
-    }
-
-    if (!resizeCornerImage)
-        return;
-    FloatRect imageRect = snapRectToDevicePixels(LayoutRect(resizerCornerRect.maxXMaxYCorner() - cornerResizerSize, cornerResizerSize), document->deviceScaleFactor());
-    context.drawImage(*resizeCornerImage, imageRect);
-}
-
 void RenderLayerScrollableArea::paintResizer(GraphicsContext& context, const LayoutPoint& paintOffset, const LayoutRect& damageRect)
 {
     auto& renderer = m_layer.renderer();
@@ -1576,20 +1565,11 @@ void RenderLayerScrollableArea::paintResizer(GraphicsContext& context, const Lay
         return;
     }
 
-    drawPlatformResizerImage(context, resizerAbsRect);
+    renderer.theme().paintPlatformResizer(renderer, context, resizerAbsRect);
 
-    // Draw a frame around the resizer (1px grey line) if there are any scrollbars present.
-    // Clipping will exclude the right and bottom edges of this frame.
-    if (!hasOverlayScrollbars() && (m_vBar || m_hBar) && renderer.style().scrollbarWidth() != ScrollbarWidth::None) {
-        GraphicsContextStateSaver stateSaver(context);
-        context.clip(resizerAbsRect);
-        LayoutRect largerCorner = resizerAbsRect;
-        largerCorner.setSize(LayoutSize(largerCorner.width() + 1_lu, largerCorner.height() + 1_lu));
-        context.setStrokeColor(SRGBA<uint8_t> { 217, 217, 217 });
-        context.setStrokeThickness(1.0f);
-        context.setFillColor(Color::transparentBlack);
-        context.drawRect(snappedIntRect(largerCorner));
-    }
+    // Draw a frame around the resizer if there are any scrollbars present.
+    if (!hasOverlayScrollbars() && (m_vBar || m_hBar) && renderer.style().scrollbarWidth() != ScrollbarWidth::None)
+        renderer.theme().paintPlatformResizerFrame(renderer, context, resizerAbsRect);
 }
 
 bool RenderLayerScrollableArea::hitTestOverflowControls(HitTestResult& result, const IntPoint& localPoint)
@@ -1635,7 +1615,7 @@ bool RenderLayerScrollableArea::isActive() const
 
 IntPoint RenderLayerScrollableArea::lastKnownMousePositionInView() const
 {
-    return m_layer.renderer().view().protectedFrameView()->lastKnownMousePositionInView();
+    return m_layer.renderer().view().frameView().lastKnownMousePositionInView();
 }
 
 bool RenderLayerScrollableArea::isHandlingWheelEvent() const
@@ -2003,7 +1983,7 @@ void RenderLayerScrollableArea::scrollByRecursively(const IntSize& delta, Scroll
     } else {
         // If we are here, we were called on a renderer that can be programmatically scrolled, but doesn't
         // have an overflow clip. Which means that it is a document node that can be scrolled.
-        renderer.view().protectedFrameView()->scrollBy(delta);
+        renderer.view().frameView().scrollBy(delta);
         if (scrolledArea)
             *scrolledArea = &renderer.view().frameView();
 
@@ -2065,6 +2045,11 @@ void RenderLayerScrollableArea::invalidateScrollAnchoringElement()
         m_scrollAnchoringController->invalidateAnchorElement();
 }
 
+void RenderLayerScrollableArea::updateAnchorPositionedAfterScroll()
+{
+    Style::AnchorPositionEvaluator::updatePositionsAfterScroll(m_layer.renderer().document());
+}
+
 std::optional<FrameIdentifier> RenderLayerScrollableArea::rootFrameID() const
 {
     return m_layer.renderer().frame().rootFrame().frameID();
@@ -2075,5 +2060,13 @@ void RenderLayerScrollableArea::scrollbarWidthChanged(ScrollbarWidth width)
     scrollbarsController().scrollbarWidthChanged(width);
     availableContentSizeChanged(AvailableSizeChangeReason::ScrollbarsChanged);
 }
+
+#if ENABLE(FORM_CONTROL_REFRESH)
+bool RenderLayerScrollableArea::formControlRefreshEnabled() const
+{
+    return m_layer.page().settings().formControlRefreshEnabled();
+}
+#endif
+
 
 } // namespace WebCore

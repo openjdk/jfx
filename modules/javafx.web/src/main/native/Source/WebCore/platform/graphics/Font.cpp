@@ -64,10 +64,10 @@ Ref<Font> Font::create(const FontPlatformData& platformData, Origin origin, IsIn
     return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback, identifier));
 }
 
-Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, float fontSize, bool syntheticBold, bool syntheticItalic)
+Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, float fontSize, bool syntheticBold, bool syntheticItalic, DownloadableBinaryFontTrustedTypes trustedType)
 {
     bool wrapping;
-    auto customFontData = CachedFont::createCustomFontData(fontFaceData.get(), { }, wrapping);
+    auto customFontData = CachedFont::createCustomFontData(fontFaceData.get(), { }, wrapping, trustedType);
     FontDescription description;
     description.setComputedSize(fontSize);
     // FIXME: Why doesn't this pass in any meaningful data for the last few arguments?
@@ -92,12 +92,13 @@ Font::Font(const FontPlatformData& platformData, Origin origin, IsInterstitial i
     , m_shouldNotBeUsedForArabic(false)
 #endif
 {
+    relaxAdoptionRequirement();
     platformInit();
     platformGlyphInit();
     platformCharWidthInit();
 #if ENABLE(OPENTYPE_VERTICAL)
     if (platformData.orientation() == FontOrientation::Vertical && orientationFallback == IsOrientationFallback::No) {
-        m_verticalData = FontCache::forCurrentThread().verticalData(platformData);
+        m_verticalData = FontCache::forCurrentThread()->verticalData(platformData);
         m_hasVerticalGlyphs = m_verticalData.get() && m_verticalData->hasVerticalMetrics();
     }
 #endif
@@ -199,7 +200,7 @@ RenderingResourceIdentifier FontInternalAttributes::ensureRenderingResourceIdent
     return *renderingResourceIdentifier;
 }
 
-static bool fillGlyphPage(GlyphPage& pageToFill, std::span<const UChar> buffer, const Font& font)
+static bool fillGlyphPage(GlyphPage& pageToFill, std::span<const char16_t> buffer, const Font& font)
 {
     bool hasGlyphs = pageToFill.fill(buffer);
 #if ENABLE(OPENTYPE_VERTICAL)
@@ -327,9 +328,9 @@ static std::optional<size_t> codePointSupportIndex(char32_t codePoint)
 }
 
 #if PLATFORM(WIN)
-static void overrideControlCharacters(Vector<UChar>& buffer, unsigned start, unsigned end)
+static void overrideControlCharacters(Vector<char16_t>& buffer, unsigned start, unsigned end)
 {
-    auto overwriteCodePoints = [&](unsigned minimum, unsigned maximum, UChar newCodePoint) {
+    auto overwriteCodePoints = [&](unsigned minimum, unsigned maximum, char16_t newCodePoint) {
         unsigned begin = std::max(start, minimum);
         unsigned complete = std::min(end, maximum);
         for (unsigned i = begin; i < complete; ++i) {
@@ -338,7 +339,7 @@ static void overrideControlCharacters(Vector<UChar>& buffer, unsigned start, uns
         }
     };
 
-    auto overwriteCodePoint = [&](UChar codePoint, UChar newCodePoint) {
+    auto overwriteCodePoint = [&](char16_t codePoint, char16_t newCodePoint) {
         ASSERT(codePointSupportIndex(codePoint));
         if (codePoint >= start && codePoint < end)
             buffer[codePoint - start] = newCodePoint;
@@ -382,7 +383,7 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
     unsigned glyphPageSize = GlyphPage::sizeForPageNumber(pageNumber);
 
     unsigned start = GlyphPage::startingCodePointInPageNumber(pageNumber);
-    Vector<UChar> buffer(glyphPageSize * 2 + 2);
+    Vector<char16_t> buffer(glyphPageSize * 2 + 2);
     unsigned bufferLength;
     if (U_IS_BMP(start)) {
         bufferLength = glyphPageSize;
@@ -670,8 +671,10 @@ ColorGlyphType Font::colorGlyphType(Glyph glyph) const
 
     return WTF::switchOn(m_emojiType, [](NoEmojiGlyphs) {
         return ColorGlyphType::Outline;
+#if USE(SKIA)
     }, [](AllEmojiGlyphs) {
         return ColorGlyphType::Color;
+#endif
     }, [glyph](const SomeEmojiGlyphs& someEmojiGlyphs) {
         return someEmojiGlyphs.colorGlyphs.get(glyph) ? ColorGlyphType::Color : ColorGlyphType::Outline;
     });
@@ -681,6 +684,28 @@ ColorGlyphType Font::colorGlyphType(Glyph glyph) const
 TextStream& operator<<(TextStream& ts, const Font& font)
 {
     ts << font.description();
+    return ts;
+}
+
+WTF::TextStream& operator<<(WTF::TextStream& ts, const GlyphBuffer& glyphBuffer)
+{
+    ts << "glyphBuffer: " << &glyphBuffer;
+    auto initialAdvance = glyphBuffer.initialAdvance();
+    ts << ", initial advance: width:" <<  width(initialAdvance) << " height:" << height(initialAdvance);
+    for (size_t index = 0; index < glyphBuffer.size(); ++index) {
+        auto advance = glyphBuffer.advanceAt(index);
+        auto& font = glyphBuffer.fontAt(index);
+        auto glyph =  glyphBuffer.glyphAt(index);
+        auto bounds = font.boundsForGlyph(glyph);
+        ts << "\n"_s;
+        ts << "glyph index: " << index;
+        ts << ", glyph: " << glyph;
+        ts << ", font: " <<  &font;
+        ts << ", advance: width:" <<  width(advance) << " height:" << height(advance);
+        ts << ", string index: "  << glyphBuffer.uncheckedStringOffsetAt(index);
+        ts << ", origin: " << glyphBuffer.originAt(index);
+        ts << ", glyph bounds: " << bounds;
+    }
     return ts;
 }
 #endif

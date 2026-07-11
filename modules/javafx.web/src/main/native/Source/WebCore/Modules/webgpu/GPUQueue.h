@@ -89,7 +89,7 @@ public:
 private:
     GPUQueue(Ref<WebGPU::Queue>&&, WebGPU::Device&);
 
-    Ref<WebGPU::Queue> m_backing;
+    const Ref<WebGPU::Queue> m_backing;
     WeakPtr<WebGPU::Device> m_device;
 };
 

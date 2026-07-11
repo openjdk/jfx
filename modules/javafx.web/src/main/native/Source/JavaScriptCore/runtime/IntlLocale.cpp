@@ -81,7 +81,7 @@ public:
     bool initialize(const String&);
     CString toCanonical();
 
-    void overrideLanguageScriptRegion(StringView language, StringView script, StringView region);
+    void overrideLanguageScriptRegionVariants(StringView language, StringView script, StringView region, StringView variants = { });
     bool setKeywordValue(ASCIILiteral key, StringView value);
 
 private:
@@ -101,17 +101,17 @@ CString LocaleIDBuilder::toCanonical()
 {
     ASSERT(m_buffer.size());
 
-    auto buffer = canonicalizeLocaleIDWithoutNullTerminator(m_buffer.data());
+    auto buffer = canonicalizeLocaleIDWithoutNullTerminator(m_buffer.span().data());
     if (!buffer)
         return { };
 
     return canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(WTFMove(buffer.value())).span();
 }
 
-// Because ICU's C API doesn't have set[Language|Script|Region] functions...
-void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringView script, StringView region)
+// Because ICU's C API doesn't have set[Language|Script|Region|Variants] functions...
+void LocaleIDBuilder::overrideLanguageScriptRegionVariants(StringView language, StringView script, StringView region, StringView variants)
 {
-    unsigned length = strlen(m_buffer.data());
+    unsigned length = strlen(m_buffer.span().data());
 
     StringView localeIDView { m_buffer.span().first(length) };
 
@@ -143,6 +143,20 @@ void LocaleIDBuilder::overrideLanguageScriptRegion(StringView language, StringVi
             subtags[index] = region;
         else
             subtags.insert(index, region);
+    }
+
+    if (!variants.isNull()) {
+        while (subtags.size() > 1) {
+            auto& lastSubtag = subtags.last();
+            bool isVariant = (lastSubtag.length() >= 5 && lastSubtag.length() <= 8) || (lastSubtag.length() == 4 && isASCIIDigit(lastSubtag[0]));
+            if (!isVariant)
+                break;
+            subtags.removeLast();
+        }
+        if (!variants.isEmpty()) {
+            for (auto variant : variants.split('-'))
+                subtags.append(variant);
+        }
     }
 
     Vector<char, 32> buffer;
@@ -184,12 +198,12 @@ bool LocaleIDBuilder::setKeywordValue(ASCIILiteral key, StringView value)
     rawValue[value.length()] = '\0';
 
     UErrorCode status = U_ZERO_ERROR;
-    auto length = uloc_setKeywordValue(key.characters(), rawValue.data(), m_buffer.data(), m_buffer.size(), &status);
+    auto length = uloc_setKeywordValue(key.characters(), rawValue.span().data(), m_buffer.mutableSpan().data(), m_buffer.size(), &status);
     // uloc_setKeywordValue does not set U_STRING_NOT_TERMINATED_WARNING.
     if (needsToGrowToProduceBuffer(status)) {
         m_buffer.grow(length + 1);
         status = U_ZERO_ERROR;
-        uloc_setKeywordValue(key.characters(), rawValue.data(), m_buffer.data(), length + 1, &status);
+        uloc_setKeywordValue(key.characters(), rawValue.span().data(), m_buffer.mutableSpan().data(), length + 1, &status);
     }
     return U_SUCCESS(status);
 }
@@ -198,16 +212,16 @@ String IntlLocale::keywordValue(ASCIILiteral key, bool isBoolean) const
 {
     UErrorCode status = U_ZERO_ERROR;
     Vector<char, 32> buffer(32);
-    auto bufferLength = uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.data(), buffer.size(), &status);
+    auto bufferLength = uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.mutableSpan().data(), buffer.size(), &status);
     if (needsToGrowToProduceCString(status)) {
         buffer.grow(bufferLength + 1);
         status = U_ZERO_ERROR;
-        uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.data(), buffer.size(), &status);
+        uloc_getKeywordValue(m_localeID.data(), key.characters(), buffer.mutableSpan().data(), buffer.size(), &status);
     }
     ASSERT(U_SUCCESS(status));
     if (isBoolean)
-        return String::fromLatin1(buffer.data());
-    const char* value = uloc_toUnicodeLocaleType(key.characters(), buffer.data());
+        return String::fromLatin1(buffer.span().data());
+    const char* value = uloc_toUnicodeLocaleType(key.characters(), buffer.span().data());
     if (!value)
         return nullString();
     auto result = String::fromLatin1(value);
@@ -286,8 +300,39 @@ void IntlLocale::initializeLocale(JSGlobalObject* globalObject, const String& ta
         return;
     }
 
-    if (!language.isNull() || !script.isNull() || !region.isNull())
-        localeID.overrideLanguageScriptRegion(language, script, region);
+    String variants = intlStringOption(globalObject, options, vm.propertyNames->variants, { }, { }, { });
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!variants.isNull()) {
+        constexpr auto variantsErrorMessage = "variants is not a well-formed variants value"_s;
+        if (variants.isEmpty() || variants.startsWith('-') || variants.endsWith('-') || variants.contains("--")) [[unlikely]] {
+            throwRangeError(globalObject, scope, variantsErrorMessage);
+            return;
+        }
+        auto variantList = variants.split('-');
+        if (variantList.size() == 1) {
+            if (!isUnicodeVariantSubtag(variantList[0])) [[unlikely]] {
+                throwRangeError(globalObject, scope, variantsErrorMessage);
+                return;
+            }
+        } else {
+            HashSet<String> seenVariants;
+            for (auto variant : variantList) {
+                if (!isUnicodeVariantSubtag(variant)) [[unlikely]] {
+                    throwRangeError(globalObject, scope, variantsErrorMessage);
+                    return;
+                }
+                String lowerVariant = variant.convertToASCIILowercase();
+                if (seenVariants.contains(lowerVariant)) [[unlikely]] {
+                    throwRangeError(globalObject, scope, variantsErrorMessage);
+                    return;
+                }
+                seenVariants.add(lowerVariant);
+            }
+        }
+    }
+
+    if (!language.isNull() || !script.isNull() || !region.isNull() || !variants.isNull())
+        localeID.overrideLanguageScriptRegionVariants(language, script, region, variants);
 
     String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
@@ -365,28 +410,28 @@ const String& IntlLocale::maximal()
         // FIXME: ICU tracking bug https://unicode-org.atlassian.net/browse/ICU-21639.
         UErrorCode status = U_ZERO_ERROR;
         Vector<char, 32> buffer(32);
-        auto bufferLength = uloc_addLikelySubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
+        auto bufferLength = uloc_addLikelySubtags(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_addLikelySubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
+            uloc_addLikelySubtags(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         }
 
         if (U_SUCCESS(status))
-            m_maximal = languageTagForLocaleID(buffer.data());
+            m_maximal = languageTagForLocaleID(buffer.span().data());
         else {
             status = U_ZERO_ERROR;
             Vector<char, 32> baseNameID;
-            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.mutableSpan().data(), baseNameID.size(), &status);
             if (needsToGrowToProduceCString(status)) {
                 baseNameID.grow(bufferLength + 1);
                 status = U_ZERO_ERROR;
-                uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+                uloc_getBaseName(m_localeID.data(), baseNameID.mutableSpan().data(), baseNameID.size(), &status);
             }
             ASSERT(U_SUCCESS(status));
 
             Vector<char, 32> maximal;
-            status = callBufferProducingFunction(uloc_addLikelySubtags, baseNameID.data(), maximal);
+            status = callBufferProducingFunction(uloc_addLikelySubtags, baseNameID.span().data(), maximal);
             // We fail if,
             // 1. uloc_addLikelySubtags still fails.
             // 2. New maximal locale ID includes newly-added keywords.
@@ -399,7 +444,7 @@ const String& IntlLocale::maximal()
             if (endOfLanguageScriptRegionVariant != notFound)
                 maximal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
             maximal.append('\0');
-            m_maximal = languageTagForLocaleID(maximal.data());
+            m_maximal = languageTagForLocaleID(maximal.span().data());
         }
     }
     return m_maximal;
@@ -416,28 +461,28 @@ const String& IntlLocale::minimal()
         // FIXME: ICU tracking bug https://unicode-org.atlassian.net/browse/ICU-21639.
         UErrorCode status = U_ZERO_ERROR;
         Vector<char, 32> buffer(32);
-        auto bufferLength = uloc_minimizeSubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
+        auto bufferLength = uloc_minimizeSubtags(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_minimizeSubtags(m_localeID.data(), buffer.data(), buffer.size(), &status);
+            uloc_minimizeSubtags(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         }
 
         if (U_SUCCESS(status))
-            m_minimal = languageTagForLocaleID(buffer.data());
+            m_minimal = languageTagForLocaleID(buffer.span().data());
         else {
             status = U_ZERO_ERROR;
             Vector<char, 32> baseNameID;
-            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+            auto bufferLength = uloc_getBaseName(m_localeID.data(), baseNameID.mutableSpan().data(), baseNameID.size(), &status);
             if (needsToGrowToProduceCString(status)) {
                 baseNameID.grow(bufferLength + 1);
                 status = U_ZERO_ERROR;
-                uloc_getBaseName(m_localeID.data(), baseNameID.data(), baseNameID.size(), &status);
+                uloc_getBaseName(m_localeID.data(), baseNameID.mutableSpan().data(), baseNameID.size(), &status);
             }
             ASSERT(U_SUCCESS(status));
 
             Vector<char, 32> minimal;
-            auto status = callBufferProducingFunction(uloc_minimizeSubtags, baseNameID.data(), minimal);
+            auto status = callBufferProducingFunction(uloc_minimizeSubtags, baseNameID.span().data(), minimal);
             // We fail if,
             // 1. uloc_minimizeSubtags still fails.
             // 2. New minimal locale ID includes newly-added keywords.
@@ -450,7 +495,7 @@ const String& IntlLocale::minimal()
             if (endOfLanguageScriptRegionVariant != notFound)
                 minimal.appendRange(m_localeID.data() + endOfLanguageScriptRegionVariant, m_localeID.data() + m_localeID.length());
             minimal.append('\0');
-            m_minimal = languageTagForLocaleID(minimal.data());
+            m_minimal = languageTagForLocaleID(minimal.span().data());
         }
     }
     return m_minimal;
@@ -470,15 +515,15 @@ const String& IntlLocale::baseName()
     if (m_baseName.isNull()) {
         UErrorCode status = U_ZERO_ERROR;
         Vector<char, 32> buffer(32);
-        auto bufferLength = uloc_getBaseName(m_localeID.data(), buffer.data(), buffer.size(), &status);
+        auto bufferLength = uloc_getBaseName(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         if (needsToGrowToProduceCString(status)) {
             buffer.grow(bufferLength + 1);
             status = U_ZERO_ERROR;
-            uloc_getBaseName(m_localeID.data(), buffer.data(), buffer.size(), &status);
+            uloc_getBaseName(m_localeID.data(), buffer.mutableSpan().data(), buffer.size(), &status);
         }
         ASSERT(U_SUCCESS(status));
 
-        m_baseName = languageTagForLocaleID(buffer.data());
+        m_baseName = languageTagForLocaleID(buffer.span().data());
     }
     return m_baseName;
 }
@@ -490,6 +535,9 @@ const String& IntlLocale::language()
         Vector<char, 8> buffer;
         auto status = callBufferProducingFunction(uloc_getLanguage, m_localeID.data(), buffer);
         ASSERT_UNUSED(status, U_SUCCESS(status));
+        if (!buffer.size())
+            m_language = "und"_s;
+        else
         m_language = buffer.span();
     }
     return m_language;
@@ -517,6 +565,36 @@ const String& IntlLocale::region()
         m_region = buffer.span();
     }
     return m_region;
+}
+
+// https://tc39.es/ecma402/#sec-Intl.Locale.prototype.variants
+const String& IntlLocale::variants()
+{
+    if (m_variants.isNull()) {
+        const String& baseNameValue = baseName();
+        Vector<String> variantParts;
+        if (!baseNameValue.isEmpty()) {
+            auto parts = baseNameValue.split('-');
+            for (size_t i = 1; i < parts.size(); i++) {
+                const String& part = parts[i];
+                if (isUnicodeVariantSubtag(part))
+                    variantParts.append(part.convertToASCIILowercase());
+            }
+        }
+        if (variantParts.size() > 0) {
+            StringBuilder builder;
+            bool first = true;
+            for (const auto& variant : variantParts) {
+                if (!first)
+                    builder.append('-');
+                builder.append(variant);
+                first = false;
+            }
+            m_variants = builder.toString();
+        } else
+            m_variants = emptyString();
+    }
+    return m_variants;
 }
 
 // https://tc39.es/ecma402/#sec-Intl.Locale.prototype.calendar
@@ -602,8 +680,12 @@ JSArray* IntlLocale::calendars(JSGlobalObject* globalObject)
     while ((pointer = uenum_next(calendars.get(), &length, &status)) && U_SUCCESS(status)) {
         String calendar(unsafeMakeSpan(pointer, static_cast<size_t>(length)));
         if (auto mapped = mapICUCalendarKeywordToBCP47(calendar))
-            elements.append(WTFMove(mapped.value()));
-        else
+            calendar = WTFMove(mapped.value());
+
+        // Skip if the obtained calendar code is not meeting Unicode Locale Identifier's `type` definition
+        // as whole ECMAScript's i18n is relying on Unicode Local Identifiers.
+        if (!isUnicodeLocaleIdentifierType(calendar))
+            continue;
             elements.append(WTFMove(calendar));
     }
     if (!U_SUCCESS(status)) {
@@ -676,8 +758,8 @@ JSArray* IntlLocale::hourCycles(JSGlobalObject* globalObject)
     }
 
     // Use "j" skeleton and parse pattern to retrieve the configured hour-cycle information.
-    constexpr const UChar skeleton[] = { 'j', 0 };
-    Vector<UChar, 32> pattern;
+    constexpr const char16_t skeleton[] = { 'j', 0 };
+    Vector<char16_t, 32> pattern;
     status = callBufferProducingFunction(udatpg_getBestPatternWithOptions, generator.get(), skeleton, 1, UDATPG_MATCH_HOUR_FIELD_LENGTH, pattern);
     if (!U_SUCCESS(status)) {
         throwTypeError(globalObject, scope, "invalid locale"_s);

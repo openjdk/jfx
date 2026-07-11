@@ -27,10 +27,12 @@
 
 #pragma once
 
+#include "PageIdentifier.h"
 #include <wtf/Function.h>
 
 namespace WebCore {
 
+class MediaSessionManagerInterface;
 struct MediaCapabilitiesDecodingInfo;
 struct MediaCapabilitiesEncodingInfo;
 struct MediaDecodingConfiguration;
@@ -61,6 +63,12 @@ public:
 
     WEBCORE_EXPORT static void enableMock();
     WEBCORE_EXPORT static void disableMock();
+
+    using MediaSessionManagerProvider = Function<RefPtr<MediaSessionManagerInterface> (PageIdentifier)>;
+    WEBCORE_EXPORT static void setMediaSessionManagerProvider(MediaSessionManagerProvider&&);
+
+    WEBCORE_EXPORT static RefPtr<MediaSessionManagerInterface> mediaSessionManagerForPageIdentifier(PageIdentifier);
+
 };
 
 } // namespace WebCore

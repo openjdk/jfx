@@ -75,7 +75,7 @@ void PaintWorklet::addModule(const String& moduleURL, WorkletOptions&&, DOMPromi
     // https://bugs.webkit.org/show_bug.cgi?id=191136
     // PaintWorklets don't have access to any sensitive APIs so we don't bother tracking taintedness there.
     auto maybeContext = PaintWorkletGlobalScope::tryCreate(*document, ScriptSourceCode(moduleURL, JSC::SourceTaintedOrigin::Untainted));
-    if (UNLIKELY(!maybeContext)) {
+    if (!maybeContext) [[unlikely]] {
         promise.reject(Exception { ExceptionCode::OutOfMemoryError });
         return;
     }

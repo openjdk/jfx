@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Color.h"
 #include "CompositeOperation.h"
 #include "IntPoint.h"
 #include "IterationCompositeOperation.h"
@@ -38,13 +39,17 @@ struct BlendingContext {
     CompositeOperation compositeOperation { CompositeOperation::Replace };
     IterationCompositeOperation iterationCompositeOperation { IterationCompositeOperation::Replace };
     double currentIteration { 0 };
+    Color fromCurrentColor { };
+    Color toCurrentColor { };
 
-    BlendingContext(double progress = 0, bool isDiscrete = false, CompositeOperation compositeOperation = CompositeOperation::Replace, IterationCompositeOperation iterationCompositeOperation = IterationCompositeOperation::Replace, double currentIteration = 0)
+    BlendingContext(double progress = 0, bool isDiscrete = false, CompositeOperation compositeOperation = CompositeOperation::Replace, IterationCompositeOperation iterationCompositeOperation = IterationCompositeOperation::Replace, double currentIteration = 0, Color fromCurrentColor = { }, Color toCurrentColor = { })
         : progress(progress)
         , isDiscrete(isDiscrete)
         , compositeOperation(compositeOperation)
         , iterationCompositeOperation(iterationCompositeOperation)
         , currentIteration(currentIteration)
+        , fromCurrentColor(fromCurrentColor)
+        , toCurrentColor(toCurrentColor)
     {
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -87,7 +87,7 @@ void WaveShaperDSPKernel::processCurve(std::span<const float> source, std::span<
     ASSERT(source.data() && destination.data() && waveShaperProcessor());
 
     assertIsHeld(waveShaperProcessor()->processLock());
-    Float32Array* curve = waveShaperProcessor()->curve();
+    RefPtr curve = waveShaperProcessor()->curve();
     if (!curve) {
         // Act as "straight wire" pass-through if no curve is set.
         memcpySpan(destination, source);

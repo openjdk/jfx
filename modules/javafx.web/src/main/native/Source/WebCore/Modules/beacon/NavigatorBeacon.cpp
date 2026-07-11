@@ -125,7 +125,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
         return true;
     }
 
-    ResourceRequest request(parsedUrl);
+    ResourceRequest request(WTFMove(parsedUrl));
     request.setHTTPMethod("POST"_s);
     request.setRequester(ResourceRequestRequester::Beacon);
     if (RefPtr documentLoader = document.loader())

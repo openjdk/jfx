@@ -30,6 +30,7 @@
 #include "DatabaseTask.h"
 
 #include "Database.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "SQLTransaction.h"
 #include <wtf/TZoneMallocInlines.h>

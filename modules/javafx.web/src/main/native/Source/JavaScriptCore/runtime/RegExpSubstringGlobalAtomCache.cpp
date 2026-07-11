@@ -76,12 +76,12 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
 
     auto regExpMatch = [&]() ALWAYS_INLINE_LAMBDA {
         MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, substring, input, startIndex);
-        if (UNLIKELY(scope.exception()))
+        if (scope.exception()) [[unlikely]]
             return;
 
         while (result) {
             lastResult = result;
-            if (UNLIKELY(numberOfMatches > MAX_STORAGE_VECTOR_LENGTH)) {
+            if (numberOfMatches > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return;
             }
@@ -92,7 +92,7 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
                 startIndex++;
 
             result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, substring, input, startIndex);
-            if (UNLIKELY(scope.exception()))
+            if (scope.exception()) [[unlikely]]
                 return;
         }
     };
@@ -108,7 +108,7 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
                 }
             } else {
                 regExpMatch();
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return { };
             }
         } else {
@@ -120,14 +120,14 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
                 }
             } else {
                 regExpMatch();
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return { };
             }
         }
     } else {
         if (input->is8Bit()) {
             regExpMatch();
-            if (UNLIKELY(scope.exception()))
+            if (scope.exception()) [[unlikely]]
                 return { };
         } else {
             if (pattern.length() == 1) {
@@ -138,13 +138,13 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
                 }
             } else {
                 regExpMatch();
-                if (UNLIKELY(scope.exception()))
+                if (scope.exception()) [[unlikely]]
                     return { };
             }
         }
     }
 
-    if (UNLIKELY(numberOfMatches > MAX_STORAGE_VECTOR_LENGTH)) {
+    if (numberOfMatches > MAX_STORAGE_VECTOR_LENGTH) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -154,6 +154,9 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
 
     // Construct the array
     JSArray* array = createPatternFilledArray(globalObject, jsString(vm, pattern), numberOfMatches);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    globalObject->regExpGlobalData().recordMatch(vm, globalObject, regExp, substring, lastResult, oneCharacterMatch);
     RETURN_IF_EXCEPTION(scope, { });
 
     globalObject->regExpGlobalData().recordMatch(vm, globalObject, regExp, substring, lastResult, oneCharacterMatch);

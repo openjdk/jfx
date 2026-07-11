@@ -96,7 +96,7 @@ bool RenderSVGResourceGradient::prepareFillOperation(GraphicsContext& context, c
             return false;
 
     Ref svgStyle = style.svgStyle();
-    context.setAlpha(svgStyle->fillOpacity());
+    context.setAlpha(svgStyle->fillOpacity().value.value);
     context.setFillRule(svgStyle->fillRule());
     context.setFillGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;
@@ -114,7 +114,7 @@ bool RenderSVGResourceGradient::prepareStrokeOperation(GraphicsContext& context,
             userspaceTransform = shape->nonScalingStrokeTransform() * userspaceTransform;
             }
 
-    context.setAlpha(svgStyle->strokeOpacity());
+    context.setAlpha(svgStyle->strokeOpacity().value.value);
     SVGRenderSupport::applyStrokeStyleToContext(context, style, targetRenderer);
     context.setStrokeGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;

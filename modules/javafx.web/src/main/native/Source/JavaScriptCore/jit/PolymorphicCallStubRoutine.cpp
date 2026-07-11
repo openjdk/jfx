@@ -55,9 +55,11 @@ void PolymorphicCallNode::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, C
     }
 }
 
-void PolymorphicCallNode::clear()
+void PolymorphicCallNode::unlinkForcefully()
 {
     m_cleared = true;
+    if (isOnList())
+        remove();
 }
 
 PolymorphicCallStubRoutine* PolymorphicCallNode::owner()
@@ -150,10 +152,10 @@ CallEdgeList PolymorphicCallStubRoutine::edges() const
     return result;
 }
 
-void PolymorphicCallStubRoutine::clearCallNodesFor(CallLinkInfo*)
+void PolymorphicCallStubRoutine::unlinkForcefully()
 {
     for (auto& callNode : leadingSpan())
-        callNode.clear();
+        callNode.unlinkForcefully();
 }
 
 bool PolymorphicCallStubRoutine::visitWeakImpl(VM& vm)

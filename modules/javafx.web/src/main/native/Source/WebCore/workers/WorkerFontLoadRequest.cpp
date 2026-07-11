@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  * Copyright (C) 2021 Metrological Group B.V.
  * Copyright (C) 2021 Igalia S.L.
@@ -28,13 +28,14 @@
 #include "config.h"
 #include "WorkerFontLoadRequest.h"
 
+#include "WOFFFileFormat.h"
+#include "CachedFont.h"
 #include "Font.h"
 #include "FontCreationContext.h"
 #include "FontCustomPlatformData.h"
 #include "FontSelectionAlgorithm.h"
 #include "ResourceLoaderOptions.h"
 #include "ServiceWorker.h"
-#include "WOFFFileFormat.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThreadableLoader.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -53,7 +54,7 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
 {
     m_context = workerGlobalScope;
 
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     ASSERT(request.httpMethod() == "GET"_s);
 
     FetchOptions fetchOptions;
@@ -65,7 +66,7 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
 
     ThreadableLoaderOptions options { WTFMove(fetchOptions) };
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
-    options.contentSecurityPolicyEnforcement = m_context->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
+    options.contentSecurityPolicyEnforcement = Ref { *m_context }->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
     options.loadedFromOpaqueSource = m_loadedFromOpaqueSource;
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
 
@@ -74,6 +75,15 @@ void WorkerFontLoadRequest::load(WorkerGlobalScope& workerGlobalScope)
         options.serviceWorkerRegistrationIdentifier = activeServiceWorker->registrationIdentifier();
 
     WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTFMove(request), *this, options);
+}
+
+RefPtr<FontCustomPlatformData> WorkerFontLoadRequest::loadCustomFont(SharedBuffer& bytes, const String& itemInCollection)
+{
+    ASSERT(m_context);
+
+    // FIXME: We should refactor this so that the unused wrapping parameter is not required.
+    bool wrapper = false;
+    return CachedFont::createCustomFontData(bytes, itemInCollection, wrapper, m_context->settingsValues().downloadableBinaryFontTrustedTypes);
 }
 
 bool WorkerFontLoadRequest::ensureCustomFontData()
@@ -86,10 +96,13 @@ bool WorkerFontLoadRequest::ensureCustomFontData()
         convertWOFFToSfntIfNecessary(contiguousData);
 #endif
         if (contiguousData) {
-            m_fontCustomPlatformData = FontCustomPlatformData::create(*contiguousData, m_url.fragmentIdentifier().toString());
+            RefPtr fontCustomPlatformData = loadCustomFont(*contiguousData, m_url.fragmentIdentifier().toString());
             m_data = WTFMove(contiguousData);
-            if (!m_fontCustomPlatformData)
+            if (!fontCustomPlatformData) {
                 m_errorOccurred = true;
+                return false;
+            }
+            lazyInitialize(m_fontCustomPlatformData, fontCustomPlatformData.releaseNonNull());
         }
     }
 

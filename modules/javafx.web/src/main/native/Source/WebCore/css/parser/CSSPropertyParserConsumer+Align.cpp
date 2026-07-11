@@ -30,6 +30,7 @@
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserConsumer+Ident.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
@@ -152,7 +153,7 @@ static RefPtr<CSSValue> consumeSelfPositionOverflowPosition(CSSParserTokenRange&
     return selfPosition;
 }
 
-RefPtr<CSSValue> consumeAlignContent(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeAlignContent(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'align-content'> = normal | <baseline-position> | <content-distribution> | <overflow-position>? <content-position>
     // https://drafts.csswg.org/css-align/#propdef-align-content
@@ -160,7 +161,7 @@ RefPtr<CSSValue> consumeAlignContent(CSSParserTokenRange& range, const CSSParser
     return consumeContentDistributionOverflowPosition(range, isContentPositionKeyword);
 }
 
-RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'justify-content'> = normal | <content-distribution> | <overflow-position>? [ <content-position> | left | right ]
     // https://drafts.csswg.org/css-align/#propdef-justify-content
@@ -171,31 +172,31 @@ RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange& range, const CSSPars
     return consumeContentDistributionOverflowPosition(range, isContentPositionOrLeftOrRightKeyword);
 }
 
-RefPtr<CSSValue> consumeAlignSelf(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeAlignSelf(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'align-self'> = auto | normal | stretch | <baseline-position> | <overflow-position>? <self-position>
     // https://drafts.csswg.org/css-align/#propdef-align-self
 
     OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords;
-    if (context.propertySettings.cssAnchorPositioningEnabled)
+    if (state.context.propertySettings.cssAnchorPositioningEnabled)
         additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
 
     return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
 }
 
-RefPtr<CSSValue> consumeJustifySelf(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeJustifySelf(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'justify-self'> = auto | normal | stretch | <baseline-position> | <overflow-position>? [ <self-position> | left | right ]
     // https://drafts.csswg.org/css-align/#propdef-justify-self
 
     OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords { AdditionalSelfPositionKeywords::LeftRight };
-    if (context.propertySettings.cssAnchorPositioningEnabled)
+    if (state.context.propertySettings.cssAnchorPositioningEnabled)
         additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
 
     return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
 }
 
-RefPtr<CSSValue> consumeAlignItems(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeAlignItems(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'align-items'> = normal | stretch | <baseline-position> | [ <overflow-position>? <self-position> ]
     // https://drafts.csswg.org/css-align/#propdef-align-items
@@ -205,13 +206,13 @@ RefPtr<CSSValue> consumeAlignItems(CSSParserTokenRange& range, const CSSParserCo
         return nullptr;
 
     OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords;
-    if (context.propertySettings.cssAnchorPositioningEnabled)
+    if (state.context.propertySettings.cssAnchorPositioningEnabled)
         additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
 
     return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
 }
 
-RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'justify-items'> = normal | stretch | <baseline-position> | <overflow-position>? [ <self-position> | left | right ] | legacy | legacy && [ left | right | center ]
     // https://drafts.csswg.org/css-align/#propdef-justify-items
@@ -234,7 +235,7 @@ RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange& range, const CSSParser
     }
 
     OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords { AdditionalSelfPositionKeywords::LeftRight };
-    if (context.propertySettings.cssAnchorPositioningEnabled)
+    if (state.context.propertySettings.cssAnchorPositioningEnabled)
         additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
 
     return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);

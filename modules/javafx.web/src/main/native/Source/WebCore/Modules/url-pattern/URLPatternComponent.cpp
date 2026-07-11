@@ -26,6 +26,7 @@
 #include "config.h"
 #include "URLPatternComponent.h"
 
+#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include "URLPatternCanonical.h"
 #include "URLPatternParser.h"
@@ -33,6 +34,7 @@
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSString.h>
 #include <JavaScriptCore/RegExpObject.h>
+#include <ranges>
 
 namespace WebCore {
 using namespace JSC;
@@ -85,7 +87,7 @@ bool URLPatternComponent::matchSpecialSchemeProtocol(ScriptExecutionContext& con
         return false;
     auto protocolRegex = JSC::RegExpObject::create(vm, contextObject->regExpStructure(), m_regularExpression.get(), true);
 
-    auto isSchemeMatch = std::find_if(specialSchemeList.begin(), specialSchemeList.end(), [context = Ref { context }, &vm, &protocolRegex](const String& scheme) {
+    auto isSchemeMatch = std::ranges::find_if(specialSchemeList, [context = Ref { context }, &vm, &protocolRegex](const String& scheme) {
         auto maybeMatch = protocolRegex->exec(context->globalObject(), JSC::jsString(vm, scheme));
         return !maybeMatch.isNull();
     });
@@ -118,7 +120,7 @@ URLPatternComponentResult URLPatternComponent::createComponentMatchResult(JSC::J
     for (unsigned index = 1; index < length; ++index) {
         auto match = execResult.get(globalObject, index);
 
-        std::variant<std::monostate, String> value;
+        Variant<std::monostate, String> value;
         if (!match.isNull() && !match.isUndefined())
             value = match.toWTFString(globalObject);
 

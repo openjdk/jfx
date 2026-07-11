@@ -29,6 +29,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueList.h"
 #include "ComposedTreeAncestorIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ContainerQueryFeatures.h"
 #include "Document.h"
 #include "MediaList.h"
@@ -154,16 +155,18 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> requ
     };
 
     auto findOriginatingElement = [&]() -> const Element* {
-        // ::part() selectors can query its originating host, but not internal query containers inside the shadow tree.
-        if (selectionMode == SelectionMode::PartPseudoElement) {
-        if (scopeOrdinal <= ScopeOrdinal::ContainingHost)
-            return hostForScopeOrdinal(element, scopeOrdinal);
-            ASSERT(scopeOrdinal == ScopeOrdinal::Element);
-            return element.shadowHost();
-        }
+        // ::part() selectors query the composed tree
+        if (selectionMode == SelectionMode::PartPseudoElement)
+            return element.assignedSlot();
+
         // ::slotted() selectors can query containers inside the shadow tree, including the slot itself.
         if (scopeOrdinal >= ScopeOrdinal::FirstSlot && scopeOrdinal <= ScopeOrdinal::SlotLimit)
             return assignedSlotForScopeOrdinal(element, scopeOrdinal);
+
+        // Unnamed queries query the composed tree, while named queries do not.
+        if (scopeOrdinal == ScopeOrdinal::Element && element.assignedSlot() && name.isEmpty())
+            return element.assignedSlot();
+
         return nullptr;
     };
 

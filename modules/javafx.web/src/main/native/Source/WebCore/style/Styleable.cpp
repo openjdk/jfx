@@ -32,9 +32,9 @@
 #include "AnimationTimeline.h"
 #include "CSSAnimation.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "DocumentTimeline.h"
@@ -45,11 +45,13 @@
 #include "RenderChildIterator.h"
 #include "RenderDescendantIterator.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "StyleCustomPropertyData.h"
+#include "StyleInterpolation.h"
 #include "StyleOriginatedAnimation.h"
 #include "StyleOriginatedTimelinesController.h"
 #include "StylePropertyShorthand.h"
@@ -60,6 +62,7 @@
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
 #include "WillChangeData.h"
+#include <wtf/IndexedRange.h>
 
 namespace WebCore {
 
@@ -87,7 +90,7 @@ const std::optional<const Styleable> Styleable::fromRenderer(const RenderElement
     case PseudoId::ViewTransitionNew:
     case PseudoId::ViewTransitionOld:
         if (auto* documentElement = renderer.document().documentElement())
-            return Styleable(*documentElement, Style::PseudoElementIdentifier { renderer.style().pseudoElementType(), renderer.style().pseudoElementNameArgument() });
+            return Styleable(*documentElement, renderer.style().pseudoElementIdentifier());
         break;
     case PseudoId::ViewTransition:
         if (auto* documentElement = renderer.document().documentElement())
@@ -132,8 +135,10 @@ RenderElement* Styleable::renderer() const
         }
         break;
     case PseudoId::ViewTransition:
-        if (element.renderer() && element.renderer()->isDocumentElementRenderer())
-            return element.renderer()->view().viewTransitionRoot().get();
+        if (element.renderer() && element.renderer()->isDocumentElementRenderer()) {
+            if (WeakPtr containingBlock = element.renderer()->view().viewTransitionContainingBlock())
+                return containingBlock->firstChildBox();
+        }
         break;
     case PseudoId::ViewTransitionGroup:
     case PseudoId::ViewTransitionImagePair:
@@ -205,7 +210,7 @@ bool Styleable::mayHaveNonZeroOpacity() const
     if (!renderer)
         return false;
 
-    if (renderer->style().opacity() != 0.0f)
+    if (!renderer->style().opacity().isZero())
         return true;
 
     if (renderer->style().willChange() && renderer->style().willChange()->containsProperty(CSSPropertyOpacity))
@@ -223,14 +228,14 @@ bool Styleable::mayHaveNonZeroOpacity() const
     return false;
 }
 
-bool Styleable::isRunningAcceleratedTransformAnimation() const
+bool Styleable::isRunningAcceleratedAnimationOfProperty(CSSPropertyID property) const
 {
     auto* effectStack = keyframeEffectStack();
     if (!effectStack)
         return false;
 
     for (const auto& effect : effectStack->sortedEffects()) {
-        if (effect->isCurrentlyAffectingProperty(CSSPropertyTransform, KeyframeEffect::Accelerated::Yes))
+        if (effect->isCurrentlyAffectingProperty(property, KeyframeEffect::Accelerated::Yes))
             return true;
     }
 
@@ -308,13 +313,19 @@ void Styleable::willChangeRenderer() const
     }
 }
 
-OptionSet<AnimationImpact> Styleable::applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
+OptionSet<AnimationImpact> Styleable::applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
 {
     return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
 }
 
 void Styleable::cancelStyleOriginatedAnimations() const
 {
+    // It is important we don't cancel style-originated animations when entering the page cache
+    // since any JS wrapper that is kept alive in the page cache could be associated with an animation
+    // that itself has not been kept alive (or rather canceled) when entering the page cache.
+    if (element.protectedDocument()->backForwardCacheState() != Document::NotInBackForwardCache)
+        return;
+
     cancelStyleOriginatedAnimations({ });
     if (CheckedPtr styleOriginatedTimelinesController = element.protectedDocument()->styleOriginatedTimelinesController())
         styleOriginatedTimelinesController->unregisterNamedTimelinesAssociatedWithElement(*this);
@@ -392,9 +403,6 @@ void Styleable::updateCSSAnimations(const RenderStyle* currentStyle, const Rende
     // first item in the list.
     if (currentAnimationList) {
         for (auto& currentAnimation : makeReversedRange(*currentAnimationList)) {
-            if (!currentAnimation->isValidAnimation())
-                continue;
-
             auto& animationName = currentAnimation->name().name;
             if (animationName == noneAtom() || animationName.isEmpty())
                 continue;
@@ -461,7 +469,7 @@ static KeyframeEffect* keyframeEffectForElementAndProperty(const Styleable& styl
 static bool propertyInStyleMatchesValueForTransitionInMap(const AnimatableCSSProperty& property, const RenderStyle& style, AnimatableCSSPropertyToTransitionMap& transitions, const Document& document)
 {
     if (auto* transition = transitions.get(property)) {
-        if (CSSPropertyAnimation::propertiesEqual(property, style, transition->targetStyle(), document))
+        if (Style::Interpolation::equals(property, style, transition->targetStyle(), document))
             return true;
     }
     return false;
@@ -507,7 +515,7 @@ static bool transitionMatchesProperty(const Animation& transition, const Animata
     return false;
 }
 
-static void compileTransitionPropertiesInStyle(const RenderStyle& style, CSSPropertiesBitSet& transitionProperties, UncheckedKeyHashSet<AtomString>& transitionCustomProperties, bool& transitionPropertiesContainAll)
+static void compileTransitionPropertiesInStyle(const RenderStyle& style, CSSPropertiesBitSet& transitionProperties, HashSet<AtomString>& transitionCustomProperties, bool& transitionPropertiesContainAll)
 {
     auto* transitions = style.transitions();
     if (!transitions) {
@@ -594,13 +602,8 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
             auto style = RenderStyle::clone(*lastStyleChangeEventStyle);
             if (auto* keyframeEffectStack = styleable.keyframeEffectStack()) {
                 for (const auto& effect : keyframeEffectStack->sortedEffects()) {
-                    if (!effectTargetsProperty(*effect))
-                        continue;
-                    auto* effectAnimation = effect->animation();
-                    auto* cssTransition = dynamicDowncast<CSSTransition>(effectAnimation);
-                    ASSERT(document.timeline().currentTime());
-                    bool shouldUseTimelineTimeAtCreation = cssTransition && (!effectAnimation->startTime() || effectAnimation->startTime() == document.timeline().currentTime());
-                    effectAnimation->resolve(style, { nullptr }, shouldUseTimelineTimeAtCreation ? cssTransition->timelineTimeAtCreation() : std::nullopt);
+                    if (effectTargetsProperty(*effect))
+                        Ref { *effect->animation() }->resolve(style, { nullptr });
                 }
             }
             return style;
@@ -625,7 +628,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
 
     auto allowsDiscreteTransitions = matchingBackingAnimation && matchingBackingAnimation->allowsDiscreteTransitions();
     auto propertyCanBeInterpolated = [&](const AnimatableCSSProperty& property, const RenderStyle& a, const RenderStyle& b) {
-        return allowsDiscreteTransitions || CSSPropertyAnimation::canPropertyBeInterpolated(property, a, b, document);
+        return allowsDiscreteTransitions || Style::Interpolation::canInterpolate(property, a, b, document);
     };
 
     auto createCSSTransition = [&](const RenderStyle& oldStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double reversingShorteningFactor) {
@@ -637,7 +640,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
     bool hasRunningTransition = styleable.hasRunningTransitionForProperty(property);
     if (!hasRunningTransition
         && hasMatchingTransitionProperty && matchingTransitionDuration > 0
-        && !CSSPropertyAnimation::propertiesEqual(property, beforeChangeStyle, afterChangeStyle, document)
+        && !Style::Interpolation::equals(property, beforeChangeStyle, afterChangeStyle, document)
         && propertyCanBeInterpolated(property, beforeChangeStyle, afterChangeStyle)
         && !propertyInStyleMatchesValueForTransitionInMap(property, afterChangeStyle, styleable.ensureCompletedTransitionsByProperty(), document)) {
         // 1. If all of the following are true:
@@ -687,7 +690,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
         auto& previouslyRunningTransitionCurrentStyle = previouslyRunningTransition->currentStyle();
         // 4. If the element has a running transition for the property, there is a matching transition-property value, and the end value of the running
         //    transition is not equal to the value of the property in the after-change style, then:
-        if (CSSPropertyAnimation::propertiesEqual(property, previouslyRunningTransitionCurrentStyle, afterChangeStyle, document) || !propertyCanBeInterpolated(property, currentStyle, afterChangeStyle)) {
+        if (Style::Interpolation::equals(property, previouslyRunningTransitionCurrentStyle, afterChangeStyle, document) || !propertyCanBeInterpolated(property, currentStyle, afterChangeStyle)) {
             // 1. If the current value of the property in the running transition is equal to the value of the property in the after-change style,
             //    or if these two values cannot be interpolated, then implementations must cancel the running transition.
             previouslyRunningTransition->cancelFromStyle();
@@ -695,7 +698,7 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
             // 2. Otherwise, if the combined duration is less than or equal to 0s, or if the current value of the property in the running transition
             //    cannot be interpolated with the value of the property in the after-change style, then implementations must cancel the running transition.
             previouslyRunningTransition->cancelFromStyle();
-        } else if (CSSPropertyAnimation::propertiesEqual(property, previouslyRunningTransition->reversingAdjustedStartStyle(), afterChangeStyle, document)) {
+        } else if (Style::Interpolation::equals(property, previouslyRunningTransition->reversingAdjustedStartStyle(), afterChangeStyle, document)) {
             // 3. Otherwise, if the reversing-adjusted start value of the running transition is the same as the value of the property in the after-change
             //    style (see the section on reversing of transitions for why these case exists), implementations must cancel the running transition
             //    and start a new transition whose:
@@ -793,7 +796,7 @@ void Styleable::updateCSSTransitions(const RenderStyle& currentStyle, const Rend
     // First, let's compile the list of all CSS properties found in the current style and the after-change style.
     bool transitionPropertiesContainAll = false;
     CSSPropertiesBitSet transitionProperties;
-    UncheckedKeyHashSet<AtomString> transitionCustomProperties;
+    HashSet<AtomString> transitionCustomProperties;
     compileTransitionPropertiesInStyle(currentStyle, transitionProperties, transitionCustomProperties, transitionPropertiesContainAll);
     compileTransitionPropertiesInStyle(newStyle, transitionProperties, transitionCustomProperties, transitionPropertiesContainAll);
 
@@ -836,7 +839,7 @@ void Styleable::updateCSSTransitions(const RenderStyle& currentStyle, const Rend
                 addProperty(property);
         }
 
-        auto gatherAnimatableCustomProperties = [&](const StyleCustomPropertyData& customPropertyData) {
+        auto gatherAnimatableCustomProperties = [&](const Style::CustomPropertyData& customPropertyData) {
             if (!customPropertyData.mayHaveAnimatableProperties())
                 return;
 
@@ -891,18 +894,15 @@ void Styleable::updateCSSScrollTimelines(const RenderStyle* currentStyle, const 
         auto& currentTimelineNames = afterChangeStyle.scrollTimelineNames();
         auto& currentTimelineAxes = afterChangeStyle.scrollTimelineAxes();
         auto numberOfAxes = currentTimelineAxes.size();
-        for (size_t i = 0; i < currentTimelineNames.size(); ++i) {
-            auto& name = currentTimelineNames[i];
-            auto axis = numberOfAxes ? currentTimelineAxes[i % numberOfAxes] : ScrollAxis::Block;
-            styleOriginatedTimelinesController->registerNamedScrollTimeline(name, *this, axis);
-        }
+        for (auto [i, name] : indexedRange(currentTimelineNames))
+            styleOriginatedTimelinesController->registerNamedScrollTimeline(name.value.value, *this, currentTimelineAxes[i % numberOfAxes]);
 
         if (!currentStyle)
             return;
 
         for (auto& previousTimelineName : currentStyle->scrollTimelineNames()) {
             if (!currentTimelineNames.contains(previousTimelineName))
-                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName, *this);
+                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName.value.value, *this);
         }
     };
 
@@ -940,19 +940,15 @@ void Styleable::updateCSSViewTimelines(const RenderStyle* currentStyle, const Re
         auto& currentTimelineInsets = afterChangeStyle.viewTimelineInsets();
         auto numberOfAxes = currentTimelineAxes.size();
         auto numberOfInsets = currentTimelineInsets.size();
-        for (size_t i = 0; i < currentTimelineNames.size(); ++i) {
-            auto& name = currentTimelineNames[i];
-            auto axis = numberOfAxes ? currentTimelineAxes[i % numberOfAxes] : ScrollAxis::Block;
-            auto insets = numberOfInsets ? ViewTimelineInsets(currentTimelineInsets[i % numberOfInsets]) : ViewTimelineInsets();
-            styleOriginatedTimelinesController->registerNamedViewTimeline(name, *this, axis, WTFMove(insets));
-        }
+        for (auto [i, name] : indexedRange(currentTimelineNames))
+            styleOriginatedTimelinesController->registerNamedViewTimeline(name.value.value, *this, currentTimelineAxes[i % numberOfAxes], currentTimelineInsets[i % numberOfInsets]);
 
         if (!currentStyle)
             return;
 
         for (auto& previousTimelineName : currentStyle->viewTimelineNames()) {
             if (!currentTimelineNames.contains(previousTimelineName))
-                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName, *this);
+                styleOriginatedTimelinesController->unregisterNamedTimeline(previousTimelineName.value.value, *this);
         }
     };
 
@@ -992,15 +988,14 @@ void Styleable::setCapturedInViewTransition(AtomString captureName)
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const Styleable& styleable)
 {
-    ts << styleable.element << ", " << styleable.pseudoElementIdentifier;
+    ts << styleable.element << ", "_s << styleable.pseudoElementIdentifier;
     return ts;
 }
 
 WTF::TextStream& operator<<(WTF::TextStream& ts, const WeakStyleable& styleable)
 {
-    ts << styleable.element() << ", " << styleable.pseudoElementIdentifier();
+    ts << styleable.element() << ", "_s << styleable.pseudoElementIdentifier();
     return ts;
 }
-
 
 } // namespace WebCore

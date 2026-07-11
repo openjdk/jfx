@@ -25,22 +25,20 @@
 
 #pragma once
 
-#include "CSSPropertyNames.h"
-
 namespace WebCore {
 
 class CSSValue;
-struct CSSRegisteredCustomProperty;
+enum CSSPropertyID : uint16_t;
 
 namespace Style {
-class BuilderState;
 
+class BuilderState;
 enum class ApplyValueType : uint8_t;
 
 class BuilderGenerated {
 public:
-    static void applyProperty(CSSPropertyID, Style::BuilderState&, CSSValue&, ApplyValueType);
+    static void applyProperty(CSSPropertyID, BuilderState&, CSSValue&, ApplyValueType);
 };
 
-}
-}
+} // namespace Style
+} // namespace WebCore

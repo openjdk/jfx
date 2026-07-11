@@ -223,7 +223,7 @@ video_meta_serialize (const GstMeta * meta, GstByteArrayInterface * data,
     return FALSE;
 
   GstByteWriter bw;
-  gboolean success = TRUE;
+  gboolean success GST_UNUSED_ASSERT = TRUE;
   gst_byte_writer_init_with_data (&bw, ptr, size, FALSE);
   success &= gst_byte_writer_put_int32_le (&bw, vmeta->flags);
   success &= gst_byte_writer_put_int32_le (&bw, vmeta->format);
@@ -264,6 +264,8 @@ video_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
 
   if (version != 0)
     return NULL;
+
+  gst_video_alignment_reset (&align);
 
   GstByteReader br;
   gboolean success = TRUE;
@@ -641,16 +643,37 @@ gst_video_meta_validate_alignment (GstVideoMeta * meta,
  * Returns: %TRUE if @alignment's meta has been updated, %FALSE if not
  *
  * Since: 1.18
+ * Deprecated: 1.28: Use gst_video_meta_set_alignment_full() instead
  */
 gboolean
 gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment)
+{
+  return gst_video_meta_set_alignment_full (meta, &alignment);
+}
+
+/**
+ * gst_video_meta_set_alignment_full:
+ * @meta: a #GstVideoMeta
+ * @alignment: a #GstVideoAlignment
+ *
+ * Set the alignment of @meta to @alignment. This function checks that
+ * the paddings defined in @alignment are compatible with the strides
+ * defined in @meta and will fail to update if they are not.
+ *
+ * Returns: %TRUE if @alignment's meta has been updated, %FALSE if not
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_meta_set_alignment_full (GstVideoMeta * meta,
+    const GstVideoAlignment * alignment)
 {
   GstVideoAlignment old;
 
   g_return_val_if_fail (meta, FALSE);
 
   old = meta->alignment;
-  meta->alignment = alignment;
+  meta->alignment = *alignment;
 
   if (!gst_video_meta_validate_alignment (meta, NULL)) {
     /* Invalid alignment, restore the previous one */
@@ -658,9 +681,9 @@ gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment)
     return FALSE;
   }
 
-  GST_LOG ("Set alignment on meta: padding %u-%ux%u-%u", alignment.padding_top,
-      alignment.padding_left, alignment.padding_right,
-      alignment.padding_bottom);
+  GST_LOG ("Set alignment on meta: padding %u-%ux%u-%u", alignment->padding_top,
+      alignment->padding_left, alignment->padding_right,
+      alignment->padding_bottom);
 
   return TRUE;
 }
@@ -840,6 +863,263 @@ gst_video_meta_transform_scale_get_quark (void)
     _value = g_quark_from_static_string ("gst-video-scale");
   }
   return _value;
+}
+
+/**
+ * gst_video_meta_transform_matrix_get_quark:
+ *
+ * Get the #GQuark for the "gst-video-matrix" metadata transform operation.
+ *
+ * Returns: a #GQuark
+ *
+ * Since: 1.28
+ */
+GQuark
+gst_video_meta_transform_matrix_get_quark (void)
+{
+  static GQuark _value = 0;
+
+  if (_value == 0) {
+    _value = g_quark_from_static_string ("gst-video-matrix");
+  }
+  return _value;
+}
+
+/**
+ * gst_video_meta_transform_matrix_init:
+ * @trans: a #GstVideoMetaTransformMatrix with in_rectangle and out_rectangle
+ *  filled
+ * @in_info: (in): The #GstVideoInfo of the input image
+ * @in_rectangle: the input #GstVideoRectangle
+ * @out_info: (in): the output #GstVideoInfo
+ * @out_rectangle: the output #GstVideoRectangle
+ *
+ * Based on the rectangles, initializes the matrix to do a translation and
+ * scaling from @in_rectangle to @out_rectangle
+ *
+ * Since: 1.28
+ */
+void
+gst_video_meta_transform_matrix_init (GstVideoMetaTransformMatrix * trans,
+    const GstVideoInfo * in_info, const GstVideoRectangle * in_rectangle,
+    const GstVideoInfo * out_info, const GstVideoRectangle * out_rectangle)
+{
+  g_return_if_fail (in_info != NULL);
+  g_return_if_fail (out_info != NULL);
+  g_return_if_fail (in_rectangle->w > 0);
+  g_return_if_fail (in_rectangle->h > 0);
+  g_return_if_fail (out_rectangle->w > 0);
+  g_return_if_fail (out_rectangle->h > 0);
+
+  trans->in_info = in_info;
+  trans->out_info = out_info;
+  trans->in_rectangle = *in_rectangle;
+  trans->out_rectangle = *out_rectangle;
+
+  memset (trans->matrix, 0, sizeof (gfloat) * 9);
+
+  trans->matrix[0][0] = (gfloat) trans->out_rectangle.w /
+      (gfloat) trans->in_rectangle.w;
+  trans->matrix[1][1] = (gfloat) trans->out_rectangle.h /
+      (gfloat) trans->in_rectangle.h;
+  trans->matrix[2][2] = 1;
+}
+
+static gboolean
+_gst_video_meta_transform_matrix_point (const GstVideoMetaTransformMatrix *
+    transform, gint * x, gint * y, gboolean clip)
+{
+  gboolean ret = TRUE;
+  gdouble x_in = *x - transform->in_rectangle.x;
+  gdouble y_in = *y - transform->in_rectangle.y;
+  gdouble x_temp, y_temp;
+  gdouble w_prime = transform->matrix[2][0] * x_in +
+      transform->matrix[2][1] * y_in + transform->matrix[2][2];
+
+  if (w_prime == 0.0f) {
+    *x = transform->out_rectangle.x;
+    *y = transform->out_rectangle.y;
+    g_return_val_if_fail (w_prime != 0.0, FALSE);
+  }
+
+  if (w_prime == 1.0f) {
+    x_temp = transform->matrix[0][0] * x_in +
+        transform->matrix[0][1] * y_in + transform->matrix[0][2];
+    y_temp = transform->matrix[1][0] * x_in +
+        transform->matrix[1][1] * y_in + transform->matrix[1][2];
+  } else {
+    x_temp = (transform->matrix[0][0] * x_in +
+        transform->matrix[0][1] * y_in + transform->matrix[0][2]) / w_prime;
+    y_temp = (transform->matrix[1][0] * x_in +
+        transform->matrix[1][1] * y_in + transform->matrix[1][2]) / w_prime;
+  }
+
+  *x = x_temp + 0.5f + transform->out_rectangle.x;
+  *y = y_temp + 0.5f + transform->out_rectangle.y;
+
+  if (clip) {
+    if (*x < transform->out_rectangle.x) {
+      *x = transform->out_rectangle.x;
+      ret = FALSE;
+    }
+
+    if (*x >= transform->out_rectangle.x + transform->out_rectangle.w) {
+      *x = transform->out_rectangle.x + transform->out_rectangle.w - 1;
+      ret = FALSE;
+    }
+
+    if (*y < transform->out_rectangle.y) {
+      *y = transform->out_rectangle.y;
+      ret = FALSE;
+    }
+
+    if (*y >= transform->out_rectangle.y + transform->out_rectangle.h) {
+      *y = transform->out_rectangle.y + transform->out_rectangle.h - 1;
+      ret = FALSE;
+    }
+  }
+
+  return ret;
+}
+
+/**
+ * gst_video_meta_transform_matrix_point:
+ * @transform: a #GstVideoMetaTransformMatrix
+ * @x: (inout): a non-NULL pointer to the X value of the coordinate
+ * @y: (inout): a non-NULL pointer to the Y value of the coordinate
+ *
+ * Transforms the (@x, @y) point from the input coordinates to the
+ * output ones.  The point's coordinates are transformed by first
+ * applying the @transform.matrix to it using the top left (x, y) of
+ * @transform.in_rectangle as the origin, then translate it to use
+ * the top-left of @transform.out_rectangle as new origin.
+ *
+ * Returns: %FALSE if the point is outside of @transform.out_rectangle
+ * after the transformation has been applied
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_meta_transform_matrix_point (const GstVideoMetaTransformMatrix *
+    transform, gint * x, gint * y)
+{
+  return _gst_video_meta_transform_matrix_point (transform, x, y, FALSE);
+}
+
+/**
+ * gst_video_meta_transform_matrix_point_clipped:
+ * @transform: a #GstVideoMetaTransformMatrix
+ * @x: (inout): a non-NULL pointer to the X value of the coordinate
+ * @y: (inout): a non-NULL pointer to the Y value of the coordinate
+ *
+ * Transforms the (@x, @y) point from the input coordinates to the
+ * output ones.  The point's coordinates are transformed by first
+ * applying the @transform.matrix to it using the top left (x, y) of
+ * @transform.in_rectangle as the origin, then translate it to use
+ * the top-left of @transform.out_rectangle as new origin.
+ *
+ * Returns: %FALSE if the point is outside of @transform.out_rectangle
+ * after the transformation has been applied
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_meta_transform_matrix_point_clipped (const GstVideoMetaTransformMatrix
+    * transform, gint * x, gint * y)
+{
+  return _gst_video_meta_transform_matrix_point (transform, x, y, TRUE);
+}
+
+static gboolean
+_gst_video_meta_transform_matrix_rectangle (const
+    GstVideoMetaTransformMatrix * transform, GstVideoRectangle * rect,
+    gboolean clip)
+{
+  gboolean ret = TRUE;
+  gint x1, y1;
+  gint x2, y2;
+
+  /* If the transformation is not affine, can't do it on a rectangle */
+  if (transform->matrix[2][0] != 0 ||
+      transform->matrix[2][1] != 0 || transform->matrix[2][2] != 1)
+    return FALSE;
+
+  /* If there is shearing, it won't preserve the rectangle either */
+  if ((transform->matrix[0][0] != 0 || transform->matrix[1][1] != 0) &&
+      (transform->matrix[0][1] != 0 || transform->matrix[1][0] != 0))
+    return FALSE;
+
+  x1 = rect->x;
+  y1 = rect->y;
+  x2 = rect->x + rect->w;
+  y2 = rect->y + rect->h;
+
+  ret = _gst_video_meta_transform_matrix_point (transform, &x1, &y1, clip) &&
+      _gst_video_meta_transform_matrix_point (transform, &x2, &y2, clip);
+
+  rect->x = MIN (x1, x2);
+  rect->y = MIN (y1, y2);
+
+  rect->w = MAX (x1, x2) - rect->x;
+  rect->h = MAX (y1, y2) - rect->y;
+
+  return ret;
+}
+
+/**
+ * gst_video_meta_transform_matrix_rectangle:
+ * @transform: A #GstVideoMetaTransformMatrix
+ * @rect: (inout): a rectangle in the coordinate of the original image
+ *
+ * Transforms @rect from the input coordinates to the
+ * output ones.  The point's coordinates are transformed by first
+ * applying the @transform.matrix to it using the top left (x, y) of
+ * @transform.in_rectangle as the origin, then translate it to use
+ * the top-left of @transform.out_rectangle as new origin.
+ *
+ * @rect is always axis aligned at input and this function only returns
+ * axis aligned rectangles as output, otherwise it returns FALSE.
+ *
+ * Output rectangle could be in partially or totally outside of
+ * @transform.out_rectangle.
+ *
+ * Returns: %FALSE is the output rectangle is not axis aligned
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_meta_transform_matrix_rectangle (const
+    GstVideoMetaTransformMatrix * transform, GstVideoRectangle * rect)
+{
+  return _gst_video_meta_transform_matrix_rectangle (transform, rect, FALSE);
+}
+
+/**
+ * gst_video_meta_transform_matrix_rectangle_clipped:
+ * @transform: A #GstVideoMetaTransformMatrix
+ * @rect: (inout): a rectangle in the coordinate of the original image
+ *
+ * Transforms @rect from the input coordinates to the
+ * output ones.  The point's coordinates are transformed by first
+ * applying the @transform.matrix to it using the top left (x, y) of
+ * @transform.in_rectangle as the origin, then translate it to use
+ * the top-left of @transform.out_rectangle as new origin.
+ *
+ * @rect is always axis aligned at input and this function only returns
+ * axis aligned rectangles as output, otherwise it returns FALSE.
+ *
+ * Output rectangle will be clipped to fit inside @transform.out_rectangle.
+ *
+ * Returns: %FALSE if the output rectangle is not axis aligned or if
+ *  the rectangle is entirely outside of the out_rectangle.
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_video_meta_transform_matrix_rectangle_clipped (const
+    GstVideoMetaTransformMatrix * transform, GstVideoRectangle * rect)
+{
+  return _gst_video_meta_transform_matrix_rectangle (transform, rect, TRUE);
 }
 
 
@@ -1034,12 +1314,12 @@ static gboolean
 gst_video_region_of_interest_meta_transform (GstBuffer * dest, GstMeta * meta,
     GstBuffer * buffer, GQuark type, gpointer data)
 {
-  GstVideoRegionOfInterestMeta *dmeta, *smeta;
+  GstVideoRegionOfInterestMeta *smeta = (GstVideoRegionOfInterestMeta *) meta;
+  GstVideoRegionOfInterestMeta *dmeta;
 
   if (GST_META_TRANSFORM_IS_COPY (type)) {
-    smeta = (GstVideoRegionOfInterestMeta *) meta;
-
-    GST_DEBUG ("copy region of interest metadata");
+    GST_DEBUG ("copy region of interest metadata (seqnum: %" G_GUINT64_FORMAT
+        ")", gst_meta_get_seqnum (meta));
     dmeta =
         gst_buffer_add_video_region_of_interest_meta_id (dest,
         smeta->roi_type, smeta->x, smeta->y, smeta->w, smeta->h);
@@ -1050,6 +1330,40 @@ gst_video_region_of_interest_meta_transform (GstBuffer * dest, GstMeta * meta,
     dmeta->parent_id = smeta->parent_id;
     dmeta->params = g_list_copy_deep (smeta->params,
         (GCopyFunc) gst_structure_copy, NULL);
+  } else if (GST_VIDEO_META_TRANSFORM_IS_MATRIX (type)) {
+    GstVideoMetaTransformMatrix *trans = data;
+    GstVideoRectangle rect = { smeta->x, smeta->y, smeta->w, smeta->h };
+
+    GST_LOG ("Scaling and cropping region of interest metadata %dx%d+%d+%d"
+        " in (%dx%d) -> %dx%d+%d+%d in %dx%d (seqnum: %" G_GUINT64_FORMAT ")",
+        trans->in_rectangle.w,
+        trans->in_rectangle.h, trans->in_rectangle.x, trans->in_rectangle.y,
+        GST_VIDEO_INFO_WIDTH (trans->in_info),
+        GST_VIDEO_INFO_HEIGHT (trans->in_info), trans->out_rectangle.w,
+        trans->out_rectangle.h, trans->out_rectangle.x,
+        trans->out_rectangle.y, GST_VIDEO_INFO_WIDTH (trans->out_info),
+        GST_VIDEO_INFO_HEIGHT (trans->out_info), gst_meta_get_seqnum (meta));
+
+    if (!gst_video_meta_transform_matrix_rectangle_clipped (trans, &rect))
+      return FALSE;
+
+    dmeta = gst_buffer_add_video_region_of_interest_meta_id (dest,
+        smeta->roi_type, rect.x, rect.y, rect.w, rect.h);
+    if (!dmeta)
+      return FALSE;
+
+    dmeta->id = smeta->id;
+    dmeta->parent_id = smeta->parent_id;
+
+    GST_LOG ("region of interest (id:%d, parent id:%d) offset %dx%d -> %dx%d "
+        "(seqnum: %" G_GUINT64_FORMAT " -> %" G_GUINT64_FORMAT ")",
+        smeta->id, smeta->parent_id, smeta->x, smeta->y, dmeta->x, dmeta->y,
+        gst_meta_get_seqnum (meta),
+        gst_meta_get_seqnum (GST_META_CAST (dmeta)));
+    GST_LOG ("region of interest size   %dx%d -> %dx%d (seqnum: %"
+        G_GUINT64_FORMAT " -> %" G_GUINT64_FORMAT " ))", smeta->w, smeta->h,
+        dmeta->w, dmeta->h, gst_meta_get_seqnum (meta),
+        gst_meta_get_seqnum (GST_META_CAST (dmeta)));
   } else if (GST_VIDEO_META_TRANSFORM_IS_SCALE (type)) {
     GstVideoMetaTransform *trans = data;
     gint ow, oh, nw, nh;
@@ -1057,10 +1371,11 @@ gst_video_region_of_interest_meta_transform (GstBuffer * dest, GstMeta * meta,
     nw = GST_VIDEO_INFO_WIDTH (trans->out_info);
     oh = GST_VIDEO_INFO_HEIGHT (trans->in_info);
     nh = GST_VIDEO_INFO_HEIGHT (trans->out_info);
-    GST_DEBUG ("scaling region of interest metadata %dx%d -> %dx%d", ow, oh, nw,
-        nh);
 
-    smeta = (GstVideoRegionOfInterestMeta *) meta;
+    GST_LOG ("scaling region of interest metadata %dx%d -> %dx%d "
+        "(seqnum: %" G_GUINT64_FORMAT ")", ow, oh, nw, nh,
+        gst_meta_get_seqnum (meta));
+
     dmeta =
         gst_buffer_add_video_region_of_interest_meta_id (dest,
         smeta->roi_type, (smeta->x * nw) / ow, (smeta->y * nh) / oh,
@@ -1071,10 +1386,15 @@ gst_video_region_of_interest_meta_transform (GstBuffer * dest, GstMeta * meta,
     dmeta->id = smeta->id;
     dmeta->parent_id = smeta->parent_id;
 
-    GST_DEBUG ("region of interest (id:%d, parent id:%d) offset %dx%d -> %dx%d",
-        smeta->id, smeta->parent_id, smeta->x, smeta->y, dmeta->x, dmeta->y);
-    GST_DEBUG ("region of interest size   %dx%d -> %dx%d", smeta->w, smeta->h,
-        dmeta->w, dmeta->h);
+    GST_LOG ("region of interest (id:%d, parent id:%d) offset %dx%d -> %dx%d"
+        " (seqnum: %" G_GUINT64_FORMAT " -> %" G_GUINT64_FORMAT ")",
+        smeta->id, smeta->parent_id, smeta->x, smeta->y, dmeta->x, dmeta->y,
+        gst_meta_get_seqnum (meta),
+        gst_meta_get_seqnum (GST_META_CAST (dmeta)));
+    GST_LOG ("region of interest size   %dx%d -> %dx%d (seqnum: %"
+        G_GUINT64_FORMAT " -> %" G_GUINT64_FORMAT ")", smeta->w, smeta->h,
+        dmeta->w, dmeta->h, gst_meta_get_seqnum (meta),
+        gst_meta_get_seqnum (GST_META_CAST (dmeta)));
   } else {
     /* return FALSE, if transform type is not supported */
     return FALSE;

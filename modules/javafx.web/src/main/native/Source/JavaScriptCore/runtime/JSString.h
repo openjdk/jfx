@@ -37,6 +37,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/MathExtras.h>
+#include <wtf/UnalignedAccess.h>
 #include <wtf/text/StringView.h>
 
 #if OS(DARWIN)
@@ -60,7 +61,7 @@ JSString* jsString(VM&, RefPtr<AtomStringImpl>&&);
 JSString* jsString(VM&, Ref<AtomStringImpl>&&);
 JSString* jsString(VM&, Ref<StringImpl>&&);
 
-JSString* jsSingleCharacterString(VM&, UChar);
+JSString* jsSingleCharacterString(VM&, char16_t);
 JSString* jsSingleCharacterString(VM&, LChar);
 JSString* jsSubstring(VM&, const String&, unsigned offset, unsigned length);
 
@@ -132,6 +133,9 @@ public:
     static constexpr uintptr_t isRopeInPointer = 0x1;
 
     static constexpr unsigned maxLengthForOnStackResolve = 2048;
+
+    template<typename CharacterType>
+    inline void resolveToBuffer(std::span<CharacterType>);
 
 private:
     String& uninitializedValueInternal() const
@@ -220,8 +224,8 @@ protected:
 
 public:
     Identifier toIdentifier(JSGlobalObject*) const;
-    AtomString toAtomString(JSGlobalObject*) const;
-    AtomString toExistingAtomString(JSGlobalObject*) const;
+    GCOwnedDataScope<AtomStringImpl*> toAtomString(JSGlobalObject*) const;
+    GCOwnedDataScope<AtomStringImpl*> toExistingAtomString(JSGlobalObject*) const;
 
     GCOwnedDataScope<StringView> view(JSGlobalObject*) const;
 
@@ -230,8 +234,8 @@ public:
     GCOwnedDataScope<const String&> value(JSGlobalObject*) const;
     inline GCOwnedDataScope<const String&> tryGetValue(bool allocationAllowed = true) const;
     GCOwnedDataScope<const String&> tryGetValueWithoutGC() const;
-    const StringImpl* getValueImpl() const;
-    const StringImpl* tryGetValueImpl() const;
+    StringImpl* getValueImpl() const;
+    StringImpl* tryGetValueImpl() const;
     ALWAYS_INLINE unsigned length() const;
 
     JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;
@@ -273,7 +277,7 @@ public:
 
     bool is8Bit() const;
 
-    ALWAYS_INLINE JSString* tryReplaceOneChar(JSGlobalObject*, UChar, JSString* replacement);
+    ALWAYS_INLINE JSString* tryReplaceOneChar(JSGlobalObject*, char16_t, JSString* replacement);
 
     bool isSubstring() const;
 protected:
@@ -282,7 +286,7 @@ protected:
 
     JS_EXPORT_PRIVATE bool equalSlowCase(JSGlobalObject*, JSString* other) const;
 
-    inline JSString* tryReplaceOneCharImpl(JSGlobalObject*, UChar search, JSString* replacement, uint8_t* stackLimit, bool& found);
+    inline JSString* tryReplaceOneCharImpl(JSGlobalObject*, char16_t search, JSString* replacement, uint8_t* stackLimit, bool& found);
 
     uintptr_t fiberConcurrently() const { return m_fiber; }
 
@@ -303,12 +307,13 @@ private:
     friend JSString* jsString(JSGlobalObject*, JSString*, JSString*, JSString*);
     friend JSString* jsString(JSGlobalObject*, const String&, const String&, const String&);
     friend JS_EXPORT_PRIVATE JSString* jsStringWithCacheSlowCase(VM&, StringImpl&);
-    friend JSString* jsSingleCharacterString(VM&, UChar);
+    friend JSString* jsSingleCharacterString(VM&, char16_t);
     friend JSString* jsSingleCharacterString(VM&, LChar);
     friend JSString* jsNontrivialString(VM&, const String&);
     friend JSString* jsNontrivialString(VM&, String&&);
     friend JSString* jsSubstring(VM&, const String&, unsigned, unsigned);
     friend JSString* jsSubstring(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
+    friend JSString* tryJSSubstringImpl(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
     friend JSString* jsSubstringOfResolved(VM&, GCDeferralContext*, JSString*, unsigned, unsigned);
     friend JSString* jsOwnedString(VM&, const String&);
     friend JSString* jsAtomString(JSGlobalObject*, VM&, JSString*);
@@ -447,7 +452,7 @@ public:
 
         bool append(JSString* jsString)
         {
-            if (UNLIKELY(this->hasOverflowed()))
+            if (this->hasOverflowed()) [[unlikely]]
                 return false;
             if (!jsString->length())
                 return true;
@@ -516,6 +521,8 @@ public:
     {
         return m_compactFibers.length();
     }
+
+    inline StringImpl* tryGetLHS(ASCIILiteral rhs) const;
 
 private:
     friend class LLIntOffsetsExtractor;
@@ -654,8 +661,8 @@ private:
     friend JSValue jsStringFromRegisterArray(JSGlobalObject*, Register*, unsigned);
 
     template<bool reportAllocation, typename Function> const String& resolveRopeWithFunction(JSGlobalObject* nullOrGlobalObjectForOOM, Function&&) const;
-    JS_EXPORT_PRIVATE AtomString resolveRopeToAtomString(JSGlobalObject*) const;
-    JS_EXPORT_PRIVATE RefPtr<AtomStringImpl> resolveRopeToExistingAtomString(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE GCOwnedDataScope<AtomStringImpl*> resolveRopeToAtomString(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE GCOwnedDataScope<AtomStringImpl*> resolveRopeToExistingAtomString(JSGlobalObject*) const;
     template<typename CharacterType> void resolveRopeInternalNoSubstring(std::span<CharacterType>, uint8_t* stackLimit) const;
     Identifier toIdentifier(JSGlobalObject*) const;
     void outOfMemory(JSGlobalObject* nullOrGlobalObjectForOOM) const;
@@ -737,6 +744,7 @@ private:
     friend JSString* jsString(JSGlobalObject*, const String&, const String&, const String&);
     friend JSString* jsSubstringOfResolved(VM&, GCDeferralContext*, JSString*, unsigned, unsigned);
     friend JSString* jsSubstring(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
+    friend JSString* tryJSSubstringImpl(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
     friend JSString* jsAtomString(JSGlobalObject*, VM&, JSString*);
     friend JSString* jsAtomString(JSGlobalObject*, VM&, JSString*, JSString*);
     friend JSString* jsAtomString(JSGlobalObject*, VM&, JSString*, JSString*, JSString*);
@@ -768,13 +776,13 @@ ALWAYS_INLINE unsigned JSString::length() const
     return std::bit_cast<StringImpl*>(pointer)->length();
 }
 
-inline const StringImpl* JSString::getValueImpl() const
+inline StringImpl* JSString::getValueImpl() const
 {
     ASSERT(!isRope());
     return std::bit_cast<StringImpl*>(m_fiber);
 }
 
-inline const StringImpl* JSString::tryGetValueImpl() const
+inline StringImpl* JSString::tryGetValueImpl() const
 {
     uintptr_t pointer = fiberConcurrently();
     if (pointer & isRopeInPointer)
@@ -784,7 +792,7 @@ inline const StringImpl* JSString::tryGetValueImpl() const
 
 inline JSString* asString(JSValue value)
 {
-    ASSERT(value.asCell()->isString());
+    ASSERT(value.isString());
     return jsCast<JSString*>(value.asCell());
 }
 
@@ -794,7 +802,7 @@ inline JSString* jsEmptyString(VM& vm)
     return vm.smallStrings.emptyString();
 }
 
-ALWAYS_INLINE JSString* jsSingleCharacterString(VM& vm, UChar c)
+ALWAYS_INLINE JSString* jsSingleCharacterString(VM& vm, char16_t c)
 {
     if constexpr (validateDFGDoesGC)
         vm.verifyCanGC();
@@ -829,7 +837,7 @@ ALWAYS_INLINE Identifier JSRopeString::toIdentifier(JSGlobalObject* globalObject
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto atomString = static_cast<const JSRopeString*>(this)->resolveRopeToAtomString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    return Identifier::fromString(vm, atomString);
+    return Identifier::fromString(vm, Ref { *atomString });
 }
 
 ALWAYS_INLINE void JSString::swapToAtomString(VM& vm, RefPtr<AtomStringImpl>&& atom) const
@@ -865,29 +873,32 @@ ALWAYS_INLINE Identifier JSString::toIdentifier(JSGlobalObject* globalObject) co
     return Identifier::fromString(vm, Ref { vm.lastAtomizedIdentifierAtomStringImpl });
 }
 
-ALWAYS_INLINE AtomString JSString::toAtomString(JSGlobalObject* globalObject) const
+ALWAYS_INLINE GCOwnedDataScope<AtomStringImpl*> JSString::toAtomString(JSGlobalObject* globalObject) const
 {
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
     if (isRope())
-        return static_cast<const JSRopeString*>(this)->resolveRopeToAtomString(globalObject);
+        return { this, static_cast<const JSRopeString*>(this)->resolveRopeToAtomString(globalObject) };
+    if (valueInternal().impl()->isAtom())
+        return { this, static_cast<AtomStringImpl*>(valueInternal().impl()) };
     AtomString atom(valueInternal());
-    // It is possible that AtomString constructor converts existing valueInternal()'s StringImpl to AtomicStringImpl,
-    // thus we need to recheck atomicity status here.
-    if (!valueInternal().impl()->isAtom())
-        swapToAtomString(getVM(globalObject), RefPtr { atom.impl() });
-    return atom;
+    swapToAtomString(getVM(globalObject), atom.releaseImpl());
+    return { this, static_cast<AtomStringImpl*>(valueInternal().impl()) };
 }
 
-ALWAYS_INLINE AtomString JSString::toExistingAtomString(JSGlobalObject* globalObject) const
+ALWAYS_INLINE GCOwnedDataScope<AtomStringImpl*> JSString::toExistingAtomString(JSGlobalObject* globalObject) const
 {
     if constexpr (validateDFGDoesGC)
         vm().verifyCanGC();
     if (isRope())
         return static_cast<const JSRopeString*>(this)->resolveRopeToExistingAtomString(globalObject);
     if (valueInternal().impl()->isAtom())
-        return static_cast<AtomStringImpl*>(valueInternal().impl());
-    return AtomStringImpl::lookUp(valueInternal().impl());
+        return { this, static_cast<AtomStringImpl*>(valueInternal().impl()) };
+    if (auto atom = AtomStringImpl::lookUp(valueInternal().impl())) {
+        swapToAtomString(getVM(globalObject), WTFMove(atom));
+        return { this, static_cast<AtomStringImpl*>(valueInternal().impl()) };
+    }
+    return { };
 }
 
 inline GCOwnedDataScope<const String&> JSString::value(JSGlobalObject* globalObject) const
@@ -985,7 +996,7 @@ ALWAYS_INLINE JSString* jsString(VM& vm, Ref<StringImpl>&& s)
     return jsString(vm, String { WTFMove(s) });
 }
 
-inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* base, unsigned offset, unsigned length)
+inline JSString* tryJSSubstringImpl(VM& vm, JSGlobalObject* globalObject, JSString* base, unsigned offset, unsigned length)
 {
     ASSERT(offset <= base->length());
     ASSERT(length <= base->length());
@@ -1012,7 +1023,7 @@ inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* bas
     ASSERT(fiber0);
     if (offset < fiber0->length()) {
         if ((offset + length) <= fiber0->length())
-            MUST_TAIL_CALL return jsSubstring(vm, globalObject, fiber0, offset, length);
+            MUST_TAIL_CALL return tryJSSubstringImpl(vm, globalObject, fiber0, offset, length);
         // Crossing multiple fibers. Giving up and resolving the rope.
     } else {
         unsigned adjustedOffset = offset - fiber0->length();
@@ -1020,7 +1031,7 @@ inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* bas
         ASSERT(fiber1);
         if (adjustedOffset < fiber1->length()) {
             if ((adjustedOffset + length) <= fiber1->length())
-                MUST_TAIL_CALL return jsSubstring(vm, globalObject, fiber1, adjustedOffset, length);
+                MUST_TAIL_CALL return tryJSSubstringImpl(vm, globalObject, fiber1, adjustedOffset, length);
             // Crossing multiple fibers. Giving up and resolving the rope.
         } else {
             adjustedOffset -= fiber1->length();
@@ -1028,14 +1039,26 @@ inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* bas
             ASSERT(fiber2);
             ASSERT(adjustedOffset < fiber2->length());
             ASSERT((adjustedOffset + length) <= fiber2->length());
-            MUST_TAIL_CALL return jsSubstring(vm, globalObject, fiber2, adjustedOffset, length);
+            MUST_TAIL_CALL return tryJSSubstringImpl(vm, globalObject, fiber2, adjustedOffset, length);
         }
     }
 
+    return nullptr;
+}
+
+inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* base, unsigned offset, unsigned length)
+{
     auto scope = DECLARE_THROW_SCOPE(vm);
-    rope->resolveRope(globalObject);
+    JSString* result = tryJSSubstringImpl(vm, globalObject, base, offset, length);
     RETURN_IF_EXCEPTION(scope, nullptr);
+
+    if (!result) {
+        jsCast<JSRopeString*>(base)->resolveRope(globalObject);
+        RETURN_IF_EXCEPTION(scope, nullptr);
     return jsSubstringOfResolved(vm, nullptr, base, offset, length);
+    }
+
+    return result;
 }
 
 inline JSString* jsSubstringOfResolved(VM& vm, JSString* s, unsigned offset, unsigned length)
@@ -1169,3 +1192,26 @@ inline bool JSString::isSubstring() const
 }
 
 } // namespace JSC
+namespace WTF {
+
+template<>
+class StringTypeAdapter<JSC::JSString*> {
+public:
+    StringTypeAdapter(JSC::JSString* string)
+        : m_string(string)
+    {
+    }
+
+    unsigned length() const { return m_string->length(); }
+    bool is8Bit() const { return m_string->is8Bit(); }
+    template<typename CharacterType>
+    void writeTo(std::span<CharacterType> destination) const
+    {
+        m_string->resolveToBuffer(destination.first(m_string->length()));
+    }
+
+private:
+    JSC::JSString* m_string { nullptr };
+};
+
+} // namespace WTF

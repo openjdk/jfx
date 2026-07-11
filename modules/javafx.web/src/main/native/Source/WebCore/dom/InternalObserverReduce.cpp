@@ -68,10 +68,10 @@ private:
         JSC::JSLockHolder lock(vm);
         auto scope = DECLARE_CATCH_SCOPE(vm);
 
-        auto result = protectedCallback()->handleEventRethrowingException(m_accumulator.getValue(), value, m_index++);
+        auto result = protectedCallback()->invokeRethrowingException(m_accumulator.getValue(), value, m_index++);
 
         JSC::Exception* exception = scope.exception();
-        if (UNLIKELY(exception)) {
+        if (exception) [[unlikely]] {
             scope.clearException();
             auto value = exception->value();
             protectedPromise()->reject<IDLAny>(value);
@@ -91,7 +91,7 @@ private:
     {
         InternalObserver::complete();
 
-        if (UNLIKELY(!m_accumulator)) {
+        if (!m_accumulator) [[unlikely]] {
             protectedPromise()->reject(Exception { ExceptionCode::TypeError, "No inital value for Observable with no values"_s });
             return;
         }
@@ -114,7 +114,7 @@ private:
         , m_callback(WTFMove(callback))
         , m_promise(WTFMove(promise))
     {
-        if (UNLIKELY(!initialValue.isUndefined()))
+        if (!initialValue.isUndefined()) [[unlikely]]
             m_accumulator.setWeakly(initialValue);
     }
 

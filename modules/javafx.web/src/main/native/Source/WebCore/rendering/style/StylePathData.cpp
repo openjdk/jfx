@@ -45,7 +45,7 @@ Ref<StylePathData> StylePathData::clone() const
     return StylePathData::create(m_path);
 }
 
-Path StylePathData::path(const FloatRect& rect) const
+WebCore::Path StylePathData::path(const FloatRect& rect) const
 {
     return Style::path(m_path, rect);
 }

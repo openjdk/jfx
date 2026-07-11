@@ -25,6 +25,7 @@
 #include "config.h"
 #include "SVGLinearGradientElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "FloatPoint.h"
 #include "LegacyRenderSVGResourceLinearGradient.h"
@@ -34,6 +35,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGUnitTypes.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -64,7 +66,7 @@ Ref<SVGLinearGradientElement> SVGLinearGradientElement::create(const QualifiedNa
 
 void SVGLinearGradientElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::x1Attr:
@@ -142,7 +144,7 @@ bool SVGLinearGradientElement::collectGradientAttributes(LinearGradientAttribute
     if (!renderer())
         return false;
 
-    UncheckedKeyHashSet<Ref<SVGGradientElement>> processedGradients;
+    HashSet<Ref<SVGGradientElement>> processedGradients;
     Ref<SVGGradientElement> current { *this };
 
     setGradientAttributes(current.get(), attributes);

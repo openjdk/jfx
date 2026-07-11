@@ -29,58 +29,18 @@
 #pragma once
 
 #include "ContainerNode.h"
-#include "Element.h"
-#include "HTMLElement.h"
-#include "HTMLNames.h"
-#include "NodeName.h"
 
 namespace WebCore {
 
 class AsyncNodeDeletionQueue {
 public:
-    ALWAYS_INLINE void addIfSubtreeSizeIsUnderLimit(NodeVector&& children, unsigned subTreeSize)
-    {
-        if (m_nodeCount + subTreeSize > s_maxSizeAsyncNodeDeletionQueue)
-            return;
-        m_nodeCount += subTreeSize;
-        m_queue.appendVector(WTFMove(children));
-    }
+    ALWAYS_INLINE AsyncNodeDeletionQueue();
+    ALWAYS_INLINE ~AsyncNodeDeletionQueue();
 
-    ALWAYS_INLINE void deleteNodesNow()
-    {
-        m_queue.clear();
-        m_nodeCount = 0;
-    }
-
-    ALWAYS_INLINE static ContainerNode::CanDelayNodeDeletion canNodeBeDeletedAsync(const Node& node)
-    {
-        if (!dynamicDowncast<HTMLElement>(node))
-            return ContainerNode::CanDelayNodeDeletion::Yes;
-        if (isNodeLikelyLarge(node))
-            return ContainerNode::CanDelayNodeDeletion::No;
-        return ContainerNode::CanDelayNodeDeletion::Yes;
-    }
-
-    ALWAYS_INLINE static bool isNodeLikelyLarge(const Node& node)
-    {
-        ASSERT(node.isElementNode());
-
-        switch (downcast<Element>(node).elementName()) {
-        case NodeName::HTML_audio:
-        case NodeName::HTML_body:
-        case NodeName::HTML_canvas:
-        case NodeName::HTML_iframe:
-        case NodeName::HTML_img:
-        case NodeName::HTML_object:
-        case NodeName::HTML_source:
-        case NodeName::HTML_track:
-        case NodeName::HTML_video:
-        case NodeName::SVG_svg:
-            return true;
-        default:
-            return false;
-        }
-    }
+    ALWAYS_INLINE void addIfSubtreeSizeIsUnderLimit(NodeVector&&, unsigned subTreeSize);
+    ALWAYS_INLINE void deleteNodesNow();
+    ALWAYS_INLINE static ContainerNode::CanDelayNodeDeletion canNodeBeDeletedAsync(const Node&);
+    ALWAYS_INLINE static bool isNodeLikelyLarge(const Node&);
 
 private:
     Vector<Ref<Node>> m_queue;

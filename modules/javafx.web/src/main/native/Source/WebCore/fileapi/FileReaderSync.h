@@ -30,7 +30,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -41,6 +42,7 @@ namespace WebCore {
 class Blob;
 class FileReaderLoader;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class FileReaderSync : public RefCounted<FileReaderSync> {
 public:

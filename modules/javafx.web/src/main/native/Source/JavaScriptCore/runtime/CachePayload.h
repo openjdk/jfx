@@ -26,9 +26,8 @@
 #pragma once
 
 #include "VM.h"
-#include <variant>
-#include <wtf/FileSystem.h>
 #include <wtf/MallocSpan.h>
+#include <wtf/MappedFileData.h>
 
 namespace JSC {
 
@@ -42,10 +41,10 @@ public:
     JS_EXPORT_PRIVATE ~CachePayload();
 
     size_t size() const { return span().size(); }
-    JS_EXPORT_PRIVATE std::span<const uint8_t> span() const;
+    JS_EXPORT_PRIVATE std::span<const uint8_t> span() const LIFETIME_BOUND;
 
 private:
-    using DataType = std::variant<MallocSpan<uint8_t, VMMalloc>, FileSystem::MappedFileData>;
+    using DataType = Variant<MallocSpan<uint8_t, VMMalloc>, FileSystem::MappedFileData>;
     explicit CachePayload(DataType&&);
 
     DataType m_data;

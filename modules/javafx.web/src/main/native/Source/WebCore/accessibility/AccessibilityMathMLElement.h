@@ -41,11 +41,11 @@ namespace WebCore {
 class AccessibilityMathMLElement : public AccessibilityRenderObject {
 
 public:
-    static Ref<AccessibilityMathMLElement> create(AXID, RenderObject&, bool isAnonymousOperator);
+    static Ref<AccessibilityMathMLElement> create(AXID, RenderObject&, AXObjectCache&, bool isAnonymousOperator);
     virtual ~AccessibilityMathMLElement();
 
 protected:
-    explicit AccessibilityMathMLElement(AXID, RenderObject&, bool isAnonymousOperator);
+    explicit AccessibilityMathMLElement(AXID, RenderObject&, AXObjectCache&, bool isAnonymousOperator);
 
 private:
     AccessibilityRole determineAccessibilityRole() final;
@@ -100,7 +100,7 @@ private:
     String mathFencedOpenString() const final;
     String mathFencedCloseString() const final;
     int mathLineThickness() const final;
-    bool isAnonymousMathOperator() const final;
+    bool isAnonymousMathOperator() const final { return m_isAnonymousOperator; }
 
     // Multiscripts components.
     void mathPrescripts(AccessibilityMathMultiscriptPairs&) final;

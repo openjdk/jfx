@@ -22,7 +22,6 @@
 
 #include "DictationContext.h"
 #include "SimpleRange.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/UUID.h>
@@ -142,7 +141,7 @@ public:
         WTF::UUID uuid;
     };
 
-    using Data = std::variant<
+    using Data = Variant<
         String
         , DictationData // DictationAlternatives
 #if PLATFORM(IOS_FAMILY)

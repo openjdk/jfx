@@ -31,7 +31,7 @@ namespace JSC { namespace DFG {
 
 class Graph;
 
-// Tries to eliminate DoubleRep(ValueRep) roundtrips.
+// Tries to eliminate DoubleRep(ValueRep) / Int52Rep(ValueRep) roundtrips.
 
 bool performValueRepReduction(Graph&);
 

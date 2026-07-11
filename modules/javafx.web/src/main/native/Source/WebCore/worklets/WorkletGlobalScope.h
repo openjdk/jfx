@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,11 @@
 #pragma once
 
 #include "Document.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
+#include "Settings.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/ConsoleMessage.h>
@@ -105,21 +106,16 @@ private:
 
     EventTarget* errorEventTarget() final { return this; }
 #if !PLATFORM(JAVA)
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
     std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
-#else
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
-    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
-    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
 #endif
     URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
-    Ref<SecurityOrigin> m_topOrigin;
+    const Ref<SecurityOrigin> m_topOrigin;
 
     URL m_url;
     JSC::RuntimeFlags m_jsRuntimeFlags;
@@ -127,7 +123,7 @@ private:
 
     std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
 
-    Settings::Values m_settingsValues;
+    SettingsValues m_settingsValues;
 };
 
 } // namespace WebCore

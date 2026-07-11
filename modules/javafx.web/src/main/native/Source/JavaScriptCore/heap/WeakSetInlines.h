@@ -36,11 +36,12 @@ inline WeakImpl* WeakSet::allocate(JSValue jsValue, WeakHandleOwner* weakHandleO
     ASSERT(container.vm().currentThreadIsHoldingAPILock());
     WeakSet& weakSet = container.weakSet();
     WeakBlock::FreeCell* allocator = weakSet.m_allocator;
-    if (UNLIKELY(!allocator))
+    if (!allocator) [[unlikely]]
         allocator = weakSet.findAllocator(container);
     weakSet.m_allocator = allocator->next;
 
     WeakImpl* weakImpl = WeakBlock::asWeakImpl(allocator);
+    container.vm().heap.didAllocate(sizeof(WeakImpl));
     return new (NotNull, weakImpl) WeakImpl(jsValue, weakHandleOwner, context);
 }
 

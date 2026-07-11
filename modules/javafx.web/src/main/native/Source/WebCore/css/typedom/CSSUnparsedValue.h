@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CSSStyleValue.h"
-#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -34,7 +33,7 @@ namespace WebCore {
 template<typename> class ExceptionOr;
 class CSSOMVariableReferenceValue;
 class CSSParserTokenRange;
-using CSSUnparsedSegment = std::variant<String, RefPtr<CSSOMVariableReferenceValue>>;
+using CSSUnparsedSegment = Variant<String, RefPtr<CSSOMVariableReferenceValue>>;
 
 class CSSUnparsedValue final : public CSSStyleValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSUnparsedValue);

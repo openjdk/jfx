@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  * Copyright (C) 2012 University of Szeged
  * Copyright (C) 2012 Renata Hodovan <reni@webkit.org>
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -29,10 +29,12 @@
 
 #include "CachedResourceLoader.h"
 #include "CachedSVGDocument.h"
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
 #include "NodeName.h"
@@ -40,6 +42,7 @@
 #include "SVGDocumentExtensions.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
+#include "SVGParsingError.h"
 #include "SVGSVGElement.h"
 #include "SVGSymbolElement.h"
 #include "ScriptDisallowedScope.h"
@@ -83,7 +86,7 @@ SVGUseElement::~SVGUseElement()
 
 void SVGUseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -475,7 +478,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
         if (target->contains(this))
             return nullptr;
         // Target should only refer to a node in the same tree or a node in another document.
-        ASSERT(!isDescendantOrShadowDescendantOf(target.get()));
+        ASSERT(!isShadowIncludingDescendantOf(target.get()));
     }
 
     return target;
@@ -483,7 +486,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
 
 void SVGUseElement::cloneTarget(ContainerNode& container, SVGElement& target) const
 {
-    Ref targetClone = static_cast<SVGElement&>(target.cloneElementWithChildren(protectedDocument(), nullptr).get());
+    Ref targetClone = downcast<SVGElement>(target.cloneElementWithChildren(protectedDocument(), nullptr));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { targetClone };
     associateClonesWithOriginals(targetClone.get(), target);
     removeDisallowedElementsFromSubtree(targetClone.get());
@@ -641,7 +644,7 @@ void SVGUseElement::updateExternalDocument()
         options.mode = FetchOptions::Mode::SameOrigin;
         options.destination = FetchOptions::Destination::Image;
         options.sniffContent = ContentSniffingPolicy::DoNotSniffContent;
-        CachedResourceRequest request { ResourceRequest { externalDocumentURL }, options };
+        CachedResourceRequest request { ResourceRequest { WTFMove(externalDocumentURL) }, options };
         request.setInitiator(*this);
         m_externalDocument = document->protectedCachedResourceLoader()->requestSVGDocument(WTFMove(request)).value_or(nullptr);
         if (CachedResourceHandle externalDocument = m_externalDocument)

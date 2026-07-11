@@ -48,7 +48,7 @@ bool DocumentPictureInPicture::pictureInPictureEnabled(Document&)
 
 void DocumentPictureInPicture::exitPictureInPicture(Document& document, Ref<DeferredPromise>&& promise)
 {
-    auto element = document.pictureInPictureElement();
+    RefPtr element = document.pictureInPictureElement();
 
     if (!element) {
         promise->reject(ExceptionCode::InvalidStateError);

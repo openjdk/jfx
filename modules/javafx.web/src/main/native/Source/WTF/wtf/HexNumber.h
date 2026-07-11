@@ -21,6 +21,7 @@
 #pragma once
 
 #include <array>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringImpl.h>
 
 namespace WTF {
@@ -41,13 +42,13 @@ WTF_EXPORT_PRIVATE std::span<LChar> appendHex(std::span<LChar> buffer, std::uint
 template<size_t arraySize, typename NumberType>
 inline std::span<LChar> appendHex(std::array<LChar, arraySize>& buffer, NumberType number, unsigned minimumDigits, HexConversionMode mode)
 {
-    return appendHex(std::span<LChar> { buffer }, static_cast<typename std::make_unsigned<NumberType>::type>(number), minimumDigits, mode);
+    return appendHex(std::span<LChar> { buffer }, unsignedCast(number), minimumDigits, mode);
 }
 
 } // namespace Internal
 
 struct HexNumberBuffer {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(HexNumberBuffer);
 
     std::array<LChar, 16> buffer;
     unsigned length;

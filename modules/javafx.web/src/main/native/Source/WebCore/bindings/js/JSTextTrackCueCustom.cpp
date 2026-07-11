@@ -45,7 +45,7 @@ bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> h
     TextTrackCue& textTrackCue = jsTextTrackCue->wrapped();
 
     if (!textTrackCue.isContextStopped() && textTrackCue.hasPendingActivity()) {
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "TextTrackCue with pending activity"_s;
         return true;
     }
@@ -54,7 +54,7 @@ bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> h
     if (!textTrackCue.track())
         return false;
 
-    if (UNLIKELY(reason))
+    if (reason) [[unlikely]]
         *reason = "TextTrack is an opaque root"_s;
 
     return containsWebCoreOpaqueRoot(visitor, textTrackCue.track());

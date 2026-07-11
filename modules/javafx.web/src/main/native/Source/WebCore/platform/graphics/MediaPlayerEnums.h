@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -110,6 +111,13 @@ enum class MediaPlayerNeedsRenderingModeChanged : bool {
     Yes,
 };
 
+enum class MediaPlayerSoundStageSize : uint8_t {
+    Auto,
+    Small,
+    Medium,
+    Large,
+};
+
 class MediaPlayerEnums {
 public:
     using NetworkState = MediaPlayerNetworkState;
@@ -123,6 +131,7 @@ public:
     using WirelessPlaybackTargetType = MediaPlayerWirelessPlaybackTargetType;
     using PitchCorrectionAlgorithm = MediaPlayerPitchCorrectionAlgorithm;
     using NeedsRenderingModeChanged = MediaPlayerNeedsRenderingModeChanged;
+    using SoundStageSize = MediaPlayerSoundStageSize;
 
     enum {
         VideoFullscreenModeNone = 0,
@@ -140,6 +149,14 @@ String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
 String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
+
+enum class VideoMediaSampleRendererPreference : uint8_t {
+    PrefersDecompressionSession = 1 << 0,
+    ProtectedFallbackDisabled = 1 << 1,
+    UseDecompressionSessionForProtectedContent = 1 << 2,
+    UseStereoDecoding = 1 << 3,
+};
+using VideoMediaSampleRendererPreferences = OptionSet<VideoMediaSampleRendererPreference>;
 
 } // namespace WebCore
 

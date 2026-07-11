@@ -29,7 +29,6 @@
 #include "StyleGradient.h"
 
 #include "ColorInterpolation.h"
-#include "ComputedStyleExtractor.h"
 #include "FloatConversion.h"
 #include "GeometryUtilities.h"
 #include "Gradient.h"
@@ -364,9 +363,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         };
     });
 
-    std::ranges::stable_sort(result, [](const auto& a, const auto& b) {
-        return a.offset < b.offset;
-    });
+    std::ranges::stable_sort(result, { }, &WebCore::GradientColorStop::offset);
 
     return GradientColorStops::Sorted { WTFMove(result) };
 }
@@ -473,7 +470,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
         // Check if everything coincides or the midpoint is exactly in the middle.
         // If so, ignore the midpoint.
         if (offset - offset1 == offset2 - offset) {
-            stops.remove(x);
+            stops.removeAt(x);
             continue;
         }
 
@@ -515,7 +512,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
             newStops[y].color = interpolateColors(styleGradient.parameters.colorInterpolationMethod.method, color1, 1.0f - multiplier, color2, multiplier);
         }
 
-        stops.remove(x);
+        stops.removeAt(x);
         stops.insertSpan(x, std::span { newStops });
         x += 9;
     }
@@ -645,7 +642,7 @@ template<typename GradientAdapter, typename StyleGradient> GradientColorStops co
     };
 }
 
-static inline float positionFromValue(const LengthPercentage<>& coordinate, float widthOrHeight)
+static inline float positionFromValue(LengthWrapperBaseDerived auto const& coordinate, float widthOrHeight)
 {
     return evaluate(coordinate, widthOrHeight);
 }
@@ -893,7 +890,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
             );
         },
         [&](const SpaceSeparatedTuple<Horizontal, Vertical>& pair) -> std::pair<FloatPoint, FloatPoint> {
-            return std::visit(WTF::makeVisitor(
+            return WTF::visit(WTF::makeVisitor(
                 [&](CSS::Keyword::Left, CSS::Keyword::Top) -> std::pair<FloatPoint, FloatPoint> {
                     return { { 0, 0 }, { size.width(), size.height() } };
                 },
@@ -943,7 +940,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         return position ? computeEndPoint(*position, size) : FloatPoint { size.width() / 2, size.height() / 2 };
     };
 
-    auto computeCircleRadius = [&](const std::variant<RadialGradient::Circle::Length, RadialGradient::Extent>& circleLengthOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeCircleRadius = [&](const Variant<RadialGradient::Circle::Length, RadialGradient::Extent>& circleLengthOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(circleLengthOrExtent,
             [&](const RadialGradient::Circle::Length& circleLength) -> std::pair<float, float> {
                 return { circleLength.value, 1 };
@@ -967,7 +964,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         );
     };
 
-    auto computeEllipseRadii = [&](const std::variant<RadialGradient::Ellipse::Size, RadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeEllipseRadii = [&](const Variant<RadialGradient::Ellipse::Size, RadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(ellipseSizeOrExtent,
             [&](const RadialGradient::Ellipse::Size& ellipseSize) -> std::pair<float, float> {
                 auto xDist = resolveRadius(get<0>(ellipseSize), size.width());
@@ -1038,7 +1035,7 @@ template<CSSValueID Name> static Ref<WebCore::Gradient> createPlatformGradient(c
         return position ? computeEndPoint(*position, size) : FloatPoint { size.width() / 2, size.height() / 2 };
     };
 
-    auto computeEllipseRadii = [&](const std::variant<PrefixedRadialGradient::Ellipse::Size, PrefixedRadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
+    auto computeEllipseRadii = [&](const Variant<PrefixedRadialGradient::Ellipse::Size, PrefixedRadialGradient::Extent>& ellipseSizeOrExtent, FloatPoint centerPoint) -> std::pair<float, float> {
         return WTF::switchOn(ellipseSizeOrExtent,
             [&](const PrefixedRadialGradient::Ellipse::Size& ellipseSize) -> std::pair<float, float> {
                 auto xDist = resolveRadius(get<0>(ellipseSize), size.width());

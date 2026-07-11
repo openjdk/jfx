@@ -26,6 +26,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <limits>
 #include <optional>
 
 namespace WTF {
@@ -50,9 +51,9 @@ enum class PrintColorAdjust : bool {
 // - StyleDifference::Repaint - The object just needs to be repainted.
 // - StyleDifference::RepaintIfText - The object needs to be repainted if it contains text.
 // - StyleDifference::RepaintLayer - The layer and its descendant layers needs to be repainted.
-// - StyleDifference::LayoutPositionedMovementOnly - Only the position of this positioned object has been updated
+// - StyleDifference::LayoutOutOfFlowMovementOnly - Only the position of this out-of-flow box has been updated
 // - StyleDifference::Overflow - Only overflow needs to be recomputed
-// - StyleDifference::OverflowAndPositionedMovement - Both positioned movement and overflow updates are required.
+// - StyleDifference::OverflowAndOutOfFlowMovement - Both out-of-flow movement and overflow updates are required.
 // - StyleDifference::Layout - A full layout is required.
 enum class StyleDifference : uint8_t {
     Equal,
@@ -60,9 +61,9 @@ enum class StyleDifference : uint8_t {
     Repaint,
     RepaintIfText,
     RepaintLayer,
-    LayoutPositionedMovementOnly,
+    LayoutOutOfFlowMovementOnly,
     Overflow,
-    OverflowAndPositionedMovement,
+    OverflowAndOutOfFlowMovement,
     Layout,
     NewStyle
 };
@@ -242,9 +243,17 @@ enum class BorderPrecedence : uint8_t {
     Cell
 };
 
-enum class OutlineIsAuto : bool {
-    Off,
-    On
+enum class OutlineStyle : uint8_t {
+    Auto,
+    None,
+    Inset,
+    Groove,
+    Outset,
+    Ridge,
+    Dotted,
+    Dashed,
+    Solid,
+    Double
 };
 
 enum class PositionType : uint8_t {
@@ -294,19 +303,6 @@ enum class Overflow : uint8_t {
     Auto,
     PagedX,
     PagedY
-};
-
-enum class VerticalAlign : uint8_t {
-    Baseline,
-    Middle,
-    Sub,
-    Super,
-    TextTop,
-    TextBottom,
-    Top,
-    Bottom,
-    BaselineMiddle,
-    Length
 };
 
 enum class Clear : uint8_t {
@@ -937,14 +933,11 @@ enum class TextEmphasisFill : bool {
 };
 
 enum class TextEmphasisMark : uint8_t {
-    None,
-    Auto,
     Dot,
     Circle,
     DoubleCircle,
     Triangle,
-    Sesame,
-    Custom
+    Sesame
 };
 
 enum class TextEmphasisPosition : uint8_t {
@@ -1054,16 +1047,6 @@ enum GridAutoFlow : uint8_t {
     AutoFlowColumnDense = InternalAutoFlowAlgorithmDense | InternalAutoFlowDirectionColumn
 };
 
-enum class MasonryAutoFlowPlacementAlgorithm {
-    Pack,
-    Next
-};
-
-enum class MasonryAutoFlowPlacementOrder {
-    DefiniteFirst,
-    Ordered
-};
-
 enum class AutoRepeatType : uint8_t {
     None,
     Fill,
@@ -1078,16 +1061,6 @@ constexpr float maximumAllowedFontSize = std::numeric_limits<short>::max();
 // Reasonable maximum to prevent insane font sizes from causing crashes on some platforms (such as Windows).
 constexpr float maximumAllowedFontSize = 1000000.0f;
 #endif
-
-enum class TextIndentLine : bool {
-    FirstLine,
-    EachLine
-};
-
-enum class TextIndentType : bool {
-    Normal,
-    Hanging
-};
 
 enum class Isolation : bool {
     Auto,
@@ -1157,7 +1130,7 @@ enum class FontLoadingBehavior : uint8_t {
     Optional
 };
 
-enum class EventListenerRegionType : uint16_t {
+enum class EventListenerRegionType : uint32_t {
     Wheel           = 1 << 0,
     NonPassiveWheel = 1 << 1,
     MouseClick      = 1 << 2,
@@ -1169,6 +1142,26 @@ enum class EventListenerRegionType : uint16_t {
     NonPassiveTouchCancel = 1 << 8,
     TouchMove             = 1 << 9,
     NonPassiveTouchMove   = 1 << 10,
+    PointerDown            = 1 << 11,
+    NonPassivePointerDown  = 1 << 12,
+    PointerEnter           = 1 << 13,
+    NonPassivePointerEnter = 1 << 14,
+    PointerLeave           = 1 << 15,
+    NonPassivePointerLeave = 1 << 16,
+    PointerMove            = 1 << 17,
+    NonPassivePointerMove  = 1 << 18,
+    PointerOut             = 1 << 19,
+    NonPassivePointerOut   = 1 << 20,
+    PointerOver            = 1 << 21,
+    NonPassivePointerOver  = 1 << 22,
+    PointerUp              = 1 << 23,
+    NonPassivePointerUp    = 1 << 24,
+    MouseDown              = 1 << 25,
+    NonPassiveMouseDown    = 1 << 26,
+    MouseUp                = 1 << 27,
+    NonPassiveMouseUp      = 1 << 28,
+    MouseMove              = 1 << 29,
+    NonPassiveMouseMove    = 1 << 30,
 };
 
 enum class MathStyle : bool {
@@ -1225,6 +1218,12 @@ enum class BlockStepRound : uint8_t {
 enum class FieldSizing : bool {
     Fixed,
     Content
+};
+
+enum class PositionVisibility : uint8_t {
+    AnchorsValid   = 1 << 0,
+    AnchorsVisible = 1 << 1,
+    NoOverflow     = 1 << 2
 };
 
 CSSBoxType transformBoxToCSSBoxType(TransformBox);
@@ -1299,12 +1298,14 @@ WTF::TextStream& operator<<(WTF::TextStream&, MaskMode);
 WTF::TextStream& operator<<(WTF::TextStream&, NBSPMode);
 WTF::TextStream& operator<<(WTF::TextStream&, ObjectFit);
 WTF::TextStream& operator<<(WTF::TextStream&, Order);
+WTF::TextStream& operator<<(WTF::TextStream&, OutlineStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, WebCore::Overflow);
 WTF::TextStream& operator<<(WTF::TextStream&, OverflowAlignment);
 WTF::TextStream& operator<<(WTF::TextStream&, OverflowWrap);
 WTF::TextStream& operator<<(WTF::TextStream&, PaintOrder);
 WTF::TextStream& operator<<(WTF::TextStream&, PointerEvents);
 WTF::TextStream& operator<<(WTF::TextStream&, PositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionVisibility);
 WTF::TextStream& operator<<(WTF::TextStream&, PrintColorAdjust);
 WTF::TextStream& operator<<(WTF::TextStream&, PseudoId);
 WTF::TextStream& operator<<(WTF::TextStream&, QuoteType);
@@ -1346,7 +1347,6 @@ WTF::TextStream& operator<<(WTF::TextStream&, TransformStyle3D);
 WTF::TextStream& operator<<(WTF::TextStream&, UserDrag);
 WTF::TextStream& operator<<(WTF::TextStream&, UserModify);
 WTF::TextStream& operator<<(WTF::TextStream&, UserSelect);
-WTF::TextStream& operator<<(WTF::TextStream&, VerticalAlign);
 WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpaceCollapse);

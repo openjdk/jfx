@@ -67,9 +67,9 @@ public:
     static constexpr ptrdiff_t offsetOfInternalFields() { return OBJECT_OFFSETOF(JSInternalFieldObjectImpl, m_internalFields); }
     static constexpr ptrdiff_t offsetOfInternalField(unsigned index) { return OBJECT_OFFSETOF(JSInternalFieldObjectImpl, m_internalFields) + index * sizeof(WriteBarrier<Unknown>); }
 
-protected:
     DECLARE_VISIT_CHILDREN;
 
+protected:
     JSInternalFieldObjectImpl(VM& vm, Structure* structure)
         : Base(vm, structure)
     {

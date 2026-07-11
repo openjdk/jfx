@@ -57,21 +57,22 @@ public:
     bool isRangeStartSet() const { return m_rangeStartSet; }
     bool isRangeEndSet() const { return m_rangeEndSet; }
 
-    // Flags this to be the special "none" animation (animation-name: none)
-    bool isNoneAnimation() const { return m_isNone; }
-
-    // We can make placeholder Animation objects to keep the comma-separated lists
-    // of properties in sync. isValidAnimation means this is not a placeholder.
-    bool isValidAnimation() const { return !m_isNone && !m_name.name.isEmpty(); }
-
     bool isEmpty() const
     {
-        return !m_directionSet && !m_durationSet && !m_fillModeSet
-            && !m_nameSet && !m_playStateSet && !m_iterationCountSet
-            && !m_delaySet && !m_timingFunctionSet && !m_propertySet
-            && !m_isNone && !m_compositeOperationSet && !m_timelineSet
-            && !m_allowsDiscreteTransitionsSet && !m_rangeStartSet
-            && !m_rangeEndSet;
+        return !m_nameSet
+            && (!m_directionSet || m_directionFilled)
+            && (!m_durationSet || m_durationFilled)
+            && (!m_fillModeSet || m_fillModeFilled)
+            && (!m_playStateSet || m_playStateFilled)
+            && (!m_iterationCountSet || m_iterationCountFilled)
+            && (!m_delaySet || m_delayFilled)
+            && (!m_timingFunctionSet || m_timingFunctionFilled)
+            && (!m_propertySet || m_propertyFilled)
+            && (!m_compositeOperationSet || m_compositeOperationFilled)
+            && (!m_timelineSet || m_timelineFilled)
+            && (!m_allowsDiscreteTransitionsSet || m_allowsDiscreteTransitionsFilled)
+            && (!m_rangeStartSet || m_rangeStartFilled)
+            && (!m_rangeEndSet || m_rangeEndFilled);
     }
 
     bool isEmptyOrZeroDuration() const
@@ -84,7 +85,11 @@ public:
     void clearDuration() { m_durationSet = false; m_durationFilled = false; }
     void clearFillMode() { m_fillModeSet = false; m_fillModeFilled = false; }
     void clearIterationCount() { m_iterationCountSet = false; m_iterationCountFilled = false; }
-    void clearName() { m_nameSet = false; }
+    void clearName()
+    {
+        m_nameSet = false;
+        m_name = initialName();
+    }
     void clearPlayState() { m_playStateSet = false; m_playStateFilled = false; }
     void clearProperty() { m_propertySet = false; m_propertyFilled = false; }
     void clearTimeline() { m_timelineSet = false; m_timelineFilled = false; }
@@ -142,17 +147,17 @@ public:
     };
     struct AnonymousViewTimeline {
         ScrollAxis axis;
-        ViewTimelineInsets insets;
+        ViewTimelineInsetItem insets;
         bool operator==(const AnonymousViewTimeline& o) const { return axis == o.axis && insets == o.insets; }
     };
-    using Timeline = std::variant<TimelineKeyword, AtomString, AnonymousScrollTimeline, AnonymousViewTimeline>;
+    using Timeline = Variant<TimelineKeyword, AtomString, AnonymousScrollTimeline, AnonymousViewTimeline>;
 
     Direction direction() const { return static_cast<Direction>(m_direction); }
     bool directionIsForwards() const { return direction() == Direction::Normal || direction() == Direction::Alternate; }
 
     AnimationFillMode fillMode() const { return static_cast<AnimationFillMode>(m_fillMode); }
 
-    MarkableDouble duration() const { return m_duration; }
+    Markable<double> duration() const { return m_duration; }
     double playbackRate() const { return m_playbackRate; }
 
     static constexpr double IterationCountInfinite = -1;
@@ -162,6 +167,7 @@ public:
     TransitionProperty property() const { return m_property; }
     const Timeline& timeline() const { return m_timeline; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
+    RefPtr<TimingFunction> protectedTimingFunction() const { return m_timingFunction; }
     TimingFunction* defaultTimingFunctionForKeyframes() const { return m_defaultTimingFunctionForKeyframes.get(); }
     const SingleTimelineRange rangeStart() const { return m_range.start; }
     const SingleTimelineRange rangeEnd() const { return m_range.end; }
@@ -169,7 +175,7 @@ public:
 
     void setDelay(double c) { m_delay = c; m_delaySet = true; }
     void setDirection(Direction d) { m_direction = static_cast<unsigned>(d); m_directionSet = true; }
-    void setDuration(MarkableDouble d) { ASSERT(!d || *d >= 0); m_duration = d; m_durationSet = true; }
+    void setDuration(Markable<double> d) { ASSERT(!d || *d >= 0); m_duration = d; m_durationSet = true; }
     void setPlaybackRate(double d) { m_playbackRate = d; }
     void setFillMode(AnimationFillMode f) { m_fillMode = static_cast<unsigned>(f); m_fillModeSet = true; }
     void setIterationCount(double c) { m_iterationCount = c; m_iterationCountSet = true; }
@@ -187,11 +193,9 @@ public:
     void setRangeEnd(SingleTimelineRange range) { m_range.end = range; m_rangeEndSet = true; }
     void setRange(TimelineRange range) { setRangeStart(range.start); setRangeEnd(range.end); }
 
-    void setIsNoneAnimation(bool n) { m_isNone = n; }
-
     void fillDelay(double delay) { setDelay(delay); m_delayFilled = true; }
     void fillDirection(Direction direction) { setDirection(direction); m_directionFilled = true; }
-    void fillDuration(MarkableDouble duration) { setDuration(duration); m_durationFilled = true; }
+    void fillDuration(Markable<double> duration) { setDuration(duration); m_durationFilled = true; }
     void fillFillMode(AnimationFillMode fillMode) { setFillMode(fillMode); m_fillModeFilled = true; }
     void fillIterationCount(double iterationCount) { setIterationCount(iterationCount); m_iterationCountFilled = true; }
     void fillPlayState(AnimationPlayState playState) { setPlayState(playState); m_playStateFilled = true; }
@@ -208,6 +212,7 @@ public:
     bool isDurationFilled() const { return m_durationFilled; }
     bool isFillModeFilled() const { return m_fillModeFilled; }
     bool isIterationCountFilled() const { return m_iterationCountFilled; }
+    static bool isNameFilled() { return false; } // Needed for property generation generalization.
     bool isPlayStateFilled() const { return m_playStateFilled; }
     bool isPropertyFilled() const { return m_propertyFilled; }
     bool isTimelineFilled() const { return m_timelineFilled; }
@@ -243,7 +248,7 @@ private:
     Style::ScopedName m_name;
     double m_iterationCount;
     double m_delay;
-    MarkableDouble m_duration;
+    Markable<double> m_duration;
     double m_playbackRate { 1 };
     Timeline m_timeline;
     RefPtr<TimingFunction> m_timingFunction;
@@ -271,8 +276,6 @@ private:
     bool m_rangeStartSet : 1;
     bool m_rangeEndSet : 1;
 
-    bool m_isNone : 1;
-
     bool m_delayFilled : 1;
     bool m_directionFilled : 1;
     bool m_durationFilled : 1;
@@ -290,7 +293,7 @@ private:
 public:
     static double initialDelay() { return 0; }
     static Direction initialDirection() { return Direction::Normal; }
-    static MarkableDouble initialDuration() { return std::nullopt; }
+    static Markable<double> initialDuration() { return std::nullopt; }
     static AnimationFillMode initialFillMode() { return AnimationFillMode::None; }
     static double initialIterationCount() { return 1.0; }
     static const Style::ScopedName& initialName();

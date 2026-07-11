@@ -27,6 +27,7 @@
 
 #include "BackgroundPainter.h"
 #include "BorderPainter.h"
+#include "ContainerNodeInlines.h"
 #include "GraphicsContext.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"
@@ -36,6 +37,7 @@
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
+#include "StyleBoxShadow.h"
 
 namespace WebCore {
 
@@ -234,7 +236,7 @@ void InlineBoxPainter::paintDecorations()
     LayoutRect paintRect = LayoutRect(adjustedPaintoffset, localRect.size());
     // Shadow comes first and is behind the background and border.
     if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(renderer(), adjustedPaintoffset, BleedAvoidance::None, m_inlineBox))
-        paintBoxShadow(ShadowStyle::Normal, paintRect);
+        paintBoxShadow(Style::ShadowStyle::Normal, paintRect);
 
     auto color = style.visitedDependentColor(CSSPropertyBackgroundColor, m_paintInfo.paintBehavior);
     auto compositeOp = renderer().document().compositeOperatorForBackgroundColor(color, renderer());
@@ -242,7 +244,7 @@ void InlineBoxPainter::paintDecorations()
     color = style.colorByApplyingColorFilter(color);
 
     paintFillLayers(color, style.backgroundLayers(), paintRect, compositeOp);
-    paintBoxShadow(ShadowStyle::Inset, paintRect);
+    paintBoxShadow(Style::ShadowStyle::Inset, paintRect);
 
     // :first-line cannot be used to put borders on a line. Always paint borders with our
     // non-first-line style.
@@ -352,7 +354,7 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     backgroundPainter.paintFillLayer(color, fillLayer, rect, BleedAvoidance::None, m_inlineBox, backgroundImageStrip, op);
 }
 
-void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect& paintRect)
+void InlineBoxPainter::paintBoxShadow(Style::ShadowStyle shadowStyle, const LayoutRect& paintRect)
 {
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 

@@ -98,10 +98,10 @@ pas_try_allocate_for_reallocate_and_copy(
     if (result.begin) {
         if (verbose)
             pas_log("result.begin = %p\n", (void*)result.begin);
-        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin);
         size_t copy_size = PAS_MIN(new_size, old_size);
         if (verbose)
             pas_log("copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
+        PAS_PROFILE(TRY_REALLOCATE_AND_COPY, result.begin, old_ptr, copy_size);
         memcpy((void*)result.begin, old_ptr, copy_size);
         if (verbose)
             pas_log("\t...done copying size %zu from %p to %p\n", copy_size, old_ptr, (void*)result.begin);
@@ -258,7 +258,7 @@ pas_try_reallocate(void* old_ptr,
                 page_and_kind.page_base, begin, heap, new_size, allocation_mode, config.small_bitfit_config,
                 teleport_rule, free_mode, allocate_callback, allocate_callback_arg);
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return pas_allocation_result_create_failure();
         }
     }
@@ -322,12 +322,14 @@ pas_try_reallocate(void* old_ptr,
         if (!begin)
             return allocate_callback(heap, new_size, allocation_mode, allocate_callback_arg);
 
-        if (PAS_UNLIKELY(pas_debug_heap_is_enabled(config.kind))) {
+        if (PAS_UNLIKELY(pas_system_heap_is_enabled(config.kind))) {
             void* raw_result;
 
             PAS_ASSERT(free_mode == pas_reallocate_free_if_successful);
 
-            raw_result = pas_debug_heap_realloc(old_ptr, new_size);
+            raw_result = allocation_mode == pas_non_compact_allocation_mode
+                ? pas_system_heap_realloc(old_ptr, new_size)
+                : pas_system_heap_realloc_compact(old_ptr, new_size);
 
             result = pas_allocation_result_create_failure();
 

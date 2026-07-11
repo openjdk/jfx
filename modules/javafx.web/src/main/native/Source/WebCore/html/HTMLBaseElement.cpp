@@ -93,10 +93,10 @@ String HTMLBaseElement::href() const
 
     return urlRecord.string();
 }
-
+#if PLATFORM(JAVA)
 void HTMLBaseElement::setHref(const AtomString& value)
 {
     setAttributeWithoutSynchronization(hrefAttr, value);
 }
-
+#endif
 }

@@ -1,7 +1,7 @@
 /*
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
-    Copyright (C) 2004, 2006-2008, 2015 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
     Copyright (C) 2010 Google Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
@@ -143,7 +143,7 @@ private:
 
     typedef HashMap<String, std::unique_ptr<HostInformation>, StringHash> HostMap;
     HostMap m_hosts;
-    UniqueRef<HostInformation> m_nonHTTPProtocolHost;
+    const UniqueRef<HostInformation> m_nonHTTPProtocolHost;
 
     WebCore::Timer m_requestTimer;
 

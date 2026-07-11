@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,11 +47,11 @@ ResourceMonitorChecker& ResourceMonitorChecker::singleton()
 ResourceMonitorChecker::ResourceMonitorChecker()
     : m_workQueue { WorkQueue::create("ResourceMonitorChecker Work Queue"_s) }
 {
-    protectedWorkQueue()->dispatchAfter(ruleListPreparationTimeout, [this] mutable {
+    m_workQueue->dispatchAfter(ruleListPreparationTimeout, [this] mutable {
         if (m_ruleList)
             return;
 
-        RESOURCEMONITOR_RELEASE_LOG("Did not receive rule list in time, using default eligibility");
+        RESOURCEMONITOR_RELEASE_LOG("ResourceMonitorChecker: Did not receive rule list in time, using default eligibility");
 
         m_ruleListIsPreparing = false;
         finishPendingQueries([](const auto&) {
@@ -71,7 +71,7 @@ void ResourceMonitorChecker::checkEligibility(ContentExtensions::ResourceLoadInf
 {
     ASSERT(isMainThread());
 
-    protectedWorkQueue()->dispatch([this, info = crossThreadCopy(WTFMove(info)), completionHandler = WTFMove(completionHandler)] mutable {
+    m_workQueue->dispatch([this, info = crossThreadCopy(WTFMove(info)), completionHandler = WTFMove(completionHandler)] mutable {
         if (!m_ruleList && m_ruleListIsPreparing) {
             m_pendingQueries.append(std::make_pair(WTFMove(info), WTFMove(completionHandler)));
             return;
@@ -90,7 +90,7 @@ ResourceMonitorChecker::Eligibility ResourceMonitorChecker::checkEligibility(con
     ASSERT(m_ruleList);
 
     auto matched = m_ruleList->processContentRuleListsForResourceMonitoring(info.resourceURL, info.mainDocumentURL, info.frameURL, info.type);
-    RESOURCEMONITOR_RELEASE_LOG("The url is %" PUBLIC_LOG_STRING ": %" SENSITIVE_LOG_STRING " (%" PUBLIC_LOG_STRING ")", (matched ? "eligible" : "not eligible"), info.resourceURL.string().utf8().data(), ContentExtensions::resourceTypeToString(info.type).characters());
+    RESOURCEMONITOR_RELEASE_LOG("checkEligibility: The url is %" PUBLIC_LOG_STRING ": %" SENSITIVE_LOG_STRING " (%" PUBLIC_LOG_STRING ")", (matched ? "eligible" : "not eligible"), info.resourceURL.string().utf8().data(), ContentExtensions::resourceTypeToString(info.type).characters());
 
     return matched ? Eligibility::Eligible : Eligibility::NotEligible;
 }
@@ -99,11 +99,11 @@ void ResourceMonitorChecker::setContentRuleList(ContentExtensions::ContentExtens
 {
     ASSERT(isMainThread());
 
-    protectedWorkQueue()->dispatch([this, backend = crossThreadCopy(WTFMove(backend))] mutable {
+    m_workQueue->dispatch([this, backend = crossThreadCopy(WTFMove(backend))] mutable {
         m_ruleList = makeUnique<ContentExtensions::ContentExtensionsBackend>(WTFMove(backend));
         m_ruleListIsPreparing = false;
 
-        RESOURCEMONITOR_RELEASE_LOG("Content rule list is set");
+        RESOURCEMONITOR_RELEASE_LOG("ContentExtensionsBackend: Content rule list is set");
 
         if (!m_pendingQueries.isEmpty()) {
             finishPendingQueries([this](const auto& info) {
@@ -115,7 +115,7 @@ void ResourceMonitorChecker::setContentRuleList(ContentExtensions::ContentExtens
 
 void ResourceMonitorChecker::finishPendingQueries(Function<Eligibility(const ContentExtensions::ResourceLoadInfo&)> checker)
 {
-    RESOURCEMONITOR_RELEASE_LOG("Finish pending queries: count %lu", m_pendingQueries.size());
+    RESOURCEMONITOR_RELEASE_LOG("finishPendingQueries: Finish pending queries: count=%lu", m_pendingQueries.size());
 
     for (auto& pair : m_pendingQueries) {
         auto& [info, completionHandler] = pair;
@@ -154,14 +154,13 @@ void ResourceMonitorChecker::setNetworkUsageThreshold(size_t threshold, double r
     if (m_networkUsageThreshold == threshold && m_networkUsageThresholdRandomness == randomness)
         return;
 
-    RESOURCEMONITOR_RELEASE_LOG("Update network usage threshold: threshold=%zu, randomness=%.3f", threshold, randomness);
+    RESOURCEMONITOR_RELEASE_LOG("setNetworkUsageThreshold: Update network usage threshold: threshold=%zu, randomness=%.3f", threshold, randomness);
 
     m_networkUsageThreshold = threshold;
     m_networkUsageThresholdRandomness = randomness;
 
-    m_resourceMonitors.forEach([this](auto& resourceMonitor) {
-        resourceMonitor.updateNetworkUsageThreshold(networkUsageThresholdWithNoise());
-    });
+    for (auto& resourceMonitor : copyToVectorOf<Ref<ResourceMonitor>>(m_resourceMonitors))
+        resourceMonitor->updateNetworkUsageThreshold(networkUsageThresholdWithNoise());
 }
 
 } // namespace WebCore

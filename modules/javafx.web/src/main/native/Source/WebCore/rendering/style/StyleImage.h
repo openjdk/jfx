@@ -26,6 +26,8 @@
 #include "CSSValue.h"
 #include "FloatSize.h"
 #include "Image.h"
+#include "RenderObject.h"
+#include "StyleURL.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -41,8 +43,6 @@ class RenderElement;
 class RenderObject;
 class RenderStyle;
 struct ResourceLoaderOptions;
-
-typedef const void* WrappedImagePtr;
 
 class StyleImage : public RefCountedAndCanMakeWeakPtr<StyleImage> {
 public:
@@ -63,7 +63,7 @@ public:
     virtual bool errorOccurred() const { return false; }
     virtual bool usesDataProtocol() const { return false; }
     virtual bool hasImage() const { return false; }
-    virtual URL reresolvedURL(const Document&) const { return { }; }
+    virtual Style::URL url() const { return { }; }
 
     // Clients.
     virtual void addClient(RenderElement&) = 0;

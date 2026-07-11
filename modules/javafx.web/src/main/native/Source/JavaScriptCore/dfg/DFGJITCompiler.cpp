@@ -46,7 +46,7 @@
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JITCompiler);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(JITCompiler);
 
 JITCompiler::JITCompiler(Graph& dfg)
     : CCallHelpers(dfg.m_codeBlock)
@@ -55,8 +55,8 @@ JITCompiler::JITCompiler(Graph& dfg)
     , m_blockHeads(dfg.numBlocks())
     , m_pcToCodeOriginMapBuilder(dfg.m_vm)
 {
-    if (UNLIKELY(shouldDumpDisassembly() || m_graph.m_vm.m_perBytecodeProfiler))
-        m_disassembler = makeUnique<Disassembler>(dfg);
+    if (shouldDumpDisassembly() || m_graph.m_vm.m_perBytecodeProfiler) [[unlikely]]
+        m_disassembler = makeUniqueWithoutFastMallocCheck<Disassembler>(dfg);
 #if ENABLE(FTL_JIT)
     m_jitCode->tierUpInLoopHierarchy = WTFMove(m_graph.m_plan.tierUpInLoopHierarchy());
     for (BytecodeIndex tierUpBytecode : m_graph.m_plan.tierUpAndOSREnterBytecodes())
@@ -69,7 +69,7 @@ JITCompiler::~JITCompiler() = default;
 void JITCompiler::linkOSRExits()
 {
     ASSERT(m_osrExit.size() == m_exitCompilationInfo.size());
-    if (UNLIKELY(m_graph.compilation())) {
+    if (m_graph.compilation()) [[unlikely]] {
         for (unsigned i = 0; i < m_osrExit.size(); ++i) {
             OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
             Vector<Label> labels;
@@ -192,6 +192,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
             tables[index++] = WTFMove(entry.value);
         m_jitCode->common.m_stringSearchTable8 = WTFMove(tables);
     }
+    m_jitCode->common.m_concatKeyAtomStringCaches = WTFMove(m_graph.m_concatKeyAtomStringCaches);
 
 #if USE(JSVALUE32_64)
     m_jitCode->common.doubleConstants = WTFMove(m_graph.m_doubleConstants);
@@ -212,7 +213,10 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         case SwitchChar:
         case SwitchImm: {
             if (!data.didUseJumpTable) {
+#if ASSERT_ENABLED
+                if (data.hasSwitchTableIndex())
                 ASSERT(m_jitCode->m_switchJumpTables[data.switchTableIndex].isEmpty());
+#endif
                 continue;
             }
 
@@ -232,7 +236,10 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 
         case SwitchString: {
             if (!data.didUseJumpTable) {
+#if ASSERT_ENABLED
+                if (data.hasSwitchTableIndex())
                 ASSERT(m_jitCode->m_stringSwitchJumpTables[data.switchTableIndex].isEmpty());
+#endif
                 continue;
             }
 
@@ -320,7 +327,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         ASSERT(m_jitCode->common.m_jumpReplacements.isEmpty());
 #endif
 
-    if (UNLIKELY(m_graph.compilation())) {
+    if (m_graph.compilation()) [[unlikely]] {
         ASSERT(m_exitSiteLabels.size() == m_osrExit.size());
         for (unsigned i = 0; i < m_exitSiteLabels.size(); ++i) {
             Vector<Label>& labels = m_exitSiteLabels[i];
@@ -368,7 +375,7 @@ void JITCompiler::disassemble(LinkBuffer& linkBuffer)
         linkBuffer.didAlreadyDisassemble();
     }
 
-    if (UNLIKELY(m_graph.m_plan.compilation()))
+    if (m_graph.m_plan.compilation()) [[unlikely]]
         m_disassembler->reportToProfiler(m_graph.m_plan.compilation(), linkBuffer);
 }
 
@@ -448,20 +455,10 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
     m_osrEntry.append(WTFMove(entry));
 }
 
-void JITCompiler::appendExceptionHandlingOSRExit(SpeculativeJIT* speculative, ExitKind kind, unsigned eventStreamIndex, CodeOrigin opCatchOrigin, HandlerInfo* exceptionHandler, CallSiteIndex callSite, MacroAssembler::JumpList jumpsToFail)
-{
-    OSRExit exit(kind, JSValueRegs(), MethodOfGettingAValueProfile(), speculative, eventStreamIndex);
-    exit.m_codeOrigin = opCatchOrigin;
-    exit.m_exceptionHandlerCallSiteIndex = callSite;
-    OSRExitCompilationInfo& exitInfo = appendExitInfo(jumpsToFail);
-    m_osrExit.append(WTFMove(exit));
-    m_exceptionHandlerOSRExitCallSites.append(ExceptionHandlingOSRExitInfo { exitInfo, *exceptionHandler, callSite });
-}
-
 void JITCompiler::setEndOfMainPath(CodeOrigin semanticOrigin)
 {
     m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), semanticOrigin);
-    if (LIKELY(!m_disassembler))
+    if (!m_disassembler) [[likely]]
         return;
     m_disassembler->setEndOfMainPath(labelIgnoringWatchpoints());
 }
@@ -469,7 +466,7 @@ void JITCompiler::setEndOfMainPath(CodeOrigin semanticOrigin)
 void JITCompiler::setEndOfCode()
 {
     m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), PCToCodeOriginMapBuilder::defaultCodeOrigin());
-    if (LIKELY(!m_disassembler))
+    if (!m_disassembler) [[likely]]
         return;
     m_disassembler->setEndOfCode(labelIgnoringWatchpoints());
 }

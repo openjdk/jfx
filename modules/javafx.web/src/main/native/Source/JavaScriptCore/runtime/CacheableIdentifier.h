@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "GCOwnedDataScope.h"
 #include "JSCJSValue.h"
 #include <wtf/text/SymbolImpl.h>
 
@@ -78,6 +79,9 @@ public:
 
     static inline bool isCacheableIdentifierCell(JSCell*);
     static inline bool isCacheableIdentifierCell(JSValue);
+
+    static inline GCOwnedDataScope<const UniquedStringImpl*> getCacheableIdentifier(JSCell*);
+    static inline GCOwnedDataScope<const UniquedStringImpl*> getCacheableIdentifier(JSValue);
 
     uintptr_t rawBits() const { return m_bits; }
 

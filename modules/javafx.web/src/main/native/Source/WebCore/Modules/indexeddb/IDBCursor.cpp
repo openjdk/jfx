@@ -26,6 +26,7 @@
 #include "config.h"
 #include "IDBCursor.h"
 
+#include "ExceptionOr.h"
 #include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
 #include "IDBGetResult.h"
@@ -129,7 +130,7 @@ ExceptionOr<Ref<IDBRequest>> IDBCursor::update(JSGlobalObject& state, JSValue va
     auto serializedValue = SerializedScriptValue::create(state, value, SerializationForStorage::Yes);
     transaction->activate();
 
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return Exception { ExceptionCode::DataCloneError, "Failed to store record in an IDBObjectStore: An object could not be cloned."_s };
 
     auto& objectStore = effectiveObjectStore();
@@ -262,10 +263,10 @@ ExceptionOr<void> IDBCursor::continueFunction(const IDBKeyData& key)
         return Exception { ExceptionCode::DataError, "Failed to execute 'continue' on 'IDBCursor': The parameter is not a valid key."_s };
 
     if (m_info.isDirectionForward()) {
-        if (!key.isNull() && key.compare(m_keyData) <= 0)
+        if (!key.isNull() && key <= m_keyData)
             return Exception { ExceptionCode::DataError, "Failed to execute 'continue' on 'IDBCursor': The parameter is less than or equal to this cursor's position."_s };
     } else {
-        if (!key.isNull() && key.compare(m_keyData) >= 0)
+        if (!key.isNull() && key >= m_keyData)
             return Exception { ExceptionCode::DataError, "Failed to execute 'continue' on 'IDBCursor': The parameter is greater than or equal to this cursor's position."_s };
     }
 

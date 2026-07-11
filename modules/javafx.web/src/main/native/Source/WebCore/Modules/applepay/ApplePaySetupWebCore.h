@@ -64,7 +64,6 @@ private:
     ApplePaySetupConfiguration m_configuration;
     std::optional<SetupFeaturesPromise> m_setupFeaturesPromise;
     std::optional<BeginPromise> m_beginPromise;
-    RefPtr<PendingActivity<ApplePaySetup>> m_pendingActivity;
 };
 
 } // namespace WebCore

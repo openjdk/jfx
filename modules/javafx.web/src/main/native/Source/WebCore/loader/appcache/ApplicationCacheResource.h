@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ public:
         Fallback = 1 << 4
     };
 
-    static Ref<ApplicationCacheResource> create(const URL&, const ResourceResponse&, unsigned type, RefPtr<FragmentedSharedBuffer>&& = SharedBuffer::create(), const String& path = String());
+    static Ref<ApplicationCacheResource> create(URL&&, ResourceResponse&&, unsigned type, RefPtr<FragmentedSharedBuffer>&& = SharedBuffer::create(), String&& path = String());
 
     unsigned type() const { return m_type; }
     void addType(unsigned type);
@@ -58,7 +58,7 @@ public:
 #endif
 
 private:
-    ApplicationCacheResource(URL&&, ResourceResponse&&, unsigned type, Ref<FragmentedSharedBuffer>&&, const String& path);
+    ApplicationCacheResource(URL&&, ResourceResponse&&, unsigned type, Ref<FragmentedSharedBuffer>&&, String&& path);
 
     void deliver(ResourceLoader&) override;
 

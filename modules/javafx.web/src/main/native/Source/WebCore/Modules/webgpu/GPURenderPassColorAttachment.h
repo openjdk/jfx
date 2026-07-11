@@ -31,7 +31,6 @@
 #include "GPUStoreOp.h"
 #include "GPUTextureView.h"
 #include "WebGPURenderPassColorAttachment.h"
-#include <variant>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 

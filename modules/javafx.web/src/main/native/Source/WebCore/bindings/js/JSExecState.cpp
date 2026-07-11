@@ -27,9 +27,12 @@
 #include "JSExecState.h"
 
 #include "EventLoop.h"
+#include "JSDOMExceptionHandling.h"
+#include "Microtasks.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
@@ -49,6 +52,12 @@ JSC::JSValue functionCallHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobal
 JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobalObject, const JSC::SourceCode& source, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException)
 {
     return JSExecState::evaluate(lexicalGlobalObject, source, thisValue, returnedException);
+}
+
+void JSExecState::runTask(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
+{
+    JSExecState currentState(globalObject);
+    MicrotaskQueue::runJSMicrotask(globalObject, globalObject->vm(), task);
 }
 
 ScriptExecutionContext* executionContext(JSC::JSGlobalObject* globalObject)

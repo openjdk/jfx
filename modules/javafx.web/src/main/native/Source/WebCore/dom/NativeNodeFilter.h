@@ -46,7 +46,7 @@ private:
 
     bool hasCallback() const final;
 
-    Ref<NodeFilterCondition> m_condition;
+    const Ref<NodeFilterCondition> m_condition;
 };
 
 } // namespace WebCore

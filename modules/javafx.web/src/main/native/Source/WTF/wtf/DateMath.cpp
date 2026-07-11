@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010 &yet, LLC. (nate@andyet.net)
@@ -11,7 +11,7 @@
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
- * the Initial Developer. All Rights Reserved.
+ * the Initial Developer. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -95,9 +95,9 @@
 namespace WTF {
 
 static Lock innerTimeZoneOverrideLock;
-static Vector<UChar>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOverrideLock)
+static Vector<char16_t>& innerTimeZoneOverride() WTF_REQUIRES_LOCK(innerTimeZoneOverrideLock)
 {
-    static NeverDestroyed<Vector<UChar>> timeZoneOverride;
+    static NeverDestroyed<Vector<char16_t>> timeZoneOverride;
     return timeZoneOverride;
 }
 
@@ -302,11 +302,11 @@ static double calculateDSTOffset(time_t localTime, double utcOffset)
 LocalTimeOffset calculateLocalTimeOffset(double ms, TimeType inputTimeType)
 {
 #if HAVE(TM_GMTOFF)
-    double localToUTCTimeOffset = inputTimeType == LocalTime ? calculateUTCOffset() : 0;
+    double localToUTCTimeOffset = inputTimeType == TimeType::LocalTime ? calculateUTCOffset() : 0;
 #else
     double localToUTCTimeOffset = calculateUTCOffset();
 #endif
-    if (inputTimeType == LocalTime)
+    if (inputTimeType == TimeType::LocalTime)
         ms -= localToUTCTimeOffset;
 
     // On Mac OS X, the call to localtime (see calculateDSTOffset) will return historically accurate
@@ -451,7 +451,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 // Parses a date with the format YYYY[-MM[-DD]].
 // Year parsing is lenient, allows any number of digits, and +/-.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& year, long& month, long& day)
+static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& year, long& month, long& day, bool& isSingleDigit)
 {
     // This is a bit more lenient on the year string than ES5 specifies:
     // instead of restricting to 4 digits (or 6 digits with mandatory +/-),
@@ -471,7 +471,9 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
     auto postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &month))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if ((postParsePosition.data() - currentPosition.data()) == 1)
+        isSingleDigit = true;
+    else if ((postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
 
@@ -484,7 +486,9 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
     postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &day))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if ((postParsePosition.data() - currentPosition.data()) == 1)
+        isSingleDigit = true;
+    else if ((postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
     return true;
@@ -493,7 +497,7 @@ static bool parseES5DatePortion(std::span<const LChar>& currentPosition, int& ye
 // Parses a time with the format HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)].
 // Fractional seconds parsing is lenient, allows any number of digits.
 // Returns 0 if a parse error occurs, else returns the end of the parsed portion of the string.
-static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds)
+static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& hours, long& minutes, long& seconds, double& milliseconds, bool& isLocalTime, long& timeZoneSeconds, bool hasTSymbol)
 {
     isLocalTime = false;
 
@@ -503,7 +507,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     auto postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &hours))
         return false;
-    if (postParsePosition.empty() || postParsePosition.front() != ':' || (postParsePosition.data() - currentPosition.data()) != 2)
+    if (postParsePosition.empty() || postParsePosition.front() != ':' || (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2))
         return false;
     currentPosition = postParsePosition.subspan(1);
 
@@ -512,7 +516,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     postParsePosition = currentPosition;
     if (!parseLong(postParsePosition, 10, &minutes))
         return false;
-    if ((postParsePosition.data() - currentPosition.data()) != 2)
+    if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
         return false;
     currentPosition = postParsePosition;
 
@@ -523,7 +527,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
         postParsePosition = currentPosition;
         if (!parseLong(postParsePosition, 10, &seconds))
             return false;
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
         if (!postParsePosition.empty() && postParsePosition.front() == '.') {
             currentPosition = postParsePosition.subspan(1);
@@ -570,7 +574,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
     if (!parseLong(postParsePosition, 10, &tzHours))
         return false;
     if (postParsePosition.empty() || postParsePosition.front() != ':') {
-        if ((postParsePosition.data() - currentPosition.data()) == 2) {
+        if (!hasTSymbol && (postParsePosition.data() - currentPosition.data()) == 2) {
             // "00" case.
             tzHoursAbs = labs(tzHours);
         } else if ((postParsePosition.data() - currentPosition.data()) == 4) {
@@ -582,7 +586,7 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
             return false;
     } else {
         // "00:00" case.
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
         tzHoursAbs = labs(tzHours);
         currentPosition = postParsePosition.subspan(1); // Skip ":".
@@ -592,12 +596,12 @@ static bool parseES5TimePortion(std::span<const LChar>& currentPosition, long& h
         postParsePosition = currentPosition;
         if (!parseLong(postParsePosition, 10, &tzMinutes))
             return false;
-        if ((postParsePosition.data() - currentPosition.data()) != 2)
+        if (hasTSymbol && (postParsePosition.data() - currentPosition.data()) != 2)
             return false;
     }
     currentPosition = postParsePosition;
 
-    if (tzHoursAbs > 24)
+    if (tzHoursAbs > 23)
         return false;
     if (tzMinutes < 0 || tzMinutes > 59)
         return false;
@@ -628,16 +632,23 @@ double parseES5Date(std::span<const LChar> dateString, bool& isLocalTime)
     long seconds = 0;
     double milliseconds = 0;
     long timeZoneSeconds = 0;
+    bool isSingleDigit = false;
 
     // Parse the date YYYY[-MM[-DD]]
-    if (!parseES5DatePortion(dateString, year, month, day))
+    if (!parseES5DatePortion(dateString, year, month, day, isSingleDigit))
         return std::numeric_limits<double>::quiet_NaN();
     // Look for a time portion.
     // Note: As of ES2016, when a UTC offset is missing, date-time forms are local time while date-only forms are UTC.
     if (!dateString.empty() && (dateString.front() == 'T' || dateString.front() == 't' || dateString.front() == ' ')) {
+        const bool hasTSymbol = dateString.front() == 'T' || dateString.front() == 't';
         skip(dateString, 1);
+
+        // when dataString does not follow ISO8601 format, return NaN
+        if (isSingleDigit && hasTSymbol)
+            return std::numeric_limits<double>::quiet_NaN();
+
         // Parse the time HH:mm[:ss[.sss]][Z|(+|-)(00:00|0000|00)]
-        if (!parseES5TimePortion(dateString, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds))
+        if (!parseES5TimePortion(dateString, hours, minutes, seconds, milliseconds, isLocalTime, timeZoneSeconds, hasTSymbol))
             return std::numeric_limits<double>::quiet_NaN();
     }
     // Check that we have parsed all characters in the string.
@@ -966,7 +977,7 @@ double parseDate(std::span<const LChar> dateString)
     double value = parseDate(dateString, isLocalTime);
 
     if (isLocalTime)
-        value -= calculateLocalTimeOffset(value, LocalTime).offset;
+        value -= calculateLocalTimeOffset(value, TimeType::LocalTime).offset;
 
     return value;
 }
@@ -992,11 +1003,11 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     return stringBuilder.toString();
 }
 
-static std::optional<Vector<UChar, 32>> validateTimeZone(StringView timeZone)
+static std::optional<Vector<char16_t, 32>> validateTimeZone(StringView timeZone)
 {
     auto buffer = timeZone.upconvertedCharacters();
-    const UChar* characters = buffer;
-    Vector<UChar, 32> canonicalBuffer;
+    const char16_t* characters = buffer;
+    Vector<char16_t, 32> canonicalBuffer;
     auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, characters, timeZone.length(), canonicalBuffer, nullptr);
     if (!U_SUCCESS(status))
         return std::nullopt;
@@ -1027,7 +1038,7 @@ bool setTimeZoneOverride(StringView timeZone)
     return true;
 }
 
-void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID)
+void getTimeZoneOverride(Vector<char16_t, 32>& timeZoneID)
 {
     Locker locker { innerTimeZoneOverrideLock };
     timeZoneID = innerTimeZoneOverride();

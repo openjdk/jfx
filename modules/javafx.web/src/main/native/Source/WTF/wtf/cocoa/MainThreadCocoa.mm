@@ -66,14 +66,14 @@ void dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(void (^block)())
 {
 #if USE(WEB_THREAD)
     if (WebCoreWebThreadIsEnabled && WebCoreWebThreadIsEnabled()) {
-        RunLoop::protectedMain()->dispatch([block = makeBlockPtr(block)] {
+        RunLoop::mainSingleton().dispatch([block = makeBlockPtr(block)] {
             WebCoreWebThreadLock();
             block();
         });
         return;
     }
 #endif
-    RunLoop::protectedMain()->dispatch([block = makeBlockPtr(block)] {
+    RunLoop::mainSingleton().dispatch([block = makeBlockPtr(block)] {
         block();
     });
 }
@@ -86,7 +86,7 @@ void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
         return;
     }
 #endif
-    RunLoop::protectedMain()->dispatch([block = makeBlockPtr(block)] {
+    RunLoop::mainSingleton().dispatch([block = makeBlockPtr(block)] {
         block();
     });
 }
@@ -117,7 +117,7 @@ bool isWebThread()
 void initializeApplicationUIThread()
 {
     ASSERT(pthread_main_np());
-    s_applicationUIThread = &Thread::current();
+    s_applicationUIThread = &Thread::currentSingleton();
 }
 
 void initializeWebThread()
@@ -126,14 +126,14 @@ void initializeWebThread()
     std::call_once(initializeKey, [] {
         ASSERT(!pthread_main_np());
         s_webThreadPthread = pthread_self();
-        s_webThread = &Thread::current();
+        s_webThread = &Thread::currentSingleton();
         RunLoop::initializeWeb();
     });
 }
 
 bool canCurrentThreadAccessThreadLocalData(Thread& thread)
 {
-    Thread& currentThread = Thread::current();
+    auto& currentThread = Thread::currentSingleton();
     if (&thread == &currentThread)
         return true;
 

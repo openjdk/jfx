@@ -24,7 +24,6 @@
 #include "GraphicsContext.h"
 #include "GraphicsLayerFactory.h"
 #include "ImageBuffer.h"
-#include "NicosiaAnimation.h"
 #include "TransformOperation.h"
 
 #if !USE(COORDINATED_GRAPHICS)
@@ -514,13 +513,7 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
 
     if (m_changeMask & BackingStoreChange)
         m_layer.setBackingStore(m_backingStore.get());
-#if PLATFORM(JAVA)
-    if (m_changeMask & DebugVisualsChange)
-        m_layer.setDebugVisuals(isShowingDebugBorder(), debugBorderColor(), debugBorderWidth());
 
-    if (m_changeMask & RepaintCountChange)
-        m_layer.setRepaintCounter(isShowingRepaintCounter(), repaintCount());
-#else
     if (m_changeMask & DebugVisualsChange) {
         m_layer.setShowDebugBorder(isShowingDebugBorder());
         m_layer.setDebugBorderColor(debugBorderColor());
@@ -531,7 +524,7 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         m_layer.setShowRepaintCounter(isShowingRepaintCounter());
         m_layer.setRepaintCount(repaintCount());
     }
-#endif
+
     if (m_changeMask & ContentChange)
         m_layer.setContentsLayer(platformLayer());
 
@@ -623,12 +616,16 @@ bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList
             return false;
 
         const auto& filters = static_cast<const FilterAnimationValue&>(valueList.at(listIndex)).value();
+        // The animation of drop-shadow filter with currentColor isn't supported yet.
+        // GraphicsLayerCA doesn't accept animations with drap-shadow. Do it here.
+        if (filters.hasFilterOfType<FilterOperation::Type::DropShadowWithStyleColor>())
+            return false;
         if (!filtersCanBeComposited(filters))
             return false;
     }
 
     const MonotonicTime currentTime = MonotonicTime::now();
-    m_animations.add(Nicosia::Animation(keyframesName, valueList, boxSize, *anim, currentTime - Seconds(timeOffset), 0_s, Nicosia::Animation::AnimationState::Playing));
+    m_animations.add(TextureMapperAnimation(keyframesName, valueList, boxSize, *anim, currentTime - Seconds(timeOffset), 0_s, TextureMapperAnimation::State::Playing));
     // m_animationStartTime is the time of the first real frame of animation, now or delayed by a negative offset.
     if (Seconds(timeOffset) > 0_s)
         m_animationStartTime = currentTime;

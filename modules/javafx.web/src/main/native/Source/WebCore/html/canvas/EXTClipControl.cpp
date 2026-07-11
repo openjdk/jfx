@@ -51,8 +51,7 @@ void EXTClipControl::clipControlEXT(GCGLenum origin, GCGLenum depth)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->clipControlEXT(origin, depth);
+    protectedContext()->protectedGraphicsContextGL()->clipControlEXT(origin, depth);
 }
 
 } // namespace WebCore

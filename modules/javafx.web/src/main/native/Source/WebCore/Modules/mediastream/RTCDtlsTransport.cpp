@@ -31,6 +31,7 @@
 #include "Blob.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "RTCDtlsTransportBackend.h"
@@ -63,6 +64,11 @@ RTCDtlsTransport::~RTCDtlsTransport()
     m_backend->unregisterClient();
 }
 
+ScriptExecutionContext* RTCDtlsTransport::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 Vector<Ref<JSC::ArrayBuffer>> RTCDtlsTransport::getRemoteCertificates()
 {
     return m_remoteCertificates;
@@ -80,18 +86,18 @@ bool RTCDtlsTransport::virtualHasPendingActivity() const
 
 void RTCDtlsTransport::onStateChanged(RTCDtlsTransportState state, Vector<Ref<JSC::ArrayBuffer>>&& certificates)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, state, certificates = WTFMove(certificates)]() mutable {
-        if (m_state == RTCDtlsTransportState::Closed)
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [state, certificates = WTFMove(certificates)](auto& transport) mutable {
+        if (transport.m_state == RTCDtlsTransportState::Closed)
             return;
 
-        if (m_remoteCertificates != certificates)
-            m_remoteCertificates = WTFMove(certificates);
+        if (transport.m_remoteCertificates != certificates)
+            transport.m_remoteCertificates = WTFMove(certificates);
 
-        if (m_state != state) {
-            m_state = state;
-            if (RefPtr connection = m_iceTransport->connection())
+        if (transport.m_state != state) {
+            transport.m_state = state;
+            if (RefPtr connection = transport.m_iceTransport->connection())
                 connection->updateConnectionState();
-            dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+            transport.dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
         }
     });
 }

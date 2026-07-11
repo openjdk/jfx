@@ -36,6 +36,7 @@
 #include "CSSUnparsedValue.h"
 #include "CSSVariableData.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "PaintWorkletGlobalScope.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/text/MakeString.h>
@@ -61,7 +62,7 @@ ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainTh
         return { std::monostate { } };
 
     if (isCustomPropertyName(property)) {
-        if (auto value = reifyValue(customPropertyValue(property), std::nullopt, *document))
+        if (auto value = reifyValue(*document, customPropertyValue(property), CSSPropertyCustom))
             return { WTFMove(value) };
 
         return { std::monostate { } };
@@ -72,13 +73,13 @@ ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainTh
         return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (isShorthand(propertyID)) {
-        if (auto value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document }))
+        if (auto value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
             return { WTFMove(value) };
 
         return { std::monostate { } };
     }
 
-    if (auto value = reifyValue(propertyValue(propertyID), propertyID, *document))
+    if (auto value = reifyValue(*document, propertyValue(propertyID), propertyID))
         return { WTFMove(value) };
 
     return { std::monostate { } };
@@ -92,19 +93,19 @@ ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::g
         return Vector<RefPtr<CSSStyleValue>> { };
 
     if (isCustomPropertyName(property))
-        return reifyValueToVector(customPropertyValue(property), std::nullopt, *document);
+        return reifyValueToVector(*document, customPropertyValue(property), CSSPropertyCustom);
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
         return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (isShorthand(propertyID)) {
-        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document }))
+        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
             return Vector<RefPtr<CSSStyleValue>> { WTFMove(value) };
         return Vector<RefPtr<CSSStyleValue>> { };
     }
 
-    return reifyValueToVector(propertyValue(propertyID), propertyID, *document);
+    return reifyValueToVector(*document, propertyValue(propertyID), propertyID);
 }
 
 // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-has

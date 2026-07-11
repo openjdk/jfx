@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
-import com.sun.javafx.css.CascadingStyle;
-import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
-
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -54,19 +49,22 @@ import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
+import javafx.css.converter.FontConverter;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 import com.sun.javafx.css.CalculatedValue;
+import com.sun.javafx.css.CascadingStyle;
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.StyleCache;
 import com.sun.javafx.css.StyleCacheEntry;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleMap;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
-import javafx.css.converter.FontConverter;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 
@@ -89,15 +87,23 @@ final class CssStyleHelper {
      * Creates a new StyleHelper.
      */
     static CssStyleHelper createStyleHelper(final Node node) {
-
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
         // TODO: is there some other way of knowing how far from the root a node is?
+        Node styleableAncestor = null;
         Styleable parent = node;
         int depth = 0;
-        while(parent != null) {
+        while (parent != null) {
             depth++;
             parent = parent.getStyleableParent();
+
+            if (styleableAncestor == null && parent instanceof Node parentNode && isStyleableAncestor(parentNode)) {
+                styleableAncestor = parentNode;
+            }
+        }
+
+        if (node.styleHelper != null) {
+            setFirstStyleableAncestor(node.styleHelper, styleableAncestor);
         }
 
         // The List<CacheEntry> should only contain entries for those
@@ -118,7 +124,6 @@ final class CssStyleHelper {
         // reuse the existing styleHelper if possible.
         //
         if ( canReuseStyleHelper(node, styleMap) ) {
-
             //
             // JDK-8123731
             //
@@ -140,7 +145,6 @@ final class CssStyleHelper {
 
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
-
         }
 
         if (styleMap == null || styleMap.isEmpty()) {
@@ -164,7 +168,7 @@ final class CssStyleHelper {
                 // If this node had a style helper, then reset properties to their initial value
                 // since the node won't have a style helper after this call
                 if (node.styleHelper != null) {
-                    node.styleHelper.resetToInitialValues(node);
+                    node.styleHelper.resetToInitialValues(node, styleMap);
                 }
 
                 //
@@ -176,6 +180,7 @@ final class CssStyleHelper {
         }
 
         final CssStyleHelper helper = new CssStyleHelper();
+        setFirstStyleableAncestor(helper, styleableAncestor);
 
         if (triggerStates[0] != null) {
             helper.triggerStates.addAll(triggerStates[0]);
@@ -185,13 +190,16 @@ final class CssStyleHelper {
 
         helper.cacheContainer = new CacheContainer(node, styleMap, depth);
 
-        helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
-
-        // If this node had a style helper, then reset properties to their initial value
-        // since the style map might now be different
+        // If this node had a style helper, we need to reset all properties that will be unset with the
+        // new style map to their initial values. Properties that remain set with the new style map carry
+        // over to the new style helper.
         if (node.styleHelper != null) {
-            node.styleHelper.resetToInitialValues(node);
+            Map<CssMetaData, CalculatedValue> remainingProperties =
+                node.styleHelper.resetToInitialValues(node, styleMap);
+
+            helper.cacheContainer.cssSetProperties.putAll(remainingProperties);
         }
+
         return helper;
     }
 
@@ -202,32 +210,29 @@ final class CssStyleHelper {
         for(int n=1; n<depth; n++) {
 
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
-            if (parent instanceof Node == false) {
-                parent=parent.getStyleableParent();
+            if (!(parent instanceof Node parentNode)) {
+                parent = parent.getStyleableParent();
                 continue;
             }
-            Node parentNode = (Node)parent;
 
             final PseudoClassState triggerState = triggerStates[n];
 
             // if there is nothing in triggerState, then continue since there
             // isn't any pseudo-class state that might trigger a state change
-            if (triggerState != null && triggerState.size() > 0) {
-
+            if (triggerState != null && !triggerState.isEmpty()) {
                 // Create a StyleHelper for the parent, if necessary.
-                // TODO : check why calling createStyleHelper(parentNode) does not work here?
                 if (parentNode.styleHelper == null) {
+                    // The createStyleHelper(..) is not used, because it can return null.
+                    // But we do need a helper to hold the triggerStates.
                     parentNode.styleHelper = new CssStyleHelper();
-                    parentNode.styleHelper.firstStyleableAncestor = new WeakReference(findFirstStyleableAncestor(parentNode)) ;
                 }
                 parentNode.styleHelper.triggerStates.addAll(triggerState);
-
             }
 
-            parent=parent.getStyleableParent();
+            parent = parent.getStyleableParent();
         }
-
     }
+
     //
     // return true if the fontStyleableProperty's origin is USER
     //
@@ -241,8 +246,8 @@ final class CssStyleHelper {
             if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
         }
 
-        Styleable styleableParent = firstStyleableAncestor.get();
-        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor.get());
+        Node styleableParent = getCachedStyleableAncestor(node);
+        CssStyleHelper parentStyleHelper = getStyleHelper(styleableParent);
 
         if (parentStyleHelper != null) {
             return parentStyleHelper.isUserSetFont(styleableParent);
@@ -255,20 +260,56 @@ final class CssStyleHelper {
         return (n != null)? n.styleHelper : null;
     }
 
-    private static Node findFirstStyleableAncestor(Styleable st) {
-        Node ancestor = null;
-        Styleable parent = st.getStyleableParent();
+    private static Node findFirstStyleableAncestor(Styleable styleable) {
+        Node ancestor = getCachedStyleableAncestor(styleable);
+        if (ancestor != null) {
+            return ancestor;
+        }
+
+        ancestor = findFirstStyleableAncestorInParent(styleable);
+        if (styleable instanceof Node node) {
+            setFirstStyleableAncestor(node.styleHelper, ancestor);
+        }
+        return ancestor;
+    }
+
+    private static void setFirstStyleableAncestor(CssStyleHelper helper, Node ancestor) {
+        if (ancestor == null) {
+            helper.firstStyleableAncestor = null;
+            return;
+        }
+        helper.firstStyleableAncestor = new WeakReference<>(ancestor);
+    }
+
+    private static Node getCachedStyleableAncestor(Styleable styleable) {
+        if (styleable instanceof Node node) {
+            WeakReference<Node> ancestorRef = node.styleHelper.firstStyleableAncestor;
+            if (ancestorRef != null) {
+                return ancestorRef.get();
+            }
+        }
+        return null;
+    }
+
+    private static Node findFirstStyleableAncestorInParent(Styleable styleable) {
+        Styleable parent = styleable.getStyleableParent();
         while (parent != null) {
-            if (parent instanceof Node) {
-                if (((Node) parent).styleHelper != null) {
-                    ancestor = (Node) parent;
-                    break;
+            if (parent instanceof Node parentNode) {
+                if (isStyleableAncestor(parentNode)) {
+                    return parentNode;
                 }
             }
             parent = parent.getStyleableParent();
         }
+        return null;
+    }
 
-        return ancestor;
+    private static boolean isStyleableAncestor(Node parentNode) {
+        if (parentNode.styleHelper == null) {
+            parentNode.styleHelper = createStyleHelper(parentNode);
+        }
+
+        return parentNode.styleHelper != null;
     }
 
     //
@@ -308,9 +349,6 @@ final class CssStyleHelper {
             return false;
         }
 
-        //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
-        node.styleHelper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
-
         // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
         // Under this condition, there are no styles for this node _and_ no styles inherit.
         if (node.styleHelper.cacheContainer == null) {
@@ -331,7 +369,7 @@ final class CssStyleHelper {
             return true;
         }
 
-        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor.get());
+        CssStyleHelper parentHelper = getStyleHelper(getCachedStyleableAncestor(node));
 
         if (parentHelper != null && parentHelper.cacheContainer != null) {
 
@@ -358,11 +396,13 @@ final class CssStyleHelper {
         return false;
     }
 
-    private static final WeakReference<Node> EMPTY_NODE = new WeakReference<>(null);
 
-    /* This is the first Styleable parent (of Node this StyleHelper belongs to)
-     * having a valid StyleHelper */
-    private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
+    /**
+     * This is the first valid styleable ancestor of this helper.
+     * The first styleable ancestor is a styleable parent of the node (this helper belongs to) that has a styleHelper
+     * and therefore might be important for styling this node.
+     */
+    private WeakReference<Node> firstStyleableAncestor = null;
 
     private CacheContainer cacheContainer;
 
@@ -463,31 +503,109 @@ final class CssStyleHelper {
 
     private boolean resetInProgress = false;
 
-    private void resetToInitialValues(final Styleable styleable) {
+    /**
+     * Resets any properties on the given {@code Styleable} that were set with the old style map, but will no
+     * longer be set after applying {@code newStyleMap}. Properties that remain set with {@code newStyleMap}
+     * are not reset here, because the next {@link Node#applyCss()} pass will compute and apply their new values.
+     *
+     * @return the properties that remain set with {@code newStyleMap}
+     */
+    private Map<CssMetaData, CalculatedValue> resetToInitialValues(Styleable styleable, StyleMap newStyleMap) {
+        if (cacheContainer == null) {
+            return Map.of();
+        }
 
-        if (cacheContainer == null ||
-                cacheContainer.cssSetProperties == null ||
-                cacheContainer.cssSetProperties.isEmpty()) return;
+        Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
+        if (cssSetProperties.isEmpty()) {
+            return Map.of();
+        }
 
         resetInProgress = true;
-        // JDK-8094367 - make a copy of the entry set and clear the cssSetProperties immediately.
-        Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
-        cacheContainer.cssSetProperties.clear();
 
-        for (Entry<CssMetaData, CalculatedValue> resetValues : entrySet) {
+        try {
+            Map<String, List<CascadingStyle>> newCascadingStyles =
+                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
 
-            final CssMetaData metaData = resetValues.getKey();
-            final StyleableProperty styleableProperty = metaData.getStyleableProperty(styleable);
+            List<Entry<CssMetaData, CalculatedValue>> resetList = null;
+            Entry<CssMetaData, CalculatedValue> transitionEntry = null;
+            var it = cssSetProperties.entrySet().iterator();
+            int idx = 0;
 
-            final StyleOrigin styleOrigin = styleableProperty.getStyleOrigin();
-            if (styleOrigin != null && styleOrigin != StyleOrigin.USER) {
-                final CalculatedValue calculatedValue = resetValues.getValue();
-                styleableProperty.applyStyle(calculatedValue.getOrigin(), calculatedValue.getValue());
+            while (it.hasNext()) {
+                Entry<CssMetaData, CalculatedValue> entry = it.next();
+                CssMetaData key = entry.getKey();
+
+                if (!containsProperty(newCascadingStyles, key)) {
+                    if (key != TransitionDefinitionCssMetaData.getInstance()) {
+                        if (resetList == null) {
+                            resetList = new ArrayList<>(cssSetProperties.size() - idx);
+                        }
+
+                        resetList.add(entry);
+                    } else {
+                        transitionEntry = entry;
+                    }
+
+                    it.remove();
+                }
+
+                ++idx;
             }
+
+            // The transition property must be reset before all other properties, as its value might
+            // affect the transitions that are applied to other properties.
+            if (transitionEntry != null) {
+                resetToInitialValue(styleable, transitionEntry.getKey(), transitionEntry.getValue());
+            }
+
+            if (resetList != null) {
+                for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
+                    resetToInitialValue(styleable, entry.getKey(), entry.getValue());
+                }
+            }
+
+            return cssSetProperties;
+        } finally {
+            resetInProgress = false;
         }
-        resetInProgress = false;
     }
 
+    /**
+     * Returns whether the cascading style map contains the specified property or any of its sub-properties.
+     */
+    private boolean containsProperty(Map<String, List<CascadingStyle>> cascadingStyles,
+                                     CssMetaData<? extends Styleable, ?> propertyMetadata) {
+        if (cascadingStyles.containsKey(propertyMetadata.getProperty())) {
+            return true;
+        }
+
+        List<CssMetaData<? extends Styleable, ?>> subProperties = propertyMetadata.getSubProperties();
+        if (subProperties == null) {
+            return false;
+        }
+
+        for (int i = 0, max = subProperties.size(); i < max; ++i) {
+            if (containsProperty(cascadingStyles, subProperties.get(i))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Resets the property to its initial value, but only if the property value is currently set by CSS;
+     * that is, its style origin is either {@code INLINE}, {@code AUTHOR}, or {@code USER_AGENT}.
+     * If the style origin is {@code null} or {@code USER}, we don't modify the property value.
+     */
+    private void resetToInitialValue(Styleable styleable, CssMetaData metadata, CalculatedValue initialValue) {
+        StyleableProperty styleableProperty = metadata.getStyleableProperty(styleable);
+        StyleOrigin styleOrigin = styleableProperty.getStyleOrigin();
+
+        if (styleOrigin != null && styleOrigin != StyleOrigin.USER) {
+            styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
+        }
+    }
 
     private StyleMap getStyleMap(Styleable styleable) {
         if (cacheContainer == null || styleable == null) return null;
@@ -906,11 +1024,7 @@ final class CssStyleHelper {
                     // there was no style for the property in the current
                     // state, so reset the property to its initial value.
                     if (initialValue != null) {
-
-                        StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                        if (styleableProperty.getStyleOrigin() != StyleOrigin.USER) {
-                            styleableProperty.applyStyle(initialValue.getOrigin(), initialValue.getValue());
-                        }
+                        resetToInitialValue(node, cssMetaData, initialValue);
                     }
 
                     continue;
@@ -956,13 +1070,12 @@ final class CssStyleHelper {
                 }
 
                 final Object value = calculatedValue.getValue();
-                final Object currentValue = styleableProperty.getValue();
 
-                // JDK-8102176: Only apply the style if something has changed.
-                if ((originOfCurrentValue != originOfCalculatedValue)
-                        || (currentValue != null
-                        ? currentValue.equals(value) == false
-                        : value != null)) {
+                // JDK-8102176: Only apply the style if something has changed. Since an animated transition might be
+                // affecting the property, make sure that we compare the calculated value to the after-change style
+                // value of the property, and not to its current value.
+                if (originOfCurrentValue != originOfCalculatedValue
+                        || !StyleablePropertyHelper.equalsEndValue(styleableProperty, value)) {
 
                     if (LOGGER.isLoggable(Level.FINER)) {
                         LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
@@ -973,7 +1086,8 @@ final class CssStyleHelper {
 
                     if (cacheContainer.cssSetProperties.containsKey(cssMetaData) == false) {
                         // track this property
-                        CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, false);
+                        CalculatedValue initialValue = new CalculatedValue(
+                            cssMetaData.getInitialValue(node), originOfCurrentValue, false);
                         cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
                     }
 
@@ -1249,21 +1363,21 @@ final class CssStyleHelper {
             final Styleable styleable,
             final String property) {
 
-        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
-        CssStyleHelper parentStyleHelper = getStyleHelper((Node) parent);
+        Node ancestor = findFirstStyleableAncestor(styleable);
+        CssStyleHelper parentStyleHelper = getStyleHelper(ancestor);
 
-        if (parent != null && parentStyleHelper != null) {
+        if (ancestor != null && parentStyleHelper != null) {
 
-            StyleMap parentStyleMap = parentStyleHelper.getStyleMap(parent);
-            Set<PseudoClass> transitionStates = ((Node)parent).pseudoClassStates;
-            CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, parentStyleMap, transitionStates);
+            StyleMap parentStyleMap = parentStyleHelper.getStyleMap(ancestor);
+            Set<PseudoClass> transitionStates = ancestor.pseudoClassStates;
+            CascadingStyle cascadingStyle = parentStyleHelper.getStyle(ancestor, property, parentStyleMap, transitionStates);
 
             if (cascadingStyle != null) {
 
                 final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
                 if ("inherit".equals(cssValue.getValue())) {
-                    return getInheritedStyle(parent, property);
+                    return getInheritedStyle(ancestor, property);
                 }
                 return cascadingStyle;
             }
@@ -1294,20 +1408,17 @@ final class CssStyleHelper {
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
 
-                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
-                CssStyleHelper parentStyleHelper = getStyleHelper((Node) styleableParent);
+                Node ancestor = findFirstStyleableAncestor(styleable);
+                CssStyleHelper parentStyleHelper = getStyleHelper(ancestor);
 
-                if (styleableParent == null || parentStyleHelper == null) {
+                if (ancestor == null || parentStyleHelper == null) {
                     return null;
                 }
 
-                StyleMap parentStyleMap = parentStyleHelper.getStyleMap(styleableParent);
-                Set<PseudoClass> styleableParentPseudoClassStates =
-                    styleableParent instanceof Node
-                        ? ((Node)styleableParent).pseudoClassStates
-                        : styleable.getPseudoClassStates();
+                StyleMap parentStyleMap = parentStyleHelper.getStyleMap(ancestor);
+                Set<PseudoClass> styleableParentPseudoClassStates = ancestor.pseudoClassStates;
 
-                return parentStyleHelper.resolveRef(styleableParent, property,
+                return parentStyleHelper.resolveRef(ancestor, property,
                         parentStyleMap, styleableParentPseudoClassStates);
             }
         }
@@ -1631,8 +1742,8 @@ final class CssStyleHelper {
                     LOGGER.fine("styles = " + getMatchingStyles(styleable, cssMetaData));
                 }
                 return SKIP;
-            } catch (IllegalArgumentException iae) {
-                final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), iae);
+            } catch (IllegalArgumentException | NullPointerException e) {
+                final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), e);
                 List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
                     final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
@@ -1640,21 +1751,7 @@ final class CssStyleHelper {
                 }
                 if (LOGGER.isLoggable(Level.WARNING)) {
                     LOGGER.warning(msg);
-                    LOGGER.fine("caught: ", iae);
-                    LOGGER.fine("styleable = " + cssMetaData);
-                    LOGGER.fine("node = " + styleable.toString());
-                }
-                return SKIP;
-            } catch (NullPointerException npe) {
-                final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), npe);
-                List<CssParser.ParseError> errors = null;
-                if ((errors = StyleManager.getErrors()) != null) {
-                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
-                    errors.add(error);
-                }
-                if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.warning(msg);
-                    LOGGER.fine("caught: ", npe);
+                    LOGGER.fine("caught: ", e);
                     LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + styleable.toString());
                 }

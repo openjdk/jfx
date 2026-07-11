@@ -25,16 +25,19 @@
 #include "config.h"
 #include "GenericMediaQueryParser.h"
 
-#include "CSSAspectRatioValue.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSParserImpl.h"
+#include "CSSParser.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Integer.h"
-#include "CSSPropertyParserConsumer+Length.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+IntegerDefinitions.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSPropertyParserConsumer+Resolution.h"
+#include "CSSPropertyParserConsumer+Ratio.h"
+#include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
+#include "CSSPropertyParserState.h"
+#include "CSSRatioValue.h"
 #include "CSSValue.h"
 #include "CSSVariableParser.h"
 #include "MediaQueryParserContext.h"
@@ -69,7 +72,7 @@ static RefPtr<CSSValue> consumeCustomPropertyValue(AtomString propertyName, CSSP
     range.consumeAll();
 
     // Syntax is that of a valid declaration so !important is allowed. It just gets ignored.
-    CSSParserImpl::consumeTrailingImportantAndWhitespace(valueRange);
+    CSSParser::consumeTrailingImportantAndWhitespace(valueRange);
 
     if (valueRange.atEnd())
         return CSSCustomPropertyValue::createEmpty(propertyName);
@@ -218,45 +221,30 @@ std::optional<Feature> FeatureParser::consumeRangeFeature(CSSParserTokenRange& r
     return Feature { WTFMove(featureName), Syntax::Range, WTFMove(leftComparison), WTFMove(rightComparison) };
 }
 
-static RefPtr<CSSValue> consumeRatioWithSlash(CSSParserTokenRange& range, const MediaQueryParserContext& context)
-{
-    RefPtr leftValue = CSSPropertyParserHelpers::consumeNumber(range, context.context, ValueRange::NonNegative);
-    if (!leftValue)
-        return nullptr;
-
-    if (!CSSPropertyParserHelpers::consumeSlashIncludingWhitespace(range))
-        return nullptr;
-
-    RefPtr rightValue = CSSPropertyParserHelpers::consumeNumber(range, context.context, ValueRange::NonNegative);
-    if (!rightValue)
-        return nullptr;
-
-    return CSSAspectRatioValue::create(
-        leftValue->resolveAsNumberDeprecated<float>(),
-        rightValue->resolveAsNumberDeprecated<float>()
-    );
-}
-
 RefPtr<CSSValue> FeatureParser::consumeValue(CSSParserTokenRange& range, const MediaQueryParserContext& context)
 {
+    using namespace CSSPropertyParserHelpers;
+
     if (range.atEnd())
         return nullptr;
 
-    if (RefPtr value = CSSPropertyParserHelpers::consumeIdent(range))
+    if (RefPtr value = consumeIdent(range))
         return value;
 
-    auto rangeCopy = range;
-    if (RefPtr value = consumeRatioWithSlash(range, context))
-        return value;
-    range = rangeCopy;
+    auto parserState = CSS::PropertyParserState {
+        .context = context.context,
+    };
 
-    if (RefPtr value = CSSPropertyParserHelpers::consumeInteger(range, context.context))
+    if (RefPtr value = consumeRatioWithBothNumeratorAndDenominator(range, parserState))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeNumber(range, context.context))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Integer<>>::consumeAndResolve(range, parserState))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeLength(range, context.context, HTMLStandardMode))
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, parserState))
         return value;
-    if (RefPtr value = CSSPropertyParserHelpers::consumeResolution(range, context.context))
+    // FIXME: Figure out and document why overrideParserMode is explicitly set to HTMLStandardMode here.
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(range, parserState, { .overrideParserMode = HTMLStandardMode }))
+        return value;
+    if (RefPtr value = CSSPrimitiveValueResolver<CSS::Resolution<>>::consumeAndResolve(range, parserState))
         return value;
 
     return nullptr;
@@ -288,13 +276,13 @@ bool FeatureParser::validateFeatureAgainstSchema(Feature& feature, const Feature
 
         case FeatureSchema::ValueType::Ratio:
             if (primitiveValue && primitiveValue->isNumberOrInteger()) {
-                auto number = primitiveValue->template resolveAsNumberDeprecated<float>();
+                auto number = primitiveValue->template resolveAsNumberDeprecated<double>();
                 if (number < 0)
                     return false;
-                value = CSSAspectRatioValue::create(number, 1);
+                value = CSSRatioValue::create(CSS::Ratio { number, 1.0 });
                 return true;
             }
-            return is<CSSAspectRatioValue>(value.get());
+            return is<CSSRatioValue>(value.get());
 
         case FeatureSchema::ValueType::CustomProperty:
             return value && value->isCustomPropertyValue();

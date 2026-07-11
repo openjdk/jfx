@@ -19,13 +19,10 @@
  */
 
 #pragma once
-#if PLATFORM(JAVA)
-#if USE(TEXTURE_MAPPER_GL)
-#endif
 
 #if USE(TEXTURE_MAPPER)
 
-88#include "TextureMapperGLHeaders.h"
+#include "TextureMapperGLHeaders.h"
 #include "TransformationMatrix.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
@@ -111,6 +108,7 @@ public:
         TextureYUVA      = 1L << 25,
         TextureCopy      = 1L << 26,
         AlphaToShadow    = 1L << 27,
+        ToneMapPQ        = 1L << 28,
     };
 
     enum class VariableID {
@@ -147,6 +145,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#if PLATFORM(JAVA)
-#endif // USE(TEXTURE_MAPPER_GL)
-#endif

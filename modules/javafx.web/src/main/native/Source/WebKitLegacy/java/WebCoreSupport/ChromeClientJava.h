@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class ChromeClientJava final : public ChromeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ChromeClientJava);
 public:
     ChromeClientJava(const JLObject &webPage);
     void chromeDestroyed() override;
@@ -49,8 +49,8 @@ public:
 
     void focusedElementChanged(Element*) override;
     void focusedFrameChanged(Frame*) override;
-        void rootFrameAdded(const LocalFrame&) override;
-        void rootFrameRemoved(const LocalFrame&) override;
+    void rootFrameAdded(const LocalFrame&) override;
+    void rootFrameRemoved(const LocalFrame&) override;
 
     // The Frame pointer provides the ChromeClient with context about which
     // Frame wants to create the new Page. Also, the newly created window
@@ -80,7 +80,7 @@ public:
 
     void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) override;
     bool canRunBeforeUnloadConfirmPanel() override;
-    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame& Frame) override;
+    bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame& Frame) override;
 
     void closeWindow() override;
 
@@ -169,6 +169,8 @@ public:
     // to do an eager layout before the drawing.
     void triggerRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) override;
+    void wheelEventHandlersChanged(bool hasHandlers) override { }
+    void updateTextIndicator(const TextIndicatorData&) const override  {};
 
 #if ENABLE(TOUCH_EVENTS)
     void needTouchEvents(bool) override {};
@@ -178,8 +180,6 @@ public:
     bool selectItemAlignmentFollowsMenuWritingDirection() override;
     RefPtr<PopupMenu> createPopupMenu(PopupMenuClient&) const override;
     RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient&) const override;
-
-    void wheelEventHandlersChanged(bool) override {};
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;

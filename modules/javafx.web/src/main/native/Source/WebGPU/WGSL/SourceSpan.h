@@ -34,8 +34,6 @@ struct SourcePosition {
 };
 
 struct SourceSpan {
-    // FIXME: we could possibly skip lineOffset and recompute it only when trying to show an error
-    // This would shrink the AST size by 32 bits per AST node, at the cost of a bit of code complexity in the error toString function.
     unsigned line;
     unsigned lineOffset;
     unsigned offset;

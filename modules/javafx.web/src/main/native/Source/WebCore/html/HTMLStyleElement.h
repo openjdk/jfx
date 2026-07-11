@@ -71,7 +71,7 @@ private:
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
     InlineStyleSheetOwner m_styleSheetOwner;
-    std::unique_ptr<DOMTokenList> m_blockingList;
+    const std::unique_ptr<DOMTokenList> m_blockingList;
     bool m_loadedSheet { false };
 };
 

@@ -35,7 +35,7 @@ class NativeImage;
 
 class WEBCORE_EXPORT SourceImage {
 public:
-    using ImageVariant = std::variant<
+    using ImageVariant = Variant<
         Ref<NativeImage>,
         Ref<ImageBuffer>,
         RenderingResourceIdentifier

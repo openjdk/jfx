@@ -48,7 +48,7 @@ void FreeList::clear()
 
 void FreeList::initialize(FreeCell* start, uint64_t secret, unsigned bytes)
 {
-    if (UNLIKELY(!start)) {
+    if (!start) [[unlikely]] {
         clear();
         return;
     }

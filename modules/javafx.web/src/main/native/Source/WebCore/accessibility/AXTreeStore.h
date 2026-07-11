@@ -26,7 +26,6 @@
 
 #include "AXCoreObject.h"
 #include "ActivityState.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
@@ -41,13 +40,13 @@ class AXIsolatedTree;
 #endif
 class AXObjectCache;
 
-using AXTreePtr = std::variant<std::nullptr_t, WeakPtr<AXObjectCache>
+using AXTreePtr = Variant<std::nullptr_t, WeakPtr<AXObjectCache>
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     , RefPtr<AXIsolatedTree>
 #endif
 >;
 
-using AXTreeWeakPtr = std::variant<WeakPtr<AXObjectCache>
+using AXTreeWeakPtr = Variant<WeakPtr<AXObjectCache>
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     , ThreadSafeWeakPtr<AXIsolatedTree>
 #endif
@@ -68,6 +67,7 @@ public:
     static WeakPtr<AXObjectCache> axObjectCacheForID(std::optional<AXID>);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     static RefPtr<AXIsolatedTree> isolatedTreeForID(std::optional<AXID>);
+    static void applyPendingChangesForAllIsolatedTrees();
 #endif
 
 protected:
@@ -84,9 +84,9 @@ protected:
     const AXID m_id;
     static Lock s_storeLock;
 private:
-    static UncheckedKeyHashMap<AXID, WeakPtr<AXObjectCache>>& liveTreeMap();
+    static HashMap<AXID, WeakPtr<AXObjectCache>>& liveTreeMap();
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    static UncheckedKeyHashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>& isolatedTreeMap() WTF_REQUIRES_LOCK(s_storeLock);
+    static HashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>& isolatedTreeMap() WTF_REQUIRES_LOCK(s_storeLock);
 #endif
 };
 
@@ -169,19 +169,19 @@ inline RefPtr<AXIsolatedTree> AXTreeStore<T>::isolatedTreeForID(std::optional<AX
 #endif
 
 template<typename T>
-inline UncheckedKeyHashMap<AXID, WeakPtr<AXObjectCache>>& AXTreeStore<T>::liveTreeMap()
+inline HashMap<AXID, WeakPtr<AXObjectCache>>& AXTreeStore<T>::liveTreeMap()
 {
     ASSERT(isMainThread());
 
-    static NeverDestroyed<UncheckedKeyHashMap<AXID, WeakPtr<AXObjectCache>>> map;
+    static NeverDestroyed<HashMap<AXID, WeakPtr<AXObjectCache>>> map;
     return map;
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 template<typename T>
-inline UncheckedKeyHashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>& AXTreeStore<T>::isolatedTreeMap()
+inline HashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>& AXTreeStore<T>::isolatedTreeMap()
 {
-    static NeverDestroyed<UncheckedKeyHashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>> map;
+    static NeverDestroyed<HashMap<AXID, ThreadSafeWeakPtr<AXIsolatedTree>>> map;
     return map;
 }
 #endif

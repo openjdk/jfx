@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2006, 2008, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2002-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,7 +33,7 @@ struct MediaQuery;
 using MediaQueryList = Vector<MediaQuery>;
 }
 
-class CSSImportRule final : public CSSRule, public CanMakeWeakPtr<CSSImportRule> {
+class CSSImportRule final : public CSSRule {
 public:
     static Ref<CSSImportRule> create(StyleRuleImport& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSImportRule(rule, sheet)); }
 
@@ -55,13 +55,13 @@ private:
     String cssText() const final;
     String cssText(const CSS::SerializationContext&) const final;
     void reattach(StyleRuleBase&) final;
-    void getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>&) final;
+    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&) final;
 
     String cssTextInternal(const String& urlString) const;
     const MQ::MediaQueryList& mediaQueries() const;
     void setMediaQueries(MQ::MediaQueryList&&);
 
-    Ref<StyleRuleImport> m_importRule;
+    const Ref<StyleRuleImport> m_importRule;
     mutable RefPtr<MediaList> m_mediaCSSOMWrapper;
     mutable RefPtr<CSSStyleSheet> m_styleSheetCSSOMWrapper;
 };

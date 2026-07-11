@@ -65,7 +65,7 @@ inline Structure* InternalFunctionAllocationProfile::createAllocationStructureFr
     // function Foo() { }
     // Reflect.construct(Promise, [], Foo);
     // Reflect.construct(Int8Array, [], Foo);
-    if (UNLIKELY(m_structureID && m_structureID.value() != structure->id()))
+    if (m_structureID && m_structureID.value() != structure->id()) [[unlikely]]
         watchpointSet.fireAll(vm, "InternalFunctionAllocationProfile rotated to a new structure");
 
     m_structureID.set(vm, owner, structure);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ApplicationCacheResourceLoader.h"
-#include "DOMApplicationCache.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -60,7 +59,7 @@ enum ApplicationCacheUpdateOption {
 
 class ApplicationCacheGroup : public CanMakeWeakPtr<ApplicationCacheGroup> {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheGroup);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ApplicationCacheGroup, Loader);
 public:
     explicit ApplicationCacheGroup(Ref<ApplicationCacheStorage>&&, const URL& manifestURL);
     virtual ~ApplicationCacheGroup();
@@ -104,9 +103,9 @@ public:
     void disassociateDocumentLoader(DocumentLoader&);
 
 private:
-    static void postListenerTask(const AtomString& eventType, const UncheckedKeyHashSet<DocumentLoader*>& set) { postListenerTask(eventType, 0, 0, set); }
+    static void postListenerTask(const AtomString& eventType, const HashSet<DocumentLoader*>& set) { postListenerTask(eventType, 0, 0, set); }
     static void postListenerTask(const AtomString& eventType, DocumentLoader& loader)  { postListenerTask(eventType, 0, 0, loader); }
-    static void postListenerTask(const AtomString& eventType, int progressTotal, int progressDone, const UncheckedKeyHashSet<DocumentLoader*>&);
+    static void postListenerTask(const AtomString& eventType, int progressTotal, int progressDone, const HashSet<DocumentLoader*>&);
     static void postListenerTask(const AtomString& eventType, int progressTotal, int progressDone, DocumentLoader&);
 
     void scheduleReachedMaxAppCacheSizeCallback();
@@ -114,8 +113,8 @@ private:
     void didFinishLoadingManifest();
     void didFailLoadingManifest(ApplicationCacheResourceLoader::Error);
 
-    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, const URL&, unsigned type);
-    void didFinishLoadingEntry(const URL&);
+    void didFailLoadingEntry(ApplicationCacheResourceLoader::Error, URL&&, unsigned type);
+    void didFinishLoadingEntry(URL&&);
 
     void didReachMaxAppCacheSize();
     void didReachOriginQuota(int64_t totalSpaceNeeded);
@@ -135,7 +134,7 @@ private:
 
     ResourceRequest createRequest(URL&&, ApplicationCacheResource*);
 
-    Ref<ApplicationCacheStorage> m_storage;
+    const Ref<ApplicationCacheStorage> m_storage;
 
     URL m_manifestURL;
     Ref<SecurityOrigin> m_origin;
@@ -145,19 +144,19 @@ private:
     RefPtr<ApplicationCache> m_newestCache;
 
     // All complete caches in this cache group.
-    UncheckedKeyHashSet<ApplicationCache*> m_caches;
+    HashSet<ApplicationCache*> m_caches;
 
     // The cache being updated (if any). Note that cache updating does not immediately create a new
     // ApplicationCache object, so this may be null even when update status is not Idle.
     RefPtr<ApplicationCache> m_cacheBeingUpdated;
 
     // List of pending master entries, used during the update process to ensure that new master entries are cached.
-    UncheckedKeyHashSet<DocumentLoader*> m_pendingMasterResourceLoaders;
+    HashSet<DocumentLoader*> m_pendingMasterResourceLoaders;
     // How many of the above pending master entries have not yet finished downloading.
     int m_downloadingPendingMasterResourceLoadersCount { 0 };
 
     // These are all the document loaders that are associated with a cache in this group.
-    UncheckedKeyHashSet<DocumentLoader*> m_associatedDocumentLoaders;
+    HashSet<DocumentLoader*> m_associatedDocumentLoaders;
 
     // The URLs and types of pending cache entries.
     HashMap<String, unsigned> m_pendingEntries;

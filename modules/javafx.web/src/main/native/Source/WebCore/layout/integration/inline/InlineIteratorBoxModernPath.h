@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FontCascade.h"
+#include "InlineIteratorBoxLegacyPath.h"
 #include "LayoutElementBox.h"
 #include "LayoutIntegrationInlineContent.h"
 #include "TextBoxSelectableRange.h"

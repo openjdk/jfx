@@ -39,7 +39,7 @@
 namespace WebCore {
 namespace CSS {
 
-using Filter = std::variant<
+using Filter = Variant<
     BlurFunction,
     BrightnessFunction,
     ContrastFunction,
@@ -56,10 +56,9 @@ using FilterValueList = SpaceSeparatedVector<Filter>;
 
 // <'filter'> = none | <filter-value-list>
 // https://drafts.fxtf.org/filter-effects/#propdef-filter
-// NOTE: Subclassing, rather than aliasing, is being used to allow easy forward declarations.
 struct FilterProperty : ListOrNone<FilterValueList> { using ListOrNone<FilterValueList>::ListOrNone; };
 
 } // namespace CSS
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::FilterProperty> = true;
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::FilterProperty)

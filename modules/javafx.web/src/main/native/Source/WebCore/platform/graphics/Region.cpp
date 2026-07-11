@@ -27,6 +27,7 @@
 #include "Region.h"
 
 #include <stdio.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/TextStream.h>
@@ -311,7 +312,7 @@ void Region::Shape::appendSpans(const Shape& shape, std::span<const Span> spans)
 
 std::span<const int> Region::Shape::segments(std::span<const Span> span) const
 {
-    ASSERT(span.data() >= m_spans.data());
+    ASSERT(span.data() >= std::to_address(m_spans.begin()));
     ASSERT(span.data() < std::to_address(m_spans.end()));
     ASSERT(std::to_address(span.end()) <= std::to_address(m_spans.end()));
 
@@ -328,19 +329,19 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, const Region::Shape& value)
     TextStream::IndentScope indentScope(ts);
     ts << indent;
     for (auto spans = value.spans(); !spans.empty(); skip(spans, 1)) {
-        ts << "y: " << spans[0].y << " spans: (";
+        ts << "y: "_s << spans[0].y << " spans: ("_s;
         int comma = 0;
         for (auto& segment : value.segments(spans))
             ts << (comma++ > 0 ? ", "_s : ""_s) << segment;
-        ts << ")\n";
+        ts << ")\n"_s;
     }
-    ts << "spans: (";
+    ts << "spans: ("_s;
     for (size_t i = 0; i < value.m_spans.size(); ++i)
-        ts << (i > 0 ? ", "_s : ""_s) << "y: " << value.m_spans[i].y << " si: " << value.m_spans[i].segmentIndex;
-    ts << ")\n" << "segments: (";
+        ts << (i > 0 ? ", "_s : ""_s) << "y: "_s << value.m_spans[i].y << " si: "_s << value.m_spans[i].segmentIndex;
+    ts << ")\n"_s << "segments: ("_s;
     for (size_t i = 0; i < value.m_segments.size(); ++i)
         ts << (i > 0 ? ", "_s : ""_s) << value.m_segments[i];
-    ts << ")\n";
+    ts << ")\n"_s;
     return ts;
 }
 
@@ -626,33 +627,33 @@ bool Region::Shape::isValidShape(std::span<const int> segments, std::span<const 
         return !segmentsSize;
     if (!segmentsSize)
         return !spansSize;
-    if (UNLIKELY(spansSize == 1))
+    if (spansSize == 1) [[unlikely]]
         return false;
-    if (UNLIKELY(segmentsSize % 2))
+    if (segmentsSize % 2) [[unlikely]]
         return false;
     for (size_t i = 0; i < spansSize; ++i) {
         auto& span = spans[i];
-        if (UNLIKELY(span.segmentIndex > segmentsSize))
+        if (span.segmentIndex > segmentsSize) [[unlikely]]
             return false;
-        if (UNLIKELY(span.segmentIndex % 2))
+        if (span.segmentIndex % 2) [[unlikely]]
             return false;
 
         if (i < spansSize - 1) {
             auto& nextSpan = spans[i + 1];
 
-            if (UNLIKELY(span.y >= nextSpan.y))
+            if (span.y >= nextSpan.y) [[unlikely]]
                 return false;
-            if (UNLIKELY(span.segmentIndex > nextSpan.segmentIndex))
+            if (span.segmentIndex > nextSpan.segmentIndex) [[unlikely]]
                 return false;
 
             std::span spanSegments = segmentsForSpanSegmentIndices(segments, span.segmentIndex, nextSpan.segmentIndex);
             int lastX = std::numeric_limits<int>::min();
             for (int segment : spanSegments) {
-                if (UNLIKELY(lastX > segment))
+                if (lastX > segment) [[unlikely]]
                     return false;
                 lastX = segment;
             }
-        } else if (UNLIKELY(span.segmentIndex != segments.size()))
+        } else if (span.segmentIndex != segments.size()) [[unlikely]]
             return false;
     }
     return true;
@@ -660,11 +661,11 @@ bool Region::Shape::isValidShape(std::span<const int> segments, std::span<const 
 
 TextStream& operator<<(TextStream& ts, const Region& region)
 {
-    ts << "\n";
+    ts << '\n';
     {
         TextStream::IndentScope indentScope(ts);
         for (auto& rect : region.rects())
-            ts << indent << "(rect " << rect << ")\n";
+            ts << indent << "(rect "_s << rect << ")\n"_s;
     }
 
     return ts;

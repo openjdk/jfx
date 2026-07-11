@@ -766,78 +766,80 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader
         shouldWaitForLoadingOfRequestedResource:
         (AVAssetResourceLoadingRequest *)loadingRequest {
-    AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
-    AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
+    @synchronized(self) {
+        AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
+        AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
 
-    if (locatorStream == NULL) {
+        if (locatorStream == NULL) {
+            return NO;
+        }
+
+        if (contentRequest != nil) {
+            contentRequest.contentType = [self getContentTypeFromURL:loadingRequest.request.URL.absoluteString];
+            contentRequest.contentLength = locatorStream->GetSizeHint();
+            contentRequest.byteRangeAccessSupported = YES;
+        }
+
+        if (dataRequest != nil) {
+            // If requestsAllDataToEndOfResource is YES, than requestedLength is
+            // invalid and we need to provide all data to the end of file.
+            long requestedLength = 0;
+            if (dataRequest.requestsAllDataToEndOfResource) {
+               int64_t sizeHint = locatorStream->GetSizeHint();
+               requestedLength = sizeHint - dataRequest.requestedOffset;
+            } else {
+                requestedLength = dataRequest.requestedLength;
+            }
+
+            // Do not provide more then MAX_READ_SIZE at one call, otherwise
+            // AVFoundation might fail if we provide too much data.
+            // We will be requested again if not all data provided.
+            if (requestedLength > MAX_READ_SIZE) {
+                requestedLength = MAX_READ_SIZE;
+            }
+
+            NSMutableData* readData = nil;
+            bool isRandomAccess = locatorStream->GetCallbacks()->IsRandomAccess();
+            int64_t position = -1;
+            if (isRandomAccess) {
+                position = dataRequest.requestedOffset;
+            } else {
+                position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
+                if (position != dataRequest.requestedOffset) {
+                    return NO;
+                }
+            }
+
+            while (requestedLength > 0) {
+                unsigned int blockSize = -1;
+                if (isRandomAccess) {
+                    blockSize = locatorStream->GetCallbacks()->ReadBlock(position, requestedLength);
+                } else {
+                    blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
+                }
+                if (blockSize <= 0) {
+                    break;
+                }
+
+                unsigned int readSize =
+                        (blockSize > (unsigned int)dataRequest.requestedLength) ?
+                        (unsigned int)dataRequest.requestedLength : blockSize;
+                readData = [NSMutableData dataWithLength:readSize];
+
+                locatorStream->GetCallbacks()->CopyBlock((void*)[readData bytes], readSize);
+                [loadingRequest.dataRequest respondWithData:readData];
+
+                requestedLength -= readSize;
+                position += readSize;
+            }
+
+            [loadingRequest finishLoading];
+
+            return YES;
+        }
+
         return NO;
     }
-
-    if (contentRequest != nil) {
-        contentRequest.contentType = [self getContentTypeFromURL:loadingRequest.request.URL.absoluteString];
-        contentRequest.contentLength = locatorStream->GetSizeHint();
-        contentRequest.byteRangeAccessSupported = YES;
-    }
-
-    if (dataRequest != nil) {
-
-        // If requestsAllDataToEndOfResource is YES, than requestedLength is
-        // invalid and we need to provide all data to the end of file.
-        long requestedLength = 0;
-        if (dataRequest.requestsAllDataToEndOfResource) {
-           int64_t sizeHint = locatorStream->GetSizeHint();
-           requestedLength = sizeHint - dataRequest.requestedOffset;
-        } else {
-           requestedLength = dataRequest.requestedLength;
-        }
-
-        // Do not provide more then MAX_READ_SIZE at one call, otherwise
-        // AVFoundation might fail if we provide too much data.
-        // We will be requested again if not all data provided.
-        if (requestedLength > MAX_READ_SIZE) {
-           requestedLength = MAX_READ_SIZE;
-        }
-
-        NSMutableData* readData = nil;
-        bool isRandomAccess = locatorStream->GetCallbacks()->IsRandomAccess();
-        int64_t position = -1;
-        if (isRandomAccess) {
-            position = dataRequest.requestedOffset;
-        } else {
-            position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
-            if (position != dataRequest.requestedOffset) {
-                return NO;
-            }
-        }
-        while (requestedLength > 0) {
-            unsigned int blockSize = -1;
-            if (isRandomAccess) {
-                blockSize = locatorStream->GetCallbacks()->ReadBlock(position, requestedLength);
-            } else {
-                blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
-            }
-            if (blockSize <= 0) {
-                break;
-            }
-
-            unsigned int readSize =
-                    (blockSize > (unsigned int)dataRequest.requestedLength) ?
-                    (unsigned int)dataRequest.requestedLength : blockSize;
-            readData = [NSMutableData dataWithLength:readSize];
-
-            locatorStream->GetCallbacks()->CopyBlock((void*)[readData bytes], readSize);
-            [loadingRequest.dataRequest respondWithData:readData];
-
-            requestedLength -= readSize;
-            position += readSize;
-        }
-
-        [loadingRequest finishLoading];
-
-        return YES;
-    }
-
-    return NO;
 }
 
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader

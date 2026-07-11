@@ -45,10 +45,9 @@ AudioNodeOutput::AudioNodeOutput(AudioNode* node, unsigned numberOfChannels)
     : m_node(node, EnableWeakPtrThreadingAssertions::No) // WebAudio code uses locking when accessing the context.
     , m_numberOfChannels(numberOfChannels)
     , m_desiredNumberOfChannels(numberOfChannels)
+    , m_internalBus { AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize) }
 {
     ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
-
-    m_internalBus = AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeOutput::setNumberOfChannels(unsigned numberOfChannels)
@@ -109,7 +108,7 @@ void AudioNodeOutput::propagateChannelCount()
     }
 }
 
-AudioBus* AudioNodeOutput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
+AudioBus& AudioNodeOutput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
 {
     ASSERT(context().isAudioThread());
     ASSERT(m_renderingFanOutCount > 0 || m_renderingParamFanOutCount > 0);
@@ -120,18 +119,18 @@ AudioBus* AudioNodeOutput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
     // In this case pull() is called multiple times per rendering quantum, and the processIfNecessary() call below will
     // cause our node to process() only the first time, caching the output in m_internalOutputBus for subsequent calls.
 
-    m_isInPlace = inPlaceBus && inPlaceBus->numberOfChannels() == numberOfChannels() && (m_renderingFanOutCount + m_renderingParamFanOutCount) == 1;
+    bool isInPlace = inPlaceBus && inPlaceBus->numberOfChannels() == numberOfChannels() && (m_renderingFanOutCount + m_renderingParamFanOutCount) == 1;
 
-    m_inPlaceBus = m_isInPlace ? inPlaceBus : 0;
+    m_inPlaceBus = isInPlace ? inPlaceBus : nullptr;
 
     node()->processIfNecessary(framesToProcess);
     return bus();
 }
 
-AudioBus* AudioNodeOutput::bus() const
+AudioBus& AudioNodeOutput::bus() const
 {
     ASSERT(const_cast<AudioNodeOutput*>(this)->context().isAudioThread());
-    return m_isInPlace ? m_inPlaceBus.get() : m_internalBus.get();
+    return m_inPlaceBus ? *m_inPlaceBus : m_internalBus.get();
 }
 
 unsigned AudioNodeOutput::fanOutCount()

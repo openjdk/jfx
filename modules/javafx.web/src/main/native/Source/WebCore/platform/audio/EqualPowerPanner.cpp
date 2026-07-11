@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,24 +77,24 @@ void EqualPowerPanner::calculateDesiredGain(double& desiredGainL, double& desire
     desiredGainR = std::sin(piOverTwoDouble * desiredPanPosition);
 }
 
-void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess)
 {
-    bool isInputSafe = inputBus && (inputBus->numberOfChannels() == 1 || inputBus->numberOfChannels() == 2) && framesToProcess <= inputBus->length();
+    bool isInputSafe = (inputBus.numberOfChannels() == 1 || inputBus.numberOfChannels() == 2) && framesToProcess <= inputBus.length();
     ASSERT(isInputSafe);
     if (!isInputSafe)
         return;
 
-    unsigned numberOfInputChannels = inputBus->numberOfChannels();
+    unsigned numberOfInputChannels = inputBus.numberOfChannels();
 
-    bool isOutputSafe = outputBus && outputBus->numberOfChannels() == 2 && framesToProcess <= outputBus->length();
+    bool isOutputSafe = outputBus.numberOfChannels() == 2 && framesToProcess <= outputBus.length();
     ASSERT(isOutputSafe);
     if (!isOutputSafe)
         return;
 
-    auto sourceL = inputBus->channel(0)->span().first(framesToProcess);
-    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span().first(framesToProcess) : sourceL;
-    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
-    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
+    auto sourceL = inputBus.channel(0)->span().first(framesToProcess);
+    auto sourceR = numberOfInputChannels > 1 ? inputBus.channel(1)->span().first(framesToProcess) : sourceL;
+    auto destinationL = outputBus.channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus.channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     // Clamp azimuth to allowed range of -180 -> +180.
     azimuth = std::max(-180.0, azimuth);
@@ -140,23 +140,21 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
     }
 }
 
-void EqualPowerPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double>, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+void EqualPowerPanner::panWithSampleAccurateValues(std::span<double> azimuth, std::span<double>, const AudioBus& inputBus, AudioBus& outputBus, size_t framesToProcess)
 {
-    ASSERT(inputBus);
-    ASSERT(framesToProcess <= inputBus->length());
-    ASSERT(inputBus->numberOfChannels() >= 1u);
-    ASSERT(inputBus->numberOfChannels() <= 2u);
+    ASSERT(framesToProcess <= inputBus.length());
+    ASSERT(inputBus.numberOfChannels() >= 1u);
+    ASSERT(inputBus.numberOfChannels() <= 2u);
 
-    unsigned numberOfInputChannels = inputBus->numberOfChannels();
+    unsigned numberOfInputChannels = inputBus.numberOfChannels();
 
-    ASSERT(outputBus);
-    ASSERT(outputBus->numberOfChannels() == 2u);
-    ASSERT(framesToProcess <= outputBus->length());
+    ASSERT(outputBus.numberOfChannels() == 2u);
+    ASSERT(framesToProcess <= outputBus.length());
 
-    auto sourceL = inputBus->channel(0)->span();
-    auto sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->span() : sourceL;
-    auto destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableSpan();
-    auto destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableSpan();
+    auto sourceL = inputBus.channel(0)->span();
+    auto sourceR = numberOfInputChannels > 1 ? inputBus.channel(1)->span() : sourceL;
+    auto destinationL = outputBus.channelByType(AudioBus::ChannelLeft)->mutableSpan();
+    auto destinationR = outputBus.channelByType(AudioBus::ChannelRight)->mutableSpan();
 
     int n = framesToProcess;
 

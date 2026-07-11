@@ -75,13 +75,13 @@ template<> struct CSSFilterFunctionDescriptor<CSSValueDropShadow> {
     static constexpr bool isPixelFilterFunction = true;
     static constexpr bool isColorFilterFunction = false;
 
-    static constexpr auto defaultColorValue = Color::transparentBlack; // FIXME: This should be "currentcolor", but that requires filters to be able to store StyleColors.
+    static constexpr auto defaultColorValue = Style::CurrentColor { };
     static constexpr auto defaultStdDeviationValue = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
 
     static constexpr auto initialColorValueForInterpolation = Color::transparentBlack;
     static constexpr auto initialLengthValueForInterpolation = CSS::LengthRaw<> { CSS::LengthUnit::Px, 0 };
 
-    static constexpr auto operationType = FilterOperation::Type::DropShadow;
+    static constexpr auto operationType = FilterOperation::Type::DropShadowWithStyleColor;
 };
 
 // https://drafts.fxtf.org/filter-effects/#funcdef-filter-grayscale

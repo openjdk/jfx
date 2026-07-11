@@ -34,8 +34,9 @@
 
 namespace WebCore {
 
-class CSSParserImpl;
+class CSSParser;
 class CSSParserTokenRange;
+struct CSSParserContext;
 
 class CSSSupportsParser {
 public:
@@ -50,10 +51,11 @@ public:
         AllowBareDeclarationAndGeneralEnclosed,
     };
 
-    static SupportsResult supportsCondition(CSSParserTokenRange, CSSParserImpl&, ParsingMode);
+    static SupportsResult supportsCondition(CSSParserTokenRange, CSSParser&, ParsingMode);
+    static SupportsResult supportsCondition(const String&, const CSSParserContext&, ParsingMode);
 
 private:
-    CSSSupportsParser(CSSParserImpl& parser)
+    CSSSupportsParser(CSSParser& parser)
         : m_parser(parser)
     { }
 
@@ -72,7 +74,7 @@ private:
 
     SupportsResult consumeConditionInParenthesis(CSSParserTokenRange&, CSSParserTokenType);
 
-    CSSParserImpl& m_parser;
+    CSSParser& m_parser;
 };
 
 } // namespace WebCore

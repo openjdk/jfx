@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-ResourceMonitorThrottler::ResourceMonitorThrottler(String&& path, size_t count, Seconds duration, size_t maxHosts)
+ResourceMonitorThrottler::ResourceMonitorThrottler(String&& directoryPath, size_t count, Seconds duration, size_t maxHosts)
     : m_config { count, duration, maxHosts }
 {
     ASSERT(!isMainThread());
@@ -49,7 +49,7 @@ ResourceMonitorThrottler::ResourceMonitorThrottler(String&& path, size_t count, 
     RESOURCEMONITOR_RELEASE_LOG("Opening persistence for throttler.");
     auto persistence = makeUnique<ResourceMonitorPersistence>();
 
-    if (!persistence->openDatabase(WTFMove(path))) {
+    if (!persistence->openDatabase(WTFMove(directoryPath))) {
         RESOURCEMONITOR_RELEASE_LOG("Failed to setup persistence for throttler.");
         return;
     }
@@ -75,7 +75,6 @@ ResourceMonitorThrottler::~ResourceMonitorThrottler()
 
     if (m_persistence) {
         RESOURCEMONITOR_RELEASE_LOG("Closing persistence for throttler.");
-        m_persistence->deleteExpiredRecords(ContinuousApproximateTime::now(), m_config.duration);
         m_persistence = nullptr;
     }
 }
@@ -130,6 +129,8 @@ bool ResourceMonitorThrottler::tryAccess(const String& host, ContinuousApproxima
 void ResourceMonitorThrottler::clearAllData()
 {
     ASSERT(!isMainThread());
+
+    m_throttlersByHost.clear();
 
     if (m_persistence)
         m_persistence->deleteAllRecords();

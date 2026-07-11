@@ -65,7 +65,7 @@ bool CommonData::invalidateLinkedCode()
     if (!m_isStillValid)
         return false;
 
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)
@@ -84,7 +84,7 @@ CommonData::~CommonData()
 {
     if (m_isUnlinked)
         return;
-    if (UNLIKELY(m_hasVMTrapsBreakpointsInstalled)) {
+    if (m_hasVMTrapsBreakpointsInstalled) [[unlikely]] {
         Locker locker { pcCodeBlockMapLock };
         auto& map = pcCodeBlockMap();
         for (auto& jumpReplacement : m_jumpReplacements)

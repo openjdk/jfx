@@ -39,7 +39,7 @@ namespace WebCore {
 
 PathOperation::~PathOperation() = default;
 
-Ref<ReferencePathOperation> ReferencePathOperation::create(const String& url, const AtomString& fragment, const RefPtr<SVGElement> element)
+Ref<ReferencePathOperation> ReferencePathOperation::create(const Style::URL& url, const AtomString& fragment, const RefPtr<SVGElement> element)
 {
     return adoptRef(*new ReferencePathOperation(url, fragment, element));
 }
@@ -58,7 +58,7 @@ Ref<PathOperation> ReferencePathOperation::clone() const
     return adoptRef(*new ReferencePathOperation(std::nullopt));
 }
 
-ReferencePathOperation::ReferencePathOperation(const String& url, const AtomString& fragment, const RefPtr<SVGElement> element)
+ReferencePathOperation::ReferencePathOperation(const Style::URL& url, const AtomString& fragment, const RefPtr<SVGElement> element)
     : PathOperation(Type::Reference)
     , m_url(url)
     , m_fragment(fragment)
@@ -121,9 +121,14 @@ std::optional<Path> BoxPathOperation::getPath(const TransformOperationData& data
 
 // MARK: - RayPathOperation
 
-Ref<RayPathOperation> RayPathOperation::create(Style::RayFunction ray, CSSBoxType referenceBox)
+Ref<RayPathOperation> RayPathOperation::create(Style::RayFunction&& ray, CSSBoxType referenceBox)
 {
     return adoptRef(*new RayPathOperation(WTFMove(ray), referenceBox));
+}
+
+Ref<RayPathOperation> RayPathOperation::create(const Style::RayFunction& ray, CSSBoxType referenceBox)
+{
+    return adoptRef(*new RayPathOperation(ray, referenceBox));
 }
 
 Ref<PathOperation> RayPathOperation::clone() const

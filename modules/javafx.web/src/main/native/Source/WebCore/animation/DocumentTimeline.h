@@ -28,7 +28,6 @@
 #include "AnimationFrameRate.h"
 #include "AnimationTimeline.h"
 #include "DocumentTimelineOptions.h"
-#include "ExceptionOr.h"
 #include "Timer.h"
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
@@ -58,8 +57,8 @@ public:
 
     Document* document() const { return m_document.get(); }
 
-    std::optional<WebAnimationTime> currentTime() override;
-    ExceptionOr<Ref<WebAnimation>> animate(Ref<CustomEffectCallback>&&, std::optional<std::variant<double, CustomAnimationOptions>>&&);
+    std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) override;
+    ExceptionOr<Ref<WebAnimation>> animate(Ref<CustomEffectCallback>&&, std::optional<Variant<double, CustomAnimationOptions>>&&);
 
     void animationTimingDidChange(WebAnimation&) override;
     void removeAnimation(WebAnimation&) override;
@@ -76,6 +75,7 @@ public:
     AnimationEvents prepareForPendingAnimationEventsDispatch();
     void documentDidUpdateAnimationsAndSendEvents();
     void styleOriginatedAnimationsWereCreated();
+    void pendingStartTimeWasSetOnAnimation();
 
     WEBCORE_EXPORT Seconds animationInterval() const;
     void suspendAnimations() override;
@@ -104,7 +104,7 @@ private:
     bool shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const;
 
     Timer m_tickScheduleTimer;
-    UncheckedKeyHashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
+    HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
     AnimationEvents m_pendingAnimationEvents;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     Seconds m_originTime;

@@ -32,6 +32,7 @@
 #include "CustomPaintImage.h"
 #include "PaintWorkletGlobalScope.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {

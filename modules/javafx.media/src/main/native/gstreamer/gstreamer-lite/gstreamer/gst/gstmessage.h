@@ -126,6 +126,8 @@ typedef struct _GstMessage GstMessage;
  * @GST_MESSAGE_INSTANT_RATE_REQUEST: Message sent by elements to request the
  *     running time from the pipeline when an instant rate change should
  *     be applied (which may be in the past when the answer arrives). (Since: 1.18)
+ * @GST_MESSAGE_DEVICE_MONITOR_STARTED: Message indicating the
+ *     #GstDeviceMonitor has completed async startup (Since: 1.28)
  * @GST_MESSAGE_ANY: mask for all of the above messages.
  *
  * The different message types that are available.
@@ -180,6 +182,14 @@ typedef enum
   GST_MESSAGE_REDIRECT          = GST_MESSAGE_EXTENDED + 6,
   GST_MESSAGE_DEVICE_CHANGED    = GST_MESSAGE_EXTENDED + 7,
   GST_MESSAGE_INSTANT_RATE_REQUEST = GST_MESSAGE_EXTENDED + 8,
+  /**
+   * GST_MESSAGE_DEVICE_MONITOR_STARTED:
+   *
+   * Message indicating the #GstDeviceMonitor has completed async startup.
+   *
+   * Since: 1.28
+   */
+  GST_MESSAGE_DEVICE_MONITOR_STARTED = GST_MESSAGE_EXTENDED + 9,
   GST_MESSAGE_ANY               = (gint) (0xffffffff)
 } GstMessageType;
 
@@ -387,49 +397,24 @@ gst_clear_message (GstMessage ** msg_ptr)
 }
 
 /* copy message */
-static inline GstMessage * gst_message_copy (const GstMessage * msg);
-static inline GstMessage *
+G_GNUC_WARN_UNUSED_RESULT static inline GstMessage *
 gst_message_copy (const GstMessage * msg)
 {
   return GST_MESSAGE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (msg)));
 }
-#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-GST_API
-GstMessage *  gst_message_ref   (GstMessage * msg);
 
-GST_API
-void          gst_message_unref (GstMessage * msg);
+static inline gboolean
+gst_message_is_writable (const GstMessage * message)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (message));
+}
 
-GST_API
-void          gst_clear_message (GstMessage ** msg_ptr);
+G_GNUC_WARN_UNUSED_RESULT static inline GstMessage *
+gst_message_make_writable (GstMessage * message)
+{
+  return GST_MESSAGE_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (message)));
+}
 
-GST_API
-GstMessage *  gst_message_copy  (const GstMessage * msg);
-#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-
-/**
- * gst_message_is_writable:
- * @msg: a #GstMessage
- *
- * Tests if you can safely write into a message's structure or validly
- * modify the seqnum and timestamp fields.
- */
-#define         gst_message_is_writable(msg)     gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (msg))
-/**
- * gst_message_make_writable:
- * @msg: (transfer full): the message to make writable
- *
- * Checks if a message is writable. If not, a writable copy is made and
- * returned.
- *
- * Returns: (transfer full): a message (possibly a duplicate) that is writable.
- *
- * MT safe
- */
-#define         gst_message_make_writable(msg)  GST_MESSAGE_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (msg)))
-
-#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
-static inline gboolean gst_message_replace (GstMessage **old_message, GstMessage *new_message);
 static inline gboolean
 gst_message_replace (GstMessage **old_message, GstMessage *new_message)
 {
@@ -442,7 +427,30 @@ gst_message_take (GstMessage **old_message, GstMessage *new_message)
   return gst_mini_object_take ((GstMiniObject **) old_message,
       (GstMiniObject *) new_message);
 }
+
+static inline GstMessage *
+gst_message_steal(GstMessage **old_message)
+{
+  return GST_MESSAGE_CAST(gst_mini_object_steal((GstMiniObject **)old_message));
+}
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstMessage *  gst_message_ref   (GstMessage * msg);
+
+GST_API
+void          gst_message_unref (GstMessage * msg);
+
+GST_API
+void          gst_clear_message (GstMessage ** msg_ptr);
+
+GST_API
+GstMessage *  gst_message_copy  (const GstMessage * msg) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstMessage *  gst_message_make_writable (GstMessage * message) G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean      gst_message_is_writable   (const GstMessage * message);
+
 GST_API
 gboolean  gst_message_replace                   (GstMessage ** old_message,
                                                  GstMessage * new_message);
@@ -450,6 +458,9 @@ gboolean  gst_message_replace                   (GstMessage ** old_message,
 GST_API
 gboolean  gst_message_take                      (GstMessage ** old_message,
                                                  GstMessage * new_message);
+
+GST_API
+GstMessage *gst_message_steal (GstMessage **old_message);
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /* custom messages */
@@ -457,7 +468,7 @@ gboolean  gst_message_take                      (GstMessage ** old_message,
 GST_API
 GstMessage *    gst_message_new_custom          (GstMessageType type,
                                                  GstObject    * src,
-                                                 GstStructure * structure) G_GNUC_MALLOC;
+                                                 GstStructure * structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 const GstStructure *
                 gst_message_get_structure       (GstMessage *message);
@@ -489,15 +500,15 @@ void            gst_message_set_seqnum          (GstMessage *message, guint32 se
 /* EOS */
 
 GST_API
-GstMessage *    gst_message_new_eos             (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_eos             (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* ERROR */
 
 GST_API
-GstMessage *    gst_message_new_error           (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_error           (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *    gst_message_new_error_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_error_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_error         (GstMessage *message, GError **gerror, gchar **debug);
@@ -511,10 +522,10 @@ void            gst_message_parse_error_writable_details (GstMessage *message, G
 /* WARNING */
 
 GST_API
-GstMessage *    gst_message_new_warning         (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_warning         (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *    gst_message_new_warning_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_warning_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_warning       (GstMessage *message, GError **gerror, gchar **debug);
@@ -528,10 +539,10 @@ void            gst_message_parse_warning_writable_details (GstMessage *message,
 /* INFO */
 
 GST_API
-GstMessage *    gst_message_new_info            (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_info            (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMessage *    gst_message_new_info_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_info_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_info          (GstMessage *message, GError **gerror, gchar **debug);
@@ -545,7 +556,7 @@ void            gst_message_parse_info_writable_details  (GstMessage *message, G
 /* TAG */
 
 GST_API
-GstMessage *    gst_message_new_tag             (GstObject * src, GstTagList * tag_list) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_tag             (GstObject * src, GstTagList * tag_list) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_tag           (GstMessage *message, GstTagList **tag_list);
@@ -553,7 +564,7 @@ void            gst_message_parse_tag           (GstMessage *message, GstTagList
 /* BUFFERING */
 
 GST_API
-GstMessage *    gst_message_new_buffering         (GstObject * src, gint percent) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_buffering         (GstObject * src, gint percent) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_buffering       (GstMessage *message, gint *percent);
@@ -571,7 +582,7 @@ void            gst_message_parse_buffering_stats (GstMessage *message, GstBuffe
 
 GST_API
 GstMessage *    gst_message_new_state_changed   (GstObject * src, GstState oldstate,
-                                                 GstState newstate, GstState pending) G_GNUC_MALLOC;
+                                                 GstState newstate, GstState pending) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_state_changed (GstMessage *message, GstState *oldstate,
                                                  GstState *newstate, GstState *pending);
@@ -579,14 +590,14 @@ void            gst_message_parse_state_changed (GstMessage *message, GstState *
 /* STATE_DIRTY */
 
 GST_API
-GstMessage *    gst_message_new_state_dirty     (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_state_dirty     (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* STEP_DONE */
 
 GST_API
 GstMessage *    gst_message_new_step_done       (GstObject * src, GstFormat format, guint64 amount,
                                                  gdouble rate, gboolean flush, gboolean intermediate,
-                                                 guint64 duration, gboolean eos) G_GNUC_MALLOC;
+                                                 guint64 duration, gboolean eos) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_step_done     (GstMessage * message, GstFormat *format, guint64 *amount,
                                                  gdouble *rate, gboolean *flush, gboolean *intermediate,
@@ -594,7 +605,7 @@ void            gst_message_parse_step_done     (GstMessage * message, GstFormat
 /* CLOCK_PROVIDE */
 
 GST_API
-GstMessage *    gst_message_new_clock_provide   (GstObject * src, GstClock *clock, gboolean ready) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_clock_provide   (GstObject * src, GstClock *clock, gboolean ready) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_clock_provide (GstMessage *message, GstClock **clock,
@@ -603,7 +614,7 @@ void            gst_message_parse_clock_provide (GstMessage *message, GstClock *
 /* CLOCK_LOST */
 
 GST_API
-GstMessage *    gst_message_new_clock_lost      (GstObject * src, GstClock *clock) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_clock_lost      (GstObject * src, GstClock *clock) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_clock_lost    (GstMessage *message, GstClock **clock);
@@ -611,7 +622,7 @@ void            gst_message_parse_clock_lost    (GstMessage *message, GstClock *
 /* NEW_CLOCK */
 
 GST_API
-GstMessage *    gst_message_new_new_clock       (GstObject * src, GstClock *clock) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_new_clock       (GstObject * src, GstClock *clock) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_new_clock     (GstMessage *message, GstClock **clock);
@@ -619,17 +630,17 @@ void            gst_message_parse_new_clock     (GstMessage *message, GstClock *
 /* APPLICATION */
 
 GST_API
-GstMessage *    gst_message_new_application     (GstObject * src, GstStructure * structure) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_application     (GstObject * src, GstStructure * structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* ELEMENT */
 
 GST_API
-GstMessage *    gst_message_new_element         (GstObject * src, GstStructure * structure) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_element         (GstObject * src, GstStructure * structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* SEGMENT_START */
 
 GST_API
-GstMessage *    gst_message_new_segment_start   (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_segment_start   (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_segment_start (GstMessage *message, GstFormat *format,
@@ -638,7 +649,7 @@ void            gst_message_parse_segment_start (GstMessage *message, GstFormat 
 /* SEGMENT_DONE */
 
 GST_API
-GstMessage *    gst_message_new_segment_done    (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_segment_done    (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_segment_done  (GstMessage *message, GstFormat *format,
@@ -647,22 +658,22 @@ void            gst_message_parse_segment_done  (GstMessage *message, GstFormat 
 /* DURATION_CHANGED */
 
 GST_API
-GstMessage *    gst_message_new_duration_changed (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_duration_changed (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* LATENCY */
 
 GST_API
-GstMessage *    gst_message_new_latency         (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_latency         (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* ASYNC_START */
 
 GST_API
-GstMessage *    gst_message_new_async_start     (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_async_start     (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* ASYNC_DONE */
 
 GST_API
-GstMessage *    gst_message_new_async_done      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_async_done      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_async_done    (GstMessage *message, GstClockTime *running_time);
@@ -671,7 +682,7 @@ void            gst_message_parse_async_done    (GstMessage *message, GstClockTi
 
 GST_API
 GstMessage *    gst_message_new_structure_change   (GstObject * src, GstStructureChangeType type,
-                                                    GstElement *owner, gboolean busy) G_GNUC_MALLOC;
+                                                    GstElement *owner, gboolean busy) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_structure_change (GstMessage *message, GstStructureChangeType *type,
                                                     GstElement **owner, gboolean *busy);
@@ -680,7 +691,7 @@ void            gst_message_parse_structure_change (GstMessage *message, GstStru
 
 GST_API
 GstMessage *    gst_message_new_stream_status        (GstObject * src, GstStreamStatusType type,
-                                                      GstElement *owner) G_GNUC_MALLOC;
+                                                      GstElement *owner) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_stream_status      (GstMessage *message, GstStreamStatusType *type,
                                                       GstElement **owner);
@@ -693,7 +704,7 @@ const GValue *  gst_message_get_stream_status_object (GstMessage *message);
 /* REQUEST_STATE */
 
 GST_API
-GstMessage *    gst_message_new_request_state   (GstObject * src, GstState state) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_request_state   (GstObject * src, GstState state) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_request_state (GstMessage * message, GstState *state);
@@ -703,7 +714,7 @@ void            gst_message_parse_request_state (GstMessage * message, GstState 
 GST_API
 GstMessage *    gst_message_new_step_start      (GstObject * src, gboolean active, GstFormat format,
                                                  guint64 amount, gdouble rate, gboolean flush,
-                                                 gboolean intermediate) G_GNUC_MALLOC;
+                                                 gboolean intermediate) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_step_start    (GstMessage * message, gboolean *active, GstFormat *format,
                                                  guint64 *amount, gdouble *rate, gboolean *flush,
@@ -713,7 +724,7 @@ void            gst_message_parse_step_start    (GstMessage * message, gboolean 
 
 GST_API
 GstMessage *    gst_message_new_qos             (GstObject * src, gboolean live, guint64 running_time,
-                                                 guint64 stream_time, guint64 timestamp, guint64 duration) G_GNUC_MALLOC;
+                                                 guint64 stream_time, guint64 timestamp, guint64 duration) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_set_qos_values      (GstMessage * message, gint64 jitter, gdouble proportion,
                                                  gint quality);
@@ -733,7 +744,7 @@ void            gst_message_parse_qos_stats     (GstMessage * message, GstFormat
 
 GST_API
 GstMessage *    gst_message_new_progress           (GstObject * src, GstProgressType type, const gchar *code,
-                                                    const gchar *text) G_GNUC_MALLOC;
+                                                    const gchar *text) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_progress         (GstMessage * message, GstProgressType * type, gchar ** code,
                                                     gchar ** text);
@@ -741,7 +752,7 @@ void            gst_message_parse_progress         (GstMessage * message, GstPro
 /* TOC */
 
 GST_API
-GstMessage *    gst_message_new_toc             (GstObject *src, GstToc *toc, gboolean updated);
+GstMessage *    gst_message_new_toc             (GstObject *src, GstToc *toc, gboolean updated) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_toc           (GstMessage *message, GstToc **toc, gboolean *updated);
@@ -749,7 +760,7 @@ void            gst_message_parse_toc           (GstMessage *message, GstToc **t
 /* RESET_TIME */
 
 GST_API
-GstMessage *    gst_message_new_reset_time      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_reset_time      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_reset_time    (GstMessage *message, GstClockTime *running_time);
@@ -757,7 +768,7 @@ void            gst_message_parse_reset_time    (GstMessage *message, GstClockTi
 /* STREAM_START */
 
 GST_API
-GstMessage *    gst_message_new_stream_start    (GstObject * src) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_stream_start    (GstObject * src) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_set_group_id        (GstMessage *message, guint group_id);
@@ -768,7 +779,7 @@ gboolean        gst_message_parse_group_id      (GstMessage *message, guint *gro
 /* NEED_CONTEXT */
 
 GST_API
-GstMessage *    gst_message_new_need_context    (GstObject * src, const gchar * context_type) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_need_context    (GstObject * src, const gchar * context_type) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean        gst_message_parse_context_type  (GstMessage * message, const gchar ** context_type);
@@ -776,7 +787,7 @@ gboolean        gst_message_parse_context_type  (GstMessage * message, const gch
 /* HAVE_CONTEXT */
 
 GST_API
-GstMessage *    gst_message_new_have_context    (GstObject * src, GstContext *context) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_have_context    (GstObject * src, GstContext *context) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_have_context  (GstMessage *message, GstContext **context);
@@ -785,7 +796,7 @@ void            gst_message_parse_have_context  (GstMessage *message, GstContext
 /* DEVICE_ADDED */
 
 GST_API
-GstMessage *    gst_message_new_device_added    (GstObject * src, GstDevice * device) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_device_added    (GstObject * src, GstDevice * device) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_device_added  (GstMessage * message, GstDevice ** device);
@@ -793,7 +804,7 @@ void            gst_message_parse_device_added  (GstMessage * message, GstDevice
 /* DEVICE_REMOVED */
 
 GST_API
-GstMessage *    gst_message_new_device_removed    (GstObject * src, GstDevice * device) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_device_removed    (GstObject * src, GstDevice * device) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_device_removed  (GstMessage * message, GstDevice ** device);
@@ -801,17 +812,25 @@ void            gst_message_parse_device_removed  (GstMessage * message, GstDevi
 /* DEVICE_CHANGED */
 
 GST_API
-GstMessage *    gst_message_new_device_changed    (GstObject * src, GstDevice * device, GstDevice *changed_device);
+GstMessage *    gst_message_new_device_changed    (GstObject * src, GstDevice * device, GstDevice *changed_device) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_device_changed  (GstMessage * message, GstDevice ** device, GstDevice ** changed_device);
+
+/* DEVICE_MONITOR_STARTED */
+
+GST_API
+GstMessage *    gst_message_new_device_monitor_started    (GstObject * src, gboolean success);
+
+GST_API
+void            gst_message_parse_device_monitor_started  (GstMessage * message, gboolean *success);
 
 #endif // GSTREAMER_LITE
 
 /* PROPERTY_NOTIFY */
 
 GST_API
-GstMessage *    gst_message_new_property_notify   (GstObject * src, const gchar * property_name, GValue * val) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_property_notify   (GstObject * src, const gchar * property_name, GValue * val) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_property_notify (GstMessage * message, GstObject ** object, const gchar ** property_name, const GValue ** property_value);
@@ -819,7 +838,7 @@ void            gst_message_parse_property_notify (GstMessage * message, GstObje
 /* STREAM_COLLECTION */
 
 GST_API
-GstMessage *    gst_message_new_stream_collection   (GstObject * src, GstStreamCollection * collection) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_stream_collection   (GstObject * src, GstStreamCollection * collection) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_parse_stream_collection (GstMessage *message, GstStreamCollection **collection);
@@ -827,7 +846,7 @@ void            gst_message_parse_stream_collection (GstMessage *message, GstStr
 /* STREAMS_SELECTED */
 
 GST_API
-GstMessage *    gst_message_new_streams_selected (GstObject *src, GstStreamCollection *collection);
+GstMessage *    gst_message_new_streams_selected (GstObject *src, GstStreamCollection *collection) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_message_streams_selected_add (GstMessage *message, GstStream *stream);
@@ -839,15 +858,15 @@ GST_API
 guint           gst_message_streams_selected_get_size (GstMessage * message);
 
 GST_API
-GstStream      *gst_message_streams_selected_get_stream (GstMessage *message, guint idx);
+GstStream      *gst_message_streams_selected_get_stream (GstMessage *message, guint idx) G_GNUC_WARN_UNUSED_RESULT;
 
 /* REDIRECT */
 
 GST_API
-GstMessage *    gst_message_new_redirect             (GstObject * src, const gchar * location, GstTagList * tag_list, const GstStructure * entry_struct) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_redirect             (GstObject * src, const gchar * location, GstTagList * tag_list, GstStructure * entry_struct) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-void            gst_message_add_redirect_entry       (GstMessage * message, const gchar * location, GstTagList * tag_list, const GstStructure * entry_struct);
+void            gst_message_add_redirect_entry       (GstMessage * message, const gchar * location, GstTagList * tag_list, GstStructure * entry_struct);
 
 GST_API
 void            gst_message_parse_redirect_entry     (GstMessage * message, gsize entry_index, const gchar ** location, GstTagList ** tag_list, const GstStructure ** entry_struct);
@@ -858,7 +877,7 @@ gsize           gst_message_get_num_redirect_entries (GstMessage * message);
 /* INSTANT_RATE_REQUEST */
 
 GST_API
-GstMessage *    gst_message_new_instant_rate_request   (GstObject * src, gdouble rate_multiplier) G_GNUC_MALLOC;
+GstMessage *    gst_message_new_instant_rate_request   (GstObject * src, gdouble rate_multiplier) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 void            gst_message_parse_instant_rate_request (GstMessage * message, gdouble * rate_multiplier);
 

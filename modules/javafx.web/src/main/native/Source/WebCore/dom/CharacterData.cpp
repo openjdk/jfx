@@ -111,7 +111,7 @@ void CharacterData::parserAppendData(StringView string)
     notifyParentAfterChange(childChange);
 
     auto mutationRecipients = MutationObserverInterestGroup::createForCharacterDataMutation(*this);
-    if (UNLIKELY(mutationRecipients))
+    if (mutationRecipients) [[unlikely]]
         mutationRecipients->enqueueMutationRecord(MutationRecord::createCharacterData(*this, oldData));
 }
 

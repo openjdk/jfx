@@ -22,6 +22,7 @@
 #pragma once
 
 #include "FontCascade.h"
+#include "RenderObjectInlines.h"
 #include "RenderText.h"
 #include "SVGTextLayoutAttributes.h"
 #include "Text.h"

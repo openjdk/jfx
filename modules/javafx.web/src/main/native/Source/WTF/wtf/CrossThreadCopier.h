@@ -33,7 +33,6 @@
 
 #include <tuple>
 #include <type_traits>
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
@@ -42,6 +41,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeTraits.h>
+#include <wtf/Variant.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -318,19 +318,19 @@ template<> struct CrossThreadCopierBase<false, false, std::nullptr_t> {
     static std::nullptr_t copy(std::nullptr_t) { return nullptr; }
 };
 
-// Default specialization for std::variant of CrossThreadCopyable classes.
-template<typename... Types> struct CrossThreadCopierBase<false, false, std::variant<Types...>> {
-    using Type = std::variant<Types...>;
+// Default specialization for Variant of CrossThreadCopyable classes.
+template<typename... Types> struct CrossThreadCopierBase<false, false, Variant<Types...>> {
+    using Type = Variant<Types...>;
     static constexpr bool IsNeeded = (CrossThreadCopier<std::remove_cvref_t<Types>>::IsNeeded || ...);
-    static std::variant<Types...> copy(const Type& source)
+    static Variant<Types...> copy(const Type& source)
     {
-        return std::visit([] (auto& type) -> std::variant<Types...> {
+        return WTF::visit([] (auto& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(type);
         }, source);
     }
-    static std::variant<Types...> copy(Type&& source)
+    static Variant<Types...> copy(Type&& source)
     {
-        return std::visit([] (auto&& type) -> std::variant<Types...> {
+        return WTF::visit([] (auto&& type) -> Variant<Types...> {
             return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(std::forward<decltype(type)>(type));
         }, WTFMove(source));
     }

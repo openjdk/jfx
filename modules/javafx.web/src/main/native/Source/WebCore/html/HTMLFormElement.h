@@ -57,15 +57,13 @@ public:
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     WEBCORE_EXPORT unsigned length() const;
     HTMLElement* item(unsigned index);
-    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
+    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
 
     String enctype() const { return m_attributes.encodingType(); }
-    WEBCORE_EXPORT void setEnctype(const AtomString&);
 
     bool shouldAutocomplete() const;
 
-    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
     WEBCORE_EXPORT const AtomString& autocomplete() const;
 
     void registerFormListedElement(FormListedElement&);
@@ -93,10 +91,8 @@ public:
     void setAcceptCharset(const String&);
 
     WEBCORE_EXPORT String action() const;
-    WEBCORE_EXPORT void setAction(const AtomString&);
-
     WEBCORE_EXPORT String method() const;
-    WEBCORE_EXPORT void setMethod(const AtomString&);
+    bool isMethodPost() const { return method() == "post"_s; }
 
     DOMTokenList& relList();
 
@@ -169,7 +165,7 @@ private:
     RefPtr<HTMLFormControlElement> findSubmitButton(HTMLFormControlElement* submitter, bool needButtonActivation);
 
     FormSubmission::Attributes m_attributes;
-    UncheckedKeyHashMap<AtomString, WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>> m_pastNamesMap;
+    HashMap<AtomString, WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>> m_pastNamesMap;
 
     RadioButtonGroups m_radioButtonGroups;
     mutable WeakPtr<HTMLFormControlElement, WeakPtrImplWithEventTargetData> m_defaultButton;
@@ -178,7 +174,8 @@ private:
     Vector<WeakPtr<HTMLImageElement, WeakPtrImplWithEventTargetData>> m_imageElements;
     WeakHashSet<HTMLElement, WeakPtrImplWithEventTargetData> m_invalidFormControls;
     WeakPtr<FormSubmission> m_plannedFormSubmission;
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
+    RefPtr<HTMLFormControlsCollection> m_controlsCollection;
 
     unsigned m_listedElementsBeforeIndex { 0 };
     unsigned m_listedElementsAfterIndex { 0 };

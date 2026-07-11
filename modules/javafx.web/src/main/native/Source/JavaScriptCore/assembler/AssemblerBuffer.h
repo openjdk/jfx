@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
 #include "ExecutableAllocator.h"
@@ -468,7 +470,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         void putIntegral(IntegralType value)
         {
             unsigned nextIndex = m_index + sizeof(IntegralType);
-            if (UNLIKELY(nextIndex > m_storage.capacity()))
+            if (nextIndex > m_storage.capacity()) [[unlikely]]
                 outOfLineGrow();
             putIntegralUnchecked<IntegralType>(value);
         }

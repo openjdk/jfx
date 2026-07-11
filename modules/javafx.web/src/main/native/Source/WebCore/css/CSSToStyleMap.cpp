@@ -178,20 +178,19 @@ void CSSToStyleMap::mapFillRepeat(CSSPropertyID propertyID, FillLayer& layer, co
 
 static inline bool convertToLengthSize(const CSSValue& value, Style::BuilderState& builderState, LengthSize& size)
 {
-    auto& conversionData = builderState.cssToLengthConversionData();
     if (value.isPair()) {
-        auto pair = Style::BuilderConverter::requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
+        auto pair = Style::requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
         if (!pair)
             return false;
-        size.width = pair->first.convertToLength<AnyConversion>(conversionData);
-        size.height = pair->second.convertToLength<AnyConversion>(conversionData);
+        size.width = Style::BuilderConverter::convertLengthOrAuto(builderState, pair->first);
+        size.height = Style::BuilderConverter::convertLengthOrAuto(builderState, pair->second);
     } else {
-        auto primitiveValue = Style::BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+        auto primitiveValue = Style::requiredDowncast<CSSPrimitiveValue>(builderState, value);
         if (!primitiveValue)
             return false;
-        size.width = primitiveValue->convertToLength<AnyConversion>(conversionData);
+        size.width = Style::BuilderConverter::convertLengthOrAuto(builderState, *primitiveValue);
     }
-    return !size.width.isUndefined() && !size.height.isUndefined();
+    return true;
 }
 
 void CSSToStyleMap::mapFillSize(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -224,17 +223,7 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setXPosition(FillLayer::initialFillXPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentX(m_builderState, value);
-
-    layer.setXPosition(length);
-    if (value.isPair())
-        layer.setBackgroundXOrigin(fromCSSValue<Edge>(value.first()));
+    layer.setXPosition(Style::toStyleFromCSSValue<Style::PositionX>(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -243,17 +232,7 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
         layer.setYPosition(FillLayer::initialFillYPosition(layer.type()));
         return;
     }
-
-    Length length;
-    if (value.isPair()) {
-        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionY || propertyID == CSSPropertyWebkitMaskPositionY);
-        length = Style::BuilderConverter::convertLength(m_builderState, value.second());
-    } else
-        length = Style::BuilderConverter::convertPositionComponentY(m_builderState, value);
-
-    layer.setYPosition(length);
-    if (value.isPair())
-        layer.setBackgroundYOrigin(fromCSSValue<Edge>(value.first()));
+    layer.setYPosition(Style::toStyleFromCSSValue<Style::PositionY>(m_builderState, value));
 }
 
 void CSSToStyleMap::mapFillMaskMode(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -406,7 +385,7 @@ void CSSToStyleMap::mapAnimationName(Animation& layer, const CSSValue& value)
         return;
 
     if (primitiveValue->valueID() == CSSValueNone)
-        layer.setIsNoneAnimation(true);
+        layer.setName(Animation::initialName());
     else
         layer.setName({ AtomString { primitiveValue->stringValue() }, m_builderState.styleScopeOrdinal(), primitiveValue->isCustomIdent() });
 }
@@ -599,10 +578,15 @@ void CSSToStyleMap::mapNinePieceImageSlice(const CSSBorderImageSliceValue& value
 {
     // Set up a length box to represent our image slices.
     auto& conversionData = m_builderState.cssToLengthConversionData();
-    auto side = [&](const CSSPrimitiveValue& value) -> Length {
-        if (value.isPercentage())
-            return { value.resolveAsPercentage(conversionData), LengthType::Percent };
-        return { value.resolveAsNumber<int>(conversionData), LengthType::Fixed };
+    auto side = [&](const CSSValue& value) -> Length {
+        RefPtr primitive = dynamicDowncast<CSSPrimitiveValue>(value);
+        if (!primitive) {
+            m_builderState.setCurrentPropertyInvalidAtComputedValueTime();
+            return { };
+        }
+        if (primitive->isPercentage())
+            return { primitive->resolveAsPercentage(conversionData), LengthType::Percent };
+        return { primitive->resolveAsNumber<int>(conversionData), LengthType::Fixed };
     };
     auto& slices = value.slices();
     image.setImageSlices({
@@ -633,7 +617,7 @@ void CSSToStyleMap::mapNinePieceImageWidth(const CSSBorderImageWidthValue& value
 
 LengthBox CSSToStyleMap::mapNinePieceImageQuad(const CSSValue& value)
 {
-    if (LIKELY(value.isQuad()))
+    if (value.isQuad()) [[likely]]
         return mapNinePieceImageQuad(value.quad());
 
     // Values coming from CSS Typed OM may not have been converted to a Quad yet.
@@ -648,7 +632,7 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(const CSSValue& value)
 
 Length CSSToStyleMap::mapNinePieceImageSide(const CSSValue& value)
 {
-    auto primitiveValue = Style::BuilderConverter::requiredDowncast<CSSPrimitiveValue>(m_builderState, value);
+    auto primitiveValue = Style::requiredDowncast<CSSPrimitiveValue>(m_builderState, value);
     if (!primitiveValue)
         return { };
     if (primitiveValue->valueID() == CSSValueAuto)

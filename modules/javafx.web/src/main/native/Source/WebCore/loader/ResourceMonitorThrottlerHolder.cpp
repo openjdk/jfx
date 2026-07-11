@@ -55,24 +55,24 @@ Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create()
 
 Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(size_t count, Seconds duration, size_t maxHosts)
 {
-    return create(SQLiteDatabase::inMemoryPath(), count, duration, maxHosts);
+    return create(emptyString(), count, duration, maxHosts);
 }
 
-Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databasePath)
+Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databaseDirectoryPath)
 {
-    return create(databasePath, ResourceMonitorThrottler::defaultThrottleAccessCount, ResourceMonitorThrottler::defaultThrottleDuration, ResourceMonitorThrottler::defaultMaxHosts);
+    return create(databaseDirectoryPath, ResourceMonitorThrottler::defaultThrottleAccessCount, ResourceMonitorThrottler::defaultThrottleDuration, ResourceMonitorThrottler::defaultMaxHosts);
 }
 
-Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databasePath, size_t count, Seconds duration, size_t maxHosts)
+Ref<ResourceMonitorThrottlerHolder> ResourceMonitorThrottlerHolder::create(const String& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts)
 {
-    return adoptRef(*new ResourceMonitorThrottlerHolder(databasePath, count, duration, maxHosts));
+    return adoptRef(*new ResourceMonitorThrottlerHolder(databaseDirectoryPath, count, duration, maxHosts));
 }
 
-ResourceMonitorThrottlerHolder::ResourceMonitorThrottlerHolder(const String& databasePath, size_t count, Seconds duration, size_t maxHosts)
+ResourceMonitorThrottlerHolder::ResourceMonitorThrottlerHolder(const String& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts)
 {
     ASSERT(isMainThread());
 
-    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, path = crossThreadCopy(databasePath), count, duration, maxHosts] mutable {
+    sharedWorkQueueSingleton()->dispatch([weakThis = ThreadSafeWeakPtr { *this }, path = crossThreadCopy(databaseDirectoryPath), count, duration, maxHosts] mutable {
         if (RefPtr protectedThis = weakThis.get())
             protectedThis->m_throttler = makeUnique<ResourceMonitorThrottler>(WTFMove(path), count, duration, maxHosts);
     });

@@ -39,6 +39,7 @@
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "SQLError.h"
@@ -52,6 +53,7 @@
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
@@ -277,7 +279,7 @@ void Database::close()
 
 void Database::performClose()
 {
-    ASSERT(databaseThread().getThread() == &Thread::current());
+    ASSERT(databaseThread().getThread() == &Thread::currentSingleton());
 
     {
         Locker locker { m_transactionInProgressLock };
@@ -552,7 +554,7 @@ bool Database::hasPendingTransaction()
     return m_transactionInProgress || !m_transactionQueue.isEmpty();
 }
 
-SQLTransactionCoordinator* Database::transactionCoordinator()
+SQLTransactionCoordinator& Database::transactionCoordinator()
 {
     return databaseThread().transactionCoordinator();
 }
@@ -684,7 +686,7 @@ void Database::runTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<
     if (!m_isTransactionQueueEnabled) {
         if (errorCallback) {
             m_document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = Ref { *errorCallback }]() {
-                errorCallback->handleEvent(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"_s));
+                errorCallback->invoke(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"_s));
             });
         }
         return;
@@ -772,7 +774,7 @@ SecurityOriginData Database::securityOrigin()
 {
     if (isMainThread())
         return m_contextThreadSecurityOrigin->data();
-    if (databaseThread().getThread() == &Thread::current())
+    if (databaseThread().getThread() == &Thread::currentSingleton())
         return m_databaseThreadSecurityOrigin->data();
     RELEASE_ASSERT_NOT_REACHED();
 }

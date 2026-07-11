@@ -63,7 +63,7 @@ static bool shouldRemoveFragmentIdentifier(const String& mediaType)
 #endif
 }
 
-static WorkQueue& decodeQueue()
+static WorkQueue& decodeQueueSingleton()
 {
     static NeverDestroyed<Ref<WorkQueue>> queue(WorkQueue::create("org.webkit.DataURLDecoder"_s, WorkQueue::QOS::UserInitiated));
     return queue.get();
@@ -114,13 +114,13 @@ public:
         // formatTypeStart might be at the begining of "base64" or "charset=...".
         size_t formatTypeStart = mediaTypeEnd + 1;
         auto formatType = header.substring(formatTypeStart, header.length() - formatTypeStart);
-        formatType = formatType.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        formatType = formatType.trim(isASCIIWhitespaceWithoutFF<char16_t>);
 
         isBase64 = equalLettersIgnoringASCIICase(formatType, "base64"_s);
 
         // If header does not end with "base64", mediaType should be the whole header.
         auto mediaType = (isBase64 ? header.left(mediaTypeEnd) : header).toString();
-        mediaType = mediaType.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        mediaType = mediaType.trim(isASCIIWhitespaceWithoutFF<char16_t>);
         if (mediaType.startsWith(';'))
             mediaType = makeString("text/plain"_s, mediaType);
 
@@ -177,7 +177,7 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, ShouldValida
 {
     ASSERT(url.protocolIsData());
 
-    decodeQueue().dispatch([decodeTask = createDecodeTask(url, scheduleContext, shouldValidatePadding, WTFMove(completionHandler))]() mutable {
+    decodeQueueSingleton().dispatch([decodeTask = createDecodeTask(url, scheduleContext, shouldValidatePadding, WTFMove(completionHandler))]() mutable {
         auto result = decodeSynchronously(*decodeTask);
 
 #if USE(COCOA_EVENT_LOOP) && !PLATFORM(JAVA)
@@ -191,7 +191,7 @@ void decode(const URL& url, const ScheduleContext& scheduleContext, ShouldValida
 #if USE(COCOA_EVENT_LOOP) && !PLATFORM(JAVA)
         RunLoop::dispatch(scheduledPairs, WTFMove(callCompletionHandler));
 #else
-        RunLoop::protectedMain()->dispatch(WTFMove(callCompletionHandler));
+        RunLoop::mainSingleton().dispatch(WTFMove(callCompletionHandler));
 #endif
     });
 }

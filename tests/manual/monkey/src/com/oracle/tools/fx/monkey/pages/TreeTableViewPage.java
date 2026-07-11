@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
@@ -56,6 +57,7 @@ import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.TableColumnPropertySheet;
 import com.oracle.tools.fx.monkey.util.ColumnBuilder;
+import com.oracle.tools.fx.monkey.util.ContextMenuOptions;
 import com.oracle.tools.fx.monkey.util.DataRow;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
@@ -83,13 +85,11 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
             }
         };
 
-        Button addDataItemButton = FX.button("Add Data Item", this::addDataItem);
-        addDataItemButton.setDisable(true); // FIX
-
-        Button clearDataItemsButton = FX.button("Clear Data Items", () -> {
+        Button clearDataItemsButton = FX.button("Clear", () -> {
             control.setRoot(new TreeItem(null));
             control.setShowRoot(false);
         });
+        FX.tooltip(clearDataItemsButton, "Clear Data Items");
 
         Button refresh = FX.button("Refresh", () -> {
             control.refresh();
@@ -103,20 +103,32 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         op.option("Fixed Cell Size:", Options.fixedSizeOption("fixedCellSize", control.fixedCellSizeProperty()));
         op.option("Focus Model:", createFocusModelOptions("focusModel", control.focusModelProperty()));
         op.option("Placeholder:", Options.placeholderNode("placeholder", control.placeholderProperty()));
-        op.option("Root:", createRootOptions("root", control.rootProperty()));
-        op.option(Utils.buttons(addDataItemButton, clearDataItemsButton));
+        op.option("Root:", Utils.withButtons(createRootOptions("root", control.rootProperty()), clearDataItemsButton));
         op.option("Row Factory:", createRowFactoryOptions("rowFactory", control.rowFactoryProperty()));
         op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
         op.option(new BooleanOption("showRoot", "show root", control.showRootProperty()));
         op.option("Sort Mode:", new EnumOption("sortMode", TreeSortMode.class, control.sortModeProperty()));
-        op.option("Sort Policy: TODO", null); // TODO
+        op.option("Sort Policy:", createSortPolicyOptions("sortPolicy", control.sortPolicyProperty()));
         op.option(new BooleanOption("tableMenuButtonVisible", "table menu button visible", control.tableMenuButtonVisibleProperty()));
         op.separator();
         op.option(refresh);
-        ControlPropertySheet.appendTo(op, control);
+        ControlPropertySheet.appendTo(op, control, contextMenuOptions("contextMenu"));
 
         setContent(control);
         setOptions(op);
+    }
+
+    private ContextMenuOptions contextMenuOptions(String name) {
+        ContextMenuOptions c = new ContextMenuOptions(name, control);
+        c.addChoiceSupplier("Data Manipulation", () -> {
+            ContextMenu m = new ContextMenu();
+            FX.item(m, "Add After", this::addAfter);
+            FX.item(m, "Add Child", this::addChild);
+            FX.separator(m);
+            FX.item(m, "Remove Item", this::removeItem);
+            return m;
+        });
+        return c;
     }
 
     private ContextMenu createPopupMenu(TreeTableColumn<?,?> tc) {
@@ -297,6 +309,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoice("AUTO_RESIZE_SUBSEQUENT_COLUMNS", TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         s.addChoice("UNCONSTRAINED_RESIZE_POLICY", TreeTableView.UNCONSTRAINED_RESIZE_POLICY);
         s.addChoice("user defined, equal width", new UserDefinedResizePolicy());
+        s.setPrefWidth(100);
         return s;
     }
 
@@ -358,14 +371,79 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         ObjectOption<TreeItem<DataRow>> s = new ObjectOption(name, p);
         s.addChoiceSupplier("1 Row", mk(false, 1));
         s.addChoiceSupplier("10 Rows", mk(false, 10));
-        s.addChoiceSupplier("1_000 Rows", mk(false, 1_000));
+        s.addChoiceSupplier("1,000 Rows", mk(false, 1_000));
+        s.addChoiceSupplier("10,000 Rows", mk(false, 10_000));
+        s.addChoiceSupplier("100,000 Rows", mk(false, 100_000));
         s.addChoiceSupplier("null value + 5 Rows", mk(true, 5));
         s.addChoiceSupplier("null value + 15 Rows", mk(true, 15));
         s.addChoice("<null>", null);
+        s.setPrefWidth(70);
         return s;
     }
 
-    private void addDataItem() {
-        // TODO
+    private void addAfter() {
+        control.getSelectionModel().getSelectedItems().forEach((item) -> {
+            var p = item.getParent();
+            if (p != null) {
+                var items = p.getChildren();
+                int ix = items.indexOf(item);
+                items.add(ix + 1, new TreeItem<>(new DataRow()));
+            }
+        });
+    }
+
+    private void addChild() {
+        control.getSelectionModel().getSelectedItems().forEach((item) -> {
+            item.getChildren().add(new TreeItem<>(new DataRow()));
+            item.setExpanded(true);
+        });
+    }
+
+    private void removeItem() {
+        List.copyOf(control.getSelectionModel().getSelectedItems()).forEach((item) -> {
+            var p = item.getParent();
+            if (p != null) {
+                p.getChildren().remove(item);
+            }
+        });
+    }
+
+    private Node createSortPolicyOptions(String name, ObjectProperty<Callback<TreeTableView<DataRow>, Boolean>> p) {
+        Callback<TreeTableView<DataRow>, Boolean> defaultValue = p.get();
+        ObjectOption<Callback<TreeTableView<DataRow>, Boolean>> s = new ObjectOption<>(name, p);
+        s.addChoice("<default>", defaultValue);
+        s.addChoice("String Sorting", new Callback<TreeTableView<DataRow>, Boolean>() {
+            @Override
+            public Boolean call(TreeTableView<DataRow> table) {
+                List<TreeTableColumn<DataRow, ?>> order = table.getSortOrder();
+                if (order.isEmpty()) {
+                    return Boolean.TRUE;
+                }
+                TreeTableColumn<DataRow, ?> tc = order.get(0);
+
+                FXCollections.sort(table.getRoot().getChildren(), new Comparator<TreeItem<DataRow>>() {
+                    @Override
+                    public int compare(TreeItem<DataRow> a, TreeItem<DataRow> b) {
+                        Object va = a.getValue().getValue(tc);
+                        Object vb = b.getValue().getValue(tc);
+                        int d = compareValues(va, vb);
+                        if (d != 0) {
+                            return tc.getSortType() == TreeTableColumn.SortType.ASCENDING ? d : -d;
+                        }
+                        return 0;
+                    }
+
+                    private int compareValues(Object a, Object b) {
+                        String sa = (a == null) ? "" : a.toString();
+                        String sb = (b == null) ? "" : b.toString();
+                        return sa.compareTo(sb);
+                    }
+                });
+                return Boolean.TRUE;
+            }
+        });
+        s.addChoice("<null>", null);
+        s.selectFirst();
+        return s;
     }
 }

@@ -90,28 +90,28 @@ float DynamicsCompressor::parameterValue(unsigned parameterID)
     return m_parameters[parameterID];
 }
 
-void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinationBus, unsigned framesToProcess)
+void DynamicsCompressor::process(const AudioBus& sourceBus, AudioBus& destinationBus, unsigned framesToProcess)
 {
     // Though numberOfChannels is retrived from destinationBus, we still name it numberOfChannels instead of numberOfDestinationChannels.
     // It's because we internally match sourceChannels's size to destinationBus by channel up/down mix. Thus we need numberOfChannels
     // to do the loop work for both m_sourceChannels and m_destinationChannels.
 
-    unsigned numberOfChannels = destinationBus->numberOfChannels();
-    unsigned numberOfSourceChannels = sourceBus->numberOfChannels();
+    unsigned numberOfChannels = destinationBus.numberOfChannels();
+    unsigned numberOfSourceChannels = sourceBus.numberOfChannels();
 
     ASSERT(numberOfChannels == m_numberOfChannels && numberOfSourceChannels);
 
     if (numberOfChannels != m_numberOfChannels || !numberOfSourceChannels) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     switch (numberOfChannels) {
     case 2: // stereo
-        m_sourceChannels[0] = sourceBus->channel(0)->span();
+        m_sourceChannels[0] = sourceBus.channel(0)->span();
 
         if (numberOfSourceChannels > 1)
-            m_sourceChannels[1] = sourceBus->channel(1)->span();
+            m_sourceChannels[1] = sourceBus.channel(1)->span();
         else
             // Simply duplicate mono channel input data to right channel for stereo processing.
             m_sourceChannels[1] = m_sourceChannels[0];
@@ -120,12 +120,12 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
     default:
         // FIXME : support other number of channels.
         ASSERT_NOT_REACHED();
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     for (unsigned i = 0; i < numberOfChannels; ++i)
-        m_destinationChannels[i] = destinationBus->channel(i)->mutableSpan();
+        m_destinationChannels[i] = destinationBus.channel(i)->mutableSpan();
 
     float dbThreshold = parameterValue(ParamThreshold);
     float dbKnee = parameterValue(ParamKnee);

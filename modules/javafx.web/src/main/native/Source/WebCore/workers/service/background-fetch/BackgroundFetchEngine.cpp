@@ -103,7 +103,7 @@ void BackgroundFetchEngine::startBackgroundFetch(SWServerRegistration& registrat
 void BackgroundFetchEngine::notifyBackgroundFetchUpdate(BackgroundFetch& fetch)
 {
     auto information = fetch.information();
-    auto* registration = m_server->getRegistration(information.registrationIdentifier);
+    RefPtr registration = m_server->getRegistration(information.registrationIdentifier);
     if (!registration)
         return;
 
@@ -251,7 +251,7 @@ void BackgroundFetchEngine::remove(SWServerRegistration& registration)
 
 void BackgroundFetchEngine::retrieveRecordResponse(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseCallback&& callback)
 {
-    auto record = m_records.get(recordIdentifier);
+    RefPtr record = m_records.get(recordIdentifier);
     if (!record) {
         callback(makeUnexpected(ExceptionData { ExceptionCode::InvalidStateError, "Record not found"_s }));
         return;
@@ -261,7 +261,7 @@ void BackgroundFetchEngine::retrieveRecordResponse(BackgroundFetchRecordIdentifi
 
 void BackgroundFetchEngine::retrieveRecordResponseBody(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseBodyCallback&& callback)
 {
-    auto record = m_records.get(recordIdentifier);
+    RefPtr record = m_records.get(recordIdentifier);
     if (!record) {
         callback(makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, { }, "Record not found"_s }));
         return;
@@ -294,13 +294,13 @@ void BackgroundFetchEngine::addFetchFromStore(std::span<const uint8_t> data, Com
 
 void BackgroundFetchEngine::abortBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    if (auto *registration = m_server ? m_server->getRegistration(key) : nullptr)
+    if (RefPtr registration = m_server ? m_server->getRegistration(key) : nullptr)
         abortBackgroundFetch(*registration, identifier, [](auto) { });
 }
 
 void BackgroundFetchEngine::pauseBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr registration = m_server ? m_server->getRegistration(key) : nullptr;
     if (!registration)
         return;
 
@@ -318,7 +318,7 @@ void BackgroundFetchEngine::pauseBackgroundFetch(const ServiceWorkerRegistration
 
 void BackgroundFetchEngine::resumeBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr registration = m_server ? m_server->getRegistration(key) : nullptr;
     if (!registration)
         return;
 
@@ -338,7 +338,7 @@ void BackgroundFetchEngine::resumeBackgroundFetch(const ServiceWorkerRegistratio
 
 void BackgroundFetchEngine::clickBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& backgroundFetchIdentifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr registration = m_server ? m_server->getRegistration(key) : nullptr;
     if (!registration)
         return;
 

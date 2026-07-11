@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "BiquadFilterNode.h"
+#include "ExceptionOr.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/TZoneMallocInlines.h>
 

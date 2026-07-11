@@ -67,7 +67,7 @@ private:
         struct DynamicContext {
             const MQ::MediaQueryList& queries;
             Vector<size_t> affectedRulePositions { };
-            UncheckedKeyHashSet<Ref<const StyleRule>> affectedRules { };
+            HashSet<Ref<const StyleRule>> affectedRules { };
         };
         Vector<DynamicContext> dynamicContextStack { };
 
@@ -85,7 +85,7 @@ private:
     const ShrinkToFit m_shrinkToFit { ShrinkToFit::Enable };
 
     CascadeLayerName m_resolvedCascadeLayerName;
-    UncheckedKeyHashMap<CascadeLayerName, RuleSet::CascadeLayerIdentifier> m_cascadeLayerIdentifierMap;
+    HashMap<CascadeLayerName, RuleSet::CascadeLayerIdentifier> m_cascadeLayerIdentifierMap;
     RuleSet::CascadeLayerIdentifier m_currentCascadeLayerIdentifier { 0 };
     Vector<const CSSSelectorList*> m_selectorListStack;
     Vector<CSSParserEnum::NestedContextType> m_ancestorStack;

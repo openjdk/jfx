@@ -35,6 +35,7 @@
 #include "PropertyAllowlist.h"
 #include "StyleBuilderGenerated.h"
 #include "StylePropertyShorthand.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -42,12 +43,17 @@ namespace Style {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PropertyCascade);
 
-PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedProperties)
+PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, IncludedProperties&& includedProperties, const HashSet<AnimatableCSSProperty>* animatedProperties, const StyleProperties* positionTryFallbackProperties)
     : m_matchResult(matchResult)
-    , m_includedProperties(includedProperties)
+    , m_includedProperties(WTFMove(includedProperties))
     , m_maximumCascadeLevel(maximumCascadeLevel)
     , m_animationLayer(animatedProperties ? std::optional { AnimationLayer { *animatedProperties } } : std::nullopt)
 {
+    ASSERT(!m_includedProperties.isEmpty());
+
+    if (positionTryFallbackProperties)
+        m_positionTryFallbackProperties = MatchedProperties { *positionTryFallbackProperties };
+
     buildCascade();
 }
 
@@ -58,16 +64,17 @@ PropertyCascade::PropertyCascade(const PropertyCascade& parent, CascadeLevel max
     , m_rollbackScope(rollbackScope)
     , m_maximumCascadeLayerPriorityForRollback(maximumCascadeLayerPriorityForRollback)
     , m_animationLayer(parent.m_animationLayer)
+    , m_positionTryFallbackProperties(parent.m_positionTryFallbackProperties)
 {
     buildCascade();
 }
 
 PropertyCascade::~PropertyCascade() = default;
 
-PropertyCascade::AnimationLayer::AnimationLayer(const UncheckedKeyHashSet<AnimatableCSSProperty>& properties)
+PropertyCascade::AnimationLayer::AnimationLayer(const HashSet<AnimatableCSSProperty>& properties)
     : properties(properties)
 {
-    hasCustomProperties = std::find_if(properties.begin(), properties.end(), [](auto& property) {
+    hasCustomProperties = std::ranges::find_if(properties, [](auto& property) {
         return std::holds_alternative<AtomString>(property);
     }) != properties.end();
 
@@ -86,6 +93,9 @@ void PropertyCascade::buildCascade()
         if (hasImportant)
             cascadeLevelsWithImportant.add(cascadeLevel);
     }
+
+    if (m_positionTryFallbackProperties)
+        addPositionTryFallbackProperties();
 
     for (auto cascadeLevel : { CascadeLevel::Author, CascadeLevel::User, CascadeLevel::UserAgent }) {
         if (!cascadeLevelsWithImportant.contains(cascadeLevel))
@@ -168,6 +178,18 @@ bool PropertyCascade::hasProperty(CSSPropertyID propertyID, const CSSValue& valu
     return propertyID < firstLogicalGroupProperty ? hasNormalProperty(propertyID) : hasLogicalGroupProperty(propertyID);
 }
 
+bool PropertyCascade::mayOverrideExistingProperty(CSSPropertyID propertyID, const CSSValue& value)
+{
+    if (propertyID == CSSPropertyCustom)
+        return hasCustomProperty(downcast<CSSCustomPropertyValue>(value).name());
+    if (propertyID < firstLogicalGroupProperty)
+        return hasNormalProperty(propertyID);
+
+    // Apply all logical group properties if we have applied any. They may override the ones we already applied.
+    // FIXME: This could check if any existing properties are actually in the same group.
+    return !!m_lastIndexForLogicalGroup;
+}
+
 const PropertyCascade::Property* PropertyCascade::lastPropertyResolvingLogicalPropertyPair(CSSPropertyID propertyID, WritingMode writingMode) const
 {
     ASSERT(CSSProperty::isInLogicalPropertyGroup(propertyID));
@@ -204,7 +226,7 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
     if (m_maximumCascadeLayerPriorityForRollback && !includePropertiesForRollback())
         return false;
 
-    if (matchedProperties.isStartingStyle == IsStartingStyle::Yes && !m_includedProperties.contains(PropertyType::StartingStyle))
+    if (matchedProperties.isStartingStyle == IsStartingStyle::Yes && !m_includedProperties.types.contains(PropertyType::StartingStyle))
         return false;
 
     auto propertyAllowlist = matchedProperties.allowlistType;
@@ -230,17 +252,20 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
         if (propertyAllowlist == PropertyAllowlist::Marker && !isValidMarkerStyleProperty(propertyID))
                 return false;
 
-            if (m_includedProperties.containsAll(normalProperties()))
+            if (m_includedProperties.types.containsAll(normalPropertyTypes()))
                 return true;
 
-            if (matchedProperties.isCacheable == IsCacheable::Partially && m_includedProperties.contains(PropertyType::NonCacheable))
+            if (m_includedProperties.ids.contains(propertyID))
+                return true;
+
+            if (matchedProperties.isCacheable == IsCacheable::Partially && m_includedProperties.types.contains(PropertyType::NonCacheable))
                 return true;
 
             // If we have applied this property for some reason already we must apply anything that overrides it.
-            if (hasProperty(propertyID, *current.value()))
+            if (mayOverrideExistingProperty(propertyID, *current.value()))
                 return true;
 
-            if (m_includedProperties.containsAny({ PropertyType::AfterAnimation, PropertyType::AfterTransition })) {
+            if (m_includedProperties.types.containsAny({ PropertyType::AfterAnimation, PropertyType::AfterTransition })) {
                 if (shouldApplyAfterAnimation(current)) {
                     m_animationLayer->overriddenProperties.add(propertyID);
                     return true;
@@ -249,15 +274,11 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
             }
 
             bool currentIsInherited = CSSProperty::isInheritedProperty(current.id());
-            if (m_includedProperties.contains(PropertyType::Inherited) && currentIsInherited)
+            if (m_includedProperties.types.contains(PropertyType::Inherited) && currentIsInherited)
                 return true;
-            if (m_includedProperties.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
+            if (m_includedProperties.types.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
                 return true;
-            if (m_includedProperties.contains(PropertyType::NonInherited) && !currentIsInherited)
-                return true;
-
-            // Apply all logical group properties if we have applied any. They may override the ones we already applied.
-            if (propertyID >= firstLogicalGroupProperty && m_lastIndexForLogicalGroup)
+            if (m_includedProperties.types.contains(PropertyType::NonInherited) && !currentIsInherited)
                 return true;
 
             return false;
@@ -291,13 +312,13 @@ bool PropertyCascade::shouldApplyAfterAnimation(const StyleProperties::PropertyR
     if (isAnimatedProperty) {
         // "Important declarations from all origins take precedence over animations."
         // https://drafts.csswg.org/css-cascade-5/#importance
-        return m_includedProperties.contains(PropertyType::AfterAnimation) && property.isImportant();
+        return m_includedProperties.types.contains(PropertyType::AfterAnimation) && property.isImportant();
     }
 
     // If we are animating custom properties they may affect other properties so we need to re-resolve them.
     if (m_animationLayer->hasCustomProperties) {
         // We could check if the we are actually animating the referenced variable. Indirect cases would need to be taken into account.
-        if (customProperty && !customProperty->isResolved())
+        if (customProperty && customProperty->isVariableReference())
             return true;
         if (property.value()->hasVariableReferences())
             return true;
@@ -313,6 +334,22 @@ bool PropertyCascade::shouldApplyAfterAnimation(const StyleProperties::PropertyR
     }
 
     return false;
+}
+
+void PropertyCascade::addPositionTryFallbackProperties()
+{
+    ASSERT(m_positionTryFallbackProperties);
+
+    // "All of the properties in a @position-try are applied to the box as part of the Position Fallback Origin,
+    // a new cascade origin that lies between the Author Origin and the Animation Origin"
+    // https://drafts.csswg.org/css-anchor-position-1/#fallback-rule
+    // FIXME: Use own cascade origin. This matters for revert-layer.
+    if (m_maximumCascadeLevel < CascadeLevel::Author)
+        return;
+
+    // "It is invalid to use !important on the properties in the <declaration-list>."
+    // FIXME: "Doing so causes the property it is used on to become invalid."
+    addMatch(*m_positionTryFallbackProperties, CascadeLevel::Author, IsImportant::No);
 }
 
 static auto& declarationsForCascadeLevel(const MatchResult& matchResult, CascadeLevel cascadeLevel)
@@ -374,7 +411,7 @@ void PropertyCascade::addImportantMatches(CascadeLevel cascadeLevel)
 
     if (hasMatchesFromOtherScopesOrLayers) {
         // Match results are sorted in reverse tree context order so this is not needed for normal properties.
-        std::stable_sort(importantMatches.begin(), importantMatches.end(), [] (auto& a, auto& b) {
+        std::ranges::stable_sort(importantMatches, [](auto& a, auto& b) {
             // For !important properties a later shadow tree wins.
             if (a.ordinal != b.ordinal)
                 return a.ordinal < b.ordinal;
@@ -399,12 +436,12 @@ void PropertyCascade::sortLogicalGroupPropertyIDs()
     }
     m_seenLogicalGroupPropertyCount = endIndex;
     auto logicalGroupPropertyIDs = std::span { m_logicalGroupPropertyIDs }.first(endIndex);
-    std::sort(logicalGroupPropertyIDs.begin(), logicalGroupPropertyIDs.end(), [&](auto id1, auto id2) {
+    std::ranges::sort(logicalGroupPropertyIDs, [&](auto id1, auto id2) {
         return logicalGroupPropertyIndex(id1) < logicalGroupPropertyIndex(id2);
     });
 }
 
-const UncheckedKeyHashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
+const HashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
 {
     if (m_animationLayer)
         return m_animationLayer->overriddenProperties;

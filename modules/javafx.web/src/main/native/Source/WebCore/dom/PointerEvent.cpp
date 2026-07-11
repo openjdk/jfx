@@ -30,6 +30,7 @@
 #include "MouseEventTypes.h"
 #include "Node.h"
 #include "PointerEventTypeNames.h"
+#include <numbers>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -102,7 +103,7 @@ auto PointerEvent::angleFromTilt(long tiltX, long tiltY) -> PointerEventAngle
     if (!tiltX && tiltY)
         azimuthAngle = tiltY > 0 ? piOverTwoDouble : 3 * piOverTwoDouble;
     else if (tiltX && !tiltY)
-        azimuthAngle = tiltX < 0 ? piDouble : azimuthAngle;
+        azimuthAngle = tiltX < 0 ? std::numbers::pi : azimuthAngle;
     else if (abs(tiltX) == 90 || abs(tiltY) == 90)
         azimuthAngle = 0;
     else {

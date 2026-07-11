@@ -61,7 +61,7 @@ public:
     void setPageOverlayNeedsDisplay(PageOverlay&, const IntRect&);
     void setPageOverlayOpacity(PageOverlay&, float);
     void clearPageOverlay(PageOverlay&);
-    GraphicsLayer& layerForOverlay(PageOverlay&) const;
+    GraphicsLayer& layerForOverlay(const PageOverlay&) const;
 
     void didChangeViewSize();
     void didChangeDocumentSize();

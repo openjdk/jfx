@@ -26,10 +26,16 @@
 namespace WebCore {
 namespace Style {
 
+struct UnadjustedStyle {
+    std::unique_ptr<RenderStyle> style;
+    std::unique_ptr<Relations> relations { };
+    RefPtr<const MatchResult> matchResult { };
+};
+
 struct ResolvedStyle {
     std::unique_ptr<RenderStyle> style;
     std::unique_ptr<Relations> relations { };
-    std::unique_ptr<MatchResult> matchResult { };
+    RefPtr<const MatchResult> matchResult { };
 };
 
 } // namespace Style

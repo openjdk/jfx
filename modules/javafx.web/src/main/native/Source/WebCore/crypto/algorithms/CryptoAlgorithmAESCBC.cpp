@@ -30,6 +30,7 @@
 #include "CryptoAlgorithmAesCbcCfbParams.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {

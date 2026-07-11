@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,10 +34,8 @@
 #include "BlobResourceHandle.h"
 
 #include "AsyncFileStream.h"
-#include "BlobData.h"
 #include "FileStream.h"
 #include "HTTPHeaderNames.h"
-#include "HTTPParsers.h"
 #include "ParsedContentRange.h"
 #include "ResourceError.h"
 #include "ResourceHandleClient.h"
@@ -117,8 +116,8 @@ void BlobResourceSynchronousLoader::didReceiveResponseAsync(ResourceHandle* hand
     m_response = response;
 
     // Read all the data.
-    m_data.resize(static_cast<size_t>(response.expectedContentLength()));
-    static_cast<BlobResourceHandle*>(handle)->readSync(m_data.mutableSpan());
+    m_data.resize(static_cast<uint64_t>(response.expectedContentLength()));
+    downcast<BlobResourceHandle>(*handle).readSync(m_data.mutableSpan());
     completionHandler();
 }
 
@@ -127,6 +126,37 @@ void BlobResourceSynchronousLoader::didFail(ResourceHandle*, const ResourceError
     m_error = error;
 }
 
+}
+
+BlobResourceHandleBase::BlobResourceHandleBase(RefPtr<BlobData>&& blobData)
+    : m_blobData(WTFMove(blobData))
+{
+}
+
+auto BlobResourceHandleBase::adjustAndValidateRangeBounds() -> std::optional<Error>
+{
+    if (!m_range->start) {
+        if (!m_range->end)
+            return Error::RangeError;
+        // m_range->end indicates the last bytes to read.
+        if (*m_range->end > m_totalSize) {
+            m_range->start = 0;
+            m_range->end = m_totalSize ? (m_totalSize - 1) : 0;
+        } else {
+            m_range->start = m_totalSize - *m_range->end;
+            m_range->end = *m_range->start + *m_range->end - 1;
+        }
+    } else {
+        if (*m_range->start >= m_totalSize)
+            return Error::RangeError;
+        if (m_range->end && *m_range->start > *m_range->end)
+            return Error::RangeError;
+        if (!m_range->end || *m_range->end >= m_totalSize)
+            m_range->end = m_totalSize ? (m_totalSize - 1) : 0;
+        else
+            m_range->end = *m_range->end;
+    }
+    return { };
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -150,8 +180,8 @@ void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const Res
 }
 
 BlobResourceHandle::BlobResourceHandle(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
-    : ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, ContentEncodingSniffingPolicy::Default, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
-    , m_blobData { blobData }
+    : BlobResourceHandleBase(blobData)
+    , ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, ContentEncodingSniffingPolicy::Default, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
     , m_async { async }
 {
     if (m_async)
@@ -206,11 +236,13 @@ void BlobResourceHandle::doStart()
     }
 
     // Parse the "Range" header we care about.
-    String range = firstRequest().httpHeaderField(HTTPHeaderName::Range);
-    m_isRangeRequest = !range.isNull();
-    if (m_isRangeRequest && !parseRange(range, RangeAllowWhitespace::Yes, m_rangeStart, m_rangeEnd)) {
+    if (String range = firstRequest().httpHeaderField(HTTPHeaderName::Range); !range.isNull()) {
+        m_range = parseRange(range, RangeAllowWhitespace::Yes);
+        if (!m_range) {
         notifyFail(Error::RangeError);
         return;
+    }
+        m_isRangeRequest = true;
     }
 
     if (m_async)
@@ -219,6 +251,11 @@ void BlobResourceHandle::doStart()
         Ref<BlobResourceHandle> protectedThis(*this); // getSizeForNext calls the client
         for (size_t i = 0; i < m_blobData->items().size() && !erroredOrAborted(); ++i)
             getSizeForNext();
+
+        if (auto error = seek()) {
+            notifyFail(*error);
+            return;
+        }
         notifyResponse();
     }
 }
@@ -245,13 +282,15 @@ void BlobResourceHandle::getSizeForNext()
     case BlobDataItem::Type::Data:
         didGetSize(item.length());
         break;
-    case BlobDataItem::Type::File:
+    case BlobDataItem::Type::File: {
         // Files know their sizes, but asking the stream to verify that the file wasn't modified.
+        RefPtr file = item.file();
         if (m_async)
-            m_asyncStream->getSize(item.file()->path(), item.file()->expectedModificationTime());
+            m_asyncStream->getSize(file->path(), file->expectedModificationTime());
         else
-            didGetSize(m_stream->getSize(item.file()->path(), item.file()->expectedModificationTime()));
+            didGetSize(m_stream->getSize(file->path(), file->expectedModificationTime()));
         break;
+    }
     default:
         ASSERT_NOT_REACHED();
     }
@@ -274,52 +313,46 @@ void BlobResourceHandle::didGetSize(long long size)
 
     // The size passed back is the size of the whole file. If the underlying item is a sliced file, we need to use the slice length.
     const BlobDataItem& item = m_blobData->items().at(m_sizeItemCount);
-    size = item.length();
+    uint64_t updatedSize = static_cast<uint64_t>(item.length());
 
     // Cache the size.
-    m_itemLengthList.append(size);
+    m_itemLengthList.append(updatedSize);
 
     // Count the size.
-    m_totalSize += size;
-    m_totalRemainingSize += size;
-    m_sizeItemCount++;
+    m_totalSize += updatedSize;
+    m_totalRemainingSize += updatedSize;
+    ++m_sizeItemCount;
 
     // Continue with the next item.
     getSizeForNext();
 }
 
-auto BlobResourceHandle::seek() -> std::optional<Error>
+auto BlobResourceHandleBase::seek() -> std::optional<Error>
 {
     ASSERT(isMainThread());
 
     // Bail out if the range is not provided.
     if (!m_isRangeRequest)
-        return std::nullopt;
+        return { };
 
-    // Adjust m_rangeStart / m_rangeEnd
-    if (m_rangeStart == kPositionNotSpecified) {
-        m_rangeStart = m_totalSize - m_rangeEnd;
-        m_rangeEnd = m_rangeStart + m_rangeEnd - 1;
-    } else {
-        if (m_rangeStart >= m_totalSize)
-            return Error::RangeError;
-        if (m_rangeEnd == kPositionNotSpecified || m_rangeEnd >= m_totalSize)
-            m_rangeEnd = m_totalSize - 1;
-    }
+    if (auto error = adjustAndValidateRangeBounds())
+        return error;
 
     // Skip the initial items that are not in the range.
-    long long offset = m_rangeStart;
-    for (m_readItemCount = 0; m_readItemCount < m_blobData->items().size() && offset >= m_itemLengthList[m_readItemCount]; ++m_readItemCount)
+    Checked<uint64_t> offset = *m_range->start;
+    for (m_readItemCount = 0; m_readItemCount < m_blobData->items().size() && offset.value() >= m_itemLengthList[m_readItemCount]; ++m_readItemCount)
         offset -= m_itemLengthList[m_readItemCount];
 
     // Set the offset that need to jump to for the first item in the range.
-    m_currentItemReadSize = offset;
+    m_currentItemReadSize = offset.value();
 
     // Adjust the total remaining size in order not to go beyond the range.
-    long long rangeSize = m_rangeEnd - m_rangeStart + 1;
-        if (m_totalRemainingSize > rangeSize)
-            m_totalRemainingSize = rangeSize;
-    return std::nullopt;
+    Checked<uint64_t> rangeSize = *m_range->end;
+    rangeSize -= *m_range->start;
+    rangeSize += 1uz;
+    if (m_totalRemainingSize > rangeSize.value())
+        m_totalRemainingSize = rangeSize.value();
+    return { };
 }
 
 int BlobResourceHandle::readSync(std::span<uint8_t> buffer)
@@ -330,7 +363,7 @@ int BlobResourceHandle::readSync(std::span<uint8_t> buffer)
     Ref<BlobResourceHandle> protectedThis(*this);
 
     int offset = 0;
-    size_t remaining = buffer.size();
+    uint64_t remaining = buffer.size();
     while (remaining) {
         // Do not continue if the request is aborted or an error occurs.
         if (erroredOrAborted())
@@ -376,14 +409,14 @@ int BlobResourceHandle::readDataSync(const BlobDataItem& item, std::span<uint8_t
 
     ASSERT(!m_async);
 
-    long long remaining = item.length() - m_currentItemReadSize;
-    long long bytesToRead = std::min(std::min<long long>(remaining, buffer.size()), m_totalRemainingSize);
-    memcpySpan(buffer, item.data()->span().subspan(item.offset() + m_currentItemReadSize).first(bytesToRead));
+    uint64_t remaining = item.length() - m_currentItemReadSize;
+    uint64_t bytesToRead = std::min(std::min<uint64_t>(remaining, buffer.size()), m_totalRemainingSize);
+    memcpySpan(buffer, item.protectedData()->span().subspan(item.offset() + m_currentItemReadSize).first(bytesToRead));
     m_totalRemainingSize -= bytesToRead;
 
     m_currentItemReadSize += bytesToRead;
-    if (m_currentItemReadSize == item.length()) {
-        m_readItemCount++;
+    if (m_currentItemReadSize == static_cast<uint64_t>(item.length())) {
+        ++m_readItemCount;
         m_currentItemReadSize = 0;
     }
 
@@ -397,10 +430,10 @@ int BlobResourceHandle::readFileSync(const BlobDataItem& item, std::span<uint8_t
     ASSERT(!m_async);
 
     if (!m_fileOpened) {
-        long long bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
+        auto bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
         if (bytesToRead > m_totalRemainingSize)
             bytesToRead = m_totalRemainingSize;
-        bool success = m_stream->openForRead(item.file()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
+        bool success = m_stream->openForRead(item.protectedFile()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
         m_currentItemReadSize = 0;
         if (!success) {
             m_errorCode = Error::NotReadableError;
@@ -409,11 +442,8 @@ int BlobResourceHandle::readFileSync(const BlobDataItem& item, std::span<uint8_t
 
         m_fileOpened = true;
     }
-#if !PLATFORM(JAVA)
+
     int bytesRead = m_stream->read(buffer);
-#else
-    int bytesRead = m_stream->read(buffer.data(), buffer.size());
-#endif
     if (bytesRead < 0) {
         m_errorCode = Error::NotReadableError;
         return 0;
@@ -458,12 +488,12 @@ void BlobResourceHandle::readDataAsync(const BlobDataItem& item)
 
     Ref<BlobResourceHandle> protectedThis(*this);
 
-    long long bytesToRead = item.length() - m_currentItemReadSize;
-    ASSERT(bytesToRead >= 0);
+    ASSERT(m_currentItemReadSize <= static_cast<uint64_t>(item.length()));
+    uint64_t bytesToRead = static_cast<uint64_t>(item.length()) - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = m_totalRemainingSize;
 
-    auto data = item.data()->span().subspan(item.offset() + m_currentItemReadSize, bytesToRead);
+    auto data = item.protectedData()->span().subspan(item.offset() + m_currentItemReadSize, bytesToRead);
     m_currentItemReadSize = 0;
 
     consumeData(data);
@@ -474,18 +504,14 @@ void BlobResourceHandle::readFileAsync(const BlobDataItem& item)
     ASSERT(isMainThread());
 
     if (m_fileOpened) {
-#if !PLATFORM(JAVA)
         m_asyncStream->read(m_buffer.mutableSpan());
-#else
-    m_asyncStream->read(m_buffer.data(), m_buffer.size());
-#endif
         return;
     }
 
-    long long bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
+    uint64_t bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    m_asyncStream->openForRead(item.file()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
+    m_asyncStream->openForRead(item.protectedFile()->path(), item.offset() + m_currentItemReadSize, bytesToRead);
     m_fileOpened = true;
     m_currentItemReadSize = 0;
 }
@@ -575,7 +601,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
 {
     ASSERT(isMainThread());
 
-    ResourceResponse response(firstRequest().url(), extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
+    ResourceResponse response(URL { firstRequest().url() }, extractMIMETypeFromMediaType(m_blobData->contentType()), m_totalRemainingSize, String());
     response.setHTTPStatusCode(m_isRangeRequest ? httpPartialContent : httpOK);
     response.setHTTPStatusText(m_isRangeRequest ? httpPartialContentText : httpOKText);
 
@@ -585,7 +611,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     addPolicyContainerHeaders(response, m_blobData->policyContainer());
 
     if (m_isRangeRequest)
-        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeStart, m_rangeEnd, m_totalSize).headerValue());
+        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(*m_range->start, *m_range->end, m_totalSize).headerValue());
 
     // FIXME: If a resource identified with a blob: URL is a File object, user agents must use that file's name attribute,
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.

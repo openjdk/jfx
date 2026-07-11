@@ -182,7 +182,7 @@ template<typename T, typename Deleter> struct HashTraits<std::unique_ptr<T, Dele
 
         // The null case happens if a caller uses std::move() to remove the pointer before calling remove()
         // with an iterator. This is very uncommon.
-        if (LIKELY(pointer))
+        if (pointer) [[likely]]
             Deleter()(pointer);
     }
 };
@@ -378,14 +378,14 @@ struct HashTraits<std::tuple<Traits...>> : public TupleHashTraits<HashTraits<Tra
 
 
 template<typename FirstTrait, typename... Traits>
-struct VariantHashTraits : GenericHashTraits<std::variant<typename FirstTrait::TraitType, typename Traits::TraitType...>> {
-    typedef std::variant<typename FirstTrait::TraitType, typename Traits::TraitType...> TraitType;
+struct VariantHashTraits : GenericHashTraits<Variant<typename FirstTrait::TraitType, typename Traits::TraitType...>> {
+    typedef Variant<typename FirstTrait::TraitType, typename Traits::TraitType...> TraitType;
 
     static TraitType emptyValue() { return FirstTrait::emptyValue(); }
 };
 
 template<typename... Traits>
-struct HashTraits<std::variant<Traits...>> : public VariantHashTraits<HashTraits<Traits>...> { };
+struct HashTraits<Variant<Traits...>> : public VariantHashTraits<HashTraits<Traits>...> { };
 
 template<typename KeyTraitsArg, typename ValueTraitsArg>
 struct KeyValuePairHashTraits : GenericHashTraits<KeyValuePair<typename KeyTraitsArg::TraitType, typename ValueTraitsArg::TraitType>> {

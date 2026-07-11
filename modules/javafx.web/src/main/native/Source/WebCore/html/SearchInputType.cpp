@@ -32,6 +32,7 @@
 #include "config.h"
 #include "SearchInputType.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -83,9 +84,9 @@ static void updateResultButtonPseudoType(SearchFieldResultsButtonElement& result
 void SearchInputType::attributeChanged(const QualifiedName& name)
 {
     if (name == resultsAttr) {
-        if (m_resultsButton) {
-            if (auto* element = this->element())
-                updateResultButtonPseudoType(*m_resultsButton, element->maxResults());
+        if (RefPtr resultsButton = m_resultsButton) {
+            if (RefPtr input = element())
+                updateResultButtonPseudoType(*resultsButton, input->maxResults());
         }
     }
     BaseTextInputType::attributeChanged(name);
@@ -94,7 +95,8 @@ void SearchInputType::attributeChanged(const QualifiedName& name)
 RenderPtr<RenderElement> SearchInputType::createInputRenderer(RenderStyle&& style)
 {
     ASSERT(element());
-    return createRenderer<RenderSearchField>(*element(), WTFMove(style));
+    // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderSearchField>(*protectedElement(), WTFMove(style));
 }
 
 const AtomString& SearchInputType::formControlType() const
@@ -112,21 +114,24 @@ void SearchInputType::createShadowSubtree()
     ASSERT(needsShadowSubtree());
     ASSERT(!m_resultsButton);
     ASSERT(!m_cancelButton);
+    ASSERT(element());
 
     TextFieldInputType::createShadowSubtree();
-    RefPtr<HTMLElement> container = containerElement();
-    RefPtr<HTMLElement> textWrapper = innerBlockElement();
+    Ref document = element()->document();
+    RefPtr container = containerElement();
+    RefPtr textWrapper = innerBlockElement();
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *container };
     ASSERT(container);
     ASSERT(textWrapper);
 
-    ASSERT(element());
-    m_resultsButton = SearchFieldResultsButtonElement::create(element()->document());
-    container->insertBefore(*m_resultsButton, textWrapper.copyRef());
-    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
+    Ref resultsButton = SearchFieldResultsButtonElement::create(document);
+    container->insertBefore(resultsButton, textWrapper.copyRef());
+    updateResultButtonPseudoType(resultsButton, element()->maxResults());
+    m_resultsButton = WTFMove(resultsButton);
 
-    m_cancelButton = SearchFieldCancelButtonElement::create(element()->document());
-    container->insertBefore(*m_cancelButton, textWrapper->protectedNextSibling());
+    Ref cancelButton = SearchFieldCancelButtonElement::create(document);
+    container->insertBefore(cancelButton, textWrapper->protectedNextSibling());
+    m_cancelButton = WTFMove(cancelButton);
 }
 
 HTMLElement* SearchInputType::resultsButtonElement() const
@@ -142,13 +147,13 @@ HTMLElement* SearchInputType::cancelButtonElement() const
 auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     ASSERT(element());
-    if (!element()->isMutable())
+    Ref element = *this->element();
+    if (!element->isMutable())
         return TextFieldInputType::handleKeydownEvent(event);
 
     const String& key = event.keyIdentifier();
     if (key == "U+001B"_s) {
-        Ref<HTMLInputElement> protectedInputElement(*element());
-        protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
+        element->setValue(emptyString(), DispatchChangeEvent);
         event.setDefaultHandled();
         return ShouldCallBaseEventHandler::Yes;
     }
@@ -176,35 +181,45 @@ void SearchInputType::didSetValueByUserEdit()
 bool SearchInputType::sizeShouldIncludeDecoration(int, int& preferredSize) const
 {
     ASSERT(element());
-    preferredSize = element()->size();
+    Ref element = *this->element();
+    preferredSize = element->size();
     // https://html.spec.whatwg.org/multipage/input.html#the-size-attribute
     // If the attribute is present, then its value must be parsed using the rules for parsing non-negative integers, and if the
     // result is a number greater than zero, then the user agent should ensure that at least that many characters are visible.
-    if (!element()->hasAttributeWithoutSynchronization(sizeAttr))
+    if (!element->hasAttributeWithoutSynchronization(sizeAttr))
         return false;
-    if (auto parsedSize = parseHTMLNonNegativeInteger(element()->attributeWithoutSynchronization(sizeAttr)))
+    if (auto parsedSize = parseHTMLNonNegativeInteger(element->attributeWithoutSynchronization(sizeAttr)))
         return static_cast<int>(parsedSize.value()) == preferredSize;
     return false;
 }
 
-float SearchInputType::decorationWidth() const
+float SearchInputType::decorationWidth(float) const
 {
     float width = 0;
-    if (m_resultsButton && m_resultsButton->renderStyle())
-        width += m_resultsButton->renderStyle()->logicalWidth().value();
-    if (m_cancelButton && m_cancelButton->renderStyle())
-        width += m_cancelButton->renderStyle()->logicalWidth().value();
+    if (RefPtr resultsButton = m_resultsButton; resultsButton && resultsButton->renderStyle()) {
+        // FIXME: Document what invariant holds to allow only using fixed logical widths?
+        if (auto fixedLogicalWidth = resultsButton->renderStyle()->logicalWidth().tryFixed())
+            width += fixedLogicalWidth->value;
+    }
+    if (RefPtr cancelButton = m_cancelButton; cancelButton && cancelButton->renderStyle()) {
+        // FIXME: Document what invariant holds to allow only using fixed logical widths?
+        if (auto fixedLogicalWidth = cancelButton->renderStyle()->logicalWidth().tryFixed())
+            width += fixedLogicalWidth->value;
+    }
     return width;
 }
 
 void SearchInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != element()->value().isEmpty();
+    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != protectedElement()->value()->isEmpty();
 
     BaseTextInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
 
-    if (m_cancelButton && emptinessChanged)
-        m_cancelButton->invalidateStyleInternal();
+    if (!emptinessChanged)
+        return;
+
+    if (RefPtr cancelButton = m_cancelButton)
+        cancelButton->invalidateStyleInternal();
 }
 
 } // namespace WebCore

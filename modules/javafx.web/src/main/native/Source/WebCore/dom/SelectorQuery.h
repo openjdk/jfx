@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CSSSelectorList.h"
 #include "CSSSelectorParser.h"
 #include "ExceptionOr.h"
 #include "NodeList.h"
@@ -130,7 +129,7 @@ public:
 
 private:
     using Key = std::tuple<String, CSSSelectorParserContext, SecurityOriginData>;
-    UncheckedKeyHashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
+    HashMap<Key, std::unique_ptr<SelectorQuery>> m_entries;
 };
 
 inline bool SelectorQuery::matches(Element& element) const

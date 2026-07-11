@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +41,7 @@
 #include "WaiterListManager.h"
 #include "Watchdog.h"
 #include <wtf/ProcessID.h>
+#include <wtf/Scope.h>
 #include <wtf/ThreadMessage.h>
 #include <wtf/threads/Signals.h>
 
@@ -175,10 +176,10 @@ void VMTraps::invalidateCodeBlocksOnStack(CallFrame* topCallFrame)
 
 void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, CallFrame* topCallFrame)
 {
-    if (!m_needToInvalidatedCodeBlocks)
+    if (!m_needToInvalidateCodeBlocks)
         return;
 
-    m_needToInvalidatedCodeBlocks = false;
+    m_needToInvalidateCodeBlocks = false;
 
     EntryFrame* entryFrame = vm().topEntryFrame;
     CallFrame* callFrame = topCallFrame;
@@ -376,31 +377,61 @@ void VMTraps::willDestroyVM()
 #endif
 }
 
-void VMTraps::fireTrap(VMTraps::Event event)
+void VMTraps::cancelThreadStopIfNeeded()
 {
-    ASSERT(!vm().currentThreadIsHoldingAPILock());
-    ASSERT(onlyContainsAsyncEvents(event));
-    {
+    Locker locker { *m_lock };
+
+    // We need to confirm that there are no pending async events before cancelling the
+    // thread stop request. This is because:
+    // 1. The AsyncEvent being cleared may not be the only one needing threads to stop, or
+    // 2. A new AsyncEvent may have been set by another thread before we get here, and we
+    //    we need to keep the thread stop request.
+    if (needHandling(AsyncEvents)) {
+        RELEASE_ASSERT(m_threadStopRequested);
+        return;
+    }
+    if (!m_threadStopRequested)
+        return; // Cancel was already processed due to another thread. Nothing more to do.
+
+    // Nothing else to do to cancel thread stopping for now.
+
+    m_threadStopRequested = false;
+}
+
+void VMTraps::requestThreadStopIfNeeded(VMTraps::Event event)
+{
         Locker locker { *m_lock };
         ASSERT(!m_isShuttingDown);
-        setTrapBit(event);
-        m_needToInvalidatedCodeBlocks = true;
+
+    // We got here because an AsyncEvent was set. Because this is an asynchronous event,
+    // it may have already been cleared by another thread before we get here. So, we
+    // need to confirm that an async event is still pending before requesting a thread stop.
+    if (!needHandling(AsyncEvents)) {
+        RELEASE_ASSERT(!m_threadStopRequested);
+        return;
     }
+
+    if (m_threadStopRequested)
+        return; // Stop requested was already processed due to another AsyncEvent source. Nothing more to do.
+
+    VM& vm = this->vm();
+    m_needToInvalidateCodeBlocks = true;
 
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
     if (!Options::usePollingTraps()) {
         // sendSignal() can loop until it has confirmation that the mutator thread
         // has received the trap request. We'll call it from another thread so that
-        // fireTrap() does not block.
-        Locker locker { *m_lock };
+        // requestThreadStopIfNeeded() does not block.
         if (!m_signalSender)
-            m_signalSender = adoptRef(new SignalSender(locker, vm()));
+            m_signalSender = adoptRef(new SignalSender(locker, vm));
         m_signalSender->notify(locker);
     }
 #endif
 
     if (event == NeedTermination)
-        vm().syncWaiter()->condition().notifyOne();
+        vm.syncWaiter()->condition().notifyOne();
+
+    m_threadStopRequested = true;
 }
 
 void VMTraps::handleTraps(VMTraps::BitField mask)
@@ -409,7 +440,9 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(onlyContainsAsyncEvents(mask));
     ASSERT(needHandling(mask));
-    ASSERT(!hasTrapBit(DeferTrapHandling));
+
+    if (m_trapsDeferred)
+        return; // We'll service them on the next opportunity after deferring has stopped.
 
     if (isDeferringTermination())
         mask &= ~NeedTermination;
@@ -422,6 +455,25 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
                 codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         });
     }
+
+    auto takeTopPriorityTrap = [&] (VMTraps::BitField mask) -> Event {
+        Locker locker { *m_lock };
+
+        // Note: the EventBitShift is already sorted in highest to lowest priority
+        // i.e. a bit shift of 0 is highest priority, etc.
+        for (unsigned i = 0; i < NumberOfEvents; ++i) {
+            Event event = static_cast<Event>(1 << i);
+            if (hasTrapBit(event, mask)) {
+                clearTrapWithoutCancellingThreadStop(event);
+                return event;
+            }
+        }
+        return NoEvent;
+    };
+
+    auto cancelThreadStop = makeScopeExit([&] {
+        cancelThreadStopIfNeeded();
+    });
 
     while (needHandling(mask)) {
         auto event = takeTopPriorityTrap(mask);
@@ -438,10 +490,10 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
 
         case NeedWatchdogCheck:
             ASSERT(vm.watchdog());
-            if (LIKELY(!vm.watchdog()->isActive() || !vm.watchdog()->shouldTerminate(vm.entryScope->globalObject())))
+            if (!vm.watchdog()->isActive() || !vm.watchdog()->shouldTerminate(vm.entryScope->globalObject())) [[likely]]
                 continue;
             vm.setHasTerminationRequest();
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case NeedTermination:
             ASSERT(vm.hasTerminationRequest());
@@ -451,27 +503,10 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
             return;
 
         case NeedExceptionHandling:
-        case DeferTrapHandling:
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
-}
-
-auto VMTraps::takeTopPriorityTrap(VMTraps::BitField mask) -> Event
-{
-    Locker locker { *m_lock };
-
-    // Note: the EventBitShift is already sorted in highest to lowest priority
-    // i.e. a bit shift of 0 is highest priority, etc.
-    for (unsigned i = 0; i < NumberOfEvents; ++i) {
-        Event event = static_cast<Event>(1 << i);
-        if (hasTrapBit(event, mask)) {
-            clearTrapBit(event);
-            return event;
-        }
-    }
-    return NoEvent;
 }
 
 void VMTraps::deferTerminationSlow(DeferAction)
@@ -479,8 +514,12 @@ void VMTraps::deferTerminationSlow(DeferAction)
     ASSERT(m_deferTerminationCount == 1);
 
     VM& vm = this->vm();
-    if (vm.hasPendingTerminationException()) {
-        ASSERT(vm.hasTerminationRequest());
+    if (vm.hasPendingTerminationException()) [[unlikely]] {
+        RELEASE_ASSERT(vm.hasTerminationRequest());
+        // While we clear the TerminationExeption here, hasTerminationRequest() remains true and
+        // is how we remember that we still need a TerminationException when we stop deferring.
+        // hasTerminationRequest() will eventually trigger a re-throw of TerminationExeption
+        // after we stop deferring.
         vm.clearException();
         m_suspendedTerminationException = true;
     }
@@ -496,7 +535,7 @@ void VMTraps::undoDeferTerminationSlow(DeferAction deferAction)
         vm.throwTerminationException();
         m_suspendedTerminationException = false;
     } else if (deferAction == DeferAction::DeferForAWhile)
-        setTrapBit(NeedTermination); // Let the next trap check handle it.
+        fireTrap(NeedTermination); // Let the next trap check handle it.
 }
 
 VMTraps::VMTraps()

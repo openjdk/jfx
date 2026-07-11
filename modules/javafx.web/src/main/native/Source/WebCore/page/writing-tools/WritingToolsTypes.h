@@ -85,7 +85,7 @@ using ContextID = WTF::UUID;
 struct Context {
     using ID = ContextID;
 
-    ID identifier;
+    Markable<ID> identifier;
     AttributedString attributedText;
     CharacterRange range;
 };

@@ -55,7 +55,7 @@ private:
     const AtomString& formControlType() const final;
     String typeMismatchText() const final;
     bool supportsSelectionAPI() const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     void attributeChanged(const QualifiedName&) final;
 };
 

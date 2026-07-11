@@ -48,7 +48,7 @@ static inline const char* pas_thread_local_cache_layout_node_kind_get_string(
     case pas_thread_local_cache_layout_local_view_cache_node_kind:
         return "local_view_cache";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

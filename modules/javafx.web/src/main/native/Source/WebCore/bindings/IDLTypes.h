@@ -29,7 +29,6 @@
 #include "StringAdaptors.h"
 #include <JavaScriptCore/HandleTypes.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/Compiler.h>
 #include <wtf/Markable.h>
@@ -303,11 +302,11 @@ struct IDLError : IDLUnsupportedType { };
 struct IDLDOMException : IDLUnsupportedType { };
 
 template<typename... Ts>
-struct IDLUnion : IDLType<std::variant<typename Ts::ImplementationType...>> {
+struct IDLUnion : IDLType<Variant<typename Ts::ImplementationType...>> {
     using TypeList = brigand::list<Ts...>;
 
-    using ParameterType = const std::variant<typename Ts::ImplementationType...>&;
-    using NullableParameterType = const std::optional<std::variant<typename Ts::ImplementationType...>>&;
+    using ParameterType = const Variant<typename Ts::ImplementationType...>&;
+    using NullableParameterType = const std::optional<Variant<typename Ts::ImplementationType...>>&;
 };
 
 template<typename T> struct IDLBufferSourceBase : IDLWrapper<T> {

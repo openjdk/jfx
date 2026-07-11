@@ -43,6 +43,7 @@
 #include "HTMLDivElement.h"
 #include "HTMLStyleElement.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ScriptDisallowedScope.h"
@@ -113,7 +114,7 @@ static ExceptionOr<void> checkForInvalidNodeTypes(Node& root)
     if (!isLegalNode(root))
         return invalidNodeException(root);
 
-    for (auto* child = root.firstChild(); child; child = child->nextSibling()) {
+    for (RefPtr child = root.firstChild(); child; child = child->nextSibling()) {
         if (!isLegalNode(*child))
             return invalidNodeException(*child);
 
@@ -180,14 +181,14 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
     if (cueFragment.firstChild()->nodeType() == Node::TEXT_NODE)
         return Exception { ExceptionCode::InvalidNodeTypeError, "Invalid first child"_s };
 
-    for (Node* node = cueFragment.firstChild(); node; node = node->nextSibling()) {
+    for (RefPtr node = cueFragment.firstChild(); node; node = node->nextSibling()) {
         auto result = checkForInvalidNodeTypes(*node);
         if (result.hasException())
             return result.releaseException();
     }
 
     auto fragment = DocumentFragment::create(document);
-    for (Node* node = cueFragment.firstChild(); node; node = node->nextSibling()) {
+    for (RefPtr node = cueFragment.firstChild(); node; node = node->nextSibling()) {
         auto result = fragment->ensurePreInsertionValidity(*node, nullptr);
         if (result.hasException())
             return result.releaseException();
@@ -195,7 +196,7 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
     cueFragment.cloneChildNodes(document, nullptr, fragment);
 
     OptionSet<RequiredNodes> nodeTypes = { };
-    for (Node* node = fragment->firstChild(); node; node = node->nextSibling()) {
+    for (RefPtr node = fragment->firstChild(); node; node = node->nextSibling()) {
         auto result = tagPseudoObjects(*node, nodeTypes);
         if (result.hasException())
             return result.releaseException();
@@ -243,6 +244,11 @@ ScriptExecutionContext* TextTrackCue::scriptExecutionContext() const
 Document* TextTrackCue::document() const
 {
     return downcast<Document>(scriptExecutionContext());
+}
+
+RefPtr<Document> TextTrackCue::protectedDocument() const
+{
+    return document();
 }
 
 void TextTrackCue::willChange()
@@ -447,14 +453,14 @@ RefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
     if (!m_cueNode)
         return nullptr;
 
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document)
         return nullptr;
 
     auto clonedFragment = DocumentFragment::create(*document);
     m_cueNode->cloneChildNodes(*document, nullptr, clonedFragment);
 
-    for (Node* node = clonedFragment->firstChild(); node; node = node->nextSibling())
+    for (RefPtr node = clonedFragment->firstChild(); node; node = node->nextSibling())
         removeUserAgentPartAttributes(*node);
 
     return clonedFragment;
@@ -517,7 +523,7 @@ void TextTrackCue::rebuildDisplayTree()
     m_displayTree->appendChild(clonedFragment);
 
     if (m_fontSize) {
-        if (auto page = document->page()) {
+        if (RefPtr page = document->page()) {
             auto style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
             style->setTextContent(makeString(page->captionUserPreferencesStyleSheet(),
                 " ::"_s, UserAgentParts::cue(), "{font-size:"_s, m_fontSize, m_fontSizeIsImportant ? "px !important}"_s : "px}"_s));

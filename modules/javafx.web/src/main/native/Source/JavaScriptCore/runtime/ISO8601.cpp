@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -528,18 +528,71 @@ std::optional<int64_t> parseUTCOffsetInMinutes(StringView string)
 }
 
 template<typename CharacterType>
-static bool canBeCalendar(const StringParsingBuffer<CharacterType>& buffer)
+static bool canBeRFC9557Annotation(const StringParsingBuffer<CharacterType>& buffer)
 {
-    // https://tc39.es/proposal-temporal/#prod-Calendar
-    // Calendar :
-    //     [u-ca= CalendarName]
-    return buffer.lengthRemaining() >= 6 && buffer[0] == '[' && buffer[1] == 'u' && buffer[2] == '-' && buffer[3] == 'c' && buffer[4] == 'a' && buffer[5] == '=';
+    // https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime
+    // Step 4(a)(ii)(2)(a):
+    //  Let key be the source text matched by the AnnotationKey Parse Node contained within annotation
+    //
+    // https://tc39.es/proposal-temporal/#prod-Annotation
+    // Annotation :::
+    //     [ AnnotationCriticalFlag[opt] AnnotationKey = AnnotationValue ]
+    //
+    // AnnotationCriticalFlag :::
+    //     !
+    //
+    // AnnotationKey :::
+    //     AKeyLeadingChar
+    //     AnnotationKey AKeyChar
+    //
+    // AKeyLeadingChar :::
+    //     LowercaseAlpha
+    //     _
+    //
+    // AKeyChar :::
+    //     AKeyLeadingChar
+    //     DecimalDigit
+    //     -
+    //
+    // AnnotationValue :::
+    //     AnnotationValueComponent
+    //     AnnotationValueComponent - AnnotationValue
+    //
+    // AnnotationValueComponent :::
+    //     Alpha AnnotationValueComponent[opt]
+    //     DecimalDigit AnnotationValueComponent[opt]
+
+    // This just checks for '[', followed by an optional '!' (critical flag),
+    // followed by a valid key, followed by an '='.
+
+    size_t length = buffer.lengthRemaining();
+    // Because of `[`, `=`, `]`, `AnnotationKey`, and `AnnotationValue`,
+    // the annotation must have length >= 5.
+    if (length < 5)
+        return false;
+    if (*buffer != '[')
+        return false;
+    size_t index = 1;
+    if (buffer[index] == '!')
+        ++index;
+    if (!isASCIILower(buffer[index]) && buffer[index] != '_')
+        return false;
+    ++index;
+    while (index < length) {
+        if (buffer[index] == '=')
+            return true;
+        if (isASCIILower(buffer[index]) || isASCIIDigit(buffer[index]) || buffer[index] == '-' || buffer[index] == '_')
+            ++index;
+        else
+            return false;
+    }
+    return false;
 }
 
 template<typename CharacterType>
 static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, CharacterType character)
 {
-    switch (static_cast<UChar>(character)) {
+    switch (static_cast<char16_t>(character)) {
     // UTCDesignator
     // https://tc39.es/proposal-temporal/#prod-UTCDesignator
     case 'z':
@@ -553,10 +606,8 @@ static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, Char
     // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
     case '[': {
         // We should reject calendar extension case.
-        // https://tc39.es/proposal-temporal/#prod-Calendar
-        // Calendar :
-        //     [u-ca= CalendarName]
-        if (canBeCalendar(buffer))
+        // For BNF, see comment in canBeRFC9557Annotation()
+        if (canBeRFC9557Annotation(buffer))
             return false;
         return true;
     }
@@ -566,7 +617,7 @@ static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, Char
 }
 
 template<typename CharacterType>
-static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotation(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<Variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotation(StringParsingBuffer<CharacterType>& buffer)
 {
     // https://tc39.es/proposal-temporal/#prod-TimeZoneAnnotation
     // TimeZoneAnnotation :
@@ -585,7 +636,7 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotati
     if (*buffer == '!')
         buffer.advance();
 
-    switch (static_cast<UChar>(*buffer)) {
+    switch (static_cast<char16_t>(*buffer)) {
     case '+':
     case '-': {
         auto offset = parseUTCOffset(buffer, false);
@@ -623,7 +674,7 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneAnnotati
                 }
             }
         }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     default: {
         // TZLeadingChar :
@@ -717,7 +768,7 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
 {
     if (buffer.atEnd())
         return std::nullopt;
-    switch (static_cast<UChar>(*buffer)) {
+    switch (static_cast<char16_t>(*buffer)) {
     // UTCDesignator
     // https://tc39.es/proposal-temporal/#prod-UTCDesignator
     case 'z':
@@ -760,29 +811,30 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
 }
 
 template<typename CharacterType>
-static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<RFC9557Annotation> parseOneRFC9557Annotation(StringParsingBuffer<CharacterType>& buffer)
 {
-    // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
-    // Calendar :
-    //     [u-ca= CalendarName ]
-    //
-    // CalendarName :
-    //     CalendarNameComponent
-    //     CalendarNameComponent - CalendarName
-    //
-    // CalendarNameComponent :
-    //     CalChar CalChar CalChar CalChar[opt] CalChar[opt] CalChar[opt] CalChar[opt] CalChar[opt]
-    //
-    // CalChar :
-    //     Alpha
-    //     Digit
+    // For BNF, see comment in canBeRFC9557Annotation()
 
-    if (!canBeCalendar(buffer))
+    if (!canBeRFC9557Annotation(buffer))
         return std::nullopt;
-    buffer.advanceBy(6);
+    RFC9557Flag flag = buffer[1] == '!' ? RFC9557Flag::Critical : RFC9557Flag::None;
+    // Skip '[' or '[!'
+    buffer.advanceBy(flag == RFC9557Flag::Critical ? 2 : 1);
+
+    // Parse the key
+    unsigned keyLength = 0;
+    while (buffer[keyLength] != '=')
+        keyLength++;
+    if (!keyLength)
+        return std::nullopt;
+    auto key(buffer.span().first(keyLength));
+    buffer.advanceBy(keyLength);
 
     if (buffer.atEnd())
         return std::nullopt;
+
+    // Consume the '='
+    buffer.advance();
 
     unsigned nameLength = 0;
     {
@@ -797,6 +849,22 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
         if (!index)
             return std::nullopt;
         nameLength = index;
+    }
+
+    // Check if the key is equal to "u-ca"
+    if (key.size() != 4
+        || key[0] != 'u' || key[1] != '-'
+        || key[2] != 'c' || key[3] != 'a') {
+        // Annotation is unknown
+        // Consume the rest of the annotation
+        buffer.advanceBy(nameLength);
+        if (buffer.atEnd() || *buffer != ']') {
+            // Parse error
+            return std::nullopt;
+        }
+        // Consume the ']'
+        buffer.advance();
+        return RFC9557Annotation { flag, RFC9557Key::Other, { } };
     }
 
     auto isValidComponent = [&](unsigned start, unsigned end) {
@@ -843,7 +911,45 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
     if (*buffer != ']')
         return std::nullopt;
     buffer.advance();
-    return CalendarRecord { WTFMove(result) };
+    return RFC9557Annotation { flag, RFC9557Key::Calendar, WTFMove(result) };
+}
+
+template<typename CharacterType>
+static std::optional<Vector<CalendarID, 1>>
+parseCalendar(StringParsingBuffer<CharacterType>& buffer)
+{
+    // https://tc39.es/proposal-temporal/#prod-Annotations
+    //  Annotations :::
+    //      Annotation Annotations[opt]
+
+    if (!canBeRFC9557Annotation(buffer))
+        return std::nullopt;
+
+    Vector<CalendarID, 1> result;
+    // https://tc39.es/proposal-temporal/#sec-temporal-parseisodatetime
+    bool calendarWasCritical = false;
+    while (canBeRFC9557Annotation(buffer)) {
+        auto annotation = parseOneRFC9557Annotation(buffer);
+        if (!annotation)
+            return std::nullopt;
+        if (annotation->m_key == RFC9557Key::Calendar)
+            result.append(annotation->m_value);
+        if (annotation->m_flag == RFC9557Flag::Critical) {
+            // Check for unknown annotations with critical flag
+            // step 4(a)(ii)(2)(d)(i)
+            if (annotation->m_key != RFC9557Key::Calendar)
+                return std::nullopt;
+            // Check for multiple calendars and critical flag
+            // step 4(a)(ii)(2)(c)(ii)
+            if (result.size() == 1)
+                calendarWasCritical = true;
+            else
+                return std::nullopt;
+        }
+        if (calendarWasCritical && result.size() > 1)
+            return std::nullopt;
+    }
+    return result;
 }
 
 template<typename CharacterType>
@@ -1019,7 +1125,7 @@ static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::option
 }
 
 template<typename CharacterType>
-static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringParsingBuffer<CharacterType>& buffer)
 {
     // https://tc39.es/proposal-temporal/#prod-CalendarTime
     // CalendarTime :
@@ -1050,19 +1156,20 @@ static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::o
     if (buffer.atEnd())
         return std::tuple { WTFMove(plainTime.value()), WTFMove(timeZoneOptional), std::nullopt };
 
-    std::optional<CalendarRecord> calendarOptional;
-    if (canBeCalendar(buffer)) {
-        auto calendar = parseCalendar(buffer);
-        if (!calendar)
+    std::optional<CalendarID> calendarOptional;
+    if (canBeRFC9557Annotation(buffer)) {
+        auto calendars = parseCalendar(buffer);
+        if (!calendars)
             return std::nullopt;
-        calendarOptional = WTFMove(calendar);
+        if (calendars.value().size() > 0)
+            calendarOptional = WTFMove(calendars.value()[0]);
     }
 
     return std::tuple { WTFMove(plainTime.value()), WTFMove(timeZoneOptional), WTFMove(calendarOptional) };
 }
 
 template<typename CharacterType>
-static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringParsingBuffer<CharacterType>& buffer)
+static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringParsingBuffer<CharacterType>& buffer)
 {
     // https://tc39.es/proposal-temporal/#prod-DateTime
     // CalendarDateTime :
@@ -1074,14 +1181,16 @@ static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::option
 
     auto [plainDate, plainTimeOptional, timeZoneOptional] = WTFMove(dateTime.value());
 
-    if (!buffer.atEnd() && canBeCalendar(buffer)) {
-        auto calendar = parseCalendar(buffer);
-        if (!calendar)
+    std::optional<CalendarID> calendarOptional;
+    if (!buffer.atEnd() && canBeRFC9557Annotation(buffer)) {
+        auto calendars = parseCalendar(buffer);
+        if (!calendars)
             return std::nullopt;
-        return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), WTFMove(calendar) };
+        if (calendars.value().size() > 0)
+            calendarOptional = WTFMove(calendars.value()[0]);
     }
 
-    return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), std::nullopt };
+    return std::tuple { WTFMove(plainDate), WTFMove(plainTimeOptional), WTFMove(timeZoneOptional), WTFMove(calendarOptional) };
 }
 
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView string)
@@ -1148,9 +1257,9 @@ static bool isAmbiguousCalendarTime(StringParsingBuffer<CharacterType>& buffer)
     return true;
 }
 
-std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView string)
+std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringView string)
 {
-    auto tuple = readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
+    auto tuple = readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> {
         auto result = parseCalendarTime(buffer);
         if (!buffer.atEnd())
             return std::nullopt;
@@ -1176,9 +1285,9 @@ std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<Time
     });
 }
 
-std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringView string)
+std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringView string)
 {
-    return readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
+    return readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> {
         auto result = parseCalendarDateTime(buffer);
         if (!buffer.atEnd())
             return std::nullopt;
@@ -1585,6 +1694,47 @@ Int128 ExactTime::round(Int128 quantity, unsigned increment, TemporalUnit unit, 
         ASSERT_NOT_REACHED();
     }
     return roundNumberToIncrement(quantity, incrementNs, roundingMode);
+}
+
+// https://tc39.es/proposal-temporal/#sec-temporal-datedurationsign
+static int32_t dateDurationSign(const Duration& d)
+{
+    if (d.years() > 0)
+        return 1;
+    if (d.years() < 0)
+        return -1;
+    if (d.months() > 0)
+        return 1;
+    if (d.months() < 0)
+        return -1;
+    if (d.weeks() > 0)
+        return 1;
+    if (d.weeks() < 0)
+        return -1;
+    if (d.days() > 0)
+        return 1;
+    if (d.days() < 0)
+        return -1;
+    return 0;
+}
+
+// https://tc39.es/proposal-temporal/#sec-temporal-internaldurationsign
+int32_t ISO8601::InternalDuration::sign() const
+{
+    int32_t sign = dateDurationSign(m_dateDuration);
+    if (sign)
+        return sign;
+    return timeDurationSign();
+}
+
+// https://tc39.es/proposal-temporal/#sec-temporal-combinedateandtimeduration
+InternalDuration InternalDuration::combineDateAndTimeDuration(Duration dateDuration, Int128 timeDuration)
+{
+    int32_t dateSign = dateDurationSign(dateDuration);
+    int32_t timeSign = timeDuration < 0 ? -1 : timeDuration > 0 ? 1 : 0;
+    bool signsDiffer = dateSign && timeSign && dateSign != timeSign;
+    ASSERT_UNUSED(signsDiffer, signsDiffer);
+    return InternalDuration { WTFMove(dateDuration), timeDuration };
 }
 
 // DifferenceInstant ( ns1, ns2, roundingIncrement, smallestUnit, roundingMode )

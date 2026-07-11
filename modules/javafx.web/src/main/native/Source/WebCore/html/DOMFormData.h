@@ -32,7 +32,6 @@
 
 #include "File.h"
 #include <pal/text/TextEncoding.h>
-#include <variant>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,7 +43,7 @@ class HTMLFormElement;
 
 class DOMFormData : public RefCounted<DOMFormData>, public ContextDestructionObserver {
 public:
-    using FormDataEntryValue = std::variant<RefPtr<File>, String>;
+    using FormDataEntryValue = Variant<RefPtr<File>, String>;
 
     struct Item {
         String name;
@@ -73,7 +72,7 @@ public:
         std::optional<KeyValuePair<String, FormDataEntryValue>> next();
 
     private:
-        Ref<DOMFormData> m_target;
+        const Ref<DOMFormData> m_target;
         size_t m_index { 0 };
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }

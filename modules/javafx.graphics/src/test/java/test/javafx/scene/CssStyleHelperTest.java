@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,14 @@ package test.javafx.scene;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.sun.javafx.css.StyleManager;
-import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
 import javafx.css.CssParser.ParseError.PropertySetError;
@@ -43,15 +47,18 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class CssStyleHelperTest {
 
@@ -456,6 +463,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         A.getChildren().add(C);
+        Toolkit.getToolkit().firePulse();
         assertTrue(A.isVisible());
         assertTrue(C.isVisible());
     }
@@ -910,6 +918,243 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals(Paint.valueOf("#808080"), pane.getBackground().getFills().get(0).getFill());
+    }
+
+    @Test
+    public void mediaQueryRemovalShouldNotInterruptTransitionsDuringReset() {
+        String css = """
+            .pane {
+                transition: -fx-scale-x 2s linear;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                .pane {
+                    -fx-scale-x: 2;
+                }
+            }
+            """;
+
+        var toolkit = (StubToolkit)Toolkit.getToolkit();
+        toolkit.setCurrentTime(0);
+
+        List<Number> trace = new ArrayList<>();
+        Pane p = new Pane();
+        p.scaleXProperty().subscribe(newValue -> trace.add(newValue));
+        p.getStyleClass().add("pane");
+        root.getChildren().add(p);
+        scene.getStylesheets().add(toDataURL(css));
+        scene.getPreferences().setColorScheme(ColorScheme.DARK);
+        stage.show();
+
+        assertEquals(2, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0), trace);
+
+        // Setting the color scheme to light causes the media query to evaluate to false, which removes
+        // the nested rule from the cascade. We expect -fx-scale-x to smoothly transition from 2 to 1.
+        scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+        toolkit.firePulse();
+        assertEquals(2, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0), trace);
+
+        toolkit.setCurrentTime(1000);
+        toolkit.handleAnimation();
+        assertEquals(1.5, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0, 1.5), trace);
+
+        toolkit.setCurrentTime(2000);
+        toolkit.handleAnimation();
+        assertEquals(1,  p.getScaleX());
+        assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
+    }
+
+    /**
+     * PseudoClass should correctly pass down even if there are intermediate unstyled panes inbetween.
+     */
+    @Test
+    void testLookupResolvesWithPseudoClassAndIntermediatePane() {
+        var errors = CssParser.errorsProperty();
+        errors.clear();
+
+        String theme = toDataURL("""
+                .root { -my-color: #0000FF; }
+                .pseudo:ps1 .leaf { -fx-background-color: -my-color; }
+                """);
+
+        StackPane leaf = new StackPane();
+        leaf.getStyleClass().add("leaf");
+        StackPane intermediate = new StackPane(leaf);
+
+        StackPane pseudo = new StackPane(intermediate);
+        pseudo.getStyleClass().add("pseudo");
+        pseudo.pseudoClassStateChanged(PseudoClass.getPseudoClass("ps1"), true);
+
+        StackPane root = new StackPane(pseudo);
+
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(theme);
+
+        scene.getRoot().applyCss();
+
+        assertEquals(0, errors.size(), errors::toString);
+        assertEquals(Color.BLUE, leaf.getBackground().getFills().getFirst().getFill());
+    }
+
+    /**
+     * The stylesheet uses '.root' styleClass but is not on the root node results in the following css error:
+     * {@code Caught 'java.lang.ClassCastException: class java.lang.String cannot be cast to class javafx.scene.paint.Paint
+     * while converting value for '-fx-background-color'.}
+     */
+    @Test
+    void testColorLookupClassCastExceptionWhenStylesheetNotOnRoot() {
+        var errors = CssParser.errorsProperty();
+        errors.clear();
+
+        String themeA = toDataURL("""
+                .root { -theme-button: #0000FF; }
+                .leaf { -fx-background-color: -theme-button; }
+                """);
+
+        StackPane sub = new StackPane();
+        sub.getStylesheets().add(themeA);
+
+        Pane leaf = new Pane();
+        leaf.getStyleClass().add("leaf");
+        sub.getChildren().add(leaf);
+
+        StackPane root = new StackPane(sub);
+        Scene _ = new Scene(root);
+        root.applyCss();
+
+        assertEquals(1, errors.size(), errors::toString);
+
+        assertNull(leaf.getBackground());
+    }
+
+    /**
+     * The stylesheet was correctly on the root node with the styleClass '.root' but will be reparented
+     * to a new root node results in the following css error:
+     * {@code Caught 'java.lang.ClassCastException: class java.lang.String cannot be cast to class javafx.scene.paint.Paint
+     * while converting value for '-fx-background-color'.}
+     */
+    @Test
+    void testColorLookupClassCastExceptionAfterNewRootSwap() {
+        var errors = CssParser.errorsProperty();
+        errors.clear();
+
+        String themeA = toDataURL("""
+                .root { -theme-button: #0000FF; }
+                .leaf { -fx-background-color: -theme-button; }
+                """);
+
+        StackPane root = new StackPane();
+        root.getStylesheets().add(themeA);
+
+        Pane leaf = new Pane();
+        leaf.getStyleClass().add("leaf");
+        root.getChildren().add(leaf);
+
+        Scene scene = new Scene(root);
+        root.applyCss();
+
+        assertEquals(Color.BLUE, leaf.getBackground().getFills().getFirst().getFill());
+
+        root = new StackPane(root);
+        scene.setRoot(root);
+        root.applyCss();
+
+        assertEquals(1, errors.size(), errors::toString);
+
+        assertNull(leaf.getBackground());
+    }
+
+    /**
+     * No errors when we switch the root node in a listener of the root node (which is triggered by a CSS pulse).
+     */
+    @Test
+    void testLookupResolvesAfterRootTransitionToStateRootSwap() {
+        var errors = CssParser.errorsProperty();
+        errors.clear();
+
+        String theme = toDataURL("""
+                .root {
+                    -jr-fg: #0000FF;
+                    -fx-background-color: -jr-fg;
+                }
+                .leaf {
+                    -fx-background-color: -jr-fg;
+                }
+                """);
+
+        StackPane oldRoot = new StackPane();
+
+        StackPane leaf = new StackPane();
+        leaf.getStyleClass().add("leaf");
+        oldRoot.getChildren().add(leaf);
+
+        Scene scene = new Scene(oldRoot);
+        scene.getStylesheets().add(theme);
+
+        // When CSS applies -fx-background-color to oldRoot, we are in the transitionToState phase (mid-pulse).
+        AtomicBoolean swapped = new AtomicBoolean(false);
+        oldRoot.backgroundProperty().addListener((_, _, _) -> {
+            if (!swapped.getAndSet(true)) {
+                StackPane newRoot = new StackPane(oldRoot);
+                scene.setRoot(newRoot);
+            }
+        });
+
+        scene.getRoot().applyCss();
+
+        assertEquals(0, errors.size(), errors::toString);
+
+        assertEquals(Color.BLUE, leaf.getBackground().getFills().getFirst().getFill());
+    }
+
+    /**
+     * No errors when we switch the root node in a listener of a child node (which is triggered by a CSS pulse).
+     */
+    @Test
+    void testLookupResolvesAfterChildTransitionToStateRootSwap() {
+        var errors = CssParser.errorsProperty();
+        errors.clear();
+
+        String theme = toDataURL("""
+                .root {
+                    -jr-fg: #0000FF;
+                }
+                .leaf {
+                    -fx-background-color: -jr-fg;
+                }
+                .leaf-leaf {
+                    -fx-background-color: -jr-fg;
+                }
+                """);
+
+        StackPane oldRoot = new StackPane();
+
+        StackPane leafLeaf = new StackPane();
+        leafLeaf.getStyleClass().add("leaf-leaf");
+        StackPane leaf = new StackPane(leafLeaf);
+        leaf.getStyleClass().add("leaf");
+        oldRoot.getChildren().add(leaf);
+
+        Scene scene = new Scene(oldRoot);
+        scene.getStylesheets().add(theme);
+
+        // When CSS applies -fx-background-color to leaf, we are in the transitionToState phase (mid-pulse).
+        AtomicBoolean swapped = new AtomicBoolean(false);
+        leaf.backgroundProperty().addListener((_, _, _) -> {
+            if (!swapped.getAndSet(true)) {
+                StackPane newRoot = new StackPane(oldRoot);
+                scene.setRoot(newRoot);
+            }
+        });
+
+        scene.getRoot().applyCss();
+
+        assertEquals(0, errors.size(), errors::toString);
+
+        assertEquals(Color.BLUE, leaf.getBackground().getFills().getFirst().getFill());
     }
 
     private static String toDataURL(String stylesheet) {

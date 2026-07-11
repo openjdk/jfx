@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "testb3.h"
+#include <wtf/WasmSIMD128.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -1274,7 +1275,7 @@ void testWasmAddress()
 
 
     auto code = compileProc(proc);
-    invoke<void>(*code, loopCount, numToStore, values.data());
+    invoke<void>(*code, loopCount, numToStore, values.span().data());
     for (unsigned value : values)
         CHECK_EQ(numToStore, value);
 }
@@ -1303,7 +1304,7 @@ void testWasmAddressWithOffset()
     root->appendNewControlValue(proc, Return, Origin());
 
     auto code = compileProc(proc);
-    invoke<void>(*code, 1, numToStore, values.data());
+    invoke<void>(*code, 1, numToStore, values.span().data());
     CHECK_EQ(20U, values[0]);
     CHECK_EQ(21U, values[1]);
     CHECK_EQ(42U, values[2]);
@@ -2649,6 +2650,116 @@ void testVectorExtractLane0Double()
     }
 }
 
+void testVectorMulHigh()
+{
+    auto vectorMulHigh = [&](SIMDLane lane, SIMDSignMode signMode, v128_t lhs, v128_t rhs) {
+        auto simdeLHS = std::bit_cast<simde_v128_t>(lhs);
+        auto simdeRHS = std::bit_cast<simde_v128_t>(rhs);
+        switch (lane) {
+        case SIMDLane::i16x8:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u16x8_extmul_high_u8x16(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i16x8_extmul_high_i8x16(simdeLHS, simdeRHS));
+        case SIMDLane::i32x4:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u32x4_extmul_high_u16x8(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i32x4_extmul_high_i16x8(simdeLHS, simdeRHS));
+        case SIMDLane::i64x2:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u64x2_extmul_high_u32x4(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i64x2_extmul_high_i32x4(simdeLHS, simdeRHS));
+        default:
+            return v128_t { };
+        }
+    };
+
+    auto test = [&](SIMDLane lane, SIMDSignMode signMode) {
+        alignas(16) v128_t vectors[2];
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<void*>(proc, root);
+
+        Value* address = arguments[0];
+        Value* input0 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address);
+        Value* input1 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address, sizeof(v128_t));
+        Value* result = root->appendNew<SIMDValue>(proc, Origin(), VectorMulHigh, B3::V128, lane, signMode, input0, input1);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), result, address);
+        root->appendNewControlValue(proc, Return, Origin());
+
+        auto code = compileProc(proc);
+        for (auto& operand0 : v128Operands()) {
+            for (auto& operand1 : v128Operands()) {
+                vectors[0] = operand0.value;
+                vectors[1] = operand1.value;
+                invoke<void>(*code, vectors);
+                CHECK(bitEquals(vectors[0], vectorMulHigh(lane, signMode, operand0.value, operand1.value)));
+            }
+        }
+    };
+
+    test(SIMDLane::i16x8, SIMDSignMode::Signed);
+    test(SIMDLane::i16x8, SIMDSignMode::Unsigned);
+    test(SIMDLane::i32x4, SIMDSignMode::Signed);
+    test(SIMDLane::i32x4, SIMDSignMode::Unsigned);
+    test(SIMDLane::i64x2, SIMDSignMode::Signed);
+    test(SIMDLane::i64x2, SIMDSignMode::Unsigned);
+}
+
+void testVectorMulLow()
+{
+    auto vectorMulLow = [&](SIMDLane lane, SIMDSignMode signMode, v128_t lhs, v128_t rhs) {
+        auto simdeLHS = std::bit_cast<simde_v128_t>(lhs);
+        auto simdeRHS = std::bit_cast<simde_v128_t>(rhs);
+        switch (lane) {
+        case SIMDLane::i16x8:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u16x8_extmul_low_u8x16(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i16x8_extmul_low_i8x16(simdeLHS, simdeRHS));
+        case SIMDLane::i32x4:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u32x4_extmul_low_u16x8(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i32x4_extmul_low_i16x8(simdeLHS, simdeRHS));
+        case SIMDLane::i64x2:
+            if (signMode == SIMDSignMode::Unsigned)
+                return std::bit_cast<v128_t>(simde_wasm_u64x2_extmul_low_u32x4(simdeLHS, simdeRHS));
+            return std::bit_cast<v128_t>(simde_wasm_i64x2_extmul_low_i32x4(simdeLHS, simdeRHS));
+        default:
+            return v128_t { };
+        }
+    };
+
+    auto test = [&](SIMDLane lane, SIMDSignMode signMode) {
+        alignas(16) v128_t vectors[2];
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<void*>(proc, root);
+
+        Value* address = arguments[0];
+        Value* input0 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address);
+        Value* input1 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address, sizeof(v128_t));
+        Value* result = root->appendNew<SIMDValue>(proc, Origin(), VectorMulLow, B3::V128, lane, signMode, input0, input1);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), result, address);
+        root->appendNewControlValue(proc, Return, Origin());
+
+        auto code = compileProc(proc);
+        for (auto& operand0 : v128Operands()) {
+            for (auto& operand1 : v128Operands()) {
+                vectors[0] = operand0.value;
+                vectors[1] = operand1.value;
+                invoke<void>(*code, vectors);
+                CHECK(bitEquals(vectors[0], vectorMulLow(lane, signMode, operand0.value, operand1.value)));
+            }
+        }
+    };
+
+    test(SIMDLane::i16x8, SIMDSignMode::Signed);
+    test(SIMDLane::i16x8, SIMDSignMode::Unsigned);
+    test(SIMDLane::i32x4, SIMDSignMode::Signed);
+    test(SIMDLane::i32x4, SIMDSignMode::Unsigned);
+    test(SIMDLane::i64x2, SIMDSignMode::Signed);
+    test(SIMDLane::i64x2, SIMDSignMode::Unsigned);
+}
+
 void testInt52RoundTripUnary(int32_t constant)
 {
     Procedure proc;
@@ -2684,6 +2795,38 @@ void testInt52RoundTripBinary()
         for (auto rhs : int32Operands())
             CHECK_EQ(invoke<int32_t>(*code, lhs.value, rhs.value), static_cast<int32_t>(((static_cast<int64_t>(lhs.value) << 12) + (static_cast<int64_t>(rhs.value) << 12)) >> 12));
     }
+}
+
+// Test that Trunc(SShr(Add(@a, unaligned-constant), $12)) produces the correct
+// result when the constant is not 12-bit aligned. This pattern arises from
+// WebAssembly's i32.wrap_i64(i64.shr_s(i64.add(@a, C), 12)) with arbitrary
+// 64-bit values.
+void testTruncSShrAddUnalignedConstant()
+{
+    // Use constant 2048 which is NOT 12-bit aligned (lower 12 bits are non-zero).
+    int64_t constant = 2048;
+
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argA = arguments[0];
+    Value* node = root->appendNew<Value>(proc, Add, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), constant));
+    Value* shifted = root->appendNew<Value>(proc, SShr, Origin(), node, root->appendNew<Const32Value>(proc, Origin(), 12));
+    Value* result = root->appendNew<Value>(proc, Trunc, Origin(), shifted);
+    root->appendNew<Value>(proc, Return, Origin(), result);
+    auto code = compileProc(proc);
+
+    // a=2048, C=2048: (2048+2048)>>12 = 4096>>12 = 1
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(2048)), static_cast<int32_t>((2048LL + constant) >> 12));
+    // a=0
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(0)), static_cast<int32_t>((0LL + constant) >> 12));
+    // a=4095
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(4095)), static_cast<int32_t>((4095LL + constant) >> 12));
+    // a=4096
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(4096)), static_cast<int32_t>((4096LL + constant) >> 12));
+    // Large values
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(100000)), static_cast<int32_t>((100000LL + constant) >> 12));
+    CHECK_EQ(invoke<int32_t>(*code, static_cast<int64_t>(-2048)), static_cast<int32_t>((-2048LL + constant) >> 12));
 }
 
 #endif // ENABLE(B3_JIT)

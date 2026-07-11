@@ -678,22 +678,17 @@ inline UInt128Impl::operator long double() const {
 
 // Comparison operators.
 
-constexpr bool operator==(UInt128Impl lhs, UInt128Impl rhs) {
-  return (UInt128Low64(lhs) == UInt128Low64(rhs) &&
-          UInt128High64(lhs) == UInt128High64(rhs));
+constexpr bool operator==(UInt128Impl lhs, UInt128Impl rhs)
+{
+    return UInt128Low64(lhs) == UInt128Low64(rhs) && UInt128High64(lhs) == UInt128High64(rhs);
 }
 
-constexpr bool operator<(UInt128Impl lhs, UInt128Impl rhs) {
-  return (UInt128High64(lhs) == UInt128High64(rhs))
-             ? (UInt128Low64(lhs) < UInt128Low64(rhs))
-             : (UInt128High64(lhs) < UInt128High64(rhs));
+constexpr std::strong_ordering operator<=>(UInt128Impl lhs, UInt128Impl rhs)
+{
+    if (auto cmp = UInt128High64(lhs) <=> UInt128High64(rhs); cmp != std::strong_ordering::equal)
+        return cmp;
+    return UInt128Low64(lhs) <=> UInt128Low64(rhs);
 }
-
-constexpr bool operator>(UInt128Impl lhs, UInt128Impl rhs) { return rhs < lhs; }
-
-constexpr bool operator<=(UInt128Impl lhs, UInt128Impl rhs) { return !(rhs < lhs); }
-
-constexpr bool operator>=(UInt128Impl lhs, UInt128Impl rhs) { return !(lhs < rhs); }
 
 // Unary operators.
 
@@ -1104,26 +1099,17 @@ inline Int128Impl::operator long double() const {
 
 // Comparison operators.
 
-constexpr bool operator==(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128Low64(lhs) == Int128Low64(rhs) &&
-          Int128High64(lhs) == Int128High64(rhs));
+constexpr bool operator==(Int128Impl lhs, Int128Impl rhs)
+{
+    return Int128Low64(lhs) == Int128Low64(rhs) && Int128High64(lhs) == Int128High64(rhs);
 }
 
-constexpr bool operator<(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128High64(lhs) == Int128High64(rhs))
-             ? (Int128Low64(lhs) < Int128Low64(rhs))
-             : (Int128High64(lhs) < Int128High64(rhs));
+constexpr std::strong_ordering operator<=>(Int128Impl lhs, Int128Impl rhs)
+{
+    if (auto cmp = Int128High64(lhs) <=> Int128High64(rhs); cmp != std::strong_ordering::equal)
+        return cmp;
+    return Int128Low64(lhs) <=> Int128Low64(rhs);
 }
-
-constexpr bool operator>(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128High64(lhs) == Int128High64(rhs))
-             ? (Int128Low64(lhs) > Int128Low64(rhs))
-             : (Int128High64(lhs) > Int128High64(rhs));
-}
-
-constexpr bool operator<=(Int128Impl lhs, Int128Impl rhs) { return !(lhs > rhs); }
-
-constexpr bool operator>=(Int128Impl lhs, Int128Impl rhs) { return !(lhs < rhs); }
 
 // Unary operators.
 

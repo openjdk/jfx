@@ -37,6 +37,7 @@
 #include "SVGRenderStyle.h"
 #include "SVGResourcesCache.h"
 #include "SVGTextFragment.h"
+#include "StyleTextShadow.h"
 #include "TextPainter.h"
 
 namespace WebCore {
@@ -218,7 +219,7 @@ void SVGTextBoxPainter<TextBoxPath>::paint()
             m_paintInfo.context().concatCTM(fragmentTransform);
 
         // Spec: All text decorations except line-through should be drawn before the text is filled and stroked; thus, the text is rendered on top of these decorations.
-        auto decorations = style.textDecorationsInEffect();
+        auto decorations = style.textDecorationLineInEffect();
         if (decorations & TextDecorationLine::Underline)
             paintDecoration(TextDecorationLine::Underline, fragment);
         if (decorations & TextDecorationLine::Overline)
@@ -421,7 +422,7 @@ static inline float thicknessForDecoration(OptionSet<TextDecorationLine>, const 
 template<typename TextBoxPath>
 void SVGTextBoxPainter<TextBoxPath>::paintDecoration(OptionSet<TextDecorationLine> decoration, const SVGTextFragment& fragment)
 {
-    if (renderer().style().textDecorationsInEffect().isEmpty())
+    if (renderer().style().textDecorationLineInEffect().isEmpty())
         return;
 
     // Find out which render style defined the text-decoration, as its fill/stroke properties have to be used for drawing instead of ours.
@@ -536,8 +537,8 @@ void SVGTextBoxPainter<TextBoxPath>::paintTextWithShadows(const RenderStyle& sty
     float scalingFactor = renderer().scalingFactor();
     ASSERT(scalingFactor);
 
-    const FontCascade& scaledFont = renderer().scaledFont();
-    const ShadowData* shadow = style.textShadow();
+    const auto& scaledFont = renderer().scaledFont();
+    const auto& shadows = style.textShadow();
 
     FloatPoint textOrigin(fragment.x, fragment.y);
     FloatSize textSize(fragment.width, fragment.height);
@@ -566,9 +567,9 @@ void SVGTextBoxPainter<TextBoxPath>::paintTextWithShadows(const RenderStyle& sty
         releaseLegacyPaintingResource(usedContext, /* path */nullptr);
     };
 
-    do {
+    auto draw = [&](const Style::TextShadow* shadow, bool lastShadowInIteration) -> bool {
         if (!prepareGraphicsContext())
-            break;
+            return false;
 
         {
             // Optimized code path to support gradient/pattern fill/stroke on text without using temporary ImageBuffers / masking.
@@ -605,7 +606,7 @@ void SVGTextBoxPainter<TextBoxPath>::paintTextWithShadows(const RenderStyle& sty
                 }
             }
 
-            ShadowApplier shadowApplier(style, *usedContext, shadow, nullptr, shadowRect);
+            ShadowApplier shadowApplier(style, *usedContext, shadow, nullptr, shadowRect, lastShadowInIteration);
 
             if (!shadowApplier.didSaveContext())
                 usedContext->save();
@@ -622,11 +623,18 @@ void SVGTextBoxPainter<TextBoxPath>::paintTextWithShadows(const RenderStyle& sty
 
         restoreGraphicsContext();
 
-        if (!shadow)
-            break;
+        return true;
+    };
 
-        shadow = shadow->next();
-    } while (shadow);
+    if (shadows.isNone()) {
+        draw(nullptr, false);
+        return;
+    }
+
+    for (const auto& shadow : shadows) {
+        if (!draw(&shadow, &shadow == &shadows.last()))
+            return;
+    }
 }
 
 template<typename TextBoxPath>

@@ -20,6 +20,8 @@
 #include "config.h"
 #include "RefTrackerMixin.h"
 
+#include <ranges>
+
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
@@ -55,7 +57,7 @@ void RefTracker::logAllLiveReferences()
     Locker locker(lock);
     auto keysIterator = map.keys();
     auto keys = std::vector<void*> { keysIterator.begin(), keysIterator.end() };
-    std::sort(keys.begin(), keys.end());
+    std::ranges::sort(keys);
     for (auto& k : keys) {
         auto* v = map.get(k);
         if (!v)

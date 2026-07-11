@@ -92,7 +92,7 @@ private:
     ProtectCountSet m_protectCountSet;
     HashMap<RuntimeObject*, JSC::Weak<RuntimeObject>> m_runtimeObjects; // We use a map to implement a set.
 
-    UncheckedKeyHashSet<InvalidationCallback*> m_invalidationCallbacks;
+    HashSet<InvalidationCallback*> m_invalidationCallbacks;
 };
 
 } // namespace Bindings

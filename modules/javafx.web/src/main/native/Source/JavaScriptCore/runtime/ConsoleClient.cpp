@@ -74,14 +74,14 @@ static void appendMessagePrefix(StringBuilder& builder, MessageSource source, Me
     case MessageSource::Storage:
         sourceString = "STORAGE"_s;
         break;
-    case MessageSource::AppCache:
-        sourceString = "APPCACHE"_s;
-        break;
     case MessageSource::Rendering:
         sourceString = "RENDERING"_s;
         break;
     case MessageSource::CSS:
         sourceString = "CSS"_s;
+        break;
+    case MessageSource::Accessibility:
+        sourceString = "Accessibility"_s;
         break;
     case MessageSource::Security:
         sourceString = "SECURITY"_s;

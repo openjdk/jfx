@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class VersionInfoTest {
 
     // Increment this feature-release counter for every major release.
-    private static final String FEATURE = "26";
+    private static final String FEATURE = "27";
 
     // The working directory at runtime is 'modules/javafx.base'.
     private static final String PROPERTIES_FILE = "build/module-lib/javafx.properties";

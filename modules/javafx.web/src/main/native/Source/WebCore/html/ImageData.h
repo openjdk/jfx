@@ -29,7 +29,6 @@
 #pragma once
 
 #include "ByteArrayPixelBuffer.h"
-#include "ExceptionOr.h"
 #include "ImageDataArray.h"
 #include "ImageDataSettings.h"
 #include "IntSize.h"
@@ -38,6 +37,8 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class ImageData : public RefCounted<ImageData> {
 public:
@@ -62,7 +63,7 @@ public:
     PredefinedColorSpace colorSpace() const { return m_colorSpace; }
     ImageDataStorageFormat storageFormat() const { return m_data.storageFormat(); }
 
-    Ref<ByteArrayPixelBuffer> pixelBuffer() const;
+    Ref<ByteArrayPixelBuffer> byteArrayPixelBuffer() const;
 
 private:
     explicit ImageData(const IntSize&, ImageDataArray&&, PredefinedColorSpace);

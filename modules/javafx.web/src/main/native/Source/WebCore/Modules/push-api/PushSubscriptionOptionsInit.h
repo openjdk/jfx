@@ -27,13 +27,12 @@
 
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <optional>
-#include <variant>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 struct PushSubscriptionOptionsInit {
-    using ApplicationServerKey = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, String>;
+    using ApplicationServerKey = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, String>;
     bool userVisibleOnly { false };
     std::optional<ApplicationServerKey> applicationServerKey;
 };

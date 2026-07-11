@@ -105,7 +105,7 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     auto parseAndCompileResult = parseAndCompileBytecode(function.data, signature, m_moduleInformation.get(), functionIndex);
     endCompilerSignpost(CompilationMode::LLIntMode, functionIndexSpace);
 
-    if (UNLIKELY(!parseAndCompileResult)) {
+    if (!parseAndCompileResult) [[unlikely]] {
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
@@ -129,29 +129,33 @@ void LLIntPlan::compileFunction(FunctionCodeIndex functionIndex)
     }
 
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
-    if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
+    if (Options::dumpGeneratedWasmBytecodes()) [[unlikely]]
         BytecodeDumper::dumpBlock(m_wasmInternalFunctions[functionIndex].get(), m_moduleInformation, WTF::dataFile());
 
     LLIntCallee* llintCallee = nullptr;
     if (!m_callees) {
         auto callee = LLIntCallee::create(*m_wasmInternalFunctions[functionIndex], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
         ASSERT(!callee->entrypoint());
-
-        if (Options::useWasmJIT() && Options::useBBQJIT()) {
-#if ENABLE(JIT)
-            if (m_moduleInformation->usesSIMD(functionIndex))
-                callee->setEntrypoint(LLInt::wasmFunctionEntryThunkSIMD().retaggedCode<WasmEntryPtrTag>());
-            else
-                callee->setEntrypoint(LLInt::wasmFunctionEntryThunk().retaggedCode<WasmEntryPtrTag>());
-#endif
-        } else {
-            if (m_moduleInformation->usesSIMD(functionIndex)) {
+        bool usesSIMD = m_moduleInformation->usesSIMD(functionIndex);
+        if (usesSIMD && !Options::useBBQJIT()) {
                 Locker locker { m_lock };
                 Base::fail(makeString("JIT is disabled, but the entrypoint for "_s, functionIndex.rawIndex(), " requires JIT"_s));
                 return;
             }
-            callee->setEntrypoint(LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_trampoline));
+
+        CodePtr<WasmEntryPtrTag> entrypoint { };
+#if ENABLE(JIT)
+        if (Options::useJIT()) {
+            if (usesSIMD)
+                entrypoint = LLInt::wasmFunctionEntryThunkSIMD().retaggedCode<WasmEntryPtrTag>();
+            else
+                entrypoint = LLInt::wasmFunctionEntryThunk().retaggedCode<WasmEntryPtrTag>();
         }
+#endif
+        if (!entrypoint)
+            entrypoint = LLInt::getCodeFunctionPtr<CFunctionPtrTag>(wasm_function_prologue_trampoline);
+
+        callee->setEntrypoint(entrypoint);
         llintCallee = callee.ptr();
         m_calleesVector[functionIndex] = WTFMove(callee);
     } else
@@ -184,7 +188,7 @@ void LLIntPlan::didCompleteCompilation()
 
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
-        m_callees = m_calleesVector.data();
+        m_callees = m_calleesVector.span().data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
     }

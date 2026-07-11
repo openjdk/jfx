@@ -64,7 +64,7 @@ public:
 private:
     CSSGridIntegerRepeatValue(Ref<CSSPrimitiveValue>&& repetitions, CSSValueListBuilder);
 
-    Ref<CSSPrimitiveValue> m_repetitions;
+    const Ref<CSSPrimitiveValue> m_repetitions;
 };
 
 } // namespace WebCore

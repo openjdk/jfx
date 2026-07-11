@@ -53,7 +53,7 @@ class TextResourceDecoder;
 class ThreadableLoader;
 
 class FileReaderLoader final : public ThreadableLoaderClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FileReaderLoader, FileReaderLoader);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FileReaderLoader);
 public:
     enum ReadType {
@@ -102,6 +102,8 @@ private:
 
     static ExceptionCode httpStatusCodeToErrorCode(int);
     static ExceptionCode toErrorCode(BlobResourceHandle::Error);
+
+    RefPtr<JSC::ArrayBuffer> protectedRawData() const { return m_rawData; }
 
     ReadType m_readType;
     WeakPtr<FileReaderLoaderClient> m_client;

@@ -60,9 +60,9 @@ constexpr size_t ResponseFrameSize = 256;
 constexpr float ResponseSampleRate = 44100;
 
 static Lock audioBusMapLock;
-static UncheckedKeyHashMap<String, RefPtr<AudioBus>>& concatenatedImpulseResponsesMap() WTF_REQUIRES_LOCK(audioBusMapLock)
+static HashMap<String, RefPtr<AudioBus>>& concatenatedImpulseResponsesMap() WTF_REQUIRES_LOCK(audioBusMapLock)
 {
-    static NeverDestroyed<UncheckedKeyHashMap<String, RefPtr<AudioBus>>> audioBusMap;
+    static NeverDestroyed<HashMap<String, RefPtr<AudioBus>>> audioBusMap;
     return audioBusMap;
 }
 
@@ -151,8 +151,13 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
     // (hardware) sample-rate.
     unsigned startFrame = index * ResponseFrameSize;
     unsigned stopFrame = startFrame + ResponseFrameSize;
-    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(bus.get(), startFrame, stopFrame);
-    auto response = AudioBus::createBySampleRateConverting(preSampleRateConvertedResponse.get(), false, sampleRate);
+    auto preSampleRateConvertedResponse = AudioBus::createBufferFromRange(*bus, startFrame, stopFrame);
+    ASSERT(preSampleRateConvertedResponse);
+    if (!preSampleRateConvertedResponse)
+        return false;
+    auto response = AudioBus::createBySampleRateConverting(*preSampleRateConvertedResponse, false, sampleRate);
+    if (!response)
+        return false;
     AudioChannel* leftEarImpulseResponse = response->channel(AudioBus::ChannelLeft);
     AudioChannel* rightEarImpulseResponse = response->channel(AudioBus::ChannelRight);
 #else

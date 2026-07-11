@@ -29,7 +29,6 @@
 
 #pragma once
 
-#include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ColorTypes.h"
 #include <optional>
@@ -38,28 +37,27 @@
 namespace WebCore {
 
 namespace CSS {
+struct PropertyParserState;
 struct Range;
 }
 
 class CSSValue;
-
 struct CSSParserContext;
+enum CSSPropertyID : uint16_t;
 
 class CSSParserFastPaths {
 public:
     // Parses simple values like '10px' or 'green', but makes no guarantees about handling any property completely.
-    static RefPtr<CSSValue> maybeParseValue(CSSPropertyID, StringView, const CSSParserContext&);
+    static RefPtr<CSSValue> maybeParseValue(CSSPropertyID, StringView, CSS::PropertyParserState&);
 
-    // Properties handled here shouldn't be explicitly handled in CSSPropertyParser.
-    static bool isKeywordFastPathEligibleStyleProperty(CSSPropertyID);
-    static bool isKeywordValidForStyleProperty(CSSPropertyID, CSSValueID, const CSSParserContext&);
+    // Returns the allowed numeric value range for a length value if the property supports a single length value.
+    // FIXME: This should be generated from CSSProperties.json
+    static std::optional<CSS::Range> lengthValueRangeForPropertiesSupportingSimpleLengths(CSSPropertyID);
 
     // Parses numeric and named colors.
-    static WEBCORE_EXPORT std::optional<SRGBA<uint8_t>> parseSimpleColor(StringView, bool strict = false);
+    static WEBCORE_EXPORT std::optional<SRGBA<uint8_t>> parseSimpleColor(StringView, const CSSParserContext&);
     static std::optional<SRGBA<uint8_t>> parseHexColor(StringView); // Hex colors of length 3, 4, 6, or 8, without leading "#".
     static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
-
-    static bool isSimpleLengthPropertyID(CSSPropertyID, CSS::Range&);
 };
 
 } // namespace WebCore

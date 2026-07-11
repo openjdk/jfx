@@ -25,14 +25,17 @@
 #include "SVGImageElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "HTMLParserIdioms.h"
 #include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGResource.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "RenderImageResource.h"
 #include "RenderSVGImage.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "XLinkNames.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -89,7 +92,7 @@ bool SVGImageElement::renderingTaintsOrigin() const
 
 void SVGImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::preserveAspectRatioAttr:
         Ref { m_preserveAspectRatio }->setBaseValInternal(SVGPreserveAspectRatioValue { newValue });
@@ -170,12 +173,12 @@ void SVGImageElement::didAttachRenderers()
     SVGGraphicsElement::didAttachRenderers();
 
     if (CheckedPtr image = dynamicDowncast<RenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
-        image->checkedImageResource()->setCachedImage(m_imageLoader.protectedImage());
+        image->imageResource().setCachedImage(m_imageLoader.protectedImage());
             return;
     }
 
     if (CheckedPtr image = dynamicDowncast<LegacyRenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
-        image->checkedImageResource()->setCachedImage(m_imageLoader.protectedImage());
+        image->imageResource().setCachedImage(m_imageLoader.protectedImage());
         return;
     }
 }

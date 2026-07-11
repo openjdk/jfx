@@ -27,6 +27,7 @@
 
 #include "CollectionIndexCacheInlines.h"
 #include "LiveNodeList.h"
+#include "TreeScopeInlines.h"
 
 namespace WebCore {
 

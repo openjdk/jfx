@@ -54,7 +54,7 @@ static PAS_ALWAYS_INLINE bool pas_try_shrink(void* ptr,
                 begin, new_size);
             return true;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return 0;
         }
     }
@@ -101,7 +101,7 @@ static PAS_ALWAYS_INLINE bool pas_try_shrink(void* ptr,
         return true;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

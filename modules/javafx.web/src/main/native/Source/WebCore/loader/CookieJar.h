@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -87,8 +87,7 @@ protected:
     CookieJar(Ref<StorageSessionProvider>&&);
 
 private:
-    Ref<StorageSessionProvider> m_storageSessionProvider;
-    Ref<StorageSessionProvider> protectedStorageSessionProvider() const;
+    const Ref<StorageSessionProvider> m_storageSessionProvider;
 };
 
 } // namespace WebCore

@@ -62,7 +62,7 @@ static PAS_ALWAYS_INLINE size_t pas_get_allocation_size(void* ptr,
                 pas_page_base_get_bitfit(page_and_kind.page_base),
                 begin);
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             return 0;
         }
     }
@@ -136,7 +136,7 @@ static PAS_ALWAYS_INLINE size_t pas_get_allocation_size(void* ptr,
         return result;
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 

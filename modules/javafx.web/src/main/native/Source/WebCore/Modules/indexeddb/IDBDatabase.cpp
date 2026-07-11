@@ -28,6 +28,8 @@
 
 #include "DOMStringList.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
 #include "IDBIndex.h"
@@ -40,6 +42,7 @@
 #include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -48,7 +51,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabase);
 
 static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
 {
-    std::sort(vector.begin(), vector.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(vector, WTF::codePointCompareLessThan);
     removeRepeatedElements(vector);
     return WTFMove(vector);
 }
@@ -330,7 +333,7 @@ Ref<IDBTransaction> IDBDatabase::startVersionChangeTransaction(const IDBTransact
     ASSERT(scriptExecutionContext());
 
     Ref<IDBTransaction> transaction = IDBTransaction::create(*this, info, request);
-    m_versionChangeTransaction = &transaction.get();
+    m_versionChangeTransaction = transaction.get();
 
     m_activeTransactions.set(transaction->info().identifier(), &transaction.get());
 
@@ -486,6 +489,14 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
     auto* objectStore = m_info.infoForExistingObjectStore(info.objectStoreIdentifier());
     ASSERT(objectStore);
     objectStore->deleteIndex(info.name());
+}
+
+std::optional<ScriptExecutionContextIdentifier> IDBDatabase::scriptExecutionContextIdentifier() const
+{
+    if (RefPtr context = scriptExecutionContext())
+        return context->identifier();
+
+    return std::nullopt;
 }
 
 } // namespace WebCore

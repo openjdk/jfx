@@ -32,6 +32,7 @@
 #pragma once
 
 #include "WorkerThread.h"
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
@@ -47,8 +48,10 @@ public:
     }
     virtual ~DedicatedWorkerThread();
 
-    WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
+    WorkerObjectProxy* workerObjectProxy() const { return m_workerObjectProxy.get(); }
     void start() { WorkerThread::start(nullptr); }
+
+    void clearProxies() override;
 
 protected:
     Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) override;
@@ -58,7 +61,7 @@ private:
 
     ASCIILiteral threadName() const final { return "WebCore: Worker"_s; }
 
-    WorkerObjectProxy& m_workerObjectProxy;
+    CheckedPtr<WorkerObjectProxy> m_workerObjectProxy;
 };
 
 } // namespace WebCore

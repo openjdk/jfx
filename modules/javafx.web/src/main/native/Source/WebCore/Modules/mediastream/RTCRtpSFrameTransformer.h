@@ -27,14 +27,17 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include "RTCRtpTransformBackend.h"
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CryptoKey;
+
+template<typename> class ExceptionOr;
 
 class RTCRtpSFrameTransformer : public ThreadSafeRefCounted<RTCRtpSFrameTransformer, WTF::DestructionThread::Main> {
 public:

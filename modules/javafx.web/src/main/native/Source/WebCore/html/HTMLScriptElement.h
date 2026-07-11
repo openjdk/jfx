@@ -42,24 +42,22 @@ public:
 
     String text() const { return scriptContent(); }
     WEBCORE_EXPORT void setText(String&&);
-    ExceptionOr<void> setText(std::variant<RefPtr<TrustedScript>, String>&&);
+    ExceptionOr<void> setText(Variant<RefPtr<TrustedScript>, String>&&);
 
     using Node::setTextContent;
-    ExceptionOr<void> setTextContent(std::optional<std::variant<RefPtr<TrustedScript>, String>>&&);
+    ExceptionOr<void> setTextContent(std::optional<Variant<RefPtr<TrustedScript>, String>>&&);
 
     using HTMLElement::setInnerText;
-    ExceptionOr<void> setInnerText(std::variant<RefPtr<TrustedScript>, String>&&);
+    ExceptionOr<void> setInnerText(Variant<RefPtr<TrustedScript>, String>&&);
 
     String src() const;
-    ExceptionOr<void> setSrc(std::variant<RefPtr<TrustedScriptURL>, String>&&);
+    ExceptionOr<void> setSrc(Variant<RefPtr<TrustedScriptURL>, String>&&);
 
     WEBCORE_EXPORT void setAsync(bool);
     WEBCORE_EXPORT bool async() const;
 
-    WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const final;
 
@@ -68,9 +66,8 @@ public:
 
     static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s; }
 
-    void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriority() const override;
+    RequestPriority fetchPriority() const final;
 
     WEBCORE_EXPORT DOMTokenList& blocking();
 
@@ -107,7 +104,7 @@ private:
 
     bool isScriptPreventedByAttributes() const final;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const final;
 
     const std::unique_ptr<DOMTokenList> m_blockingList;
     bool m_isRenderBlocking { false };

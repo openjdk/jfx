@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ElementTextDirection.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
@@ -231,7 +232,7 @@ std::optional<TextDirection> computeAutoDirectionality(const Element& element)
         // Specs: The directionality of the auto-directionality form-associated
         // element is calculated from its value() text.
         // Specs: If element's value is not the empty string, then return 'ltr'.
-        if (auto value = textFormControl->value(); !value.isEmpty())
+        if (auto value = textFormControl->value(); !value->isEmpty())
             return computeTextDirectionFromText(value).value_or(TextDirection::LTR);
         return std::nullopt;
     }

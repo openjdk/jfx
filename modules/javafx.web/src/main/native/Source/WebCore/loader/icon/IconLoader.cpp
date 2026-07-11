@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,7 +64,7 @@ void IconLoader::startLoading()
     if (!frame)
         return;
 
-    ResourceRequest resourceRequest = m_url;
+    ResourceRequest resourceRequest = URL { m_url };
     resourceRequest.setPriority(ResourceLoadPriority::Low);
 #if !ERROR_DISABLED
     // Copy this because we may want to access it after transferring the
@@ -89,7 +89,7 @@ void IconLoader::startLoading()
 
     request.setInitiatorType(cachedResourceRequestInitiatorTypes().icon);
 
-    auto cachedResource = frame->document()->protectedCachedResourceLoader()->requestIcon(WTFMove(request));
+    auto cachedResource = frame->protectedDocument()->protectedCachedResourceLoader()->requestIcon(WTFMove(request));
     m_resource = cachedResource.value_or(nullptr);
     if (CachedResourceHandle resource = m_resource)
         resource->addClient(*this);

@@ -32,36 +32,41 @@
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
-class TextureMapperJava final : public TextureMapper {
-    WTF_MAKE_FAST_ALLOCATED;
+class TextureMapperJava : public TextureMapper, public ThreadSafeRefCounted<TextureMapperJava>  {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TextureMapperJava);
 public:
     TextureMapperJava();
 
     // TextureMapper implementation
-    void drawBorder(const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) final;
-    void drawNumber(int number, const Color&, const FloatPoint&, const TransformationMatrix&) final;
-    void drawTexture(const BitmapTexture&, const FloatRect& targetRect, const TransformationMatrix&, float opacity, unsigned exposedEdges) final;
-    void drawSolidColor(const FloatRect&, const TransformationMatrix&, const Color&, bool) final;
-    void beginClip(const TransformationMatrix&, const FloatRoundedRect&) final;
-    void bindSurface(BitmapTexture* surface) final { m_currentSurface = surface;}
-    void endClip() final { graphicsContext()->restore(); }
-    IntRect clipBounds() final { return currentContext()->clipBounds(); }
-    IntSize maxTextureSize() const final;
-    Ref<BitmapTexture> createTexture() { return BitmapTextureJava::create(); }
-    BitmapTexture* currentSurface() { return m_currentSurface.get(); }
-    Ref<BitmapTexture> createTexture(GCGLint) { return createTexture(); }
-    void setDepthRange(double zNear, double zFar) final;
-    void clearColor(const Color&) final;
+    void drawBorder(const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&);
+    void drawNumber(int number, const Color&, const FloatPoint&, const TransformationMatrix&);
+    void drawTexture(const BitmapTextureJava&, const FloatRect& targetRect, const TransformationMatrix&, float opacity, unsigned exposedEdges);
+    void drawSolidColor(const FloatRect&, const TransformationMatrix&, const Color&, bool);
+    void beginClip(const TransformationMatrix&, const FloatRoundedRect&);
+    void bindSurface(BitmapTextureJava* surface) { m_currentSurface = surface;}
+    void endClip() { graphicsContext()->restore(); }
+    IntRect clipBounds() { return currentContext()->clipBounds(); }
+    IntSize maxTextureSize() const;
+    Ref<BitmapTextureJava> createTexture() { return BitmapTextureJava::create(); }
+    BitmapTextureJava* currentSurface() { return m_currentSurface ? m_currentSurface.get() : nullptr; }
+    Ref<BitmapTextureJava> createTexture(GCGLint) { return createTexture(); }
+    void setDepthRange(double zNear, double zFar);
+    void clearColor(const Color&);
 
     inline GraphicsContext* currentContext()
     {
-        return m_currentSurface ? static_cast<BitmapTextureJava*>(m_currentSurface.get())->graphicsContext() : graphicsContext();
+        return m_currentSurface ? m_currentSurface->graphicsContext() : graphicsContext();
+    }
+
+    static Ref<TextureMapperJava> create()
+    {
+        return adoptRef(*new TextureMapperJava());
     }
 
     void setGraphicsContext(GraphicsContext* context) { m_context = context; }
     GraphicsContext* graphicsContext() { return m_context; }
 private:
-    RefPtr<BitmapTexture> m_currentSurface;
+    RefPtr<BitmapTextureJava> m_currentSurface;
     GraphicsContext* m_context;
 };
 

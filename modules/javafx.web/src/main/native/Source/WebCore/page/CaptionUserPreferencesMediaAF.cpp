@@ -29,6 +29,7 @@
 #if ENABLE(VIDEO)
 
 #include "AudioTrackList.h"
+#include "CSSValueKeywords.h"
 #include "ColorSerialization.h"
 #include "CommonAtomStrings.h"
 #include "FloatConversion.h"
@@ -40,6 +41,7 @@
 #include "UserAgentParts.h"
 #include "UserStyleSheetTypes.h"
 #include <algorithm>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
@@ -147,12 +149,12 @@ CaptionUserPreferencesMediaAF::CaptionUserPreferencesMediaAF(PageGroup& group)
 CaptionUserPreferencesMediaAF::~CaptionUserPreferencesMediaAF()
 {
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
-    if (RetainPtr observer = m_observer) {
+    if (m_observer) {
         auto center = CFNotificationCenterGetLocalCenter();
         if (kMAXCaptionAppearanceSettingsChangedNotification)
-            CFNotificationCenterRemoveObserver(center, observer.get(), kMAXCaptionAppearanceSettingsChangedNotification, 0);
+            CFNotificationCenterRemoveObserver(center, m_observer.get(), kMAXCaptionAppearanceSettingsChangedNotification, 0);
         if (kMAAudibleMediaSettingsChangedNotification)
-            CFNotificationCenterRemoveObserver(center, observer.get(), kMAAudibleMediaSettingsChangedNotification, 0);
+            CFNotificationCenterRemoveObserver(center, m_observer.get(), kMAAudibleMediaSettingsChangedNotification, 0);
     }
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 }
@@ -283,15 +285,14 @@ void CaptionUserPreferencesMediaAF::setInterestedInCaptionPreferenceChanges()
     m_registeringForNotification = true;
 
     if (!m_observer)
-        m_observer = createWeakObserver(this);
-    RetainPtr observer = m_observer;
+        lazyInitialize(m_observer, createWeakObserver(this));
     auto suspensionBehavior = static_cast<CFNotificationSuspensionBehavior>(CFNotificationSuspensionBehaviorCoalesce | _CFNotificationObserverIsObjC);
     auto center = CFNotificationCenterGetLocalCenter();
     if (kMAXCaptionAppearanceSettingsChangedNotification)
-        CFNotificationCenterAddObserver(center, observer.get(), userCaptionPreferencesChangedNotificationCallback, kMAXCaptionAppearanceSettingsChangedNotification, 0, suspensionBehavior);
+        CFNotificationCenterAddObserver(center, m_observer.get(), userCaptionPreferencesChangedNotificationCallback, kMAXCaptionAppearanceSettingsChangedNotification, 0, suspensionBehavior);
 
     if (canLoad_MediaAccessibility_kMAAudibleMediaSettingsChangedNotification())
-        CFNotificationCenterAddObserver(center, observer.get(), userCaptionPreferencesChangedNotificationCallback, kMAAudibleMediaSettingsChangedNotification, 0, suspensionBehavior);
+        CFNotificationCenterAddObserver(center, m_observer.get(), userCaptionPreferencesChangedNotificationCallback, kMAAudibleMediaSettingsChangedNotification, 0, suspensionBehavior);
     m_registeringForNotification = false;
 
     // Generating and registering the caption stylesheet can be expensive and this method is called indirectly when the parser creates an audio or
@@ -735,7 +736,7 @@ static String trackDisplayName(const TrackBase& track)
 
     String result;
 
-    String label = track.label();
+    String label = track.label().string().trim(isASCIIWhitespace);
     String trackLanguageIdentifier = track.validBCP47Language();
 
     auto preferredLanguages = userPreferredLanguages(ShouldMinimizeLanguages::No);
@@ -761,8 +762,12 @@ static String trackDisplayName(const TrackBase& track)
 
         result = addTrackKindDisplayNameIfNeeded(track, result);
 
-        if (!label.isEmpty() && !result.contains(label))
+        if (!label.isEmpty()) {
+            if (result.isEmpty())
+                result = label;
+            else if (!result.contains(label))
             result = addTrackLabelAsSuffix(result, label);
+    }
     }
 
     if (result.isEmpty())
@@ -839,7 +844,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&] (auto& a, auto& b) {
         if (auto trackDisplayComparison = collator.collate(trackDisplayName(*a), trackDisplayName(*b)))
             return trackDisplayComparison < 0;
 
@@ -849,12 +854,12 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
     return tracksForMenu;
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, UncheckedKeyHashSet<TextTrack::Kind> kinds)
+Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 
     Vector<RefPtr<TextTrack>> tracksForMenu;
-    UncheckedKeyHashSet<String> languagesIncluded;
+    HashSet<String> languagesIncluded;
     CaptionDisplayMode displayMode = captionDisplayMode();
     bool prefersAccessibilityTracks = userPrefersCaptions();
     bool filterTrackList = shouldFilterTrackMenu();
@@ -955,7 +960,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     if (tracksForMenu.isEmpty())
         return tracksForMenu;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+    std::ranges::sort(tracksForMenu, textTrackCompare);
 
     if (requestingCaptionsOrDescriptionsOrSubtitles) {
         tracksForMenu.insert(0, &TextTrack::captionMenuOffItem());

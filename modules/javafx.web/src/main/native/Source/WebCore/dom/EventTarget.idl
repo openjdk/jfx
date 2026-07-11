@@ -20,6 +20,7 @@
 
 [
     CustomToJSObject,
+    ExportMacro=WEBCORE_EXPORT,
     Exposed=*,
     IsImmutablePrototypeExoticObjectOnPrototype,
     JSCustomHeader,

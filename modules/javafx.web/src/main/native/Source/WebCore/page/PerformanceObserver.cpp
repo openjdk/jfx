@@ -39,10 +39,10 @@ PerformanceObserver::PerformanceObserver(ScriptExecutionContext& scriptExecution
     : m_callback(WTFMove(callback))
 {
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-        if (auto* window = document->domWindow())
-            m_performance = &window->performance();
+        if (auto* window = document->window())
+            m_performance = window->performance();
     } else if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
-        m_performance = &workerGlobalScope->performance();
+        m_performance = workerGlobalScope->performance();
     else
         ASSERT_NOT_REACHED();
 }
@@ -144,7 +144,7 @@ void PerformanceObserver::deliver()
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
-    m_callback->handleEvent(*this, list, *this);
+    m_callback->invoke(*this, list, *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
 }
 

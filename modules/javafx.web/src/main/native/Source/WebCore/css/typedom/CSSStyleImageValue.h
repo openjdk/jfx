@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ class WeakPtrImplWithEventTargetData;
 class CSSStyleImageValue final : public CSSStyleValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleImageValue);
 public:
-    static Ref<CSSStyleImageValue> create(Ref<CSSImageValue>&& cssValue, Document* document)
+    static Ref<CSSStyleImageValue> create(Ref<CSSImageValue>&& cssValue, Document& document)
     {
         return adoptRef(*new CSSStyleImageValue(WTFMove(cssValue), document));
     }
@@ -55,9 +55,9 @@ public:
     RefPtr<CSSValue> toCSSValue() const final;
 
 private:
-    CSSStyleImageValue(Ref<CSSImageValue>&&, Document*);
+    CSSStyleImageValue(Ref<CSSImageValue>&&, Document&);
 
-    Ref<CSSImageValue> m_cssValue;
+    const Ref<CSSImageValue> m_cssValue;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 

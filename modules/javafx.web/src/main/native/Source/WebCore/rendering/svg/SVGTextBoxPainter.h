@@ -77,6 +77,9 @@ private:
     LegacyRenderSVGResource* m_legacyPaintingResource { nullptr };
 };
 
+extern template class SVGTextBoxPainter<InlineIterator::BoxLegacyPath>;
+extern template class SVGTextBoxPainter<InlineIterator::BoxModernPath>;
+
 class LegacySVGTextBoxPainter : public SVGTextBoxPainter<InlineIterator::BoxLegacyPath> {
 public:
     LegacySVGTextBoxPainter(const SVGInlineTextBox&, PaintInfo&, const LayoutPoint& paintOffset);

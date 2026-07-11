@@ -29,12 +29,13 @@
 
 #include "ContentExtensionsDebugging.h"
 #include "ImmutableNFANodeBuilder.h"
-#include "NFANode.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
 namespace ContentExtensions {
 
+typedef Vector<uint64_t, 0, CrashOnOverflow, 1> ActionList;
 typedef ImmutableRange<char> ImmutableCharRange;
 typedef ImmutableNFANodeBuilder<char, uint64_t> ImmutableCharNFANodeBuilder;
 

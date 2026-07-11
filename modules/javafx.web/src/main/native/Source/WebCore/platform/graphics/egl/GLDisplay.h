@@ -20,8 +20,10 @@
 #pragma once
 
 #include <optional>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -34,12 +36,10 @@ typedef unsigned EGLenum;
 
 namespace WebCore {
 
-class GLDisplay {
+class GLDisplay final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GLDisplay, WTF::DestructionThread::MainRunLoop> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(GLDisplay);
-    WTF_MAKE_NONCOPYABLE(GLDisplay);
 public:
-    static std::unique_ptr<GLDisplay> create(EGLDisplay);
-    explicit GLDisplay(EGLDisplay);
+    static RefPtr<GLDisplay> create(EGLDisplay);
     ~GLDisplay() = default;
 
     EGLDisplay eglDisplay() const { return m_display; }
@@ -74,6 +74,8 @@ public:
 #endif
 
 private:
+    explicit GLDisplay(EGLDisplay);
+
     EGLDisplay m_display { nullptr };
     struct {
         int major { 0 };
@@ -82,8 +84,12 @@ private:
     Extensions m_extensions;
 
 #if USE(GBM)
+    Lock m_dmabufFormatsLock;
+    bool m_dmabufFormatsInitialized WTF_GUARDED_BY_LOCK(m_dmabufFormatsLock) { false };
     Vector<DMABufFormat> m_dmabufFormats;
 #if USE(GSTREAMER)
+    Lock m_dmabufFormatsForVideoLock;
+    bool m_dmabufFormatsForVideoInitialized WTF_GUARDED_BY_LOCK(m_dmabufFormatsForVideoLock) { false };
     Vector<DMABufFormat> m_dmabufFormatsForVideo;
 #endif
 #endif

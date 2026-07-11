@@ -115,7 +115,15 @@ public:
 
 private:
     friend class RunLoopSetup;
-    MessageQueueWaitResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
+
+    struct RunInModeResult {
+        MessageQueueWaitResult messageQueueResult;
+        bool firedSharedTimer { false };
+        bool firedRunLoopTimer { false };
+        String activeRunLoopTimersBeforeFiring;
+        String activeRunLoopTimersAfterFiring;
+    };
+    RunInModeResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
 
     // Runs any clean up tasks that are currently in the queue and returns.
     // This should only be called when the context is closed or loop has been terminated.

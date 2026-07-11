@@ -68,7 +68,8 @@ public class WebViewApp extends Application {
         WebView webView = new WebView();
 
         final WebEngine webEngine = webView.getEngine();
-        final String DEFAULT_URL = "http://www.oracle.com/us/index.html";
+        final String DEFAULT_URL = "https://www.oracle.com/us/index.html";
+        final String[] allowedPrefixes = {"http://", "https://"};
         webEngine.load(DEFAULT_URL);
 
         final TextField locationField = new TextField(DEFAULT_URL);
@@ -79,9 +80,17 @@ public class WebViewApp extends Application {
             };
         webEngine.locationProperty().addListener(changeListener);
         EventHandler<ActionEvent> goAction = (ActionEvent event) -> {
-            webEngine.load(locationField.getText().startsWith("http://")
-                    ? locationField.getText()
-                    : "http://" + locationField.getText());
+            String address = locationField.getText().trim();
+            boolean hasSupportedPrefix = false;
+            for (String prefix : allowedPrefixes) {
+                if (address.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                    hasSupportedPrefix = true;
+                    break;
+                }
+            }
+            webEngine.load(hasSupportedPrefix
+                    ? address
+                    : "https://" + address);
         };
         locationField.setOnAction(goAction);
 

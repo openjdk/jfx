@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTable.h"
 
@@ -60,6 +61,62 @@ inline RectEdges<LayoutUnit> RenderTable::borderWidths() const
         borderBottom(),
         borderLeft()
     };
+}
+
+inline LayoutUnit RenderTable::paddingTop() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingTop();
+}
+
+inline LayoutUnit RenderTable::paddingBottom() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingBottom();
+}
+
+inline LayoutUnit RenderTable::paddingLeft() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingLeft();
+}
+
+inline LayoutUnit RenderTable::paddingRight() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingRight();
+}
+
+inline LayoutUnit RenderTable::paddingAfter() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingAfter();
+}
+
+inline LayoutUnit RenderTable::paddingBefore() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingBefore();
+}
+
+inline LayoutUnit RenderTable::paddingStart() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingStart();
+}
+
+inline LayoutUnit RenderTable::paddingEnd() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingEnd();
 }
 
 inline LayoutUnit RenderTable::bordersPaddingAndSpacingInRowDirection() const

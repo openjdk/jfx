@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,13 @@
 
 #pragma once
 
-#include "Color.h"
 #include "DecodingOptions.h"
+#include "DestinationColorSpace.h"
 #include "FloatRect.h"
-#include "FloatSize.h"
-#include "GraphicsTypes.h"
 #include "ImageAdapter.h"
 #include "ImageOrientation.h"
 #include "ImagePaintingOptions.h"
 #include "ImageTypes.h"
-#include "NativeImage.h"
-#include "Timer.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
@@ -46,12 +42,17 @@
 namespace WebCore {
 
 class AffineTransform;
+class Document;
 class FloatPoint;
 class FloatSize;
-class GraphicsContext;
 class FragmentedSharedBuffer;
+class GraphicsContext;
+class NativeImage;
 class ShareableBitmap;
+class Timer;
 struct Length;
+
+enum class CompositeOperator : uint8_t;
 
 // This class gets notified when an image creates or destroys decoded frames and when it advances animation frames.
 class ImageObserver;
@@ -77,6 +78,8 @@ public:
     virtual bool isPDFDocumentImage() const { return false; }
     virtual bool isCustomPaintImage() const { return false; }
 
+    virtual void subresourcesAreFinished(Document*, CompletionHandler<void()>&&);
+
     bool drawsSVGImage() const { return isSVGImage() || isSVGImageForContainer(); }
 
     virtual unsigned frameCount() const { return 1; }
@@ -99,7 +102,7 @@ public:
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
     virtual FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const = 0;
-    virtual FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return size(orientation); }
+    virtual FloatSize sourceSize(ImageOrientation = ImageOrientation::Orientation::FromImage) const;
     virtual bool hasDensityCorrectedSize() const { return false; }
     FloatRect rect() const { return FloatRect(FloatPoint(), size()); }
     float width() const { return size().width(); }
@@ -118,9 +121,10 @@ public:
 
     FragmentedSharedBuffer* data() { return m_encodedImageData.get(); }
     const FragmentedSharedBuffer* data() const { return m_encodedImageData.get(); }
+    WEBCORE_EXPORT RefPtr<FragmentedSharedBuffer> protectedData() const;
 
     virtual DestinationColorSpace colorSpace();
-    virtual Headroom headroom() const { return Headroom::None; }
+    virtual bool hasHDRContent() const { return false; }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.
@@ -129,7 +133,7 @@ public:
     virtual void stopAnimation() {}
     virtual void resetAnimation() {}
     virtual bool isAnimating() const { return false; }
-    bool animationPending() const { return m_animationStartTimer && m_animationStartTimer->isActive(); }
+    WEBCORE_EXPORT bool animationPending() const;
     std::optional<bool> allowsAnimation() const { return m_allowsAnimation; }
     void setAllowsAnimation(std::optional<bool> allowsAnimation) { m_allowsAnimation = allowsAnimation; }
     static bool systemAllowsAnimationControls() { return gSystemAllowsAnimationControls; }
@@ -148,10 +152,10 @@ public:
 
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
-    virtual RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) { return nullptr; }
-    virtual RefPtr<NativeImage> nativeImageAtIndex(unsigned) { return nativeImage(); }
-    virtual RefPtr<NativeImage> currentNativeImage() { return nativeImage(); }
-    virtual RefPtr<NativeImage> currentPreTransformedNativeImage(ImageOrientation = ImageOrientation::Orientation::FromImage) { return currentNativeImage(); }
+    virtual RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB());
+    virtual RefPtr<NativeImage> nativeImageAtIndex(unsigned);
+    virtual RefPtr<NativeImage> currentNativeImage();
+    virtual RefPtr<NativeImage> currentPreTransformedNativeImage(ImageOrientation = ImageOrientation::Orientation::FromImage);
 
 #if PLATFORM(JAVA)
     virtual RefPtr<NativeImage> javaImage() { return currentNativeImage(); }
@@ -187,7 +191,7 @@ protected:
     ImageDrawResult drawTiled(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ImagePaintingOptions = { });
 
     // Supporting tiled drawing
-    virtual std::optional<Color> singlePixelSolidColor() const { return std::nullopt; }
+    virtual std::optional<Color> singlePixelSolidColor() const;
 
 private:
     RefPtr<FragmentedSharedBuffer> m_encodedImageData;
@@ -200,7 +204,7 @@ private:
     static bool gSystemAllowsAnimationControls;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Image&);
 
 } // namespace WebCore
 

@@ -75,7 +75,7 @@ public:
 
     ThreadSafeDataBuffer isolatedCopy() const { return *this; }
 
-    const Vector<uint8_t>* data() const
+    const Vector<uint8_t>* data() const LIFETIME_BOUND
     {
         return m_impl ? &m_impl->m_data : nullptr;
     }

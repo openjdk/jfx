@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia S.L.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,11 +28,12 @@
 #include "AccessibilityAtspiEnums.h"
 #include "AccessibilityObject.h"
 #include "AXCoreObject.h"
-#include "Editing.h"
+#include "EditingInlines.h"
 #include "PlatformScreen.h"
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "SurrogatePairAwareTextIterator.h"
 #include "TextIterator.h"
@@ -275,7 +276,7 @@ String AccessibilityObjectAtspi::text() const
 
     m_hasListMarkerAtStart = false;
 
-    if (m_coreObject->roleValue() == AccessibilityRole::ColorWell) {
+    if (m_coreObject->role() == AccessibilityRole::ColorWell) {
         auto color = convertColor<SRGBA<float>>(m_coreObject->colorValue()).resolved();
         GUniquePtr<char> colorString(g_strdup_printf("rgb %7.5f %7.5f %7.5f 1", color.red, color.green, color.blue));
         return String::fromUTF8(colorString.get());
@@ -499,7 +500,7 @@ int AccessibilityObjectAtspi::characterAtOffset(int offset) const
     return g_utf8_get_char(g_utf8_offset_to_pointer(utf8Text.data(), offset));
 }
 
-std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(UChar character, int index) const
+std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(char16_t character, int index) const
 {
     auto utf16Text = text();
     unsigned start = 0;
@@ -518,7 +519,7 @@ std::optional<unsigned> AccessibilityObjectAtspi::characterOffset(UChar characte
     return UTF16OffsetToUTF8(mapping, offset);
 }
 
-std::optional<unsigned> AccessibilityObjectAtspi::characterIndex(UChar character, unsigned offset) const
+std::optional<unsigned> AccessibilityObjectAtspi::characterIndex(char16_t character, unsigned offset) const
 {
     auto utf16Text = text();
     auto utf8Text = utf16Text.utf8();
@@ -762,8 +763,8 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     if (!m_coreObject || !m_coreObject->renderer())
         return { };
 
-    auto accessibilityTextAttributes = [this](AXCoreObject& axObject, const UncheckedKeyHashMap<String, String>& defaultAttributes) -> UncheckedKeyHashMap<String, String> {
-        UncheckedKeyHashMap<String, String> attributes;
+    auto accessibilityTextAttributes = [this](AXCoreObject& axObject, const HashMap<String, String>& defaultAttributes) -> HashMap<String, String> {
+        HashMap<String, String> attributes;
         auto& style = axObject.renderer()->style();
 
         auto addAttributeIfNeeded = [&](const String& name, const String& value) {
@@ -792,9 +793,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         addAttributeIfNeeded("invisible"_s, style.visibility() == Visibility::Hidden ? "true"_s : "false"_s);
         addAttributeIfNeeded("editable"_s, m_coreObject->canSetValueAttribute() ? "true"_s : "false"_s);
         addAttributeIfNeeded("direction"_s, style.writingMode().isBidiLTR() ? "ltr"_s : "rtl"_s);
-
-        if (!style.textIndent().isUndefined())
-            addAttributeIfNeeded("indent"_s, makeString(valueForLength(style.textIndent(), m_coreObject->size().width()).toInt()));
+        addAttributeIfNeeded("indent"_s, makeString(Style::evaluate(style.textIndent().length, m_coreObject->size().width())));
 
         switch (style.textAlign()) {
         case TextAlignMode::Start:
@@ -821,7 +820,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         if (invalidStatus != "false"_s)
             addAttributeIfNeeded("invalid"_s, invalidStatus);
 
-        String language = m_coreObject->language();
+        String language = m_coreObject->languageIncludingAncestors();
         if (!language.isEmpty())
             addAttributeIfNeeded("language"_s, language);
 
@@ -850,7 +849,7 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
     }
 
     VisiblePosition offsetPosition = m_coreObject->visiblePositionForIndex(adjustInputOffset(*utf16Offset, m_hasListMarkerAtStart));
-    auto childNode = offsetPosition.deepEquivalent().protectedDeprecatedNode();
+    RefPtr childNode = offsetPosition.deepEquivalent().deprecatedNode();
     if (!childNode)
         return { WTFMove(defaultAttributes), -1, -1 };
 

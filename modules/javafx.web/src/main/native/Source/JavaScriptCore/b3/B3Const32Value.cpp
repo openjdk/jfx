@@ -66,6 +66,22 @@ Value* Const32Value::mulConstant(Procedure& proc, const Value* other) const
     return proc.add<Const32Value>(origin(), m_value * other->asInt32());
 }
 
+Value* Const32Value::mulHighConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasInt32())
+        return nullptr;
+    int32_t result = static_cast<int32_t>((static_cast<int64_t>(static_cast<int32_t>(m_value)) * static_cast<int64_t>(static_cast<int32_t>(other->asInt32()))) >> 32);
+    return proc.add<Const32Value>(origin(), result);
+}
+
+Value* Const32Value::uMulHighConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasInt32())
+        return nullptr;
+    uint32_t result = static_cast<uint32_t>((static_cast<uint64_t>(static_cast<uint32_t>(m_value)) * static_cast<uint64_t>(static_cast<uint32_t>(other->asInt32()))) >> 32);
+    return proc.add<Const32Value>(origin(), static_cast<int32_t>(result));
+}
+
 Value* Const32Value::checkAddConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasInt32())

@@ -92,7 +92,7 @@ typedef enum
 } GstTracerValueFlags;
 
 GST_API
-GstTracerRecord * gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...) G_GNUC_NULL_TERMINATED;
+GstTracerRecord * gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
 
 #ifndef GST_DISABLE_GST_DEBUG
 GST_API

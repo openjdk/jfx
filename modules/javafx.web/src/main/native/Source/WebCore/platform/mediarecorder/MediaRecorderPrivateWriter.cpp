@@ -43,18 +43,33 @@ MediaRecorderPrivateWriter::~MediaRecorderPrivateWriter() = default;
 
 std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(String type, MediaRecorderPrivateWriterListener& listener)
 {
-    if (hasPlatformStrategies()) {
-        auto writer = platformStrategies()->mediaStrategy().createMediaRecorderPrivateWriter(type, listener);
-        if (writer)
-            return writer;
-    }
+    auto containerType = [](const String& type) -> std::optional<MediaRecorderContainerType> {
     if (equalLettersIgnoringASCIICase(type, "video/mp4"_s) || equalLettersIgnoringASCIICase(type, "audio/mp4"_s))
-        return MediaRecorderPrivateWriterAVFObjC::create(listener);
+            return MediaRecorderContainerType::Mp4;
 #if ENABLE(MEDIA_RECORDER_WEBM)
     if (equalLettersIgnoringASCIICase(type, "video/webm"_s) || equalLettersIgnoringASCIICase(type, "audio/webm"_s))
+            return MediaRecorderContainerType::WebM;
+#endif
+        return { };
+    }(type);
+    if (!containerType)
+        return nullptr;
+
+    return create(*containerType, listener);
+}
+
+std::unique_ptr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(MediaRecorderContainerType type, MediaRecorderPrivateWriterListener& listener)
+{
+    switch (type) {
+    case MediaRecorderContainerType::Mp4:
+        return MediaRecorderPrivateWriterAVFObjC::create(listener);
+#if ENABLE(MEDIA_RECORDER_WEBM)
+    case MediaRecorderContainerType::WebM:
         return MediaRecorderPrivateWriterWebM::create(listener);
 #endif
+    default:
     return nullptr;
+    }
 }
 
 Ref<MediaRecorderPrivateWriter::WriterPromise> MediaRecorderPrivateWriter::writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&& samples, const MediaTime& endTime)

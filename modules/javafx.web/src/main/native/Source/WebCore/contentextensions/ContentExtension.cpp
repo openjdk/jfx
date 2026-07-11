@@ -55,12 +55,12 @@ ContentExtension::ContentExtension(const String& identifier, Ref<CompiledContent
     m_universalActions.shrinkToFit();
 }
 
-uint32_t ContentExtension::findFirstIgnorePreviousRules() const
+uint32_t ContentExtension::findFirstIgnoreRule() const
 {
     auto serializedActions = m_compiledExtension->serializedActions();
     uint32_t currentActionIndex = 0;
     while (currentActionIndex < serializedActions.size()) {
-        if (serializedActions[currentActionIndex] == WTF::alternativeIndexV<IgnorePreviousRulesAction, ActionData>)
+        if (serializedActions[currentActionIndex] == WTF::alternativeIndexV<IgnorePreviousRulesAction, ActionData> || serializedActions[currentActionIndex] == WTF::alternativeIndexV<IgnoreFollowingRulesAction, ActionData>)
             return currentActionIndex;
         currentActionIndex += DeserializedAction::serializedLength(serializedActions, currentActionIndex);
     }
@@ -74,13 +74,14 @@ StyleSheetContents* ContentExtension::globalDisplayNoneStyleSheet()
 
 void ContentExtension::compileGlobalDisplayNoneStyleSheet()
 {
-    uint32_t firstIgnorePreviousRules = findFirstIgnorePreviousRules();
+    uint32_t firstIgnoreRule = findFirstIgnoreRule();
 
     auto serializedActions = m_compiledExtension->serializedActions();
 
     auto inGlobalDisplayNoneStyleSheet = [&](const uint32_t location) {
-        RELEASE_ASSERT(location < serializedActions.size());
-        return location < firstIgnorePreviousRules && serializedActions[location] == WTF::alternativeIndexV<CSSDisplayNoneSelectorAction, ActionData>;
+        auto serializedActionSize = serializedActions.size();
+        RELEASE_ASSERT(location < serializedActionSize, location, serializedActionSize);
+        return location < firstIgnoreRule && serializedActions[location] == WTF::alternativeIndexV<CSSDisplayNoneSelectorAction, ActionData>;
     };
 
     StringBuilder css;

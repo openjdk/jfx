@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,16 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
 
 /**
  * Option Pane - a vertical option sheet.
  */
 public class OptionPane extends VBox {
+
+    public static final Insets INDENT = new Insets(0, 0, 0, 10);
 
     public OptionPane() {
         FX.name(this, "OptionPane");
@@ -46,30 +50,37 @@ public class OptionPane extends VBox {
     }
 
     public void label(String text) {
-        lastSection().add(new Label(text));
+        lastSection().addFull(new Label(text));
     }
 
     public void option(Node n) {
-        lastSection().add(n);
+        lastSection().addFull(n);
+    }
+
+    public void option(BooleanOption op) {
+        op.setPadding(INDENT);
+        lastSection().addFull(new HBox(op));
     }
 
     public void option(String text, Node n) {
-        lastSection().add(new Label(text));
-        if (n != null) {
-            lastSection().add(n);
-        }
+        lastSection().add(new Label(text), n);
     }
 
     public void add(Node n) {
-        lastSection().add(n);
+        lastSection().addFull(n);
     }
 
     public void separator() {
-        lastSection().add(new Separator(Orientation.HORIZONTAL));
+        lastSection().addFull(new Separator(Orientation.HORIZONTAL));
     }
 
     public void section(String name) {
         section(name, new OptionGridPane());
+    }
+
+    public void section(String name, boolean expanded) {
+        TitledPane p = section(name, new OptionGridPane());
+        p.setExpanded(expanded);
     }
 
     private List<TitledPane> getPanes() {
@@ -80,9 +91,10 @@ public class OptionPane extends VBox {
             collect(Collectors.toList());
     }
 
-    public void section(String name, OptionGridPane content) {
+    public TitledPane section(String name, OptionGridPane content) {
         TitledPane t = new TitledPane(name, content);
         getChildren().add(t);
+        return t;
     }
 
     private OptionGridPane lastSection() {
@@ -96,27 +108,32 @@ public class OptionPane extends VBox {
     }
 
     private static class OptionGridPane extends GridPane {
+        private static final Insets PADDING = new Insets(2);
         private int row;
-        private int column;
-        private static final Insets MARGIN = new Insets(1, 4, 0, 4);
-        private static final Insets PADDING = new Insets(0, 0, 2, 0);
 
         public OptionGridPane() {
             setPadding(PADDING);
             setMaxWidth(Double.MAX_VALUE);
+            setVgap(2);
+            setHgap(5);
+            // we might consider using CSS to reduce padding on all the controls
+            setStyle("-fx-font-size:90%;");
         }
 
-        public void label(String text) {
-            add(new Label(text));
+        void add(Node label, Node n) {
+            if (label != null) {
+                add(label, 0, row);
+            }
+            if (n != null) {
+                add(n, 1, row);
+                setFillHeight(n, Boolean.TRUE);
+                setFillWidth(n, Boolean.TRUE);
+            }
+            row++;
         }
 
-        public void option(Node n) {
-            add(n);
-        }
-
-        public void add(Node n) {
-            add(n, column, row++);
-            setMargin(n, MARGIN);
+        void addFull(Node n) {
+            add(n, 0, row++, 2, 1);
             setFillHeight(n, Boolean.TRUE);
             setFillWidth(n, Boolean.TRUE);
         }

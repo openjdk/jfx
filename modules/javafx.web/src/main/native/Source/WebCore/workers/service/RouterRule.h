@@ -33,7 +33,7 @@ namespace WebCore {
 
 struct RouterRule {
     RouterCondition condition;
-    std::variant<RouterSourceDict, RouterSourceEnum> source;
+    Variant<RouterSourceDict, RouterSourceEnum> source;
 };
 
 } // namespace WebCore

@@ -109,8 +109,6 @@ private:
     RefPtr<const Element> m_elementForContainerUnitResolution;
     std::optional<float> m_zoom;
     std::optional<CSSPropertyID> m_propertyToCompute;
-    // FIXME: Remove this hack.
-    RenderStyle* m_viewportDependencyDetectionStyle { nullptr };
 
     Style::BuilderState* m_styleBuilderState { nullptr };
 };

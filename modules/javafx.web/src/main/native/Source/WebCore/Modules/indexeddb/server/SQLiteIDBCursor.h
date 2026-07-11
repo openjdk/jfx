@@ -139,7 +139,7 @@ private:
     std::unique_ptr<SQLiteStatement> m_cachedObjectStoreStatement;
 
     bool m_statementNeedsReset { true };
-    std::variant<IDBObjectStoreIdentifier, IDBIndexIdentifier> m_boundID;
+    Variant<IDBObjectStoreIdentifier, IDBIndexIdentifier> m_boundID;
 
     bool m_backingStoreCursor { false };
 

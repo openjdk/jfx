@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-typedef UncheckedKeyHashSet<String, ASCIICaseInsensitiveHash> HTTPHeaderSet;
+using HTTPHeaderSet = HashSet<String, ASCIICaseInsensitiveHash>;
 
 class ResourceResponse;
 enum class HTTPHeaderName : uint16_t;
@@ -89,16 +89,20 @@ WEBCORE_EXPORT bool isValidUserAgentHeaderValue(const String&);
 bool isValidHTTPToken(const String&);
 bool isValidHTTPToken(StringView);
 std::optional<WallTime> parseHTTPDate(const String&);
-StringView filenameFromHTTPContentDisposition(StringView);
+StringView filenameFromHTTPContentDisposition(StringView value LIFETIME_BOUND);
 WEBCORE_EXPORT String extractMIMETypeFromMediaType(const String&);
-WEBCORE_EXPORT StringView extractCharsetFromMediaType(StringView);
+WEBCORE_EXPORT StringView extractCharsetFromMediaType(StringView mediaType LIFETIME_BOUND);
 XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL);
 AtomString extractReasonPhraseFromHTTPStatusLine(const String&);
 WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(StringView);
 WEBCORE_EXPORT OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse&);
 
-// -1 could be set to one of the return parameters to indicate the value is not specified.
-WEBCORE_EXPORT bool parseRange(StringView, RangeAllowWhitespace, long long& rangeStart, long long& rangeEnd);
+// One of the HTTPRange bounds could be set to std::nullopt but not both of them.
+struct HTTPRange {
+    std::optional<uint64_t> start;
+    std::optional<uint64_t> end;
+};
+WEBCORE_EXPORT std::optional<HTTPRange> parseRange(StringView, RangeAllowWhitespace);
 
 ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header);
 
@@ -126,7 +130,7 @@ bool isSafeMethod(const String&);
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
 template<class HashType>
-bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, UncheckedKeyHashSet<String, HashType>& set)
+bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, HashSet<String, HashType>& set)
 {
     StringImpl* stringImpl = string.impl();
     if (!stringImpl)
@@ -153,9 +157,9 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
 }
 
 template<class HashType = DefaultHash<String>>
-std::optional<UncheckedKeyHashSet<String, HashType>> parseAccessControlAllowList(const String& string)
+std::optional<HashSet<String, HashType>> parseAccessControlAllowList(const String& string)
 {
-    UncheckedKeyHashSet<String, HashType> set;
+    HashSet<String, HashType> set;
     unsigned start = 0;
     size_t end;
     while ((end = string.find(',', start)) != notFound) {

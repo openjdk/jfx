@@ -114,7 +114,7 @@ inline void InlineContentCache::InlineItems::set(InlineItemList&& inlineItemList
 
 inline void InlineContentCache::InlineItems::replace(size_t insertionPosition, InlineItemList&& inlineItemList, ContentAttributes contentAttributes, IsPopulatedFromCache isPopulatedFromCache)
 {
-    m_inlineItemList.remove(insertionPosition, m_inlineItemList.size() - insertionPosition);
+    m_inlineItemList.removeAt(insertionPosition, m_inlineItemList.size() - insertionPosition);
     m_inlineItemList.appendVector(WTFMove(inlineItemList));
     m_contentAttributes = contentAttributes;
     if (isPopulatedFromCache == IsPopulatedFromCache::No)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
- * Copyright (C) 2021-2023 Apple Inc.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -149,23 +149,7 @@ public:
         return m_epochNanoseconds >= ExactTime::minValue && m_epochNanoseconds <= ExactTime::maxValue;
     }
 
-    constexpr bool operator<(ExactTime other) const
-    {
-        return m_epochNanoseconds < other.m_epochNanoseconds;
-    }
-    constexpr bool operator<=(ExactTime other) const
-    {
-        return m_epochNanoseconds <= other.m_epochNanoseconds;
-    }
-    friend constexpr bool operator==(const ExactTime&, const ExactTime&) = default;
-    constexpr bool operator>=(ExactTime other) const
-    {
-        return m_epochNanoseconds >= other.m_epochNanoseconds;
-    }
-    constexpr bool operator>(ExactTime other) const
-    {
-        return m_epochNanoseconds > other.m_epochNanoseconds;
-    }
+    friend constexpr auto operator<=>(const ExactTime&, const ExactTime&) = default;
 
     std::optional<ExactTime> add(Duration) const;
     Int128 difference(ExactTime other, unsigned increment, TemporalUnit, RoundingMode) const;
@@ -184,6 +168,43 @@ private:
     static Int128 round(Int128 quantity, unsigned increment, TemporalUnit, RoundingMode);
 
     Int128 m_epochNanoseconds { };
+};
+
+// https://tc39.es/proposal-temporal/#sec-temporal-internal-duration-records
+// Represents a duration as an ISO8601::Duration (in which all time fields
+// are ignored) along with an Int128 time duration that represents the sum
+// of all time fields. Used to avoid losing precision in intermediate calculations.
+class InternalDuration final {
+public:
+    InternalDuration(Duration d, Int128 t)
+        : m_dateDuration(d), m_time(t) { }
+    InternalDuration()
+        : m_dateDuration(Duration()), m_time(0) { }
+    static constexpr Int128 maxTimeDuration = 9'007'199'254'740'992 * ExactTime::nsPerSecond - 1;
+
+    int32_t sign() const;
+
+    int32_t timeDurationSign() const
+    {
+        return m_time < 0 ? -1 : m_time > 0 ? 1 : 0;
+    }
+
+    Int128 time() const { return m_time; }
+
+    Duration dateDuration() const { return m_dateDuration; }
+
+    static InternalDuration combineDateAndTimeDuration(Duration, Int128);
+private:
+
+    // Time fields are ignored
+    Duration m_dateDuration;
+
+    // A time duration is an integer in the inclusive interval from -maxTimeDuration
+    // to maxTimeDuration, where
+    // maxTimeDuration = 2**53 × 10**9 - 1 = 9,007,199,254,740,991,999,999,999.
+    // It represents the portion of a Temporal.Duration object that deals with time
+    // units, but as a combined value of total nanoseconds.
+    Int128 m_time;
 };
 
 class PlainTime {
@@ -254,20 +275,25 @@ private:
 };
 static_assert(sizeof(PlainDate) == sizeof(int32_t));
 
-using TimeZone = std::variant<TimeZoneID, int64_t>;
+using TimeZone = Variant<TimeZoneID, int64_t>;
 
 // https://tc39.es/proposal-temporal/#sec-temporal-parsetemporaltimezonestring
 // Record { [[Z]], [[OffsetString]], [[Name]] }
 struct TimeZoneRecord {
     bool m_z { false };
     std::optional<int64_t> m_offset;
-    std::variant<Vector<LChar>, int64_t> m_nameOrOffset;
+    Variant<Vector<LChar>, int64_t> m_nameOrOffset;
 };
 
 static constexpr unsigned minCalendarLength = 3;
 static constexpr unsigned maxCalendarLength = 8;
-struct CalendarRecord {
-    Vector<LChar, maxCalendarLength> m_name;
+enum class RFC9557Flag : bool { None, Critical }; // "Critical" = "!" flag
+enum class RFC9557Key : bool { Calendar, Other };
+using RFC9557Value = Vector<LChar, maxCalendarLength>;
+struct RFC9557Annotation {
+    RFC9557Flag m_flag;
+    RFC9557Key m_key;
+    RFC9557Value m_value;
 };
 
 // https://tc39.es/proposal-temporal/#sup-isvalidtimezonename
@@ -276,10 +302,11 @@ std::optional<Duration> parseDuration(StringView);
 std::optional<int64_t> parseUTCOffset(StringView, bool parseSubMinutePrecision = true);
 std::optional<int64_t> parseUTCOffsetInMinutes(StringView);
 enum class ValidateTimeZoneID : bool { No, Yes };
+using CalendarID = RFC9557Value;
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView);
-std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView);
+std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarTime(StringView);
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>>> parseDateTime(StringView);
-std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringView);
+std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarID>>> parseCalendarDateTime(StringView);
 uint8_t dayOfWeek(PlainDate);
 uint16_t dayOfYear(PlainDate);
 uint8_t weeksInYear(int32_t year);

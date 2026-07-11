@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,7 +126,7 @@ URL WorkletGlobalScope::completeURL(const String& url, ForceUTF8) const
 
 void WorkletGlobalScope::logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<ScriptCallStack>&& stack)
 {
-    if (UNLIKELY(settingsValues().logsPageMessagesToSystemConsoleEnabled)) {
+    if (settingsValues().logsPageMessagesToSystemConsoleEnabled) [[unlikely]] {
         if (stack) {
             Inspector::ConsoleMessage message { MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage, *stack };
             PageConsoleClient::logMessageToSystemConsole(message);
@@ -143,7 +143,7 @@ void WorkletGlobalScope::logExceptionToConsole(const String& errorMessage, const
 
 void WorkletGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
 {
-    if (UNLIKELY(settingsValues().logsPageMessagesToSystemConsoleEnabled && message))
+    if (settingsValues().logsPageMessagesToSystemConsoleEnabled && message) [[unlikely]]
         PageConsoleClient::logMessageToSystemConsole(*message);
 
     if (!m_document || isJSExecutionForbidden() || !message)

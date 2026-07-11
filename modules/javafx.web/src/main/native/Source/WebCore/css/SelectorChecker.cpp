@@ -541,7 +541,7 @@ static bool attributeValueMatches(const Attribute& attribute, CSSSelector::Match
     case CSSSelector::Match::List:
         {
             // Ignore empty selectors or selectors containing spaces.
-            if (selectorValue.isEmpty() || selectorValue.find(isASCIIWhitespace<UChar>) != notFound)
+            if (selectorValue.isEmpty() || selectorValue.find(isASCIIWhitespace<char16_t>) != notFound)
                 return false;
 
             unsigned startSearchAt = 0;
@@ -732,14 +732,13 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
 
     if (context.mustMatchHostPseudoClass) {
         // :host doesn't combine with anything except pseudo elements.
-        bool isHostPseudoClass = selector.match() == CSSSelector::Match::PseudoClass && selector.pseudoClass() == CSSSelector::PseudoClass::Host;
         bool isPseudoElement = selector.match() == CSSSelector::Match::PseudoElement;
         // FIXME: We do not support combining :host with :not() functional pseudoclass. Combination with functional pseudoclass has been allowed for the useful :is(:host) ; but combining with :not() doesn't sound useful like :host():not(:not(:host))
         // https://bugs.webkit.org/show_bug.cgi?id=283062
         bool isNotPseudoClass = selector.match() == CSSSelector::Match::PseudoClass && selector.pseudoClass() == CSSSelector::PseudoClass::Not;
 
-        // We can early return when we know it's neither :host, a compound :is(:host) , a pseudo-element.
-        if (!isHostPseudoClass && !isPseudoElement && (!selector.selectorList() || isNotPseudoClass))
+        // We can early return when we know it's neither :host, :scope (which can match when the scoping root is the shadow host), a compound :is(:host) , a pseudo-element.
+        if (!selector.isHostPseudoClass() && !isPseudoElement && !selector.isScopePseudoClass() && (!selector.selectorList() || isNotPseudoClass))
             return false;
     }
 
@@ -785,11 +784,11 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
         if (selector.pseudoClass() == CSSSelector::PseudoClass::Not) {
             const CSSSelectorList* selectorList = selector.selectorList();
 
-            for (const CSSSelector* subselector = selectorList->first(); subselector; subselector = CSSSelectorList::next(subselector)) {
+            for (auto& subselector : *selectorList) {
                 LocalContext subcontext(context);
                 subcontext.inFunctionalPseudoClass = true;
                 subcontext.pseudoElementEffective = false;
-                subcontext.selector = subselector;
+                subcontext.selector = &subselector;
                 subcontext.firstSelectorOfTheFragment = selectorList->first();
                 PseudoIdSet ignoreDynamicPseudo;
 
@@ -910,6 +909,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
                 bool hasMatchedAnything = false;
 
                 MatchType localMatchType = MatchType::VirtualPseudoElementOnly;
+                ASSERT(selector.selectorList());
                 for (const auto& subselector : *selector.selectorList()) {
                     LocalContext subcontext(context);
                     subcontext.inFunctionalPseudoClass = true;
@@ -938,17 +938,15 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
                 return hasMatchedAnything;
             }
         case CSSSelector::PseudoClass::Has: {
-            for (auto* hasSelector = selector.selectorList()->first(); hasSelector; hasSelector = CSSSelectorList::next(hasSelector)) {
-                if (matchHasPseudoClass(checkingContext, element, *hasSelector))
+            for (auto& hasSelector : *selector.selectorList()) {
+                if (matchHasPseudoClass(checkingContext, element, hasSelector))
                     return true;
             }
             return false;
         }
         case CSSSelector::PseudoClass::PlaceholderShown:
-            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element)) {
-                addStyleRelation(checkingContext, element, Style::Relation::Unique);
+            if (auto* formControl = dynamicDowncast<HTMLTextFormControlElement>(element))
                 return formControl->isPlaceholderVisible();
-            }
             return false;
         case CSSSelector::PseudoClass::NthChild: {
             if (auto* parentElement = dynamicDowncast<Element>(element.parentNode())) {
@@ -1140,7 +1138,10 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
 
         case CSSSelector::PseudoClass::Scope: {
             const Node* contextualReferenceNode = !checkingContext.scope ? element.document().documentElement() : checkingContext.scope.get();
-            return &element == contextualReferenceNode;
+            auto match = &element == contextualReferenceNode;
+            if (match && element.shadowRoot())
+                context.matchedHostPseudoClass = true;
+            return match;
             }
         case CSSSelector::PseudoClass::State:
             return element.hasCustomState(selector.argument());
@@ -1213,8 +1214,9 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             LocalContext subcontext(context);
 
             const CSSSelector* const & selector = context.selector;
-            for (subcontext.selector = selector->selectorList()->first(); subcontext.selector; subcontext.selector = CSSSelectorList::next(subcontext.selector)) {
-                subcontext.firstSelectorOfTheFragment = subcontext.selector;
+            for (auto& subselector : *selector->selectorList()) {
+                subcontext.selector = &subselector;
+                subcontext.firstSelectorOfTheFragment = &subselector;
                 subcontext.inFunctionalPseudoClass = true;
                 subcontext.pseudoElementEffective = false;
                 PseudoIdSet ignoredDynamicPseudo;
@@ -1322,13 +1324,13 @@ bool SelectorChecker::matchSelectorList(CheckingContext& checkingContext, const 
 {
     bool hasMatchedAnything = false;
 
-    for (const CSSSelector* subselector = selectorList.first(); subselector; subselector = CSSSelectorList::next(subselector)) {
+    for (auto& subselector : selectorList) {
         LocalContext subcontext(context);
         subcontext.element = &element;
-        subcontext.selector = subselector;
+        subcontext.selector = &subselector;
         subcontext.inFunctionalPseudoClass = true;
         subcontext.pseudoElementEffective = false;
-        subcontext.firstSelectorOfTheFragment = subselector;
+        subcontext.firstSelectorOfTheFragment = &subselector;
         PseudoIdSet ignoreDynamicPseudo;
         if (matchRecursively(checkingContext, subcontext, ignoreDynamicPseudo).match == Match::SelectorMatches) {
             ASSERT(!ignoreDynamicPseudo);
@@ -1533,7 +1535,6 @@ bool SelectorChecker::matchHasPseudoClass(CheckingContext& checkingContext, cons
         case Style::Relation::FirstChild:
         case Style::Relation::LastChild:
         case Style::Relation::NthChildIndex:
-        case Style::Relation::Unique:
             return;
         case Style::Relation::AffectedByHasWithPositionalPseudoClass:
             ASSERT_NOT_REACHED();

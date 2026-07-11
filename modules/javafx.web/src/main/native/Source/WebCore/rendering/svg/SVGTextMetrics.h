@@ -45,7 +45,7 @@ public:
     static SVGTextMetrics measureCharacterRange(const RenderSVGInlineText&, unsigned position, unsigned length);
     static TextRun constructTextRun(const RenderSVGInlineText&, unsigned position = 0, unsigned length = std::numeric_limits<unsigned>::max());
 
-    bool isEmpty() const { return !m_width && !m_height && !m_glyph.isValid && m_length == 1; }
+    bool isEmpty() const { return !m_width && !m_height && m_length == 1; }
 
     float width() const { return m_width; }
     void setWidth(float width) { m_width = width; }
@@ -53,27 +53,12 @@ public:
     float height() const { return m_height; }
     unsigned length() const { return m_length; }
 
-    struct Glyph {
-        Glyph()
-            : isValid(false)
-        {
-        }
-
-        bool isValid;
-        String name;
-        String unicodeString;
-    };
-
-    // Only useful when measuring individual characters, to lookup ligatures.
-    const Glyph& glyph() const { return m_glyph; }
-
 private:
     SVGTextMetrics(const RenderSVGInlineText&, const TextRun&);
 
     float m_width { 0 };
     float m_height { 0 };
     unsigned m_length { 0 };
-    Glyph m_glyph;
 };
 
 } // namespace WebCore

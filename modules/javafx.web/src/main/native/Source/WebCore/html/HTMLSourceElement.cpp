@@ -206,7 +206,7 @@ const MQ::MediaQueryList& HTMLSourceElement::parsedMediaAttribute(Document& docu
 {
     if (!m_cachedParsedMediaAttribute) {
         auto& value = attributeWithoutSynchronization(mediaAttr);
-        m_cachedParsedMediaAttribute = MQ::MediaQueryParser::parse(value, MediaQueryParserContext { document });
+        m_cachedParsedMediaAttribute = MQ::MediaQueryParser::parse(value, document.cssParserContext());
     }
     return m_cachedParsedMediaAttribute.value();
 }
@@ -227,7 +227,7 @@ void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) cons
     getURLsFromSrcsetAttribute(*this, attributeWithoutSynchronization(srcsetAttr), urls);
 }
 
-Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
+Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
 {
     Ref clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)

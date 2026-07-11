@@ -99,7 +99,7 @@ RefPtr<MediaQueryList> MediaQueryMatcher::matchMedia(const String& query)
     if (!m_document)
         return nullptr;
 
-    auto queries = MQ::MediaQueryParser::parse(query, MediaQueryParserContext(*m_document));
+    auto queries = MQ::MediaQueryParser::parse(query, m_document->cssParserContext());
     bool matches = evaluate(queries);
     return MediaQueryList::create(*m_document, *this, WTFMove(queries), matches);
 }

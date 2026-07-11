@@ -30,6 +30,7 @@
 #include "ScriptBuffer.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/FileHandle.h>
 #include <wtf/MainThread.h>
 #include <wtf/PageBlock.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -72,7 +73,7 @@ String SWScriptStorage::saltPath() const
 
 String SWScriptStorage::registrationDirectory(const ServiceWorkerRegistrationKey& registrationKey) const
 {
-    return FileSystem::pathByAppendingComponents(m_directory, { sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) });
+    return FileSystem::pathByAppendingComponents(m_directory, std::initializer_list<StringView>({ sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) }));
 }
 
 String SWScriptStorage::scriptPath(const ServiceWorkerRegistrationKey& registrationKey, const URL& scriptURL) const
@@ -90,7 +91,7 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
     size_t size = script.buffer() ? script.buffer()->size() : 0;
 
     auto iterateOverBufferAndWriteData = [&](NOESCAPE const Function<bool(std::span<const uint8_t>)>& writeData) {
-        script.buffer()->forEachSegment([&](std::span<const uint8_t> span) {
+        script.protectedBuffer()->forEachSegment([&](std::span<const uint8_t> span) {
             writeData(span);
         });
     };
@@ -100,17 +101,16 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
 
     if (!shouldUseFileMapping(size)) {
         auto handle = FileSystem::openFile(scriptPath, FileSystem::FileOpenMode::Truncate);
-        if (!FileSystem::isHandleValid(handle)) {
+        if (!handle) {
             RELEASE_LOG_ERROR(ServiceWorker, "SWScriptStorage::store: Failure to store %s, FileSystem::openFile() failed", scriptPath.utf8().data());
             return { };
         }
         if (size) {
         iterateOverBufferAndWriteData([&](std::span<const uint8_t> span) {
-                FileSystem::writeToFile(handle, span);
+                handle.write(span);
             return true;
         });
         }
-        FileSystem::closeFile(handle);
         return script;
     }
 

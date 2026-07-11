@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SVGMaskElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGResourceMaskerInlines.h"
 #include "NodeName.h"
 #include "RenderElementInlines.h"
@@ -33,6 +34,8 @@
 #include "SVGElementInlines.h"
 #include "SVGLayerTransformComputation.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
 #include "SVGUnitTypes.h"
@@ -70,7 +73,7 @@ Ref<SVGMaskElement> SVGMaskElement::create(const QualifiedName& tagName, Documen
 
 void SVGMaskElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::maskUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
@@ -171,8 +174,8 @@ FloatRect SVGMaskElement::calculateMaskContentRepaintRect(RepaintRectCalculation
     };
     FloatRect maskRepaintRect;
     for (auto* childNode = firstChild(); childNode; childNode = childNode->nextSibling()) {
-        CheckedPtr renderer = childNode->renderer();
-        if (!childNode->isSVGElement() || !renderer)
+        CheckedPtr renderer = dynamicDowncast<RenderElement>(childNode->renderer());
+        if (!renderer || !childNode->isSVGElement())
             continue;
         const auto& style = renderer->style();
         if (style.display() == DisplayType::None || style.usedVisibility() != Visibility::Visible)

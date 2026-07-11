@@ -44,7 +44,7 @@ public:
     virtual void clearAll(CompletionHandler<void()>&&) = 0;
     virtual void flushChanges(CompletionHandler<void()>&&) = 0;
     virtual void closeFiles(CompletionHandler<void()>&&) = 0;
-    virtual void importRegistrations(CompletionHandler<void(std::optional<Vector<ServiceWorkerContextData>>)>&&) = 0;
+    virtual void importRegistrations(CompletionHandler<void(std::optional<Vector<ServiceWorkerContextData>>&&)>&&) = 0;
     virtual void updateRegistration(const ServiceWorkerContextData&) = 0;
     virtual void removeRegistration(const ServiceWorkerRegistrationKey&) = 0;
 

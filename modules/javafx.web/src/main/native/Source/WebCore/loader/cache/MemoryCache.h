@@ -62,7 +62,7 @@ struct ClientOrigin;
 // -------|-----+++++++++++++++|+++++
 
 class MemoryCache {
-    WTF_MAKE_NONCOPYABLE(MemoryCache); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(MemoryCache); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MemoryCache, Loader);
     friend NeverDestroyed<MemoryCache>;
     friend class Internals;
 public:
@@ -157,13 +157,13 @@ public:
     void resourceAccessed(CachedResource&);
     bool inLiveDecodedResourcesList(CachedResource&) const;
 
-    typedef UncheckedKeyHashSet<RefPtr<SecurityOrigin>> SecurityOriginSet;
+    using SecurityOriginSet = HashSet<RefPtr<SecurityOrigin>>;
     WEBCORE_EXPORT void removeResourcesWithOrigin(const SecurityOrigin&);
     void removeResourcesWithOrigin(const SecurityOrigin&, const String& cachePartition);
     WEBCORE_EXPORT void removeResourcesWithOrigin(const ClientOrigin&);
     WEBCORE_EXPORT void removeResourcesWithOrigins(PAL::SessionID, const HashSet<RefPtr<SecurityOrigin>>&);
     WEBCORE_EXPORT void getOriginsWithCache(SecurityOriginSet& origins);
-    WEBCORE_EXPORT UncheckedKeyHashSet<RefPtr<SecurityOrigin>> originsWithCache(PAL::SessionID) const;
+    WEBCORE_EXPORT HashSet<RefPtr<SecurityOrigin>> originsWithCache(PAL::SessionID) const;
 
     // pruneDead*() - Flush decoded and encoded data from resources not referenced by Web pages.
     // pruneLive*() - Flush decoded data from resources still referenced by Web pages.

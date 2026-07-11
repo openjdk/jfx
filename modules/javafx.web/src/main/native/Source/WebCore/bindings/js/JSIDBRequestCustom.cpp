@@ -40,7 +40,7 @@ JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) cons
 {
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
     auto result = wrapped().result();
-    if (UNLIKELY(result.hasException())) {
+    if (result.hasException()) [[unlikely]] {
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
         return jsNull();
     }
@@ -86,7 +86,7 @@ JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) cons
                 if (!result)
                     return jsNull();
                 list.append(result.value());
-                if (UNLIKELY(list.hasOverflowed())) {
+                if (list.hasOverflowed()) [[unlikely]] {
                     propagateException(lexicalGlobalObject, throwScope, Exception(ExceptionCode::UnknownError));
                     return jsNull();
                 }

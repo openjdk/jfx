@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- *  Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2024 Sosuke Suzuki <aosukeke@gmail.com>.
  *  Copyright (C) 2024 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
@@ -28,6 +28,7 @@
 #include "LazyClassStructure.h"
 #include "RegExpGlobalData.h"
 #include "RuntimeFlags.h"
+#include "SourceTaintedOrigin.h"
 #include "StructureCache.h"
 #include "Watchpoint.h"
 #include "WeakGCSet.h"
@@ -102,6 +103,7 @@ class NullGetterFunction;
 class NullSetterFunction;
 class ObjectAdaptiveStructureWatchpoint;
 class ObjectConstructor;
+class ObjectPropertyCondition;
 class ObjectPrototype;
 class RegExpConstructor;
 class RegExpPrototype;
@@ -126,6 +128,9 @@ struct GlobalObjectMethodTable;
 
 template<typename Watchpoint> class ObjectPropertyChangeAdaptiveWatchpoint;
 
+enum class JSCJSGlobalObjectSignpostIdentifierType { };
+using JSCJSGlobalObjectSignpostIdentifier = AtomicObjectIdentifier<JSCJSGlobalObjectSignpostIdentifierType>;
+
 enum class ScriptExecutionStatus {
     Running,
     Suspended,
@@ -138,6 +143,13 @@ enum class CompilationType {
     Function,
     DirectEval,
     IndirectEval,
+};
+
+enum class TrustedTypesEnforcement {
+    None,
+    ReportOnly,
+    Enforced,
+    EnforcedWithEvalEnabled
 };
 
 constexpr bool typeExposedByDefault = true;
@@ -176,7 +188,6 @@ constexpr bool typeExposedByDefault = true;
 
 #if ENABLE(WEBASSEMBLY)
 #define FOR_EACH_WEBASSEMBLY_CONSTRUCTOR_TYPE(macro) \
-    macro(WebAssemblyArray,        webAssemblyArray,        webAssemblyArray,        JSWebAssemblyArray,        Array,        null,   typeExposedByDefault) \
     macro(WebAssemblyCompileError, webAssemblyCompileError, webAssemblyCompileError, ErrorInstance,             CompileError, error,  typeExposedByDefault) \
     macro(WebAssemblyException,    webAssemblyException,    webAssemblyException,    JSWebAssemblyException,    Exception,    object, typeExposedByDefault) \
     macro(WebAssemblyGlobal,       webAssemblyGlobal,       webAssemblyGlobal,       JSWebAssemblyGlobal,       Global,       object, typeExposedByDefault) \
@@ -185,7 +196,6 @@ constexpr bool typeExposedByDefault = true;
     macro(WebAssemblyMemory,       webAssemblyMemory,       webAssemblyMemory,       JSWebAssemblyMemory,       Memory,       object, typeExposedByDefault) \
     macro(WebAssemblyModule,       webAssemblyModule,       webAssemblyModule,       JSWebAssemblyModule,       Module,       object, typeExposedByDefault) \
     macro(WebAssemblyRuntimeError, webAssemblyRuntimeError, webAssemblyRuntimeError, ErrorInstance,             RuntimeError, error,  typeExposedByDefault) \
-    macro(WebAssemblyStruct,       webAssemblyStruct,       webAssemblyStruct,       JSWebAssemblyStruct,       Struct,       null,   typeExposedByDefault) \
     macro(WebAssemblyTable,        webAssemblyTable,        webAssemblyTable,        JSWebAssemblyTable,        Table,        object, typeExposedByDefault) \
     macro(WebAssemblyTag,          webAssemblyTag,          webAssemblyTag,          JSWebAssemblyTag,          Tag,          object, typeExposedByDefault)
 #else
@@ -221,6 +231,7 @@ public:
     WriteBarrier<JSScope> m_globalScopeExtension;
     WriteBarrier<JSCallee> m_globalCallee;
     WriteBarrier<JSCallee> m_partiallyInitializedFrameCallee;
+    WriteBarrier<JSCallee> m_evalCallee;
 
     JS_GLOBAL_OBJECT_ADDITIONS_1;
 
@@ -231,6 +242,7 @@ public:
     LazyClassStructure m_typeErrorStructure;
     LazyClassStructure m_URIErrorStructure;
     LazyClassStructure m_aggregateErrorStructure;
+    LazyClassStructure m_suppressedErrorStructure;
 
     WriteBarrier<ObjectConstructor> m_objectConstructor;
     WriteBarrier<ArrayConstructor> m_arrayConstructor;
@@ -345,7 +357,9 @@ public:
     struct FunctionStructures {
         WriteBarrierStructureID arrowFunctionStructure;
         WriteBarrierStructureID sloppyFunctionStructure;
+        WriteBarrierStructureID sloppyMethodStructure;
         WriteBarrierStructureID strictFunctionStructure;
+        WriteBarrierStructureID strictMethodStructure;
     };
     FunctionStructures m_builtinFunctions;
     FunctionStructures m_ordinaryFunctions;
@@ -388,6 +402,8 @@ public:
     LazyProperty<JSGlobalObject, Structure> m_callableProxyObjectStructure;
     LazyProperty<JSGlobalObject, Structure> m_proxyRevokeStructure;
     LazyClassStructure m_sharedArrayBufferStructure;
+    LazyClassStructure m_disposableStackStructure;
+    LazyClassStructure m_asyncDisposableStackStructure;
 
 #define DEFINE_STORAGE_FOR_SIMPLE_TYPE_PROTOTYPE(capitalName, lowerName, properName, instanceType, jsName, prototypeBase, featureFlag) \
     WriteBarrier<capitalName ## Prototype> m_ ## lowerName ## Prototype;
@@ -446,12 +462,12 @@ public:
     RefPtr<JSGlobalObjectDebuggable> m_inspectorDebuggable;
 #endif
 
-    Ref<WatchpointSet> m_masqueradesAsUndefinedWatchpointSet;
-    Ref<WatchpointSet> m_havingABadTimeWatchpointSet;
-    Ref<WatchpointSet> m_varInjectionWatchpointSet;
-    Ref<WatchpointSet> m_varReadOnlyWatchpointSet;
-    Ref<WatchpointSet> m_regExpRecompiledWatchpointSet;
-    Ref<WatchpointSet> m_arrayBufferDetachWatchpointSet;
+    const Ref<WatchpointSet> m_masqueradesAsUndefinedWatchpointSet;
+    const Ref<WatchpointSet> m_havingABadTimeWatchpointSet;
+    const Ref<WatchpointSet> m_varInjectionWatchpointSet;
+    const Ref<WatchpointSet> m_varReadOnlyWatchpointSet;
+    const Ref<WatchpointSet> m_regExpRecompiledWatchpointSet;
+    const Ref<WatchpointSet> m_arrayBufferDetachWatchpointSet;
 
     struct RareData;
     std::unique_ptr<RareData> m_rareData;
@@ -466,17 +482,23 @@ public:
     InlineWatchpointSet m_setIteratorProtocolWatchpointSet { IsWatched };
     InlineWatchpointSet m_stringIteratorProtocolWatchpointSet { IsWatched };
     InlineWatchpointSet m_stringSymbolReplaceWatchpointSet { IsWatched };
+    InlineWatchpointSet m_stringSymbolToPrimitiveWatchpointSet { IsWatched };
+    InlineWatchpointSet m_arraySymbolToPrimitiveWatchpointSet { IsWatched };
     InlineWatchpointSet m_regExpPrimordialPropertiesWatchpointSet { IsWatched };
     InlineWatchpointSet m_mapSetWatchpointSet { IsWatched };
     InlineWatchpointSet m_setAddWatchpointSet { IsWatched };
+    InlineWatchpointSet m_setPrimordialPropertiesWatchpointSet { IsWatched };
     InlineWatchpointSet m_arraySpeciesWatchpointSet { ClearWatchpoint };
     InlineWatchpointSet m_arrayJoinWatchpointSet { IsWatched };
+    InlineWatchpointSet m_arrayToStringWatchpointSet { IsWatched };
     InlineWatchpointSet m_arrayNegativeOneWatchpointSet { IsWatched };
     InlineWatchpointSet m_arrayIsConcatSpreadableWatchpointSet { IsWatched };
     InlineWatchpointSet m_arrayPrototypeChainIsSaneWatchpointSet { IsWatched };
     InlineWatchpointSet m_objectPrototypeChainIsSaneWatchpointSet { IsWatched };
     InlineWatchpointSet m_stringPrototypeChainIsSaneWatchpointSet { IsWatched };
     InlineWatchpointSet m_numberToStringWatchpointSet { IsWatched };
+    InlineWatchpointSet m_stringToStringWatchpointSet { IsWatched };
+    InlineWatchpointSet m_stringValueOfWatchpointSet { IsWatched };
     InlineWatchpointSet m_structureCacheClearedWatchpointSet { IsWatched };
     InlineWatchpointSet m_arrayBufferSpeciesWatchpointSet { ClearWatchpoint };
     InlineWatchpointSet m_sharedArrayBufferSpeciesWatchpointSet { ClearWatchpoint };
@@ -491,40 +513,6 @@ public:
 
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayConstructorSpeciesWatchpoint;
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayPrototypeConstructorWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayPrototypeSymbolIteratorWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayPrototypeJoinWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_arrayPrototypeAbsenceOfIndexedPropertiesWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_stringPrototypeAbsenceOfIndexedPropertiesWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_objectPrototypeAbsenceOfIndexedPropertiesWatchpoint;
-    std::unique_ptr<ChainedWatchpoint> m_objectPrototypeAbsenceOfIndexedPropertiesWatchpointForArray;
-    std::unique_ptr<ChainedWatchpoint> m_objectPrototypeAbsenceOfIndexedPropertiesWatchpointForString;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayIteratorPrototypeNext;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_mapPrototypeSymbolIteratorWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_mapIteratorPrototypeNextWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_setPrototypeSymbolIteratorWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_setIteratorPrototypeNextWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_stringPrototypeSymbolIteratorWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_stringIteratorPrototypeNextWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_stringPrototypeSymbolReplaceMissWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_objectPrototypeSymbolReplaceMissWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_arrayPrototypeNegativeOneMissWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_objectPrototypeNegativeOneMissWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_arrayPrototypeIsConcatSpreadableMissWatchpoint;
-    std::unique_ptr<ObjectAdaptiveStructureWatchpoint> m_objectPrototypeIsConcatSpreadableMissWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeExecWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeFlagsWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeDotAllWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeGlobalWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeHasIndicesWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeIgnoreCaseWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeMultilineWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeStickyWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeUnicodeWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeUnicodeSetsWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_regExpPrototypeSymbolReplaceWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_mapPrototypeSetWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_setPrototypeAddWatchpoint;
-    std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_numberPrototypeToStringWatchpoint;
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayBufferConstructorSpeciesWatchpoints[2];
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_arrayBufferPrototypeConstructorWatchpoints[2];
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_typedArrayConstructorSpeciesWatchpoint;
@@ -535,15 +523,21 @@ public:
     std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>> m_typedArray ## name ## PrototypeConstructorWatchpoint;
     FOR_EACH_TYPED_ARRAY_TYPE(DECLARE_TYPED_ARRAY_TYPE_WATCHPOINT)
 #undef DECLARE_TYPED_ARRAY_TYPE_WATCHPOINT
-    Vector<std::unique_ptr<ObjectAdaptiveStructureWatchpoint>> m_missWatchpoints;
+    Vector<UniqueRef<ObjectAdaptiveStructureWatchpoint>> m_installedObjectAdaptiveStructureWatchpoints;
+    Vector<UniqueRef<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>> m_installedObjectPropertyChangeAdaptiveWatchpoints;
+    Vector<UniqueRef<ChainedWatchpoint>> m_installedChainedWatchpoints;
 
-    void addWeakTicket(DeferredWorkTimer::Ticket);
-    void clearWeakTickets();
-    std::unique_ptr<ThreadSafeWeakHashSet<DeferredWorkTimer::TicketData>> m_weakTickets;
+    void installObjectAdaptiveStructureWatchpoint(const ObjectPropertyCondition&, InlineWatchpointSet&);
+    void installObjectPropertyChangeAdaptiveWatchpoint(const ObjectPropertyCondition&, InlineWatchpointSet&);
+    void installChainedWatchpoint(InlineWatchpointSet& from, InlineWatchpointSet& to);
 
     inline std::unique_ptr<ObjectAdaptiveStructureWatchpoint>& typedArrayConstructorSpeciesAbsenceWatchpoint(TypedArrayType);
     inline std::unique_ptr<ObjectAdaptiveStructureWatchpoint>& typedArrayPrototypeSymbolIteratorAbsenceWatchpoint(TypedArrayType);
     inline std::unique_ptr<ObjectPropertyChangeAdaptiveWatchpoint<InlineWatchpointSet>>& typedArrayPrototypeConstructorWatchpoint(TypedArrayType);
+
+    void addWeakTicket(DeferredWorkTimer::Ticket);
+    void clearWeakTickets();
+    std::unique_ptr<ThreadSafeWeakHashSet<DeferredWorkTimer::TicketData>> m_weakTickets;
 
 public:
     JSCallee* partiallyInitializedFrameCallee() const { return m_partiallyInitializedFrameCallee.get(); }
@@ -553,14 +547,20 @@ public:
     InlineWatchpointSet& setIteratorProtocolWatchpointSet() { return m_setIteratorProtocolWatchpointSet; }
     InlineWatchpointSet& stringIteratorProtocolWatchpointSet() { return m_stringIteratorProtocolWatchpointSet; }
     InlineWatchpointSet& stringSymbolReplaceWatchpointSet() { return m_stringSymbolReplaceWatchpointSet; }
+    InlineWatchpointSet& stringSymbolToPrimitiveWatchpointSet() { return m_stringSymbolToPrimitiveWatchpointSet; }
+    InlineWatchpointSet& arraySymbolToPrimitiveWatchpointSet() { return m_arraySymbolToPrimitiveWatchpointSet; }
+    InlineWatchpointSet& stringToStringWatchpointSet() { return m_stringToStringWatchpointSet; }
+    InlineWatchpointSet& stringValueOfWatchpointSet() { return m_stringValueOfWatchpointSet; }
     InlineWatchpointSet& regExpPrimordialPropertiesWatchpointSet() { return m_regExpPrimordialPropertiesWatchpointSet; }
     InlineWatchpointSet& mapSetWatchpointSet() { return m_mapSetWatchpointSet; }
     InlineWatchpointSet& setAddWatchpointSet() { return m_setAddWatchpointSet; }
+    InlineWatchpointSet& setPrimordialPropertiesWatchpointSet() { return m_setPrimordialPropertiesWatchpointSet; }
     InlineWatchpointSet& arraySpeciesWatchpointSet() { return m_arraySpeciesWatchpointSet; }
     InlineWatchpointSet& arrayPrototypeChainIsSaneWatchpointSet() { return m_arrayPrototypeChainIsSaneWatchpointSet; }
     InlineWatchpointSet& objectPrototypeChainIsSaneWatchpointSet() { return m_objectPrototypeChainIsSaneWatchpointSet; }
     InlineWatchpointSet& stringPrototypeChainIsSaneWatchpointSet() { return m_stringPrototypeChainIsSaneWatchpointSet; }
     InlineWatchpointSet& arrayJoinWatchpointSet() { return m_arrayJoinWatchpointSet; }
+    InlineWatchpointSet& arrayToStringWatchpointSet() { return m_arrayToStringWatchpointSet; }
     InlineWatchpointSet& arrayNegativeOneWatchpointSet() { return m_arrayNegativeOneWatchpointSet; }
     InlineWatchpointSet& arrayIsConcatSpreadableWatchpointSet() { return m_arrayIsConcatSpreadableWatchpointSet; }
     InlineWatchpointSet& numberToStringWatchpointSet()
@@ -594,7 +594,6 @@ public:
 
     bool m_evalEnabled { true };
     bool m_webAssemblyEnabled { true };
-    bool m_requiresTrustedTypes { true };
     bool m_needsSiteSpecificQuirks { false };
     unsigned m_globalLexicalBindingEpoch { 1 };
     String m_evalDisabledErrorMessage;
@@ -603,6 +602,8 @@ public:
     WeakPtr<ConsoleClient> m_consoleClient;
     std::optional<unsigned> m_stackTraceLimit;
     Weak<FunctionExecutable> m_executableForCachedFunctionExecutableForFunctionConstructor;
+
+    TrustedTypesEnforcement m_trustedTypesEnforcement { TrustedTypesEnforcement::None };
 
     template<typename T>
     struct WeakCustomGetterOrSetterHash {
@@ -623,6 +624,8 @@ public:
     WeakGCSetJSCustomSetterFunction& customSetterFunctionSet() { return m_customSetterFunctionSet; }
 
     const Ref<ImportMap> m_importMap;
+
+    HashMap<String, JSCJSGlobalObjectSignpostIdentifier> m_signposts;
 
 #if ASSERT_ENABLED
     const JSGlobalObject* m_globalObjectAtDebuggerEntry { nullptr };
@@ -660,6 +663,9 @@ public:
     std::optional<unsigned> stackTraceLimit() const { return m_stackTraceLimit; }
     void setStackTraceLimit(std::optional<unsigned> value) { m_stackTraceLimit = value; }
 
+    JS_EXPORT_PRIVATE void startSignpost(String&&);
+    JS_EXPORT_PRIVATE void stopSignpost(String&&);
+
 protected:
     JS_EXPORT_PRIVATE explicit JSGlobalObject(VM&, Structure*, const GlobalObjectMethodTable* = nullptr);
 
@@ -693,6 +699,7 @@ public:
     void clearGlobalScopeExtension();
 
     JSCallee* globalCallee() { return m_globalCallee.get(); }
+    JSCallee* evalCallee() { return m_evalCallee.get(); }
 
     // The following accessors return pristine values, even if a script
     // replaces the global object's associated property.
@@ -864,6 +871,18 @@ public:
             return m_builtinFunctions.strictFunctionStructure.get();
         return m_ordinaryFunctions.strictFunctionStructure.get();
     }
+    Structure* sloppyMethodStructure(bool isBuiltin) const
+    {
+        if (isBuiltin)
+            return m_builtinFunctions.sloppyMethodStructure.get();
+        return m_ordinaryFunctions.sloppyMethodStructure.get();
+    }
+    Structure* strictMethodStructure(bool isBuiltin) const
+    {
+        if (isBuiltin)
+            return m_builtinFunctions.strictMethodStructure.get();
+        return m_ordinaryFunctions.strictMethodStructure.get();
+    }
 
     Structure* boundFunctionStructure() const { return m_boundFunctionStructure.get(); }
     Structure* customGetterFunctionStructure() const { return m_customGetterFunctionStructure.get(this); }
@@ -900,6 +919,8 @@ public:
     Structure* proxyObjectStructure() const { return m_proxyObjectStructure.get(this); }
     Structure* callableProxyObjectStructure() const { return m_callableProxyObjectStructure.get(this); }
     Structure* proxyRevokeStructure() const { return m_proxyRevokeStructure.get(this); }
+    Structure* disposableStackStructure() const { return m_disposableStackStructure.get(this); }
+    Structure* asyncDisposableStackStructure() const { return m_asyncDisposableStackStructure.get(this); }
     Structure* restParameterStructure() const { return arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous); }
     Structure* originalRestParameterStructure() const { return originalArrayStructureForIndexingType(ArrayWithContiguous); }
 #if ENABLE(WEBASSEMBLY)
@@ -966,6 +987,7 @@ public:
     // FIXME: <http://webkit.org/b/246237> Local inspection should be controlled by `inspectable` API.
     Inspector::JSGlobalObjectInspectorController& inspectorController() const { return *m_inspectorController.get(); }
     JSGlobalObjectDebuggable& inspectorDebuggable() { return *m_inspectorDebuggable; }
+    Ref<JSGlobalObjectDebuggable> protectedInspectorDebuggable();
 #endif
 
     void bumpGlobalLexicalBindingEpoch(VM&);
@@ -994,6 +1016,7 @@ public:
 
     inline JSObject* arrayBufferPrototype(ArrayBufferSharingMode) const;
     inline Structure* arrayBufferStructure(ArrayBufferSharingMode) const;
+    inline Structure* arrayBufferStructureConcurrently(ArrayBufferSharingMode) const;
     template<ArrayBufferSharingMode sharingMode> Structure* arrayBufferStructureWithSharingMode() const { return arrayBufferStructure(sharingMode); }
     inline JSObject* arrayBufferConstructor(ArrayBufferSharingMode) const;
     inline GetterSetter* arrayBufferSpeciesGetterSetter(ArrayBufferSharingMode) const;
@@ -1083,14 +1106,13 @@ public:
     static bool shouldInterruptScriptBeforeTimeout(const JSGlobalObject*) { return false; }
     static RuntimeFlags javaScriptRuntimeFlags(const JSGlobalObject*) { return RuntimeFlags(); }
 
-    JS_EXPORT_PRIVATE void queueMicrotask(Ref<Microtask>&&);
-    JS_EXPORT_PRIVATE void queueMicrotask(JSValue job, JSValue, JSValue, JSValue, JSValue);
+    JS_EXPORT_PRIVATE void queueMicrotask(JSFunction* job, JSValue, JSValue, JSValue, JSValue);
 
     static void reportViolationForUnsafeEval(const JSGlobalObject*, const String&) { }
 
     bool evalEnabled() const { return m_evalEnabled; }
     bool webAssemblyEnabled() const { return m_webAssemblyEnabled; }
-    bool requiresTrustedTypes() const { return m_requiresTrustedTypes; }
+    TrustedTypesEnforcement trustedTypesEnforcement() const { return m_trustedTypesEnforcement; }
     const String& evalDisabledErrorMessage() const { return m_evalDisabledErrorMessage; }
     const String& webAssemblyDisabledErrorMessage() const { return m_webAssemblyDisabledErrorMessage; }
     void setEvalEnabled(bool enabled, const String& errorMessage = String())
@@ -1103,9 +1125,10 @@ public:
         m_webAssemblyEnabled = enabled;
         m_webAssemblyDisabledErrorMessage = errorMessage;
     }
-    void setRequiresTrustedTypes(bool required)
+    void setTrustedTypesEnforcement(TrustedTypesEnforcement enforcement)
     {
-        m_requiresTrustedTypes = required;
+        if (Options::useTrustedTypes())
+            m_trustedTypesEnforcement = enforcement;
     }
 
 #if ASSERT_ENABLED
@@ -1120,7 +1143,7 @@ public:
     WriteBarrier<JSObject>* addressOfGlobalThis() { return &m_globalThis; }
     OptionSet<CodeGenerationMode> defaultCodeGenerationMode() const;
 
-    FunctionExecutable* tryGetCachedFunctionExecutableForFunctionConstructor(const Identifier& name, const SourceCode&, LexicallyScopedFeatures, FunctionConstructionMode);
+    FunctionExecutable* tryGetCachedFunctionExecutableForFunctionConstructor(const Identifier& name, StringView program, const SourceOrigin&, SourceTaintedOrigin, const String& sourceURL, const TextPosition& startPosition, LexicallyScopedFeatures, FunctionConstructionMode);
     void cachedFunctionExecutableForFunctionConstructor(FunctionExecutable*);
 
     static inline Structure* createStructure(VM&, JSValue prototype);
@@ -1186,6 +1209,8 @@ private:
     void initializeErrorConstructor(LazyClassStructure::Initializer&);
 
     void initializeAggregateErrorConstructor(LazyClassStructure::Initializer&);
+
+    void initializeSuppressedErrorConstructor(LazyClassStructure::Initializer&);
 
     JS_EXPORT_PRIVATE void init(VM&);
     void initStaticGlobals(VM&);

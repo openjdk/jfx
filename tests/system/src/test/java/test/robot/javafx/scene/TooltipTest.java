@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TooltipTest {
 
-    private static final int DELTA = 100;
+    private static final int DELTA = 150;
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch tooltipShownLatch;
@@ -84,131 +84,161 @@ class TooltipTest {
 
     @Test
     void testDefaultTooltip() {
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
 
-        assertTrue(tooltip.isShowing());
-        assertTooltipShowDelay(tooltipShowTime, 1000);
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+            assertTooltipShowDelay(tooltipShowTime, 1000);
+        });
     }
 
     @Test
     void testCssStylesheetTooltip() {
-        scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
 
-        assertTrue(tooltip.isShowing());
-
-        assertTooltipShowDelay(tooltipShowTime, 30);
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+            assertTooltipShowDelay(tooltipShowTime, 30);
+        });
     }
 
     @Test
     void testCssStylesheetChangeTooltip() {
-        scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            scene.getStylesheets().add(getClass().getResource("tooltip.css").toExternalForm());
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
-
         assertTooltipShowDelay(tooltipShowTime, 30);
 
-        scene.getStylesheets().setAll(getClass().getResource("tooltip2.css").toExternalForm());
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+            scene.getStylesheets().setAll(getClass().getResource("tooltip2.css").toExternalForm());
+        });
+
         reset();
         tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
-
         assertTooltipShowDelay(tooltipShowTime, 200);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     @Test
     void testSmallShowDelayTooltip() {
-        tooltip.setShowDelay(Duration.millis(100));
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            tooltip.setShowDelay(Duration.millis(100));
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 100);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     @Test
     void testSmallShowDelayCssTooltip() {
-        tooltip.setStyle("-fx-show-delay: 100ms;");
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            tooltip.setStyle("-fx-show-delay: 100ms;");
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 100);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     @Test
     void testChangeShowDelayTooltip() {
-        tooltip.setShowDelay(Duration.millis(100));
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            tooltip.setShowDelay(Duration.millis(100));
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 100);
 
-        // Try again with a bigger show delay.
-        tooltip.setShowDelay(Duration.millis(2000));
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+
+            // Try again with a bigger show delay.
+            tooltip.setShowDelay(Duration.millis(2000));
+        });
+
         reset();
         tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 2000);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     @Test
     void testChangeShowDelayCssTooltip() throws Throwable {
-        tooltip.setStyle("-fx-show-delay: 100ms;");
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            tooltip.setStyle("-fx-show-delay: 100ms;");
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 100);
 
-        // Try again with a bigger show delay.
-        tooltip.setStyle("-fx-show-delay: 2000ms;");
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+
+            // Try again with a bigger show delay.
+            tooltip.setStyle("-fx-show-delay: 2000ms;");
+        });
+
         reset();
         tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
         assertTooltipShowDelay(tooltipShowTime, 2000);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     @Test
     void testShowDelayCssShowTooltipTwice() {
-        tooltip.setStyle("-fx-show-delay: 100ms;");
-
-        assertFalse(tooltip.isShowing());
+        Util.runAndWait(() -> {
+            tooltip.setStyle("-fx-show-delay: 100ms;");
+            assertFalse(tooltip.isShowing());
+        });
 
         long tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
-
         assertTooltipShowDelay(tooltipShowTime, 100);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
 
         // Try again.
         reset();
         tooltipShowTime = waitForTooltip();
-
-        assertTrue(tooltip.isShowing());
-
         assertTooltipShowDelay(tooltipShowTime, 100);
+
+        Util.runAndWait(() -> {
+            assertTrue(tooltip.isShowing());
+        });
     }
 
     private void reset() {
@@ -228,9 +258,9 @@ class TooltipTest {
         // Make sure that a previous tooltip is hidden by now.
         Util.sleep(500);
 
-        assertFalse(tooltip.isShowing());
-
         Util.runAndWait(() -> {
+            assertFalse(tooltip.isShowing());
+
             Window window = scene.getWindow();
             robot.mouseMove(
                     window.getX() + scene.getX() + button.getLayoutX() + button.getLayoutBounds().getWidth() / 2,

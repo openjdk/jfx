@@ -30,6 +30,7 @@
 #include "ContextDestructionObserver.h"
 #include "Event.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaControllerInterface.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
@@ -100,7 +101,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaController; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); };
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     void addMediaElement(HTMLMediaElement&);
     void removeMediaElement(HTMLMediaElement&);
@@ -130,12 +131,16 @@ private:
 
     ReadyState readyState() const final { return m_readyState; }
 
+    void forEachElement(Function<void(Ref<HTMLMediaElement>&&)>&&) const;
+    bool anyElement(Function<bool(Ref<HTMLMediaElement>&&)>&&) const;
+    bool everyElement(Function<bool(Ref<HTMLMediaElement>&&)>&&) const;
+
     enum PlaybackState { WAITING, PLAYING, ENDED };
 
     friend class HTMLMediaElement;
     friend class MediaControllerEventListener;
 
-    Vector<HTMLMediaElement*> m_mediaElements;
+    Vector<CheckedPtr<HTMLMediaElement>> m_mediaElements;
     bool m_paused;
     double m_defaultPlaybackRate;
     double m_volume;

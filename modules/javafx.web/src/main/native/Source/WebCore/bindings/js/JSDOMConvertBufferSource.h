@@ -185,14 +185,14 @@ struct BufferSourceConverter {
         auto scope = DECLARE_THROW_SCOPE(vm);
         if constexpr (mode == BufferSourceConverterAllowSharedMode::Allow) {
             RefPtr object = WrapperType::toWrappedAllowShared(vm, value);
-            if (UNLIKELY(!object)) {
+            if (!object) [[unlikely]] {
             exceptionThrower(lexicalGlobalObject, scope);
                 return Result::exception();
     }
             return Result { object.releaseNonNull() };
         } else {
             RefPtr object = WrapperType::toWrapped(vm, value);
-            if (UNLIKELY(!object)) {
+            if (!object) [[unlikely]] {
                 exceptionThrower(lexicalGlobalObject, scope);
                 return Result::exception();
     }

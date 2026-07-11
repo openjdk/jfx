@@ -32,7 +32,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(TextRun);
 
 struct ExpectedTextRunSize final : public CanMakeCheckedPtr<ExpectedTextRunSize> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ExpectedTextRunSize);
     WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ExpectedTextRunSize);
 
     String text;
@@ -49,17 +49,17 @@ static_assert(sizeof(TextRun) == sizeof(ExpectedTextRunSize), "TextRun should be
 
 TextStream& operator<<(TextStream& ts, const TextRun& textRun)
 {
-    ts.dumpProperty("text", textRun.text());
-    ts.dumpProperty("tab-size", textRun.tabSize());
-    ts.dumpProperty("x-pos", textRun.xPos());
-    ts.dumpProperty("horizontal-glyph-streatch", textRun.horizontalGlyphStretch());
-    ts.dumpProperty("expansion", textRun.expansion());
-    ts.dumpProperty("expansion-behavior", textRun.expansionBehavior());
-    ts.dumpProperty("allow-tabs", textRun.allowTabs());
-    ts.dumpProperty("direction", textRun.direction());
-    ts.dumpProperty("directional-override", textRun.directionalOverride());
-    ts.dumpProperty("character-scan-for-code-path", textRun.characterScanForCodePath());
-    ts.dumpProperty("spacing-disabled", textRun.spacingDisabled());
+    ts.dumpProperty("text"_s, textRun.text());
+    ts.dumpProperty("tab-size"_s, textRun.tabSize());
+    ts.dumpProperty("x-pos"_s, textRun.xPos());
+    ts.dumpProperty("horizontal-glyph-streatch"_s, textRun.horizontalGlyphStretch());
+    ts.dumpProperty("expansion"_s, textRun.expansion());
+    ts.dumpProperty("expansion-behavior"_s, textRun.expansionBehavior());
+    ts.dumpProperty("allow-tabs"_s, textRun.allowTabs());
+    ts.dumpProperty("direction"_s, textRun.direction());
+    ts.dumpProperty("directional-override"_s, textRun.directionalOverride());
+    ts.dumpProperty("character-scan-for-code-path"_s, textRun.characterScanForCodePath());
+    ts.dumpProperty("spacing-disabled"_s, textRun.spacingDisabled());
     return ts;
 }
 

@@ -77,7 +77,7 @@ void printInternal(PrintStream& out, const char* string)
 
 static void printExpectedCStringHelper(PrintStream& out, const char* type, Expected<CString, UTF8ConversionError> expectedCString)
 {
-    if (UNLIKELY(!expectedCString)) {
+    if (!expectedCString) [[unlikely]] {
         if (expectedCString.error() == UTF8ConversionError::OutOfMemory) {
             printInternal(out, "(Out of memory while converting ");
             printInternal(out, type);

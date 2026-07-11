@@ -299,7 +299,7 @@ private:
 
     static CoordinatePair toCoordinatePair(FloatPoint p)
     {
-        return toPosition(p).value;
+        return { LengthPercentage<>::Dimension { p.x() }, LengthPercentage<>::Dimension { p.y() } };
     }
 
     static Position absoluteOffsetPoint(FloatPoint p)
@@ -312,7 +312,7 @@ private:
         return toCoordinatePair(p);
     }
 
-    static std::variant<ToPosition, ByCoordinatePair> fromOffsetPoint(const FloatPoint& offsetPoint, PathCoordinateMode mode)
+    static Variant<ToPosition, ByCoordinatePair> fromOffsetPoint(const FloatPoint& offsetPoint, PathCoordinateMode mode)
     {
         switch (mode) {
         case AbsoluteCoordinates:
@@ -323,7 +323,7 @@ private:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    template<typename Command> static std::variant<typename Command::To, typename Command::By> fromOffsetLength(float offset, PathCoordinateMode mode)
+    template<typename Command> static Variant<typename Command::To, typename Command::By> fromOffsetLength(float offset, PathCoordinateMode mode)
     {
         switch (mode) {
         case AbsoluteCoordinates:
@@ -649,7 +649,7 @@ std::optional<Shape> makeShapeFromPath(const Path& path)
     // FIXME: Not clear how to convert a initial Move command to the Shape's "from" parameter.
     // https://github.com/w3c/csswg-drafts/issues/10740
 
-    CommaSeparatedVector<ShapeCommand>::Vector shapeCommands;
+    CommaSeparatedVector<ShapeCommand>::Container shapeCommands;
     ShapeConversionPathConsumer converter(shapeCommands);
     SVGPathByteStreamSource source(path.data.byteStream);
 

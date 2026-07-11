@@ -34,7 +34,6 @@
 #include "CSSParserIdioms.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSSelector.h"
 #include "CSSSelectorInlines.h"
 #include "CSSTokenizer.h"
 #include "CommonAtomStrings.h"
@@ -251,6 +250,11 @@ MutableCSSSelectorList CSSSelectorParser::consumeNestedComplexForgivingSelectorL
     });
 }
 
+std::optional<CSSSelectorList> CSSSelectorParser::parseSelectorList(const String& string, const CSSParserContext& context, StyleSheetContents* styleSheet, CSSParserEnum::NestedContext nestedContext)
+{
+    return parseCSSSelectorList(CSSTokenizer(string).tokenRange(), context, styleSheet, nestedContext);
+}
+
 bool CSSSelectorParser::supportsComplexSelector(CSSParserTokenRange range, const CSSSelectorParserContext& context)
 {
     range.consumeWhitespace();
@@ -322,7 +326,7 @@ static std::optional<FixedVector<AtomString>> consumeCommaSeparatedCustomIdentLi
     Vector<AtomString> customIdents { };
 
     do {
-        auto ident = CSSPropertyParserHelpers::consumeCustomIdentRaw(range, /* shouldLowercase */ true);
+        auto ident = CSSPropertyParserHelpers::consumeCustomIdentRaw(range);
         if (ident.isEmpty())
             return std::nullopt;
 
@@ -1039,7 +1043,7 @@ CSSSelector::Relation CSSSelectorParser::consumeCombinator(CSSParserTokenRange& 
     if (range.peek().type() != DelimiterToken)
         return fallbackResult;
 
-    UChar delimiter = range.peek().delimiter();
+    char16_t delimiter = range.peek().delimiter();
 
     if (delimiter == '+' || delimiter == '~' || delimiter == '>') {
         range.consumeIncludingWhitespace();
@@ -1070,7 +1074,7 @@ CSSSelector::Match CSSSelectorParser::consumeAttributeMatch(CSSParserTokenRange&
     case DelimiterToken:
         if (token.delimiter() == '=')
             return CSSSelector::Match::Exact;
-        FALLTHROUGH;
+        [[fallthrough]];
     default:
         m_failedParsing = true;
         return CSSSelector::Match::Exact;
@@ -1303,18 +1307,15 @@ CSSSelectorList CSSSelectorParser::resolveNestingParent(const CSSSelectorList& n
 {
     MutableCSSSelectorList result;
     CSSSelectorList copiedSelectorList { nestedSelectorList };
-    auto selector = copiedSelectorList.first();
-    while (selector) {
+    for (auto& selector : copiedSelectorList) {
             if (parentResolvedSelectorList) {
             // FIXME: We should build a new MutableCSSSelector from this selector and resolve it
-                const_cast<CSSSelector*>(selector)->resolveNestingParentSelectors(*parentResolvedSelectorList);
+            const_cast<CSSSelector&>(selector).resolveNestingParentSelectors(*parentResolvedSelectorList);
             } else {
             // It's top-level, the nesting parent selector should be replaced by :scope
-                const_cast<CSSSelector*>(selector)->replaceNestingParentByPseudoClassScope();
+            const_cast<CSSSelector&>(selector).replaceNestingParentByPseudoClassScope();
             }
-        auto mutableSelector = makeUnique<MutableCSSSelector>(*selector);
-        result.append(WTFMove(mutableSelector));
-        selector = copiedSelectorList.next(selector);
+        result.append(makeUnique<MutableCSSSelector>(selector));
     }
 
     auto final = CSSSelectorList { WTFMove(result) };

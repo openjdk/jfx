@@ -27,7 +27,6 @@
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 
-#include "ExceptionOr.h"
 #include "NotificationOptionsPayload.h"
 #include "NotificationPayload.h"
 #include <wtf/JSONValues.h>
@@ -35,6 +34,8 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class NotificationJSONParser {
 public:

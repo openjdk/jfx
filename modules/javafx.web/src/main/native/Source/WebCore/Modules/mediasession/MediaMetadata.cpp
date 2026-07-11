@@ -40,6 +40,7 @@
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -83,7 +84,10 @@ void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkL
         m_callback(nullptr);
         return;
     }
-    m_callback(m_cachedImage->image());
+    Ref image = *m_cachedImage->image();
+    image->subresourcesAreFinished(nullptr, [image, callback = std::exchange(m_callback, { })]() mutable {
+        callback(image.ptr());
+    });
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)
@@ -245,9 +249,7 @@ void MediaMetadata::refreshArtworkImage()
         return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
     });
 
-    std::sort(artworks.begin(), artworks.end(), [](const Pair& a1, const Pair& a2) {
-        return a1.score > a2.score;
-    });
+    std::ranges::sort(artworks, std::ranges::greater { }, &Pair::score);
 
     tryNextArtworkImage(0, WTFMove(artworks));
 }

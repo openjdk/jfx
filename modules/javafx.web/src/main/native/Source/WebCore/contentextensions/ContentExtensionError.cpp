@@ -78,6 +78,8 @@ const std::error_category& contentExtensionErrorCategory()
                 return "Invalid list of if-domain, unless-domain, if-top-url, or unless-top-url conditions.";
             case ContentExtensionError::JSONTooManyRules:
                 return "Too many rules in JSON array.";
+            case ContentExtensionError::JSONInvalidRequestMethod:
+                return "The request-method string must be \"get\", \"head\", \"options\", \"trace\", \"put\", \"delete\", \"post\", \"patch\", or \"connect\".";
             case ContentExtensionError::JSONDomainNotLowerCaseASCII:
                 return "Domains must be lower case ASCII. Use punycode to encode non-ASCII characters.";
             case ContentExtensionError::JSONMultipleConditions:

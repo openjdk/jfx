@@ -291,7 +291,7 @@ inline bool isSubtypeIndex(TypeIndex sub, TypeIndex parent)
     auto parentRTT = TypeInformation::tryGetCanonicalRTT(parent);
     ASSERT(subRTT.has_value() && parentRTT.has_value());
 
-    return subRTT.value()->isSubRTT(*parentRTT.value());
+    return subRTT.value()->isStrictSubRTT(*parentRTT.value());
 }
 
 bool isSubtype(Type, Type);
@@ -430,6 +430,24 @@ inline bool isDefaultableType(StorageType type)
     return true;
 }
 
+inline size_t sizeOfType(TypeKind kind)
+{
+    switch (kind) {
+    case Wasm::TypeKind::I32:
+    case Wasm::TypeKind::F32:
+        return sizeof(uint32_t);
+    case Wasm::TypeKind::I64:
+    case Wasm::TypeKind::F64:
+    case Wasm::TypeKind::Ref:
+    case Wasm::TypeKind::RefNull:
+        return sizeof(uint64_t);
+    case Wasm::TypeKind::V128:
+        return sizeof(v128_t);
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
 inline JSValue internalizeExternref(JSValue value)
 {
     if (value.isDouble() && JSC::canBeStrictInt32(value.asDouble())) {
@@ -484,7 +502,7 @@ inline ASCIILiteral makeString(ExternalKind kind)
 }
 
 struct Import {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Import);
     const Name module;
     const Name field;
     ExternalKind kind;
@@ -492,7 +510,7 @@ struct Import {
 };
 
 struct Export {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Export);
     const Name field;
     ExternalKind kind;
     unsigned kindIndex; // Index in the vector of the corresponding kind.
@@ -501,7 +519,7 @@ struct Export {
 String makeString(const Name& characters);
 
 struct GlobalInformation {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(GlobalInformation);
 
     enum InitializationType : uint8_t {
         IsImport,
@@ -528,7 +546,7 @@ struct GlobalInformation {
 };
 
 struct FunctionData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FunctionData);
     size_t start;
     size_t end;
     Vector<uint8_t> data;
@@ -583,7 +601,7 @@ private:
 };
 
 struct Segment {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Segment);
 
     enum class Kind : uint8_t {
         Active,
@@ -609,7 +627,7 @@ struct Segment {
 };
 
 struct Element {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Element);
 
     enum class Kind : uint8_t {
         Active,
@@ -699,7 +717,7 @@ private:
 };
 
 struct CustomSection {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CustomSection);
     Name name;
     Vector<uint8_t> payload;
 };
@@ -760,7 +778,7 @@ private:
 };
 
 struct UnlinkedWasmToWasmCall {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(UnlinkedWasmToWasmCall);
     CodeLocationNearCall<WasmEntryPtrTag> callLocation;
     FunctionSpaceIndex functionIndexSpace;
     CodeLocationDataLabelPtr<WasmEntryPtrTag> calleeLocation;
@@ -769,7 +787,7 @@ struct UnlinkedWasmToWasmCall {
 
 #if ENABLE(JIT)
 struct Entrypoint {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Entrypoint);
     std::unique_ptr<Compilation> compilation;
     RegisterAtOffsetList calleeSaveRegisters;
 };
@@ -780,7 +798,7 @@ using StackMap = FixedVector<OSREntryValue>;
 using StackMaps = UncheckedKeyHashMap<CallSiteIndex, StackMap>;
 
 struct InternalFunction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(InternalFunction);
 #if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
     StackMaps stackmaps;
 #endif
@@ -794,16 +812,16 @@ struct InternalFunction {
     unsigned osrEntryScratchBufferSize { 0 };
 };
 
-extern const uintptr_t NullWasmCallee;
+extern const CalleeBits NullWasmCallee;
 
 struct alignas(8) WasmCallableFunction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(alignas);
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
     static constexpr ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, entrypointLoadLocation); }
     static constexpr ptrdiff_t offsetOfBoxedWasmCalleeLoadLocation() { return OBJECT_OFFSETOF(WasmCallableFunction, boxedWasmCalleeLoadLocation); }
 
     // FIXME: This always points to the interpreter callee anyway so there's no point in having the extra indirection.
-    const uintptr_t* boxedWasmCalleeLoadLocation { &NullWasmCallee };
+    const CalleeBits* boxedWasmCalleeLoadLocation { &NullWasmCallee };
     // Target instance and entrypoint are only set for wasm->wasm calls, and are otherwise nullptr. The js-specific logic occurs through import function.
     WriteBarrier<JSWebAssemblyInstance> targetInstance { };
     LoadLocation entrypointLoadLocation { };
@@ -813,31 +831,37 @@ struct alignas(8) WasmCallableFunction {
 // with all imports, and then all internal functions. WasmToWasmImportableFunction and FunctionIndexSpace are only
 // meant as fast lookup tables for these opcodes and do not own code.
 struct WasmToWasmImportableFunction : public WasmCallableFunction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(WasmToWasmImportableFunction);
     static constexpr ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, typeIndex); }
     static constexpr ptrdiff_t offsetOfRTT() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, rtt); }
 
     // FIXME: Pack type index and code pointer into one 64-bit value. See <https://bugs.webkit.org/show_bug.cgi?id=165511>.
     TypeIndex typeIndex { TypeDefinition::invalidIndex };
     // Used when GC proposal is enabled, otherwise can be null.
-    const RTT* rtt;
+    const RTT* rtt { nullptr };
 };
 using FunctionIndexSpace = Vector<WasmToWasmImportableFunction>;
 
 struct WasmOrJSImportableFunction : public WasmToWasmImportableFunction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(WasmOrJSImportableFunction);
     using LoadLocation = CodePtr<WasmEntryPtrTag>*;
 
     CodePtr<WasmEntryPtrTag> importFunctionStub;
     WriteBarrier<JSObject> importFunction { };
-    uintptr_t boxedCallee { 0xBEEF };
+    CalleeBits boxedCallee { 0xBEEF };
 };
 
 struct WasmOrJSImportableFunctionCallLinkInfo final : public WasmOrJSImportableFunction {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(WasmOrJSImportableFunctionCallLinkInfo);
     std::unique_ptr<DataOnlyCallLinkInfo> callLinkInfo { };
     static constexpr ptrdiff_t offsetOfCallLinkInfo() { return OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, callLinkInfo); }
 };
+
+#if ASSERT_ENABLED
+void validateWasmValue(uint64_t wasmValue, Type expectedType);
+#else
+ALWAYS_INLINE void validateWasmValue(uint64_t, Type) { }
+#endif
 
 } } // namespace JSC::Wasm
 

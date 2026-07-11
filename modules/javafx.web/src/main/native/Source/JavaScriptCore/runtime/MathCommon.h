@@ -34,24 +34,24 @@
 
 namespace JSC {
 
-const int32_t maxExponentForIntegerMathPow = 1000;
+constexpr int32_t maxExponentForIntegerMathPow = 1000;
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationMathPow, double, (double x, double y));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32, UCPUStrictInt32, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(operationToInt32SensibleSlow, UCPUStrictInt32, (double));
 
-constexpr double maxSafeInteger()
+consteval double maxSafeInteger()
 {
     // 2 ^ 53 - 1
     return 9007199254740991.0;
 }
 
-constexpr double minSafeInteger()
+consteval double minSafeInteger()
 {
     // -(2 ^ 53 - 1)
     return -9007199254740991.0;
 }
 
-constexpr uint64_t maxSafeIntegerAsUInt64()
+consteval uint64_t maxSafeIntegerAsUInt64()
 {
     // 2 ^ 53 - 1
     return 9007199254740991ULL;
@@ -262,9 +262,6 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double));
 namespace Math {
 
 // This macro defines a set of information about all known arith unary generic node.
-#define FOR_EACH_ARITH_UNARY_OP_CUSTOM(macro) \
-    macro(Log1p, log1p) \
-
 #define FOR_EACH_ARITH_UNARY_OP_STD(macro) \
     macro(Sin, sin) \
     macro(Sinh, sinh) \
@@ -284,10 +281,10 @@ namespace Math {
     macro(Cbrt, cbrt) \
     macro(Exp, exp) \
     macro(Expm1, expm1) \
+    macro(Log1p, log1p) \
 
 #define FOR_EACH_ARITH_UNARY_OP(macro) \
     FOR_EACH_ARITH_UNARY_OP_STD(macro) \
-    FOR_EACH_ARITH_UNARY_OP_CUSTOM(macro) \
 
 #define JSC_DEFINE_VIA_STD(capitalizedName, lowerName) \
     using std::lowerName; \
@@ -295,13 +292,6 @@ namespace Math {
     JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
 FOR_EACH_ARITH_UNARY_OP_STD(JSC_DEFINE_VIA_STD)
 #undef JSC_DEFINE_VIA_STD
-
-#define JSC_DEFINE_VIA_CUSTOM(capitalizedName, lowerName) \
-    JS_EXPORT_PRIVATE double lowerName(double); \
-    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Double, double, (double)); \
-    JSC_DECLARE_NOEXCEPT_JIT_OPERATION(lowerName##Float, float, (float));
-FOR_EACH_ARITH_UNARY_OP_CUSTOM(JSC_DEFINE_VIA_CUSTOM)
-#undef JSC_DEFINE_VIA_CUSTOM
 
 template<typename FloatType>
 ALWAYS_INLINE FloatType fMax(FloatType a, FloatType b)

@@ -312,11 +312,6 @@ public:
         return m_value == other.m_value;
     }
 
-    bool operator!=(const Float16& other) const
-    {
-        return m_value != other.m_value;
-    }
-
 private:
     explicit constexpr Float16(_Float16 value)
         : m_value(value)
@@ -350,11 +345,6 @@ public:
     bool operator==(const Float16& other) const
     {
         return asDouble() == other.asDouble();
-    }
-
-    bool operator!=(const Float16& other) const
-    {
-        return asDouble() != other.asDouble();
     }
 
 private:

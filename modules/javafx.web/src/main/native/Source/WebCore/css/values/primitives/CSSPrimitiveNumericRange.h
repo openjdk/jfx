@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <wtf/MathExtras.h>
 
 namespace WebCore {
 namespace CSS {
@@ -84,6 +85,9 @@ inline constexpr auto ClosedUnitRange = Range { 0, 1 };
 // Constant value for `[0,1(clamp upper)]`.
 inline constexpr auto ClosedUnitRangeClampUpper = Range { 0, 1, RangeOptions::ClampUpper };
 
+// Constant value for `[0,1(clamp both)]`.
+inline constexpr auto ClosedUnitRangeClampBoth = Range { 0, 1, RangeOptions::ClampBoth };
+
 // Constant value for `[0,100]`.
 inline constexpr auto ClosedPercentageRange = Range { 0, 100 };
 
@@ -93,7 +97,29 @@ inline constexpr auto ClosedPercentageRangeClampUpper = Range { 0, 100, RangeOpt
 // Clamps a floating point value to within `range`.
 template<Range range, std::floating_point T> constexpr T clampToRange(T value)
 {
-    return std::clamp<T>(value, range.min, range.max);
+    return clampTo<T>(
+        value,
+        std::max<T>(range.min, -std::numeric_limits<T>::max()),
+        std::min<T>(range.max,  std::numeric_limits<T>::max())
+    );
+}
+
+// Clamps a floating point value to within `range` and within additional provided range.
+template<Range range, std::floating_point T> constexpr T clampToRange(T value, T additionalMinimum, T additionalMaximum)
+{
+    return clampTo<T>(
+        value,
+        std::max<T>(std::max<T>(range.min, -std::numeric_limits<T>::max()), additionalMinimum),
+        std::min<T>(std::min<T>(range.max,  std::numeric_limits<T>::max()), additionalMaximum)
+    );
+}
+
+// Checks if a floating point value is within `range`.
+template<Range range, std::floating_point T> constexpr bool isWithinRange(T value)
+{
+    return !std::isnan(value)
+        && value >= std::max<T>(range.min, -std::numeric_limits<T>::max())
+        && value <= std::min<T>(range.max,  std::numeric_limits<T>::max());
 }
 
 } // namespace CSS

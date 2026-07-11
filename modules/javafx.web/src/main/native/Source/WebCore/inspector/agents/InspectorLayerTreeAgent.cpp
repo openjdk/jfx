@@ -31,11 +31,13 @@
 #include "config.h"
 #include "InspectorLayerTreeAgent.h"
 
+#include "EventTargetInlines.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "IntRect.h"
 #include "PseudoElement.h"
 #include "RenderChildIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
@@ -51,14 +53,14 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorLayerTreeAgent);
 
 InspectorLayerTreeAgent::InspectorLayerTreeAgent(WebAgentContext& context)
     : InspectorAgentBase("LayerTree"_s, context)
-    , m_frontendDispatcher(makeUnique<Inspector::LayerTreeFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::LayerTreeFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::LayerTreeBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
 InspectorLayerTreeAgent::~InspectorLayerTreeAgent() = default;
 
-void InspectorLayerTreeAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorLayerTreeAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -156,9 +158,9 @@ void InspectorLayerTreeAgent::gatherLayersUsingRenderLayerHierarchy(RenderLayer*
 
 Ref<Inspector::Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectForLayer(RenderLayer* renderLayer)
 {
-    RenderObject* renderer = &renderLayer->renderer();
+    RenderElement* renderer = &renderLayer->renderer();
     RenderLayerBacking* backing = renderLayer->backing();
-    Node* node = renderer->node();
+    Node* node = renderer->element();
 
     bool isReflection = renderLayer->isReflection();
     bool isGenerated = (isReflection ? renderer->parent() : renderer)->isBeforeOrAfterContent();
@@ -169,7 +171,7 @@ Ref<Inspector::Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectF
     else if (isReflection && isGenerated)
         node = renderer->parent()->generatingElement();
     else if (isGenerated)
-        node = renderer->generatingNode();
+        node = renderer->generatingElement();
     else if (isReflection || isAnonymous)
         node = renderer->parent()->element();
 
@@ -193,7 +195,7 @@ Ref<Inspector::Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectF
         if (isReflection)
             renderer = renderer->parent();
         layerObject->setIsGeneratedContent(true);
-        layerObject->setPseudoElementId(bindPseudoElement(downcast<PseudoElement>(renderer->node())));
+        layerObject->setPseudoElementId(bindPseudoElement(downcast<PseudoElement>(renderer->element())));
         if (renderer->isBeforeContent())
             layerObject->setPseudoElement("before"_s);
         else if (renderer->isAfterContent())
@@ -203,7 +205,7 @@ Ref<Inspector::Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectF
     // FIXME: RenderView is now really anonymous but don't tell about it to the frontend before making sure it can handle it.
     if (isAnonymous && !renderer->isRenderView()) {
         layerObject->setIsAnonymous(true);
-        const RenderStyle& style = renderer->style();
+        auto& style = renderer->style();
         if (style.pseudoElementType() == PseudoId::FirstLetter)
             layerObject->setPseudoElement("first-letter"_s);
         else if (style.pseudoElementType() == PseudoId::FirstLine)

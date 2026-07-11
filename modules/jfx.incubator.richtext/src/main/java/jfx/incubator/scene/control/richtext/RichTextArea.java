@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -47,6 +49,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.InsetsConverter;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
@@ -62,6 +66,7 @@ import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.input.FunctionTag;
@@ -296,10 +301,12 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<StyledTextModel> model;
     private final SelectionModel selectionModel = new SingleSelectionModel();
     private SimpleBooleanProperty editableProperty;
+    private SimpleObjectProperty<StyleAttributeMap> insertStyles;
     private SimpleObjectProperty<SideDecorator> leftDecorator;
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
     private ReadOnlyBooleanWrapper redoable;
+    private ReadOnlyObjectWrapper<Bounds> documentArea;
     // styleables
     private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
     private SimpleStyleableObjectProperty<Insets> contentPadding;
@@ -319,6 +326,11 @@ public class RichTextArea extends Control {
             @Override
             public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
                 return t.getText(start, end, sb, limit);
+            }
+
+            @Override
+            public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+                t.setDocumentArea(minX, minY, width, height);
             }
         });
     }
@@ -342,28 +354,6 @@ public class RichTextArea extends Control {
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
         setAccessibleRoleDescription("Rich Text Area");
-
-        selectionModel.selectionProperty().addListener((s, old, cur) -> {
-            TextPos min0 = old == null ? null : old.getMin();
-            TextPos max0 = old == null ? null : old.getMax();
-            TextPos min2 = cur == null ? null : cur.getMin();
-            TextPos max2 = cur == null ? null : cur.getMax();
-
-            if (accessibilityHelper != null) {
-                if (accessibilityHelper.handleSelectionChange(cur)) {
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                }
-            }
-
-            if (!Objects.equals(min0, min2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
-            }
-
-            if (!Objects.equals(max0, max2)) {
-                notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
-            }
-        });
-
         setModel(model);
     }
 
@@ -595,6 +585,32 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Specifies the styles to be in effect for the characters to be inserted via user input.
+     * The value can be {@code null}, in which case the styles are determined by the model.
+     *
+     * @return the insert styles property
+     * @defaultValue null
+     * @since 26
+     */
+    public final ObjectProperty<StyleAttributeMap> insertStylesProperty() {
+        if (insertStyles == null) {
+            insertStyles = new SimpleObjectProperty<>(this, "insertStyles");
+        }
+        return insertStyles;
+    }
+
+    public final StyleAttributeMap getInsertStyles() {
+        if (insertStyles == null) {
+            return null;
+        }
+        return insertStyles.get();
+    }
+
+    public final void setInsertStyles(StyleAttributeMap v) {
+        insertStylesProperty().set(v);
+    }
+
+    /**
      * Specifies the left-side paragraph decorator.
      * The value can be null.
      *
@@ -660,17 +676,6 @@ public class RichTextArea extends Control {
     public final ObjectProperty<StyledTextModel> modelProperty() {
         if (model == null) {
             model = new SimpleObjectProperty<>(this, "model") {
-                // TODO does this create a memory leak?  should we bind or weak listen?
-                private final StyledTextModel.Listener li = (ch) -> {
-                    if (ch.isEdit()) {
-                        if (accessibilityHelper != null) {
-                            if (accessibilityHelper.handleTextUpdate(ch.getStart(), ch.getEnd())) {
-                                // TODO check the timing, may be runLater?
-                                notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
-                            }
-                        }
-                    }
-                };
                 private StyledTextModel old;
 
                 @Override
@@ -701,18 +706,21 @@ public class RichTextArea extends Control {
                     }
 
                     if (old != null) {
-                        old.removeListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.unregisterModel(old);
+                        }
                     }
                     if (m != null) {
-                        m.addListener(li);
+                        if (accessibilityHelper != null) {
+                            accessibilityHelper.registerModel(m);
+                        }
                     }
                     old = m;
 
+                    selectionModel.clear();
                     if (accessibilityHelper != null) {
                         accessibilityHelper.handleModelChange();
                     }
-                    selectionModel.clear();
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
                 }
             };
         }
@@ -1508,38 +1516,14 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        String lineSeparator = m.getLineEnding().getText();
-        int toCopy = limit;
-        int index = start.index();
-        boolean first = true;
-        boolean all = true;
-        while (toCopy > 0) {
-            int beg;
-            if (first) {
-                first = false;
-                beg = start.offset();
-            } else {
-                sb.append(lineSeparator);
-                beg = 0;
-            }
-            String text = getPlainText(index);
-            int len = Math.min(toCopy, text.length() - beg);
-            sb.append(text, beg, beg + len);
-            toCopy -= len;
-            index++;
-
-            // did we copy all?
-            if (toCopy == 0) {
-                if (index < end.index()) {
-                    all = false;
-                } else if (index == end.index()) {
-                    if (beg + len < end.offset()) {
-                        all = false;
-                    }
-                }
-            }
+        LineEnding lineEnding = m.getLineEnding();
+        StringBuilderStyledOutput out = new StringBuilderStyledOutput(sb, lineEnding, limit);
+        try {
+            m.export(start, end, out);
+            return true;
+        } catch(IOException e) {
+            return false;
         }
-        return all;
     }
 
     /**
@@ -2369,21 +2353,9 @@ public class RichTextArea extends Control {
     private StyleAttributeMap getModelStyleAttrs(StyleResolver r) {
         StyledTextModel m = getModel();
         if (m != null) {
-            TextPos pos = getCaretPosition();
-            if (pos != null) {
-                if (hasNonEmptySelection()) {
-                    TextPos an = getAnchorPosition();
-                    if (pos.compareTo(an) > 0) {
-                        pos = an;
-                    }
-                } else if (!TextPos.ZERO.equals(pos)) {
-                    int ix = pos.offset() - 1;
-                    if (ix < 0) {
-                        // FIX find previous symbol
-                        ix = 0;
-                    }
-                    pos = TextPos.ofLeading(pos.index(), ix);
-                }
+            SelectionSegment sel = getSelection();
+            if (sel != null) {
+                TextPos pos = sel.getMax();
                 return m.getStyleAttributeMap(r, pos);
             }
         }
@@ -2501,6 +2473,10 @@ public class RichTextArea extends Control {
     private RTAccessibilityHelper accessibilityHelper() {
         if(accessibilityHelper == null) {
             accessibilityHelper = new RTAccessibilityHelper(this);
+            StyledTextModel m = getModel();
+            if (m != null) {
+                accessibilityHelper.registerModel(m);
+            }
         }
         return accessibilityHelper;
     }
@@ -2557,6 +2533,41 @@ public class RichTextArea extends Control {
             return accessibilityHelper().caretOffset();
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    /**
+     * Provides the bounds to the document area in local coordinates.
+     * The bounds are determined by the skin, and may be {@code null}.
+     *
+     * @return the document area
+     * @defaultValue null
+     * @since 27
+     */
+    public final ReadOnlyObjectProperty<Bounds> documentAreaProperty() {
+        return documentAreaPropertyImpl().getReadOnlyProperty();
+    }
+
+    private final ReadOnlyObjectWrapper<Bounds> documentAreaPropertyImpl() {
+        if (documentArea == null) {
+            VFlow f = vflow();
+            Bounds v = (f == null) ? null : f.getDocumentArea();
+            documentArea = new ReadOnlyObjectWrapper<>(this, "documentArea", v);
+        }
+        return documentArea;
+    }
+
+    public final Bounds getDocumentArea() {
+        if (documentArea == null) {
+            return null;
+        }
+        return documentArea.get();
+    }
+
+    private final void setDocumentArea(double minX, double minY, double width, double height) {
+        if (documentArea != null) {
+            BoundingBox b = new BoundingBox(minX, minY, width, height);
+            documentAreaPropertyImpl().set(b);
         }
     }
 }

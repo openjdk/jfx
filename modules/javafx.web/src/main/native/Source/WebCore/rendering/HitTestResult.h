@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Google Inc.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
@@ -97,6 +97,8 @@ public:
     WEBCORE_EXPORT LocalFrame* frame() const;
     WEBCORE_EXPORT LocalFrame* targetFrame() const;
     WEBCORE_EXPORT bool isSelected() const;
+    WEBCORE_EXPORT bool allowsFollowingLink() const;
+    WEBCORE_EXPORT bool allowsFollowingImageURL() const;
     WEBCORE_EXPORT String selectedText() const;
     WEBCORE_EXPORT String spellingToolTip(TextDirection&) const;
     String replacedString() const;

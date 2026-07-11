@@ -155,6 +155,7 @@ protected:
     void didStopAnimatedScroll();
     void willStartWheelEventScroll();
     void didStopWheelEventScroll();
+    void didStopProgrammaticScroll();
 
     void setScrollAnimationInProgress(bool);
 

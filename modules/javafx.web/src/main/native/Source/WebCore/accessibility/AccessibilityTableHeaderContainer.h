@@ -36,7 +36,7 @@ namespace WebCore {
 
 class AccessibilityTableHeaderContainer final : public AccessibilityMockObject {
 public:
-    static Ref<AccessibilityTableHeaderContainer> create(AXID axID);
+    static Ref<AccessibilityTableHeaderContainer> create(AXID, AXObjectCache&);
     virtual ~AccessibilityTableHeaderContainer();
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::TableHeaderContainer; }
@@ -46,7 +46,7 @@ public:
     LayoutRect elementRect() const final;
 
 private:
-    explicit AccessibilityTableHeaderContainer(AXID);
+    explicit AccessibilityTableHeaderContainer(AXID, AXObjectCache&);
 
     bool computeIsIgnored() const final;
 

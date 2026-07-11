@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGClipPathElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "ImageBuffer.h"
 #include "LegacyRenderSVGResourceClipper.h"
@@ -113,10 +114,10 @@ RenderPtr<RenderElement> SVGClipPathElement::createElementRenderer(RenderStyle&&
 RefPtr<SVGGraphicsElement> SVGClipPathElement::shouldApplyPathClipping() const
 {
     // If the current clip-path gets clipped itself, we have to fall back to masking.
-    if (renderer() && renderer()->style().clipPath())
+    if (renderer() && renderer()->style().hasClipPath())
         return nullptr;
 
-    auto rendererRequiresMaskClipping = [](const RenderObject& renderer) -> bool {
+    auto rendererRequiresMaskClipping = [](auto& renderer) -> bool {
         // Only shapes or paths are supported for direct clipping. We need to fall back to masking for texts.
         if (is<RenderSVGText>(renderer))
             return true;
@@ -124,7 +125,7 @@ RefPtr<SVGGraphicsElement> SVGClipPathElement::shouldApplyPathClipping() const
         if (style.display() == DisplayType::None || style.usedVisibility() != Visibility::Visible)
             return false;
         // Current shape in clip-path gets clipped too. Fall back to masking.
-        return style.clipPath();
+        return style.hasClipPath();
     };
 
     RefPtr<SVGGraphicsElement> useGraphicsElement;
@@ -180,8 +181,8 @@ FloatRect SVGClipPathElement::calculateClipContentRepaintRect(RepaintRectCalcula
     FloatRect clipContentRepaintRect;
     // This is a rough heuristic to appraise the clip size and doesn't consider clip on clip.
     for (auto* childNode = firstChild(); childNode; childNode = childNode->nextSibling()) {
-        CheckedPtr renderer = childNode->renderer();
-        if (!childNode->isSVGElement() || !renderer)
+        CheckedPtr renderer = dynamicDowncast<RenderElement>(childNode->renderer());
+        if (!renderer || !childNode->isSVGElement())
             continue;
         if (!renderer->isRenderSVGShape() && !renderer->isRenderSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;

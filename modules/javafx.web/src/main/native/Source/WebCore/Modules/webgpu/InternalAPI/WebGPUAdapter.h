@@ -67,8 +67,8 @@ private:
     Adapter& operator=(Adapter&&) = delete;
 
     String m_name;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
     bool m_isFallbackAdapter;
 };
 

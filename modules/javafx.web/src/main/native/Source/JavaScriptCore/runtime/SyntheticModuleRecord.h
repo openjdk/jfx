@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AbstractModuleRecord.h"
+#include "ArgList.h"
 #include "SourceCode.h"
 
 namespace JSC {
@@ -40,6 +41,8 @@ public:
     using Base = AbstractModuleRecord;
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
@@ -65,8 +68,6 @@ private:
     static SyntheticModuleRecord* tryCreateWithExportNamesAndValues(JSGlobalObject*, const Identifier& moduleKey, const Vector<Identifier, 4>& exportNames, const MarkedArgumentBuffer& exportValues);
 
     void finishCreation(JSGlobalObject*, VM&);
-
-    DECLARE_VISIT_CHILDREN;
 };
 
 } // namespace JSC

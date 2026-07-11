@@ -22,13 +22,18 @@
 #pragma once
 
 #include "AffineTransform.h"
-#include "ExceptionOr.h"
 
 namespace WebCore {
 
 class FloatRect;
 class SVGElement;
 class SVGMatrix;
+template<typename> class ExceptionOr;
+
+enum class CTMScope : bool {
+    NearestViewportScope, // Used for getCTM()
+    ScreenScope // Used for getScreenCTM()
+};
 
 class SVGLocatable {
 public:
@@ -47,13 +52,8 @@ public:
     static SVGElement* nearestViewportElement(const SVGElement*);
     static SVGElement* farthestViewportElement(const SVGElement*);
 
-    enum CTMScope {
-        NearestViewportScope, // Used for getCTM()
-        ScreenScope // Used for getScreenCTM()
-    };
-
 protected:
-    virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const { return AffineTransform(); }
+    virtual AffineTransform localCoordinateSpaceTransform(CTMScope) const { return AffineTransform(); }
 
     static FloatRect getBBox(SVGElement*, StyleUpdateStrategy);
     static AffineTransform computeCTM(SVGElement*, CTMScope, StyleUpdateStrategy);

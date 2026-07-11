@@ -38,6 +38,13 @@ class LocalFrame;
 class ResourceMonitor final : public RefCountedAndCanMakeWeakPtr<ResourceMonitor> {
 public:
     using Eligibility = ResourceMonitorEligibility;
+    enum class UsageLevel : uint8_t {
+        Empty = 0,
+        Low = 20,
+        Medium = 60,
+        High = 80,
+        Critical = 100,
+    };
 
     static Ref<ResourceMonitor> create(LocalFrame&);
     WEBCORE_EXPORT ~ResourceMonitor();
@@ -48,6 +55,8 @@ public:
 
     void setDocumentURL(URL&&);
     WEBCORE_EXPORT void addNetworkUsage(size_t);
+    size_t networkUsageThreshold() const { return m_networkUsageThreshold; }
+    WEBCORE_EXPORT UsageLevel networkUsageLevel() const;
 
     void updateNetworkUsageThreshold(size_t);
 

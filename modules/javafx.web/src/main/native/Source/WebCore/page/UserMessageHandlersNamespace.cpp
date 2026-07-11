@@ -30,6 +30,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "UserContentController.h"
@@ -81,17 +82,17 @@ bool UserMessageHandlersNamespace::isSupportedPropertyName(const AtomString&)
 
 UserMessageHandler* UserMessageHandlersNamespace::namedItem(DOMWrapperWorld& world, const AtomString& name)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return nullptr;
 
-    Page* page = frame->page();
+    RefPtr page = frame->page();
     if (!page)
         return nullptr;
 
-    UserMessageHandler* handler = m_messageHandlers.get(std::pair<AtomString, RefPtr<DOMWrapperWorld>>(name, &world));
+    RefPtr handler = m_messageHandlers.get(std::pair<AtomString, RefPtr<DOMWrapperWorld>>(name, &world));
     if (handler)
-        return handler;
+        return handler.get();
 
     page->protectedUserContentProvider()->forEachUserMessageHandler([&](const UserMessageHandlerDescriptor& descriptor) {
         if (descriptor.name() != name || &descriptor.world() != &world)
@@ -103,7 +104,7 @@ UserMessageHandler* UserMessageHandlersNamespace::namedItem(DOMWrapperWorld& wor
         handler = addResult.iterator->value.get();
     });
 
-    return handler;
+    return handler.get();
 }
 
 } // namespace WebCore

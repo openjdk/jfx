@@ -41,7 +41,7 @@ namespace ContentExtensions {
 template <typename CharacterType, typename ActionType>
 class ImmutableNFANodeBuilder {
     typedef ImmutableNFA<CharacterType, ActionType> TypedImmutableNFA;
-    typedef UncheckedKeyHashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> TargetSet;
+    typedef HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> TargetSet;
 public:
     ImmutableNFANodeBuilder() { }
 
@@ -139,13 +139,13 @@ public:
         m_epsilonTransitionTargets.add(targetNodeId);
     }
 
-    template<typename ActionIterator>
-    void setActions(ActionIterator begin, ActionIterator end)
+    template<typename ActionContainer>
+    void setActions(ActionContainer&& actions)
     {
         ASSERT(!m_finalized);
         ASSERT(m_immutableNFA);
 
-        m_actions.add(begin, end);
+        m_actions.addAll(WTFMove(actions));
     }
 
     ImmutableNFANodeBuilder& operator=(ImmutableNFANodeBuilder&& other)
@@ -217,7 +217,7 @@ private:
     TypedImmutableNFA* m_immutableNFA { nullptr };
     MutableRangeList<CharacterType, TargetSet> m_ranges;
     TargetSet m_epsilonTransitionTargets;
-    UncheckedKeyHashSet<ActionType, IntHash<ActionType>, WTF::UnsignedWithZeroKeyHashTraits<ActionType>> m_actions;
+    HashSet<ActionType, IntHash<ActionType>, WTF::UnsignedWithZeroKeyHashTraits<ActionType>> m_actions;
     uint32_t m_nodeId;
     bool m_finalized { true };
 };

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
- * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "IDBConnectionProxy.h"
 #include "IDBFactory.h"
 #include "LocalDOMWindow.h"
@@ -68,7 +68,7 @@ private:
     static ASCIILiteral supplementName() { return "WorkerGlobalScopeIndexedDatabase"_s; }
 
     RefPtr<IDBFactory> m_idbFactory;
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 };
 
 // DOMWindowIndexedDatabase supplement.
@@ -104,15 +104,14 @@ IDBFactory* DOMWindowIndexedDatabase::indexedDB()
     if (!document)
         return nullptr;
 
-    auto* page = document->page();
-    if (!page)
+    if (!document->page())
         return nullptr;
 
     if (!window->isCurrentlyDisplayedInFrame())
         return nullptr;
 
     if (!m_idbFactory) {
-        auto* connectionProxy = document->idbConnectionProxy();
+        RefPtr connectionProxy = document->idbConnectionProxy();
         if (!connectionProxy)
             return nullptr;
 
@@ -140,7 +139,7 @@ WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(WorkerG
 #else /* PLATFORM(JAVA) */
     auto* supplement = static_cast<WorkerGlobalScopeIndexedDatabase*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
     if (!supplement) {
-        auto* connectionProxy = scope.idbConnectionProxy();
+        RefPtr connectionProxy = scope.idbConnectionProxy();
         if (!connectionProxy)
             return nullptr;
 

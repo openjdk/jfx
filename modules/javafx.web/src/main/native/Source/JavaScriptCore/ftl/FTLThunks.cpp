@@ -201,7 +201,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> slowPathCallThunkGenerator(VM& vm, const S
     jit.storePtr(GPRInfo::nonArgGPR1, AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, key.offset()));
     jit.prepareCallOperation(vm);
 
-    if (UNLIKELY(Options::clobberAllRegsInFTLICSlowPath())) {
+    if (Options::clobberAllRegsInFTLICSlowPath()) [[unlikely]] {
         auto dontClobber = key.argumentRegistersIfClobberingCheckIsEnabled();
         if (!key.callTarget())
             dontClobber.add(GPRInfo::nonArgGPR0, IgnoreVectors);

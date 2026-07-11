@@ -26,7 +26,6 @@
 #pragma once
 
 #include "WebGPUIntegralTypes.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore::WebGPU {
@@ -37,6 +36,6 @@ struct Origin3DDict {
     IntegerCoordinate z { 0 };
 };
 
-using Origin3D = std::variant<Vector<IntegerCoordinate>, Origin3DDict>;
+using Origin3D = Variant<Vector<IntegerCoordinate>, Origin3DDict>;
 
 } // namespace WebCore::WebGPU

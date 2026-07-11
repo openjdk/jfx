@@ -92,7 +92,7 @@ static void sendViolationReportWhenNavigatingToCOOPResponse(ReportingClient& rep
         body.setString("type"_s, "navigation-to-response"_s);
         body.setString("referrer"_s, referrer);
     });
-    reportingClient.sendReportToEndpoints(coopURL, { }, { endpoint }, WTFMove(report), ViolationReportType::CrossOriginOpenerPolicy);
+    reportingClient.sendReportToEndpoints(coopURL, { }, singleElementSpan(endpoint), WTFMove(report), ViolationReportType::CrossOriginOpenerPolicy);
 }
 
 // https://html.spec.whatwg.org/multipage/origin.html#coop-violation-navigation-from
@@ -109,7 +109,7 @@ static void sendViolationReportWhenNavigatingAwayFromCOOPResponse(ReportingClien
         body.setString("type"_s, "navigation-from-response"_s);
     });
 
-    reportingClient.sendReportToEndpoints(coopURL, { }, { endpoint }, WTFMove(report), ViolationReportType::CrossOriginOpenerPolicy);
+    reportingClient.sendReportToEndpoints(coopURL, { }, singleElementSpan(endpoint), WTFMove(report), ViolationReportType::CrossOriginOpenerPolicy);
 }
 
 // https://html.spec.whatwg.org/multipage/origin.html#matching-coop

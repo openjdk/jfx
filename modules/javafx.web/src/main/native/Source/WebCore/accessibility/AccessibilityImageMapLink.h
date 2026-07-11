@@ -29,25 +29,19 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
+#include "AccessibilityNodeObject.h"
 #include "HTMLAreaElement.h"
 #include "HTMLMapElement.h"
 
 namespace WebCore {
 
-class AccessibilityImageMapLink final : public AccessibilityMockObject {
+class AccessibilityImageMapLink final : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityImageMapLink> create(AXID);
+    static Ref<AccessibilityImageMapLink> create(AXID, HTMLAreaElement&, AXObjectCache&);
     virtual ~AccessibilityImageMapLink();
 
-    void setHTMLAreaElement(HTMLAreaElement*);
-    HTMLAreaElement* areaElement() const { return m_areaElement.get(); }
-
-    void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }
-    HTMLMapElement* mapElement() const { return m_mapElement.get(); }
-
-    Node* node() const final { return m_areaElement.get(); }
-
     AccessibilityRole determineAccessibilityRole() final;
+    bool computeIsIgnored() const final;
     bool isEnabled() const final { return true; }
 
     Element* anchorElement() const final;
@@ -60,17 +54,13 @@ public:
     LayoutRect elementRect() const final;
 
 private:
-    explicit AccessibilityImageMapLink(AXID);
+    explicit AccessibilityImageMapLink(AXID, HTMLAreaElement&, AXObjectCache&);
 
-    void detachFromParent() final;
     Path elementPath() const final;
     RenderElement* imageMapLinkRenderer() const;
     void accessibilityText(Vector<AccessibilityText>&) const final;
     bool isImageMapLink() const final { return true; }
     bool supportsPath() const final { return true; }
-
-    WeakPtr<HTMLAreaElement, WeakPtrImplWithEventTargetData> m_areaElement;
-    WeakPtr<HTMLMapElement, WeakPtrImplWithEventTargetData> m_mapElement;
 };
 
 } // namespace WebCore

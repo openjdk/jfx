@@ -34,7 +34,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
 #include "MediaPromiseTypes.h"
@@ -63,6 +62,7 @@ class TextTrack;
 class TimeRanges;
 class VideoTrack;
 class VideoTrackPrivate;
+template<typename> class ExceptionOr;
 
 enum class MediaSourceReadyState { Closed, Open, Ended };
 
@@ -110,7 +110,7 @@ public:
     void elementIsShuttingDown();
     void detachFromElement();
     bool isSeeking() const { return !!m_pendingSeekTarget; }
-    Ref<TimeRanges> seekable();
+    PlatformTimeRanges seekable();
     ExceptionOr<void> setLiveSeekableRange(double start, double end);
     ExceptionOr<void> clearLiveSeekableRange();
 
@@ -248,12 +248,12 @@ private:
 #endif
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };
 #endif
     std::atomic<uint64_t> m_associatedRegistryCount { 0 };
     RefPtr<MediaSourcePrivate> m_private;
-    Ref<MediaSourceClientImpl> m_client;
+    const Ref<MediaSourceClientImpl> m_client;
 };
 
 String convertEnumerationToString(MediaSource::EndOfStreamError);

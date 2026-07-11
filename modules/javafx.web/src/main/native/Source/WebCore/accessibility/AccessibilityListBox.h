@@ -34,7 +34,7 @@ namespace WebCore {
 
 class AccessibilityListBox final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityListBox> create(AXID, RenderObject&);
+    static Ref<AccessibilityListBox> create(AXID, RenderObject&, AXObjectCache&);
     virtual ~AccessibilityListBox();
 
     WEBCORE_EXPORT void setSelectedChildren(const AccessibilityChildrenVector&) final;
@@ -46,7 +46,7 @@ public:
     void addChildren() final;
 
 private:
-    explicit AccessibilityListBox(AXID, RenderObject&);
+    explicit AccessibilityListBox(AXID, RenderObject&, AXObjectCache&);
 
     bool isAccessibilityListBoxInstance() const final { return true; }
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;

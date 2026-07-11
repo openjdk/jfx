@@ -32,11 +32,6 @@
 
 namespace WebCore {
 
-PathSegment::PathSegment(Data&& data)
-    : m_data(WTFMove(data))
-{
-}
-
 FloatPoint PathSegment::calculateEndPoint(const FloatPoint& currentPoint, FloatPoint& lastMoveToPoint) const
 {
     return WTF::switchOn(m_data, [&](auto& data) {
@@ -49,6 +44,22 @@ std::optional<FloatPoint> PathSegment::tryGetEndPointWithoutContext() const
     return WTF::switchOn(m_data, [&](auto& data) {
         return data.tryGetEndPointWithoutContext();
     });
+}
+
+FloatRect PathSegment::fastBoundingRect() const
+{
+    FloatPoint currentPoint;
+    FloatPoint lastMoveToPoint;
+
+    auto boundingRect = FloatRect::smallestRect();
+    extendFastBoundingRect(currentPoint, lastMoveToPoint, boundingRect);
+
+    if (boundingRect.isSmallest()) {
+        currentPoint = calculateEndPoint(currentPoint, lastMoveToPoint);
+        boundingRect.extend(currentPoint);
+    }
+
+    return boundingRect;
 }
 
 void PathSegment::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const

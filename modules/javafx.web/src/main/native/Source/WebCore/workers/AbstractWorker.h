@@ -31,13 +31,14 @@
 #pragma once
 
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "FetchOptions.h"
 
 namespace WebCore {
 
+class Exception;
 struct FetchOptions;
 struct WorkerOptions;
+template<typename> class ExceptionOr;
 
 class AbstractWorker : public RefCounted<AbstractWorker>, public EventTarget {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AbstractWorker);
@@ -52,6 +53,8 @@ protected:
 
     // Helper function that converts a URL to an absolute URL and checks the result for validity.
     ExceptionOr<URL> resolveURL(const String& url);
+
+    static std::optional<Exception> validateURL(ScriptExecutionContext&, const URL&);
 
     intptr_t asID() const { return reinterpret_cast<intptr_t>(this); }
 

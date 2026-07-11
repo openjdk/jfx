@@ -84,7 +84,7 @@ public:
 
 private:
     struct CompositionState : CanMakeCheckedPtr<CompositionState> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CompositionState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(CompositionState);
 
         enum class ClearStateDeferralReason : uint8_t {
@@ -111,7 +111,7 @@ private:
     };
 
     struct ProofreadingState : CanMakeCheckedPtr<ProofreadingState> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ProofreadingState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ProofreadingState);
 
         ProofreadingState(const Ref<Range>& contextRange, const WritingTools::Session& session, int replacementLocationOffset)
@@ -197,7 +197,7 @@ private:
 
     WeakPtr<Page> m_page;
 
-    std::variant<std::monostate, ProofreadingState, CompositionState> m_state;
+    Variant<std::monostate, ProofreadingState, CompositionState> m_state;
 };
 
 } // namespace WebKit

@@ -191,7 +191,7 @@ void RenderMathMLOperator::resetStretchSize()
 
 void RenderMathMLOperator::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     LayoutUnit preferredWidth;
 
@@ -214,7 +214,7 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
 
     m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderMathMLOperator::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
@@ -238,7 +238,7 @@ void RenderMathMLOperator::layoutBlock(RelayoutChildren relayoutChildren, Layout
         setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue + borderAndPaddingLogicalWidth());
         setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent() + borderAndPaddingLogicalHeight());
 
-        layoutPositionedObjects(relayoutChildren);
+        layoutOutOfFlowBoxes(relayoutChildren);
     } else {
         // We first do the normal layout without spacing.
         // No need to handle padding/border/margin here, RenderMathMLToken::layoutBlock takes care of them.

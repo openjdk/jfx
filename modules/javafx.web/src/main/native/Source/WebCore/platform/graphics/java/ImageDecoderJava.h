@@ -36,7 +36,7 @@
 namespace WebCore {
 
 class ImageDecoderJava : public ImageDecoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ImageDecoderJava);
 public:
     ImageDecoderJava();
     ~ImageDecoderJava();

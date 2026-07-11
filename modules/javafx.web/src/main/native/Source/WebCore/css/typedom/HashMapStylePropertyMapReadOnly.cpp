@@ -30,12 +30,12 @@
 
 namespace WebCore {
 
-Ref<HashMapStylePropertyMapReadOnly> HashMapStylePropertyMapReadOnly::create(UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>>&& map)
+Ref<HashMapStylePropertyMapReadOnly> HashMapStylePropertyMapReadOnly::create(HashMap<AtomString, RefPtr<CSSValue>>&& map)
 {
     return adoptRef(*new HashMapStylePropertyMapReadOnly(WTFMove(map)));
 }
 
-HashMapStylePropertyMapReadOnly::HashMapStylePropertyMapReadOnly(UncheckedKeyHashMap<AtomString, RefPtr<CSSValue>>&& map)
+HashMapStylePropertyMapReadOnly::HashMapStylePropertyMapReadOnly(HashMap<AtomString, RefPtr<CSSValue>>&& map)
     : m_map(WTFMove(map))
 {
 }
@@ -71,7 +71,7 @@ auto HashMapStylePropertyMapReadOnly::entries(ScriptExecutionContext* context) c
 
     return WTF::map(m_map, [&](auto& entry) -> StylePropertyMapEntry {
         auto& [propertyName, cssValue] = entry;
-        return makeKeyValuePair(propertyName,  Vector<RefPtr<CSSStyleValue>> { reifyValue(cssValue.get(), cssPropertyID(propertyName), *document) });
+        return makeKeyValuePair(propertyName,  Vector<RefPtr<CSSStyleValue>> { reifyValue(*document, cssValue.get(), cssPropertyID(propertyName)) });
     });
 }
 

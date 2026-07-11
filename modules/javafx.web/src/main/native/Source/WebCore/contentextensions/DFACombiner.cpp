@@ -151,7 +151,7 @@ private:
         uint32_t indexA = extractIndexA(newNodeSignature);
         uint32_t indexB = extractIndexB(newNodeSignature);
 
-        UncheckedKeyHashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> actions;
+        HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> actions;
         if (indexA != invalidNodeIndex) {
             const DFANode& node = m_dfaA.nodes[indexA];
             uint32_t actionsStart = node.actionsStart();
@@ -180,7 +180,7 @@ private:
     const DFA& m_dfaA;
     const DFA& m_dfaB;
     DFA m_output;
-    UncheckedKeyHashMap<uint64_t, uint32_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_nodeMapping;
+    HashMap<uint64_t, uint32_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_nodeMapping;
     Vector<uint64_t, 0, ContentExtensionsOverflowHandler> m_unprocessedNodes;
 };
 
@@ -192,7 +192,7 @@ void DFACombiner::combineDFAs(unsigned minimumSize, NOESCAPE const Function<void
     for (unsigned i = m_dfas.size(); i--;) {
         if (m_dfas[i].graphSize() > minimumSize) {
             handler(WTFMove(m_dfas[i]));
-            m_dfas.remove(i);
+            m_dfas.removeAt(i);
         }
     }
 

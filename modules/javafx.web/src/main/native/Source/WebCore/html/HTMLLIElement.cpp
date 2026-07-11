@@ -42,7 +42,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLLIElement);
 using namespace HTMLNames;
 
 HTMLLIElement::HTMLLIElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
+    : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(liTag));
 }

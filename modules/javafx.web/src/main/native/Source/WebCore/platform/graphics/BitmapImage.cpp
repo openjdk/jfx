@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,8 +96,9 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     auto scaleFactorForDrawing = context.scaleFactorForDrawing(destinationRect, adjustedSourceRect);
     auto sizeForDrawing = expandedIntSize(sourceSize * scaleFactorForDrawing);
     auto subsamplingLevel =  m_source->subsamplingLevelForScaleFactor(context, scaleFactorForDrawing, options.allowImageSubsampling());
+    auto shouldDecodeToHDR = m_source->hasHDRGainMap() && options.drawsHDRContent() == DrawsHDRContent::Yes && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard() ? ShouldDecodeToHDR::Yes : ShouldDecodeToHDR::No;
 
-    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), sizeForDrawing });
+    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), shouldDecodeToHDR, sizeForDrawing });
 
     if (!nativeImage) {
         // The decoder has not returned a frame. Fill the image rectangle with a debugging color to show what has happened.
@@ -123,11 +124,11 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
             orientation = currentFrameOrientation();
 
         auto headroom = options.headroom();
-        if (headroom == Headroom::FromImage && headroomForTesting().value_or(Headroom::None) > Headroom::None)
+        if (hasHDRContentForTesting() && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard())
             fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
         else {
             if (headroom == Headroom::FromImage)
-                headroom = currentFrameHeadroom();
+                headroom = currentFrameHeadroom(shouldDecodeToHDR);
 
             context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
         }
@@ -144,7 +145,10 @@ void BitmapImage::drawPattern(GraphicsContext& context, const FloatRect& destina
     if (tileRect.isEmpty())
         return;
 
-    if (context.drawLuminanceMask())
+    auto headroom = options.headroom();
+    if (headroom == Headroom::FromImage && hasHDRContentForTesting())
+        fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+    else if (context.drawLuminanceMask())
         drawLuminanceMaskPattern(context, destinationRect, tileRect, transform, phase, spacing, options);
     else
         Image::drawPattern(context, destinationRect, tileRect, transform, phase, spacing, { options, ImageOrientation::Orientation::FromImage });

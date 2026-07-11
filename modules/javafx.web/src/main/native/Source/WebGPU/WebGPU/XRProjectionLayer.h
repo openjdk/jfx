@@ -41,11 +41,11 @@ class CommandEncoder;
 class Device;
 
 class XRProjectionLayer : public RefCountedAndCanMakeWeakPtr<XRProjectionLayer>, public WGPUXRProjectionLayerImpl {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRProjectionLayer);
 public:
-    static Ref<XRProjectionLayer> create(Device& device)
+    static Ref<XRProjectionLayer> create(WGPUTextureFormat colorFormat, WGPUTextureFormat* optionalDepthStencilFormat, WGPUTextureUsageFlags flags, double scale, Device& device)
     {
-        return adoptRef(*new XRProjectionLayer(true, device));
+        return adoptRef(*new XRProjectionLayer(colorFormat, optionalDepthStencilFormat, flags, scale, device));
     }
     static Ref<XRProjectionLayer> createInvalid(Device& device)
     {
@@ -63,9 +63,13 @@ public:
     id<MTLTexture> depthTexture() const;
     const std::pair<id<MTLSharedEvent>, uint64_t>& completionEvent() const;
     size_t reusableTextureIndex() const;
+    WGPUTextureFormat colorFormat() const { return m_colorFormat; }
+    std::optional<WGPUTextureFormat> optionalDepthStencilFormat() const { return m_optionalDepthStencilFormat; }
+    WGPUTextureUsageFlags flags() const { return m_flags; }
+    double scale() const { return m_scale; }
 
 private:
-    XRProjectionLayer(bool, Device&);
+    XRProjectionLayer(WGPUTextureFormat, WGPUTextureFormat*, WGPUTextureUsageFlags, double scale, Device&);
     XRProjectionLayer(Device&);
 
     NSMutableDictionary<NSNumber*, id<MTLTexture>>* m_colorTextures { nil };
@@ -74,8 +78,12 @@ private:
     id<MTLTexture> m_depthTexture { nil };
     std::pair<id<MTLSharedEvent>, uint64_t> m_sharedEvent;
     size_t m_reusableTextureIndex { 0 };
+    WGPUTextureFormat m_colorFormat { WGPUTextureFormat_Undefined };
+    std::optional<WGPUTextureFormat> m_optionalDepthStencilFormat;
+    WGPUTextureUsageFlags m_flags { WGPUTextureUsage_None };
+    double m_scale { 1.f };
 
-    Ref<Device> m_device;
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU

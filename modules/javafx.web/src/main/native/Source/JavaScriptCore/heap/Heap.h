@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -48,12 +48,14 @@
 #include "Synchronousness.h"
 #include "WeakHandleOwner.h"
 #include <wtf/AutomaticThread.h>
+#include <wtf/Box.h>
 #include <wtf/ConcurrentPtrHashSet.h>
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Markable.h>
+#include <wtf/NotFound.h>
 #include <wtf/ParallelHelperPool.h>
 #include <wtf/Threading.h>
 
@@ -150,9 +152,18 @@ class Heap;
     v(structureRareDataSpace, destructibleCellHeapCellType, StructureRareData) \
     v(symbolTableSpace, destructibleCellHeapCellType, SymbolTable)
 
+
+#if ENABLE(WEBASSEMBLY)
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v) \
+    v(webAssemblyGCStructureSpace, destructibleCellHeapCellType, WebAssemblyGCStructure)
+#else
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
+#endif
+
 #define FOR_EACH_JSC_STRUCTURE_ISO_SUBSPACE(v) \
     v(structureSpace, destructibleCellHeapCellType, Structure) \
     v(brandedStructureSpace, destructibleCellHeapCellType, BrandedStructure) \
+    FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
 
 #define FOR_EACH_JSC_ISO_SUBSPACE(v) \
     FOR_EACH_JSC_COMMON_ISO_SUBSPACE(v) \
@@ -177,19 +188,23 @@ class Heap;
 
 #if ENABLE(WEBASSEMBLY)
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v) \
-    v(webAssemblyArraySpace, webAssemblyArrayHeapCellType, JSWebAssemblyArray) \
     v(webAssemblyExceptionSpace, webAssemblyExceptionHeapCellType, JSWebAssemblyException) \
     v(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType, WebAssemblyFunction) \
     v(webAssemblyGlobalSpace, webAssemblyGlobalHeapCellType, JSWebAssemblyGlobal) \
     v(webAssemblyMemorySpace, webAssemblyMemoryHeapCellType, JSWebAssemblyMemory) \
-    v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct) \
     v(webAssemblyModuleSpace, webAssemblyModuleHeapCellType, JSWebAssemblyModule) \
     v(webAssemblyModuleRecordSpace, webAssemblyModuleRecordHeapCellType, WebAssemblyModuleRecord) \
     v(webAssemblyTableSpace, webAssemblyTableHeapCellType, JSWebAssemblyTable) \
     v(webAssemblyTagSpace, webAssemblyTagHeapCellType, JSWebAssemblyTag) \
     v(webAssemblyWrapperFunctionSpace, cellHeapCellType, WebAssemblyWrapperFunction)
+
+// FIXME: This is a bit confusingly named since the objects in here are exclusive to the subspace but they can vary in size thus can't be in an IsoSubspace.
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v) \
+    v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance, PreciseSubspace)
+
 #else
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v)
 #endif
 
 #define FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(v) \
@@ -284,14 +299,16 @@ class Heap;
     v(wrapForValidIteratorSpace, cellHeapCellType, JSWrapForValidIterator) \
     v(asyncFromSyncIteratorSpace, cellHeapCellType, JSAsyncFromSyncIterator) \
     v(regExpStringIteratorSpace, cellHeapCellType, JSRegExpStringIterator) \
+    v(disposableStackSpace, cellHeapCellType, JSDisposableStack) \
+    v(asyncDisposableStackSpace, cellHeapCellType, JSAsyncDisposableStack) \
     \
     FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
-
 
 typedef HashCountedSet<JSCell*> ProtectCountSet;
 typedef HashCountedSet<ASCIILiteral> TypeCountSet;
 
-enum class HeapType : uint8_t { Small, Large };
+enum class HeapType : uint8_t { Small, Medium, Large };
+enum class GrowthMode : uint8_t { Default, Aggressive };
 
 class HeapUtil;
 
@@ -434,8 +451,8 @@ public:
     JS_EXPORT_PRIVATE size_t globalObjectCount();
     JS_EXPORT_PRIVATE size_t protectedObjectCount();
     JS_EXPORT_PRIVATE size_t protectedGlobalObjectCount();
-    JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> protectedObjectTypeCounts();
-    JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> objectTypeCounts();
+    JS_EXPORT_PRIVATE TypeCountSet protectedObjectTypeCounts();
+    JS_EXPORT_PRIVATE TypeCountSet objectTypeCounts();
 
     UncheckedKeyHashSet<MarkedVectorBase*>& markListSet();
     void addMarkedJSValueRefArray(MarkedJSValueRefArray*);
@@ -461,7 +478,7 @@ public:
     void deleteAllCodeBlocks(DeleteAllCodeEffort);
     void deleteAllUnlinkedCodeBlocks(DeleteAllCodeEffort);
 
-    void didAllocate(size_t);
+    JS_EXPORT_PRIVATE void didAllocate(size_t);
     bool isPagedOut();
 
     const JITStubRoutineSet& jitStubRoutines() { return *m_jitStubRoutines; }
@@ -741,6 +758,7 @@ private:
 
     void deleteUnmarkedCompiledCode();
     JS_EXPORT_PRIVATE void addToRememberedSet(const JSCell*);
+    double projectedGCRateLimitingValue(MonotonicTime);
     void updateAllocationLimits();
     void didFinishCollection();
     void resumeCompilerThreads();
@@ -798,7 +816,10 @@ private:
     const HeapType m_heapType;
     MutatorState m_mutatorState { MutatorState::Running };
     const size_t m_ramSize;
+    const GrowthMode m_growthMode;
     const size_t m_minBytesPerCycle;
+    const size_t m_maxEdenSizeForRateLimiting;
+    double m_gcRateLimitingValue { 0.0 };
     size_t m_bytesAllocatedBeforeLastEdenCollect { 0 };
     size_t m_sizeAfterLastCollect { 0 };
     size_t m_sizeAfterLastFullCollect { 0 };
@@ -822,8 +843,8 @@ private:
     bool m_shouldDoOpportunisticFullCollection { false };
     bool m_isInOpportunisticTask { false };
     bool m_shouldDoFullCollection { false };
-    Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_collectionScope;
-    Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_lastCollectionScope;
+    Markable<CollectionScope> m_collectionScope;
+    Markable<CollectionScope> m_lastCollectionScope;
     Lock m_raceMarkStackLock;
 
     MarkedSpace m_objectSpace;
@@ -878,7 +899,7 @@ private:
     RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
     const Ref<IncrementalSweeper> m_sweeper;
-    Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
+    const Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
 
     Vector<HeapObserver*> m_observers;
 
@@ -953,7 +974,7 @@ private:
     uint64_t m_phaseVersion { 0 };
     uint64_t m_gcVersion { 0 };
     Box<Lock> m_threadLock;
-    Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
+    const Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
     RefPtr<AutomaticThread> m_thread;
 
     RefPtr<Thread> m_collectContinuouslyThread { nullptr };
@@ -1071,20 +1092,8 @@ public:
 
     // Whenever possible, use subspaceFor<CellType>(vm) to get one of these subspaces.
     CompleteSubspace cellSpace;
-    CompleteSubspace variableSizedCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
+    CompleteSubspace variableSizedCellSpace;
     CompleteSubspace destructibleObjectSpace;
-
-#if ENABLE(WEBASSEMBLY)
-    template<SubspaceAccess mode>
-    PreciseSubspace* webAssemblyInstanceSpace()
-    {
-        if (m_webAssemblyInstanceSpace || mode == SubspaceAccess::Concurrently)
-            return m_webAssemblyInstanceSpace.get();
-        return webAssemblyInstanceSpaceSlow();
-    }
-    JS_EXPORT_PRIVATE PreciseSubspace* webAssemblyInstanceSpaceSlow();
-    std::unique_ptr<PreciseSubspace> m_webAssemblyInstanceSpace;
-#endif
 
 #define DECLARE_ISO_SUBSPACE(name, heapCellType, type) \
     IsoSubspace name;
@@ -1120,7 +1129,7 @@ public:
     std::unique_ptr<type> m_##name;
 
     struct SpaceAndSet {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SpaceAndSet);
 
         IsoSubspace space;
         IsoCellSet set;
@@ -1151,7 +1160,7 @@ public:
     }
 
     struct ScriptExecutableSpaceAndSets {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ScriptExecutableSpaceAndSets);
 
         IsoSubspace space;
         IsoCellSet clearableCodeSet;
@@ -1199,6 +1208,21 @@ public:
     UnlinkedFunctionExecutableSpaceAndSet unlinkedFunctionExecutableSpaceAndSet;
 
 #undef DYNAMIC_SPACE_AND_SET_DEFINE_MEMBER
+
+#define DEFINE_NON_ISO_SUBSPACE_MEMBER(name, heapCellType, type, SubspaceType) \
+    template<SubspaceAccess mode> \
+    SubspaceType* name() \
+    { \
+        if (m_##name || mode == SubspaceAccess::Concurrently) \
+            return m_##name.get(); \
+        return name##Slow(); \
+    } \
+    JS_EXPORT_PRIVATE SubspaceType* name##Slow(); \
+    std::unique_ptr<SubspaceType> m_##name;
+
+    FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(DEFINE_NON_ISO_SUBSPACE_MEMBER)
+#undef DEFINE_NON_ISO_SUBSPACE_MEMBER
+
     CString m_signpostMessage;
 };
 

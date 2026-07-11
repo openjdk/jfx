@@ -67,9 +67,7 @@ public:
     bool isInlineItemListDirty() const { return m_isInlineItemListDirty; }
     void setInlineItemListClean() { m_isInlineItemListDirty = false; }
 
-#ifndef NDEBUG
     bool hasDetachedContent() const { return !m_detachedLayoutBoxes.isEmpty(); }
-#endif
 
 private:
     friend class InlineInvalidation;

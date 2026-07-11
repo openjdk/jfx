@@ -41,7 +41,7 @@ using DynamicRangeLimitMixPercentage = Percentage<CSS::Range{0, 100}>;
 
 struct DynamicRangeLimitMixParameters {
     DynamicRangeLimitMixPercentage standard;
-    DynamicRangeLimitMixPercentage constrainedHigh;
+    DynamicRangeLimitMixPercentage constrained;
     DynamicRangeLimitMixPercentage noLimit;
 
     bool operator==(const DynamicRangeLimitMixParameters&) const = default;
@@ -53,7 +53,7 @@ template<size_t I> const auto& get(const DynamicRangeLimitMixParameters& value)
     if constexpr (I == 0)
         return value.standard;
     else if constexpr (I == 1)
-        return value.constrainedHigh;
+        return value.constrained;
     else if constexpr (I == 2)
         return value.noLimit;
 }

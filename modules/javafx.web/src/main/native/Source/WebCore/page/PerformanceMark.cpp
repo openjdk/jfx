@@ -28,6 +28,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "MessagePort.h"
 #include "Performance.h"
@@ -45,7 +46,7 @@ static double performanceNow(ScriptExecutionContext& scriptExecutionContext)
     // the ScriptExecutionContext to avoid this.
 
     if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
-        if (auto window = document->domWindow())
+        if (auto window = document->window())
             return window->performance().now();
     } else if (RefPtr workerGlobal = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
         return workerGlobal->performance().now();

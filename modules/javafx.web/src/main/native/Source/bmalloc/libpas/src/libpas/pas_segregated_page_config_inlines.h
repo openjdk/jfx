@@ -43,18 +43,20 @@ PAS_BEGIN_EXTERN_C;
     \
     PAS_NEVER_INLINE bool lower_case_page_config_name ## _specialized_local_allocator_start_allocating_in_primordial_partial_view( \
         pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode, \
         pas_segregated_partial_view* partial, \
         pas_segregated_size_directory* size_directory) \
     { \
         return pas_local_allocator_start_allocating_in_primordial_partial_view( \
-            allocator, partial, size_directory, (page_config_value)); \
+            allocator, allocation_mode, partial, size_directory, (page_config_value)); \
     } \
     \
     PAS_NEVER_INLINE bool lower_case_page_config_name ## _specialized_local_allocator_refill( \
         pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode, \
         pas_allocator_counts* counts) \
     { \
-        return pas_local_allocator_refill_with_known_config(allocator, counts, (page_config_value)); \
+        return pas_local_allocator_refill_with_known_config(allocator, allocation_mode, counts, (page_config_value)); \
     } \
     \
     void lower_case_page_config_name ## _specialized_local_allocator_return_memory_to_page( \

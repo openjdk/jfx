@@ -28,6 +28,8 @@ namespace WebCore {
 
 class HitTestResult;
 class HTMLImageElement;
+class LayoutPoint;
+class LayoutSize;
 
 class HTMLMapElement final : public HTMLElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLMapElement);

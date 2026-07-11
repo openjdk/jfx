@@ -30,6 +30,7 @@
 #include "FEGaussianBlurSoftwareApplier.h"
 //#endif
 #include "Filter.h"
+#include <numbers>
 #include <wtf/text/TextStream.h>
 
 #if USE(SKIA)
@@ -85,7 +86,7 @@ bool FEGaussianBlur::setEdgeMode(EdgeModeType edgeMode)
 
 static inline float gaussianKernelFactor()
 {
-    return 3 / 4.f * sqrtf(2 * piFloat);
+    return 3 / 4.f * sqrtf(2 * std::numbers::pi_v<float>);
 }
 
 static int clampedToKernelSize(float value)
@@ -149,7 +150,7 @@ IntOutsets FEGaussianBlur::calculateOutsets(const FloatSize& stdDeviation)
     return { outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width() };
 }
 
-bool FEGaussianBlur::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEGaussianBlur::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }
@@ -195,12 +196,12 @@ std::optional<GraphicsStyle> FEGaussianBlur::createGraphicsStyle(GraphicsContext
 
 TextStream& FEGaussianBlur::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feGaussianBlur";
+    ts << indent << "[feGaussianBlur"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\"";
+    ts << " stdDeviation=\""_s << m_stdX << ", "_s << m_stdY << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

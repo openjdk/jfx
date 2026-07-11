@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ class ControlFactory : public RefCounted<ControlFactory> {
 public:
     virtual ~ControlFactory() = default;
 
-    WEBCORE_EXPORT static RefPtr<ControlFactory> create();
+    WEBCORE_EXPORT static Ref<ControlFactory> create();
     WEBCORE_EXPORT static ControlFactory& shared();
 
 #if ENABLE(APPLE_PAY)

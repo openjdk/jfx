@@ -231,25 +231,6 @@ ALWAYS_INLINE void* untaggedPtr(void* ptr)
     return CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>();
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(ipint_entry, "function for IPInt entry"));
-    });
-    return codeRef;
-}
-
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterSIMDEntryThunk()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(ipint_function_prologue_simd, "function for IPInt SIMD call"));
-    });
-    return codeRef;
-}
 #endif // ENABLE(WEBASSEMBLY)
 
 MacroAssemblerCodeRef<JSEntryPtrTag> defaultCallThunk()
@@ -998,6 +979,71 @@ MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
 } // namespace LLInt
 
 #endif // ENABLE(JIT)
+
+namespace LLInt {
+
+#if ENABLE(WEBASSEMBLY)
+#if ENABLE(JIT)
+
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(ipint_entry, "function for IPInt entry"));
+    });
+    return codeRef;
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterSIMDEntryThunk()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(ipint_function_prologue_simd, "function for IPInt SIMD call"));
+    });
+    return codeRef;
+}
+
+#define DEFINE_IPINT_THUNK_FOR_CATCH(funcName, target) \
+    MacroAssemblerCodeRef<JITThunkPtrTag> funcName() \
+    { \
+        static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef; \
+        static std::once_flag onceKey; \
+        std::call_once(onceKey, [&] { \
+            if (Options::useJIT()) \
+                codeRef.construct(generateThunkWithJumpTo<JITThunkPtrTag>(target, #target)); \
+            else \
+                codeRef.construct(getCodeRef<JITThunkPtrTag>(target)); \
+        }); \
+        return codeRef; \
+    }
+
+#else
+
+#define DEFINE_IPINT_THUNK_FOR_CATCH(funcName, target) \
+    MacroAssemblerCodeRef<JITThunkPtrTag> funcName() \
+    { \
+        static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef; \
+        static std::once_flag onceKey; \
+        std::call_once(onceKey, [&] { \
+            codeRef.construct(getCodeRef<JITThunkPtrTag>(target)); \
+        }); \
+        return codeRef; \
+    }
+
+#endif
+
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterCatchEntryThunk, ipint_catch_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterCatchAllEntryThunk, ipint_catch_all_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchEntryThunk, ipint_table_catch_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchRefEntryThunk, ipint_table_catch_ref_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchAllEntryThunk, ipint_table_catch_all_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchAllrefEntryThunk, ipint_table_catch_allref_entry)
+
+#endif
+
+} // namespace LLInt
 
 #if ENABLE(C_LOOP)
 // Non-JIT (i.e. C Loop LLINT) case:

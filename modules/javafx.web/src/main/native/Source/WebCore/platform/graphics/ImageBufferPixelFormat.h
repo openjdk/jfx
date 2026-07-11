@@ -25,13 +25,17 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
+#include "ContentsFormat.h"
 #if HAVE(IOSURFACE)
 #include "IOSurface.h"
 #endif
 #include "PixelFormat.h"
 
+#include <wtf/Forward.h>
+
 namespace WebCore {
+
+// FIXME: We should eliminate ImageBufferPixelFormat in favor of PixelFormat everywhere.
 enum class ImageBufferPixelFormat : uint8_t {
     BGRX8,
     BGRA8,
@@ -71,6 +75,30 @@ constexpr PixelFormat convertToPixelFormat(ImageBufferPixelFormat format)
     return PixelFormat::BGRX8;
 }
 
+constexpr ContentsFormat convertToContentsFormat(ImageBufferPixelFormat format)
+{
+    switch (format) {
+    case ImageBufferPixelFormat::BGRX8:
+    case ImageBufferPixelFormat::BGRA8:
+        return ContentsFormat::RGBA8;
+#if ENABLE(PIXEL_FORMAT_RGB10)
+    case ImageBufferPixelFormat::RGB10:
+        return ContentsFormat::RGBA10;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
+    case ImageBufferPixelFormat::RGB10A8:
+        return ContentsFormat::RGBA10;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    case ImageBufferPixelFormat::RGBA16F:
+        return ContentsFormat::RGBA16F;
+#endif
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return ContentsFormat::RGBA8;
+    }
+}
+
 #if HAVE(IOSURFACE)
 constexpr IOSurface::Format convertToIOSurfaceFormat(ImageBufferPixelFormat format)
 {
@@ -97,5 +125,27 @@ constexpr IOSurface::Format convertToIOSurfaceFormat(ImageBufferPixelFormat form
     }
 }
 #endif
+
+constexpr bool imageBufferPixelFormatIsOpaque(ImageBufferPixelFormat format)
+{
+    switch (format) {
+    case ImageBufferPixelFormat::BGRX8:
+#if ENABLE(PIXEL_FORMAT_RGB10)
+    case ImageBufferPixelFormat::RGB10:
+#endif
+        return true;
+    case ImageBufferPixelFormat::BGRA8:
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
+    case ImageBufferPixelFormat::RGB10A8:
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    case ImageBufferPixelFormat::RGBA16F:
+#endif
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
 
 } // namespace WebCore

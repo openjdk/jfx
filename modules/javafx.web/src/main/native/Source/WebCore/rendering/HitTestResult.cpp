@@ -24,6 +24,7 @@
 #include "HitTestResult.h"
 
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "ElementInlines.h"
@@ -39,6 +40,8 @@
 #include "HTMLVideoElement.h"
 #include "ImageOverlay.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PseudoElement.h"
 #include "Range.h"
@@ -217,6 +220,40 @@ bool HitTestResult::isSelected() const
     return frame->selection().contains(m_hitTestLocation.point());
 }
 
+bool HitTestResult::allowsFollowingLink() const
+{
+    auto linkURL = absoluteLinkURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
+}
+
+bool HitTestResult::allowsFollowingImageURL() const
+{
+    auto linkURL = absoluteImageURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
+}
+
 String HitTestResult::selectedText() const
 {
     if (!m_innerNonSharedNode)
@@ -336,7 +373,7 @@ String HitTestResult::altDisplayString() const
         return displayString(image->attributeWithoutSynchronization(altAttr), m_innerNonSharedNode.get());
 
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(*m_innerNonSharedNode))
-        return displayString(input->alt(), m_innerNonSharedNode.get());
+        return displayString(input->attributeWithoutSynchronization(altAttr), m_innerNonSharedNode.get());
 
     return String();
 }
@@ -445,7 +482,7 @@ URL HitTestResult::absolutePDFURL() const
 URL HitTestResult::absoluteMediaURL() const
 {
 #if ENABLE(VIDEO)
-    if (auto* element = mediaElement()) {
+    if (RefPtr element = mediaElement()) {
         auto sourceURL = element->currentSrc();
         if (RefPtr page = element->document().page())
             return page->applyLinkDecorationFiltering(sourceURL, LinkDecorationFilteringTrigger::Unspecified);
@@ -458,11 +495,10 @@ URL HitTestResult::absoluteMediaURL() const
 bool HitTestResult::mediaSupportsFullscreen() const
 {
 #if ENABLE(VIDEO)
-    HTMLMediaElement* mediaElt(mediaElement());
-    return is<HTMLVideoElement>(mediaElt) && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
-#else
-    return false;
+    if (RefPtr element = mediaElement())
+        return is<HTMLVideoElement>(*element) && element->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
 #endif
+    return false;
 }
 
 #if ENABLE(VIDEO)
@@ -490,7 +526,7 @@ bool HitTestResult::hasMediaElement() const
 void HitTestResult::toggleMediaControlsDisplay() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setControls(!mediaElt->controls());
 #endif
 }
@@ -498,7 +534,7 @@ void HitTestResult::toggleMediaControlsDisplay() const
 void HitTestResult::toggleMediaLoopPlayback() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setLoop(!mediaElt->loop());
 #endif
 }
@@ -506,7 +542,7 @@ void HitTestResult::toggleMediaLoopPlayback() const
 void HitTestResult::toggleShowMediaStats() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setShowingStats(!mediaElt->showingStats());
 #endif
 }
@@ -514,7 +550,7 @@ void HitTestResult::toggleShowMediaStats() const
 bool HitTestResult::mediaIsInFullscreen() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement())
+    if (RefPtr mediaElement = this->mediaElement())
         return mediaElement->isVideo() && mediaElement->isStandardFullscreen();
 #endif
     return false;
@@ -523,7 +559,7 @@ bool HitTestResult::mediaIsInFullscreen() const
 void HitTestResult::toggleMediaFullscreenState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement()) {
+    if (RefPtr mediaElement = this->mediaElement()) {
         if (mediaElement->isVideo() && mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
             UserGestureIndicator indicator(IsProcessingUserGesture::Yes, &mediaElement->document());
             mediaElement->toggleStandardFullscreenState();
@@ -548,11 +584,10 @@ void HitTestResult::enterFullscreenForVideo() const
 bool HitTestResult::mediaIsInVideoViewer() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModeInWindow;
-#else
-    return false;
 #endif
+    return false;
 }
 
 void HitTestResult::toggleVideoViewer() const
@@ -573,7 +608,7 @@ void HitTestResult::toggleVideoViewer() const
 bool HitTestResult::mediaControlsEnabled() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement())
+    if (RefPtr mediaElement = this->mediaElement())
         return mediaElement->controls();
 #endif
     return false;
@@ -582,7 +617,7 @@ bool HitTestResult::mediaControlsEnabled() const
 bool HitTestResult::mediaLoopEnabled() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->loop();
 #endif
     return false;
@@ -591,7 +626,7 @@ bool HitTestResult::mediaLoopEnabled() const
 bool HitTestResult::mediaStatsShowing() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->showingStats();
 #endif
     return false;
@@ -600,7 +635,7 @@ bool HitTestResult::mediaStatsShowing() const
 bool HitTestResult::mediaPlaying() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return !mediaElt->paused();
 #endif
     return false;
@@ -609,7 +644,7 @@ bool HitTestResult::mediaPlaying() const
 void HitTestResult::toggleMediaPlayState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->togglePlayState();
 #endif
 }
@@ -617,7 +652,7 @@ void HitTestResult::toggleMediaPlayState() const
 bool HitTestResult::mediaHasAudio() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->hasAudio();
 #endif
     return false;
@@ -626,7 +661,7 @@ bool HitTestResult::mediaHasAudio() const
 bool HitTestResult::mediaIsVideo() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return is<HTMLVideoElement>(*mediaElt);
 #endif
     return false;
@@ -635,7 +670,7 @@ bool HitTestResult::mediaIsVideo() const
 bool HitTestResult::mediaMuted() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->muted();
 #endif
     return false;
@@ -644,7 +679,7 @@ bool HitTestResult::mediaMuted() const
 void HitTestResult::toggleMediaMuteState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setMuted(!mediaElt->muted());
 #endif
 }
@@ -652,7 +687,7 @@ void HitTestResult::toggleMediaMuteState() const
 bool HitTestResult::isDownloadableMedia() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->canSaveMediaData();
 #endif
 
@@ -871,29 +906,27 @@ String HitTestResult::linkSuggestedFilename() const
 bool HitTestResult::mediaSupportsEnhancedFullscreen() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
-#else
-    return false;
 #endif
+    return false;
 }
 
 bool HitTestResult::mediaIsInEnhancedFullscreen() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture;
-#else
-    return false;
 #endif
+    return false;
 }
 
 void HitTestResult::toggleEnhancedFullscreenForVideo() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    auto* mediaElement(this->mediaElement());
-    auto* videoElement = dynamicDowncast<HTMLVideoElement>(*mediaElement);
-    if (!videoElement || !mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
+    RefPtr mediaElement(this->mediaElement());
+    RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(mediaElement);
+    if (!mediaElement || !videoElement || !mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
         return;
 
     UserGestureIndicator indicator(IsProcessingUserGesture::Yes, &mediaElement->document());

@@ -29,7 +29,7 @@
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "PlatformKeyboardEvent.h"
 #include "WindowsKeyboardCodes.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -111,7 +111,7 @@ static bool viewIsCompositing(WindowProxy* view)
     if (!view)
         return false;
     auto* window = dynamicDowncast<LocalDOMWindow>(view->window());
-    return window && window->frame() && window->frame()->editor().hasComposition();
+    return window && window->localFrame() && window->localFrame()->editor().hasComposition();
 }
 
 inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<WindowProxy>&& view)
@@ -218,8 +218,8 @@ int KeyboardEvent::charCode() const
     // We match Firefox, unless in backward compatibility mode, where we always return the character code.
     bool backwardCompatibilityMode = false;
     RefPtr window = dynamicDowncast<LocalDOMWindow>(view() ? view()->window() : nullptr);
-    if (window && window->frame())
-        backwardCompatibilityMode = window->frame()->eventHandler().needsKeyboardEventDisambiguationQuirks();
+    if (RefPtr frame = window ? window->localFrame() : nullptr)
+        backwardCompatibilityMode = frame->eventHandler().needsKeyboardEventDisambiguationQuirks();
 
     if (!m_underlyingPlatformEvent || (type() != eventNames().keypressEvent && !backwardCompatibilityMode))
         return 0;
@@ -238,6 +238,11 @@ unsigned KeyboardEvent::which() const
     if (m_which)
         return m_which.value();
     return static_cast<unsigned>(keyCode());
+}
+
+FocusEventData KeyboardEvent::focusEventData() const
+{
+    return { type(), keyIdentifier(), altKey() };
 }
 
 } // namespace WebCore

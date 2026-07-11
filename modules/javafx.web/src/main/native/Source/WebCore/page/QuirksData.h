@@ -28,60 +28,66 @@
 namespace WebCore {
 
 struct WEBCORE_EXPORT QuirksData {
-    bool isAmazon { false };
-    bool isBankOfAmerica { false };
-    bool isBing { false };
-    bool isCBSSports { false };
-    bool isEA { false };
-    bool isESPN { false };
-    bool isFacebook { false };
-    bool isGoogleDocs { false };
-    bool isGoogleProperty { false };
-    bool isGoogleMaps { false };
-    bool isNetflix { false };
-    bool isOutlook { false };
-    bool isSoundCloud { false };
-    bool isThesaurus { false };
-    bool isVimeo { false };
-    bool isWalmart { false };
-    bool isWebEx { false };
-    bool isYouTube { false };
-    bool isZoom { false };
+    bool isAmazon : 1 { false };
+    bool isBankOfAmerica : 1 { false };
+    bool isBing : 1 { false };
+    bool isCBSSports : 1 { false };
+    bool isEA : 1 { false };
+    bool isESPN : 1 { false };
+    bool isFacebook : 1 { false };
+    bool isGoogleDocs : 1 { false };
+    bool isGoogleProperty : 1 { false };
+    bool isGoogleMaps : 1 { false };
+    bool isGoogleAccounts : 1 { false };
+    bool isNetflix : 1 { false };
+    bool isOutlook : 1 { false };
+    bool isSoundCloud : 1 { false };
+    bool isThesaurus : 1 { false };
+    bool isVimeo : 1 { false };
+    bool isWalmart : 1 { false };
+    bool isWebEx : 1 { false };
+    bool isYouTube : 1 { false };
+    bool isZoom : 1 { false };
 
-    bool hasBrokenEncryptedMediaAPISupportQuirk { false };
-    bool implicitMuteWhenVolumeSetToZero { false };
-    bool maybeBypassBackForwardCache { false };
-    bool needsBingGestureEventQuirk { false };
-    bool needsBodyScrollbarWidthNoneDisabledQuirk { false };
-    bool needsCanPlayAfterSeekedQuirk { false };
-    bool needsChromeMediaControlsPseudoElementQuirk { false };
-    bool needsFacebookRemoveNotSupportedQuirk { false };
-    bool needsHotelsAnimationQuirk { false };
-    bool needsMozillaFileTypeForDataTransferQuirk { false };
-    bool needsResettingTransitionCancelsRunningTransitionQuirk { false };
-    bool needsScrollbarWidthThinDisabledQuirk { false };
-    bool needsSeekingSupportDisabledQuirk { false };
-    bool needsVP9FullRangeFlagQuirk { false };
-    bool needsVideoShouldMaintainAspectRatioQuirk { false };
-    bool returnNullPictureInPictureElementDuringFullscreenChangeQuirk { false };
-    bool shouldAutoplayWebAudioForArbitraryUserGestureQuirk { false };
-    bool shouldAvoidResizingWhenInputViewBoundsChangeQuirk { false };
-    bool shouldAvoidScrollingWhenFocusedContentIsVisibleQuirk { false };
-    bool shouldBypassAsyncScriptDeferring { false };
-    bool shouldDisableDataURLPaddingValidation { false };
-    bool shouldDisableElementFullscreen { false };
-    bool shouldDisableFetchMetadata { false };
-    bool shouldDisableLazyIframeLoadingQuirk { false };
-    bool shouldDisablePushStateFilePathRestrictions { false };
-    bool shouldDisableWritingSuggestionsByDefaultQuirk { false };
-    bool shouldDispatchSyntheticMouseEventsWhenModifyingSelectionQuirk { false };
-    bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPreventedQuirk { false };
-    bool shouldEnableFontLoadingAPIQuirk { false };
-    bool shouldExposeShowModalDialog { false };
-    bool shouldIgnorePlaysInlineRequirementQuirk { false };
-    bool shouldLayOutAtMinimumWindowWidthWhenIgnoringScalingConstraintsQuirk { false };
-    bool shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk { false };
-    bool shouldUseLegacySelectPopoverDismissalBehaviorInDataActivationQuirk { false };
+    bool hasBrokenEncryptedMediaAPISupportQuirk : 1 { false };
+    bool implicitMuteWhenVolumeSetToZero : 1 { false };
+    bool inputMethodUsesCorrectKeyEventOrder : 1 { false };
+    bool maybeBypassBackForwardCache : 1 { false };
+    bool needsBingGestureEventQuirk : 1 { false };
+    bool needsBodyScrollbarWidthNoneDisabledQuirk : 1 { false };
+    bool needsCanPlayAfterSeekedQuirk : 1 { false };
+    bool needsChromeMediaControlsPseudoElementQuirk : 1 { false };
+    bool needsFacebookRemoveNotSupportedQuirk : 1 { false };
+    bool needsHotelsAnimationQuirk : 1 { false };
+    bool needsMozillaFileTypeForDataTransferQuirk : 1 { false };
+    bool needsResettingTransitionCancelsRunningTransitionQuirk : 1 { false };
+    bool needsScrollbarWidthThinDisabledQuirk : 1 { false };
+    bool needsSeekingSupportDisabledQuirk : 1 { false };
+    bool needsVP9FullRangeFlagQuirk : 1 { false };
+    bool needsVideoShouldMaintainAspectRatioQuirk : 1 { false };
+    bool returnNullPictureInPictureElementDuringFullscreenChangeQuirk : 1 { false };
+    bool shouldAutoplayWebAudioForArbitraryUserGestureQuirk : 1 { false };
+    bool shouldAvoidResizingWhenInputViewBoundsChangeQuirk : 1 { false };
+    bool shouldAvoidScrollingWhenFocusedContentIsVisibleQuirk : 1 { false };
+    bool shouldBypassAsyncScriptDeferring : 1 { false };
+    bool shouldDisableDataURLPaddingValidation : 1 { false };
+    bool shouldDisableElementFullscreen : 1 { false };
+    bool shouldDisableFetchMetadata : 1 { false };
+    bool shouldBlockFetchWithNewlineAndLessThan : 1 { false };
+    bool shouldDisableLazyIframeLoadingQuirk : 1 { false };
+    bool shouldDisablePushStateFilePathRestrictions : 1 { false };
+    bool shouldDisableWritingSuggestionsByDefaultQuirk : 1 { false };
+    bool shouldDispatchSyntheticMouseEventsWhenModifyingSelectionQuirk : 1 { false };
+    bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPreventedQuirk : 1 { false };
+    bool shouldEnableFontLoadingAPIQuirk : 1 { false };
+    bool shouldExposeShowModalDialog : 1 { false };
+    bool shouldIgnorePlaysInlineRequirementQuirk : 1 { false };
+    bool shouldLayOutAtMinimumWindowWidthWhenIgnoringScalingConstraintsQuirk : 1 { false };
+    bool shouldPreventOrientationMediaQueryFromEvaluatingToLandscapeQuirk : 1 { false };
+    bool shouldUseLegacySelectPopoverDismissalBehaviorInDataActivationQuirk : 1 { false };
+    bool shouldDispatchPlayPauseEventsOnResume : 1 { false };
+    bool shouldUnloadHeavyFrames : 1 { false };
+    bool shouldAvoidStartingSelectionOnMouseDownOverPointerCursor : 1 { false };
 
     // Requires check at moment of use
     std::optional<bool> needsDisableDOMPasteAccessQuirk;
@@ -89,68 +95,74 @@ struct WEBCORE_EXPORT QuirksData {
     std::optional<bool> needsReuseLiveRangeForSelectionUpdateQuirk;
 
 #if PLATFORM(IOS_FAMILY)
-    bool mayNeedToIgnoreContentObservation { false };
-    bool needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk { false };
-    bool needsFullscreenDisplayNoneQuirk { false };
-    bool needsFullscreenObjectFitQuirk { false };
-    bool needsGMailOverflowScrollQuirk { false };
-    bool needsGoogleMapsScrollingQuirk { false };
-    bool needsIPadSkypeOverflowScrollQuirk { false };
-    bool needsPreloadAutoQuirk { false };
-    bool needsScriptToEvaluateBeforeRunningScriptFromURLQuirk { false };
-    bool needsYouTubeMouseOutQuirk { false };
-    bool needsYouTubeOverflowScrollQuirk { false };
-    bool shouldAvoidPastingImagesAsWebContent { false };
-    bool shouldDisablePointerEventsQuirk { false };
-    bool shouldEnableApplicationCacheQuirk { false };
-    bool shouldIgnoreAriaForFastPathContentObservationCheckQuirk { false };
-    bool shouldNavigatorPluginsBeEmpty { false };
-    bool shouldSilenceWindowResizeEventsDuringApplicationSnapshotting { false };
-    bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk { false };
-    bool shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk { false };
-    bool shouldTreatAddingMouseOutEventListenerAsContentChange { false };
+    bool mayNeedToIgnoreContentObservation : 1 { false };
+    bool needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk : 1 { false };
+    bool needsFullscreenDisplayNoneQuirk : 1 { false };
+    bool needsFullscreenObjectFitQuirk : 1 { false };
+    bool needsGMailOverflowScrollQuirk : 1 { false };
+    bool needsGoogleMapsScrollingQuirk : 1 { false };
+    bool needsGoogleTranslateScrollingQuirk : 1 { false };
+    bool needsIPadSkypeOverflowScrollQuirk : 1 { false };
+    bool needsPreloadAutoQuirk : 1 { false };
+    bool needsScriptToEvaluateBeforeRunningScriptFromURLQuirk : 1 { false };
+    bool needsYouTubeMouseOutQuirk : 1 { false };
+    bool needsYouTubeOverflowScrollQuirk : 1 { false };
+    bool shouldAvoidPastingImagesAsWebContent : 1 { false };
+    bool shouldDisablePointerEventsQuirk : 1 { false };
+    bool shouldIgnoreAriaForFastPathContentObservationCheckQuirk : 1 { false };
+    bool shouldNavigatorPluginsBeEmpty : 1 { false };
+    bool shouldSilenceWindowResizeEventsDuringApplicationSnapshotting : 1 { false };
+    bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasQuirk : 1 { false };
+    bool shouldSynthesizeTouchEventsAfterNonSyntheticClickQuirk : 1 { false };
+    bool shouldTreatAddingMouseOutEventListenerAsContentChange : 1 { false };
 #endif // PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
-    bool allowLayeredFullscreenVideos { false };
-    bool shouldSilenceMediaQueryListChangeEvents { false };
-    bool shouldSilenceResizeObservers { false };
+    bool allowLayeredFullscreenVideos : 1 { false };
+    bool shouldSilenceMediaQueryListChangeEvents : 1 { false };
+    bool shouldSilenceResizeObservers : 1 { false };
 #endif
 
 #if PLATFORM(VISION)
-    bool shouldDisableFullscreenVideoAspectRatioAdaptiveSizingQuirk { false };
+    bool shouldDisableFullscreenVideoAspectRatioAdaptiveSizingQuirk : 1 { false };
 #endif
 
 #if PLATFORM(MAC)
-    bool isNeverRichlyEditableForTouchBarQuirk { false };
-    bool isTouchBarUpdateSuppressedForHiddenContentEditableQuirk { false };
-    bool needsFormControlToBeMouseFocusableQuirk { false };
-    bool needsPrimeVideoUserSelectNoneQuirk { false };
-    bool needsZomatoEmailLoginLabelQuirk { false };
-    bool shouldAvoidStartingSelectionOnMouseDown { false };
+    bool isNeverRichlyEditableForTouchBarQuirk : 1 { false };
+    bool isTouchBarUpdateSuppressedForHiddenContentEditableQuirk : 1 { false };
+    bool needsFormControlToBeMouseFocusableQuirk : 1 { false };
+    bool needsPrimeVideoUserSelectNoneQuirk : 1 { false };
+    bool needsZomatoEmailLoginLabelQuirk : 1 { false };
 #endif
 
 #if ENABLE(DESKTOP_CONTENT_MODE_QUIRKS)
-    bool needsZeroMaxTouchPointsQuirk { false };
-    bool shouldHideCoarsePointerCharacteristicsQuirk { false };
+    bool needsZeroMaxTouchPointsQuirk : 1 { false };
+    bool shouldSupportHoverMediaQueriesQuirk : 1 { false };
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    bool shouldHideCoarsePointerCharacteristicsQuirk : 1 { false };
+    bool shouldHideSoftTopScrollEdgeEffectDuringFocusQuirk : 1 { false };
 #endif
 
 #if ENABLE(FLIP_SCREEN_DIMENSIONS_QUIRKS)
-    bool shouldFlipScreenDimensionsQuirk { false };
+    bool shouldFlipScreenDimensionsQuirk : 1 { false };
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    bool shouldDisableImageCaptureQuirk { false };
-    bool shouldEnableLegacyGetUserMediaQuirk { false };
-    bool shouldEnableSpeakerSelectionPermissionsPolicyQuirk { false };
+    bool shouldDisableImageCaptureQuirk : 1 { false };
+    bool shouldEnableLegacyGetUserMediaQuirk : 1 { false };
+    bool shouldEnableSpeakerSelectionPermissionsPolicyQuirk : 1 { false };
+    bool shouldEnableEnumerateDeviceQuirk : 1 { false };
 #endif
 
 #if ENABLE(META_VIEWPORT)
-    bool shouldIgnoreViewportArgumentsToAvoidExcessiveZoomQuirk { false };
+    bool shouldIgnoreViewportArgumentsToAvoidExcessiveZoomQuirk : 1 { false };
+    bool shouldIgnoreViewportArgumentsToAvoidEnlargedViewQuirk : 1 { false };
 #endif
 
 #if ENABLE(TEXT_AUTOSIZING)
-    bool shouldIgnoreTextAutoSizingQuirk { false };
+    bool shouldIgnoreTextAutoSizingQuirk : 1 { false };
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
@@ -161,23 +173,27 @@ struct WEBCORE_EXPORT QuirksData {
         Yes,
     };
     ShouldDispatchSimulatedMouseEvents shouldDispatchSimulatedMouseEventsQuirk { ShouldDispatchSimulatedMouseEvents::Unknown };
-    bool shouldDispatchPointerOutAfterHandlingSyntheticClick { false };
-    bool shouldPreventDispatchOfTouchEventQuirk { false };
+    bool shouldDispatchPointerOutAfterHandlingSyntheticClick : 1 { false };
+    bool shouldPreventDispatchOfTouchEventQuirk : 1 { false };
 #endif
 
 #if ENABLE(FULLSCREEN_API) && ENABLE(VIDEO_PRESENTATION_MODE)
-    bool blocksEnteringStandardFullscreenFromPictureInPictureQuirk { false };
-    bool blocksReturnToFullscreenFromPictureInPictureQuirk { false };
+    bool blocksEnteringStandardFullscreenFromPictureInPictureQuirk : 1 { false };
+    bool blocksReturnToFullscreenFromPictureInPictureQuirk : 1 { false };
 #endif
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    bool requiresUserGestureToLoadInPictureInPictureQuirk { false };
-    bool requiresUserGestureToPauseInPictureInPictureQuirk { false };
-    bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk { false };
+    bool requiresUserGestureToLoadInPictureInPictureQuirk : 1 { false };
+    bool requiresUserGestureToPauseInPictureInPictureQuirk : 1 { false };
+    bool shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk : 1 { false };
 #endif
 
-    bool needsNowPlayingFullscreenSwapQuirk { false };
-    bool needsWebKitMediaTextTrackDisplayQuirk { false };
+    bool needsNowPlayingFullscreenSwapQuirk : 1 { false };
+    bool needsWebKitMediaTextTrackDisplayQuirk : 1 { false };
+    bool needsMediaRewriteRangeRequestQuirk : 1 { false };
+    bool shouldEnterNativeFullscreenWhenCallingElementRequestFullscreen : 1 { false };
+    bool shouldDelayReloadWhenRegisteringServiceWorker : 1 { false };
+    bool shouldDisableDOMAudioSession : 1 { false };
 };
 
 } // namespace WebCore

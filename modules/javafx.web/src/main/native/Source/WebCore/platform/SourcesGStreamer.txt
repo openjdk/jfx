@@ -85,6 +85,7 @@ platform/graphics/gstreamer/eme/CDMThunder.cpp
 platform/graphics/gstreamer/eme/GStreamerEMEUtilities.cpp
 platform/graphics/gstreamer/eme/WebKitCommonEncryptionDecryptorGStreamer.cpp
 platform/graphics/gstreamer/eme/WebKitThunderDecryptorGStreamer.cpp
+platform/graphics/gstreamer/eme/WebKitThunderParser.cpp
 
 platform/graphics/gstreamer/mse/AppendPipeline.cpp
 platform/graphics/gstreamer/mse/GStreamerMediaDescription.cpp
@@ -126,6 +127,7 @@ platform/mediastream/libwebrtc/gstreamer/RealtimeIncomingVideoSourceLibWebRTC.cp
 platform/mediastream/libwebrtc/gstreamer/RealtimeOutgoingAudioSourceLibWebRTC.cpp
 platform/mediastream/libwebrtc/gstreamer/RealtimeOutgoingVideoSourceLibWebRTC.cpp
 
+platform/mediastream/gstreamer/DesktopPortal.cpp
 platform/mediastream/gstreamer/GStreamerAudioCaptureSource.cpp
 platform/mediastream/gstreamer/GStreamerAudioCapturer.cpp
 platform/mediastream/gstreamer/GStreamerAudioRTPPacketizer.cpp
@@ -138,11 +140,14 @@ platform/mediastream/gstreamer/GStreamerMediaStreamSource.cpp
 platform/mediastream/gstreamer/GStreamerMockDevice.cpp
 platform/mediastream/gstreamer/GStreamerMockDeviceProvider.cpp
 platform/mediastream/gstreamer/GStreamerRTPPacketizer.cpp
+platform/mediastream/gstreamer/GStreamerRTPVideoRotationHeaderExtension.cpp @no-unify
 platform/mediastream/gstreamer/GStreamerVideoCaptureSource.cpp
 platform/mediastream/gstreamer/GStreamerVideoCapturer.cpp
 platform/mediastream/gstreamer/GStreamerVideoRTPPacketizer.cpp
+platform/mediastream/gstreamer/GStreamerWebRTCCommon.cpp
 platform/mediastream/gstreamer/GStreamerWebRTCLogSink.cpp
 platform/mediastream/gstreamer/GStreamerWebRTCProvider.cpp
+platform/mediastream/gstreamer/PipeWireCaptureDeviceManager.cpp
 platform/mediastream/gstreamer/MockDisplayCaptureSourceGStreamer.cpp
 platform/mediastream/gstreamer/MockRealtimeAudioSourceGStreamer.cpp
 platform/mediastream/gstreamer/MockRealtimeVideoSourceGStreamer.cpp

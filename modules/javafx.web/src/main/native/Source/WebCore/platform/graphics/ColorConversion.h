@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ColorTypes.h"
+#include <numeric>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -318,7 +319,7 @@ struct CSSGamutMapping {
         float max = colorInOKLCHColorSpace.chroma;
 
         while (true) {
-            auto chroma = (min + max) / 2.0f;
+            auto chroma = std::midpoint(min, max);
 
             auto current = colorInOKLCHColorSpace;
             current.chroma = chroma;

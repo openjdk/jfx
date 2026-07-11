@@ -29,7 +29,6 @@
 
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "SecurityOriginData.h"
 #include <wtf/Function.h>
 #include <wtf/TZoneMalloc.h>
@@ -60,7 +59,7 @@ public:
 
 private:
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_topDocument;
-    UncheckedKeyHashMap<SecurityOriginData, DeviceOrientationOrMotionPermissionState> m_accessStatePerOrigin;
+    HashMap<SecurityOriginData, DeviceOrientationOrMotionPermissionState> m_accessStatePerOrigin;
 };
 
 } // namespace WebCore

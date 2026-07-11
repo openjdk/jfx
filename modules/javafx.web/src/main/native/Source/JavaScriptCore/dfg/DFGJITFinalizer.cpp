@@ -66,7 +66,7 @@ bool JITFinalizer::finalize()
     codeBlock->setJITCode(m_jitCode.copyRef());
 
     auto data = m_plan.tryFinalizeJITData(m_jitCode.get());
-    if (UNLIKELY(!data))
+    if (!data) [[unlikely]]
         return false;
     codeBlock->setDFGJITData(WTFMove(data));
 
@@ -74,7 +74,7 @@ bool JITFinalizer::finalize()
     m_jitCode->optimizeAfterWarmUp(codeBlock);
 #endif // ENABLE(FTL_JIT)
 
-    if (UNLIKELY(m_plan.compilation()))
+    if (m_plan.compilation()) [[unlikely]]
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
 
     if (!m_plan.willTryToTierUp())

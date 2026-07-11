@@ -33,14 +33,16 @@
 #include "HTMLImageElement.h"
 #include "HTMLInterchange.h"
 #include "LocalFrame.h"
+#include "PositionInlines.h"
 #include "Text.h"
 #include "VisibleUnits.h"
 
 namespace WebCore {
 
-InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, bool selectInsertedText, RebalanceType rebalanceType, EditAction editingAction)
+InsertTextCommand::InsertTextCommand(Ref<Document>&& document, const String& text, AllowPasswordEcho allowPasswordEcho, bool selectInsertedText, RebalanceType rebalanceType, EditAction editingAction)
     : CompositeEditCommand(WTFMove(document), editingAction)
     , m_text(text)
+    , m_allowPasswordEcho(allowPasswordEcho)
     , m_selectInsertedText(selectInsertedText)
     , m_rebalanceType(rebalanceType)
 {
@@ -93,7 +95,7 @@ bool InsertTextCommand::performTrivialReplace(const String& text, bool selectIns
     if (!endingSelection().isRange())
         return false;
 
-    if (text.contains([](UChar c) { return c == '\t' || c == ' ' || c == '\n'; }))
+    if (text.contains([](char16_t c) { return c == '\t' || c == ' ' || c == '\n'; }))
         return false;
 
     Position start = endingSelection().start();
@@ -207,7 +209,7 @@ void InsertTextCommand::doApply()
         RefPtr<Text> textNode = startPosition.containerText();
         const unsigned offset = startPosition.offsetInContainerNode();
 
-        insertTextIntoNode(*textNode, offset, m_text);
+        insertTextIntoNode(*textNode, offset, m_text, m_allowPasswordEcho);
         endPosition = Position(textNode.get(), offset + m_text.length());
         if (m_markerSupplier)
             m_markerSupplier->addMarkersToTextNode(*textNode, offset, m_text);
@@ -241,7 +243,7 @@ void InsertTextCommand::doApply()
 #endif
 
     if (typingStyle) {
-        typingStyle->prepareToApplyAt(endPosition, EditingStyle::PreserveWritingDirection);
+        typingStyle->prepareToApplyAt(endPosition, EditingStyle::ShouldPreserveWritingDirection::Yes);
         if (!typingStyle->isEmpty())
             applyStyle(typingStyle.get());
     }

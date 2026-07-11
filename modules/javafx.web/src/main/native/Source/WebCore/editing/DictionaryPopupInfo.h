@@ -28,7 +28,7 @@
 #include "FloatPoint.h"
 #include "TextIndicator.h"
 
-#if PLATFORM(COCOA)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
 #include "AttributedString.h"
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSDictionary;
@@ -36,7 +36,7 @@ OBJC_CLASS NSDictionary;
 
 namespace WebCore {
 
-#if PLATFORM(COCOA)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
 struct DictionaryPopupInfoCocoa {
     AttributedString attributedString;
 };
@@ -44,12 +44,12 @@ struct DictionaryPopupInfoCocoa {
 
 struct DictionaryPopupInfo {
     FloatPoint origin;
-    TextIndicatorData textIndicator;
+    RefPtr<TextIndicator> textIndicator;
 
-    // FIXME: This can be a plain string (and cross-platform) once all clients
-    // vend fully-formed TextIndicatorData. Legacy PDFPlugin is the last client.
-#if PLATFORM(COCOA)
+#if ENABLE(LEGACY_PDFKIT_PLUGIN)
     DictionaryPopupInfoCocoa platformData;
+#else
+    String text;
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ private:
 
     Timer m_timer;
 
-    UncheckedKeyHashSet<String> m_names;
+    HashSet<String> m_names;
     std::atomic<int> m_requestsInFlight;
     MonotonicTime m_lastProxyEnabledStatusCheckTime;
 };

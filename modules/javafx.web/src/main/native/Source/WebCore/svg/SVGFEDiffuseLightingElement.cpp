@@ -21,6 +21,7 @@
 #include "config.h"
 #include "SVGFEDiffuseLightingElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "FEDiffuseLighting.h"
 #include "NodeName.h"
 #include "RenderElement.h"
@@ -28,6 +29,7 @@
 #include "SVGFELightElement.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGRenderStyle.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -97,25 +99,25 @@ bool SVGFEDiffuseLightingElement::setFilterEffectAttribute(FilterEffect& filterE
     case AttributeNames::diffuseConstantAttr:
         return effect.setDiffuseConstant(diffuseConstant());
     case AttributeNames::azimuthAttr:
-        return effect.lightSource()->setAzimuth(lightElement()->azimuth());
+        return effect.lightSource().setAzimuth(lightElement()->azimuth());
     case AttributeNames::elevationAttr:
-        return effect.lightSource()->setElevation(lightElement()->elevation());
+        return effect.lightSource().setElevation(lightElement()->elevation());
     case AttributeNames::xAttr:
-        return effect.lightSource()->setX(lightElement()->x());
+        return effect.lightSource().setX(lightElement()->x());
     case AttributeNames::yAttr:
-        return effect.lightSource()->setY(lightElement()->y());
+        return effect.lightSource().setY(lightElement()->y());
     case AttributeNames::zAttr:
-        return effect.lightSource()->setZ(lightElement()->z());
+        return effect.lightSource().setZ(lightElement()->z());
     case AttributeNames::pointsAtXAttr:
-        return effect.lightSource()->setPointsAtX(lightElement()->pointsAtX());
+        return effect.lightSource().setPointsAtX(lightElement()->pointsAtX());
     case AttributeNames::pointsAtYAttr:
-        return effect.lightSource()->setPointsAtY(lightElement()->pointsAtY());
+        return effect.lightSource().setPointsAtY(lightElement()->pointsAtY());
     case AttributeNames::pointsAtZAttr:
-        return effect.lightSource()->setPointsAtZ(lightElement()->pointsAtZ());
+        return effect.lightSource().setPointsAtZ(lightElement()->pointsAtZ());
     case AttributeNames::specularExponentAttr:
-        return effect.lightSource()->setSpecularExponent(lightElement()->specularExponent());
+        return effect.lightSource().setSpecularExponent(lightElement()->specularExponent());
     case AttributeNames::limitingConeAngleAttr:
-        return effect.lightSource()->setLimitingConeAngle(lightElement()->limitingConeAngle());
+        return effect.lightSource().setLimitingConeAngle(lightElement()->limitingConeAngle());
     default:
         break;
     }

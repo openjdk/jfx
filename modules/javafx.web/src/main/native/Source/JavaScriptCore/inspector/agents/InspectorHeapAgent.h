@@ -26,6 +26,7 @@
 #pragma once
 
 #include "HeapObserver.h"
+#include "HeapSnapshotBuilder.h"
 #include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
 #include "InspectorFrontendDispatchers.h"
@@ -42,7 +43,7 @@ namespace Inspector {
 
 class InjectedScriptManager;
 
-class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver {
+class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver, public JSC::HeapSnapshotBuilder::Client {
     WTF_MAKE_NONCOPYABLE(InspectorHeapAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorHeapAgent);
 public:
@@ -50,7 +51,7 @@ public:
     ~InspectorHeapAgent() override;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override;
+    void didCreateFrontendAndBackend() override;
     void willDestroyFrontendAndBackend(DisconnectReason) override;
 
     // HeapBackendDispatcherHandler
@@ -67,6 +68,9 @@ public:
     void willGarbageCollect() final;
     void didGarbageCollect(JSC::CollectionScope) final;
 
+    // JSC::HeapSnapshotBuilder::Client
+    bool heapSnapshotBuilderIgnoreNode(JSC::HeapSnapshotBuilder&, JSC::JSCell*) final;
+
 protected:
     void clearHeapSnapshots();
 
@@ -76,8 +80,8 @@ private:
     std::optional<JSC::HeapSnapshotNode> nodeForHeapObjectIdentifier(Protocol::ErrorString&, unsigned heapObjectIdentifier);
 
     InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<HeapFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<HeapBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<HeapFrontendDispatcher> m_frontendDispatcher;
+    const Ref<HeapBackendDispatcher> m_backendDispatcher;
     InspectorEnvironment& m_environment;
 
     bool m_enabled { false };

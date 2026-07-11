@@ -61,7 +61,7 @@ public:
     ~InspectorDOMDebuggerAgent() override;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
+    void didCreateFrontendAndBackend() override;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
     void discardAgent() override;
     virtual bool enabled() const;
@@ -99,7 +99,7 @@ protected:
 private:
     void breakOnURLIfNeeded(const String&);
 
-    RefPtr<Inspector::DOMDebuggerBackendDispatcher> m_backendDispatcher;
+    const Ref<Inspector::DOMDebuggerBackendDispatcher> m_backendDispatcher;
     Inspector::InjectedScriptManager& m_injectedScriptManager;
 
     struct EventBreakpoint {
@@ -120,8 +120,9 @@ private:
         bool matches(const String&);
 
     private:
-        // Avoid having to (re)match the regex each time an event is dispatched.
-        std::optional<JSC::Yarr::RegularExpression> m_eventNameMatchRegex;
+        std::optional<Inspector::ContentSearchUtilities::Searcher> m_eventNameSearcher;
+
+        // Avoid having to (re)match the searcher each time an event is dispatched.
         HashSet<String> m_knownMatchingEventNames;
     };
     Vector<EventBreakpoint> m_listenerBreakpoints;

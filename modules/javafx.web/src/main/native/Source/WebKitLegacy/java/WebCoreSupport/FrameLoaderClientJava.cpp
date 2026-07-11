@@ -344,9 +344,9 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage(InitializingIframe i
     localFrame->createView(IntRect(pageRect).size(), backgroundColor, /* fixedLayoutSize */ { }, /* fixedVisibleContentRect */ { });
 }
 
-WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
+WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(WebCore::ResourceRequest&& request, SubstituteData&& substituteData)
 {
-    return DocumentLoader::create(request, substituteData);
+    return DocumentLoader::create(WTFMove(request), WTFMove(substituteData));
 }
 
 void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& function)
@@ -509,7 +509,8 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
     };
 
     SandboxFlags sandboxFlags = ownerElement.sandboxFlags();
-    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, ownerElement);
+    Ref<FrameTreeSyncData> frameTreeSyncData = FrameTreeSyncData::create();
+    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, ownerElement,WTFMove(frameTreeSyncData));
 
     static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
 
@@ -844,7 +845,7 @@ LocalFrame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& ac
     return frame;
 }
 
-WebCore::ShouldGoToHistoryItem FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation) const
+WebCore::ShouldGoToHistoryItem FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation,ProcessSwapDisposition processSwapDisposition) const
 {
     // FIXME: This is a very simple implementation. More sophisticated
     // implementation would delegate the decision to a PolicyDelegate.

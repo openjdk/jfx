@@ -30,6 +30,7 @@
 #if ENABLE(MATHML)
 
 #include "RenderMathMLBlock.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
@@ -64,7 +65,7 @@ private:
     void setMathVariantGlyphDirty()
     {
         m_mathVariantGlyphDirty = true;
-        setNeedsLayoutAndPrefWidthsRecalc();
+        setNeedsLayoutAndPreferredWidthsUpdate();
     }
     std::optional<char32_t> m_mathVariantCodePoint { std::nullopt };
     bool m_mathVariantIsMirrored { false };

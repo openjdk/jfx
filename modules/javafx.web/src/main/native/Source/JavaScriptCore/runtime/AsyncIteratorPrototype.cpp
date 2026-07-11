@@ -41,6 +41,9 @@ void AsyncIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
     ASSERT(inherits(info()));
     JSFunction* asyncIteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.asyncIterator]"_s, asyncIteratorProtoFuncAsyncIterator, ImplementationVisibility::Public, AsyncIteratorIntrinsic);
     putDirectWithoutTransition(vm, vm.propertyNames->asyncIteratorSymbol, asyncIteratorFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    if (Options::useExplicitResourceManagement())
+        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->asyncDisposeSymbol, asyncIteratorPrototypeAsyncDisposeCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 JSC_DEFINE_HOST_FUNCTION(asyncIteratorProtoFuncAsyncIterator, (JSGlobalObject* globalObject, CallFrame* callFrame))

@@ -29,13 +29,16 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "HeapVerifier.h"
+#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyStruct.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/text/MakeString.h>
 
 namespace JSC { namespace Wasm {
 
-constexpr uintptr_t NullWasmCallee = 0;
+constexpr CalleeBits NullWasmCallee = CalleeBits::nullCallee();
 
 Segment::Ptr Segment::create(std::optional<I32InitExpr> offset, uint32_t sizeInBytes, Kind kind)
 {
@@ -63,6 +66,45 @@ String makeString(const Name& characters)
 {
     return WTF::makeString(characters);
 }
+
+#if ASSERT_ENABLED
+void validateWasmValue(uint64_t wasmValue, Type expectedType)
+{
+    // FIXME: Add more validations
+    auto value = std::bit_cast<JSValue>(wasmValue);
+    if (isRefType(expectedType)) {
+        if (value.isNull()) {
+            ASSERT(expectedType.isNullable());
+            return;
+        }
+
+        if (isExternref(expectedType)) {
+            if (value.isCell())
+                HeapVerifier::validateCell(value.asCell());
+        }
+
+        if (isI31ref(expectedType))
+            ASSERT(value.isInt32());
+
+        if (isStructref(expectedType))
+            ASSERT(jsDynamicCast<JSWebAssemblyStruct*>(value));
+
+        if (isArrayref(expectedType))
+            ASSERT(jsDynamicCast<JSWebAssemblyArray*>(value));
+
+        if (isRefWithTypeIndex(expectedType)) {
+            RefPtr<const RTT> expectedRTT = Wasm::TypeInformation::getCanonicalRTT(expectedType.index);
+            if (expectedRTT->kind() == RTTKind::Function) {
+                ASSERT(jsDynamicCast<JSFunction*>(value));
+                return;
+            }
+            auto objectPtr = jsCast<WebAssemblyGCObjectBase*>(value);
+            auto objectRTT = objectPtr->rtt();
+            ASSERT(objectRTT->isSubRTT(*expectedRTT.get()));
+        }
+    }
+}
+#endif
 
 } } // namespace JSC::Wasm
 

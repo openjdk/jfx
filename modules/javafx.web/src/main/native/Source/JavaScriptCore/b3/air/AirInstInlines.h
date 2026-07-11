@@ -322,6 +322,37 @@ inline bool isX86UDiv64Valid(const Inst& inst)
     return isX86DivHelperValid(inst);
 }
 
+inline bool isX86MulHighHelperValid(const Inst& inst)
+{
+#if CPU(X86_64)
+    return inst.args[1] == Tmp(X86Registers::eax)
+        && inst.args[2] == Tmp(X86Registers::edx);
+#else
+    UNUSED_PARAM(inst);
+    return false;
+#endif
+}
+
+inline bool isX86MulHigh32Valid(const Inst& inst)
+{
+    return isX86MulHighHelperValid(inst);
+}
+
+inline bool isX86MulHigh64Valid(const Inst& inst)
+{
+    return isX86MulHighHelperValid(inst);
+}
+
+inline bool isX86UMulHigh32Valid(const Inst& inst)
+{
+    return isX86MulHighHelperValid(inst);
+}
+
+inline bool isX86UMulHigh64Valid(const Inst& inst)
+{
+    return isX86MulHighHelperValid(inst);
+}
+
 inline bool isAtomicStrongCASValid(const Inst& inst)
 {
 #if CPU(X86_64)

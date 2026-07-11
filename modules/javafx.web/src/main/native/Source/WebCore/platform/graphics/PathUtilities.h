@@ -27,12 +27,16 @@
 #define PathUtilities_h
 
 #include "FloatRoundedRect.h"
-#include "Path.h"
-#include "WritingMode.h"
-#include <wtf/Vector.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
-class BorderData;
+
+namespace Style {
+struct BorderRadius;
+}
+
+class Path;
+class WritingMode;
 
 class PathUtilities {
 public:
@@ -40,7 +44,8 @@ public:
     WEBCORE_EXPORT static Path pathWithShrinkWrappedRects(const Vector<FloatRect>&, const FloatRoundedRect::Radii&);
     WEBCORE_EXPORT static Vector<Path> pathsWithShrinkWrappedRects(const Vector<FloatRect>& rects, float radius);
 
-    static Path pathWithShrinkWrappedRectsForOutline(const Vector<FloatRect>&, const BorderData&, float outlineOffset, WritingMode, float deviceScaleFactor);
+    // FIXME: This is a layering violation as it depends on types outside of `platform`.
+    static Path pathWithShrinkWrappedRectsForOutline(const Vector<FloatRect>&, const Style::BorderRadius&, float outlineOffset, WritingMode, float deviceScaleFactor);
 };
 
 }

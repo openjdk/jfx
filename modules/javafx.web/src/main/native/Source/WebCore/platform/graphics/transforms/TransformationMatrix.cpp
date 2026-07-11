@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005-2025 Apple Inc.  All rights reserved.
- * Copyright (C) 2020 Google Inc.  All rights reserved.
+ * Copyright (C) 2016-2020 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -164,7 +164,7 @@ static double determinant4x4(const TransformationMatrix::Matrix4& m)
 //  The matrix B = (b  ) is the adjoint of A
 //                   ij
 
-static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
+static inline void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
     // Assign to individual variable names to aid
     // selecting correct values
@@ -213,9 +213,6 @@ static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationM
 // Returns false if the matrix is not invertible
 static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
-    // Calculate the adjoint matrix
-    adjoint(matrix, result);
-
     // Calculate the 4x4 determinant
     // If the determinant is zero,
     // then the inverse matrix is not unique.
@@ -224,11 +221,130 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
         return false;
 
     // Scale the adjoint matrix to get the inverse
+    double inverseDeterminant = 1 / determinant;
+
+#if CPU(ARM64) && CPU(ADDRESS64)
+    const double* mat = &(matrix[0][0]);
+    double* pr = &(result[0][0]);
+    asm volatile(
+        // mat: v16 - v23
+        // m11, m12, m13, m14
+        // m21, m22, m23, m24
+        // m31, m32, m33, m34
+        // m41, m42, m43, m44
+        "ld1 {v16.2d - v19.2d}, [%[mat]], 64  \n\t"
+        "ld1 {v20.2d - v23.2d}, [%[mat]]      \n\t"
+        "ins v30.d[0], %[inverseDeterminant]         \n\t"
+        // Determinant: right mat2x2
+        "trn1 v0.2d, v17.2d, v21.2d    \n\t"
+        "trn2 v1.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v2.2d, v17.2d, v21.2d    \n\t"
+        "trn1 v3.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v5.2d, v21.2d, v23.2d    \n\t"
+        "trn1 v4.2d, v17.2d, v19.2d    \n\t"
+        "trn2 v6.2d, v17.2d, v19.2d    \n\t"
+        "trn1 v7.2d, v21.2d, v23.2d    \n\t"
+        "trn2 v25.2d, v23.2d, v21.2d   \n\t"
+        "trn1 v27.2d, v23.2d, v21.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A11A12, v25: A13A14
+        // v26: A21A22, v27: A23A24
+        "fmul v3.2d, v18.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v16.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v16.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v16.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v20.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v20.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v18.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v18.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v22.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v22.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v22.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v20.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I11I12, v25: I13I14
+        // v26: I21I22, v27: I23I24
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]], 64 \n\t"
+        // Determinant: left mat2x2
+        "trn1 v0.2d, v16.2d, v20.2d    \n\t"
+        "trn2 v1.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v2.2d, v16.2d, v20.2d    \n\t"
+        "trn1 v3.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v5.2d, v20.2d, v22.2d    \n\t"
+        "trn1 v4.2d, v16.2d, v18.2d    \n\t"
+        "trn2 v6.2d, v16.2d, v18.2d    \n\t"
+        "trn1 v7.2d, v20.2d, v22.2d    \n\t"
+        "trn2 v25.2d, v22.2d, v20.2d   \n\t"
+        "trn1 v27.2d, v22.2d, v20.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A31A32, v25: A33A34
+        // v26: A41A42, v27: A43A44
+        "fmul v3.2d, v19.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v17.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v17.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v17.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v21.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v21.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v19.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v19.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v23.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v23.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v23.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v21.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I31I32, v25: I33I34
+        // v26: I41I42, v27: I43I44
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]] \n\t"
+        : [mat]"+r"(mat), [pr]"+r"(pr)
+        : [inverseDeterminant]"r"(inverseDeterminant)
+        : "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
+        "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30"
+    );
+#else
+    // Calculate the adjoint matrix
+    adjoint(matrix, result);
 
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            result[i][j] = result[i][j] / determinant;
+            result[i][j] = result[i][j] * inverseDeterminant;
 
+#endif
     return true;
 }
 
@@ -384,7 +500,7 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
         perspectiveMatrix[i][3] = 0;
     perspectiveMatrix[3][3] = 1;
 
-    if (determinant4x4(perspectiveMatrix) == 0)
+    if (!std::isnormal(determinant4x4(perspectiveMatrix)))
         return false;
 
     // First, isolate perspective. This is the messiest.
@@ -1179,7 +1295,7 @@ TransformationMatrix& TransformationMatrix::zoom(double zoomFactor)
 // this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
-#if CPU(ARM64) && defined(_LP64)
+#if CPU(ARM64) && CPU(ADDRESS64)
     double* leftMatrix = &(m_matrix[0][0]);
     const double* rightMatrix = &(mat.m_matrix[0][0]);
     asm volatile (
@@ -1955,11 +2071,11 @@ TransformationMatrix TransformationMatrix::transpose() const
 TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
 {
     TextStream::IndentScope indentScope(ts);
-    ts << "\n";
-    ts << indent << "[" << transform.m11() << " " << transform.m12() << " " << transform.m13() << " " << transform.m14() << "]\n";
-    ts << indent << "[" << transform.m21() << " " << transform.m22() << " " << transform.m23() << " " << transform.m24() << "]\n";
-    ts << indent << "[" << transform.m31() << " " << transform.m32() << " " << transform.m33() << " " << transform.m34() << "]\n";
-    ts << indent << "[" << transform.m41() << " " << transform.m42() << " " << transform.m43() << " " << transform.m44() << "]";
+    ts << '\n';
+    ts << indent << '[' << transform.m11() << ' ' << transform.m12() << ' ' << transform.m13() << ' ' << transform.m14() << "]\n"_s;
+    ts << indent << '[' << transform.m21() << ' ' << transform.m22() << ' ' << transform.m23() << ' ' << transform.m24() << "]\n"_s;
+    ts << indent << '[' << transform.m31() << ' ' << transform.m32() << ' ' << transform.m33() << ' ' << transform.m34() << "]\n"_s;
+    ts << indent << '[' << transform.m41() << ' ' << transform.m42() << ' ' << transform.m43() << ' ' << transform.m44() << ']';
     return ts;
 }
 

@@ -29,6 +29,7 @@
 namespace WebCore {
 
 class BlendingKeyframes;
+class LegacyRenderSVGResourceClipper;
 class RenderLayer;
 class RenderSVGResourceClipper;
 class RenderSVGResourceFilter;
@@ -36,6 +37,10 @@ class RenderSVGResourceMarker;
 class RenderSVGResourceMasker;
 class RenderSVGResourcePaintServer;
 class SVGGraphicsElement;
+
+namespace Style {
+struct URL;
+}
 
 class RenderLayerModelObject : public RenderElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderLayerModelObject);
@@ -69,8 +74,8 @@ public:
     std::optional<LayoutRect> cachedLayerClippedOverflowRect() const;
 
     bool startAnimation(double timeOffset, const Animation&, const BlendingKeyframes&) override;
-    void animationPaused(double timeOffset, const String& name) override;
-    void animationFinished(const String& name) override;
+    void animationPaused(double timeOffset, const BlendingKeyframes&) override;
+    void animationFinished(const BlendingKeyframes&) override;
     void transformRelatedPropertyDidChange() override;
 
     void suspendAnimations(MonotonicTime = MonotonicTime()) override;
@@ -107,6 +112,8 @@ public:
     RenderSVGResourceMarker* svgMarkerMidResourceFromStyle() const;
     RenderSVGResourceMarker* svgMarkerEndResourceFromStyle() const;
 
+    LegacyRenderSVGResourceClipper* legacySVGClipperResourceFromStyle() const;
+
     bool pointInSVGClippingArea(const FloatPoint&) const;
     void paintSVGClippingMask(PaintInfo&, const FloatRect& objectBoundingBox) const;
     void paintSVGMask(PaintInfo&, const LayoutPoint& adjustedPaintOffset) const;
@@ -116,6 +123,8 @@ public:
     virtual void updateLayerTransform();
     virtual void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const = 0;
     void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox) const;
+
+    bool shouldUsePositionedClipping() const { return isAbsolutelyPositioned() || isRenderSVGForeignObject(); }
 
 protected:
     RenderLayerModelObject(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -127,7 +136,7 @@ protected:
     virtual void updateFromStyle() { }
 
 private:
-    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const String& markerResource) const;
+    RenderSVGResourceMarker* svgMarkerResourceFromStyle(const Style::URL& markerResource) const;
 
     std::unique_ptr<RenderLayer> m_layer;
 

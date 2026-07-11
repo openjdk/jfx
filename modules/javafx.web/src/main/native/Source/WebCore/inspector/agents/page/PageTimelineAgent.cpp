@@ -30,10 +30,11 @@
 
 #include "FrameSnapshotting.h"
 #include "ImageBuffer.h"
-#include "InspectorClient.h"
+#include "InspectorBackendClient.h"
 #include "InspectorController.h"
 #include "InstrumentingAgents.h"
 #include "Page.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TimelineRecordFactory.h"
 #include "WebDebuggerAgent.h"
@@ -60,9 +61,9 @@ static CFRunLoopRef currentRunLoop()
     // A race condition during WebView deallocation can lead to a crash if the layer sync run loop
     // observer is added to the main run loop <rdar://problem/9798550>. However, for responsiveness,
     // we still allow this, see <rdar://problem/7403328>. Since the race condition and subsequent
-    // crash are especially troublesome for iBooks, we never allow the observer to be added to the
-    // main run loop in iBooks.
-    if (WTF::CocoaApplication::isIBooks())
+    // crash are especially troublesome for Apple Books, we never allow the observer to be added to the
+    // main run loop in Apple Books.
+    if (WTF::CocoaApplication::isAppleBooks())
         return WebThreadRunLoop();
 #endif
     return CFRunLoopGetCurrent();
@@ -142,12 +143,12 @@ void PageTimelineAgent::internalStart(std::optional<int>&& maxCallStackDepth)
             break;
         }
     });
-    RunLoop::current().observe(*m_runLoopObserver);
+    RunLoop::currentSingleton().observe(*m_runLoopObserver);
 #endif
 
     InspectorTimelineAgent::internalStart(WTFMove(maxCallStackDepth));
 
-    if (auto* client = m_inspectedPage->inspectorController().inspectorClient())
+    if (auto* client = m_inspectedPage->inspectorController().inspectorBackendClient())
         client->timelineRecordingChanged(true);
 }
 
@@ -167,7 +168,7 @@ void PageTimelineAgent::internalStop()
 
     InspectorTimelineAgent::internalStop();
 
-    if (auto* client = m_inspectedPage->inspectorController().inspectorClient())
+    if (auto* client = m_inspectedPage->inspectorController().inspectorBackendClient())
         client->timelineRecordingChanged(false);
 }
 
@@ -188,19 +189,16 @@ void PageTimelineAgent::willLayout()
     pushCurrentRecord(JSON::Object::create(), TimelineRecordType::Layout, true);
 }
 
-void PageTimelineAgent::didLayout(RenderObject& root)
+void PageTimelineAgent::didLayout(const Vector<FloatQuad>& layoutAreas)
 {
     auto* entry = lastRecordEntry();
     if (!entry)
         return;
 
     ASSERT(entry->type == TimelineRecordType::Layout);
-
-    Vector<FloatQuad> quads;
-    root.absoluteQuads(quads);
-    ASSERT(quads.size() >= 1);
-    if (quads.size() >= 1)
-        TimelineRecordFactory::appendLayoutRoot(entry->data.get(), quads[0]);
+    ASSERT(!layoutAreas.isEmpty());
+    if (!layoutAreas.isEmpty())
+        TimelineRecordFactory::appendLayoutRoot(entry->data.get(), layoutAreas[0]);
 
     didCompleteCurrentRecord(TimelineRecordType::Layout);
 }

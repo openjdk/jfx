@@ -57,13 +57,13 @@ LocalDOMWindow* UserActivation::window() const
 
 bool UserActivation::hasBeenActive() const
 {
-    auto* window = this->window();
+    RefPtr window = this->window();
     return window && window->hasStickyActivation();
 }
 
 bool UserActivation::isActive() const
 {
-    auto* window = this->window();
+    RefPtr window = this->window();
     return window && window->hasTransientActivation();
 }
 

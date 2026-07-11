@@ -40,6 +40,7 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/ValueOrReference.h>
 
 namespace WebCore {
 
@@ -224,7 +225,7 @@ public:
 
     // DOM property functions.
 
-    virtual String fallbackValue() const; // Checked last, if both internal storage and value attribute are missing.
+    virtual ValueOrReference<String> fallbackValue() const; // Checked last, if both internal storage and value attribute are missing.
     virtual String defaultValue() const; // Checked after even fallbackValue, only when the valueWithDefault function is called.
     virtual WallTime valueAsDate() const;
     virtual ExceptionOr<void> setValueAsDate(WallTime) const;
@@ -249,7 +250,7 @@ public:
     double minimum() const;
     double maximum() const;
     virtual bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const;
-    virtual float decorationWidth() const;
+    virtual float decorationWidth(float inputWidth) const;
     bool stepMismatch(const String&) const;
     virtual bool getAllowedValueStep(Decimal*) const;
     virtual StepRange createStepRange(AnyStepHandling) const;
@@ -267,9 +268,8 @@ public:
     // though typeMismatchFor() does something for them because of value sanitization.
     virtual bool typeMismatch() const { return false; }
 
-    // Return value of null string means "use the default value".
     // This function must be called only by HTMLInputElement::sanitizeValue().
-    virtual String sanitizeValue(const String&) const;
+    virtual ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const;
 
     // Event handlers.
 
@@ -299,7 +299,7 @@ public:
 
     virtual bool shouldSubmitImplicitly(Event&);
     virtual bool hasCustomFocusLogic() const;
-    virtual bool isKeyboardFocusable(KeyboardEvent*) const;
+    virtual bool isKeyboardFocusable(const FocusEventData&) const;
     virtual bool isMouseFocusable() const;
     virtual bool shouldUseInputMethod() const;
     virtual void handleFocusEvent(Node* oldFocusedNode, FocusDirection);

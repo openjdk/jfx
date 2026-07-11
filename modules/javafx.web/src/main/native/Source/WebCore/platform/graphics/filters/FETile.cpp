@@ -43,7 +43,7 @@ FloatRect FETile::calculateImageRect(const Filter& filter, std::span<const Float
     return filter.maxEffectRect(primitiveSubregion);
 }
 
-bool FETile::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FETile::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }
@@ -55,9 +55,9 @@ std::unique_ptr<FilterEffectApplier> FETile::createSoftwareApplier() const
 
 TextStream& FETile::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feTile";
+    ts << indent << "[feTile"_s;
     FilterEffect::externalRepresentation(ts, representation);
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

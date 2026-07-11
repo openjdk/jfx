@@ -43,25 +43,25 @@ protected:
         return m_items.at(index);
     }
 
-    PropertyType insert(unsigned index, PropertyType&& newItem) override
+    PropertyType insertAt(unsigned index, PropertyType&& newItem) override
     {
         ASSERT(index <= size());
         m_items.insert(index, WTFMove(newItem));
         return at(index);
     }
 
-    PropertyType replace(unsigned index, PropertyType&& newItem) override
+    PropertyType replaceAt(unsigned index, PropertyType&& newItem) override
     {
         ASSERT(index < size());
         m_items.at(index) = WTFMove(newItem);
         return at(index);
     }
 
-    PropertyType remove(unsigned index) override
+    PropertyType removeAt(unsigned index) override
     {
         ASSERT(index < size());
         PropertyType item = at(index);
-        m_items.remove(index);
+        m_items.removeAt(index);
         return item;
     }
 

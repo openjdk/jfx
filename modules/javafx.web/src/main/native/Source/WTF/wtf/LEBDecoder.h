@@ -78,7 +78,7 @@ inline bool WARN_UNUSED_RETURN decodeInt(std::span<const uint8_t> bytes, size_t&
     static_assert(std::is_signed_v<T>);
     if (bytes.size() <= offset)
         return false;
-    using UnsignedT = typename std::make_unsigned<T>::type;
+    using UnsignedT = std::make_unsigned_t<T>;
     result = 0;
     unsigned shift = 0;
     size_t last = std::min(maxByteLength<T>(), bytes.size() - offset) - 1;

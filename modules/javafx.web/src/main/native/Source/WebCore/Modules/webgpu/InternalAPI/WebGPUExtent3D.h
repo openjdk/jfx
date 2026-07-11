@@ -26,7 +26,6 @@
 #pragma once
 
 #include "WebGPUIntegralTypes.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore::WebGPU {
@@ -37,6 +36,6 @@ struct Extent3DDict {
     IntegerCoordinate depthOrArrayLayers { 0 };
 };
 
-using Extent3D = std::variant<Vector<IntegerCoordinate>, Extent3DDict>;
+using Extent3D = Variant<Vector<IntegerCoordinate>, Extent3DDict>;
 
 } // namespace WebCore::WebGPU

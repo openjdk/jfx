@@ -49,7 +49,6 @@ public:
     WEBCORE_EXPORT int index() const;
 
     WEBCORE_EXPORT String value() const;
-    WEBCORE_EXPORT void setValue(const AtomString&);
 
     WEBCORE_EXPORT bool selected(AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
     WEBCORE_EXPORT void setSelected(bool);
@@ -58,7 +57,6 @@ public:
 
     WEBCORE_EXPORT String label() const;
     WEBCORE_EXPORT String displayLabel() const;
-    WEBCORE_EXPORT void setLabel(const AtomString&);
 
     bool ownElementDisabled() const { return m_disabled; }
 
@@ -85,6 +83,7 @@ private:
     void willResetComputedStyle() final;
 
     String collectOptionInnerText() const;
+    String collectOptionInnerTextCollapsingWhitespace() const;
 
     bool m_disabled { false };
     bool m_isSelected { false };

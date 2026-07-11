@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@ namespace JSC { namespace DFG {
 class Graph;
 
 // Inserts dummy basic blocks to break critical edges. An edge A->B is
-// critical if A has multiple successors and B has multiple predessors.
+// critical if A has multiple successors and B has multiple predecessors.
 
 bool performCriticalEdgeBreaking(Graph&);
 

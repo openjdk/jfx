@@ -21,6 +21,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaQuery.h"
 #include "MediaQueryMatcher.h"
 

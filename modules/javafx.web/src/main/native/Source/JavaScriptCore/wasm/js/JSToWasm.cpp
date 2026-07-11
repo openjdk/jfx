@@ -59,7 +59,7 @@ static void marshallJSResult(CCallHelpers& jit, const FunctionSignature& signatu
             break;
         case TypeKind::F32:
             jit.convertFloatToDouble(src.fpr(), src.fpr());
-            FALLTHROUGH;
+            [[fallthrough]];
         case TypeKind::F64: {
             jit.moveTrustedValue(jsNumber(PNaN), dst);
             auto isNaN = jit.branchIfNaN(src.fpr());
@@ -521,12 +521,12 @@ static RegisterAtOffsetList usedCalleeSaveRegisters(const Wasm::FunctionSignatur
 
 CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 {
-    if (LIKELY(m_jsToWasmICCallee)) {
+    if (m_jsToWasmICCallee) [[likely]] {
         ASSERT(m_jsToWasmICCallee->jsEntrypoint());
         return m_jsToWasmICCallee->jsEntrypoint();
     }
 
-    if (Options::forceICFailure() || !Options::useWasmJIT())
+    if (Options::forceICFailure() || !Options::useJIT())
         return nullptr;
 
     Locker locker(m_jitCodeLock);
@@ -544,7 +544,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
 
     const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
     Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(*this);
-    if (UNLIKELY(argumentsOrResultsIncludeV128() || argumentsOrResultsIncludeExnref()))
+    if (argumentsOrResultsIncludeV128() || argumentsOrResultsIncludeExnref()) [[unlikely]]
         return nullptr;
     Wasm::CallInformation jsCallInfo = Wasm::jsCallingConvention().callInformationFor(*this, Wasm::CallRole::Callee);
     RegisterAtOffsetList savedResultRegisters = wasmCallInfo.computeResultsOffsetList();
@@ -807,7 +807,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
     auto hasExecutable = jit.branchTestPtr(CCallHelpers::Zero, scratchJSR.payloadGPR(), CCallHelpers::TrustedImm32(JSFunction::rareDataTag));
     jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), FunctionRareData::offsetOfExecutable() - JSFunction::rareDataTag), scratchJSR.payloadGPR());
     hasExecutable.link(&jit);
-    jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), ExecutableBase::offsetOfJITCodeWithArityCheckFor(CodeForCall)), scratchJSR.payloadGPR());
+    jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), ExecutableBase::offsetOfJITCodeWithArityCheckFor(CodeSpecializationKind::CodeForCall)), scratchJSR.payloadGPR());
     JIT_COMMENT(jit, "Slow path jump");
     jit.farJump(scratchJSR.payloadGPR(), JSEntryPtrTag);
 
@@ -822,7 +822,7 @@ CodePtr<JSEntryPtrTag> FunctionSignature::jsToWasmICEntrypoint() const
     jit.farJump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
 
     LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
-    if (UNLIKELY(linkBuffer.didFailToAllocate()))
+    if (linkBuffer.didFailToAllocate()) [[unlikely]]
         return nullptr;
 
     auto code = FINALIZE_WASM_CODE(linkBuffer, JSEntryPtrTag, nullptr, "JS->Wasm IC %s", WTF::toCString(*this).data());

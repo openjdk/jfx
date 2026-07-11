@@ -484,9 +484,9 @@ public:
         return hasDeclaredVariable(ident.impl());
     }
 
-    bool hasDeclaredVariable(const RefPtr<UniquedStringImpl>& ident)
+    bool hasDeclaredVariable(const UniquedStringImpl* ident)
     {
-        auto iter = m_declaredVariables.find(ident.get());
+        auto iter = m_declaredVariables.find(ident);
         if (iter == m_declaredVariables.end())
             return false;
         VariableEnvironmentEntry entry = iter->value;
@@ -498,9 +498,9 @@ public:
         return hasLexicallyDeclaredVariable(ident.impl());
     }
 
-    bool hasLexicallyDeclaredVariable(const RefPtr<UniquedStringImpl>& ident) const
+    bool hasLexicallyDeclaredVariable(const UniquedStringImpl* ident) const
     {
-        return m_lexicalVariables.contains(ident.get());
+        return m_lexicalVariables.contains(ident);
     }
 
     bool hasPrivateName(const Identifier& ident)
@@ -569,9 +569,9 @@ public:
         return hasDeclaredParameter(ident.impl());
     }
 
-    bool hasDeclaredParameter(const RefPtr<UniquedStringImpl>& ident)
+    bool hasDeclaredParameter(UniquedStringImpl* ident)
     {
-        return m_declaredParameters.contains(ident.get()) || hasDeclaredVariable(ident);
+        return m_declaredParameters.contains(ident) || hasDeclaredVariable(ident);
     }
 
     void preventAllVariableDeclarations()
@@ -634,7 +634,6 @@ public:
     }
     void usePrivateName(const Identifier& ident)
     {
-        ASSERT(m_allowsLexicalDeclarations);
         useVariable(&ident, false);
     }
 
@@ -731,12 +730,9 @@ public:
         }
         // Propagate closed variable candidates downwards within the same function.
         // Cross function captures will be realized via m_usedVariables propagation.
-        if (shouldTrackClosedVariables && !nestedScope->m_isFunctionBoundary && nestedScope->m_closedVariableCandidates.size()) {
-            auto end = nestedScope->m_closedVariableCandidates.end();
-            auto begin = nestedScope->m_closedVariableCandidates.begin();
-            m_closedVariableCandidates.add(begin, end);
+        if (shouldTrackClosedVariables && !nestedScope->m_isFunctionBoundary && nestedScope->m_closedVariableCandidates.size())
+            m_closedVariableCandidates.addAll(nestedScope->m_closedVariableCandidates);
         }
-    }
 
     void mergeInnerArrowFunctionFeatures(InnerArrowFunctionCodeFeatures arrowFunctionCodeFeatures)
     {
@@ -1733,7 +1729,7 @@ private:
 
         // In the case of Generator or Async function bodies, also check the wrapper function, whose name or
         // arguments may be invalid.
-        if (UNLIKELY((m_scopeStack[i].isGeneratorFunctionBoundary() || m_scopeStack[i].isAsyncFunctionBoundary()) && i))
+        if ((m_scopeStack[i].isGeneratorFunctionBoundary() || m_scopeStack[i].isAsyncFunctionBoundary()) && i) [[unlikely]]
             return m_scopeStack[i - 1].isValidStrictMode();
         return true;
     }
@@ -1792,8 +1788,8 @@ private:
 
     template <class TreeBuilder> TreeSourceElements parseSourceElements(TreeBuilder&, SourceElementsMode);
     template <class TreeBuilder> TreeSourceElements parseGeneratorFunctionSourceElements(TreeBuilder&, const Identifier& name, SourceElementsMode);
-    template <class TreeBuilder> TreeSourceElements parseAsyncFunctionSourceElements(TreeBuilder&, bool isArrowFunctionBodyExpression, SourceElementsMode);
-    template <class TreeBuilder> TreeSourceElements parseAsyncGeneratorFunctionSourceElements(TreeBuilder&, bool isArrowFunctionBodyExpression, SourceElementsMode);
+    template <class TreeBuilder> TreeSourceElements parseAsyncFunctionSourceElements(TreeBuilder&, const Identifier& calleeName, bool isArrowFunctionBodyExpression, SourceElementsMode);
+    template <class TreeBuilder> TreeSourceElements parseAsyncGeneratorFunctionSourceElements(TreeBuilder&, const Identifier& calleeName, bool isArrowFunctionBodyExpression, SourceElementsMode);
     template <class TreeBuilder> TreeSourceElements parseSingleFunction(TreeBuilder&, std::optional<int> functionConstructorParametersEndPosition);
     template <class TreeBuilder> TreeSourceElements parseClassFieldInitializerSourceElements(TreeBuilder&, const FixedVector<UnlinkedFunctionExecutable::ClassElementDefinition>&);
     template <class TreeBuilder> TreeStatement parseStatementListItem(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength);
@@ -1867,7 +1863,7 @@ private:
     template <class TreeBuilder> typename TreeBuilder::ModuleName parseModuleName(TreeBuilder&);
     template <class TreeBuilder> typename TreeBuilder::ImportAttributesList parseImportAttributes(TreeBuilder&);
     template <class TreeBuilder> TreeStatement parseImportDeclaration(TreeBuilder&);
-    template <class TreeBuilder> typename TreeBuilder::ExportSpecifier parseExportSpecifier(TreeBuilder& context, Vector<std::pair<const Identifier*, const Identifier*>>& maybeExportedLocalNames, bool& hasKeywordForLocalBindings, bool& hasReferencedModuleExportNames);
+    template <class TreeBuilder> typename TreeBuilder::ExportSpecifier parseExportSpecifier(TreeBuilder& context, Vector<std::pair<const Identifier*, const Identifier*>, 8>& maybeExportedLocalNames, bool& hasKeywordForLocalBindings, bool& hasReferencedModuleExportNames);
     template <class TreeBuilder> TreeStatement parseExportDeclaration(TreeBuilder&);
 
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression createResolveAndUseVariable(TreeBuilder&, const Identifier*, bool isEval, const JSTextPosition&, const JSTokenLocation&);
@@ -1923,7 +1919,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedLet(const JSToken& token)
     {
-        return token.m_type == LET || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->letKeyword);
+        if (token.m_type == LET)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->letKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     bool isDisallowedIdentifierAwait(const JSToken& token)
@@ -1938,7 +1938,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedAwait(const JSToken& token)
     {
-        return token.m_type == AWAIT || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->awaitKeyword);
+        if (token.m_type == AWAIT)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->awaitKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     ALWAYS_INLINE bool canUseIdentifierAwait()
@@ -1958,7 +1962,11 @@ private:
 
     ALWAYS_INLINE bool isPossiblyEscapedYield(const JSToken& token)
     {
-        return token.m_type == YIELD || UNLIKELY(token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->yieldKeyword);
+        if (token.m_type == YIELD)
+            return true;
+        if (token.m_type == ESCAPED_KEYWORD && *token.m_data.ident == m_vm.propertyNames->yieldKeyword) [[unlikely]]
+            return true;
+        return false;
     }
 
     ALWAYS_INLINE bool canUseIdentifierYield()
@@ -2279,7 +2287,7 @@ std::unique_ptr<ParsedNode> parse(
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     std::unique_ptr<ParsedNode> result;
@@ -2294,14 +2302,14 @@ std::unique_ptr<ParsedNode> parse(
             }
         }
     } else {
-        Parser<Lexer<UChar>> parser(vm, source, implementationVisibility, builtinMode, lexicallyScopedFeatures, scriptMode, parseMode, functionMode, superBinding, constructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, nullptr, isInsideOrdinaryFunction);
+        Parser<Lexer<char16_t>> parser(vm, source, implementationVisibility, builtinMode, lexicallyScopedFeatures, scriptMode, parseMode, functionMode, superBinding, constructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, nullptr, isInsideOrdinaryFunction);
         result = parser.parse<ParsedNode>(error, name, ParsingContext::Normal, std::nullopt, parentScopePrivateNames, classElementDefinitions);
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");
@@ -2324,7 +2332,7 @@ std::unique_ptr<ParsedNode> parseRootNode(
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     Identifier name;
@@ -2340,14 +2348,14 @@ std::unique_ptr<ParsedNode> parseRootNode(
     } else {
         ASSERT_WITH_MESSAGE(!positionBeforeLastNewline, "BuiltinExecutables should always use a 8-bit string");
         ASSERT_WITH_MESSAGE(constructorKindForTopLevelFunctionExpressions == ConstructorKind::None, "BuiltinExecutables' special constructors should always use a 8-bit string");
-        Parser<Lexer<UChar>> parser(vm, source, implementationVisibility, builtinMode, lexicallyScopedFeatures, scriptMode, parseMode, FunctionMode::None, SuperBinding::NotNeeded, ConstructorKind::None, DerivedContextType::None, isEvalNode, EvalContextType::None, debuggerParseData, isInsideOrdinaryFunction);
+        Parser<Lexer<char16_t>> parser(vm, source, implementationVisibility, builtinMode, lexicallyScopedFeatures, scriptMode, parseMode, FunctionMode::None, SuperBinding::NotNeeded, ConstructorKind::None, DerivedContextType::None, isEvalNode, EvalContextType::None, debuggerParseData, isInsideOrdinaryFunction);
         result = parser.parse<ParsedNode>(error, name, ParsingContext::Normal);
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");
@@ -2361,7 +2369,7 @@ inline std::unique_ptr<ProgramNode> parseFunctionForFunctionConstructor(VM& vm, 
     ASSERT(!source.provider()->source().isNull());
 
     MonotonicTime before;
-    if (UNLIKELY(Options::reportParseTimes()))
+    if (Options::reportParseTimes()) [[unlikely]]
         before = MonotonicTime::now();
 
     Identifier name;
@@ -2373,16 +2381,16 @@ inline std::unique_ptr<ProgramNode> parseFunctionForFunctionConstructor(VM& vm, 
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     } else {
-        Parser<Lexer<UChar>> parser(vm, source, ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin, lexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, FunctionMode::None, SuperBinding::NotNeeded, ConstructorKind::None, DerivedContextType::None, isEvalNode, EvalContextType::None, nullptr);
+        Parser<Lexer<char16_t>> parser(vm, source, ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin, lexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, FunctionMode::None, SuperBinding::NotNeeded, ConstructorKind::None, DerivedContextType::None, isEvalNode, EvalContextType::None, nullptr);
         result = parser.parse<ProgramNode>(error, name, ParsingContext::FunctionConstructor, functionConstructorParametersEndPosition);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     }
 
-    if (UNLIKELY(Options::countParseTimes()))
+    if (Options::countParseTimes()) [[unlikely]]
         globalParseCount++;
 
-    if (UNLIKELY(Options::reportParseTimes())) {
+    if (Options::reportParseTimes()) [[unlikely]] {
         MonotonicTime after = MonotonicTime::now();
         ParseHash hash(source);
         dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");

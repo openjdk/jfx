@@ -89,7 +89,7 @@ static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, Stri
     Ref reportElement = document.createElement(QualifiedName(nullAtom(), "parsererror"_s, xhtmlNamespaceURI), true);
 
     Attribute reportAttribute(styleAttr, "display: block; white-space: pre; border: 2px solid #c77; padding: 0 1em 0 1em; margin: 1em; background-color: #fdd; color: black"_s);
-    reportElement->parserSetAttributes(std::span(&reportAttribute, 1));
+    reportElement->parserSetAttributes(singleElementSpan(reportAttribute));
 
     Ref h3 = HTMLHeadingElement::create(h3Tag, document);
     reportElement->parserAppendChild(h3);
@@ -97,7 +97,7 @@ static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, Stri
 
     Ref fixed = HTMLDivElement::create(document);
     Attribute fixedAttribute(styleAttr, "font-family:monospace;font-size:12px"_s);
-    fixed->parserSetAttributes(std::span(&fixedAttribute, 1));
+    fixed->parserSetAttributes(singleElementSpan(fixedAttribute));
     reportElement->parserAppendChild(fixed);
 
     fixed->parserAppendChild(Text::create(document, WTFMove(errorMessages)));
@@ -144,13 +144,13 @@ void XMLErrors::insertErrorMessageBlock()
         documentElement = WTFMove(body);
     }
 
-    Ref reportElement = createXHTMLParserErrorHeader(document, m_errorMessages.toString());
+    Ref reportElement = createXHTMLParserErrorHeader(document, String { m_errorMessages.toString() });
 
 #if ENABLE(XSLT)
     if (document->transformSourceDocument()) {
         Attribute attribute(styleAttr, "white-space: normal"_s);
         Ref paragraph = HTMLParagraphElement::create(document);
-        paragraph->parserSetAttributes(std::span(&attribute, 1));
+        paragraph->parserSetAttributes(singleElementSpan(attribute));
         paragraph->parserAppendChild(document->createTextNode("This document was created as the result of an XSL transformation. The line and column numbers given are from the transformed result."_s));
         reportElement->parserAppendChild(WTFMove(paragraph));
     }

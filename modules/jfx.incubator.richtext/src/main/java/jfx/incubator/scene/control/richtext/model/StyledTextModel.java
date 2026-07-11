@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -209,6 +210,16 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
 
     /**
+     * Applies paragraph styles in the specified paragraph.
+     *
+     * @param index the paragraph index
+     * @param paragraphAttrs the paragraph attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
+     * @since 26
+     */
+    protected abstract void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
+
+    /**
      * Replaces the paragraph styles in the specified paragraph.
      *
      * @param index the paragraph index
@@ -219,7 +230,6 @@ public abstract class StyledTextModel {
 
     /**
      * Applies style to the specified text range within a single paragraph.
-     * The new attributes override any existing attributes.
      * The {@code end} argument may exceed the paragraph length, in which case the outcome should be the same
      * as supplying the paragraph length value.
      *
@@ -227,7 +237,7 @@ public abstract class StyledTextModel {
      * @param start the start offset
      * @param end the end offset
      * @param a the character attributes
-     * @param merge determines whether to merge with or overwrite the existing attributes
+     * @param merge determines whether to merge with or completely replace the existing attribute map
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge);
@@ -475,12 +485,24 @@ public abstract class StyledTextModel {
      * @see #replace(StyleResolver, TextPos, TextPos, StyledInput)
      */
     public final void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
-            // make sure start < end
             TextPos p = start;
             start = end;
             end = p;
+        }
+
+        String ver = versionString();
+        if (ver != null) {
+            out.consume(StyledSegment.ofVersion(ver));
+        }
+
+        Map<String, String> dp = documentProperties();
+        if ((dp != null) && (!dp.isEmpty())) {
+            out.consume(StyledSegment.ofDocumentProperties(dp));
         }
 
         int ix0 = start.index();
@@ -520,6 +542,38 @@ public abstract class StyledTextModel {
         }
 
         out.flush();
+    }
+
+    /**
+     * This method is called by {@link #export(TextPos, TextPos, StyledOutput)}
+     * to export the model's version string, if any.
+     *
+     * @return the model version string, or null
+     * @since 27
+     */
+    protected String versionString() {
+        return null;
+    }
+
+    /**
+     * This method is called by {@link #export(TextPos, TextPos, StyledOutput)}
+     * to ensure that the document properties, if any, are exported.
+     *
+     * @return the document properties, or null
+     * @since 27
+     */
+    protected Map<String,String> documentProperties() {
+        return null;
+    }
+
+    /**
+     * This method is called by any of the {@code replace()} methods when encountering
+     * a {@link StyledSegment.Type#DOCUMENT_PROPERTIES} segment.
+     * @param props the document properties
+     * @param completeReplacement indicates whether replacing the model's content completely
+     * @since 27
+     */
+    protected void handleDocumentProperties(Map<String, String> props, boolean completeReplacement) {
     }
 
     /**
@@ -573,7 +627,7 @@ public abstract class StyledTextModel {
             return TextPos.ZERO;
         } else if (ix < ct) {
             len = getParagraphLength(ix);
-            if (p.offset() < len) {
+            if (p.offset() <= len) {
                 return p;
             }
         } else {
@@ -674,13 +728,17 @@ public abstract class StyledTextModel {
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
         checkWritable();
 
-        // TODO clamp to document boundaries
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
             TextPos p = start;
             start = end;
             end = p;
         }
+
+        boolean completeReplacement = TextPos.ZERO.equals(start) && end.equals(getDocumentEnd());
 
         UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end, isEdit) : null;
 
@@ -728,6 +786,9 @@ public abstract class StyledTextModel {
                 offset += len;
                 btm += len;
                 break;
+            case DOCUMENT_PROPERTIES:
+                handleDocumentProperties(seg.getDocumentProperties(), completeReplacement);
+                break;
             }
         }
 
@@ -755,18 +816,21 @@ public abstract class StyledTextModel {
      * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * Depending on {@code mergeAttributes} parameter, the attributes will either be merged with (true) or completely
-     * replace the existing attributes within the range.  The affected range might be wider than the range specified
+     * replace the existing attribute map within the range.  The affected range might be wider than the range specified
      * when applying the paragraph attributes.
      *
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
-     * @param mergeAttributes whether to merge or replace the attributes
+     * @param mergeAttributes whether to merge or replace the attribute map
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         checkWritable();
 
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         if (start.compareTo(end) > 0) {
             TextPos p = start;
             start = end;
@@ -793,10 +857,20 @@ public abstract class StyledTextModel {
         boolean allowUndo = isUndoRedoEnabled();
         UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
-        if (pa != null) {
-            // set paragraph attributes
+        // paragraph attributes
+        if (pa == null) {
+            if (!mergeAttributes) {
+                for (int ix = start.index(); ix <= end.index(); ix++) {
+                    setParagraphStyle(ix, pa);
+                }
+            }
+        } else {
             for (int ix = start.index(); ix <= end.index(); ix++) {
-                setParagraphStyle(ix, pa);
+                if (mergeAttributes) {
+                    applyParagraphStyle(ix, pa);
+                } else {
+                    setParagraphStyle(ix, pa);
+                }
             }
         }
 

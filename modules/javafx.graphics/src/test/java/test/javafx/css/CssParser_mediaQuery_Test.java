@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,35 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
+import com.sun.javafx.css.media.expression.EqualExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.GreaterExpression;
+import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
+import com.sun.javafx.css.media.expression.LessExpression;
+import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
+import com.sun.javafx.scene.SceneContext;
 import javafx.application.ColorScheme;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
-import org.junit.jupiter.api.Test;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,7 +71,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             mediaRule.getQueries().getFirst());
     }
 
@@ -68,7 +86,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new NegationExpression(new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT)),
+            NegationExpression.of(FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT)),
             mediaRule.getQueries().getFirst());
     }
 
@@ -88,10 +106,10 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, outerMediaRule.getQueries().size());
         assertNull(outerMediaRule.getParent());
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             innerMediaRule.getQueries().getFirst());
         assertEquals(
-            new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true),
+            FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
             outerMediaRule.getQueries().getFirst());
     }
 
@@ -113,7 +131,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             mediaRule.getQueries().getFirst());
     }
 
@@ -153,8 +171,14 @@ public class CssParser_mediaQuery_Test {
     void parseMediaQueryList() {
         Stylesheet stylesheet = new CssParser().parse("""
             @media (prefers-color-scheme: dark),
+                   (prefers-color-scheme: LIGHT),
                    (prefers-reduced-motion),
-                   (prefers-reduced-transparency: no-preference) {
+                   (prefers-Reduced-MOTION),
+                   (prefers-reduced-transparency: no-preference),
+                   (prefers-reduced-transparency: NO-PREFERENCE),
+                   (width >= 100px),
+                   (HEIGHT < 1000Px),
+                   (max-HEIGHT: 500PX) {
                 .foo { bar: baz; }
             }
             """);
@@ -162,9 +186,15 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(
             List.of(
-                new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
-                new FunctionExpression<>("prefers-reduced-motion", null, _ -> null, true),
-                new FunctionExpression<>("prefers-reduced-transparency", "no-preference", _ -> null, false)
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
+                FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)),
+                LessExpression.ofSize(SizeQueryType.HEIGHT, new Size(1000, SizeUnits.PX)),
+                LessOrEqualExpression.ofSize(SizeQueryType.HEIGHT, new Size(500, SizeUnits.PX))
             ),
             mediaRule.getQueries());
     }
@@ -180,9 +210,9 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            List.of(new ConjunctionExpression(
-                new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
-                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true)
+            List.of(ConjunctionExpression.of(
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             )),
             mediaRule.getQueries());
     }
@@ -200,11 +230,11 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new ConjunctionExpression(
-                new ConjunctionExpression(
-                    new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
-                    new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> false, true)),
-                new FunctionExpression<>("prefers-reduced-transparency", "no-preference", _ -> false, false)
+            ConjunctionExpression.of(
+                ConjunctionExpression.of(
+                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true)),
+                FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> false, false)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -221,9 +251,9 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new DisjunctionExpression(
-                new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
-                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true)
+            DisjunctionExpression.of(
+                FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             ),
             mediaRule.getQueries().getFirst());
     }
@@ -241,11 +271,11 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new DisjunctionExpression(
-                new DisjunctionExpression(
-                    new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
-                    new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> false, true)),
-                new FunctionExpression<>("-fx-prefers-persistent-scrollbars", "persistent", _ -> false, true)
+            DisjunctionExpression.of(
+                DisjunctionExpression.of(
+                    FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+                    FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> false, true)),
+                FunctionExpression.of("-fx-prefers-persistent-scrollbars", "persistent", _ -> false, true)
             ),
             mediaRule.getQueries().getFirst()
         );
@@ -253,17 +283,21 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void disjunctionAndConjunctionCanNotBeCombined() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (prefers-color-scheme: light) or
                    (prefers-reduced-motion: reduce) and
                    (prefers-reduced-transparency: no-preference) {
                 .foo { bar: baz; }
             }
-            """);
+            """;
 
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
-        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
@@ -277,7 +311,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-reduced-motion", null, _ -> null, true),
+            FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 
@@ -292,7 +326,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-reduced-transparency", null, _ -> null, true),
+            FunctionExpression.of("prefers-reduced-transparency", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
     }
 
@@ -307,8 +341,125 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
+            FunctionExpression.of("-fx-prefers-persistent-scrollbars", null, _ -> null, true),
             mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parsePlatformQuery(){
+        Map<String, BooleanSupplier> oldPlatforms = MediaFeaturesShim.getPlatforms();
+
+        try {
+            MediaFeaturesShim.setPlatforms(Map.of(
+                "windows", () -> true,
+                "linux", () -> true,
+                "macos", () -> false
+            ));
+
+            Stylesheet stylesheet = new CssParser().parse("""
+                @media (-fx-platform: WINdows),
+                       (-fx-platform: linUX),
+                       not (-fx-platform: Macos) {
+                    .foo { bar: baz; }
+                }
+                """);
+
+            var context = new SceneContext(new Scene(new Group()));
+            var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+            assertEquals(3, mediaRule.getQueries().size());
+
+            MediaQuery expected = FunctionExpression.of("-fx-platform", "windows", _ -> null, true);
+            MediaQuery actual = mediaRule.getQueries().get(0);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = FunctionExpression.of("-fx-platform", "linux", _ -> null, true);
+            actual = mediaRule.getQueries().get(1);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+
+            expected = NegationExpression.of(FunctionExpression.of("-fx-platform", "macos", _ -> null, true));
+            actual = mediaRule.getQueries().get(2);
+            assertEquals(expected, actual);
+            assertEquals(TriState.TRUE, actual.evaluate());
+            assertTrue(expected.evaluate(context));
+        } finally {
+            MediaFeaturesShim.setPlatforms(oldPlatforms);
+        }
+    }
+
+    @Test
+    void parseSupportsConditionalFeature() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (-fx-supports-conditional-feature: ScEnE3D),
+                   (-fx-supports-conditional-feature: transparent-window),
+                   (-fx-supports-conditional-feature: media) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var context = new SceneContext(new Scene(new Group()));
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(3, mediaRule.getQueries().size());
+
+        var expected = FunctionExpression.of("-fx-supports-conditional-feature", "scene3d", _ -> null, true);
+        var actual = mediaRule.getQueries().get(0);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "transparent-window", _ -> null, true);
+        actual = mediaRule.getQueries().get(1);
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+        assertTrue(expected.evaluate(context));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "media", _ -> null, true);
+        actual = mediaRule.getQueries().get(2);
+        assertEquals(expected, actual);
+        assertEquals(TriState.FALSE, actual.evaluate());
+        assertFalse(expected.evaluate(context));
+    }
+
+    @Test
+    void invalidConditionalFeatureValueEvaluatesToFalse() {
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature: invalid-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void supportsConditionalFeatureCannotBeUsedInBooleanContext() {
+        assertThrows(IllegalArgumentException.class,
+            () -> MediaFeatures.discreteQueryExpression("-fx-supports-conditional-feature", null));
+
+        String stylesheetText = """
+            @media (-fx-supports-conditional-feature) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
@@ -325,41 +476,66 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void emptyMediaQueryWithNotKeywordEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media not {
                 .foo { bar: baz; }
             }
-            """);
+            """;
 
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
-        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
     void invalidMediaFeatureEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (invalid-media-feature) {
                 .foo { bar: baz; }
             }
-            """);
 
-        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
-        assertEquals(1, mediaRule.getQueries().size());
-        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+            @media (invalid-feature > 100px) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+
+        var mediaRule1 = RuleHelper.getMediaRule(stylesheet.getRules().get(0));
+        assertEquals(1, mediaRule1.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule1.getQueries().getFirst());
+
+        var mediaRule2 = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(1, mediaRule2.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule2.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
     void invalidFeatureValueEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
             @media (prefers-reduced-motion: invalid-value) {
                 .foo { bar: baz; }
             }
-            """);
 
-        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
-        assertEquals(1, mediaRule.getQueries().size());
-        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+            @media (width > invalid-value) {
+                .foo { bar: baz; }
+            }
+            """, true);
+
+        var mediaRule1 = RuleHelper.getMediaRule(stylesheet.getRules().get(0));
+        assertEquals(1, mediaRule1.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule1.getQueries().getFirst());
+
+        var mediaRule2 = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(1, mediaRule2.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule2.getQueries().getFirst());
     }
 
     @Test
@@ -375,23 +551,136 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(
             List.of(
-                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true),
-                new ConstantExpression(false) // the rest of the query is malformed and evaluates to false
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true),
+                ConstantExpression.of(false) // the rest of the query is malformed and evaluates to false
             ),
             mediaRule.getQueries());
     }
 
     @Test
     void invalidCombinationOfConjunctionAndNegationEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (prefers-reduced-motion: reduce) and not (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void missingCommaBetweenMediaQueriesEvaluatesToFalse() {
+        String stylesheetText = """
+            @media (prefers-color-scheme: dark)
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
+    }
+
+    @Test
+    void parserRecoversFromMissingCommaBetweenMediaQueries() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark)
+                   (prefers-reduced-motion: reduce),
+                   (prefers-reduced-transparency: reduce) {
                 .foo { bar: baz; }
             }
             """);
 
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
-        assertEquals(1, mediaRule.getQueries().size());
-        assertEquals(new ConstantExpression(false), mediaRule.getQueries().getFirst());
+        assertEquals(
+            List.of(
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-transparency", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnexpectedCommaInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark),,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void parserRecoversFromUnexpectedTokenInMediaQueryList() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), 100px,
+                   (prefers-reduced-motion: reduce) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void leadingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media , (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                ConstantExpression.of(false),
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)
+            ),
+            mediaRule.getQueries());
+    }
+
+    @Test
+    void trailingCommaInMediaQueryListEvaluatesToFalse() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark), {
+                .foo { bar: baz; }
+            }
+            """);
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(
+            List.of(
+                FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+                ConstantExpression.of(false)
+            ),
+            mediaRule.getQueries());
     }
 
     @Test
@@ -405,8 +694,8 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(
             List.of(
-                new ConstantExpression(false), // the malformed query evaluates to false
-                new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true)
+                ConstantExpression.of(false), // the malformed query evaluates to false
+                FunctionExpression.of("prefers-reduced-motion", "reduce", _ -> null, true)
             ),
             mediaRule.getQueries());
     }
@@ -439,7 +728,239 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, stylesheet.getRules().size());
         assertEquals(Set.of("foo"), stylesheet.getRules().getFirst().getSelectors().getFirst().getStyleClassNames());
         assertEquals(
-            List.of(new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
+            List.of(FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
             RuleHelper.getMediaRule(stylesheet.getRules().getFirst()).getQueries());
+    }
+
+    @Test
+    void parseRangeForm_leadingValue() {
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
+            @media (100px >= width) {
+                .foo { bar: baz; }
+            }
+
+            @media (100em > width) {
+                .foo { bar: baz; }
+            }
+
+            @media (100cm <= width) {
+                .foo { bar: baz; }
+            }
+
+            @media (100 < width) {
+                .foo { bar: baz; }
+            }
+
+            @media (100 = width) {
+                .foo { bar: baz; }
+            }
+
+            @media (0.5 < aspect-ratio) {
+                .foo { bar: baz; }
+            }
+
+            @media (0.5em < aspect-ratio) {
+                .foo { bar: baz; }
+            }
+            """, true);
+
+        assertEquals(7, stylesheet.getRules().size());
+        assertEquals(
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.EM))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
+        assertEquals(
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.CM))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
+        assertEquals(
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(4)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(5)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: aspect-ratio is a <number>, not a <size>
+            RuleHelper.getMediaRule(stylesheet.getRules().get(6)).getQueries());
+    }
+
+    @Test
+    void parseRangeForm_trailingValue() {
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
+            @media (width >= 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (width > 100em) {
+                .foo { bar: baz; }
+            }
+
+            @media (width <= 100cm) {
+                .foo { bar: baz; }
+            }
+
+            @media (width < 100) {
+                .foo { bar: baz; }
+            }
+
+            @media (width = 100) {
+                .foo { bar: baz; }
+            }
+
+            @media (aspect-ratio > 0.5) {
+                .foo { bar: baz; }
+            }
+
+            @media (aspect-ratio > 0.5em) {
+                .foo { bar: baz; }
+            }
+            """, true);
+
+        assertEquals(7, stylesheet.getRules().size());
+        assertEquals(
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.EM))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
+        assertEquals(
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.CM))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
+        assertEquals(
+            List.of(LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
+        assertEquals(
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(4)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(5)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: aspect-ratio is a <number>, not a <size>
+            RuleHelper.getMediaRule(stylesheet.getRules().get(6)).getQueries());
+    }
+
+    @Test
+    void parseRangeForm_interval() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (50px > width >= 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px >= width > 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px < width <= 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px <= width < 100px) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        assertEquals(4, stylesheet.getRules().size());
+        assertEquals(
+            List.of(ConjunctionExpression.of(
+                LessExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(ConjunctionExpression.of(
+                LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
+        assertEquals(
+            List.of(ConjunctionExpression.of(
+                GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
+        assertEquals(
+            List.of(ConjunctionExpression.of(
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
+    }
+
+    @Test
+    void parseRangeForm_invalidInterval() {
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
+            @media (50px > width = 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px > width < 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px < width > 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (50px = width < 100px) {
+                .foo { bar: baz; }
+            }
+            """, true);
+
+        assertEquals(4, stylesheet.getRules().size());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: interval has trailing '=' operator
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: operators have different directions
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: operators have different directions
+            RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: interval has leading '=' operator
+            RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
+    }
+
+    @Test
+    void parseRangeForm_prefix() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (min-width: 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (max-width: 100px) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        assertEquals(2, stylesheet.getRules().size());
+        assertEquals(
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
+    }
+
+    @Test
+    void parseRangeValue_asDiscrete() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (width: 100px) {
+                .foo { bar: baz; }
+            }
+
+            @media (aspect-ratio: 0.5) {
+                .foo { bar: baz; }
+            }
+            """);
+
+        assertEquals(2, stylesheet.getRules().size());
+        assertEquals(
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(EqualExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
     }
 }

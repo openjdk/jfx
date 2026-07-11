@@ -29,10 +29,11 @@
 #include "Document.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>

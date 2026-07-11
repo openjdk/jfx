@@ -52,18 +52,18 @@ public:
     WEBCORE_EXPORT TransformOperations clone() const;
     TransformOperations selfOrCopyWithResolvedCalculatedValues(const FloatSize&) const;
 
-    const_iterator begin() const { return m_operations.begin(); }
-    const_iterator end() const { return m_operations.end(); }
-    const_reverse_iterator rbegin() const { return m_operations.rbegin(); }
-    const_reverse_iterator rend() const { return m_operations.rend(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_operations.begin(); }
+    const_iterator end() const LIFETIME_BOUND { return m_operations.end(); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_operations.rbegin(); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_operations.rend(); }
 
     bool isEmpty() const { return m_operations.isEmpty(); }
     size_t size() const { return m_operations.size(); }
-    const TransformOperation* at(size_t index) const { return index < m_operations.size() ? m_operations[index].ptr() : nullptr; }
+    const TransformOperation* at(size_t index) const LIFETIME_BOUND { return index < m_operations.size() ? m_operations[index].ptr() : nullptr; }
 
-    const Ref<TransformOperation>& operator[](size_t i) const { return m_operations[i]; }
-    const Ref<TransformOperation>& first() const { return m_operations.first(); }
-    const Ref<TransformOperation>& last() const { return m_operations.last(); }
+    const Ref<TransformOperation>& operator[](size_t i) const LIFETIME_BOUND { return m_operations[i]; }
+    const Ref<TransformOperation>& first() const LIFETIME_BOUND { return m_operations.first(); }
+    const Ref<TransformOperation>& last() const LIFETIME_BOUND { return m_operations.last(); }
 
     void apply(TransformationMatrix&, const FloatSize&, unsigned start = 0) const;
 

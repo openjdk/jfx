@@ -30,6 +30,7 @@
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchResult.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -62,7 +63,7 @@ public:
     BackgroundFetchFailureReason failureReason() const { return m_information.failureReason; }
     bool recordsAvailable() const { return m_information.recordsAvailable; }
 
-    using RequestInfo = std::variant<RefPtr<FetchRequest>, String>;
+    using RequestInfo = Variant<RefPtr<FetchRequest>, String>;
 
     void abort(ScriptExecutionContext&, DOMPromiseDeferred<IDLBoolean>&&);
     void match(ScriptExecutionContext&, RequestInfo&&, const CacheQueryOptions&, DOMPromiseDeferred<IDLInterface<BackgroundFetchRecord>>&&);
@@ -77,7 +78,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::BackgroundFetchRegistration; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

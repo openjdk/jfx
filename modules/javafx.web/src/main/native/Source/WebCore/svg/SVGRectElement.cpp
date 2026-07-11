@@ -29,6 +29,8 @@
 #include "RenderSVGRect.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -75,7 +77,7 @@ SVGAnimatedProperty* SVGRectElement::propertyForAttribute(const QualifiedName& n
 
 void SVGRectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:

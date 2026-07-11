@@ -54,8 +54,8 @@ public:
 
     unsigned index() const { return m_index; }
 
-    const char* abbreviatedName() const { return m_abbreviatedName.data(); }
-    const char* name() const { return m_name.data(); }
+    const char* abbreviatedName() const LIFETIME_BOUND { return m_abbreviatedName.data(); }
+    const char* name() const LIFETIME_BOUND { return m_name.data(); }
 
     void resetStats();
 

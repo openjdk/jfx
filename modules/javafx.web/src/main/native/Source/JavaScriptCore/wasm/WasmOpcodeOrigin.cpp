@@ -26,11 +26,24 @@
 #include "config.h"
 #include "WasmOpcodeOrigin.h"
 
+#include "B3Origin.h"
+
 #include <wtf/text/MakeString.h>
 
 #if ENABLE(WEBASSEMBLY_OMGJIT)
 
 namespace JSC { namespace Wasm {
+
+OpcodeOrigin::OpcodeOrigin(B3::Origin origin)
+{
+    ASSERT(origin.isPackedWasmOrigin());
+    packedData = origin.m_data.bits();
+}
+
+B3::Origin OpcodeOrigin::asB3Origin()
+{
+    return B3::Origin(packedData);
+}
 
 void OpcodeOrigin::dump(PrintStream& out) const
 {
@@ -54,6 +67,9 @@ void OpcodeOrigin::dump(PrintStream& out) const
         break;
     }
 }
+
+static_assert(sizeof(OpcodeOrigin) == sizeof(uint64_t), "this packing doesn't work if this isn't the case");
+static_assert(sizeof(B3::Origin) == sizeof(uint64_t), "this packing doesn't work if this isn't the case");
 
 } } // namespace JSC::Wasm
 

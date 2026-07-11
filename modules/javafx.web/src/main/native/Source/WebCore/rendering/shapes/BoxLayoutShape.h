@@ -37,7 +37,7 @@ namespace WebCore {
 
 class RenderBox;
 
-RoundedRect computeRoundedRectForBoxShape(CSSBoxType, const RenderBox&);
+LayoutRoundedRect computeRoundedRectForBoxShape(CSSBoxType, const RenderBox&);
 
 class BoxLayoutShape final : public LayoutShape {
 public:

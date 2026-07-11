@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,8 +60,6 @@ public:
     void addItem(Ref<HistoryItem>&&);
     void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&);
     void setCurrentItem(HistoryItem&);
-    void setProvisionalItem(const HistoryItem&);
-    void clearProvisionalItem(const HistoryItem&);
 
     unsigned count() const;
     WEBCORE_EXPORT unsigned backCount() const;
@@ -77,13 +75,13 @@ public:
     WEBCORE_EXPORT RefPtr<HistoryItem> forwardItem(std::optional<FrameIdentifier> = std::nullopt);
 
     Vector<Ref<HistoryItem>> allItems();
+    Vector<Ref<HistoryItem>> itemsForFrame(FrameIdentifier);
 
 private:
     Ref<Page> protectedPage() const;
-    Ref<BackForwardClient> protectedClient() const;
 
     WeakRef<Page> m_page;
-    Ref<BackForwardClient> m_client;
+    const Ref<BackForwardClient> m_client;
 };
 
 } // namespace WebCore

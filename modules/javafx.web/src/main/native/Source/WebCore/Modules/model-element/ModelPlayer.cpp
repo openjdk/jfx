@@ -27,6 +27,9 @@
 #include "ModelPlayer.h"
 
 #include "Color.h"
+#include "FloatPoint3D.h"
+#include "ModelPlayerAnimationState.h"
+#include "ModelPlayerTransformState.h"
 #include "TransformationMatrix.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -39,6 +42,44 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
 ModelPlayer::~ModelPlayer() = default;
+
+bool ModelPlayer::isPlaceholder() const
+{
+    return false;
+}
+
+std::optional<ModelPlayerAnimationState> ModelPlayer::currentAnimationState() const
+{
+    return std::nullopt;
+}
+
+std::optional<std::unique_ptr<ModelPlayerTransformState>> ModelPlayer::currentTransformState() const
+{
+    return std::nullopt;
+}
+
+void ModelPlayer::reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&)
+{
+}
+
+void ModelPlayer::visibilityStateDidChange()
+{
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxCenter() const
+{
+    return std::nullopt;
+}
+
+std::optional<FloatPoint3D> ModelPlayer::boundingBoxExtents() const
+{
+    return std::nullopt;
+}
+
+std::optional<TransformationMatrix> ModelPlayer::entityTransform() const
+{
+    return std::nullopt;
+}
 
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {
@@ -128,6 +169,15 @@ void ModelPlayer::updateStageModeTransform(const TransformationMatrix&)
 }
 
 void ModelPlayer::endStageModeInteraction()
+{
+}
+
+void ModelPlayer::animateModelToFitPortal(CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
+void ModelPlayer::resetModelTransformAfterDrag()
 {
 }
 

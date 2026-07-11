@@ -42,6 +42,7 @@
 #include "UserStyleSheet.h"
 #include "UserStyleSheetTypes.h"
 #include <JavaScriptCore/JSObjectInlines.h>
+#include <ranges>
 #include <wtf/Language.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/Collator.h>
@@ -217,11 +218,11 @@ static String trackDisplayName(TextTrack* track)
     if (track == &TextTrack::captionMenuAutomaticItem())
         return textTrackAutomaticMenuItemText();
 
-    if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
-        return trackNoLabelText();
-    if (!track->label().isEmpty())
+    if (auto label = track->label().string().trim(isASCIIWhitespace); !label.isEmpty())
         return track->label();
-    return track->validBCP47Language();
+    if (auto languageIdentifier = track->validBCP47Language(); !languageIdentifier.isEmpty())
+        return languageIdentifier;
+    return trackNoLabelText();
 }
 
 String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
@@ -258,7 +259,7 @@ MediaSelectionOption CaptionUserPreferences::mediaSelectionOptionForTrack(TextTr
     return { mediaType, displayNameForTrack(track), legibleType };
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList, UncheckedKeyHashSet<TextTrack::Kind> kinds)
+Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 
@@ -272,7 +273,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&](auto& a, auto& b) {
         return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
@@ -286,11 +287,11 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 
 static String trackDisplayName(AudioTrack* track)
 {
-    if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
-        return trackNoLabelText();
-    if (!track->label().isEmpty())
+    if (auto label = track->label().string().trim(isASCIIWhitespace); !label.isEmpty())
         return track->label();
-    return track->validBCP47Language();
+    if (auto languageIdentifier = track->validBCP47Language(); !languageIdentifier.isEmpty())
+        return languageIdentifier;
+    return trackNoLabelText();
 }
 
 String CaptionUserPreferences::displayNameForTrack(AudioTrack* track) const
@@ -316,7 +317,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
 
     Collator collator;
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [&] (auto& a, auto& b) {
+    std::ranges::sort(tracksForMenu, [&](auto& a, auto& b) {
         return collator.collate(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 

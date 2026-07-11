@@ -49,7 +49,7 @@ float SizesCalcParser::result() const
     return m_result;
 }
 
-static bool operatorPriority(UChar cc, bool& highPriority)
+static bool operatorPriority(char16_t cc, bool& highPriority)
 {
     if (cc == '+' || cc == '-')
         highPriority = false;
@@ -140,7 +140,7 @@ bool SizesCalcParser::calcToReversePolishNotation(CSSParserTokenRange range)
             if (!equalLettersIgnoringASCIICase(token.value(), "calc"_s))
                 return false;
             // "calc(" is the same as "("
-            FALLTHROUGH;
+            [[fallthrough]];
         case LeftParenthesisToken:
             // If the token is a left parenthesis, then push it onto the stack.
             stack.append(token);
@@ -206,7 +206,7 @@ bool SizesCalcParser::calcToReversePolishNotation(CSSParserTokenRange range)
     return true;
 }
 
-static bool operateOnStack(Vector<SizesCalcValue>& stack, UChar operation)
+static bool operateOnStack(Vector<SizesCalcValue>& stack, char16_t operation)
 {
     if (stack.size() < 2)
         return false;

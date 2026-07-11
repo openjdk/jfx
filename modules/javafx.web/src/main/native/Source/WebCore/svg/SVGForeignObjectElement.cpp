@@ -23,6 +23,7 @@
 #include "SVGForeignObjectElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ContainerNodeInlines.h"
 #include "LegacyRenderSVGForeignObject.h"
 #include "LegacyRenderSVGResource.h"
 #include "NodeName.h"
@@ -30,6 +31,7 @@
 #include "SVGElementInlines.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include <wtf/Assertions.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -58,7 +60,7 @@ Ref<SVGForeignObjectElement> SVGForeignObjectElement::create(const QualifiedName
 
 void SVGForeignObjectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:

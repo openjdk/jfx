@@ -29,8 +29,10 @@
 #include "AXObjectCache.h"
 #include "ElementInlines.h"
 #include "Event.h"
+#include "EventTargetInlines.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
+#include "InspectorInstrumentation.h"
 #include "MutationObserver.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
@@ -134,7 +136,7 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         return;
     }
     for (auto& weakNode : *assignedNodes) {
-        if (UNLIKELY(!weakNode)) {
+        if (!weakNode) [[unlikely]] {
             ASSERT_NOT_REACHED();
             continue;
         }
@@ -181,7 +183,7 @@ void HTMLSlotElement::assign(FixedVector<ElementOrText>&& nodes)
     }
 
     auto previous = std::exchange(m_manuallyAssignedNodes, { });
-    UncheckedKeyHashSet<RefPtr<Node>> seenNodes;
+    HashSet<RefPtr<Node>> seenNodes;
     m_manuallyAssignedNodes = WTF::compactMap(nodes, [&seenNodes](ElementOrText& node) -> std::optional<WeakPtr<Node, WeakPtrImplWithEventTargetData>> {
         auto mapper = [&seenNodes]<typename T>(RefPtr<T>& node) -> std::optional<WeakPtr<Node, WeakPtrImplWithEventTargetData>> {
             if (seenNodes.contains(node))
@@ -218,10 +220,12 @@ void HTMLSlotElement::removeManuallyAssignedNode(Node& node)
 void HTMLSlotElement::enqueueSlotChangeEvent()
 {
     // https://dom.spec.whatwg.org/#signal-a-slot-change
-    if (m_inSignalSlotList)
-        return;
+    if (!m_inSignalSlotList) {
     m_inSignalSlotList = true;
     MutationObserver::enqueueSlotChangeEvent(*this);
+    }
+
+    InspectorInstrumentation::didChangeAssignedNodes(*this);
 }
 
 void HTMLSlotElement::dispatchSlotChangeEvent()

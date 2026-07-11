@@ -304,7 +304,7 @@ public:
     TransformationMatrix& skewY(double angle) { return skew(0, angle); }
 
     TransformationMatrix& applyPerspective(double p);
-    bool hasPerspective() const { return m_matrix[2][3] != 0.0f; }
+    bool hasPerspective() const { return m_matrix[0][3] != 0.0f || m_matrix[1][3] != 0.0f || m_matrix[2][3] != 0.0f || m_matrix[3][3] != 1.0f; }
 
     // Returns a transformation that maps a rect to a rect.
     WEBCORE_EXPORT static TransformationMatrix rectToRect(const FloatRect&, const FloatRect&);

@@ -27,6 +27,7 @@
 #include "NodeName.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "SVGStringList.h"
 #include <wtf/Language.h>
 #include <wtf/SortedArrayMap.h>

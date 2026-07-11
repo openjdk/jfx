@@ -128,28 +128,10 @@ Seconds TimeWithDynamicClockType::operator-(const TimeWithDynamicClockType& othe
     return Seconds(m_value - other.m_value);
 }
 
-bool TimeWithDynamicClockType::operator<(const TimeWithDynamicClockType& other) const
+std::partial_ordering operator<=>(const TimeWithDynamicClockType& a, const TimeWithDynamicClockType& b)
 {
-    RELEASE_ASSERT(m_type == other.m_type);
-    return m_value < other.m_value;
-}
-
-bool TimeWithDynamicClockType::operator>(const TimeWithDynamicClockType& other) const
-{
-    RELEASE_ASSERT(m_type == other.m_type);
-    return m_value > other.m_value;
-}
-
-bool TimeWithDynamicClockType::operator<=(const TimeWithDynamicClockType& other) const
-{
-    RELEASE_ASSERT(m_type == other.m_type);
-    return m_value <= other.m_value;
-}
-
-bool TimeWithDynamicClockType::operator>=(const TimeWithDynamicClockType& other) const
-{
-    RELEASE_ASSERT(m_type == other.m_type);
-    return m_value >= other.m_value;
+    RELEASE_ASSERT(a.m_type == b.m_type);
+    return a.m_value <=> b.m_value;
 }
 
 void TimeWithDynamicClockType::dump(PrintStream& out) const

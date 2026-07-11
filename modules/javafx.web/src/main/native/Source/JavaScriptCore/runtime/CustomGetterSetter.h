@@ -29,6 +29,7 @@
 #include "PropertySlot.h"
 #include "PutPropertySlot.h"
 #include "Structure.h"
+#include "VM.h"
 
 namespace JSC {
 

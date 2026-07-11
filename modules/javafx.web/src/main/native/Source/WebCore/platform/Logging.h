@@ -94,6 +94,7 @@ namespace WebCore {
     M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(ContentVisibility) \
     M(Crypto) \
     M(DatabaseTracker) \
     M(DigitalCredentials) \
@@ -114,6 +115,7 @@ namespace WebCore {
     M(FTP) \
     M(Fullscreen) \
     M(Gamepad) \
+    M(HDR) \
     M(HID) \
     M(History) \
     M(IOSurface) \
@@ -130,6 +132,7 @@ namespace WebCore {
     M(Loading) \
     M(Media) \
     M(MediaCaptureSamples) \
+    M(MediaPerformance) \
     M(MediaQueries) \
     M(MediaSource) \
     M(MediaStream) \
@@ -142,6 +145,7 @@ namespace WebCore {
     M(NotYetImplemented) \
     M(OverlayScrollbars) \
     M(PerformanceLogging) \
+    M(PerformanceTimeline) \
     M(PlatformLeaks) \
     M(Plugins) \
     M(PopupBlocking) \
@@ -176,6 +180,7 @@ namespace WebCore {
     M(Style) \
     M(StyleSheets) \
     M(SVG) \
+    M(Testing) \
     M(TextAutosizing) \
     M(TextDecoding) \
     M(TextFragment) \

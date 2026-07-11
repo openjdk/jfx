@@ -348,7 +348,7 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
         jthrowable ex = dispatchJNICall(callFrame->argumentCount(), rootObject,
                                         obj, jMethod->isStatic(),
                                         jMethod->returnType(), methodId,
-                                        jArgs.data(), result,
+                                        jArgs.mutableSpan().data(), result,
                                         accessControlContext());
         if (ex != NULL) {
             JSValue exceptionDescription

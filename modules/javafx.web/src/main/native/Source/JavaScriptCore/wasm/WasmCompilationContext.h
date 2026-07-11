@@ -38,7 +38,6 @@
 #include "WasmJS.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
-#include "WasmOpcodeOrigin.h"
 #include "WasmTierUpCount.h"
 #include <wtf/Box.h>
 #include <wtf/Expected.h>
@@ -61,14 +60,6 @@ class CalleeGroup;
 class MemoryInformation;
 class OptimizingJITCallee;
 class TierUpCount;
-
-class OMGOrigin {
-public:
-    friend bool operator==(const OMGOrigin&, const OMGOrigin&) = default;
-
-    CallSiteIndex m_callSiteIndex { };
-    OpcodeOrigin m_opcodeOrigin { };
-};
 
 struct CompilationContext {
     std::unique_ptr<CCallHelpers> jsEntrypointJIT;

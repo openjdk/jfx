@@ -28,6 +28,7 @@
 #include <jni.h>
 
 #include <WebCore/DOMWindow.h>
+#include "Frame.h"
 #include <WebCore/LocalDOMWindow.h>
 #include <WebCore/WindowProxy.h>
 

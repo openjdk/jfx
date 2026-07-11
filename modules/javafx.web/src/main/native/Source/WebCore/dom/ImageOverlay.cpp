@@ -28,6 +28,7 @@
 
 #include "Blob.h"
 #include "CharacterRange.h"
+#include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
 #include "DOMURL.h"
 #include "Document.h"
@@ -46,6 +47,7 @@
 #include "HTMLStyleElement.h"
 #include "ImageOverlayController.h"
 #include "MediaControlsHost.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
@@ -60,6 +62,7 @@
 #include "TreeScopeInlines.h"
 #include "UserAgentStyleSheets.h"
 #include "VisibleSelection.h"
+#include <numeric>
 #include <wtf/Range.h>
 #include <wtf/Scope.h>
 #include <wtf/WeakPtr.h>
@@ -110,7 +113,7 @@ static const AtomString& imageOverlayBlockClass()
 bool hasOverlay(const HTMLElement& element)
 {
     RefPtr shadowRoot = element.shadowRoot();
-    if (LIKELY(!shadowRoot || shadowRoot->mode() != ShadowRootMode::UserAgent))
+    if (!shadowRoot || shadowRoot->mode() != ShadowRootMode::UserAgent) [[likely]]
         return false;
 
     return shadowRoot->hasElementWithId(imageOverlayElementIdentifier());
@@ -673,7 +676,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
                 continue;
             }
 
-            state.scale = (state.minScale + state.maxScale) / 2;
+            state.scale = std::midpoint(state.minScale, state.maxScale);
             setInlineStylesForBlock(state.container.get(), state.scale, targetHeight);
         }
 

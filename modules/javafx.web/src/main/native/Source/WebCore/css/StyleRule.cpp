@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2002-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -63,6 +63,7 @@ static_assert(sizeof(StyleRuleBase) == sizeof(SameSizeAsStyleRuleBase), "StyleRu
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleBase);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRule);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleWithNesting);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRuleNestedDeclarations);
 
 Ref<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet& parentSheet) const
 {
@@ -318,9 +319,9 @@ Vector<Ref<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCompo
     Vector<Ref<StyleRule>> rules;
     Vector<const CSSSelector*> componentsSinceLastSplit;
 
-    for (const CSSSelector* selector = selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
+    for (auto& selector : selectorList()) {
         Vector<const CSSSelector*, 8> componentsInThisSelector;
-        for (const CSSSelector* component = selector; component; component = component->tagHistory())
+        for (const CSSSelector* component = &selector; component; component = component->tagHistory())
             componentsInThisSelector.append(component);
 
         if (componentsInThisSelector.size() + componentsSinceLastSplit.size() > maxCount && !componentsSinceLastSplit.isEmpty()) {
@@ -395,6 +396,20 @@ StyleRuleWithNesting::StyleRuleWithNesting(Ref<StyleProperties>&& properties, bo
     setType(StyleRuleType::StyleWithNesting);
 }
 
+StyleRulePage::StyleRulePage(Ref<StyleProperties>&& properties, CSSSelectorList&& selectors)
+    : StyleRuleBase(StyleRuleType::Page)
+    , m_properties(WTFMove(properties))
+    , m_selectorList(WTFMove(selectors))
+{
+}
+
+StyleRulePage::StyleRulePage(const StyleRulePage& o)
+    : StyleRuleBase(o)
+    , m_properties(o.m_properties->mutableCopy())
+    , m_selectorList(o.m_selectorList)
+{
+}
+
 StyleRuleNestedDeclarations::StyleRuleNestedDeclarations(Ref<StyleProperties>&& properties)
     : StyleRule(WTFMove(properties), false, { })
 {
@@ -404,6 +419,23 @@ StyleRuleNestedDeclarations::StyleRuleNestedDeclarations(Ref<StyleProperties>&& 
 String StyleRuleNestedDeclarations::debugDescription() const
 {
     return makeString("StyleRuleNestedDeclarations ["_s, properties().asText(CSS::defaultSerializationContext()), ']');
+}
+
+StyleRulePage::~StyleRulePage() = default;
+
+Ref<StyleRulePage> StyleRulePage::create(Ref<StyleProperties>&& properties, CSSSelectorList&& selectors)
+{
+    return adoptRef(*new StyleRulePage(WTFMove(properties), WTFMove(selectors)));
+}
+
+MutableStyleProperties& StyleRulePage::mutableProperties()
+{
+    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
+        return *mutableProperties;
+    Ref mutableProperties = m_properties->mutableCopy();
+    auto& mutablePropertiesRef = mutableProperties.get();
+    m_properties = WTFMove(mutableProperties);
+    return mutablePropertiesRef;
 }
 
 StyleRuleFontFace::StyleRuleFontFace(Ref<StyleProperties>&& properties)
@@ -486,7 +518,7 @@ void StyleRuleGroup::wrapperInsertRule(unsigned index, Ref<StyleRuleBase>&& rule
 
 void StyleRuleGroup::wrapperRemoveRule(unsigned index)
 {
-    m_childRules.remove(index);
+    m_childRules.removeAt(index);
 }
 
 String StyleRuleGroup::debugDescription() const
@@ -497,37 +529,6 @@ String StyleRuleGroup::debugDescription() const
         builder.append(rule->debugDescription());
     builder.append(']');
     return builder.toString();
-}
-
-StyleRulePage::~StyleRulePage() = default;
-
-StyleRulePage::StyleRulePage(Ref<StyleProperties>&& properties, CSSSelectorList&& selectors)
-    : StyleRuleGroup(StyleRuleType::Page, { })
-    , m_properties(WTFMove(properties))
-    , m_selectorList(WTFMove(selectors))
-{
-}
-
-StyleRulePage::StyleRulePage(const StyleRulePage& other)
-    : StyleRuleGroup(other)
-    , m_properties(other.m_properties->mutableCopy())
-    , m_selectorList(other.m_selectorList)
-{
-}
-
-Ref<StyleRulePage> StyleRulePage::create(Ref<StyleProperties>&& properties, CSSSelectorList&& selectors)
-{
-    return adoptRef(*new StyleRulePage(WTFMove(properties), WTFMove(selectors)));
-}
-
-MutableStyleProperties& StyleRulePage::mutableProperties()
-{
-    if (auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(m_properties.get()))
-        return *mutableProperties;
-    Ref mutableProperties = m_properties->mutableCopy();
-    auto& mutablePropertiesRef = mutableProperties.get();
-    m_properties = WTFMove(mutableProperties);
-    return mutablePropertiesRef;
 }
 
 StyleRuleMedia::StyleRuleMedia(MQ::MediaQueryList&& mediaQueries, Vector<Ref<StyleRuleBase>>&& rules)

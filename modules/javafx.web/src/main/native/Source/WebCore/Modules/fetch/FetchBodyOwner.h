@@ -30,7 +30,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
 #include "FetchBody.h"
 #include "FetchBodySource.h"
 #include "FetchHeaders.h"
@@ -43,10 +42,12 @@
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
 
 class FetchBodyOwner : public RefCountedAndCanMakeWeakPtr<FetchBodyOwner>, public ActiveDOMObject {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchBodyOwner, FetchBodyOwner);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -118,33 +119,38 @@ private:
     // ActiveDOMObject API
     bool virtualHasPendingActivity() const final;
 
-    struct BlobLoader final : FetchLoaderClient {
+    class BlobLoader final : public RefCounted<BlobLoader>, public FetchLoaderClient {
         WTF_MAKE_TZONE_ALLOCATED(BlobLoader);
-        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BlobLoader);
     public:
-        BlobLoader(FetchBodyOwner&);
+        static Ref<BlobLoader> create(FetchBodyOwner&);
+        ~BlobLoader();
 
         // FetchLoaderClient API
         void didReceiveResponse(const ResourceResponse&) final;
-        void didReceiveData(const SharedBuffer& buffer) final { owner.blobChunk(buffer); }
+        void didReceiveData(const SharedBuffer&) final;
         void didFail(const ResourceError&) final;
         void didSucceed(const NetworkLoadMetrics&) final;
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
 
-        FetchBodyOwner& owner;
-        std::unique_ptr<FetchLoader> loader;
+        RefPtr<FetchLoader> loader;
+
+    private:
+        explicit BlobLoader(FetchBodyOwner&);
+        WeakPtr<FetchBodyOwner> m_owner;
     };
 
 protected:
     std::optional<FetchBody> m_body;
     bool m_isDisturbed { false };
     RefPtr<FetchBodySource> m_readableStreamSource;
-    Ref<FetchHeaders> m_headers;
+    const Ref<FetchHeaders> m_headers;
 
 private:
-    std::optional<BlobLoader> m_blobLoader;
+    RefPtr<BlobLoader> m_blobLoader;
     bool m_isBodyOpaque { false };
 
-    std::variant<std::nullptr_t, Exception, ResourceError> m_loadingError;
+    Variant<std::nullptr_t, Exception, ResourceError> m_loadingError;
 };
 
 } // namespace WebCore

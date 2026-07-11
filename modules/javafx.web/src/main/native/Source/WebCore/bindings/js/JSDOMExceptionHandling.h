@@ -85,7 +85,7 @@ ALWAYS_INLINE void propagateException(JSC::JSGlobalObject& lexicalGlobalObject, 
 
 inline void propagateException(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, ExceptionOr<void>&& value)
 {
-    if (UNLIKELY(value.hasException()))
+    if (value.hasException()) [[unlikely]]
         propagateException(lexicalGlobalObject, throwScope, value.releaseException());
 }
 
@@ -95,7 +95,7 @@ template<typename Functor> void invokeFunctorPropagatingExceptionIfNecessary(JSC
 
     if constexpr (IsExceptionOr<ReturnType>) {
         auto result = functor();
-        if (UNLIKELY(result.hasException()))
+        if (result.hasException()) [[unlikely]]
             propagateException(lexicalGlobalObject, throwScope, result.releaseException());
     } else
         functor();

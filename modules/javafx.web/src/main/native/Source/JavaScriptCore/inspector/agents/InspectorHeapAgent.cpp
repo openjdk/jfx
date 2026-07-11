@@ -45,7 +45,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorHeapAgent);
 InspectorHeapAgent::InspectorHeapAgent(AgentContext& context)
     : InspectorAgentBase("Heap"_s)
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_frontendDispatcher(makeUnique<HeapFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<HeapFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(HeapBackendDispatcher::create(context.backendDispatcher, this))
     , m_environment(context.environment)
 {
@@ -53,7 +53,7 @@ InspectorHeapAgent::InspectorHeapAgent(AgentContext& context)
 
 InspectorHeapAgent::~InspectorHeapAgent() = default;
 
-void InspectorHeapAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorHeapAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -105,19 +105,12 @@ Protocol::ErrorStringOr<std::tuple<double, Protocol::Heap::HeapSnapshotData>> In
     JSLockHolder lock(vm);
 
     HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler());
+    snapshotBuilder.setClient(this);
+
     snapshotBuilder.buildSnapshot();
 
     auto timestamp = m_environment.executionStopwatch().elapsedTime().seconds();
-    auto snapshotData = snapshotBuilder.json([&] (const HeapSnapshotNode& node) {
-        if (Structure* structure = node.cell->structure()) {
-            if (JSGlobalObject* globalObject = structure->globalObject()) {
-                if (!m_environment.canAccessInspectedScriptState(globalObject))
-                    return false;
-            }
-        }
-        return true;
-    });
-
+    auto snapshotData = snapshotBuilder.json();
     return { { timestamp, snapshotData } };
 }
 
@@ -300,6 +293,17 @@ void InspectorHeapAgent::didGarbageCollect(CollectionScope scope)
     dispatchGarbageCollectedEvent(protocolTypeForHeapOperation(scope), m_gcStartTime, endTime);
 
     m_gcStartTime = Seconds::nan();
+}
+
+bool InspectorHeapAgent::heapSnapshotBuilderIgnoreNode(HeapSnapshotBuilder&, JSC::JSCell* cell)
+{
+    if (const Structure* structure = cell->structure()) {
+        if (JSGlobalObject* globalObject = structure->globalObject()) {
+            if (!m_environment.canAccessInspectedScriptState(globalObject))
+                return true;
+        }
+    }
+    return false;
 }
 
 void InspectorHeapAgent::clearHeapSnapshots()

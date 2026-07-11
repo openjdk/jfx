@@ -53,7 +53,7 @@ enum class AccessType : int8_t;
 enum class CacheType : int8_t;
 enum class JITType : uint8_t;
 
-using CompileTimeStructureStubInfo = std::variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
+using CompileTimeStructureStubInfo = Variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
 
 class JITInlineCacheGenerator {
 protected:

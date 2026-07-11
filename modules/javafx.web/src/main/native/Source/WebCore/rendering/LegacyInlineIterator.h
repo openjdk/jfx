@@ -26,6 +26,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
 #include "RenderInline.h"
+#include "RenderListMarker.h"
 #include "RenderText.h"
 #include "UnicodeBidi.h"
 #include <wtf/StdLibExtras.h>
@@ -101,14 +102,14 @@ public:
     inline bool atTextParagraphSeparator() const;
     inline bool atParagraphSeparator() const;
 
-    UChar current() const;
-    UChar previousInSameNode() const;
+    char16_t current() const;
+    char16_t previousInSameNode() const;
     ALWAYS_INLINE UCharDirection direction() const;
 
 private:
-    UChar characterAt(unsigned) const;
+    char16_t characterAt(unsigned) const;
 
-    UCharDirection surrogateTextDirection(UChar currentCodeUnit) const;
+    UCharDirection surrogateTextDirection(char16_t currentCodeUnit) const;
 
     RenderElement* m_root { nullptr };
     RenderObject* m_renderer { nullptr };
@@ -142,7 +143,7 @@ static inline void notifyObserverEnteredObject(Observer* observer, RenderObject*
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    const RenderStyle& style = object->style();
+    auto& style = downcast<RenderInline>(*object).style();
     auto unicodeBidi = style.unicodeBidi();
     if (unicodeBidi == UnicodeBidi::Normal) {
         // http://dev.w3.org/csswg/css3-writing-modes/#unicode-bidi
@@ -169,7 +170,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    auto unicodeBidi = object->style().unicodeBidi();
+    auto unicodeBidi = downcast<RenderInline>(*object).style().unicodeBidi();
     if (unicodeBidi == UnicodeBidi::Normal)
         return; // Nothing to do for unicode-bidi: normal
     if (isIsolated(unicodeBidi)) {
@@ -185,7 +186,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
 static inline bool isIteratorTarget(RenderObject* object)
 {
     ASSERT(object); // The iterator will of course return 0, but its not an expected argument to this function.
-    return object->isRenderTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplacedOrAtomicInline();
+    return object->isRenderTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isBlockLevelReplacedOrAtomicInline();
 }
 
 template <class Observer>
@@ -330,7 +331,7 @@ inline bool LegacyInlineIterator::atEnd() const
     return !m_renderer;
 }
 
-inline UChar LegacyInlineIterator::characterAt(unsigned index) const
+inline char16_t LegacyInlineIterator::characterAt(unsigned index) const
 {
     auto* textRenderer = dynamicDowncast<RenderText>(m_renderer);
     if (!textRenderer)
@@ -338,30 +339,30 @@ inline UChar LegacyInlineIterator::characterAt(unsigned index) const
     return textRenderer->characterAt(index);
 }
 
-inline UChar LegacyInlineIterator::current() const
+inline char16_t LegacyInlineIterator::current() const
 {
     return characterAt(m_pos);
 }
 
-inline UChar LegacyInlineIterator::previousInSameNode() const
+inline char16_t LegacyInlineIterator::previousInSameNode() const
 {
     return characterAt(m_pos - 1);
 }
 
 ALWAYS_INLINE UCharDirection LegacyInlineIterator::direction() const
 {
-    if (UNLIKELY(!m_renderer))
+    if (!m_renderer) [[unlikely]]
         return U_OTHER_NEUTRAL;
 
-    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); LIKELY(textRenderer)) {
-        UChar codeUnit = textRenderer->characterAt(m_pos);
-        if (LIKELY(U16_IS_SINGLE(codeUnit)))
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); textRenderer) [[likely]] {
+        char16_t codeUnit = textRenderer->characterAt(m_pos);
+        if (U16_IS_SINGLE(codeUnit)) [[likely]]
             return u_charDirection(codeUnit);
         return surrogateTextDirection(codeUnit);
     }
 
-    if (m_renderer->isRenderListMarker())
-        return m_renderer->writingMode().isBidiLTR() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
+    if (CheckedPtr listMarkerRenderer = dynamicDowncast<RenderListMarker>(*m_renderer))
+        return listMarkerRenderer->writingMode().isBidiLTR() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
 
     return U_OTHER_NEUTRAL;
 }
@@ -374,7 +375,9 @@ inline void InlineBidiResolver::incrementInternal()
 
 static inline bool isIsolatedInline(RenderObject& object)
 {
-    return object.isRenderInline() && isIsolated(object.style().unicodeBidi());
+    if (CheckedPtr inlineBox = dynamicDowncast<RenderInline>(object))
+        return isIsolated(inlineBox->style().unicodeBidi());
+    return false;
 }
 
 static inline RenderObject* highestContainingIsolateWithinRoot(RenderObject& initialObject, RenderObject* root)

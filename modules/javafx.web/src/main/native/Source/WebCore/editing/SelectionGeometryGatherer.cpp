@@ -32,6 +32,7 @@
 #include "EditorClient.h"
 #include "ImageOverlayController.h"
 #include "LocalFrame.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ServicesOverlayController.h"
 #include <wtf/TZoneMallocInlines.h>

@@ -70,6 +70,7 @@ typedef struct {
     bool check_deallocation;
     uint8_t small_segregated_min_align_shift;
     uint8_t small_segregated_sharing_shift;
+    uint8_t small_segregated_partial_view_padding;
     size_t small_segregated_page_size;
     double small_segregated_wasteage_handicap;
     pas_segregated_deallocation_logging_mode small_exclusive_segregated_logging_mode;
@@ -86,6 +87,7 @@ typedef struct {
     bool use_medium_segregated;
     uint8_t medium_segregated_min_align_shift;
     uint8_t medium_segregated_sharing_shift;
+    uint8_t medium_segregated_partial_view_padding;
     double medium_segregated_wasteage_handicap;
     pas_segregated_deallocation_logging_mode medium_exclusive_segregated_logging_mode;
     pas_segregated_deallocation_logging_mode medium_shared_segregated_logging_mode;
@@ -127,6 +129,8 @@ typedef struct {
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).small_segregated_wasteage_handicap, \
         .sharing_shift = \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).small_segregated_sharing_shift, \
+        .partial_view_padding = \
+            ((pas_basic_heap_config_arguments){__VA_ARGS__}).small_segregated_partial_view_padding, \
         .num_alloc_bits = PAS_BASIC_SEGREGATED_NUM_ALLOC_BITS( \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).small_segregated_min_align_shift, \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).small_segregated_page_size), \
@@ -193,6 +197,8 @@ typedef struct {
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_segregated_wasteage_handicap, \
         .sharing_shift = \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_segregated_sharing_shift, \
+        .partial_view_padding = \
+            ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_segregated_partial_view_padding, \
         .num_alloc_bits = PAS_BASIC_SEGREGATED_NUM_ALLOC_BITS( \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_segregated_min_align_shift, \
             ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_page_size), \
@@ -273,9 +279,10 @@ typedef struct {
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_page_size, \
             .granule_size = \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).granule_size, \
-            .max_object_size = PAS_MAX_BITFIT_OBJECT_SIZE( \
+            .max_object_size = PAS_MAX_BITFIT_OBJECT_SIZE_WITH_MAX_BITS( \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_page_size, \
-                ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_bitfit_min_align_shift), \
+                ((pas_basic_heap_config_arguments){__VA_ARGS__}).medium_bitfit_min_align_shift, \
+                PAS_BITFIT_MAX_FREE_MAX_VALID_MEDIUM), \
             .page_header_for_boundary = name ## _medium_bitfit_page_header_for_boundary, \
             .boundary_for_page_header = name ## _medium_bitfit_boundary_for_page_header, \
             .page_header_for_boundary_remote = name ## _medium_bitfit_page_header_for_boundary_remote, \

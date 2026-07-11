@@ -26,8 +26,11 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#include <wtf/Platform.h>
 
+#if ENABLE(ASSEMBLER)
+
+#include "LinkBuffer.h"
 #include <stdio.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
@@ -41,8 +44,7 @@ class PerfLog {
     WTF_MAKE_NONCOPYABLE(PerfLog);
     friend class LazyNeverDestroyed<PerfLog>;
 public:
-    static void log(CString&&, const uint8_t* executableAddress, size_t);
-    static void flush();
+    static void log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag>);
 
 private:
     PerfLog();
@@ -60,4 +62,4 @@ private:
 
 } // namespace JSC
 
-#endif  // ENABLE(ASSEMBLER) && (OS(LINUX) || OS(DARWIN))
+#endif // ENABLE(ASSEMBLER)

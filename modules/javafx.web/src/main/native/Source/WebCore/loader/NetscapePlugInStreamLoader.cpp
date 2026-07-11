@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -115,7 +115,7 @@ void NetscapePlugInStreamLoader::willSendRequest(ResourceRequest&& request, cons
     });
 }
 
-void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& response, CompletionHandler<void()>&& policyCompletionHandler)
+void NetscapePlugInStreamLoader::didReceiveResponse(ResourceResponse&& response, CompletionHandler<void()>&& policyCompletionHandler)
 {
     Ref<NetscapePlugInStreamLoader> protectedThis(*this);
     CompletionHandlerCallingScope completionHandlerCaller(WTFMove(policyCompletionHandler));
@@ -127,7 +127,8 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
     if (!m_client)
         return;
 
-    ResourceLoader::didReceiveResponse(response, [this, protectedThis = WTFMove(protectedThis), response, completionHandlerCaller = WTFMove(completionHandlerCaller)]() mutable {
+    ResourceResponse responseForClosure = response;
+    ResourceLoader::didReceiveResponse(WTFMove(response), [this, protectedThis = WTFMove(protectedThis), response = WTFMove(responseForClosure), completionHandlerCaller = WTFMove(completionHandlerCaller)]() mutable {
         // Don't continue if the stream is cancelled
         if (!m_client)
             return;
@@ -192,7 +193,8 @@ void NetscapePlugInStreamLoader::notifyDone()
     if (!m_isInitialized)
         return;
 
-    protectedDocumentLoader()->removePlugInStreamLoader(*this);
+    if (RefPtr documentLoader = this->documentLoader())
+        documentLoader->removePlugInStreamLoader(*this);
 }
 
 

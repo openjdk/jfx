@@ -44,6 +44,8 @@ enum class PixelFormat : uint8_t {
 #endif
 };
 
+enum class UseLosslessCompression : bool { No, Yes };
+
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, PixelFormat);
 
 }

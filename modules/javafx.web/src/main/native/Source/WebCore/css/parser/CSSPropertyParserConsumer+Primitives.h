@@ -27,7 +27,6 @@
 namespace WebCore {
 
 class CSSParserTokenRange;
-struct CSSPropertyParserOptions;
 
 namespace CSSPropertyParserHelpers {
 

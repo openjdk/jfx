@@ -191,7 +191,7 @@ protected:
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, String::number(m_parser->offset() + m_offsetInSource), ": "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
-        if (UNLIKELY(condition))                  \
+        if (condition) [[unlikely]]                  \
             return fail(__VA_ARGS__);             \
     } while (0)
 
@@ -313,7 +313,7 @@ public:
             result = arrayNew(m_instance, typeIndex, size, value.getVector());
         else
             result = arrayNew(m_instance, typeIndex, size, value.getValue());
-        if (UNLIKELY(result.isNull()))
+        if (result.isNull()) [[unlikely]]
             return ConstExprValue(InvalidConstExpr);
         return ConstExprValue(Strong<JSObject>(vm, asObject(result)));
     }
@@ -355,13 +355,13 @@ public:
                 WASM_PARSER_FAIL_IF(result.isInvalid(), "Failed to allocate new array"_s);
                 JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(JSValue::decode(result.getValue()));
                 for (size_t i = 0; i < args.size(); i++)
-                    arrayObject->set(i, args[i].getVector());
+                    arrayObject->set(arrayObject->vm(), i, args[i].getVector());
             } else {
                 result = createNewArray(typeIndex, args.size(), { });
                 WASM_PARSER_FAIL_IF(result.isInvalid(), "Failed to allocate new array"_s);
                 JSWebAssemblyArray* arrayObject = jsCast<JSWebAssemblyArray*>(JSValue::decode(result.getValue()));
                 for (size_t i = 0; i < args.size(); i++)
-                    arrayObject->set(i, args[i].getValue());
+                    arrayObject->set(arrayObject->vm(), i, args[i].getValue());
             }
         }
 
@@ -382,7 +382,7 @@ public:
     {
         VM& vm = m_instance->vm();
         EncodedJSValue obj = structNew(m_instance, typeIndex, static_cast<bool>(UseDefaultValue::Yes), nullptr);
-        if (UNLIKELY(!obj))
+        if (!obj) [[unlikely]]
             return ConstExprValue(InvalidConstExpr);
         return ConstExprValue(Strong<JSObject>(vm, JSValue::decode(obj).getObject()));
     }
@@ -692,15 +692,15 @@ public:
     PartialResult WARN_UNUSED_RETURN addSIMDStoreLane(SIMDLaneOperation, ExpressionType, ExpressionType, uint32_t, uint8_t) CONST_EXPR_STUB
     PartialResult WARN_UNUSED_RETURN addSIMDLoadExtend(SIMDLaneOperation, ExpressionType, uint32_t, ExpressionType&) CONST_EXPR_STUB
     PartialResult WARN_UNUSED_RETURN addSIMDLoadPad(SIMDLaneOperation, ExpressionType, uint32_t, ExpressionType&) CONST_EXPR_STUB
-    ExpressionType WARN_UNUSED_RETURN addConstant(v128_t vector)
+    ExpressionType WARN_UNUSED_RETURN addSIMDConstant(v128_t vector)
     {
         RELEASE_ASSERT(Options::useWasmSIMD());
         if (m_mode == Mode::Evaluate)
             return ConstExprValue(vector);
         return { };
     }
-    PartialResult WARN_UNUSED_RETURN addExtractLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType&) CONST_EXPR_STUB
-    PartialResult WARN_UNUSED_RETURN addReplaceLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType, ExpressionType&) CONST_EXPR_STUB
+    PartialResult WARN_UNUSED_RETURN addSIMDExtractLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType&) CONST_EXPR_STUB
+    PartialResult WARN_UNUSED_RETURN addSIMDReplaceLane(SIMDInfo, uint8_t, ExpressionType, ExpressionType, ExpressionType&) CONST_EXPR_STUB
     PartialResult WARN_UNUSED_RETURN addSIMDI_V(SIMDLaneOperation, SIMDInfo, ExpressionType, ExpressionType&) CONST_EXPR_STUB
     PartialResult WARN_UNUSED_RETURN addSIMDV_V(SIMDLaneOperation, SIMDInfo, ExpressionType, ExpressionType&) CONST_EXPR_STUB
     PartialResult WARN_UNUSED_RETURN addSIMDBitwiseSelect(ExpressionType, ExpressionType, ExpressionType, ExpressionType&) CONST_EXPR_STUB

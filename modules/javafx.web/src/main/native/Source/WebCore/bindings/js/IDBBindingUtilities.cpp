@@ -348,7 +348,7 @@ bool injectIDBKeyIntoScriptValue(JSGlobalObject& lexicalGlobalObject, const IDBK
 
     // Do not set if object already has the correct property value.
     JSValue existingKey;
-    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && !key->compare(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
+    if (get(lexicalGlobalObject, parent, keyPathElements.last(), existingKey) && key->isEqual(createIDBKeyFromValue(lexicalGlobalObject, existingKey)))
         return true;
     if (!set(lexicalGlobalObject.vm(), parent, keyPathElements.last(), toJS(lexicalGlobalObject, lexicalGlobalObject, key.get())))
         return false;
@@ -472,7 +472,7 @@ static IndexKey::Data createKeyPathArray(JSGlobalObject& lexicalGlobalObject, JS
         return keys;
     });
 
-    return std::visit(visitor, info.keyPath());
+    return WTF::visit(visitor, info.keyPath());
 }
 
 static void generateIndexKeyForValueWithoutLock(JSGlobalObject& lexicalGlobalObject, const IDBIndexInfo& info, JSValue value, IndexKey& outKey, const std::optional<IDBKeyPath>& objectStoreKeyPath, const IDBKeyData& objectStoreKey)
@@ -538,14 +538,14 @@ class IDBSerializationContext {
 public:
     IDBSerializationContext()
 #if ASSERT_ENABLED
-        : m_threadUID(Thread::current().uid())
+        : m_threadUID(Thread::currentSingleton().uid())
 #endif
     {
     }
 
     ~IDBSerializationContext()
     {
-        ASSERT(m_threadUID == Thread::current().uid());
+        ASSERT(m_threadUID == Thread::currentSingleton().uid());
         if (!m_vm)
             return;
 
@@ -556,7 +556,7 @@ public:
 
     JSC::JSGlobalObject& globalObject()
     {
-        ASSERT(m_threadUID == Thread::current().uid());
+        ASSERT(m_threadUID == Thread::currentSingleton().uid());
 
         initializeVM();
         return *m_globalObject.get();

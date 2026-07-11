@@ -163,7 +163,7 @@ public:
     const Vector<PreciseAllocation*>& preciseAllocations() const { return m_preciseAllocations; }
     unsigned preciseAllocationsNurseryOffset() const { return m_preciseAllocationsNurseryOffset; }
     unsigned preciseAllocationsOffsetForThisCollection() const { return m_preciseAllocationsOffsetForThisCollection; }
-    UncheckedKeyHashSet<HeapCell*>* preciseAllocationSet() const { return m_preciseAllocationSet.get(); }
+    std::optional<UncheckedKeyHashSet<HeapCell*>>& preciseAllocationSet() { return m_preciseAllocationSet; }
 
     void enablePreciseAllocationTracking();
 
@@ -207,7 +207,7 @@ private:
 
     Vector<Subspace*> m_subspaces;
 
-    std::unique_ptr<UncheckedKeyHashSet<HeapCell*>> m_preciseAllocationSet;
+    std::optional<UncheckedKeyHashSet<HeapCell*>> m_preciseAllocationSet;
     Vector<PreciseAllocation*> m_preciseAllocations;
     unsigned m_preciseAllocationsNurseryOffset { 0 };
     unsigned m_preciseAllocationsOffsetForThisCollection { 0 };

@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -60,7 +60,7 @@ static Style::Scope& styleScopeFor(ContainerNode& treeScope)
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleSheetCSSRuleList);
 class StyleSheetCSSRuleList final : public CSSRuleList {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleSheetCSSRuleList);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleSheetCSSRuleList, StyleSheetCSSRuleList);
 public:
     StyleSheetCSSRuleList(CSSStyleSheet* sheet) : m_styleSheet(sheet) { }
 
@@ -71,9 +71,9 @@ private:
     unsigned length() const final { return m_styleSheet->length(); }
     CSSRule* item(unsigned index) const final { return m_styleSheet->item(index); }
 
-    CSSStyleSheet* styleSheet() const final { return m_styleSheet; }
+    CSSStyleSheet* styleSheet() const final { return m_styleSheet.get(); }
 
-    CSSStyleSheet* m_styleSheet;
+    SingleThreadWeakPtr<CSSStyleSheet> m_styleSheet;
 };
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleSheetCSSRuleList);
 
@@ -159,7 +159,7 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Document& docum
         if (auto queries = mediaList->mediaQueries(); !queries.isEmpty())
             setMediaQueries(WTFMove(queries));
     }, [this](String&& mediaString) {
-        setMediaQueries(MQ::MediaQueryParser::parse(mediaString, { }));
+        setMediaQueries(MQ::MediaQueryParser::parse(mediaString, strictCSSParserContext()));
     });
 }
 
@@ -170,7 +170,7 @@ CSSStyleSheet::~CSSStyleSheet()
     // it's not ideal because it makes the CSSOM's behavior depend on the timing of garbage collection.
     for (unsigned i = 0; i < m_childRuleCSSOMWrappers.size(); ++i) {
         if (m_childRuleCSSOMWrappers[i])
-            m_childRuleCSSOMWrappers[i]->setParentStyleSheet(0);
+            m_childRuleCSSOMWrappers[i]->setParentStyleSheet(nullptr);
     }
     if (m_mediaCSSOMWrapper)
         m_mediaCSSOMWrapper->detachFromParent();
@@ -357,7 +357,7 @@ ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsign
 
     if (index > length())
         return Exception { ExceptionCode::IndexSizeError };
-    RefPtr<StyleRuleBase> rule = CSSParser::parseRule(m_contents.get().parserContext(), m_contents.ptr(), ruleString);
+    RefPtr rule = CSSParser::parseRule(ruleString, m_contents.get().parserContext(), m_contents.ptr(), CSSParser::AllowedRules::ImportRules);
 
     if (!rule)
         return Exception { ExceptionCode::SyntaxError };
@@ -367,9 +367,14 @@ ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsign
 
     RuleMutationScope mutationScope(this, RuleInsertion, dynamicDowncast<StyleRuleKeyframes>(*rule));
 
+    bool isNamespace = rule->isNamespaceRule();
     bool success = m_contents.get().wrapperInsertRule(rule.releaseNonNull(), index);
-    if (!success)
+    if (!success) {
+        if (isNamespace)
+            return Exception { ExceptionCode::InvalidStateError };
         return Exception { ExceptionCode::HierarchyRequestError };
+    }
+
     if (!m_childRuleCSSOMWrappers.isEmpty())
         m_childRuleCSSOMWrappers.insert(index, RefPtr<CSSRule>());
 
@@ -395,7 +400,7 @@ ExceptionOr<void> CSSStyleSheet::deleteRule(unsigned index)
     if (!m_childRuleCSSOMWrappers.isEmpty()) {
         if (m_childRuleCSSOMWrappers[index])
             m_childRuleCSSOMWrappers[index]->setParentStyleSheet(nullptr);
-        m_childRuleCSSOMWrappers.remove(index);
+        m_childRuleCSSOMWrappers.removeAt(index);
     }
 
     return { };
@@ -593,7 +598,7 @@ Ref<StyleSheetContents> CSSStyleSheet::protectedContents()
     return m_contents;
 }
 
-void CSSStyleSheet::getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+void CSSStyleSheet::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
 {
     RefPtr ruleList = cssRules();
     if (!ruleList)
@@ -630,8 +635,10 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
 
 CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
 {
-    if (m_styleSheet)
+    if (m_styleSheet) {
         m_styleSheet->didMutateRules(m_mutationType, m_contentsClonedForMutation, m_insertedKeyframesRule.get(), m_modifiedKeyframesRuleName);
+        m_styleSheet->contents().clearHasNestingRulesCache();
+    }
 }
 
 }

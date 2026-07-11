@@ -78,6 +78,7 @@ class RenderObject;
 class RevalidateStyleAttributeTask;
 class ShadowRoot;
 
+enum class ExceptionCode : uint8_t;
 enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;
@@ -107,7 +108,7 @@ public:
     static JSC::JSValue nodeAsScriptValue(JSC::JSGlobalObject&, Node*);
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // DOMBackendDispatcherHandler
@@ -115,6 +116,8 @@ public:
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> querySelectorAll(Inspector::Protocol::DOM::NodeId, const String& selector);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Node>> getDocument();
     Inspector::Protocol::ErrorStringOr<void> requestChildNodes(Inspector::Protocol::DOM::NodeId, std::optional<int>&& depth);
+    Inspector::CommandResult<std::optional<Inspector::Protocol::DOM::NodeId>> requestAssignedSlot(Inspector::Protocol::DOM::NodeId);
+    Inspector::CommandResult<Ref<JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>>> requestAssignedNodes(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<void> setAttributeValue(Inspector::Protocol::DOM::NodeId, const String& name, const String& value);
     Inspector::Protocol::ErrorStringOr<void> setAttributesAsText(Inspector::Protocol::DOM::NodeId, const String& text, const String& name);
     Inspector::Protocol::ErrorStringOr<void> removeAttribute(Inspector::Protocol::DOM::NodeId, const String& name);
@@ -275,8 +278,8 @@ private:
     Ref<InspectorOverlay> protectedOverlay() const;
 
     Inspector::InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::DOMBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::DOMFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::DOMBackendDispatcher> m_backendDispatcher;
     WeakRef<Page> m_inspectedPage;
     WeakRef<InspectorOverlay> m_overlay;
     WeakHashMap<Node, Inspector::Protocol::DOM::NodeId, WeakPtrImplWithEventTargetData> m_nodeToId;

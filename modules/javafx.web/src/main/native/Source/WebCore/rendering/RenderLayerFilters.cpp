@@ -34,9 +34,11 @@
 #include "CSSFilter.h"
 #include "CachedSVGDocument.h"
 #include "CachedSVGDocumentReference.h"
+#include "ContainerNodeInlines.h"
 #include "GraphicsContextSwitcher.h"
 #include "LegacyRenderSVGResourceFilter.h"
 #include "Logging.h"
+#include "ReferenceFilterOperation.h"
 #include "RenderSVGShape.h"
 #include "RenderStyleInlines.h"
 #include <wtf/NeverDestroyed.h>
@@ -75,9 +77,9 @@ void RenderLayerFilters::notifyFinished(CachedResource&, const NetworkLoadMetric
 {
     // FIXME: This really shouldn't have to invalidate layer composition,
     // but tests like css3/filters/effect-reference-delete.html fail if that doesn't happen.
-    if (auto* enclosingElement = m_layer.enclosingElement())
+    if (auto* enclosingElement = m_layer->enclosingElement())
         enclosingElement->invalidateStyleAndLayerComposition();
-    m_layer.renderer().repaint();
+    m_layer->renderer().repaint();
 }
 
 void RenderLayerFilters::updateReferenceFilterClients(const FilterOperations& operations)
@@ -85,7 +87,7 @@ void RenderLayerFilters::updateReferenceFilterClients(const FilterOperations& op
     removeReferenceFilterClients();
 
     for (auto& operation : operations) {
-        RefPtr referenceOperation = dynamicDowncast<ReferenceFilterOperation>(operation);
+        RefPtr referenceOperation = dynamicDowncast<Style::ReferenceFilterOperation>(operation);
         if (!referenceOperation)
             continue;
 
@@ -96,7 +98,7 @@ void RenderLayerFilters::updateReferenceFilterClients(const FilterOperations& op
             m_externalSVGReferences.append(cachedSVGDocument);
         } else {
             // Reference is internal; add layer as a client so we can trigger filter repaint on SVG attribute change.
-            RefPtr filterElement = m_layer.renderer().document().getElementById(referenceOperation->fragment());
+            RefPtr filterElement = m_layer->renderer().document().getElementById(referenceOperation->fragment());
             if (!filterElement)
                 continue;
             CheckedPtr renderer = dynamicDowncast<LegacyRenderSVGResourceFilter>(filterElement->renderer());
@@ -116,7 +118,7 @@ void RenderLayerFilters::removeReferenceFilterClients()
     m_externalSVGReferences.clear();
 
     for (auto& filterElement : m_internalSVGReferences) {
-        if (auto* renderer = filterElement->renderer())
+        if (CheckedPtr renderer = filterElement->renderer())
             downcast<LegacyRenderSVGResourceContainer>(*renderer).removeClientRenderLayer(m_layer);
     }
     m_internalSVGReferences.clear();
@@ -168,10 +170,10 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
     if (!m_filter)
         return nullptr;
 
-    auto& filter = *m_filter;
+    Ref filter = *m_filter;
     auto filterRegion = m_targetBoundingBox;
 
-    if (filter.hasFilterThatMovesPixels()) {
+    if (filter->hasFilterThatMovesPixels()) {
     // For CSSFilter, filterRegion = targetBoundingBox + filter->outsets()
         filterRegion.expand(toLayoutBoxExtent(outsets));
     } else if (auto* shape = dynamicDowncast<RenderSVGShape>(renderer))
@@ -187,9 +189,9 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
         hasUpdatedBackingStore = true;
     }
 
-    filter.setFilterRegion(m_filterRegion);
+    filter->setFilterRegion(m_filterRegion);
 
-    if (!filter.hasFilterThatMovesPixels())
+    if (!filter->hasFilterThatMovesPixels())
         m_repaintRect = dirtyRect;
     else if (hasUpdatedBackingStore || !hasSourceImage())
             m_repaintRect = filterRegion;
@@ -207,7 +209,7 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
             sourceImageRect = renderer.strokeBoundingBox();
         else
             sourceImageRect = m_targetBoundingBox;
-        m_targetSwitcher = GraphicsContextSwitcher::create(context, sourceImageRect, DestinationColorSpace::SRGB(), { &filter });
+        m_targetSwitcher = GraphicsContextSwitcher::create(context, sourceImageRect, DestinationColorSpace::SRGB(), { WTFMove(filter) });
     }
 
     if (!m_targetSwitcher)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2018 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,7 +63,7 @@ static const unsigned minumumBytesPerHeartbeatForProgress = 1024;
 static const Seconds progressNotificationTimeInterval { 200_ms };
 
 struct ProgressItem {
-    WTF_MAKE_NONCOPYABLE(ProgressItem); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(ProgressItem); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ProgressItem, Loader);
 public:
     explicit ProgressItem(long long length)
         : bytesReceived(0)
@@ -111,18 +111,18 @@ Ref<Page> ProgressTracker::protectedPage() const
 
 void ProgressTracker::progressStarted(LocalFrame& frame)
 {
-    LOG(Progress, "Progress started (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
+    LOG(Progress, "Progress started (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
 
     m_client->willChangeEstimatedProgress();
 
     if (!m_numProgressTrackedFrames || m_originatingProgressFrame == &frame) {
         reset();
         m_progressValue = initialProgressValue;
-        m_originatingProgressFrame = &frame;
+        m_originatingProgressFrame = frame;
 
         m_progressHeartbeatTimer.startRepeating(progressHeartbeatInterval);
         RefPtr originatingProgressFrame = m_originatingProgressFrame.get();
-        originatingProgressFrame->protectedLoader()->loadProgressingStatusChanged();
+        originatingProgressFrame->loader().loadProgressingStatusChanged();
 
         bool isMainFrame = !originatingProgressFrame->tree().parent();
         auto elapsedTimeSinceMainLoadComplete = MonotonicTime::now() - m_mainLoadCompletionTime;
@@ -136,7 +136,7 @@ void ProgressTracker::progressStarted(LocalFrame& frame)
     m_numProgressTrackedFrames++;
 
     RefPtr originatingProgressFrame = m_originatingProgressFrame.get();
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSSTARTED, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().object().toUInt64() : 0, m_isMainLoad);
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSSTARTED, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().toUInt64() : 0, m_isMainLoad);
 
     m_client->didChangeEstimatedProgress();
     InspectorInstrumentation::frameStartedLoading(frame);
@@ -151,8 +151,8 @@ void ProgressTracker::progressEstimateChanged(LocalFrame& frame)
 void ProgressTracker::progressCompleted(LocalFrame& frame)
 {
     RefPtr originatingProgressFrame = m_originatingProgressFrame.get();
-    LOG(Progress, "Progress completed (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame.get());
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSCOMPLETED, frame.frameID().object().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().object().toUInt64() : 0, m_isMainLoad);
+    LOG(Progress, "Progress completed (%p) - frame %p(frameID %" PRIu64 "), value %f, tracked frames %d, originating frame %p", this, &frame, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame.get());
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_PROGRESSCOMPLETED, frame.frameID().toUInt64(), m_progressValue, m_numProgressTrackedFrames, originatingProgressFrame ? originatingProgressFrame->frameID().toUInt64() : 0, m_isMainLoad);
 
     if (m_numProgressTrackedFrames <= 0)
         return;
@@ -170,11 +170,11 @@ void ProgressTracker::finalProgressComplete()
 {
     RefPtr frame = std::exchange(m_originatingProgressFrame, nullptr).get();
     LOG(Progress, "Final progress complete (%p)", this);
-    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_FINALPROGRESSCOMPLETE, m_progressValue, m_numProgressTrackedFrames, frame ? frame->frameID().object().toUInt64() : 0, m_isMainLoad, isMainLoadProgressing());
+    PROGRESS_TRACKER_RELEASE_LOG(PROGRESSTRACKER_FINALPROGRESSCOMPLETE, m_progressValue, m_numProgressTrackedFrames, frame ? frame->frameID().toUInt64() : 0, m_isMainLoad, isMainLoadProgressing());
 
     // Before resetting progress value be sure to send client a least one notification
     // with final progress value.
-    if (!m_finalProgressChangedSent) {
+    if (frame && !m_finalProgressChangedSent) {
         m_progressValue = 1;
         progressEstimateChanged(*frame);
     }
@@ -185,10 +185,10 @@ void ProgressTracker::finalProgressComplete()
         m_mainLoadCompletionTime = MonotonicTime::now();
 
     if (frame) {
-        frame->protectedLoader()->protectedClient()->setMainFrameDocumentReady(true);
+        frame->loader().protectedClient()->setMainFrameDocumentReady(true);
     m_client->progressFinished(*frame);
     protectedPage()->progressFinished(*frame);
-        frame->protectedLoader()->loadProgressingStatusChanged();
+        frame->loader().loadProgressingStatusChanged();
 
     InspectorInstrumentation::frameStoppedLoading(*frame);
     }
@@ -240,7 +240,7 @@ void ProgressTracker::incrementProgress(ResourceLoaderIdentifier identifier, uns
         item->estimatedLength = item->bytesReceived * 2;
     }
 
-    int numPendingOrLoadingRequests = frame->protectedLoader()->numPendingOrLoadingRequests(true);
+    int numPendingOrLoadingRequests = frame->loader().numPendingOrLoadingRequests(true);
     estimatedBytesForPendingRequests = static_cast<long long>(progressItemDefaultEstimatedLength) * numPendingOrLoadingRequests;
     remainingBytes = ((m_totalPageAndResourceBytesToLoad + estimatedBytesForPendingRequests) - m_totalBytesReceived);
     if (remainingBytes > 0)  // Prevent divide by 0.
@@ -250,7 +250,7 @@ void ProgressTracker::incrementProgress(ResourceLoaderIdentifier identifier, uns
 
     // For documents that use WebCore's layout system, treat first layout as the half-way point.
     // FIXME: The hasHTMLView function is a sort of roundabout way of asking "do you use WebCore's layout system".
-    bool useClampedMaxProgress = frame->protectedLoader()->protectedClient()->hasHTMLView()
+    bool useClampedMaxProgress = frame->loader().protectedClient()->hasHTMLView()
         && !frame->loader().stateMachine().firstLayoutDone();
     double maxProgressValue = useClampedMaxProgress ? 0.5 : finalProgressValue;
     increment = (maxProgressValue - m_progressValue) * percentOfRemainingBytes;
@@ -317,7 +317,7 @@ void ProgressTracker::progressHeartbeatTimerFired()
     m_totalBytesReceivedBeforePreviousHeartbeat = m_totalBytesReceived;
 
     if (RefPtr originatingProgressFrame = m_originatingProgressFrame.get())
-        originatingProgressFrame->protectedLoader()->loadProgressingStatusChanged();
+        originatingProgressFrame->loader().loadProgressingStatusChanged();
 
     if (m_progressValue >= finalProgressValue)
         m_progressHeartbeatTimer.stop();

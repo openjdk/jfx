@@ -288,9 +288,20 @@ struct PathContinuousRoundedRect {
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const PathContinuousRoundedRect&);
 
 struct PathDataLine {
-    FloatPoint start;
-    FloatPoint end;
+    PathDataLine(FloatPoint start, FloatPoint end)
+        : m_values { { start.x(), start.y(), end.x(), end.y() } }
+    {
+    }
+    PathDataLine(std::span<const float, 4> values)
+        : m_values { values[0], values[1], values[2], values[3] }
+    {
+    }
 
+    FloatPoint start() const { return { m_values[0], m_values[1] }; }
+    void setStart(FloatPoint p) { m_values[0] = p.x(); m_values[1] = p.y(); }
+    FloatPoint end() const { return { m_values[2], m_values[3] }; }
+    void setEnd(FloatPoint p) { m_values[2] = p.x(); m_values[3] = p.y(); }
+    std::span<const float, 4> span() const LIFETIME_BOUND { return m_values; }
     static constexpr bool canApplyElements = true;
     static constexpr bool canTransform = true;
 
@@ -305,6 +316,8 @@ struct PathDataLine {
     void applyElements(const PathElementApplier&) const;
 
     void transform(const AffineTransform&);
+private:
+    std::array<float, 4> m_values { };
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const PathDataLine&);

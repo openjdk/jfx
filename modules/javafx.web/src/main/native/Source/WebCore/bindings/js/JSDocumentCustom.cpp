@@ -56,7 +56,7 @@ JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobal
     if (auto* wrapper = getCachedWrapper(globalObject.world(), document))
         return wrapper;
 
-    RefPtr window = document.domWindow();
+    RefPtr window = document.window();
     if (!window)
         return nullptr;
 
@@ -102,11 +102,11 @@ void setAdoptedStyleSheetsOnTreeScope(TreeScope& treeScope, JSC::JSGlobalObject&
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     auto nativeValue = convert<IDLFrozenArray<IDLInterface<CSSStyleSheet>>>(lexicalGlobalObject, value);
-    if (UNLIKELY(nativeValue.hasException(throwScope)))
+    if (nativeValue.hasException(throwScope)) [[unlikely]]
         return;
 
     auto result = treeScope.setAdoptedStyleSheets(nativeValue.releaseReturnValue());
-    if (UNLIKELY(result.hasException()))
+    if (result.hasException()) [[unlikely]]
         propagateException(lexicalGlobalObject, throwScope, result.releaseException());
 }
 

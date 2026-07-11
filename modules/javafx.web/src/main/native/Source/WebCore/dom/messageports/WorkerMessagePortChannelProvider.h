@@ -43,7 +43,7 @@ public:
     ~WorkerMessagePortChannelProvider();
 
 private:
-    void createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
+    void createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote, bool siteIsolationEnabled) final;
     void entangleLocalPortInThisProcessToRemote(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
     void messagePortDisentangled(const MessagePortIdentifier& local) final;
     void messagePortClosed(const MessagePortIdentifier& local) final;
@@ -53,7 +53,7 @@ private:
     WeakRef<WorkerOrWorkletGlobalScope> m_scope;
 
     uint64_t m_lastCallbackIdentifier { 0 };
-    UncheckedKeyHashMap<uint64_t, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>> m_takeAllMessagesCallbacks;
+    HashMap<uint64_t, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>> m_takeAllMessagesCallbacks;
 };
 
 } // namespace WebCore

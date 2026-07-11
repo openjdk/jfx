@@ -26,9 +26,11 @@
 #pragma once
 
 #include "Color.h"
+#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "SVGAngleValue.h"
 #include "SVGAnimationAdditiveValueFunction.h"
+#include "SVGElement.h"
 #include "SVGLengthContext.h"
 #include "SVGLengthValue.h"
 #include "SVGPathByteStream.h"

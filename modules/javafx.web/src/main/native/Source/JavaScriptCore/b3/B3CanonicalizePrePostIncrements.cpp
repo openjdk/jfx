@@ -89,7 +89,7 @@ bool canonicalizePrePostIncrements(Procedure& proc)
                     // Double check the base and offset.
                     Value* addressBase = address->child(0);
                     MemoryValue::OffsetType addressOffset = static_cast<Value::OffsetType>(address->child(1)->asIntPtr());
-                    if (UNLIKELY(base != addressBase || offset != addressOffset))
+                    if (base != addressBase || offset != addressOffset) [[unlikely]]
                         continue;
                     // Skip the address if it's used before the memory.
                     auto uses = addressUses.find(address);

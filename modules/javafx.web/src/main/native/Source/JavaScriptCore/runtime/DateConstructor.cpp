@@ -107,7 +107,7 @@ static inline double makeDay(double year, double month, double date)
         return days + date - 1;
 }
 
-static double millisecondsFromComponents(JSGlobalObject* globalObject, const ArgList& args, WTF::TimeType timeType)
+static double millisecondsFromComponents(JSGlobalObject* globalObject, const ArgList& args, TimeType timeType)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -165,7 +165,7 @@ JSObject* constructDate(JSGlobalObject* globalObject, JSValue newTarget, const A
             }
         }
     } else {
-        value = millisecondsFromComponents(globalObject, args, WTF::LocalTime);
+        value = millisecondsFromComponents(globalObject, args, TimeType::LocalTime);
         RETURN_IF_EXCEPTION(scope, nullptr);
     }
 
@@ -191,7 +191,7 @@ JSC_DEFINE_HOST_FUNCTION(callDate, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     GregorianDateTime ts;
-    vm.dateCache.msToGregorianDateTime(WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
+    vm.dateCache.msToGregorianDateTime(WallTime::now().secondsSinceEpoch().milliseconds(), TimeType::LocalTime, ts);
     return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false, vm.dateCache)));
 }
 
@@ -216,7 +216,7 @@ JSC_DEFINE_HOST_FUNCTION(dateNow, (JSGlobalObject*, CallFrame*))
 
 JSC_DEFINE_HOST_FUNCTION(dateUTC, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    double ms = millisecondsFromComponents(globalObject, ArgList(callFrame), WTF::UTCTime);
+    double ms = millisecondsFromComponents(globalObject, ArgList(callFrame), TimeType::UTCTime);
     return JSValue::encode(jsNumber(ms));
 }
 

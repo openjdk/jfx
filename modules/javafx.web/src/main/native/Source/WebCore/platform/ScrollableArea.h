@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,6 @@
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "Scrollbar.h"
-#include "ScrollbarColor.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
@@ -58,8 +57,9 @@ class Element;
 
 enum class WheelScrollGestureState : uint8_t;
 
-struct ScrollbarColor;
+namespace Style {
 struct ScrollbarGutter;
+}
 
 inline int offsetForOrientation(ScrollOffset offset, ScrollbarOrientation orientation)
 {
@@ -157,7 +157,7 @@ public:
 
     WEBCORE_EXPORT virtual Color scrollbarThumbColorStyle() const;
     WEBCORE_EXPORT virtual Color scrollbarTrackColorStyle() const;
-    WEBCORE_EXPORT virtual ScrollbarGutter scrollbarGutterStyle() const;
+    WEBCORE_EXPORT virtual Style::ScrollbarGutter scrollbarGutterStyle() const;
     virtual ScrollbarWidth scrollbarWidthStyle() const { return ScrollbarWidth::Auto; }
 
     WEBCORE_EXPORT bool allowsHorizontalScrolling() const;
@@ -184,7 +184,7 @@ public:
     WEBCORE_EXPORT bool scrollbarsCanBeActive() const;
 
     WEBCORE_EXPORT virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
-    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
+    WEBCORE_EXPORT virtual void willRemoveScrollbar(Scrollbar&, ScrollbarOrientation);
 
     WEBCORE_EXPORT virtual void contentsResized();
 
@@ -428,6 +428,7 @@ public:
     virtual void updateScrollAnchoringElement() { }
     virtual void updateScrollPositionForScrollAnchoringController() { }
     virtual void invalidateScrollAnchoringElement() { }
+    virtual void updateAnchorPositionedAfterScroll() { }
     virtual std::optional<FrameIdentifier> rootFrameID() const { return std::nullopt; }
 
     WEBCORE_EXPORT void setScrollbarsController(std::unique_ptr<ScrollbarsController>&&);
@@ -435,6 +436,11 @@ public:
 
     virtual IntSize totalScrollbarSpace() const { return { }; }
     virtual int insetForLeftScrollbarSpace() const { return 0; }
+
+#if ENABLE(FORM_CONTROL_REFRESH)
+    virtual bool formControlRefreshEnabled() const { return false; }
+#endif
+    virtual void scrollDidEnd() { }
 
 protected:
     WEBCORE_EXPORT ScrollableArea();
@@ -455,6 +461,8 @@ protected:
     bool hasLayerForScrollCorner() const;
 
     WEBCORE_EXPORT LayoutRect getRectToExposeForScrollIntoView(const LayoutRect& visibleBounds, const LayoutRect& exposeRect, const ScrollAlignment& alignX, const ScrollAlignment& alignY, const std::optional<LayoutRect> = std::nullopt) const;
+    bool isAwaitingScrollend() const { return m_isAwaitingScrollend; }
+    void setIsAwaitingScrollend(bool isAwaitingScrollend) { m_isAwaitingScrollend = isAwaitingScrollend; }
 
 private:
     WEBCORE_EXPORT virtual IntRect visibleContentRectInternal(VisibleContentRectIncludesScrollbars, VisibleContentRectBehavior) const;
@@ -491,7 +499,7 @@ private:
     ScrollElasticity m_verticalScrollElasticity { ScrollElasticity::None };
     ScrollElasticity m_horizontalScrollElasticity { ScrollElasticity::None };
 
-    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::ScrollbarOverlayStyleDefault };
+    ScrollbarOverlayStyle m_scrollbarOverlayStyle { ScrollbarOverlayStyle::Default };
 
     ScrollType m_currentScrollType { ScrollType::User };
     ScrollAnimationStatus m_scrollAnimationStatus { ScrollAnimationStatus::NotAnimating };
@@ -499,6 +507,7 @@ private:
     bool m_inLiveResize { false };
     bool m_scrollOriginChanged { false };
     bool m_scrollShouldClearLatchedState { false };
+    bool m_isAwaitingScrollend { false };
 
     Markable<ScrollingNodeID> m_scrollingNodeIDForTesting;
 };

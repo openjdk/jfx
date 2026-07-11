@@ -88,7 +88,7 @@ JSC_DEFINE_HOST_FUNCTION(constructSet, (JSGlobalObject* globalObject, CallFrame*
         RETURN_IF_EXCEPTION(scope, { });
 
         adderFunctionCallData = JSC::getCallData(adderFunction);
-        if (UNLIKELY(adderFunctionCallData.type == CallData::Type::None))
+        if (adderFunctionCallData.type == CallData::Type::None) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "'add' property of a Set should be callable."_s);
     }
 

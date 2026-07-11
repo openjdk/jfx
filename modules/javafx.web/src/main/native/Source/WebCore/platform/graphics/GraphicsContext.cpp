@@ -28,7 +28,7 @@
 
 #include "BidiResolver.h"
 #include "DecomposedGlyphs.h"
-#include "DisplayListReplayer.h"
+#include "DisplayList.h"
 #include "Filter.h"
 #include "FilterImage.h"
 #include "FloatRoundedRect.h"
@@ -36,7 +36,7 @@
 #include "ImageBuffer.h"
 #include "ImageOrientation.h"
 #include "IntRect.h"
-#include "RoundedRect.h"
+#include "LayoutRoundedRect.h"
 #include "SystemImage.h"
 #include "TextBoxIterator.h"
 #include "VideoFrame.h"
@@ -173,10 +173,15 @@ void GraphicsContext::drawGlyphs(const Font& font, std::span<const GlyphBufferGl
     FontCascade::drawGlyphs(*this, font, glyphs, advances, point, fontSmoothingMode);
 }
 
+void GraphicsContext::drawGlyphsImmediate(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+{
+    // Called by implementations that transform drawGlyphs into drawGlyphsImmediate or drawDecomposedGlyphs.
+    drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
+}
+
 void GraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
-    auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
-    FontCascade::drawGlyphs(*this, font, positionedGlyphs.glyphs.span(), positionedGlyphs.advances.span(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
+    FontCascade::drawGlyphs(*this, font, decomposedGlyphs.glyphs(), decomposedGlyphs.advances(), decomposedGlyphs.localAnchor(), decomposedGlyphs.fontSmoothingMode());
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
@@ -255,9 +260,9 @@ RenderingMode GraphicsContext::renderingModeForCompatibleBuffer() const
     return RenderingMode::Unaccelerated;
 }
 
-RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod>) const
+RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod>, ImageBufferFormat pixelFormat) const
 {
-    return ImageBuffer::create(size, renderingMode.value_or(this->renderingModeForCompatibleBuffer()), RenderingPurpose::Unspecified, resolutionScale, colorSpace, ImageBufferPixelFormat::BGRA8);
+    return ImageBuffer::create(size, renderingMode.value_or(this->renderingModeForCompatibleBuffer()), RenderingPurpose::Unspecified, resolutionScale, colorSpace, pixelFormat);
 }
 
 RefPtr<ImageBuffer> GraphicsContext::createScaledImageBuffer(const FloatSize& size, const FloatSize& scale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
@@ -583,6 +588,20 @@ void GraphicsContext::drawLineForText(const FloatRect& rect, bool isPrinting, bo
 {
     FloatSegment line[1] { { 0, rect.width() } };
     drawLinesForText(rect.location(), rect.height(), line, isPrinting, doubleUnderlines, style);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList)
+{
+    Ref controlFactory = ControlFactory::shared();
+    drawDisplayList(displayList, controlFactory);
+}
+
+void GraphicsContext::drawDisplayList(const DisplayList::DisplayList& displayList, ControlFactory& controlFactory)
+{
+    // FIXME: ControlFactory should be property of the context and not passed this way here.
+    // Currently this mutates each ControlPart which is unsuitable for display lists.
+    for (auto& item : displayList.items())
+        applyItem(*this, controlFactory, item);
 }
 
 FloatRect GraphicsContext::computeUnderlineBoundsForText(const FloatRect& rect, bool printing)

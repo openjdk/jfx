@@ -247,16 +247,21 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.caretShapeProperty().addListener(observable -> {
             caretPath.getElements().setAll(textNode.caretShapeProperty().get());
-            if (caretPath.getElements().size() != 4) {
-                /* On replacing same text using keyboard shortcut,
-                 * caret position is not updated.
-                 * The caret pos is invalid in this case,
-                 * hence it should be updated when caret path size is not 4 */
+
+            /* On replacing same text using keyboard shortcut,
+             * caret position is not updated.
+             * The caret pos is invalid in this case,
+             * hence it should be updated when caret path size is not 4 */
+            boolean hasSplitCaret = caretPath.getElements().size() == 4;
+
+            // If the caret is split, ignore and keep the previous width value.
+            if (!hasSplitCaret) {
+                boolean hasCaret = caretPath.getElements().size() > 0;
+                if (hasCaret) {
+                    caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
+                }
+
                 updateTextNodeCaretPos(control.getCaretPosition());
-            } else if (caretPath.getElements().size() == 4) {
-                // The caret is split. Ignore and keep the previous width value.
-            } else {
-                caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
         });
 

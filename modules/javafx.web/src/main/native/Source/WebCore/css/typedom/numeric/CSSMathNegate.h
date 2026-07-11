@@ -49,7 +49,7 @@ private:
     bool equals(const CSSNumericValue& other) const final;
 
     CSSMathNegate(CSSNumberish&&);
-    Ref<CSSNumericValue> m_value;
+    const Ref<CSSNumericValue> m_value;
 };
 
 } // namespace WebCore

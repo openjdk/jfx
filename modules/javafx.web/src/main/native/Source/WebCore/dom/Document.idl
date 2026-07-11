@@ -56,11 +56,13 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     readonly attribute DocumentType? doctype;
     [DOMJIT=Getter] readonly attribute Element? documentElement;
 
-    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName, optional ElementCreationOptions options = { });
-    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName);
+    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName, optional (DOMString or ElementCreationOptions) options = {});
+    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName, optional (DOMString or ElementCreationOptions) options = {});
     HTMLCollection getElementsByTagName([AtomString] DOMString qualifiedName);
     HTMLCollection getElementsByTagNameNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
     HTMLCollection getElementsByClassName([AtomString] DOMString classNames);
+
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=customElementRegistryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
 
     [NewObject] DocumentFragment createDocumentFragment();
     [NewObject] Text createTextNode(DOMString data);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,9 @@
 #define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
 #endif
 
-// Needed for limit defines, like INTMAX_MAX, which is used by the std C++ library
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
 #endif
-
 #if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
 #include "cmakeconfig.h"
 #ifndef JSC_API_AVAILABLE
@@ -63,11 +61,11 @@
 #include <pal/ExportMacros.h>
 #include <wtf/ExportMacros.h>
 
-/* Work around bug with C++ library that screws up Objective-C++ when exception support is disabled. */
 #undef try
 #undef catch
 
 #ifdef __cplusplus
 #include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #endif
 

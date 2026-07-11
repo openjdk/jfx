@@ -23,6 +23,7 @@
 
 #include "HTMLProgressElement.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTheme.h"
 #include <wtf/RefPtr.h>
@@ -41,6 +42,12 @@ RenderProgress::RenderProgress(HTMLElement& element, RenderStyle&& style)
 }
 
 RenderProgress::~RenderProgress() = default;
+
+void RenderProgress::willBeDestroyed()
+{
+    m_animationTimer.stop();
+    RenderBlockFlow::willBeDestroyed();
+}
 
 void RenderProgress::updateFromElement()
 {

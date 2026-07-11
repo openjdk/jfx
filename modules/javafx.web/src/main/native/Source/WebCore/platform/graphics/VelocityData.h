@@ -26,6 +26,7 @@
 #pragma once
 
 #include "FloatPoint.h"
+#include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -70,21 +71,17 @@ public:
     HistoricalVelocityData() = default;
 
     WEBCORE_EXPORT VelocityData velocityForNewData(FloatPoint newPosition, double scale, MonotonicTime);
-    void clear() { m_historySize = 0; }
+    void clear() { m_positionHistory.clear(); }
 
 private:
     static constexpr unsigned maxHistoryDepth = 3;
-
-    unsigned m_historySize { 0 };
-    unsigned m_latestDataIndex { 0 };
-    MonotonicTime m_lastAppendTimestamp;
 
     struct Data {
         MonotonicTime timestamp;
         FloatPoint position;
         double scale;
     };
-    std::array<Data, maxHistoryDepth> m_positionHistory;
+    Deque<Data, maxHistoryDepth> m_positionHistory;
 };
 
 } // namespace WebCore

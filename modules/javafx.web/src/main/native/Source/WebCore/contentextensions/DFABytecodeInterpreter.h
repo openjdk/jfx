@@ -40,10 +40,10 @@ public:
     DFABytecodeInterpreter(std::span<const uint8_t> bytecode)
         : m_bytecode(bytecode) { }
 
-    using Actions = UncheckedKeyHashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+    using Actions = HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
 
     WEBCORE_EXPORT Actions interpret(const String&, ResourceFlags);
-    Actions actionsMatchingEverything();
+    WEBCORE_EXPORT Actions actionsMatchingEverything();
 
 private:
     void interpretAppendAction(unsigned& programCounter, Actions&);

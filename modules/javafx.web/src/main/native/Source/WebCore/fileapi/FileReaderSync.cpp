@@ -34,6 +34,7 @@
 
 #include "Blob.h"
 #include "BlobURL.h"
+#include "ExceptionOr.h"
 #include "FileReaderLoader.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 

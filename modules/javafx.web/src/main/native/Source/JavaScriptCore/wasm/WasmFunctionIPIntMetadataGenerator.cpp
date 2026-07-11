@@ -62,7 +62,7 @@ void FunctionIPIntMetadataGenerator::addLength(size_t length)
     };
     size_t size = m_metadata.size();
     m_metadata.grow(size + sizeof(instructionLength));
-    WRITE_TO_METADATA(m_metadata.data() + size, instructionLength, IPInt::InstructionLengthMetadata);
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, instructionLength, IPInt::InstructionLengthMetadata);
 }
 
 void FunctionIPIntMetadataGenerator::addLEB128ConstantInt32AndLength(uint32_t value, size_t length)
@@ -73,7 +73,7 @@ void FunctionIPIntMetadataGenerator::addLEB128ConstantInt32AndLength(uint32_t va
     };
     size_t size = m_metadata.size();
     m_metadata.grow(size + sizeof(mdConst));
-    WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const32Metadata);
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
 }
 
 void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type, uint64_t value, size_t length)
@@ -85,23 +85,23 @@ void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type
                 .length = safeCast<uint8_t>((value >> 7) & 1)
             };
             m_metadata.grow(size + sizeof(mdConst));
-            WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::InstructionLengthMetadata);
+            WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::InstructionLengthMetadata);
         } else {
             IPInt::Const32Metadata mdConst {
                 .instructionLength = { .length = safeCast<uint8_t>(length) },
                 .value = static_cast<uint32_t>(value)
             };
             m_metadata.grow(size + sizeof(mdConst));
-            WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const32Metadata);
+            WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
         }
     } else if (type.isI64()) {
         size_t size = m_metadata.size();
         IPInt::Const64Metadata mdConst {
-            .instructionLength = { .length = safeCast<uint8_t>(length) },
-            .value = static_cast<uint64_t>(value)
+            .value = static_cast<uint64_t>(value),
+            .instructionLength = { .length = safeCast<uint8_t>(length) }
         };
         m_metadata.grow(size + sizeof(mdConst));
-        WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const64Metadata);
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const64Metadata);
     } else if (type.isRef() || type.isRefNull() || type.isFuncref()) {
         size_t size = m_metadata.size();
         IPInt::Const32Metadata mdConst {
@@ -109,7 +109,7 @@ void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type
             .value = static_cast<uint32_t>(value)
         };
         m_metadata.grow(size + sizeof(mdConst));
-        WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const32Metadata);
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
     } else if (!type.isF32() && !type.isF64())
         ASSERT_NOT_IMPLEMENTED_YET();
 }
@@ -117,12 +117,12 @@ void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type
 void FunctionIPIntMetadataGenerator::addLEB128V128Constant(v128_t value, size_t length)
 {
     IPInt::Const128Metadata mdConst {
-        .instructionLength = { .length = safeCast<uint8_t>(length) },
-        .value = value
+        .value = value,
+        .instructionLength = { .length = safeCast<uint8_t>(length) }
     };
     size_t size = m_metadata.size();
     m_metadata.grow(size + sizeof(mdConst));
-    WRITE_TO_METADATA(m_metadata.data() + size, mdConst, IPInt::Const128Metadata);
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const128Metadata);
 }
 
 void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig, const CallInformation& returnCC)
@@ -169,6 +169,7 @@ void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig,
     m_uINTBytecode.reverse();
     m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::End));
 }
+
 
 } }
 

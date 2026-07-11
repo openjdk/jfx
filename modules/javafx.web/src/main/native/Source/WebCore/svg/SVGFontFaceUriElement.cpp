@@ -22,6 +22,7 @@
 #include "SVGFontFaceUriElement.h"
 
 #include "CSSFontFaceSrcValue.h"
+#include "CSSURL.h"
 #include "CachedFont.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
@@ -30,6 +31,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include "XLinkNames.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -58,12 +60,9 @@ SVGFontFaceUriElement::~SVGFontFaceUriElement()
 
 Ref<CSSFontFaceSrcResourceValue> SVGFontFaceUriElement::createSrcValue() const
 {
-    ResolvedURL location;
-    location.specifiedURLString = getAttribute(SVGNames::hrefAttr, XLinkNames::hrefAttr);
-    if (!location.specifiedURLString.isNull())
-        location.resolvedURL = document().completeURL(location.specifiedURLString);
+    auto location = CSS::completeURL(getAttribute(SVGNames::hrefAttr, XLinkNames::hrefAttr), document()).value_or(CSS::URL::none());
     auto& format = attributeWithoutSynchronization(formatAttr);
-    return CSSFontFaceSrcResourceValue::create(WTFMove(location), format.isEmpty() ? "svg"_s : format.string(), { FontTechnology::ColorSvg }, LoadedFromOpaqueSource::No);
+    return CSSFontFaceSrcResourceValue::create(WTFMove(location), format.isEmpty() ? "svg"_s : format.string(), { FontTechnology::ColorSvg });
 }
 
 void SVGFontFaceUriElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)

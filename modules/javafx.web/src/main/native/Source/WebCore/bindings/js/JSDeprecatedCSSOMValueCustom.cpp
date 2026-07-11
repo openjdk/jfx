@@ -41,7 +41,7 @@ bool JSDeprecatedCSSOMValueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Un
     if (!jsCSSValue->hasCustomProperties())
         return false;
 
-    if (UNLIKELY(reason))
+    if (reason) [[unlikely]]
         *reason = "CSSStyleDeclaration is opaque root"_s;
 
     return containsWebCoreOpaqueRoot(visitor, jsCSSValue->wrapped().owner());

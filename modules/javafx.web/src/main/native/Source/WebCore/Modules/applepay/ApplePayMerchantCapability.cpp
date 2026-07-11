@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ApplePayMerchantCapability.h"
 
+#include "ExceptionOr.h"
+
 #if ENABLE(APPLE_PAY)
 
 namespace WebCore {

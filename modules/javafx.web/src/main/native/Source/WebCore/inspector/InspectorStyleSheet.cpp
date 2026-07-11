@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2021-2025, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "InspectorStyleSheet.h"
 
 #include "CSSContainerRule.h"
+#include "CSSGroupingRule.h"
 #include "CSSImportRule.h"
 #include "CSSKeyframesRule.h"
 #include "CSSLayerBlockRule.h"
@@ -34,7 +35,6 @@
 #include "CSSMediaRule.h"
 #include "CSSParser.h"
 #include "CSSParserEnum.h"
-#include "CSSParserImpl.h"
 #include "CSSParserObserver.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
@@ -42,6 +42,7 @@
 #include "CSSRule.h"
 #include "CSSRuleList.h"
 #include "CSSSelectorParser.h"
+#include "CSSStyleProperties.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CSSSupportsRule.h"
@@ -50,6 +51,7 @@
 #include "Document.h"
 #include "Element.h"
 #include "ExtensionStyleSheets.h"
+#include "EventTargetInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
@@ -95,16 +97,15 @@ static RuleFlatteningStrategy flatteningStrategyForStyleRuleType(StyleRuleType s
     case StyleRuleType::Supports:
     case StyleRuleType::LayerBlock:
     case StyleRuleType::Container:
-    case StyleRuleType::StartingStyle:
-        // These rules MUST be handled by the static `isValidRuleHeaderText`, `protocolGroupingTypeForStyleRuleType`,
-        // and `asCSSRuleList` in order to provide functionality in Web Inspector. Additionally, they MUST have a CSSOM
-        // representation created in `StyleRuleBase::createCSSOMWrapper`, otherwise we will end up with a mismatched
-        // lists of source data and CSSOM wrappers.
-        return RuleFlatteningStrategy::CommitSelfThenChildren;
-
-    // FIXME: implement support for this and move this case up.
-    // https://bugs.webkit.org/show_bug.cgi?id=264496
     case StyleRuleType::Scope:
+    case StyleRuleType::StartingStyle:
+        // These rules MUST be handled by the following methods in order to provide functionality in
+        // and avoid mismatched lists of source data and CSSOM wrappers:
+        // - `isValidRuleHeaderText`
+        // - `protocolGroupingTypeForStyleRuleType`
+        // - `asCSSRuleList`
+        // - `InspectorCSSOMWrappers::collect` .
+        return RuleFlatteningStrategy::CommitSelfThenChildren;
 
     // FIXME (webkit.org/b/284176): support @position-try in Web Inspector.
     case StyleRuleType::PositionTry:
@@ -149,6 +150,10 @@ static ASCIILiteral atRuleIdentifierForType(StyleRuleType styleRuleType)
         return "@layer"_s;
     case StyleRuleType::Container:
         return "@container"_s;
+    case StyleRuleType::Scope:
+        return "@scope"_s;
+    case StyleRuleType::StartingStyle:
+        return "@starting-style"_s;
     default:
         ASSERT_NOT_REACHED();
         return ""_s;
@@ -164,13 +169,13 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
         // Make sure the engine can parse the provided `@` rule, even if it only uses unsupported features. As long as
         // the rule text is entirely consumed and it creates a rule of the expected type, we consider it valid because
         // we will be able to continue to edit the rule in the future.
-        CSSParserContext context(parserContextForDocument(document)); // CSSParserImpl holds a reference to this.
-        CSSParserImpl parser(context, makeString(atRuleIdentifier, ' ', headerText, " {}"_s));
+        CSSParserContext context(parserContextForDocument(document)); // CSSParser holds a reference to this.
+        CSSParser parser(context, makeString(atRuleIdentifier, ' ', headerText, " {}"_s));
         if (!parser.tokenizer())
             return false;
 
         auto tokenRange = parser.tokenizer()->tokenRange();
-        auto rule = parser.consumeAtRule(tokenRange, CSSParserImpl::AllowedRules::RegularRules);
+        auto rule = parser.consumeAtRule(tokenRange, CSSParser::AllowedRules::RegularRules);
 
         if (!rule)
             return false;
@@ -188,14 +193,14 @@ static bool isValidRuleHeaderText(const String& headerText, StyleRuleType styleR
     };
 
     switch (styleRuleType) {
-    case StyleRuleType::Style: {
-        CSSParser parser(parserContextForDocument(document));
-        return !!parser.parseSelectorList(headerText, nullptr, nestedContext);
-    }
+    case StyleRuleType::Style:
+        return !!CSSSelectorParser::parseSelectorList(headerText, parserContextForDocument(document), nullptr, nestedContext);
     case StyleRuleType::Media:
     case StyleRuleType::Supports:
     case StyleRuleType::LayerBlock:
     case StyleRuleType::Container:
+    case StyleRuleType::Scope:
+    case StyleRuleType::StartingStyle:
         return isValidAtRuleHeaderText(atRuleIdentifierForType(styleRuleType));
     default:
         return false;
@@ -215,6 +220,10 @@ static std::optional<Inspector::Protocol::CSS::Grouping::Type> protocolGroupingT
         return Inspector::Protocol::CSS::Grouping::Type::LayerRule;
     case StyleRuleType::Container:
         return Inspector::Protocol::CSS::Grouping::Type::ContainerRule;
+    case StyleRuleType::Scope:
+        return Inspector::Protocol::CSS::Grouping::Type::ScopeRule;
+    case StyleRuleType::StartingStyle:
+        return Inspector::Protocol::CSS::Grouping::Type::StartingStyleRule;
     default:
         return std::nullopt;
     }
@@ -353,7 +362,7 @@ void StyleSheetHandler::endRuleHeader(unsigned offset)
     if (m_parsedText.is8Bit())
         setRuleHeaderEnd<LChar>(m_parsedText.span8().first(offset));
     else
-        setRuleHeaderEnd<UChar>(m_parsedText.span16().first(offset));
+        setRuleHeaderEnd<char16_t>(m_parsedText.span16().first(offset));
 }
 
 void StyleSheetHandler::observeSelector(unsigned startOffset, unsigned endOffset)
@@ -477,7 +486,7 @@ void StyleSheetHandler::fixUnparsedPropertyRanges(CSSRuleSourceData* ruleData)
         return;
     }
 
-    fixUnparsedProperties<UChar>(m_parsedText.span16(), ruleData);
+    fixUnparsedProperties<char16_t>(m_parsedText.span16(), ruleData);
 }
 
 void StyleSheetHandler::observeProperty(unsigned startOffset, unsigned endOffset, bool isImportant, bool isParsed)
@@ -534,7 +543,7 @@ void StyleSheetHandler::observeComment(unsigned startOffset, unsigned endOffset)
     RuleSourceDataList sourceData;
 
     StyleSheetHandler handler(commentText, m_document, &sourceData);
-    CSSParser::parseDeclarationForInspector(parserContextForDocument(m_document), commentText, handler);
+    CSSParser::parseDeclarationListForInspector(commentText, parserContextForDocument(m_document), handler);
     Vector<CSSPropertySourceData>& commentPropertyData = sourceData.first()->styleSourceData->propertyData;
     if (commentPropertyData.size() != 1)
         return;
@@ -1362,8 +1371,8 @@ Vector<const CSSSelector*> InspectorStyleSheet::selectorsForCSSStyleRule(CSSStyl
 
     Vector<const CSSSelector*> selectors;
     for (auto& rule : cssStyleRulesSplitFromSameRule(rule)) {
-        for (const CSSSelector* selector = rule->styleRule().selectorList().first(); selector; selector = CSSSelectorList::next(selector))
-            selectors.append(selector);
+        for (auto& selector : rule->styleRule().selectorList())
+            selectors.append(&selector);
     }
     return selectors;
 }
@@ -1463,7 +1472,7 @@ Ref<Inspector::Protocol::CSS::CSSStyle> InspectorStyleSheet::buildObjectForStyle
     return result;
 }
 
-static inline bool isNotSpaceOrTab(UChar character)
+static inline bool isNotSpaceOrTab(char16_t character)
 {
     return character != ' ' && character != '\t';
 }
@@ -1699,10 +1708,10 @@ bool InspectorStyleSheet::ensureSourceData()
     // FIXME: <webkit.org/b/161747> Media control CSS uses out-of-spec selectors in inline user agent shadow root style
     // element. See corresponding workaround in `CSSSelectorParser::extractCompoundFlags`.
     if (auto* ownerNode = m_pageStyleSheet->ownerNode(); ownerNode && ownerNode->isInUserAgentShadowTree())
-        context.mode = UASheetMode;
+        context.setUASheetMode();
 
     StyleSheetHandler handler(m_parsedStyleSheet->text(), m_pageStyleSheet->ownerDocument(), ruleSourceDataResult.get());
-    CSSParser::parseSheetForInspector(context, newStyleSheet, m_parsedStyleSheet->text(), handler);
+    CSSParser::parseStyleSheetForInspector(m_parsedStyleSheet->text(), context, newStyleSheet, handler);
     m_parsedStyleSheet->setSourceData(WTFMove(ruleSourceDataResult));
     return m_parsedStyleSheet->hasSourceData();
 }
@@ -1927,7 +1936,7 @@ Ref<CSSRuleSourceData> InspectorStyleSheetForInlineStyle::ruleSourceData() const
     CSSParserContext context(parserContextForDocument(&m_element->document()));
     RuleSourceDataList ruleSourceDataResult;
     StyleSheetHandler handler(m_styleText, &m_element->document(), &ruleSourceDataResult);
-    CSSParser::parseDeclarationForInspector(context, m_styleText, handler);
+    CSSParser::parseDeclarationListForInspector(m_styleText, context, handler);
     return WTFMove(ruleSourceDataResult.first());
 }
 

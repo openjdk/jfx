@@ -64,7 +64,7 @@ static inline const char* pas_page_kind_get_string(pas_page_kind page_kind)
     case pas_marge_bitfit_page_kind:
         return "marge_bitfit";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -81,7 +81,7 @@ static inline pas_page_config_kind pas_page_kind_get_config_kind(pas_page_kind p
     case pas_marge_bitfit_page_kind:
         return pas_page_config_kind_bitfit;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_page_config_kind_segregated;
 }
 
@@ -96,7 +96,7 @@ pas_page_kind_get_segregated_variant(pas_page_kind page_kind)
     case pas_medium_exclusive_segregated_page_kind:
         return pas_medium_segregated_page_config_variant;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_small_segregated_page_config_variant;
     }
 }
@@ -112,7 +112,7 @@ pas_page_kind_get_segregated_role(pas_page_kind page_kind)
     case pas_medium_exclusive_segregated_page_kind:
         return pas_segregated_page_exclusive_role;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_segregated_page_shared_role;
     }
 }
@@ -128,7 +128,7 @@ pas_page_kind_get_bitfit_variant(pas_page_kind page_kind)
     case pas_marge_bitfit_page_kind:
         return pas_marge_bitfit_page_config_variant;
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_small_bitfit_page_config_variant;
     }
 }
@@ -145,7 +145,7 @@ static inline pas_page_kind pas_page_kind_for_segregated_variant_and_role(
         case pas_segregated_page_exclusive_role:
             return pas_small_exclusive_segregated_page_kind;
         }
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_small_shared_segregated_page_kind;
     case pas_medium_segregated_page_config_variant:
         switch (role) {
@@ -154,10 +154,10 @@ static inline pas_page_kind pas_page_kind_for_segregated_variant_and_role(
         case pas_segregated_page_exclusive_role:
             return pas_medium_exclusive_segregated_page_kind;
         }
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return pas_small_shared_segregated_page_kind;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_small_shared_segregated_page_kind;
 }
 
@@ -171,7 +171,7 @@ static inline pas_page_kind pas_page_kind_for_bitfit_variant(pas_bitfit_page_con
     case pas_marge_bitfit_page_config_variant:
         return pas_marge_bitfit_page_kind;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_small_shared_segregated_page_kind;
 }
 

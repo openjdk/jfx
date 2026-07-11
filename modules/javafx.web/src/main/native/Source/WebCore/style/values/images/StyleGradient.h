@@ -104,7 +104,7 @@ template<> struct ToStyle<CSS::GradientDeprecatedColorStop> { auto operator()(co
 // MARK: - LinearGradient
 
 struct LinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -128,7 +128,7 @@ DEFINE_TYPE_MAPPING(CSS::LinearGradient, LinearGradient)
 // MARK: - PrefixedLinearGradient
 
 struct PrefixedLinearGradient {
-    using GradientLine = std::variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
+    using GradientLine = Variant<Angle<>, Horizontal, Vertical, SpaceSeparatedTuple<Horizontal, Vertical>>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientLine gradientLine;
@@ -179,17 +179,17 @@ struct RadialGradient {
     using Extent = CSS::RadialGradient::Extent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<CSS::Nonnegative>, 2>;
-        std::variant<Size, Extent> size;
+        Variant<Size, Extent> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
     struct Circle {
         using Length = Style::Length<CSS::Nonnegative>;
-        std::variant<Length, Extent> size;
+        Variant<Length, Extent> size;
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -234,7 +234,7 @@ struct PrefixedRadialGradient {
     using Extent = CSS::PrefixedRadialGradient::Extent;
     struct Ellipse {
         using Size = SpaceSeparatedArray<LengthPercentage<CSS::Nonnegative>, 2>;
-        std::optional<std::variant<Size, Extent>> size;
+        std::optional<Variant<Size, Extent>> size;
         std::optional<Position> position;
         bool operator==(const Ellipse&) const = default;
     };
@@ -243,7 +243,7 @@ struct PrefixedRadialGradient {
         std::optional<Position> position;
         bool operator==(const Circle&) const = default;
     };
-    using GradientBox = std::variant<Ellipse, Circle>;
+    using GradientBox = Variant<Ellipse, Circle>;
 
     GradientColorInterpolationMethod colorInterpolationMethod;
     GradientBox gradientBox;
@@ -366,7 +366,7 @@ DEFINE_TYPE_MAPPING(CSS::ConicGradient, ConicGradient)
 
 // MARK: - Gradient (variant)
 
-using Gradient = std::variant<
+using Gradient = Variant<
     // Linear
     FunctionNotation<CSSValueLinearGradient, LinearGradient>,
     FunctionNotation<CSSValueRepeatingLinearGradient, LinearGradient>,

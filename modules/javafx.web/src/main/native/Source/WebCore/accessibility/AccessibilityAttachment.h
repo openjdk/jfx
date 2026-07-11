@@ -37,18 +37,17 @@ class RenderAttachment;
 
 class AccessibilityAttachment final : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityAttachment> create(AXID, RenderAttachment&);
+    static Ref<AccessibilityAttachment> create(AXID, RenderAttachment&, AXObjectCache&);
     HTMLAttachmentElement* attachmentElement() const;
     bool hasProgress(float* progress = nullptr) const;
 
 private:
-    explicit AccessibilityAttachment(AXID, RenderAttachment&);
+    explicit AccessibilityAttachment(AXID, RenderAttachment&, AXObjectCache&);
 
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::Button; }
 
     bool isAttachmentElement() const final { return true; }
 
-    String roleDescription() const final;
     float valueForRange() const final;
     bool computeIsIgnored() const final;
     void accessibilityText(Vector<AccessibilityText>&) const final;

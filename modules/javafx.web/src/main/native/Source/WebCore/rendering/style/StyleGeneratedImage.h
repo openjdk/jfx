@@ -77,7 +77,7 @@ protected:
     FloatSize m_containerSize;
     bool m_fixedSize;
     SingleThreadWeakHashCountedSet<RenderElement> m_clients;
-    UncheckedKeyHashMap<FloatSize, std::unique_ptr<CachedGeneratedImage>> m_images;
+    HashMap<FloatSize, std::unique_ptr<CachedGeneratedImage>> m_images;
 };
 
 } // namespace WebCore

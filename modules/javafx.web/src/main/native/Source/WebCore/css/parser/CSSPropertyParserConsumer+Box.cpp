@@ -30,36 +30,33 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumeMarginPhysical(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID currentShorthand)
-{
-    // <margin-physical> = <length-percentage> | auto
-    // https://drafts.csswg.org/css-box/#margin-physical
-
-    if (range.peek().id() == CSSValueAuto)
-        return consumeIdent(range);
-
-    auto unitless = currentShorthand != CSSPropertyInset ? UnitlessQuirk::Allow : UnitlessQuirk::Forbid;
-    auto anchorSizePolicy = context.propertySettings.cssAnchorPositioningEnabled ? AnchorSizePolicy::Allow : AnchorSizePolicy::Forbid;
-    return consumeLengthPercentage(range, context, ValueRange::All, unitless, UnitlessZeroQuirk::Allow, AnchorPolicy::Forbid, anchorSizePolicy);
-}
-
-RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'margin-trim'> = none | [ block || inline ] | [ block-start || inline-start || block-end || inline-end ]
     // https://drafts.csswg.org/css-box/#margin-trim
 
     auto firstValue = range.peek().id();
-    if (firstValue == CSSValueBlock || firstValue == CSSValueInline || firstValue == CSSValueNone)
+    if (firstValue == CSSValueNone)
         return consumeIdent(range).releaseNonNull();
+
+    // FIXME: Multiple values should be appended in canonical order.
     Vector<CSSValueID, 4> idents;
+    if (firstValue == CSSValueBlock || firstValue == CSSValueInline) {
+        while (auto ident = consumeIdentRaw<CSSValueBlock, CSSValueInline>(range)) {
+            if (idents.contains(*ident))
+                return nullptr;
+            idents.append(*ident);
+        }
+    } else {
     while (auto ident = consumeIdentRaw<CSSValueBlockStart, CSSValueBlockEnd, CSSValueInlineStart, CSSValueInlineEnd>(range)) {
         if (idents.contains(*ident))
             return nullptr;
@@ -71,6 +68,12 @@ RefPtr<CSSValue> consumeMarginTrim(CSSParserTokenRange& range, const CSSParserCo
             return CSSPrimitiveValue::create(CSSValueBlock);
         if (idents.contains(CSSValueInlineStart) && idents.contains(CSSValueInlineEnd))
             return CSSPrimitiveValue::create(CSSValueInline);
+        } else if (idents.size() == 4) {
+            CSSValueListBuilder list;
+            list.append(CSSPrimitiveValue::create(CSSValueBlock));
+            list.append(CSSPrimitiveValue::create(CSSValueInline));
+            return CSSValueList::createSpaceSeparated(WTFMove(list));
+        }
     }
     CSSValueListBuilder list;
     for (auto ident : idents)

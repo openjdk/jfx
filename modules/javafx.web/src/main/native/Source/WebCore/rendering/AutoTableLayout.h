@@ -22,6 +22,7 @@
 
 #include "LayoutUnit.h"
 #include "Length.h"
+#include "StylePreferredSize.h"
 #include "TableLayout.h"
 #include <wtf/Vector.h>
 
@@ -45,12 +46,13 @@ private:
     void recalcColumn(unsigned effCol);
 
     float calcEffectiveLogicalWidth();
+    template<typename> float shrinkCellWidthForType(float available);
 
     void insertSpanCell(RenderTableCell*);
 
     struct Layout {
-        Length logicalWidth;
-        Length effectiveLogicalWidth;
+        Style::PreferredSize logicalWidth { CSS::Keyword::Auto { } };
+        Style::PreferredSize effectiveLogicalWidth { CSS::Keyword::Auto { } };
         float minLogicalWidth { 0 };
         float maxLogicalWidth { 0 };
         float effectiveMinLogicalWidth { 0 };

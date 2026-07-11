@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -171,7 +171,7 @@ void ScriptedAnimationController::serviceRequestAnimationFrameCallbacks(ReducedR
 
         auto identifier = callback->m_id;
         InspectorInstrumentation::willFireAnimationFrame(document, identifier);
-        Ref { callback }->handleEvent(highResNowMs);
+        Ref { callback }->invoke(highResNowMs);
         InspectorInstrumentation::didFireAnimationFrame(document, identifier);
     }
 

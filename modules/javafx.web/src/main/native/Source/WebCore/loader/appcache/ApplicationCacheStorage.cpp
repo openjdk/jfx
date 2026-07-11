@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2010, 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "SQLiteTransaction.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
@@ -1128,13 +1129,13 @@ RefPtr<ApplicationCache> ApplicationCacheStorage::loadCache(unsigned storageID)
         String mimeType = cacheStatement->columnText(3);
         String textEncodingName = cacheStatement->columnText(4);
 
-        ResourceResponse response(url, mimeType, size, textEncodingName);
+        ResourceResponse response(WTFMove(url), WTFMove(mimeType), size, WTFMove(textEncodingName));
         response.setHTTPStatusCode(httpStatusCode);
 
         String headers = cacheStatement->columnText(5);
         parseHeaders(headers, response);
 
-        auto resource = ApplicationCacheResource::create(url, response, type, WTFMove(data), path);
+        auto resource = ApplicationCacheResource::create(URL { response.url() }, WTFMove(response), type, WTFMove(data), WTFMove(path));
 
         if (type & ApplicationCacheResource::Manifest)
             cache->setManifestResource(WTFMove(resource));
@@ -1286,17 +1287,18 @@ bool ApplicationCacheStorage::writeDataToUniqueFileInDirectory(FragmentedSharedB
         fullPath = FileSystem::pathByAppendingComponent(directory, path);
     } while (FileSystem::parentPath(fullPath) != directory || FileSystem::fileExists(fullPath));
 
-    FileSystem::PlatformFileHandle handle = FileSystem::openFile(fullPath, FileSystem::FileOpenMode::Truncate);
+    uint64_t writtenBytes = 0;
+    {
+        auto handle = FileSystem::openFile(fullPath, FileSystem::FileOpenMode::Truncate);
     if (!handle)
         return false;
 
-    int64_t writtenBytes = 0;
     data.forEachSegment([&](auto segment) {
-        writtenBytes += FileSystem::writeToFile(handle, segment);
+            writtenBytes += handle.write(segment).value_or(0);
     });
-    FileSystem::closeFile(handle);
+    }
 
-    if (writtenBytes != static_cast<int64_t>(data.size())) {
+    if (writtenBytes != data.size()) {
         FileSystem::deleteFile(fullPath);
         return false;
     }
@@ -1457,7 +1459,7 @@ long long ApplicationCacheStorage::flatFileAreaSize()
     return totalSize;
 }
 
-UncheckedKeyHashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCache()
+HashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCache()
 {
     auto urls = manifestURLs();
     if (!urls)
@@ -1465,7 +1467,7 @@ UncheckedKeyHashSet<SecurityOriginData> ApplicationCacheStorage::originsWithCach
 
     // Multiple manifest URLs might share the same SecurityOrigin, so we might be creating extra, wasted origins here.
     // The current schema doesn't allow for a more efficient way of building this list.
-    UncheckedKeyHashSet<SecurityOriginData> origins;
+    HashSet<SecurityOriginData> origins;
     for (auto& url : *urls)
         origins.add(SecurityOriginData::fromURL(url));
     return origins;

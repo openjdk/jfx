@@ -20,9 +20,12 @@
 #include "config.h"
 #include "RenderSVGResourcePattern.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ImageBuffer.h"
+#include "NativeImage.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourcePatternInlines.h"
 #include "RenderSVGShape.h"
@@ -50,7 +53,7 @@ void RenderSVGResourcePattern::collectPatternAttributesIfNeeded()
 
     auto attributes = PatternAttributes { };
 
-    RefPtr current = &patternElement();
+    RefPtr current = patternElement();
 
     current->synchronizeAllAttributes();
 
@@ -134,7 +137,7 @@ bool RenderSVGResourcePattern::prepareFillOperation(GraphicsContext& context, co
         return false;
 
     const auto& svgStyle = style.svgStyle();
-    context.setAlpha(svgStyle.fillOpacity());
+    context.setAlpha(svgStyle.fillOpacity().value.value);
     context.setFillRule(svgStyle.fillRule());
     context.setFillPattern(*pattern);
     return true;
@@ -148,7 +151,7 @@ bool RenderSVGResourcePattern::prepareStrokeOperation(GraphicsContext& context, 
 
     const auto& svgStyle = style.svgStyle();
 
-    context.setAlpha(svgStyle.strokeOpacity());
+    context.setAlpha(svgStyle.strokeOpacity().value.value);
     SVGRenderSupport::applyStrokeStyleToContext(context, style, targetRenderer);
     if (svgStyle.vectorEffect() == VectorEffect::NonScalingStroke) {
         if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(targetRenderer))

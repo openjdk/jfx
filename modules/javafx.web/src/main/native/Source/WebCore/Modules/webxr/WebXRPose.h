@@ -48,7 +48,7 @@ public:
 protected:
     WebXRPose(Ref<WebXRRigidTransform>&&, bool emulatedPosition);
 
-    Ref<WebXRRigidTransform> m_transform;
+    const Ref<WebXRRigidTransform> m_transform;
     bool m_emulatedPosition { false };
 };
 

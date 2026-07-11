@@ -268,7 +268,7 @@ GST_API
 GType           gst_bin_get_type                (void);
 
 GST_API
-GstElement*     gst_bin_new                     (const gchar *name);
+GstElement*     gst_bin_new                     (const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 /* add and remove elements from the bin */
 
@@ -281,36 +281,36 @@ gboolean        gst_bin_remove                  (GstBin *bin, GstElement *elemen
 /* retrieve a single child */
 
 GST_API
-GstElement*     gst_bin_get_by_name              (GstBin *bin, const gchar *name);
+GstElement*     gst_bin_get_by_name              (GstBin *bin, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstElement*     gst_bin_get_by_name_recurse_up   (GstBin *bin, const gchar *name);
+GstElement*     gst_bin_get_by_name_recurse_up   (GstBin *bin, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstElement*     gst_bin_get_by_interface         (GstBin *bin, GType iface);
+GstElement*     gst_bin_get_by_interface         (GstBin *bin, GType iface) G_GNUC_WARN_UNUSED_RESULT;
 
 /* retrieve multiple children */
 
 GST_API
-GstIterator*    gst_bin_iterate_elements         (GstBin *bin);
+GstIterator*    gst_bin_iterate_elements         (GstBin *bin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_sorted           (GstBin *bin);
+GstIterator*    gst_bin_iterate_sorted           (GstBin *bin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_recurse          (GstBin *bin);
+GstIterator*    gst_bin_iterate_recurse          (GstBin *bin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_sinks            (GstBin *bin);
+GstIterator*    gst_bin_iterate_sinks            (GstBin *bin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_sources          (GstBin *bin);
+GstIterator*    gst_bin_iterate_sources          (GstBin *bin) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_all_by_interface (GstBin *bin, GType iface);
+GstIterator*    gst_bin_iterate_all_by_interface (GstBin *bin, GType iface) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstIterator*    gst_bin_iterate_all_by_element_factory_name (GstBin * bin, const gchar * factory_name);
+GstIterator*    gst_bin_iterate_all_by_element_factory_name (GstBin * bin, const gchar * factory_name) G_GNUC_WARN_UNUSED_RESULT;
 
 /* latency */
 

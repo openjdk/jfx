@@ -28,8 +28,8 @@
 
 namespace WebCore {
 
-AccessibilityMockObject::AccessibilityMockObject(AXID axID)
-    : AccessibilityObject(axID)
+AccessibilityMockObject::AccessibilityMockObject(AXID axID, AXObjectCache& cache)
+    : AccessibilityObject(axID, cache)
 {
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,6 +82,9 @@ struct IDWriteFontCollection;
 #if USE(SKIA)
 #include "SkiaHarfBuzzFontCache.h"
 #include <skia/core/SkFontMgr.h>
+#if !OS(ANDROID) && !PLATFORM(WIN)
+#include "SkiaSystemFallbackFontCache.h"
+#endif
 #endif
 
 namespace WebCore {
@@ -120,7 +123,7 @@ class FontCache : public CanMakeCheckedPtr<FontCache> {
     WTF_MAKE_NONCOPYABLE(FontCache);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCache);
 public:
-    WEBCORE_EXPORT static FontCache& forCurrentThread();
+    WEBCORE_EXPORT static CheckedRef<FontCache> forCurrentThread();
     static FontCache* forCurrentThreadIfExists();
     static FontCache* forCurrentThreadIfNotDestroyed();
 
@@ -177,7 +180,7 @@ public:
 
     static void releaseNoncriticalMemoryInAllFontCaches();
 
-    void updateFontCascade(const FontCascade&, RefPtr<FontSelector>&&);
+    void updateFontCascade(const FontCascade&);
 
 #if PLATFORM(WIN)
     RefPtr<Font> fontFromDescriptionAndLogFont(const FontDescription&, const LOGFONT&, String& outFontFamilyName);
@@ -242,7 +245,7 @@ private:
 
     WeakHashSet<FontSelector> m_clients;
     struct FontDataCaches;
-    UniqueRef<FontDataCaches> m_fontDataCaches;
+    const UniqueRef<FontDataCaches> m_fontDataCaches;
     FontCascadeCache m_fontCascadeCache;
     SystemFallbackFontCache m_systemFallbackFontCache;
     MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> m_familiesUsingBackslashAsYenSign;
@@ -254,19 +257,19 @@ private:
 #endif
 
 #if PLATFORM(MAC)
-    UncheckedKeyHashSet<AtomString> m_knownFamilies;
+    HashSet<AtomString> m_knownFamilies;
 #endif
 
 #if PLATFORM(COCOA)
     FontDatabase m_databaseAllowingUserInstalledFonts { AllowUserInstalledFonts::Yes };
     FontDatabase m_databaseDisallowingUserInstalledFonts { AllowUserInstalledFonts::No };
 
-    using FallbackFontSet = UncheckedKeyHashSet<RetainPtr<CTFontRef>, WTF::RetainPtrObjectHash<CTFontRef>, WTF::RetainPtrObjectHashTraits<CTFontRef>>;
+    using FallbackFontSet = HashSet<RetainPtr<CTFontRef>, WTF::RetainPtrObjectHash<CTFontRef>, WTF::RetainPtrObjectHashTraits<CTFontRef>>;
     FallbackFontSet m_fallbackFonts;
 
     ListHashSet<String> m_seenFamiliesForPrewarming;
     ListHashSet<String> m_fontNamesRequiringSystemFallbackForPrewarming;
-    RefPtr<WorkQueue> m_prewarmQueue;
+    const RefPtr<WorkQueue> m_prewarmQueue;
 
     FontFamilySpecificationCoreTextCache m_fontFamilySpecificationCoreTextCache;
     SystemFontDatabaseCoreText m_systemFontDatabaseCoreText;
@@ -281,6 +284,9 @@ private:
 #if USE(SKIA)
     mutable sk_sp<SkFontMgr> m_fontManager;
     SkiaHarfBuzzFontCache m_harfBuzzFontCache;
+#if !OS(ANDROID) && !PLATFORM(WIN)
+    SkiaSystemFallbackFontCache m_skiaSystemFallbackFontCache;
+#endif
 #endif
 
 #if PLATFORM(WIN) && USE(SKIA)

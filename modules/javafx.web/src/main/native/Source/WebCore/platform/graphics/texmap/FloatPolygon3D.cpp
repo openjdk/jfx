@@ -28,6 +28,8 @@
 #include "config.h"
 #include "FloatPolygon3D.h"
 
+#include "FloatPlane3D.h"
+#include "FloatRect.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {

@@ -29,6 +29,7 @@
 #include "ElementInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
 #include "SVGElement.h"
@@ -130,16 +131,18 @@ std::optional<ResizeObservation::BoxSizes> ResizeObservation::elementSizeChanged
     if (!currentSizes)
         return std::nullopt;
 
-    LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObservation " << this << " elementSizeChanged - new content box " << currentSizes->contentBoxSize);
-
     switch (m_observedBox) {
     case ResizeObserverBoxOptions::BorderBox:
-        if (m_lastObservationSizes.borderBoxLogicalSize != currentSizes->borderBoxLogicalSize)
+        if (m_lastObservationSizes.borderBoxLogicalSize != currentSizes->borderBoxLogicalSize) {
+            LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObservation " << *this << " elementSizeChanged - border box size changed from " << m_lastObservationSizes.borderBoxLogicalSize << " to " << currentSizes->borderBoxLogicalSize);
             return currentSizes;
+        }
         break;
     case ResizeObserverBoxOptions::ContentBox:
-        if (m_lastObservationSizes.contentBoxLogicalSize != currentSizes->contentBoxLogicalSize)
+        if (m_lastObservationSizes.contentBoxLogicalSize != currentSizes->contentBoxLogicalSize) {
+            LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObservation " << *this << " elementSizeChanged - content box size changed from " << m_lastObservationSizes.contentBoxLogicalSize << " to " << currentSizes->contentBoxLogicalSize);
             return currentSizes;
+        }
         break;
     }
 
@@ -160,10 +163,14 @@ size_t ResizeObservation::targetElementDepth() const
 
 TextStream& operator<<(TextStream& ts, const ResizeObservation& observation)
 {
-    ts.dumpProperty("target", ValueOrNull(observation.target()));
-    ts.dumpProperty("border box", observation.borderBoxSize());
-    ts.dumpProperty("content box", observation.contentBoxSize());
-    ts.dumpProperty("snapped content box", observation.snappedContentBoxSize());
+    ts.dumpProperty("target"_s, ValueOrNull(observation.target()));
+
+    if (auto* box = observation.target()->renderBox())
+        ts.dumpProperty("target box"_s, box);
+
+    ts.dumpProperty("border box"_s, observation.borderBoxSize());
+    ts.dumpProperty("content box"_s, observation.contentBoxSize());
+    ts.dumpProperty("snapped content box"_s, observation.snappedContentBoxSize());
     return ts;
 }
 

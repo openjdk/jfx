@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -65,13 +65,14 @@ private:
     bool accessKeyAction(bool sendMouseEvents) final;
     void attributeChanged(const QualifiedName&) final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
-    String fallbackValue() const final;
-    String sanitizeValue(const String& proposedValue) const final;
+    ValueOrReference<String> fallbackValue() const final;
+    ValueOrReference<String> sanitizeValue(const String& proposedValue LIFETIME_BOUND) const final;
     bool shouldRespectListAttribute() final;
     HTMLElement* sliderThumbElement() const final;
     HTMLElement* sliderTrackElement() const final;
 
     SliderThumbElement& typedSliderThumbElement() const;
+    Ref<SliderThumbElement> protectedTypedSliderThumbElement() const;
 
     void dataListMayHaveChanged() final;
     void updateTickMarkValues();

@@ -30,10 +30,8 @@
 #include "CryptoKeyFormat.h"
 #include "CryptoKeyPair.h"
 #include "CryptoKeyUsage.h"
-#include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #include <pal/crypto/CryptoDigest.h>
-#include <variant>
 #include <wtf/Function.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -45,9 +43,12 @@ namespace WebCore {
 
 class CryptoAlgorithmParameters;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
-using KeyData = std::variant<Vector<uint8_t>, JsonWebKey>;
-using KeyOrKeyPair = std::variant<RefPtr<CryptoKey>, CryptoKeyPair>;
+enum class ExceptionCode : uint8_t;
+
+using KeyData = Variant<Vector<uint8_t>, JsonWebKey>;
+using KeyOrKeyPair = Variant<RefPtr<CryptoKey>, CryptoKeyPair>;
 
 class CryptoAlgorithm : public ThreadSafeRefCounted<CryptoAlgorithm> {
 public:

@@ -37,7 +37,7 @@ public:
     void paint(PaintInfo&, const LayoutPoint&) override;
     void setNeedsBoundariesUpdate() final { m_needsBoundariesUpdate = true; }
     virtual bool didTransformToRootUpdate() { return false; }
-    bool isObjectBoundingBoxValid() const { return m_objectBoundingBoxValid; }
+    bool isObjectBoundingBoxValid() const { return static_cast<bool>(m_objectBoundingBox); }
     bool isRepaintSuspendedForChildren() const { return m_repaintIsSuspendedForChildrenDuringLayout; }
 
 protected:
@@ -51,7 +51,7 @@ protected:
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
 
-    FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
+    FloatRect objectBoundingBox() const final { return m_objectBoundingBox.value_or(FloatRect()); }
     FloatRect strokeBoundingBox() const final;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
 
@@ -71,12 +71,11 @@ protected:
     void updateCachedBoundaries();
 
 private:
-    FloatRect m_objectBoundingBox;
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_strokeBoundingBox;
+    Markable<FloatRect> m_objectBoundingBox;
+    mutable Markable<FloatRect> m_strokeBoundingBox;
     FloatRect m_repaintBoundingBox;
-    mutable Markable<FloatRect, FloatRect::MarkableTraits> m_accurateRepaintBoundingBox;
+    mutable Markable<FloatRect> m_accurateRepaintBoundingBox;
 
-    bool m_objectBoundingBoxValid { false };
     bool m_needsBoundariesUpdate { true };
     bool m_repaintIsSuspendedForChildrenDuringLayout { false };
 };

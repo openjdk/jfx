@@ -28,7 +28,7 @@
 
 #include <WebCore/DOMException.h>
 #include <WebCore/Attr.h>
-#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/CSSStyleProperties.h>
 #include <WebCore/Element.h>
 #include <WebCore/ElementInlines.h>
 #include <WebCore/EventListener.h>
@@ -75,7 +75,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getStyleImpl(JNIEnv*
 {
     WebCore::JSMainThreadNullState state;
     auto ret = is<WebCore::StyledElement>(IMPL) ? WTF::getPtr(&downcast<WebCore::StyledElement>(IMPL)->cssomStyle()) : nullptr;
-    return JavaReturn<CSSStyleDeclaration>(env, ret);
+    return JavaReturn<CSSStyleProperties>(env, ret);
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_ElementImpl_getIdImpl(JNIEnv* env, jclass, jlong peer)

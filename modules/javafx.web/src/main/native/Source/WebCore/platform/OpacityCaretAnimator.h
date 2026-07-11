@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CaretAnimator.h"
+#include "LayoutRect.h"
 #include <wtf/TZoneMalloc.h>
 
 #if HAVE(REDESIGNED_TEXT_CURSOR)

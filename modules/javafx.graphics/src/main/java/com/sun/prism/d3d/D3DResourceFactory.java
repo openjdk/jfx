@@ -377,18 +377,18 @@ class D3DResourceFactory extends BaseShaderFactory {
             int width = pState.getRenderWidth();
             int height = pState.getRenderHeight();
             D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isMSAA());
-            if (PrismSettings.dirtyOptsEnabled) {
-                rtt.contentsUseful();
-            }
-
             if (rtt != null) {
+                if (PrismSettings.dirtyOptsEnabled) {
+                    rtt.contentsUseful();
+                }
+
                 return new D3DSwapChain(context, pResource, rtt, pState.getRenderScaleX(), pState.getRenderScaleY());
             }
 
             D3DResourceFactory.nReleaseResource(context.getContextHandle(), pResource);
         }
-        return null;
 
+        return null;
     }
 
     private static ByteBuffer getBuffer(InputStream is) {

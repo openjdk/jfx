@@ -30,6 +30,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/BitSet.h>
 #include <wtf/CountingLock.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/IterationStatus.h>
 #include <wtf/PageBlock.h>
@@ -61,7 +62,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlock);
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlockHandle);
 class MarkedBlock {
     WTF_MAKE_NONCOPYABLE(MarkedBlock);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlock);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlock, MarkedBlock);
     friend class LLIntOffsetsExtractor;
     friend struct VerifyMarked;
 
@@ -114,7 +115,7 @@ public:
 
     class Handle {
         WTF_MAKE_NONCOPYABLE(Handle);
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlockHandle);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlockHandle, MarkedBlockHandle);
         friend class LLIntOffsetsExtractor;
         friend class MarkedBlock;
         friend struct VerifyMarked;
@@ -597,7 +598,7 @@ inline Dependency MarkedBlock::aboutToMark(HeapVersion markingVersion, HeapCell*
 {
     HeapVersion version;
     Dependency dependency = Dependency::loadAndFence(&header().m_markingVersion, version);
-    if (UNLIKELY(version != markingVersion))
+    if (version != markingVersion) [[unlikely]]
         aboutToMarkSlow(markingVersion, cell);
     return dependency;
 }
@@ -616,7 +617,7 @@ inline bool MarkedBlock::isMarked(HeapVersion markingVersion, const void* p)
 {
     HeapVersion version;
     Dependency dependency = Dependency::loadAndFence(&header().m_markingVersion, version);
-    if (UNLIKELY(version != markingVersion))
+    if (version != markingVersion) [[unlikely]]
         return false;
     return header().m_marks.get(atomNumber(p), dependency);
 }
@@ -696,7 +697,7 @@ inline void MarkedBlock::noteMarked()
     MarkCountBiasType biasedMarkCount = header().m_biasedMarkCount;
     ++biasedMarkCount;
     header().m_biasedMarkCount = biasedMarkCount;
-    if (UNLIKELY(!biasedMarkCount))
+    if (!biasedMarkCount) [[unlikely]]
         noteMarkedSlow();
 }
 

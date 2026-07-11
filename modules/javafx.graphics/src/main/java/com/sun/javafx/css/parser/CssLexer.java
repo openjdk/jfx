@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,6 +69,8 @@ public final class CssLexer {
     public static final int SECONDS = 45;
     public static final int MS = 46;
     public static final int AT_KEYWORD = 47;
+    public static final int LESS = 48;
+    public static final int EQUALS = 49;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
@@ -870,8 +872,17 @@ public final class CssLexer {
                         break;
 
                     case '>':
-
                         token = new Token(GREATER,">", line, offset);
+                        offset = pos;
+                        break;
+
+                    case '<':
+                        token = new Token(LESS,"<", line, offset);
+                        offset = pos;
+                        break;
+
+                    case '=':
+                        token = new Token(EQUALS,"=", line, offset);
                         offset = pos;
                         break;
 

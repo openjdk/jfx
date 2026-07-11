@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -90,10 +90,10 @@ ExceptionOr<void> FetchEvent::respondWith(Ref<DOMPromise>&& promise)
     if (m_respondWithEntered)
         return Exception { ExceptionCode::InvalidStateError, "Event respondWith flag is set"_s };
 
-    m_respondPromise = WTFMove(promise);
-    addExtendLifetimePromise(*m_respondPromise);
+    m_respondPromise = promise.copyRef();
+    addExtendLifetimePromise(promise.get());
 
-    auto isRegistered = m_respondPromise->whenSettled([protectedThis = Ref { *this }] {
+    auto isRegistered = promise->whenSettled([protectedThis = Ref { *this }] {
         protectedThis->promiseIsSettled();
     });
 
@@ -131,14 +131,15 @@ void FetchEvent::processResponse(Expected<Ref<FetchResponse>, std::optional<Reso
 
 void FetchEvent::promiseIsSettled()
 {
-    if (m_respondPromise->status() == DOMPromise::Status::Rejected) {
-        auto reason = m_respondPromise->result().toWTFString(m_respondPromise->globalObject());
+    Ref respondPromise = *m_respondPromise;
+    if (respondPromise->status() == DOMPromise::Status::Rejected) {
+        auto reason = respondPromise->result().toWTFString(respondPromise->globalObject());
         respondWithError(createResponseError(m_request->url(), reason, ResourceError::IsSanitized::Yes));
         return;
     }
 
-    ASSERT(m_respondPromise->status() == DOMPromise::Status::Fulfilled);
-    auto response = JSFetchResponse::toWrapped(m_respondPromise->globalObject()->vm(), m_respondPromise->result());
+    ASSERT(respondPromise->status() == DOMPromise::Status::Fulfilled);
+    RefPtr response = JSFetchResponse::toWrapped(respondPromise->globalObject()->vm(), respondPromise->result());
     if (!response) {
         respondWithError(createResponseError(m_request->url(), "Returned response is null."_s, ResourceError::IsSanitized::Yes));
         return;
@@ -170,8 +171,10 @@ FetchEvent::PreloadResponsePromise& FetchEvent::preloadResponse(ScriptExecutionC
 
 void FetchEvent::navigationPreloadIsReady(ResourceResponse&& response)
 {
+    ASSERT(!response.isRedirected());
+
     auto* globalObject = m_handled->globalObject();
-    auto* context = globalObject ? globalObject->scriptExecutionContext() : nullptr;
+    RefPtr context = globalObject ? globalObject->scriptExecutionContext() : nullptr;
     if (!context)
         return;
 

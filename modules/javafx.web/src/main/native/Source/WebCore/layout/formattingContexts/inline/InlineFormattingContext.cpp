@@ -65,6 +65,16 @@ namespace Layout {
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineContentCache);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineFormattingContext);
 
+static size_t estimatedDisplayBoxSize(size_t inlineItemSize)
+{
+    if (inlineItemSize == 1) {
+        // Common case of blocks with only one word where we produce 2 boxes (root inline and text box)
+        return 2;
+    }
+    // This value represents a simple average derived from typical web page content.
+    return inlineItemSize * 0.6;
+}
+
 static std::optional<InlineItemRange> partialRangeForDamage(const InlineItemList& inlineItemList, const InlineDamage& lineDamage)
 {
     auto layoutStartPosition = lineDamage.layoutStartPosition()->inlineItemPosition;
@@ -120,7 +130,8 @@ InlineLayoutResult InlineFormattingContext::layout(const ConstraintsForInlineCon
         return { { }, InlineLayoutResult::Range::Full };
     }
 
-    auto& inlineItemList = inlineContentCache().inlineItems().content();
+    auto& inlineItems = inlineContentCache().inlineItems();
+    auto& inlineItemList = inlineItems.content();
     auto needsLayoutRange = [&]() -> InlineItemRange {
         if (!InlineInvalidation::mayOnlyNeedPartialLayout(lineDamage))
             return { { }, { inlineItemList.size(), { } } };
@@ -158,12 +169,12 @@ InlineLayoutResult InlineFormattingContext::layout(const ConstraintsForInlineCon
             layoutState().setAvailableLineWidthOverride({ *constrainedLineWidths });
     }
 
-    if (TextOnlySimpleLineBuilder::isEligibleForSimplifiedTextOnlyInlineLayoutByContent(inlineContentCache().inlineItems(), layoutState().placedFloats()) && TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(root().style())) {
-        auto simplifiedLineBuilder = TextOnlySimpleLineBuilder { *this, root(), constraints.horizontal(), inlineItemList };
+    if (TextOnlySimpleLineBuilder::isEligibleForSimplifiedTextOnlyInlineLayoutByContent(inlineItems, layoutState().placedFloats()) && TextOnlySimpleLineBuilder::isEligibleForSimplifiedInlineLayoutByStyle(root().style())) {
+        auto simplifiedLineBuilder = makeUniqueRef<TextOnlySimpleLineBuilder>(*this, root(), constraints.horizontal(), inlineItemList);
         return lineLayout(simplifiedLineBuilder, inlineItemList, needsLayoutRange, previousLine(), constraints, lineDamage);
     }
-    if (RangeBasedLineBuilder::isEligibleForRangeInlineLayout(*this, inlineContentCache().inlineItems(), layoutState().placedFloats())) {
-        auto rangeBasedLineBuilder = RangeBasedLineBuilder { *this, constraints.horizontal(), inlineItemList };
+    if (RangeBasedLineBuilder::isEligibleForRangeInlineLayout(*this, inlineItems, layoutState().placedFloats())) {
+        auto rangeBasedLineBuilder = makeUniqueRef<RangeBasedLineBuilder>(*this, constraints.horizontal(), inlineItems);
         return lineLayout(rangeBasedLineBuilder, inlineItemList, needsLayoutRange, previousLine(), constraints, lineDamage);
     }
     auto lineBuilder = makeUniqueRef<LineBuilder>(*this, constraints.horizontal(), inlineItemList, inlineContentCache().textSpacingContext());
@@ -203,7 +214,8 @@ std::pair<LayoutUnit, LayoutUnit> InlineFormattingContext::minimumMaximumContent
     // This also undermines the idea of computing min/max values independently.
     if (*minimumContentSize > *maximumContentSize) {
         auto hasNegativeImplicitMargin = [](auto& style) {
-            return (style.textIndent().isFixed() && style.textIndent().value() < 0) || style.wordSpacing() < 0 || style.letterSpacing() < 0;
+            auto textIndentFixedLength = style.textIndent().length.tryFixed();
+            return (textIndentFixedLength && textIndentFixedLength->value < 0) || style.wordSpacing() < 0 || style.letterSpacing() < 0;
         };
         auto contentHasNegativeImplicitMargin = hasNegativeImplicitMargin(root().style());
         if (!contentHasNegativeImplicitMargin) {
@@ -287,7 +299,7 @@ InlineLayoutResult InlineFormattingContext::lineLayout(AbstractLineBuilder& line
 
     auto layoutResult = InlineLayoutResult { };
     if (!needsLayoutRange.start)
-        layoutResult.displayContent.boxes.reserveInitialCapacity(inlineItemList.size());
+        layoutResult.displayContent.boxes.reserveInitialCapacity(estimatedDisplayBoxSize(inlineItemList.size()));
 
     auto floatingContext = this->floatingContext();
     auto lineLogicalTop = InlineLayoutUnit { constraints.logicalTop() };
@@ -504,8 +516,8 @@ void InlineFormattingContext::initializeInlineLayoutState(const LayoutState& glo
 {
     auto& inlineLayoutState = layoutState();
 
-    if (auto limitLinesValue = root().style().hyphenationLimitLines(); limitLinesValue != RenderStyle::initialHyphenationLimitLines())
-        inlineLayoutState.setHyphenationLimitLines(limitLinesValue);
+    if (auto limitLinesValue = root().style().hyphenateLimitLines().tryValue())
+        inlineLayoutState.setHyphenationLimitLines(limitLinesValue->value);
     // FIXME: Remove when IFC takes care of running layout on inline-blocks.
     inlineLayoutState.setShouldNotSynthesizeInlineBlockBaseline();
     if (globalLayoutState.inStandardsMode())

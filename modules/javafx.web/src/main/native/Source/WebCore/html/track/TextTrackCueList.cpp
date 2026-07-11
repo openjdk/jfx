@@ -116,7 +116,7 @@ void TextTrackCueList::add(Ref<TextTrackCue>&& cue)
 void TextTrackCueList::remove(TextTrackCue& cue)
 {
     ASSERT_SORTED(m_vector);
-    m_vector.remove(cueIndex(cue));
+    m_vector.removeAt(cueIndex(cue));
     ASSERT_SORTED(m_vector);
 }
 

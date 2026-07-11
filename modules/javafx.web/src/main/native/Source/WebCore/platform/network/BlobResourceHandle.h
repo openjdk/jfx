@@ -30,7 +30,9 @@
 
 #pragma once
 
+#include "BlobData.h"
 #include "FileStreamClient.h"
+#include "HTTPParsers.h"
 #include "ResourceHandle.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -44,7 +46,36 @@ class ResourceHandleClient;
 class ResourceRequest;
 class BlobDataItem;
 
-class BlobResourceHandle final : public FileStreamClient, public ResourceHandle  {
+// FIXME: Move even more logic from BlobResourceHandle / NetworkDataTaskBlob to
+// BlobResourceHandleBase and make data members private.
+class BlobResourceHandleBase {
+public:
+    enum class Error {
+        NoError = 0,
+        NotFoundError = 1,
+        SecurityError = 2,
+        RangeError = 3,
+        NotReadableError = 4,
+        MethodNotAllowed = 5
+    };
+protected:
+    WEBCORE_EXPORT BlobResourceHandleBase(RefPtr<BlobData>&& = nullptr);
+    ~BlobResourceHandleBase() = default;
+
+    WEBCORE_EXPORT std::optional<Error> seek();
+    WEBCORE_EXPORT std::optional<Error> adjustAndValidateRangeBounds();
+
+    RefPtr<BlobData> m_blobData;
+    bool m_isRangeRequest { false };
+    std::optional<HTTPRange> m_range;
+    Vector<uint64_t> m_itemLengthList;
+    uint64_t m_totalSize { 0 };
+    uint64_t m_totalRemainingSize { 0 };
+    uint64_t m_currentItemReadSize { 0 };
+    unsigned m_readItemCount { 0 };
+};
+
+class BlobResourceHandle final : public BlobResourceHandleBase, public FileStreamClient, public ResourceHandle  {
 public:
     static Ref<BlobResourceHandle> createAsync(BlobData*, const ResourceRequest&, ResourceHandleClient*);
 
@@ -55,14 +86,7 @@ public:
 
     bool aborted() const { return m_aborted; }
 
-    enum class Error {
-        NoError = 0,
-        NotFoundError = 1,
-        SecurityError = 2,
-        RangeError = 3,
-        NotReadableError = 4,
-        MethodNotAllowed = 5
-    };
+    bool isBlobResourceHandle() const final { return true; }
 
 private:
     BlobResourceHandle(BlobData*, const ResourceRequest&, ResourceHandleClient*, bool async);
@@ -78,7 +102,6 @@ private:
 
     void doStart();
     void getSizeForNext();
-    std::optional<Error> seek();
     void consumeData(std::span<const uint8_t>);
     void failed(Error);
 
@@ -98,25 +121,18 @@ private:
 
     bool erroredOrAborted() const { return m_aborted || m_errorCode != Error::NoError; }
 
-    enum { kPositionNotSpecified = -1 };
-
-    RefPtr<BlobData> m_blobData;
     bool m_async;
     std::unique_ptr<AsyncFileStream> m_asyncStream; // For asynchronous loading.
     std::unique_ptr<FileStream> m_stream; // For synchronous loading.
     Vector<uint8_t> m_buffer;
-    Vector<long long> m_itemLengthList;
     Error m_errorCode { Error::NoError };
     bool m_aborted { false };
-    bool m_isRangeRequest { false };
-    long long m_rangeStart { kPositionNotSpecified };
-    long long m_rangeEnd { kPositionNotSpecified };
-    long long m_totalSize { 0 };
-    long long m_totalRemainingSize { 0 };
-    long long m_currentItemReadSize { 0 };
     unsigned m_sizeItemCount { 0 };
-    unsigned m_readItemCount { 0 };
     bool m_fileOpened { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::BlobResourceHandle)
+    static bool isType(const WebCore::ResourceHandle& handle) { return handle.isBlobResourceHandle(); }
+SPECIALIZE_TYPE_TRAITS_END()

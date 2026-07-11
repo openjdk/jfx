@@ -28,6 +28,17 @@
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
 
+#ifndef NS_RETURNS_RETAINED
+#if __has_feature(attribute_ns_returns_retained)
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#define NS_RETURNS_RETAINED
+#endif
+#endif
+
+#define _STORE_IN_DLSYM_SECTION __attribute__((section("__TEXT,__dlsym_cstr")))
+#define _STORE_IN_GETCLASS_SECTION __attribute__((section("__TEXT,__getClass_cstr")))
+
 #pragma mark - Soft-link macros for use within a single source file
 
 #define SOFT_LINK_LIBRARY(lib) \
@@ -61,6 +72,17 @@ static void* lib##Library() \
     }(); \
     return dylib; \
 }
+
+#define SOFT_LINK_LIBRARY_WITH_PATH(lib, path) \
+    static void* lib##Library() \
+    { \
+        static void* dylib = ^{ \
+            void *result = dlopen(path #lib ".dylib", RTLD_NOW); \
+            RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
+            return result; \
+        }(); \
+        return dylib; \
+    }
 
 #define SOFT_LINK_FRAMEWORK(framework) \
     static void* framework##Library() \
@@ -148,7 +170,8 @@ static void* lib##Library() \
     \
     static resultType init##functionName parameterDeclarations \
     { \
-        softLink##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #functionName; \
+        softLink##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), auditedName); \
         RELEASE_ASSERT_WITH_MESSAGE(softLink##functionName, "%s", dlerror()); \
         return softLink##functionName parameterNames; \
     } \
@@ -167,7 +190,8 @@ static void* lib##Library() \
     static bool init##functionName() \
     { \
         ASSERT(!softLink##functionName); \
-        softLink##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #functionName; \
+        softLink##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), auditedName); \
         return !!softLink##functionName; \
     } \
     \
@@ -192,7 +216,8 @@ static void* lib##Library() \
     \
     static functionName##PtrType functionName##Ptr() \
     { \
-        static functionName##PtrType ptr = reinterpret_cast<functionName##PtrType>(dlsym(framework##Library(), #functionName)); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #functionName; \
+        static functionName##PtrType ptr = reinterpret_cast<functionName##PtrType>(dlsym(framework##Library(), auditedName)); \
         return ptr; \
     }
 
@@ -200,24 +225,26 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    struct Class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static Class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
-        class##className = objc_getClass(#className); \
-        RELEASE_ASSERT(class##className); \
+        _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
+        class##className.classObject = objc_getClass(auditedClassName); \
+        RELEASE_ASSERT(class##className.classObject); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -227,23 +254,25 @@ static void* lib##Library() \
     @class className; \
     static Class init##className(); \
     static Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
+    static class##className##Wrapper class##className; \
     \
     static Class className##Function() \
     { \
-        return class##className; \
+        return class##className.classObject; \
     } \
     \
     static Class init##className() \
     { \
         framework##Library(); \
-        class##className = objc_getClass(#className); \
+        _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
+        class##className.classObject = objc_getClass(auditedClassName); \
         get##className##Class = className##Function; \
-        return class##className; \
+        return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
-    static className *alloc##className##Instance() \
+    static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -261,7 +290,8 @@ static void* lib##Library() \
     \
     static type init##name() \
     { \
-        void** pointer = static_cast<void**>(dlsym(framework##Library(), #name)); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
+        void** pointer = static_cast<void**>(dlsym(framework##Library(), auditedName)); \
         RELEASE_ASSERT_WITH_MESSAGE(pointer, "%s", dlerror()); \
         pointer##name = static_cast<type>(*pointer); \
         get##name = name##Function; \
@@ -280,7 +310,8 @@ static void* lib##Library() \
     \
     static type init##name() \
     { \
-        void** pointer = static_cast<void**>(dlsym(framework##Library(), #name)); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
+        void** pointer = static_cast<void**>(dlsym(framework##Library(), auditedName)); \
         if (pointer) \
             pointer##name = static_cast<type>(*pointer); \
         get##name = name##Function; \
@@ -290,30 +321,33 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT(framework, name, type) \
     static type init##name(); \
     static type (*get##name)() = init##name; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static type init##name() \
     { \
-        void* constant = dlsym(framework##Library(), #name); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
+        void* constant = dlsym(framework##Library(), auditedName); \
         RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
-        return constant##name; \
+        return constant##name.constant; \
     }
 
 #define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \
     static bool init##name(); \
     static type (*get##name)() = 0; \
-    static type constant##name; \
+    struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
+    static Constant##name##Wrapper constant##name; \
     \
     static type name##Function() \
     { \
-        return constant##name; \
+        return constant##name.constant; \
     } \
     \
     static bool canLoad##name() \
@@ -325,10 +359,11 @@ static void* lib##Library() \
     static bool init##name() \
     { \
         ASSERT(!get##name); \
-        void* constant = dlsym(framework##Library(), #name); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
+        void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
-        constant##name = *static_cast<type const *>(constant); \
+        constant##name.constant = *static_cast<type const *>(constant); \
         get##name = name##Function; \
         return true; \
     }
@@ -420,8 +455,8 @@ static void* lib##Library() \
     @class className; \
     namespace functionNamespace { \
     extern Class (*get##className##Class)(); \
-    className *alloc##className##Instance(); \
-    inline className *alloc##className##Instance() \
+    className *alloc##className##Instance() NS_RETURNS_RETAINED; \
+    inline className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -439,7 +474,7 @@ static void* lib##Library() \
     namespace functionNamespace { \
     static Class init##className(); \
     export Class (*get##className##Class)() = init##className; \
-    static Class class##className; \
+    SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
     \
     static Class className##Function() \
     { \
@@ -451,7 +486,8 @@ static void* lib##Library() \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
             framework##Library(isOptional); \
-            class##className = objc_getClass(#className); \
+            _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
+            class##className = objc_getClass(auditedClassName); \
             if (!isOptional) \
                 RELEASE_ASSERT(class##className); \
             get##className##Class = className##Function; \
@@ -480,8 +516,8 @@ static void* lib##Library() \
     SOFT_LINK_CLASS_FOR_SOURCE_WITH_EXPORT_AND_IS_OPTIONAL(functionNamespace, framework, className, , SOFT_LINK_IS_OPTIONAL)
 
 #define SOFT_LINK_CLASS_ALLOC_FUNCTION(className, availability) \
-    className *alloc##className##Instance() availability; \
-    className *alloc##className##Instance() availability \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability; \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability \
     { \
         return [get##className##Class() alloc]; \
     } \
@@ -499,10 +535,11 @@ static void* lib##Library() \
     export variableType get_##framework##_##variableName(); \
     variableType get_##framework##_##variableName() \
     { \
-        static variableType constant##framework##variableName; \
+        SUPPRESS_UNRETAINED_LOCAL static variableType constant##framework##variableName; \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
-            void* constant = dlsym(framework##Library(), #variableName); \
+            _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
+            void* constant = dlsym(framework##Library(), auditedName); \
             RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
             constant##framework##variableName = *static_cast<variableType const *>(constant); \
         }); \
@@ -526,7 +563,8 @@ static void* lib##Library() \
     bool init_##framework##_##variableName(); \
     bool init_##framework##_##variableName() \
     { \
-        void* constant = dlsym(framework##Library(), #variableName); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
+        void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
         constant##framework##variableName = *static_cast<variableType const *>(constant); \
@@ -548,17 +586,23 @@ static void* lib##Library() \
 #define SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE(functionNamespace, framework, variableName, variableType) \
     SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, variableName, variableType, )
 
-#define SOFT_LINK_FUNCTION_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+#define SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, functionAttributes) \
     WTF_EXTERN_C_BEGIN \
     resultType functionName parameterDeclarations; \
     WTF_EXTERN_C_END \
     namespace functionNamespace { \
     extern resultType (*softLink##framework##functionName) parameterDeclarations; \
-    inline resultType softLink_##framework##_##functionName parameterDeclarations \
+    inline functionAttributes resultType softLink_##framework##_##functionName parameterDeclarations \
     { \
         return softLink##framework##functionName parameterNames; \
     } \
     } \
+
+#define SOFT_LINK_FUNCTION_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, )
+
+#define SOFT_LINK_FUNCTION_FOR_HEADER_WITH_CF_RETURNS_RETAINED(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, CF_RETURNS_RETAINED)
 
 #define SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, export) \
     WTF_EXTERN_C_BEGIN \
@@ -571,7 +615,8 @@ static void* lib##Library() \
     { \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
-            softLink##framework##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
+            _STORE_IN_DLSYM_SECTION static char const auditedName[] = #functionName; \
+            softLink##framework##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), auditedName); \
             RELEASE_ASSERT_WITH_MESSAGE(softLink##framework##functionName, "%s", dlerror()); \
         }); \
         return softLink##framework##functionName parameterNames; \
@@ -602,7 +647,8 @@ static void* lib##Library() \
     bool init_##framework##_##functionName() \
     { \
         ASSERT(!softLink##framework##functionName); \
-        softLink##framework##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
+        _STORE_IN_DLSYM_SECTION static char const auditedName[] = #functionName; \
+        softLink##framework##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), auditedName); \
         return !!softLink##framework##functionName; \
     } \
     \
@@ -644,7 +690,8 @@ static void* lib##Library() \
     { \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
-            void** pointer = static_cast<void**>(dlsym(framework##Library(), #variableName)); \
+            _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
+            void** pointer = static_cast<void**>(dlsym(framework##Library(), auditedName)); \
             RELEASE_ASSERT_WITH_MESSAGE(pointer, "%s", dlerror()); \
             pointer##framework##variableName = static_cast<variableType>(*pointer); \
             get_##framework##_##variableName = pointer##framework##variableName##Function; \
@@ -672,7 +719,8 @@ static void* lib##Library() \
         static variableType * variable##framework##variableName; \
         static dispatch_once_t once; \
         dispatch_once(&once, ^{ \
-            void* variable = dlsym(framework##Library(), #variableName); \
+            _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
+            void* variable = dlsym(framework##Library(), auditedName); \
             RELEASE_ASSERT_WITH_MESSAGE(variable, "%s", dlerror()); \
             variable##framework##variableName = static_cast<variableType *>(variable); \
         }); \

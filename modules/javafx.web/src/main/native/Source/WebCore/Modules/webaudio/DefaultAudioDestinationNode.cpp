@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,9 @@
 #include "AudioNodeInput.h"
 #include "AudioWorklet.h"
 #include "AudioWorkletMessagingProxy.h"
+#include "Document.h"
+#include "Exception.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MediaStrategy.h"
 #include "PlatformStrategies.h"
@@ -116,7 +119,11 @@ void DefaultAudioDestinationNode::createDestination()
 {
     ALWAYS_LOG(LOGIDENTIFIER, "contextSampleRate = ", sampleRate(), ", hardwareSampleRate = ", AudioDestination::hardwareSampleRate());
     ASSERT(!m_destination);
-    m_destination = platformStrategies()->mediaStrategy().createAudioDestination(*this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), sampleRate());
+    m_destination = platformStrategies()->mediaStrategy().createAudioDestination({ *this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), sampleRate()
+#if PLATFORM(IOS_FAMILY)
+        , context().sceneIdentifier()
+#endif
+        });
 }
 
 void DefaultAudioDestinationNode::recreateDestination()
@@ -255,16 +262,16 @@ MediaTime DefaultAudioDestinationNode::outputLatency() const
     return m_destination ? m_destination->outputLatency() : MediaTime::zeroTime();
 }
 
-void DefaultAudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void DefaultAudioDestinationNode::render(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     renderQuantum(destinationBus, numberOfFrames, outputPosition);
 
-    setIsSilent(destinationBus->isSilent());
+    setIsSilent(destinationBus.isSilent());
 
     // The reason we are handling mute after the call to setIsSilent() is because the muted state does
     // not affect the audio destination node's effective playing state.
     if (m_muted)
-        destinationBus->zero();
+        destinationBus.zero();
 }
 
 void DefaultAudioDestinationNode::setIsSilent(bool isSilent)
@@ -290,6 +297,15 @@ void DefaultAudioDestinationNode::updateIsEffectivelyPlayingAudio()
     m_isEffectivelyPlayingAudio = isEffectivelyPlayingAudio;
     context().isPlayingAudioDidChange();
 }
+
+#if PLATFORM(IOS_FAMILY)
+void DefaultAudioDestinationNode::setSceneIdentifier(const String& sceneIdentifier)
+{
+    if (m_destination)
+        m_destination->setSceneIdentifier(sceneIdentifier);
+}
+#endif
+
 
 } // namespace WebCore
 

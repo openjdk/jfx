@@ -47,7 +47,7 @@ constexpr int InputBufferSize = 8 * 16384;
 // It turns out then, that the background thread has about 278msec of scheduling slop.
 // Empirically, this has been found to be a good compromise between giving enough time for scheduling slop,
 // while still minimizing the amount of processing done in the primary (high-priority) thread.
-// This was found to be a good value on Mac OS X, and may work well on other platforms as well, assuming
+// This was found to be a good value on macOS, and may work well on other platforms as well, assuming
 // the very rough scheduling latencies are similar on these time-scales.  Of course, this code may need to be
 // tuned for individual platforms if this assumption is found to be incorrect.
 constexpr size_t RealtimeFrameLimit = 8192  + 4096; // ~278msec @ 44.1KHz
@@ -122,9 +122,9 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
     // Start up background thread
     // FIXME: would be better to up the thread priority here.  It doesn't need to be real-time, but higher than the default...
     if (this->useBackgroundThreads() && m_backgroundStages.size() > 0) {
-        m_backgroundThread = Thread::create("convolution background thread"_s, [this] {
+        lazyInitialize(m_backgroundThread, Thread::create("convolution background thread"_s, [this] {
             backgroundThreadEntry();
-        }, ThreadType::Audio);
+        }, ThreadType::Audio));
     }
 }
 

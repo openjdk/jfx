@@ -29,6 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "TransformationMatrix.h"
 #include "WebXRSession.h"
 #include <wtf/RefCounted.h>
@@ -61,13 +62,13 @@ protected:
     const WebXRRigidTransform& originOffset() const { return m_originOffset.get(); }
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebXRSpace; }
 
-    Ref<WebXRRigidTransform> m_originOffset;
+    const Ref<WebXRRigidTransform> m_originOffset;
 };
 
 // https://immersive-web.github.io/webxr/#xrsession-viewer-reference-space

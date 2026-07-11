@@ -57,7 +57,7 @@ void JSIteratorConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject,
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, iteratorPrototype, static_cast<unsigned>(PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->from, jsIteratorConstructorFromCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    if (Options::useIteratorHelpers() && Options::useIteratorSequencing())
+    if (Options::useIteratorSequencing())
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().concatPublicName(), jsIteratorConstructorConcatCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 

@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "ClientOrigin.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MainThreadPermissionObserverIdentifier.h"
 #include "Page.h"
 #include "PermissionDescriptor.h"
@@ -61,7 +62,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PermissionStatus; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

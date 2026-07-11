@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.application.ColorScheme;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -47,6 +48,7 @@ import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.tools.CustomStage;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.Formats;
+import com.oracle.tools.fx.monkey.util.HeaderBars;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -58,25 +60,20 @@ public class StagePage extends TestPaneBase {
     private final ToggleButton button;
     private final Label status;
     private Stage stage;
-    private final SimpleBooleanProperty alwaysOnTop = new SimpleBooleanProperty();
     private final SimpleBooleanProperty focused = new SimpleBooleanProperty();
-    private final SimpleBooleanProperty fullScreen = new SimpleBooleanProperty();
-    private final SimpleStringProperty fullScreenExitHint = new SimpleStringProperty();
-    private final SimpleBooleanProperty iconified = new SimpleBooleanProperty(false);
-    private final SimpleBooleanProperty maximized = new SimpleBooleanProperty(false);
+    private final SimpleObjectProperty<HeaderBars.Choice> headerBar = new SimpleObjectProperty<>(HeaderBars.Choice.NONE);
     private final SimpleDoubleProperty maxHeight = new SimpleDoubleProperty(Double.MAX_VALUE);
     private final SimpleDoubleProperty maxWidth = new SimpleDoubleProperty(Double.MAX_VALUE);
     private final SimpleDoubleProperty minHeight = new SimpleDoubleProperty(0);
     private final SimpleDoubleProperty minWidth = new SimpleDoubleProperty(0);
-    private final SimpleObjectProperty<Modality> modality = new SimpleObjectProperty<>(Modality.NONE);
     private final SimpleDoubleProperty opacity = new SimpleDoubleProperty(1.0);
-    private final SimpleBooleanProperty owner = new SimpleBooleanProperty();
     private final SimpleDoubleProperty renderScaleX = new SimpleDoubleProperty(1.0);
     private final SimpleDoubleProperty renderScaleY = new SimpleDoubleProperty(1.0);
     private final SimpleBooleanProperty resizable = new SimpleBooleanProperty(true);
     private final SimpleBooleanProperty showing = new SimpleBooleanProperty();
-    private final SimpleObjectProperty<StageStyle> stageStyle = new SimpleObjectProperty<>(StageStyle.DECORATED);
+    private final SimpleObjectProperty<CustomStage.StageContent> stageContent = new SimpleObjectProperty<>(CustomStage.StageContent.NESTED_STAGES);
     private final SimpleStringProperty title = new SimpleStringProperty();
+    private final CustomStage.Config conf = CustomStage.Config.getDefault();
 
     public StagePage() {
         super("WindowPage");
@@ -105,47 +102,58 @@ public class StagePage extends TestPaneBase {
 
         // stage
         op.section("Stage");
-        op.option(new BooleanOption("fullScreen", "full screen", fullScreen));
-        op.option("Full Screen Hint:", textChoices("fullScreenHint", fullScreenExitHint));
-        op.option(new BooleanOption("iconified", "iconified", iconified));
-        op.option(new BooleanOption("maximized", "maximized", maximized));
+        op.option(new BooleanOption("fullScreen", "full screen", conf.fullScreen));
+        op.option("Full Screen Hint:", Options.textOption("fullScreenHint", true, true, conf.fullScreenExitHint));
+        op.option(new BooleanOption("iconified", "iconified", conf.iconified));
+        op.option(new BooleanOption("maximized", "maximized", conf.maximized));
         op.option("Max Height:", maxHeight("maxHeight", maxHeight));
         op.option("Max Width:", maxHeight("maxWidth", maxWidth));
         op.option("Min Height:", maxHeight("minHeight", minHeight));
         op.option("Min Width:", maxHeight("minWidth", minWidth));
         op.option(new BooleanOption("resizable", "resizable", resizable));
-        op.option("Title:", textChoices("title", title));
+        op.option("Title:", Options.textOption("title", true, true, title));
+
+        // scene
+        op.section("Scene");
+        op.option("Color Scheme:", new EnumOption("colorScheme", ColorScheme.class, conf.colorScheme));
+        op.option("Header Bar:", new EnumOption("headerBar", false, HeaderBars.Choice.class, headerBar));
+        op.option(new BooleanOption("persistentScrollBars", "persistent scroll bars", conf.persistentScrollBars));
+        op.option(new BooleanOption("reducedData", "reduced data", conf.reducedData));
+        op.option(new BooleanOption("reducedMotion", "reduced motion", conf.reducedMotion));
+        op.option(new BooleanOption("reducedTransparency", "reduced transparency", conf.reducedTransparency));
 
         // init
         op.section("Stage Initialization");
-        op.option(new BooleanOption("alwaysOnTop", "always on top", alwaysOnTop));
-        op.option("Modality:", new EnumOption("modality", Modality.class, modality));
-        op.option(new BooleanOption("owner", "set owner", owner));
-        op.option("Stage Style:", new EnumOption("stageStyle", StageStyle.class, stageStyle));
+        op.option(new BooleanOption("alwaysOnTop", "always on top", conf.alwaysOnTop));
+        op.option("Modality:", new EnumOption("modality", Modality.class, conf.modality));
+        op.option(new BooleanOption("owner", "set owner", conf.owner));
+        op.option("Stage Style:", new EnumOption("stageStyle", StageStyle.class, conf.stageStyle));
+        op.option("Content:", new EnumOption("stageContent", CustomStage.StageContent.class, stageContent));
 
         // window
         op.section("Window");
         op.option(new BooleanOption("focused", "focused", focused));
-        op.option("Opacity:", opacity("opacity", opacity));
-        op.option("Render Scale X:", scale("renderScaleX", renderScaleX));
-        op.option("Render Scale Y:", scale("renderScaleY", renderScaleY));
+        op.option("Opacity:", Options.opacity("opacity", opacity));
+        op.option("Render Scale X:", Options.scale("renderScaleX", renderScaleX));
+        op.option("Render Scale Y:", Options.scale("renderScaleY", renderScaleY));
         return op;
     }
 
     private Stage createStage() {
-        Stage s = new CustomStage(stageStyle.get());
+        HeaderBars.Choice h = headerBar.get();
+        Stage s = new CustomStage(conf.stageStyle.get(), stageContent.get(), h, conf);
 
         // init
-        s.setAlwaysOnTop(alwaysOnTop.get());
-        s.initModality(modality.get());
-        s.initOwner(owner.get() ? FX.getParentWindow(this) : null);
+        s.setAlwaysOnTop(conf.alwaysOnTop.get());
+        s.initModality(conf.modality.get());
+        s.initOwner(conf.owner.get() ? FX.getParentWindow(this) : null);
 
         // properties
-        Utils.link(fullScreen, s.fullScreenProperty(), s::setFullScreen);
+        Utils.link(conf.fullScreen, s.fullScreenProperty(), s::setFullScreen);
         // TODO fullScreenExitCombination
-        s.fullScreenExitHintProperty().bindBidirectional(fullScreenExitHint);
-        Utils.link(iconified, s.iconifiedProperty(), s::setIconified);
-        Utils.link(maximized, s.maximizedProperty(), s::setMaximized);
+        s.fullScreenExitHintProperty().bindBidirectional(conf.fullScreenExitHint);
+        Utils.link(conf.iconified, s.iconifiedProperty(), s::setIconified);
+        Utils.link(conf.maximized, s.maximizedProperty(), s::setMaximized);
         s.maxHeightProperty().bindBidirectional(maxHeight);
         s.maxWidthProperty().bindBidirectional(maxWidth);
         s.minHeightProperty().bindBidirectional(minHeight);
@@ -193,31 +201,6 @@ public class StagePage extends TestPaneBase {
         op.addChoice("NaN", Double.NaN);
         op.selectInitialValue();
         return op;
-    }
-
-    private static Node opacity(String name, DoubleProperty p) {
-        DoubleOption op = new DoubleOption(name, p);
-        op.addChoice(0);
-        op.addChoice(0.5);
-        op.addChoice(1.0);
-        op.addChoice("NaN", Double.NaN);
-        op.selectInitialValue();
-        return op;
-    }
-
-    private static Node scale(String name, DoubleProperty p) {
-        DoubleOption op = new DoubleOption(name, p);
-        op.addChoice(0);
-        op.addChoice(0.5);
-        op.addChoice(1.0);
-        op.addChoice(2.0);
-        op.addChoice("NaN", Double.NaN);
-        op.selectInitialValue();
-        return op;
-    }
-
-    private Node textChoices(String name, SimpleStringProperty p) {
-        return Options.textOption(name, true, true, p);
     }
 
     private void toggleStage() {

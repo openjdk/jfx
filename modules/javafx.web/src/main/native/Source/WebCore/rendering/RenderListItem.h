@@ -36,8 +36,6 @@ public:
     RenderListItem(Element&, RenderStyle&&);
     virtual ~RenderListItem();
 
-    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
-
     int value() const;
     void updateValue();
 

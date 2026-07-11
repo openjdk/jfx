@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "DestinationColorSpace.h"
 #include "MediaPlayer.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourcePrivateClient.h"
@@ -236,12 +237,12 @@ RefPtr<MockMediaSourcePrivate> MockMediaPlayerMediaSource::protectedMediaSourceP
 void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
 {
     m_lastSeekTarget = target;
-    protectedMediaSourcePrivate()->waitForTarget(target)->whenSettled(RunLoop::protectedCurrent(), [weakThis = WeakPtr { this }](auto&& result) {
+    protectedMediaSourcePrivate()->waitForTarget(target)->whenSettled(RunLoop::currentSingleton(), [weakThis = WeakPtr { this }](auto&& result) {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis || !result)
             return;
 
-        protectedThis->protectedMediaSourcePrivate()->seekToTime(*result)->whenSettled(RunLoop::protectedCurrent(), [weakThis, seekTime = *result] {
+        protectedThis->protectedMediaSourcePrivate()->seekToTime(*result)->whenSettled(RunLoop::currentSingleton(), [weakThis, seekTime = *result] {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
                 return;

@@ -31,7 +31,10 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
@@ -43,15 +46,15 @@ enum class PathParsingOption : uint8_t {
 
 // <basic-shape> = <circle()> | <ellipse() | <inset()> | <path()> | <polygon()> | <rect()> | <shape()> | <xywh()>
 // https://drafts.csswg.org/css-shapes/#typedef-basic-shape
-RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange&, const CSSParserContext&, OptionSet<PathParsingOption>);
+RefPtr<CSSValue> consumeBasicShape(CSSParserTokenRange&, CSS::PropertyParserState&, OptionSet<PathParsingOption>);
 
 // <path()> = path( <'fill-rule'>? , <string> )
 // https://drafts.csswg.org/css-shapes/#funcdef-basic-shape-path
-RefPtr<CSSValue> consumePath(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumePath(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 // <'shape-outside'> = none | [ <basic-shape> || <shape-box> ] | <image>
 // https://drafts.csswg.org/css-shapes/#propdef-shape-outside
-RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeShapeOutside(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 
 } // namespace CSSPropertyParserHelpers

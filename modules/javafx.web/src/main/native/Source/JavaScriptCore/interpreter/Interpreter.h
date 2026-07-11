@@ -29,11 +29,11 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "JSCJSValue.h"
 #include "MacroAssemblerCodeRef.h"
 #include "NativeFunction.h"
 #include "Opcode.h"
-#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -58,7 +58,7 @@ struct WasmOpcodeTraits;
 using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 using WasmInstruction = BaseInstruction<WasmOpcodeTraits>;
 
-using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruction*, uintptr_t /* IPIntOffset */>;
+using JSOrWasmInstruction = Variant<const JSInstruction*, const WasmInstruction*, uintptr_t /* IPIntOffset */>;
 
     class ArgList;
     class CachedCall;
@@ -92,6 +92,8 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         WillLeaveCallFrame,
         WillExecuteStatement,
         WillExecuteExpression,
+        WillAwait,
+        DidAwait,
     };
 
     enum StackFrameCodeType {
@@ -157,7 +159,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
 
         NEVER_INLINE CatchInfo unwind(VM&, CallFrame*&, Exception*);
         void notifyDebuggerOfExceptionToBeThrown(VM&, JSGlobalObject*, CallFrame*, Exception*);
-        NEVER_INLINE void debug(CallFrame*, DebugHookType);
+        NEVER_INLINE void debug(CallFrame*, DebugHookType, JSValue data);
         static String stackTraceAsString(VM&, const Vector<StackFrame>&);
 
         void getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip = 0, size_t maxStackSize = std::numeric_limits<size_t>::max(), JSCell* caller = nullptr, JSCell* ownerOfCallLinkInfo = nullptr, CallLinkInfo* = nullptr);
@@ -190,7 +192,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
     };
 
-    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, LexicallyScopedFeatures);
+    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, CodeBlock* callerBaselineCodeBlock, BytecodeIndex, LexicallyScopedFeatures);
 
     inline CallFrame* calleeFrameForVarargs(CallFrame*, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis);
 

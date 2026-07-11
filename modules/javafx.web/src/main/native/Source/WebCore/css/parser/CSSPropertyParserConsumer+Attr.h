@@ -31,13 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <attr()> consuming
 // https://drafts.csswg.org/css-values-5/#funcdef-attr
-RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, const CSSParserContext&);
+RefPtr<CSSValue> consumeAttr(CSSParserTokenRange args, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

@@ -41,7 +41,7 @@ namespace WTF {
 
 class ThreadSafeRefCountedBase {
     WTF_MAKE_NONCOPYABLE(ThreadSafeRefCountedBase);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadSafeRefCountedBase);
 public:
     ThreadSafeRefCountedBase() = default;
 
@@ -72,7 +72,7 @@ protected:
     {
         ASSERT(m_refCount);
 
-        if (UNLIKELY(!--m_refCount)) {
+        if (!--m_refCount) [[unlikely]] {
             // Setting m_refCount to 1 here prevents double delete within the destructor but not from another thread
             // since such a thread could have ref'ed this object long after it had been deleted. See webkit.org/b/201576.
             m_refCount = 1;

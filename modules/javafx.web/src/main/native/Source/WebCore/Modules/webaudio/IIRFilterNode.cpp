@@ -29,8 +29,11 @@
 #include "IIRFilterNode.h"
 
 #include "BaseAudioContext.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "IIRFilter.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/TZoneMallocInlines.h>
 

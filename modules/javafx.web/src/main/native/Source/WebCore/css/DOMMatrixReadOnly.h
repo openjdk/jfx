@@ -30,7 +30,7 @@
 #include "ScriptWrappable.h"
 #include "TransformationMatrix.h"
 #include <JavaScriptCore/Forward.h>
-#include <variant>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -42,10 +42,10 @@ class DOMPoint;
 class ScriptExecutionContext;
 struct DOMPointInit;
 
-class DOMMatrixReadOnly : public ScriptWrappable, public RefCounted<DOMMatrixReadOnly> {
+class DOMMatrixReadOnly : public ScriptWrappable, public RefCounted<DOMMatrixReadOnly>, public NoVirtualDestructorBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DOMMatrixReadOnly);
 public:
-    static ExceptionOr<Ref<DOMMatrixReadOnly>> create(ScriptExecutionContext&, std::optional<std::variant<String, Vector<double>>>&&);
+    static ExceptionOr<Ref<DOMMatrixReadOnly>> create(ScriptExecutionContext&, std::optional<Variant<String, Vector<double>>>&&);
 
     enum class Is2D : bool { No, Yes };
     static Ref<DOMMatrixReadOnly> create(const TransformationMatrix& matrix, Is2D is2D)

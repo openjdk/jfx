@@ -30,9 +30,35 @@
 
 namespace WebCore {
 
+enum class PredominantColorType : uint8_t {
+    None,
+    Multiple,
+};
+
+using FixedContainerEdge = Variant<PredominantColorType, Color>;
+
 struct FixedContainerEdges {
-    RectEdges<Color> predominantColors;
-    RectEdges<bool> fixedEdges;
+    WTF_MAKE_TZONE_ALLOCATED(FixedContainerEdges);
+public:
+    RectEdges<FixedContainerEdge> colors { PredominantColorType::None, PredominantColorType::None, PredominantColorType::None, PredominantColorType::None };
+
+    FixedContainerEdges() = default;
+    FixedContainerEdges(const FixedContainerEdges&) = default;
+    FixedContainerEdges(RectEdges<FixedContainerEdge>&& edgeColors)
+        : colors { WTFMove(edgeColors) }
+    {
+    }
+
+    FixedContainerEdges(FixedContainerEdges&& other)
+        : colors { WTFMove(other.colors) }
+    {
+    }
+
+    FixedContainerEdges& operator=(const FixedContainerEdges&) = default;
+
+    WEBCORE_EXPORT bool hasFixedEdge(BoxSide) const;
+    WEBCORE_EXPORT Color predominantColor(BoxSide) const;
+    WEBCORE_EXPORT BoxSideSet fixedEdges() const;
 
     bool operator==(const FixedContainerEdges&) const = default;
 };

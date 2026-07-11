@@ -30,6 +30,7 @@
 #include "RenderBlock.h"
 #include "RenderBoxInlines.h"
 #include "RenderFlexibleBox.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 namespace LayoutIntegration {

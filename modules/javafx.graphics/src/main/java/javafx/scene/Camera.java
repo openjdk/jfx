@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -324,8 +324,24 @@ public abstract sealed class Camera extends Node permits ParallelCamera, Perspec
         }
     }
 
+    /*
+     * Both parallel and perspective projections introduce denominators derived from the view dimensions.
+     * If a view dimension is zero, these divisions can produce NaN or Infinity. For example, the parallel
+     * projection computes terms proportional to 1/viewWidth and 1/viewHeight, and the perspective projection
+     * depends on the aspect ratio viewWidth/viewHeight. Once a transform contains NaN or Infinity, downstream
+     * coordinate conversion APIs that rely on these transforms (such as Node.localToScreen()) can return
+     * unusable results.
+     *
+     * The intent here is not to define semantics for a mathematically degenerate 0x0 view, but to prevent the
+     * transform pipeline from being poisoned by NaN or Infinity. For this purpose, we clamp the view width
+     * and height to ulp(1), guaranteeing non-zero view dimensions while keeping the clamp very small.
+     */
+    private static double safeSize(double size) {
+        return Math.max(Math.ulp(1.0), size);
+    }
+
     void setViewWidth(double width) {
-        this.viewWidth = width;
+        this.viewWidth = safeSize(width);
         NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA);
     }
 
@@ -334,7 +350,7 @@ public abstract sealed class Camera extends Node permits ParallelCamera, Perspec
     }
 
     void setViewHeight(double height) {
-        this.viewHeight = height;
+        this.viewHeight = safeSize(height);
         NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA);
     }
 

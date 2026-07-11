@@ -31,7 +31,9 @@
 #include "config.h"
 #include "DOMFormData.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 
@@ -95,10 +97,10 @@ static auto createFileEntry(const String& name, Blob& blob, const String& filena
 
     if (RefPtr file = dynamicDowncast<File>(blob)) {
     if (!filename.isNull())
-            return { usvName, File::create(blob.scriptExecutionContext(), *file, filename) };
+            return { usvName, File::create(blob.protectedScriptExecutionContext().get(), *file, filename) };
         return { usvName, WTFMove(file) };
     }
-    return { usvName, File::create(blob.scriptExecutionContext(), blob, filename.isNull() ? "blob"_s : filename) };
+    return { usvName, File::create(blob.protectedScriptExecutionContext().get(), blob, filename.isNull() ? "blob"_s : filename) };
 }
 
 void DOMFormData::append(const String& name, const String& value)

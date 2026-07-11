@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class FrameRateAligner {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameRateAligner, Animation);
 public:
     FrameRateAligner();
     ~FrameRateAligner();
@@ -55,7 +55,7 @@ private:
         bool isNew { true };
     };
 
-    UncheckedKeyHashMap<FramesPerSecond, FrameRateData> m_frameRates;
+    HashMap<FramesPerSecond, FrameRateData> m_frameRates;
     ReducedResolutionSeconds m_timestamp;
 };
 

@@ -56,18 +56,17 @@ enum class AnimationImpact : uint8_t {
 };
 
 enum class UseAcceleratedAction : bool { No, Yes };
+enum class UseCachedCurrentTime : bool { No, Yes };
 
 enum class WebAnimationType : uint8_t { CSSAnimation, CSSTransition, WebAnimation };
-
-using MarkableDouble = Markable<double, WTF::DoubleMarkableTraits>;
 
 using WeakStyleOriginatedAnimations = Vector<WeakPtr<StyleOriginatedAnimation, WeakPtrImplWithEventTargetData>>;
 using AnimationCollection = ListHashSet<Ref<WebAnimation>>;
 using AnimationEvents = Vector<Ref<AnimationEventBase>>;
 using CSSAnimationCollection = ListHashSet<Ref<CSSAnimation>>;
 
-using AnimatableCSSProperty = std::variant<CSSPropertyID, AtomString>;
-using AnimatableCSSPropertyToTransitionMap = UncheckedKeyHashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
+using AnimatableCSSProperty = Variant<CSSPropertyID, AtomString>;
+using AnimatableCSSPropertyToTransitionMap = HashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
 
 enum class AcceleratedEffectProperty : uint16_t {
     Invalid = 1 << 0,
@@ -101,15 +100,18 @@ struct CSSPropertiesBitSet {
     WTF::BitSet<cssPropertyIDEnumValueCount> m_properties { };
 };
 
-using TimelineRangeValue = std::variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
+using TimelineRangeValue = Variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
 
 enum class Scroller : uint8_t { Nearest, Root, Self };
 
-struct ViewTimelineInsets {
+struct ViewTimelineInsetItem {
     std::optional<Length> start;
     std::optional<Length> end;
-    bool operator==(const ViewTimelineInsets&) const = default;
+    bool operator==(const ViewTimelineInsetItem&) const = default;
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, Scroller);
+WTF::TextStream& operator<<(WTF::TextStream&, const ViewTimelineInsetItem&);
 
 } // namespace WebCore
 

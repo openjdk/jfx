@@ -30,6 +30,7 @@
 
 #include "BaselineJITRegisters.h"
 #include "BasicBlockLocation.h"
+#include "BinarySwitch.h"
 #include "BytecodeGenerator.h"
 #include "Exception.h"
 #include "JITInlines.h"
@@ -283,7 +284,7 @@ void JIT::emit_op_is_big_int(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, jsRegT10);
 }
 #else // if !USE(BIGINT32)
-NO_RETURN void JIT::emit_op_is_big_int(const JSInstruction*)
+[[noreturn]] void JIT::emit_op_is_big_int(const JSInstruction*)
 {
     // If we only have HeapBigInts, then we emit isCellWithType instead of isBigInt.
     RELEASE_ASSERT_NOT_REACHED();
@@ -891,8 +892,7 @@ void JIT::compileOpStrictEq(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, regT5);
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
@@ -1060,8 +1060,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     }
 #else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
-    move(regT0, regT2);
-    or64(regT1, regT2);
+    or64(regT1, regT0, regT2);
     addSlowCase(branchIfCell(regT2));
 
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
@@ -1261,50 +1260,111 @@ void JIT::emit_op_switch_imm(const JSInstruction* currentInstruction)
     size_t tableIndex = bytecode.m_tableIndex;
     VirtualRegister scrutinee = bytecode.m_scrutinee;
 
-    // create jump table for switch destinations, track this switch statement.
     const UnlinkedSimpleJumpTable& unlinkedTable = m_unlinkedCodeBlock->unlinkedSwitchJumpTable(tableIndex);
     int32_t defaultOffset = unlinkedTable.defaultOffset();
     SimpleJumpTable& linkedTable = m_switchJumpTables[tableIndex];
     m_switches.append(SwitchRecord(tableIndex, m_bytecodeIndex, defaultOffset, SwitchRecord::Immediate));
-    linkedTable.ensureCTITable(unlinkedTable);
 
     emitGetVirtualRegister(scrutinee, jsRegT10);
     auto notInt32 = branchIfNotInt32(jsRegT10);
-    sub32(Imm32(unlinkedTable.m_min), jsRegT10.payloadGPR());
 
+    auto dispatch = label();
+    if (unlinkedTable.isList()) {
+        Vector<int64_t, 16> cases;
+        Vector<int64_t, 16> jumps;
+        cases.reserveInitialCapacity(unlinkedTable.m_branchOffsets.size() / 2);
+        jumps.reserveInitialCapacity(unlinkedTable.m_branchOffsets.size() / 2);
+
+        for (unsigned i = 0; i < unlinkedTable.m_branchOffsets.size(); i += 2) {
+            int32_t value = unlinkedTable.m_branchOffsets[i];
+            int32_t target = unlinkedTable.m_branchOffsets[i + 1];
+            cases.append(value);
+            jumps.append(target);
+        }
+
+        BinarySwitch binarySwitch(jsRegT10.payloadGPR(), cases.span(), BinarySwitch::Int32);
+        while (binarySwitch.advance(*this))
+            addJump(jump(), jumps[binarySwitch.caseIndex()]);
+        addJump(binarySwitch.fallThrough(), defaultOffset);
+    } else {
+        linkedTable.ensureCTITable(unlinkedTable);
+        sub32(Imm32(unlinkedTable.m_min), jsRegT10.payloadGPR());
     addJump(branch32(AboveOrEqual, jsRegT10.payloadGPR(), Imm32(linkedTable.m_ctiOffsets.size())), defaultOffset);
     move(TrustedImmPtr(linkedTable.m_ctiOffsets.mutableSpan().data()), regT2);
     loadPtr(BaseIndex(regT2, jsRegT10.payloadGPR(), ScalePtr), regT2);
     farJump(regT2, JSSwitchPtrTag);
+    }
 
     notInt32.link(this);
-    callOperationNoExceptionCheck(operationSwitchImmWithUnknownKeyType, TrustedImmPtr(&vm()), jsRegT10, tableIndex, unlinkedTable.m_min);
-    farJump(returnValueGPR, JSSwitchPtrTag);
+    JumpList failureCases;
+    failureCases.append(branchIfNotNumber(jsRegT10, regT2));
+#if USE(JSVALUE64)
+    unboxDoubleWithoutAssertions(jsRegT10.payloadGPR(), regT2, fpRegT0);
+#else
+    unboxDouble(jsRegT10.tagGPR(), jsRegT10.payloadGPR(), fpRegT0);
+#endif
+    branchConvertDoubleToInt32(fpRegT0, jsRegT10.payloadGPR(), failureCases, fpRegT1, /* shouldCheckNegativeZero */ false);
+    jump().linkTo(dispatch, this);
+    addJump(failureCases, defaultOffset);
 }
 
 void JIT::emit_op_switch_char(const JSInstruction* currentInstruction)
 {
-    // FIXME: We should have a fast path.
-    // https://bugs.webkit.org/show_bug.cgi?id=224521
     auto bytecode = currentInstruction->as<OpSwitchChar>();
     size_t tableIndex = bytecode.m_tableIndex;
     VirtualRegister scrutinee = bytecode.m_scrutinee;
 
-    // create jump table for switch destinations, track this switch statement.
     const UnlinkedSimpleJumpTable& unlinkedTable = m_unlinkedCodeBlock->unlinkedSwitchJumpTable(tableIndex);
     int32_t defaultOffset = unlinkedTable.defaultOffset();
     SimpleJumpTable& linkedTable = m_switchJumpTables[tableIndex];
     m_switches.append(SwitchRecord(tableIndex, m_bytecodeIndex, defaultOffset, SwitchRecord::Character));
-    linkedTable.ensureCTITable(unlinkedTable);
 
-    using SlowOperation = decltype(operationSwitchCharWithUnknownKeyType);
-    constexpr GPRReg globalObjectGPR = preferredArgumentGPR<SlowOperation, 0>();
-    constexpr JSValueRegs scrutineeJSR = preferredArgumentJSR<SlowOperation, 1>();
+    auto dispatch = label();
+    emitGetVirtualRegister(scrutinee, jsRegT10);
+    addJump(branchIfNotCell(jsRegT10), defaultOffset);
+    addJump(branchIfNotString(jsRegT10.payloadGPR()), defaultOffset);
 
-    emitGetVirtualRegister(scrutinee, scrutineeJSR);
-    loadGlobalObject(globalObjectGPR);
-    callOperation(operationSwitchCharWithUnknownKeyType, globalObjectGPR, scrutineeJSR, tableIndex, unlinkedTable.m_min);
-    farJump(returnValueGPR, JSSwitchPtrTag);
+    loadPtr(Address(jsRegT10.payloadGPR(), JSString::offsetOfValue()), regT4);
+    auto isRope = branchIfRopeStringImpl(regT4);
+    addJump(branch32(NotEqual, Address(regT4, StringImpl::lengthMemoryOffset()), TrustedImm32(1)), defaultOffset);
+    loadPtr(Address(regT4, StringImpl::dataOffset()), regT5);
+    auto is8Bit = branchTest32(NonZero, Address(regT4, StringImpl::flagsOffset()), TrustedImm32(StringImpl::flagIs8Bit()));
+    load16(Address(regT5), regT5);
+    auto loaded = jump();
+    is8Bit.link(this);
+    load8(Address(regT5), regT5);
+    loaded.link(this);
+
+    if (unlinkedTable.isList()) {
+        Vector<int64_t, 16> cases;
+        Vector<int64_t, 16> jumps;
+        cases.reserveInitialCapacity(unlinkedTable.m_branchOffsets.size() / 2);
+        jumps.reserveInitialCapacity(unlinkedTable.m_branchOffsets.size() / 2);
+        for (unsigned i = 0; i < unlinkedTable.m_branchOffsets.size(); i += 2) {
+            int32_t value = unlinkedTable.m_branchOffsets[i];
+            int32_t target = unlinkedTable.m_branchOffsets[i + 1];
+            cases.append(value);
+            jumps.append(target);
+        }
+
+        BinarySwitch binarySwitch(regT5, cases.span(), BinarySwitch::Int32);
+        while (binarySwitch.advance(*this))
+            addJump(jump(), jumps[binarySwitch.caseIndex()]);
+        addJump(binarySwitch.fallThrough(), defaultOffset);
+    } else {
+        linkedTable.ensureCTITable(unlinkedTable);
+        sub32(Imm32(unlinkedTable.m_min), regT5);
+        addJump(branch32(AboveOrEqual, regT5, Imm32(linkedTable.m_ctiOffsets.size())), defaultOffset);
+        move(TrustedImmPtr(linkedTable.m_ctiOffsets.mutableSpan().data()), regT2);
+        loadPtr(BaseIndex(regT2, regT5, ScalePtr), regT2);
+        farJump(regT2, JSSwitchPtrTag);
+    }
+
+    isRope.link(this);
+    addJump(branch32(NotEqual, Address(jsRegT10.payloadGPR(), JSRopeString::offsetOfLength()), TrustedImm32(1)), defaultOffset);
+    loadGlobalObject(regT2);
+    callOperation(operationResolveRope, regT2, jsRegT10.payloadGPR());
+    jump().linkTo(dispatch, this);
 }
 
 void JIT::emit_op_switch_string(const JSInstruction* currentInstruction)
@@ -1397,7 +1457,7 @@ void JIT::emit_op_neq_null(const JSInstruction* currentInstruction)
 void JIT::emitGetScope(VirtualRegister destination)
 {
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, regT0);
-    loadPtr(Address(regT0, JSFunction::offsetOfScopeChain()), regT0);
+    loadPtr(Address(regT0, JSCallee::offsetOfScopeChain()), regT0);
     boxCell(regT0, jsRegT10);
     emitPutVirtualRegister(destination, jsRegT10);
 }
@@ -1668,13 +1728,14 @@ void JIT::emit_op_debug(const JSInstruction* currentInstruction)
     loadPtr(addressFor(CallFrameSlot::codeBlock), regT0);
     load32(Address(regT0, CodeBlock::offsetOfDebuggerRequests()), regT0);
     Jump noDebuggerRequests = branchTest32(Zero, regT0);
-    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType));
+    emitGetVirtualRegister(bytecode.m_data, jsRegT32);
+    callOperation(operationDebug, TrustedImmPtr(&vm()), static_cast<int>(bytecode.m_debugHookType), jsRegT32);
     noDebuggerRequests.link(this);
 }
 
 void JIT::emit_op_loop_hint(const JSInstruction* instruction)
 {
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_unlinkedCodeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) [[unlikely]] {
         uintptr_t* ptr = vm().getLoopHintExecutionCounter(instruction);
         loadPtr(ptr, regT0);
         auto skipEarlyReturn = branchPtr(Below, regT0, TrustedImmPtr(Options::earlyReturnFromInfiniteLoopsLimit()));
@@ -1788,14 +1849,14 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::op_check_traps_handlerGenerator(VM& v
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "op_check_traps_handler"_s, "Baseline: op_check_traps_handler");
 }
 
-void JIT::emit_op_new_regexp(const JSInstruction* currentInstruction)
+void JIT::emit_op_new_reg_exp(const JSInstruction* currentInstruction)
 {
-    auto bytecode = currentInstruction->as<OpNewRegexp>();
+    auto bytecode = currentInstruction->as<OpNewRegExp>();
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister regexp = bytecode.m_regexp;
     GPRReg globalGPR = argumentGPR0;
     loadGlobalObject(globalGPR);
-    callOperation(operationNewRegexp, globalGPR, TrustedImmPtr(jsCast<RegExp*>(m_unlinkedCodeBlock->getConstant(regexp))));
+    callOperation(operationNewRegExp, globalGPR, TrustedImmPtr(jsCast<RegExp*>(m_unlinkedCodeBlock->getConstant(regexp))));
     boxCell(returnValueGPR, returnValueJSR);
     emitPutVirtualRegister(dst, returnValueJSR);
 }

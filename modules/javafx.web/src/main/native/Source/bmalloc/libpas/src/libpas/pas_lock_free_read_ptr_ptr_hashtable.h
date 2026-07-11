@@ -28,7 +28,10 @@
 
 #include "pas_log.h"
 #include "pas_utils.h"
+
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 
 PAS_BEGIN_EXTERN_C;
 

@@ -133,8 +133,21 @@ ExceptionOr<NotificationPayload> NotificationJSONParser::parseNotificationPayloa
     if (title.isEmpty())
         return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, titleKey, "' member is missing or is an empty string"_s) };
 
+    auto optionsOrException = parseNotificationOptions(*protectedObject);
+    if (optionsOrException.hasException())
+        return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, optionsOrException.exception().message()) };
+
+    std::optional<NotificationOptionsPayload> notificationOptions = optionsOrException.releaseReturnValue();
+
+    bool isMutable = false;
+    if (auto value = protectedObject->getValue(mutableKey)) {
+        if (value->type() != JSON::Value::Type::Boolean)
+            return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, mutableKey, "' member is specified but is not a boolean"_s) };
+        isMutable = *(value->asBoolean());
+    }
+
     std::optional<unsigned long long> appBadge;
-    if (auto value = protectedObject->getValue(appBadgeKey)) {
+    if (auto value = outerObject.getValue(appBadgeKey)) {
         if (value->type() == JSON::Value::Type::String) {
             appBadge = parseAppBadgeString(value->asString());
             if (!appBadge)
@@ -147,19 +160,6 @@ ExceptionOr<NotificationPayload> NotificationJSONParser::parseNotificationPayloa
                 return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, appBadgeKey, "' member is specified as an number but is not a valid unsigned long long"_s) };
             appBadge = (unsigned long long)(*appBadgeInt);
         }
-    }
-
-    auto optionsOrException = parseNotificationOptions(*protectedObject);
-    if (optionsOrException.hasException())
-        return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, optionsOrException.exception().message()) };
-
-    std::optional<NotificationOptionsPayload> notificationOptions = optionsOrException.releaseReturnValue();
-
-    bool isMutable = false;
-    if (auto value = protectedObject->getValue(mutableKey)) {
-        if (value->type() != JSON::Value::Type::Boolean)
-            return Exception { ExceptionCode::SyntaxError, makeString("Push message with Notification disposition: '"_s, mutableKey, "' member is specified but is not a boolean"_s) };
-        isMutable = *(value->asBoolean());
     }
 
     return NotificationPayload { WTFMove(navigationURL), WTFMove(title), WTFMove(appBadge), WTFMove(notificationOptions), isMutable };

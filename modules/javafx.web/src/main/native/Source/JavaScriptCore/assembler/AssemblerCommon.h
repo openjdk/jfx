@@ -28,6 +28,7 @@
 #include "OSCheck.h"
 #include <optional>
 #include <wtf/Atomics.h>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 

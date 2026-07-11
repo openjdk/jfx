@@ -48,7 +48,6 @@ void Line::initialize(const Vector<InlineItem, 1>& lineSpanningInlineBoxes, bool
 {
     m_isFirstFormattedLine = isFirstFormattedLine;
     m_inlineBoxListWithClonedDecorationEnd.clear();
-    m_clonedEndDecorationWidthForInlineBoxRuns = { };
     m_rubyAlignContentRightOffset = { };
     m_nonSpanningInlineLevelBoxCount = 0;
     m_hasNonDefaultBidiLevelRun = false;
@@ -70,7 +69,7 @@ void Line::initialize(const Vector<InlineItem, 1>& lineSpanningInlineBoxes, bool
                 m_runs.append({ inlineBoxStartItem, runLogicalLeft, marginBorderAndPaddingStart });
                 // Do not let negative margin make the content shorter than it already is.
                 m_contentLogicalWidth = std::max(m_contentLogicalWidth, runLogicalLeft + marginBorderAndPaddingStart);
-                m_contentLogicalWidth += addBorderAndPaddingEndForInlineBoxDecorationClone(inlineBoxStartItem);
+                m_inlineBoxListWithClonedDecorationEnd.append(&inlineBoxStartItem.layoutBox());
             }
         }
     };
@@ -86,10 +85,19 @@ void Line::resetTrailingContent()
 
 Line::Result Line::close()
 {
+    auto trailingClonedDecorationWidth = [&] {
+        auto decorationWidth = InlineLayoutUnit { };
+        for (auto* inlineBox : m_inlineBoxListWithClonedDecorationEnd) {
+            auto& boxGeometry = formattingContext().geometryForBox(*inlineBox);
+            decorationWidth += boxGeometry.borderEnd() + boxGeometry.paddingEnd();
+        }
+        return decorationWidth;
+    }();
+
     auto contentLogicalRight = this->contentLogicalRight() + m_rubyAlignContentRightOffset;
     return { WTFMove(m_runs)
-        , contentLogicalWidth()
-        , contentLogicalRight
+        , contentLogicalWidth() + trailingClonedDecorationWidth
+        , contentLogicalRight + trailingClonedDecorationWidth
         , !!m_hangingContent.trailingWhitespaceLength()
         , m_hangingContent.trailingWidth()
         , m_hangingContent.leadingPunctuationWidth()
@@ -158,7 +166,7 @@ void Line::handleOverflowingNonBreakingSpace(TrailingContentAction trailingConte
         }
 
         removedOrCollapsedContentWidth += run.logicalWidth();
-        m_runs.remove(index);
+        m_runs.removeAt(index);
     }
     m_contentLogicalWidth -= removedOrCollapsedContentWidth;
 }
@@ -179,7 +187,7 @@ const Box* Line::removeOverflowingOutOfFlowContent()
     if (!lastTrailingOutOfFlowItemIndex)
         return { };
     auto* lastTrailingOpaqueBox = &m_runs[*lastTrailingOutOfFlowItemIndex].layoutBox();
-    m_runs.remove(*lastTrailingOutOfFlowItemIndex, m_runs.size() - *lastTrailingOutOfFlowItemIndex);
+    m_runs.removeAt(*lastTrailingOutOfFlowItemIndex, m_runs.size() - *lastTrailingOutOfFlowItemIndex);
     ASSERT(!m_runs.isEmpty());
     return lastTrailingOpaqueBox;
 }
@@ -297,8 +305,6 @@ void Line::appendInlineBoxStart(const InlineItem& inlineItem, const RenderStyle&
     // This is really just a placeholder to mark the start of the inline box <span>.
     ++m_nonSpanningInlineLevelBoxCount;
     auto logicalLeft = lastRunLogicalRight();
-    // Incoming logical width includes the cloned decoration end to be able to do line breaking.
-    auto borderAndPaddingEndForDecorationClone = addBorderAndPaddingEndForInlineBoxDecorationClone(inlineItem);
     // Do not let negative margin make the content shorter than it already is.
     m_contentLogicalWidth = std::max(m_contentLogicalWidth, logicalLeft + logicalWidth);
 
@@ -308,7 +314,6 @@ void Line::appendInlineBoxStart(const InlineItem& inlineItem, const RenderStyle&
         logicalLeft += marginStart;
         logicalWidth -= marginStart;
     }
-    logicalWidth -= borderAndPaddingEndForDecorationClone;
 
     auto mayPullNonInlineBoxContentToLogicalLeft = style.letterSpacing() < 0;
     if (mayPullNonInlineBoxContentToLogicalLeft)
@@ -316,6 +321,8 @@ void Line::appendInlineBoxStart(const InlineItem& inlineItem, const RenderStyle&
 
     m_hasRubyContent = m_hasRubyContent || inlineItem.layoutBox().isRubyBase();
     m_runs.append({ inlineItem, style, logicalLeft, logicalWidth, textSpacingAdjustment });
+    if (style.boxDecorationBreak() == BoxDecorationBreak::Clone)
+        m_inlineBoxListWithClonedDecorationEnd.append(&inlineItem.layoutBox());
 }
 
 void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
@@ -331,7 +338,6 @@ void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& s
     // Prevent trailing letter-spacing from spilling out of the inline box.
     // https://drafts.csswg.org/css-text-3/#letter-spacing-property See example 21.
     removeTrailingLetterSpacing();
-    m_contentLogicalWidth -= removeBorderAndPaddingEndForInlineBoxDecorationClone(inlineItem);
     auto logicalLeft = lastRunLogicalRight();
     auto mayPullNonInlineBoxContentToLogicalLeft = style.letterSpacing() < 0;
     if (mayPullNonInlineBoxContentToLogicalLeft) {
@@ -342,6 +348,10 @@ void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& s
     m_runs.append({ inlineItem, style, logicalLeft, logicalWidth });
     // Do not let negative margin make the content shorter than it already is.
     m_contentLogicalWidth = std::max(m_contentLogicalWidth, logicalLeft + logicalWidth);
+    if (style.boxDecorationBreak() == BoxDecorationBreak::Clone) {
+        ASSERT(&inlineItem.layoutBox() == m_inlineBoxListWithClonedDecorationEnd.last());
+        m_inlineBoxListWithClonedDecorationEnd.removeLast();
+    }
 }
 
 void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
@@ -436,7 +446,7 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
     }
     }
     // Ensure that property values that act like negative margin are not making the line wider.
-    m_contentLogicalWidth = std::max(oldContentLogicalWidth, contentLogicalRight + m_clonedEndDecorationWidthForInlineBoxRuns);
+    m_contentLogicalWidth = std::max(oldContentLogicalWidth, contentLogicalRight);
 
     auto lastRunIndex = m_runs.size() - 1;
     m_trailingSoftHyphenWidth = { };
@@ -593,31 +603,6 @@ void Line::appendOpaqueBox(const InlineItem& inlineItem, const RenderStyle& styl
     m_runs.append({ inlineItem, style, lastRunLogicalRight() });
 }
 
-InlineLayoutUnit Line::addBorderAndPaddingEndForInlineBoxDecorationClone(const InlineItem& inlineBoxStartItem)
-{
-    ASSERT(inlineBoxStartItem.isInlineBoxStart());
-    if (inlineBoxStartItem.style().boxDecorationBreak() != BoxDecorationBreak::Clone)
-        return { };
-    // https://drafts.csswg.org/css-break/#break-decoration
-    auto& inlineBoxGeometry = formattingContext().geometryForBox(inlineBoxStartItem.layoutBox());
-    auto borderAndPaddingEnd = inlineBoxGeometry.borderEnd() + inlineBoxGeometry.paddingEnd();
-    m_inlineBoxListWithClonedDecorationEnd.add(&inlineBoxStartItem.layoutBox(), borderAndPaddingEnd);
-    m_clonedEndDecorationWidthForInlineBoxRuns += borderAndPaddingEnd;
-    return borderAndPaddingEnd;
-}
-
-InlineLayoutUnit Line::removeBorderAndPaddingEndForInlineBoxDecorationClone(const InlineItem& inlineBoxEndItem)
-{
-    ASSERT(inlineBoxEndItem.isInlineBoxEnd());
-    auto borderAndPaddingEnd = m_inlineBoxListWithClonedDecorationEnd.take(&inlineBoxEndItem.layoutBox());
-    if (std::isinf(borderAndPaddingEnd))
-        return { };
-    // This inline box end now contributes to the line content width in the regular way, so let's remove
-    // it from the side structure where we keep track of the "not-yet placed but space taking" decorations.
-    m_clonedEndDecorationWidthForInlineBoxRuns -= borderAndPaddingEnd;
-    return borderAndPaddingEnd;
-}
-
 void Line::addTrailingHyphen(InlineLayoutUnit hyphenLogicalWidth)
 {
     for (auto& run : makeReversedRange(m_runs)) {
@@ -731,7 +716,7 @@ InlineLayoutUnit Line::TrimmableTrailingContent::remove()
     if (!trimmableRun.textContent()->length) {
         // This trimmable run is fully collapsed now (e.g. <div><img>    <span></span></div>).
         // We don't need to keep it around anymore.
-        m_runs.remove(*m_firstTrimmableRunIndex);
+        m_runs.removeAt(*m_firstTrimmableRunIndex);
     }
     reset();
     return trimmedWidth;

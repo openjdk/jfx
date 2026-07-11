@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,11 @@
 #include "BroadcastChannel.h"
 
 #include "BroadcastChannelRegistry.h"
+#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "MessageEvent.h"
 #include "Page.h"
 #include "PartitionedSecurityOrigin.h"
@@ -63,9 +67,7 @@ static HashMap<BroadcastChannelIdentifier, ScriptExecutionContextIdentifier>& ch
 
 static PartitionedSecurityOrigin partitionedSecurityOriginFromContext(ScriptExecutionContext& context)
 {
-    Ref securityOrigin { *context.securityOrigin() };
-    Ref topOrigin { context.settingsValues().broadcastChannelOriginPartitioningEnabled ? context.topOrigin() : securityOrigin.get() };
-    return { WTFMove(topOrigin), WTFMove(securityOrigin) };
+    return { context.topOrigin(), context.protectedSecurityOrigin().releaseNonNull() };
 }
 
 class BroadcastChannel::MainThreadBridge : public ThreadSafeRefCounted<MainThreadBridge, WTF::DestructionThread::Main>, public Identified<BroadcastChannelIdentifier> {
@@ -110,12 +112,12 @@ void BroadcastChannel::MainThreadBridge::ensureOnMainThread(Function<void(Page*)
         return;
     ASSERT(context->isContextThread());
 
-    if (auto* document = dynamicDowncast<Document>(*context)) {
+    if (RefPtr document = dynamicDowncast<Document>(*context)) {
         task(document->protectedPage().get());
         return;
     }
 
-    auto* workerLoaderProxy = downcast<WorkerGlobalScope>(*context).thread().workerLoaderProxy();
+    CheckedPtr workerLoaderProxy = downcast<WorkerGlobalScope>(*context).thread().workerLoaderProxy();
     if (!workerLoaderProxy)
         return;
 
@@ -177,11 +179,6 @@ BroadcastChannel::~BroadcastChannel()
     }
 }
 
-auto BroadcastChannel::protectedMainThreadBridge() const -> Ref<MainThreadBridge>
-{
-    return m_mainThreadBridge;
-}
-
 BroadcastChannelIdentifier BroadcastChannel::identifier() const
 {
     return m_mainThreadBridge->identifier();
@@ -206,7 +203,7 @@ ExceptionOr<void> BroadcastChannel::postMessage(JSC::JSGlobalObject& globalObjec
         return messageData.releaseException();
     ASSERT(ports.isEmpty());
 
-    protectedMainThreadBridge()->postMessage(messageData.releaseReturnValue());
+    m_mainThreadBridge->postMessage(messageData.releaseReturnValue());
     return { };
 }
 
@@ -216,7 +213,7 @@ void BroadcastChannel::close()
         return;
 
     m_isClosed = true;
-    protectedMainThreadBridge()->unregisterChannel();
+    m_mainThreadBridge->unregisterChannel();
 }
 
 void BroadcastChannel::dispatchMessageTo(BroadcastChannelIdentifier channelIdentifier, Ref<SerializedScriptValue>&& message, CompletionHandler<void()>&& completionHandler)
@@ -249,24 +246,24 @@ void BroadcastChannel::dispatchMessage(Ref<SerializedScriptValue>&& message)
     if (m_isClosed)
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [this, message = WTFMove(message)]() mutable {
-        if (m_isClosed || !scriptExecutionContext())
+    queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [message = WTFMove(message)](auto& channel) mutable {
+        if (channel.m_isClosed || !channel.scriptExecutionContext())
             return;
 
-        auto* globalObject = scriptExecutionContext()->globalObject();
+        auto* globalObject = channel.scriptExecutionContext()->globalObject();
         if (!globalObject)
             return;
 
         auto& vm = globalObject->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
-        auto event = MessageEvent::create(*globalObject, WTFMove(message), scriptExecutionContext()->securityOrigin()->toString());
-        if (UNLIKELY(scope.exception())) {
+        auto event = MessageEvent::create(*globalObject, WTFMove(message), channel.scriptExecutionContext()->securityOrigin()->toString());
+        if (scope.exception()) [[unlikely]] {
             // Currently, we assume that the only way we can get here is if we have a termination.
             RELEASE_ASSERT(vm.hasPendingTerminationException());
             return;
         }
 
-        dispatchEvent(event.event);
+        channel.dispatchEvent(event.event);
     });
 }
 
@@ -287,7 +284,7 @@ bool BroadcastChannel::isEligibleForMessaging() const
     if (!context)
         return false;
 
-    if (auto document = dynamicDowncast<Document>(*context))
+    if (RefPtr document = dynamicDowncast<Document>(*context))
         return document->isFullyActive();
 
     return !downcast<WorkerGlobalScope>(*context).isClosing();

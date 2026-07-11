@@ -43,3 +43,9 @@ enum class WebCore::RubberBandingBehavior : uint8_t {
     Never,
     BasedOnSize,
 };
+
+enum class WebCore::ScrollbarOverlayStyle : uint8_t {
+    Default,
+    Dark,
+    Light,
+};

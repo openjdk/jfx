@@ -81,7 +81,7 @@ void CredentialsContainer::isCreate(CredentialCreationOptions&& options, Credent
     }
 
     if (options.publicKey) {
-    document()->page()->authenticatorCoordinator().create(*document(), WTFMove(options), WTFMove(options.signal), WTFMove(promise));
+        document()->page()->authenticatorCoordinator().create(*document(), WTFMove(options), WTFMove(options.signal), WTFMove(promise));
         return;
     }
 
@@ -130,7 +130,7 @@ bool CredentialsContainer::performCommonChecks(const Options& options, Credentia
         if (options.publicKey && options.digital) {
             promise.reject(Exception { ExceptionCode::NotSupportedError, "Only one request type is supported at a time."_s });
             return false;
-    }
+        }
     }
 
     ASSERT(document->isSecureContext());

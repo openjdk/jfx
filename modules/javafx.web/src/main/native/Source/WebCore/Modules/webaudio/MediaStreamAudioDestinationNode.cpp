@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "MediaStream.h"
 #include "MediaStreamAudioSource.h"
@@ -69,7 +70,7 @@ MediaStreamAudioDestinationNode::~MediaStreamAudioDestinationNode()
 
 void MediaStreamAudioDestinationNode::process(size_t numberOfFrames)
 {
-    m_source->consumeAudio(*input(0)->bus(), numberOfFrames);
+    m_source->consumeAudio(input(0)->bus(), numberOfFrames);
 }
 
 } // namespace WebCore

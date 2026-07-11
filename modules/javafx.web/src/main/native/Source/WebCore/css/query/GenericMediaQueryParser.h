@@ -27,6 +27,7 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "GenericMediaQueryTypes.h"
+#include "MediaQueryParserContext.h"
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -171,7 +172,7 @@ std::optional<Feature> GenericMediaQueryParser<ConcreteParser>::consumeAndValida
 template<typename ConcreteParser>
 bool GenericMediaQueryParser<ConcreteParser>::validateFeature(Feature& feature, const MediaQueryParserContext& context, State& state)
 {
-    auto* schema = ConcreteParser::schemaForFeatureName(feature.name, context, state);
+    auto* schema = ConcreteParser::schemaForFeatureName(feature.name, context.context, state);
     if (!schema)
         return false;
     return FeatureParser::validateFeatureAgainstSchema(feature, *schema);

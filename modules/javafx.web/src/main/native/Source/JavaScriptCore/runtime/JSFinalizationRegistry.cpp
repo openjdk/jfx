@@ -123,7 +123,7 @@ void JSFinalizationRegistry::finalizeUnconditionally(VM& vm, CollectionScope)
         bool keyIsDead = !vm.heap.isMarked(bucket.key);
         DeadRegistrations* deadList = nullptr;
         auto getDeadList = [&] () -> DeadRegistrations& {
-            if (UNLIKELY(!deadList))
+            if (!deadList) [[unlikely]]
                 deadList = &m_deadRegistrations.add(bucket.key, DeadRegistrations()).iterator->value;
             return *deadList;
         };

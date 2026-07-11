@@ -26,6 +26,7 @@
 #include "TextDocument.h"
 
 #include "CSSTokenizerInputStream.h"
+#include "DocumentInlines.h"
 #include "TextDocumentParser.h"
 #include <wtf/TZoneMallocInlines.h>
 

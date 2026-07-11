@@ -184,7 +184,7 @@ struct FontPlatformSerializedTraits {
 struct FontPlatformOpticalSize {
     static std::optional<FontPlatformOpticalSize> fromCF(CFTypeRef);
     RetainPtr<CFTypeRef> toCF() const;
-    std::variant<RetainPtr<CFNumberRef>, String> opticalSize;
+    Variant<RetainPtr<CFNumberRef>, String> opticalSize;
 };
 
 struct FontPlatformSerializedAttributes {
@@ -332,7 +332,7 @@ public:
 #endif
 
 #if !PLATFORM(JAVA)
-    using IPCData = std::variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
+    using IPCData = Variant<FontPlatformSerializedData, FontPlatformSerializedCreationData>;
 #endif
 #if USE(CORE_TEXT)
     WEBCORE_EXPORT FontPlatformData(float size, FontOrientation&&, FontWidthVariant&&, TextRenderingMode&&, bool syntheticBold, bool syntheticOblique, RetainPtr<CTFontRef>&&, RefPtr<FontCustomPlatformData>&&);
@@ -380,6 +380,7 @@ public:
     SkiaHarfBuzzFont* skiaHarfBuzzFont() const { return m_hbFont.get(); }
     hb_font_t* hbFont() const;
     const Vector<hb_feature_t>& features() const { return m_features; }
+    static bool skiaTypefaceHasAnySupportedColorTable(const SkTypeface&);
 #endif
 
 #if ENABLE(MATHML) && USE(HARFBUZZ)
@@ -496,7 +497,7 @@ private:
     TextRenderingMode m_textRenderingMode { TextRenderingMode::AutoTextRendering };
 
     // This is conceptually const, but we can't make it actually const,
-    // because FontPlatformData is used as a key in a UncheckedKeyHashMap.
+    // because FontPlatformData is used as a key in a HashMap.
     RefPtr<const FontCustomPlatformData> m_customPlatformData;
 
     bool m_syntheticBold { false };
@@ -533,12 +534,12 @@ public:
         : m_context(context)
         , m_textMatrix(CGContextGetTextMatrix(context))
     {
-        CGContextSetTextMatrix(m_context, newMatrix);
+        CGContextSetTextMatrix(m_context.get(), newMatrix);
     }
 
     ~ScopedTextMatrix()
     {
-        CGContextSetTextMatrix(m_context, m_textMatrix);
+        CGContextSetTextMatrix(m_context.get(), m_textMatrix);
     }
 
     CGAffineTransform savedMatrix() const
@@ -547,7 +548,7 @@ public:
     }
 
 private:
-    CGContextRef m_context;
+    RetainPtr<CGContextRef> m_context;
     CGAffineTransform m_textMatrix;
 };
 

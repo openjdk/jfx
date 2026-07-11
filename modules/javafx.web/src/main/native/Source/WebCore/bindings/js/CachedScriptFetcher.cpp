@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,7 +64,7 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(D
     options.fetchPriority = m_fetchPriority;
     options.nonce = m_nonce;
 
-    auto request = createPotentialAccessControlRequest(sourceURL, WTFMove(options), document, crossOriginMode);
+    auto request = createPotentialAccessControlRequest(URL { sourceURL }, WTFMove(options), document, crossOriginMode);
     request.upgradeInsecureRequestIfNeeded(document);
     request.setCharset(m_charset);
     request.setPriority(WTFMove(resourceLoadPriority));

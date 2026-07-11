@@ -26,7 +26,7 @@
 #pragma once
 
 #include "BackgroundFetchRecordIdentifier.h"
-#include "ExceptionOr.h"
+#include "ExceptionData.h"
 #include "NavigationPreloadState.h"
 #include "NotificationData.h"
 #include "PushPermissionState.h"
@@ -37,6 +37,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/NativePromise.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -66,7 +67,9 @@ struct ServiceWorkerClientData;
 struct ServiceWorkerClientPendingMessage;
 struct ServiceWorkerData;
 struct ServiceWorkerRegistrationData;
+struct ServiceWorkerRoute;
 struct WorkerFetchResult;
+template<typename> class ExceptionOr;
 
 class SWClientConnection : public RefCounted<SWClientConnection> {
 public:
@@ -150,6 +153,9 @@ public:
     using ExceptionOrCookieChangeSubscriptionsCallback = CompletionHandler<void(ExceptionOr<Vector<CookieChangeSubscription>>&&)>;
     virtual void cookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, ExceptionOrCookieChangeSubscriptionsCallback&&) = 0;
 
+    using AddRoutePromise = NativePromise<void, ExceptionData>;
+    virtual Ref<AddRoutePromise> addRoutes(ServiceWorkerRegistrationIdentifier, Vector<ServiceWorkerRoute>&&) = 0;
+
 protected:
     WEBCORE_EXPORT SWClientConnection();
 
@@ -164,6 +170,10 @@ protected:
     WEBCORE_EXPORT void setRegistrationUpdateViaCache(ServiceWorkerRegistrationIdentifier, ServiceWorkerUpdateViaCache);
     WEBCORE_EXPORT void notifyClientsOfControllerChange(const HashSet<ScriptExecutionContextIdentifier>& contextIdentifiers, std::optional<ServiceWorkerData>&& newController);
     WEBCORE_EXPORT void updateBackgroundFetchRegistration(const BackgroundFetchInformation&);
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void reportNetworkUsageToWorkerClient(ScriptExecutionContextIdentifier, uint64_t bytesTransferredOverNetwork);
+#endif
 
     WEBCORE_EXPORT void clearPendingJobs();
     void setIsClosed() { m_isClosed = true; }

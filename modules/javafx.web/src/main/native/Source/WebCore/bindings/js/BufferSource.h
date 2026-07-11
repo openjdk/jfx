@@ -29,7 +29,6 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <span>
-#include <variant>
 #include <wtf/Compiler.h>
 #include <wtf/RefPtr.h>
 
@@ -42,7 +41,7 @@ namespace WebCore {
 
 class BufferSource {
 public:
-    using VariantType = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>>;
+    using VariantType = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>>;
 
     BufferSource() { }
     BufferSource(VariantType&& variant)
@@ -59,20 +58,20 @@ public:
 
     size_t length() const
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->byteLength() : 0;
         }, m_variant);
     }
 
-    std::span<const uint8_t> span() const
+    std::span<const uint8_t> span() const LIFETIME_BOUND
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->span() : std::span<const uint8_t> { };
         }, m_variant);
     }
-    std::span<uint8_t> mutableSpan()
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND
     {
-        return std::visit([](auto& buffer) {
+        return WTF::visit([](auto& buffer) {
             return buffer ? buffer->mutableSpan() : std::span<uint8_t> { };
         }, m_variant);
     }

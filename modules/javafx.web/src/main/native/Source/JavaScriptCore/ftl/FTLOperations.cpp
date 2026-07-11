@@ -73,33 +73,28 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalO
     DeferGCForAWhile deferGC(vm);
 
     switch (materialization->type()) {
-    case PhantomNewArrayWithConstantSize: {
+    case PhantomNewArrayWithButterfly: {
+        auto scope = DECLARE_THROW_SCOPE(vm);
+        // This might be unnecessary because operationMaterializeObjectInOSR does DeferGCForAWhile but its better to be safe.
         JSArray* array = jsCast<JSArray*>(JSValue::decode(*encodedValue));
         for (unsigned i = materialization->properties().size(); i--;) {
             const ExitPropertyValue& property = materialization->properties()[i];
+            if (property.location().kind() != ArrayIndexedPropertyPLoc)
+                continue;
+
             JSValue value = JSValue::decode(values[i]);
             unsigned index = property.location().info();
-            Butterfly* butterfly = array->butterfly();
 
-            switch (materialization->indexingType()) {
-            case ALL_DOUBLE_INDEXING_TYPES: {
-                ASSERT(value.isNumber());
-                double valueAsDouble = value.asNumber();
-                butterfly->contiguousDouble().at(array, index) = valueAsDouble;
+            array->putDirectIndex(globalObject, index, value);
+            scope.assertNoExceptionExceptTermination();
+            }
+
+        // This might be unnecessary because operationMaterializeObjectInOSR does DeferGCForAWhile but its better to be safe.
+        if (hasContiguous(materialization->indexingType()))
+            vm.writeBarrier(array);
                 break;
             }
-            case ALL_INT32_INDEXING_TYPES:
-            case ALL_CONTIGUOUS_INDEXING_TYPES: {
-                butterfly->contiguous().at(array, index).set(vm, array, value);
-                break;
-            }
-            default:
-                RELEASE_ASSERT_NOT_REACHED();
-                break;
-            }
-        }
-        break;
-    }
+
 
     case PhantomNewObject: {
         JSFinalObject* object = jsCast<JSFinalObject*>(JSValue::decode(*encodedValue));
@@ -126,6 +121,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalO
         break;
     }
 
+    case PhantomNewButterflyWithSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -196,7 +192,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalO
         break;
     }
 
-    case PhantomNewRegexp: {
+    case PhantomNewRegExp: {
         RegExpObject* regExpObject = jsCast<RegExpObject*>(JSValue::decode(*encodedValue));
 
         for (unsigned i = materialization->properties().size(); i--;) {
@@ -218,7 +214,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationPopulateObjectInOSR, void, (JSGlobalO
 }
 
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, HeapCell*, (JSGlobalObject* globalObject, ExitTimeObjectMaterialization* materialization, EncodedJSValue* values))
 {
     using namespace DFG;
     VM& vm = globalObject->vm();
@@ -233,17 +229,78 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
     DeferGCForAWhile deferGC(vm);
 
     switch (materialization->type()) {
-    case PhantomNewArrayWithConstantSize: {
+    case PhantomNewButterflyWithSize: {
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        size_t size = materialization->size();
-        Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(materialization->indexingType());
+        size_t size = UINT64_MAX;
+        for (unsigned i = 0; i < materialization->properties().size(); ++i) {
+            const ExitPropertyValue& property = materialization->properties()[i];
+            if (property.location() != PromotedLocationDescriptor(ArrayButterflyPublicLengthPLoc))
+                continue;
 
-        JSArray* result = JSArray::tryCreate(vm, structure, size);
-        if (UNLIKELY(!result)) {
+
+            RELEASE_ASSERT(JSValue::decode(values[i]).isInt32());
+            size = JSValue::decode(values[i]).asInt32();
+            break;
+        }
+        RELEASE_ASSERT(size < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH);
+
+        unsigned preCapacity = 0;
+        unsigned propertyCapacity = 0;
+        IndexingHeader header;
+        header.setPublicLength(size);
+        header.setVectorLength(size);
+        Butterfly* result = Butterfly::tryCreate(vm, globalObject, preCapacity, propertyCapacity, true, header, size * sizeof(JSValue));
+        if (!result) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             OPERATION_RETURN(scope, nullptr);
         }
+
+        return std::bit_cast<HeapCell*>(result);
+    }
+
+    case PhantomNewArrayWithButterfly: {
+        Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(materialization->indexingType());
+
+        Butterfly* butterfly = nullptr;
+        for (unsigned i = 0; i < materialization->properties().size(); ++i) {
+            const ExitPropertyValue& property = materialization->properties()[i];
+            if (property.location().kind() == ArrayButterflyPLoc) {
+                butterfly = std::bit_cast<Butterfly*>(values[i]);
+                break;
+            }
+        }
+        RELEASE_ASSERT(butterfly);
+
+        JSArray* result =  JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+
+        // The real values will be put subsequently by
+        // operationPopulateNewObjectInOSR. We can't fill them in
+        // now, because they may not be available yet (typically
+        // because we have a cyclic dependency graph).
+
+        // We put a dummy value here in order to avoid super-subtle
+        // GC-and-OSR-exit crashes in case we have a bug and some
+        // field is, for any reason, not filled later.
+        // We use a random-ish number instead of a sensible value like
+        // undefined to make possible bugs easier to track.
+        for (unsigned i = 0; i < materialization->properties().size(); ++i) {
+            const ExitPropertyValue& property = materialization->properties()[i];
+            if (property.location().kind() != ArrayIndexedPropertyPLoc) {
+                ASSERT(property.location().kind() == ArrayButterflyPLoc);
+                continue;
+            }
+
+            unsigned index = property.location().info();
+
+            int sentinel = 0xD3137E; // delete
+            ASSERT(jsNumber(sentinel).isInt32());
+            if (hasDouble(materialization->indexingType()))
+                butterfly->contiguousDouble().atUnsafe(index) = static_cast<double>(sentinel);
+            else
+                butterfly->contiguous().atUnsafe(index).setStartingValue(jsNumber(sentinel));
+        }
+
         return result;
     }
 
@@ -651,7 +708,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
         ASSERT(isCopyOnWrite(indexingMode));
         ASSERT(!structure->outOfLineCapacity());
 
-        if (UNLIKELY(immutableButterfly->indexingMode() != indexingMode)) {
+        if (immutableButterfly->indexingMode() != indexingMode) [[unlikely]] {
             auto* newButterfly = JSImmutableButterfly::create(vm, indexingMode, immutableButterfly->length());
             for (unsigned i = 0; i < immutableButterfly->length(); ++i)
                 newButterfly->setIndex(vm, i, immutableButterfly->get(i));
@@ -741,7 +798,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
         return result;
     }
 
-    case PhantomNewRegexp: {
+    case PhantomNewRegExp: {
         RegExp* regExp = nullptr;
         for (unsigned i = materialization->properties().size(); i--;) {
             const ExitPropertyValue& property = materialization->properties()[i];
@@ -763,7 +820,7 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationMaterializeObjectInOSR, JSCell*, (JSG
     }
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, UCPUStrictInt32, (JSGlobalObject* globalObject, const UnlinkedStringJumpTable* unlinkedTable, JSString* string))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -772,16 +829,16 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationSwitchStringAndGetIndex, unsigned, (J
 
     unsigned length = string->length();
     if (length < unlinkedTable->minLength() || length > unlinkedTable->maxLength())
-        return std::numeric_limits<unsigned>::max();
+        return toUCPUStrictInt32(std::numeric_limits<unsigned>::max());
 
     auto str = string->value(globalObject);
 
     RETURN_IF_EXCEPTION(throwScope, 0);
 
-    return unlinkedTable->indexForValue(str->impl(), std::numeric_limits<unsigned>::max());
+    return toUCPUStrictInt32(unlinkedTable->indexForValue(str->impl(), std::numeric_limits<unsigned>::max()));
 }
 
-JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (JSGlobalObject* globalObject, JSCell* object))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, UCPUStrictInt32, (JSGlobalObject* globalObject, JSCell* object))
 {
     VM& vm = globalObject->vm();
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
@@ -790,10 +847,10 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationTypeOfObjectAsTypeofType, int32_t, (J
     ASSERT(jsDynamicCast<JSObject*>(object));
 
     if (object->structure()->masqueradesAsUndefined(globalObject))
-        return static_cast<int32_t>(TypeofType::Undefined);
+        return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Undefined));
     if (object->isCallable())
-        return static_cast<int32_t>(TypeofType::Function);
-    return static_cast<int32_t>(TypeofType::Object);
+        return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Function));
+    return toUCPUStrictInt32(static_cast<int32_t>(TypeofType::Object));
 }
 
 JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLLazySlowPath, void*, (CallFrame* callFrame, unsigned index))

@@ -31,7 +31,6 @@
 #include "InspectorDebuggerAgent.h"
 
 #include "AsyncStackTrace.h"
-#include "ContentSearchUtilities.h"
 #include "Debugger.h"
 #include "DebuggerScope.h"
 #include "DeferGC.h"
@@ -241,7 +240,7 @@ RefPtr<JSC::Breakpoint> InspectorDebuggerAgent::debuggerBreakpointFromPayload(Pr
 
 InspectorDebuggerAgent::InspectorDebuggerAgent(AgentContext& context)
     : InspectorAgentBase("Debugger"_s)
-    , m_frontendDispatcher(makeUnique<DebuggerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<DebuggerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(DebuggerBackendDispatcher::create(context.backendDispatcher, this))
     , m_debugger(*context.environment.debugger())
     , m_injectedScriptManager(context.injectedScriptManager)
@@ -252,7 +251,7 @@ InspectorDebuggerAgent::InspectorDebuggerAgent(AgentContext& context)
 
 InspectorDebuggerAgent::~InspectorDebuggerAgent() = default;
 
-void InspectorDebuggerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorDebuggerAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -354,9 +353,9 @@ void InspectorDebuggerAgent::setSuppressAllPauses(bool suppress)
 
 void InspectorDebuggerAgent::updatePauseReasonAndData(DebuggerFrontendDispatcher::Reason reason, RefPtr<JSON::Object>&& data)
 {
-    if (m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript) {
-        m_preBlackboxPauseReason = m_pauseReason;
-        m_preBlackboxPauseData = WTFMove(m_pauseData);
+    if (m_pauseReason != DebuggerFrontendDispatcher::Reason::Other && m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript) {
+        m_lastPauseReason = m_pauseReason;
+        m_lastPauseData = WTFMove(m_pauseData);
     }
 
     m_pauseReason = reason;
@@ -711,12 +710,12 @@ struct ReplacedThunk {
             JSC::JITCode::CodeRef<JSC::JSEntryPtrTag> oldJITCodeRef;
             CodePtr<JSC::JSEntryPtrTag> oldArityJITCodeRef;
             switch (kind) {
-            case JSC::CodeForCall:
+            case JSC::CodeSpecializationKind::CodeForCall:
                 oldJITCodeRef = WTFMove(callThunk);
                 oldArityJITCodeRef = WTFMove(callArityThunk);
                 break;
 
-            case JSC::CodeForConstruct:
+            case JSC::CodeSpecializationKind::CodeForConstruct:
                 oldJITCodeRef = WTFMove(constructThunk);
                 oldArityJITCodeRef = WTFMove(constructArityThunk);
                 break;
@@ -726,8 +725,8 @@ struct ReplacedThunk {
             nativeExecutable->swapGeneratedJITCodeWithArityCheckForDebugger(kind, oldArityJITCodeRef);
         };
 
-        restoreThunks(JSC::CodeForCall);
-        restoreThunks(JSC::CodeForConstruct);
+        restoreThunks(JSC::CodeSpecializationKind::CodeForCall);
+        restoreThunks(JSC::CodeSpecializationKind::CodeForConstruct);
     }
 
     JSC::Weak<JSC::NativeExecutable> nativeExecutable;
@@ -1302,14 +1301,19 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
     if (url.isEmpty())
         return makeUnexpected("URL must not be empty"_s);
 
-    bool caseSensitive = optionalCaseSensitive.value_or(false);
-    bool isRegex = optionalIsRegex.value_or(false);
+    BlackboxedScript blackboxedScript;
+    blackboxedScript.url = url;
+    if (optionalCaseSensitive)
+        blackboxedScript.caseSensitive = *optionalCaseSensitive;
+    if (optionalIsRegex)
+        blackboxedScript.isRegex = *optionalIsRegex;
 
-    if (!caseSensitive && !isRegex && isWebKitInjectedScript(url))
+    if (blackboxedScript.caseSensitive && !blackboxedScript.isRegex && isWebKitInjectedScript(blackboxedScript.url))
         return makeUnexpected("Blackboxing of internal scripts is controlled by 'Debugger.setPauseForInternalScripts'"_s);
 
+    m_blackboxedScripts.removeAll(blackboxedScript);
+
     if (shouldBlackbox) {
-        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> blackboxRanges;
         if (protocolSourceRanges) {
             if (protocolSourceRanges->length() % 4)
                 return makeUnexpected("Unexpected format for given sourceRanges"_s);
@@ -1344,7 +1348,7 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
                 if (startLine == endLine && startColumn >= endColumn)
                     return makeUnexpected("Unexpected endColumn before startColumn in given sourceRanges"_s);
 
-                blackboxRanges.add({
+                blackboxedScript.ranges.add({
                     { OrdinalNumber::fromZeroBasedInt(startLine), OrdinalNumber::fromZeroBasedInt(startColumn) },
                     { OrdinalNumber::fromZeroBasedInt(endLine), OrdinalNumber::fromZeroBasedInt(endColumn) },
                 });
@@ -1357,9 +1361,9 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
             ASSERT(startColumn == -1);
             ASSERT(endLine == -1);
         }
-        m_blackboxedURLs.set({ url, caseSensitive, isRegex }, WTFMove(blackboxRanges));
-    } else
-        m_blackboxedURLs.remove({ url, caseSensitive, isRegex });
+
+        m_blackboxedScripts.append(WTFMove(blackboxedScript));
+    }
 
     for (auto& [sourceID, script] : m_scripts) {
         if (isWebKitInjectedScript(script.sourceURL))
@@ -1382,15 +1386,11 @@ void InspectorDebuggerAgent::setBlackboxConfiguration(JSC::SourceID sourceID, co
         blackboxFlags.add(JSC::Debugger::BlackboxFlag::Ignore);
     }
 
-    for (const auto& [blackboxParameters, blackboxRanges] : m_blackboxedURLs) {
-        const auto& [url, caseSensitive, isRegex] = blackboxParameters;
-
-        auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ExactString;
-        auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(url, caseSensitive, searchStringType);
-        if ((script.sourceURL.isEmpty() || regex.match(script.sourceURL) == -1) && (script.url.isEmpty() || regex.match(script.url) == -1))
+    for (auto& blackboxedScript : m_blackboxedScripts) {
+        if (!blackboxedScript.matches(script.sourceURL) && !blackboxedScript.matches(script.url))
             continue;
 
-        if (blackboxRanges.isEmpty()) {
+        if (blackboxedScript.ranges.isEmpty()) {
             auto& blackboxFlags = blackboxConfiguration.ensure(blackboxRange(script), [] {
                 return JSC::Debugger::BlackboxFlags();
             }).iterator->value;
@@ -1398,8 +1398,8 @@ void InspectorDebuggerAgent::setBlackboxConfiguration(JSC::SourceID sourceID, co
             continue;
         }
 
-        for (const auto& blackboxRange : blackboxRanges) {
-            auto& blackboxFlags = blackboxConfiguration.ensure(blackboxRange, [] {
+        for (const auto& range : blackboxedScript.ranges) {
+            auto& blackboxFlags = blackboxConfiguration.ensure(range, [] {
                 return JSC::Debugger::BlackboxFlags();
             }).iterator->value;
             blackboxFlags.add(JSC::Debugger::BlackboxFlag::Defer);
@@ -1503,22 +1503,22 @@ void InspectorDebuggerAgent::didCreateNativeExecutable(JSC::NativeExecutable& na
 
         CodePtr<JSC::JITThunkPtrTag> thunk;
         switch (kind) {
-        case JSC::CodeForCall:
+        case JSC::CodeSpecializationKind::CodeForCall:
             thunk = vm.jitStubs->ctiNativeCallWithDebuggerHook(vm);
             break;
 
-        case JSC::CodeForConstruct:
+        case JSC::CodeSpecializationKind::CodeForConstruct:
             thunk = vm.jitStubs->ctiNativeConstructWithDebuggerHook(vm);
             break;
         }
 
-        RELEASE_ASSERT(nativeExecutable.generatedJITCodeWithArityCheckFor(kind) == jitCode->addressForCall(JSC::MustCheckArity));
+        RELEASE_ASSERT(nativeExecutable.generatedJITCodeWithArityCheckFor(kind) == jitCode->addressForCall(JSC::ArityCheckMode::MustCheckArity));
 
         auto oldJITCodeRef = jitCode->swapCodeRefForDebugger(createJITCodeRef(thunk));
-        auto oldArityJITCodeRef = nativeExecutable.swapGeneratedJITCodeWithArityCheckForDebugger(kind, jitCode->addressForCall(JSC::MustCheckArity));
+        auto oldArityJITCodeRef = nativeExecutable.swapGeneratedJITCodeWithArityCheckForDebugger(kind, jitCode->addressForCall(JSC::ArityCheckMode::MustCheckArity));
 
         switch (kind) {
-        case JSC::CodeForCall:
+        case JSC::CodeSpecializationKind::CodeForCall:
             ASSERT(!replacedThunk->callThunk);
             replacedThunk->callThunk = WTFMove(oldJITCodeRef);
 
@@ -1528,7 +1528,7 @@ void InspectorDebuggerAgent::didCreateNativeExecutable(JSC::NativeExecutable& na
             RELEASE_ASSERT(replacedThunk->callThunk.code() == createJITCodeRef(vm.jitStubs->ctiNativeCall(vm)).code());
             break;
 
-        case JSC::CodeForConstruct:
+        case JSC::CodeSpecializationKind::CodeForConstruct:
             ASSERT(!replacedThunk->constructThunk);
             replacedThunk->constructThunk = WTFMove(oldJITCodeRef);
 
@@ -1542,8 +1542,8 @@ void InspectorDebuggerAgent::didCreateNativeExecutable(JSC::NativeExecutable& na
         return true;
     };
 
-    bool didReplaceCallThunks = replaceThunks(JSC::CodeForCall);
-    bool didReplaceConstructThunks = replaceThunks(JSC::CodeForConstruct);
+    bool didReplaceCallThunks = replaceThunks(JSC::CodeSpecializationKind::CodeForCall);
+    bool didReplaceConstructThunks = replaceThunks(JSC::CodeSpecializationKind::CodeForConstruct);
     if (!didReplaceCallThunks && !didReplaceConstructThunks)
         return;
 
@@ -1715,9 +1715,9 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
             // There should be no break data, as we would've already continued past the breakpoint.
             ASSERT(!m_pauseData);
 
-            // Don't call `updatePauseReasonAndData` so as to not override `m_preBlackboxPauseData`.
+            // Don't call `updatePauseReasonAndData` so as to not override `m_lastPauseData`.
             if (m_pauseReason != DebuggerFrontendDispatcher::Reason::BlackboxedScript)
-                m_preBlackboxPauseReason = m_pauseReason;
+                m_lastPauseReason = m_pauseReason;
             m_pauseReason = DebuggerFrontendDispatcher::Reason::BlackboxedScript;
             break;
         }
@@ -1727,6 +1727,12 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
         case JSC::Debugger::PausedAtEndOfProgram:
             // Pause was just stepping. Nothing to report.
             break;
+        case JSC::Debugger::PausedAfterAwait:
+            // We should not have preserved the pause reason and data.
+            ASSERT(!m_pauseData);
+            m_pauseReason = m_lastPauseReason;
+            m_pauseData = m_lastPauseData;
+            break;
         case JSC::Debugger::NotPaused:
             ASSERT_NOT_REACHED();
             break;
@@ -1734,7 +1740,7 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
     }
 
     if (m_debugger.reasonForPause() == JSC::Debugger::PausedAfterBlackboxedScript) {
-        // Ensure that `m_preBlackboxPauseReason` is populated with the most recent data.
+        // Ensure that `m_lastPauseReason` is populated with the most recent data.
         updatePauseReasonAndData(m_pauseReason, nullptr);
 
         RefPtr<JSON::Object> data;
@@ -1744,10 +1750,10 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
             data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(DebuggerFrontendDispatcher::Reason::Breakpoint));
             if (auto pauseReason = buildBreakpointPauseReason(debuggerBreakpointId))
                 data->setValue("originalData"_s, pauseReason.releaseNonNull());
-        } else if (m_preBlackboxPauseData) {
+        } else if (m_lastPauseData) {
             data = JSON::Object::create();
-            data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(m_preBlackboxPauseReason));
-            data->setValue("originalData"_s, m_preBlackboxPauseData.releaseNonNull());
+            data->setString("originalReason"_s, Protocol::Helpers::getEnumConstantValue(m_lastPauseReason));
+            data->setValue("originalData"_s, m_lastPauseData.releaseNonNull());
         }
         updatePauseReasonAndData(DebuggerFrontendDispatcher::Reason::BlackboxedScript, WTFMove(data));
     }
@@ -1961,6 +1967,19 @@ void InspectorDebuggerAgent::clearAsyncStackTraceData()
     didClearAsyncStackTraceData();
 }
 
+bool InspectorDebuggerAgent::BlackboxedScript::matches(const String& url)
+{
+    if (url.isEmpty())
+        return false;
+
+    if (!m_urlSearcher) {
+        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
+        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+        m_urlSearcher = ContentSearchUtilities::createSearcherForString(this->url, searchType, searchCaseSensitive);
+    }
+    return ContentSearchUtilities::searcherMatchesText(*m_urlSearcher, url);
+}
+
 bool InspectorDebuggerAgent::SymbolicBreakpoint::matches(const String& symbol)
 {
     if (symbol.isEmpty())
@@ -1969,11 +1988,12 @@ bool InspectorDebuggerAgent::SymbolicBreakpoint::matches(const String& symbol)
     if (knownMatchingSymbols.contains(symbol))
         return true;
 
-    if (!m_symbolMatchRegex) {
-        auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ExactString;
-        m_symbolMatchRegex = ContentSearchUtilities::createRegularExpressionForSearchString(this->symbol, caseSensitive, searchStringType);
+    if (!m_symbolSearcher) {
+        auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ExactString;
+        auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+        m_symbolSearcher = ContentSearchUtilities::createSearcherForString(this->symbol, searchType, searchCaseSensitive);
     }
-    if (m_symbolMatchRegex->match(symbol) == -1)
+    if (!ContentSearchUtilities::searcherMatchesText(*m_symbolSearcher, symbol))
         return false;
 
     knownMatchingSymbols.add(symbol);

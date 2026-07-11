@@ -56,14 +56,14 @@ public:
             // Acquire barrier ensures that no loads are reordered
             // above the first load of the sequence counter.
             uint64_t versionBefore = m_version.load(std::memory_order_acquire);
-            if (UNLIKELY((versionBefore & 1) == 1))
+            if ((versionBefore & 1) == 1) [[unlikely]]
                 continue;
             relaxedCopyFromAtomic(asMutableByteSpan(result), std::span { m_storage });
             // Another acquire fence ensures that the load of 'm_version' below is
             // strictly ordered after the RelaxedCopyToAtomic call above.
             std::atomic_thread_fence(std::memory_order_acquire);
             uint64_t versionAfter = m_version.load(std::memory_order_relaxed);
-            if (LIKELY(versionBefore == versionAfter))
+            if (versionBefore == versionAfter) [[likely]]
                 break;
         }
         return result;

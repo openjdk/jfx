@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "Frame.h"
+#include "FrameInlines.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"

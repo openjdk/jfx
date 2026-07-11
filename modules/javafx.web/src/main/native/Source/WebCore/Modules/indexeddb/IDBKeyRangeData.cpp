@@ -60,23 +60,23 @@ bool IDBKeyRangeData::isExactlyOneKey() const
     if (isNull() || lowerOpen || upperOpen || !upperKey.isValid() || !lowerKey.isValid())
         return false;
 
-    return !lowerKey.compare(upperKey);
+    return lowerKey == upperKey;
 }
 
 bool IDBKeyRangeData::containsKey(const IDBKeyData& key) const
 {
     if (lowerKey.isValid()) {
-        auto compare = lowerKey.compare(key);
-        if (compare > 0)
+        auto compare = lowerKey <=> key;
+        if (is_gt(compare))
             return false;
-        if (lowerOpen && !compare)
+        if (lowerOpen && is_eq(compare))
             return false;
     }
     if (upperKey.isValid()) {
-        auto compare = upperKey.compare(key);
-        if (compare < 0)
+        auto compare = upperKey <=> key;
+        if (is_lt(compare))
             return false;
-        if (upperOpen && !compare)
+        if (upperOpen && is_eq(compare))
             return false;
     }
 

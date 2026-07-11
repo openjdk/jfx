@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,38 +124,19 @@ WorkerThread::~WorkerThread()
     --workerThreadCounter;
 }
 
-WorkerLoaderProxy* WorkerThread::workerLoaderProxy()
-{
-    return m_workerLoaderProxy.get();
-}
-
-WorkerBadgeProxy* WorkerThread::workerBadgeProxy() const
-{
-    return m_workerBadgeProxy.get();
-}
-
-WorkerDebuggerProxy* WorkerThread::workerDebuggerProxy() const
-{
-    return m_workerDebuggerProxy.get();
-}
-
-WorkerReportingProxy* WorkerThread::workerReportingProxy() const
-{
-    return m_workerReportingProxy.get();
-}
-
 Ref<Thread> WorkerThread::createThread()
 {
     if (is<WorkerMainRunLoop>(runLoop())) {
         // This worker should run on the main thread.
-        RunLoop::protectedMain()->dispatch([protectedThis = Ref { *this }] {
+        RunLoop::mainSingleton().dispatch([protectedThis = Ref { *this }] {
             protectedThis->workerOrWorkletThread();
         });
         ASSERT(isMainThread());
-        return Thread::current();
+        return Thread::currentSingleton();
     }
 
-    return Thread::create(threadName(), [this] {
+    // WorkerOrWorkletThread::workerOrWorkletThread destroys the worker and expects a single reference to this.
+    SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE return Thread::create(threadName(), [this] {
         workerOrWorkletThread();
     }, ThreadType::JavaScript);
 }
@@ -216,19 +197,9 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
     m_startupData = nullptr;
 }
 
-IDBClient::IDBConnectionProxy* WorkerThread::idbConnectionProxy()
-{
-    return m_idbConnectionProxy.get();
-}
-
-SocketProvider* WorkerThread::socketProvider()
-{
-    return m_socketProvider.get();
-}
-
 WorkerGlobalScope* WorkerThread::globalScope()
 {
-    ASSERT(!thread() || thread() == &Thread::current());
+    ASSERT(!thread() || thread() == &Thread::currentSingleton());
     return downcast<WorkerGlobalScope>(WorkerOrWorkletThread::globalScope());
 }
 

@@ -29,7 +29,9 @@
 
 #if ENABLE(VIDEO)
 
+#include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "HTMLMediaElement.h"
 #include "TimeRanges.h"
 #include <pal/system/Clock.h>
@@ -66,6 +68,47 @@ MediaController::MediaController(ScriptExecutionContext& context)
 
 MediaController::~MediaController() = default;
 
+void MediaController::forEachElement(Function<void(Ref<HTMLMediaElement>&&)>&& func) const
+{
+    for (auto& element : m_mediaElements) {
+        if (RefPtr protectedElement = element.get())
+            func(protectedElement.releaseNonNull());
+    }
+}
+
+bool MediaController::anyElement(Function<bool(Ref<HTMLMediaElement>&&)>&& func) const
+{
+    for (auto& element : m_mediaElements) {
+        RefPtr protectedElement = element.get();
+        if (!protectedElement)
+            continue;
+
+        if (func(protectedElement.releaseNonNull()))
+            return true;
+    }
+    return false;
+}
+
+bool MediaController::everyElement(Function<bool(Ref<HTMLMediaElement>&&)>&& func) const
+{
+    bool isNonEmpty = false;
+    for (auto& element : m_mediaElements) {
+        RefPtr protectedElement = element.get();
+        if (!protectedElement)
+            continue;
+
+        isNonEmpty = true;
+        if (!func(protectedElement.releaseNonNull()))
+            return false;
+    }
+    return isNonEmpty;
+}
+
+ScriptExecutionContext* MediaController::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+};
+
 void MediaController::addMediaElement(HTMLMediaElement& element)
 {
     ASSERT(!m_mediaElements.contains(&element));
@@ -77,7 +120,7 @@ void MediaController::addMediaElement(HTMLMediaElement& element)
 void MediaController::removeMediaElement(HTMLMediaElement& element)
 {
     ASSERT(m_mediaElements.contains(&element));
-    m_mediaElements.remove(m_mediaElements.find(&element));
+    m_mediaElements.removeFirst(&element);
 }
 
 Ref<TimeRanges> MediaController::buffered() const
@@ -88,9 +131,10 @@ Ref<TimeRanges> MediaController::buffered() const
     // The buffered attribute must return a new static normalized TimeRanges object that represents
     // the intersection of the ranges of the media resources of the mediagroup elements that the
     // user agent has buffered, at the time the attribute is evaluated.
-    Ref<TimeRanges> bufferedRanges = m_mediaElements.first()->buffered();
-    for (size_t index = 1; index < m_mediaElements.size(); ++index)
-        bufferedRanges->intersectWith(m_mediaElements[index]->buffered());
+    Ref<TimeRanges> bufferedRanges = TimeRanges::create(-std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity());
+    forEachElement([&] (auto element) {
+        bufferedRanges->intersectWith(element->buffered());
+    });
     return bufferedRanges;
 }
 
@@ -102,23 +146,22 @@ Ref<TimeRanges> MediaController::seekable() const
     // The seekable attribute must return a new static normalized TimeRanges object that represents
     // the intersection of the ranges of the media resources of the mediagroup elements that the
     // user agent is able to seek to, at the time the attribute is evaluated.
-    Ref<TimeRanges> seekableRanges = m_mediaElements.first()->seekable();
-    for (size_t index = 1; index < m_mediaElements.size(); ++index)
-        seekableRanges->intersectWith(m_mediaElements[index]->seekable());
+    Ref<TimeRanges> seekableRanges = TimeRanges::create(-std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity());
+    forEachElement([&] (auto element) {
+        seekableRanges->intersectWith(element->seekable());
+    });
     return seekableRanges;
 }
 
 Ref<TimeRanges> MediaController::played()
 {
-    if (m_mediaElements.isEmpty())
-        return TimeRanges::create();
-
     // The played attribute must return a new static normalized TimeRanges object that represents
     // the union of the ranges of the media resources of the mediagroup elements that the
     // user agent has so far rendered, at the time the attribute is evaluated.
-    Ref<TimeRanges> playedRanges = m_mediaElements.first()->played();
-    for (size_t index = 1; index < m_mediaElements.size(); ++index)
-        playedRanges->unionWith(m_mediaElements[index]->played());
+    Ref<TimeRanges> playedRanges = TimeRanges::create();
+    forEachElement([&] (auto element) {
+        playedRanges->unionWith(element->played());
+    });
     return playedRanges;
 }
 
@@ -127,12 +170,12 @@ double MediaController::duration() const
     // FIXME: Investigate caching the maximum duration and only updating the cached value
     // when the mediagroup elements' durations change.
     double maxDuration = 0;
-    for (auto& mediaElement : m_mediaElements) {
+    forEachElement([&] (auto mediaElement) {
         double duration = mediaElement->duration();
         if (std::isnan(duration))
-            continue;
+            return;
         maxDuration = std::max(maxDuration, duration);
-    }
+    });
     return maxDuration;
 }
 
@@ -166,8 +209,9 @@ void MediaController::setCurrentTime(double time)
     m_clock->setCurrentTime(time);
 
     // Seek each mediagroup element to the new playback position relative to the media element timeline.
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->seek(MediaTime::createWithDouble(time));
+    });
 
     scheduleTimeupdateEvent();
     m_resetCurrentTimeInNextPlay = false;
@@ -190,8 +234,9 @@ void MediaController::play()
 {
     // When the play() method is invoked, the user agent must invoke the play method of each
     // mediagroup element in turn,
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->play();
+    });
 
     // and then invoke the unpause method of the MediaController.
     unpause();
@@ -238,8 +283,9 @@ void MediaController::setPlaybackRate(double rate)
     // playback rate to the new value,
     m_clock->setPlayRate(rate);
 
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->updatePlaybackRate();
+    });
 
     // then queue a task to fire a simple event named ratechange at the MediaController.
     scheduleEvent(eventNames().ratechangeEvent);
@@ -262,8 +308,9 @@ ExceptionOr<void> MediaController::setVolume(double level)
     // and queue a task to fire a simple event named volumechange at the MediaController.
     scheduleEvent(eventNames().volumechangeEvent);
 
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->updateVolume();
+    });
 
     return { };
 }
@@ -280,8 +327,9 @@ void MediaController::setMuted(bool flag)
     // and queue a task to fire a simple event named volumechange at the MediaController.
     scheduleEvent(eventNames().volumechangeEvent);
 
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->updateVolume();
+    });
 }
 
 static const AtomString& playbackStateWaiting()
@@ -344,20 +392,19 @@ static AtomString eventNameForReadyState(MediaControllerInterface::ReadyState st
 
 void MediaController::updateReadyState()
 {
-    ReadyState oldReadyState = m_readyState;
-    ReadyState newReadyState;
+    auto readyStates = m_mediaElements.map([] (auto& checkedElement) -> std::optional<ReadyState> {
+        if (RefPtr mediaElement = checkedElement.get())
+            return mediaElement->readyState();
+        return std::nullopt;
+    });
 
-    if (m_mediaElements.isEmpty()) {
         // If the MediaController has no mediagroup elements, let new readiness state be 0.
-        newReadyState = HAVE_NOTHING;
-    } else {
         // Otherwise, let it have the lowest value of the readyState IDL attributes of all of its
         // mediagroup elements.
-        newReadyState = m_mediaElements.first()->readyState();
-        for (size_t index = 1; index < m_mediaElements.size(); ++index)
-            newReadyState = std::min(newReadyState, m_mediaElements[index]->readyState());
-    }
-
+    ReadyState oldReadyState = m_readyState;
+    ReadyState newReadyState = HAVE_NOTHING;
+    if (std::ranges::distance(readyStates) > 0)
+        newReadyState = std::ranges::min(readyStates).value_or(HAVE_NOTHING);
     if (newReadyState == oldReadyState)
         return;
 
@@ -468,8 +515,9 @@ void MediaController::updatePlaybackState()
 
 void MediaController::updateMediaElements()
 {
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([&] (auto mediaElement) {
         mediaElement->updatePlayState();
+    });
 }
 
 void MediaController::bringElementUpToSpeed(HTMLMediaElement& element)
@@ -492,23 +540,18 @@ bool MediaController::isBlocked() const
     if (m_mediaElements.isEmpty())
         return false;
 
-    bool allPaused = true;
-    for (auto& element : m_mediaElements) {
+    return anyElement([&] (auto element) {
         //  or if any of its mediagroup elements are blocked media elements,
         if (element->isBlocked())
             return true;
 
         // or if any of its mediagroup elements whose autoplaying flag is true still have their
         // paused attribute set to true,
-        if (element->isAutoplaying() && element->paused())
-            return true;
-
-        if (!element->paused())
-            allPaused = false;
-    }
-
+        return element->isAutoplaying() && element->paused();
+    }) || everyElement([&] (auto element) {
     // or if all of its mediagroup elements have their paused attribute set to true.
-    return allPaused;
+        return element->paused();
+    });
 }
 
 bool MediaController::hasEnded() const
@@ -519,15 +562,9 @@ bool MediaController::hasEnded() const
 
     // [and] all of the MediaController's mediagroup elements have ended playback ... let new
     // playback state be ended.
-    if (m_mediaElements.isEmpty())
-        return false;
-
-    bool allHaveEnded = true;
-    for (auto& mediaElement : m_mediaElements) {
-        if (!mediaElement->ended())
-            allHaveEnded = false;
-    }
-    return allHaveEnded;
+    return everyElement([] (auto mediaElement) {
+        return mediaElement->ended();
+    });
 }
 
 void MediaController::scheduleEvent(const AtomString& eventName)
@@ -553,73 +590,70 @@ void MediaController::clearPositionTimerFired()
 
 bool MediaController::hasAudio() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (mediaElement->hasAudio())
-            return true;
-    }
-    return false;
+    return anyElement([] (auto mediaElement) {
+        return mediaElement->hasAudio();
+    });
 }
 
 bool MediaController::hasVideo() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (mediaElement->hasVideo())
-            return true;
-    }
-    return false;
+    return anyElement([] (auto mediaElement) {
+        return mediaElement->hasVideo();
+    });
 }
 
 bool MediaController::hasClosedCaptions() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (mediaElement->hasClosedCaptions())
-            return true;
-    }
-    return false;
+    return anyElement([] (auto mediaElement) {
+        return mediaElement->hasClosedCaptions();
+    });
 }
 
 void MediaController::setClosedCaptionsVisible(bool visible)
 {
     m_closedCaptionsVisible = visible;
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([visible] (auto mediaElement) {
         mediaElement->setClosedCaptionsVisible(visible);
+    });
 }
 
 bool MediaController::supportsScanning() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (!mediaElement->supportsScanning())
-            return false;
-    }
-    return true;
+    return everyElement([] (auto mediaElement) {
+        return mediaElement->supportsScanning();
+    });
 }
 
 void MediaController::beginScrubbing()
 {
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([] (auto mediaElement) {
         mediaElement->beginScrubbing();
+    });
     if (m_playbackState == PLAYING)
         m_clock->stop();
 }
 
 void MediaController::endScrubbing()
 {
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([] (auto mediaElement) {
         mediaElement->endScrubbing();
+    });
     if (m_playbackState == PLAYING)
         m_clock->start();
 }
 
 void MediaController::beginScanning(ScanDirection direction)
 {
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([direction] (auto mediaElement) {
         mediaElement->beginScanning(direction);
+    });
 }
 
 void MediaController::endScanning()
 {
-    for (auto& mediaElement : m_mediaElements)
+    forEachElement([] (auto mediaElement) {
         mediaElement->endScanning();
+    });
 }
 
 bool MediaController::canPlay() const
@@ -627,35 +661,30 @@ bool MediaController::canPlay() const
     if (m_paused)
         return true;
 
-    for (auto& mediaElement : m_mediaElements) {
-        if (!mediaElement->canPlay())
-            return false;
-    }
-    return true;
+    return everyElement([] (auto mediaElement) {
+        return mediaElement->canPlay();
+    });
 }
 
 bool MediaController::isLiveStream() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (!mediaElement->isLiveStream())
-            return false;
-    }
-    return true;
+    return everyElement([] (auto mediaElement) {
+        return mediaElement->isLiveStream();
+    });
 }
 
 bool MediaController::hasCurrentSrc() const
 {
-    for (auto& mediaElement : m_mediaElements) {
-        if (!mediaElement->hasCurrentSrc())
-            return false;
-    }
-    return true;
+    return everyElement([] (auto mediaElement) {
+        return mediaElement->hasCurrentSrc();
+    });
 }
 
 void MediaController::returnToRealtime()
 {
-    for (auto& mediaElement : m_mediaElements)
+    return forEachElement([] (auto mediaElement) {
         mediaElement->returnToRealtime();
+    });
 }
 
 // The spec says to fire periodic timeupdate events (those sent while playing) every

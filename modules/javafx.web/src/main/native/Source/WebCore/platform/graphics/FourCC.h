@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ASCIICType.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

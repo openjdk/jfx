@@ -52,8 +52,6 @@ public:
     bool active() { return m_active; }
     AbortSignal& signal() { return m_signal.get(); }
 
-    Ref<AbortSignal> protectedSignal() const { return m_signal; }
-
     static Ref<Subscriber> create(ScriptExecutionContext&, Ref<InternalObserver>&&, const SubscribeOptions&);
 
     void reportErrorObject(JSC::JSValue);
@@ -86,8 +84,8 @@ private:
 
     bool m_active = true;
     Lock m_teardownsLock;
-    Ref<AbortSignal> m_signal;
-    Ref<InternalObserver> m_observer;
+    const Ref<AbortSignal> m_signal;
+    const Ref<InternalObserver> m_observer;
     SubscribeOptions m_options;
     Vector<Ref<VoidCallback>> m_teardowns WTF_GUARDED_BY_LOCK(m_teardownsLock);
 };

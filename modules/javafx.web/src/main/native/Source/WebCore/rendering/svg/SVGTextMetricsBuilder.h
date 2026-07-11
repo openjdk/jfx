@@ -22,6 +22,7 @@
 #include "SVGTextLayoutAttributes.h"
 #include "TextRun.h"
 #include "WidthIterator.h"
+#include "platform/graphics/ComplexTextController.h"
 
 namespace WebCore {
 
@@ -45,7 +46,7 @@ private:
 
     void initializeMeasurementWithTextRenderer(RenderSVGInlineText&);
     void walkTree(RenderElement&, RenderSVGInlineText* stopAtLeaf, MeasureTextData&);
-    std::tuple<unsigned, UChar> measureTextRenderer(RenderSVGInlineText&, const MeasureTextData&, std::tuple<unsigned, UChar>);
+    std::tuple<unsigned, char16_t> measureTextRenderer(RenderSVGInlineText&, const MeasureTextData&, std::tuple<unsigned, char16_t>);
 
     SingleThreadWeakPtr<RenderSVGInlineText> m_text;
     TextRun m_run;
@@ -60,6 +61,10 @@ private:
 
     // Complex text only.
     SVGTextMetrics m_complexStartToCurrentMetrics;
+
+#if PLATFORM(COCOA)
+    std::unique_ptr<ComplexTextController> m_complexTextController;
+#endif
 };
 
 } // namespace WebCore

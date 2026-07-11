@@ -179,11 +179,6 @@ void Type::dump(PrintStream& out) const
         },
         [&](const TypeConstructor& constructor) {
             out.print(constructor.name);
-        },
-        [&](const Bottom&) {
-            // Bottom is an implementation detail and should never leak, but we
-            // keep the ability to print it in debug to help when dumping types
-            out.print("⊥");
         });
 }
 
@@ -295,10 +290,10 @@ String Type::toString() const
 }
 
 // https://gpuweb.github.io/gpuweb/wgsl/#alignment-and-size
-unsigned Type::size() const
+std::optional<unsigned> Type::maybeSize() const
 {
     return WTF::switchOn(*this,
-        [&](const Primitive& primitive) -> unsigned {
+        [&](const Primitive& primitive) -> std::optional<unsigned> {
             switch (primitive.kind) {
             case Types::Primitive::F16:
                 return 2;
@@ -317,13 +312,13 @@ unsigned Type::size() const
             case Types::Primitive::AccessMode:
             case Types::Primitive::TexelFormat:
             case Types::Primitive::AddressSpace:
-                RELEASE_ASSERT_NOT_REACHED();
+                return std::nullopt;
             }
         },
-        [&](const Vector& vector) -> unsigned {
+        [&](const Vector& vector) -> std::optional<unsigned> {
             return vector.element->size() * vector.size;
         },
-        [&](const Matrix& matrix) -> unsigned {
+        [&](const Matrix& matrix) -> std::optional<unsigned> {
             // The size of the matrix is computed as: sizeof(array<vecR<T>, C>)
             // sizeof(vecR<T>)
             auto rowSize = matrix.rows * matrix.element->size();
@@ -331,10 +326,14 @@ unsigned Type::size() const
             auto rowAlignment = (matrix.rows == 2 ? 2 : 4) * matrix.element->alignment();
             return matrix.columns * WTF::roundUpToMultipleOf(rowAlignment, rowSize);
         },
-        [&](const Array& array) -> unsigned {
+        [&](const Array& array) -> std::optional<unsigned> {
             CheckedUint32 size = 1;
             if (auto* constantSize = std::get_if<unsigned>(&array.size))
                 size = *constantSize;
+            else if (auto* expression = std::get_if<AST::Expression*>(&array.size)) {
+                if (const auto& maybeConstantValue = (*expression)->constantValue())
+                    size = maybeConstantValue->integerValue();
+            }
             auto elementSize = array.element->size();
             auto stride = WTF::roundUpToMultipleOf(array.element->alignment(), elementSize);
             if (stride < elementSize)
@@ -344,43 +343,45 @@ unsigned Type::size() const
                 return std::numeric_limits<unsigned>::max();
             return size.value();
         },
-        [&](const Struct& structure) -> unsigned {
+        [&](const Struct& structure) -> std::optional<unsigned> {
             return structure.structure.size();
         },
-        [&](const PrimitiveStruct& structure) -> unsigned {
+        [&](const PrimitiveStruct& structure) -> std::optional<unsigned> {
             unsigned size = 0;
             for (auto* type : structure.values)
                 size += type->size();
             return size;
         },
-        [&](const Function&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const Function&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const Texture&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const Texture&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const TextureStorage&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const TextureStorage&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const TextureDepth&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const TextureDepth&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const Reference&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const Reference&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const Pointer&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const Pointer&) -> std::optional<unsigned> {
+            return std::nullopt;
         },
-        [&](const Atomic& a) -> unsigned {
+        [&](const Atomic& a) -> std::optional<unsigned> {
             RELEASE_ASSERT(a.element);
             return a.element->size();
         },
-        [&](const TypeConstructor&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
-        },
-        [&](const Bottom&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
+        [&](const TypeConstructor&) -> std::optional<unsigned> {
+            return std::nullopt;
         });
+}
+
+unsigned Type::size() const
+{
+    return *maybeSize();
 }
 
 unsigned Type::alignment() const
@@ -455,9 +456,6 @@ unsigned Type::alignment() const
             return a.element->alignment();
         },
         [&](const TypeConstructor&) -> unsigned {
-            RELEASE_ASSERT_NOT_REACHED();
-        },
-        [&](const Bottom&) -> unsigned {
             RELEASE_ASSERT_NOT_REACHED();
         });
 }
@@ -550,9 +548,6 @@ bool Type::isConstructible() const
         },
         [&](const TypeConstructor&) -> bool {
             return false;
-        },
-        [&](const Bottom&) -> bool {
-            return true;
         });
 }
 
@@ -623,9 +618,6 @@ bool Type::isStorable() const
         },
         [&](const Pointer&) -> bool {
             return false;
-        },
-        [&](const Bottom&) -> bool {
-            return true;
         });
 }
 
@@ -696,9 +688,6 @@ bool Type::isHostShareable() const
         },
         [&](const Pointer&) -> bool {
             return false;
-        },
-        [&](const Bottom&) -> bool {
-            return true;
         });
 }
 
@@ -769,9 +758,6 @@ bool Type::hasFixedFootprint() const
         },
         [&](const Pointer&) -> bool {
             return false;
-        },
-        [&](const Bottom&) -> bool {
-            return true;
         });
 }
 
@@ -842,9 +828,6 @@ bool Type::hasCreationFixedFootprint() const
         },
         [&](const Pointer&) -> bool {
             return false;
-        },
-        [&](const Bottom&) -> bool {
-            return true;
         });
 }
 

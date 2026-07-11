@@ -63,12 +63,15 @@ void EllipsisBoxPainter::paint()
     if (textColor != context.fillColor())
         context.setFillColor(textColor);
 
-    auto setShadow = false;
-    if (style.textShadow()) {
-        auto shadowColor = style.colorWithColorFilter(style.textShadow()->color());
-        context.setDropShadow({ LayoutSize(style.textShadow()->x().value, style.textShadow()->y().value), style.textShadow()->radius().value, shadowColor, ShadowRadiusMode::Default });
-        setShadow = true;
+    bool setShadow = WTF::switchOn(style.textShadow(),
+        [&](const CSS::Keyword::None&) {
+            return false;
+        },
+        [&](const auto& shadows) {
+            context.setDropShadow({ LayoutSize(shadows[0].location.x().value, shadows[0].location.y().value), shadows[0].blur.value, style.colorWithColorFilter(shadows[0].color), ShadowRadiusMode::Default });
+            return true;
     }
+    );
 
     auto visualRect = m_lineBox.ellipsisVisualRect();
     auto textOrigin = visualRect.location();

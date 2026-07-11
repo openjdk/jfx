@@ -218,7 +218,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalCalendarPrototypeFuncFields, (JSGlobalObject* g
                 shouldAddEraAndEraYear = true;
         }
         fieldNames.append(value);
-        if (UNLIKELY(fieldNames.hasOverflowed()))
+        if (fieldNames.hasOverflowed()) [[unlikely]]
             throwStackOverflowError(globalObject, scope);
     });
     RETURN_IF_EXCEPTION(scope, { });
@@ -226,7 +226,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalCalendarPrototypeFuncFields, (JSGlobalObject* g
     if (shouldAddEraAndEraYear) {
         fieldNames.append(jsNontrivialString(vm, vm.propertyNames->era.impl()));
         fieldNames.append(jsNontrivialString(vm, vm.propertyNames->eraYear.impl()));
-        if (UNLIKELY(fieldNames.hasOverflowed()))
+        if (fieldNames.hasOverflowed()) [[unlikely]]
             throwStackOverflowError(globalObject, scope);
     }
 

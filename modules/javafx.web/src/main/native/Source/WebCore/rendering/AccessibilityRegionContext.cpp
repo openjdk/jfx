@@ -31,6 +31,7 @@
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderInline.h"
+#include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "RenderView.h"
@@ -42,10 +43,19 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(AccessibilityRegionContext);
 
 AccessibilityRegionContext::~AccessibilityRegionContext()
 {
+    WeakPtr<AXObjectCache> cache;
     // Release all accumulated RenderText frames to the cache.
     for (auto renderTextToFrame : m_accumulatedRenderTextRects) {
-        if (auto* cache = renderTextToFrame.key.document().axObjectCache())
+        if (!cache) {
+            // Use this RenderText to get to the "canonical" AXObjectCache (attached to the page).
+            cache = renderTextToFrame.key.document().axObjectCache();
+        }
+
+        if (cache) {
+            // Every RenderText should reference the same AXObjectCache (the canonical one).
+            ASSERT(cache.get() == renderTextToFrame.key.document().axObjectCache());
             cache->onPaint(renderTextToFrame.key, enclosingIntRect(renderTextToFrame.value));
+    }
     }
 }
 
@@ -56,7 +66,7 @@ void AccessibilityRegionContext::takeBounds(const RenderInline& renderInline, La
 
 void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, LayoutPoint paintOffset)
 {
-    if (CheckedPtr renderView = dynamicDowncast<RenderView>(renderBox); UNLIKELY(renderView)) {
+    if (CheckedPtr renderView = dynamicDowncast<RenderView>(renderBox); renderView) [[unlikely]] {
         takeBounds(*renderView, WTFMove(paintOffset));
         return;
     }
@@ -79,9 +89,25 @@ void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, FloatRec
     takeBoundsInternal(renderBox, WTFMove(mappedPaintRect));
 }
 
+void AccessibilityRegionContext::takeBounds(const RenderLineBreak* renderLineBreak, const LayoutPoint& paintOffset)
+{
+    if (!renderLineBreak)
+        return;
+    auto mappedPaintRect = renderLineBreak->linesBoundingBox();
+    mappedPaintRect.moveBy(roundedIntPoint(paintOffset));
+    // We want <br>s to have non-empty rects so that something is drawn when they are navigated to by-line by
+    // ATs like VoiceOver. Make them at least 2px so they roughly match the size of a cursor in either horizontal
+    // or vertical writing modes (matching CaretRectComputation::caretWidth).
+    if (!mappedPaintRect.width())
+        mappedPaintRect.setWidth(2);
+    if (!mappedPaintRect.height())
+        mappedPaintRect.setHeight(2);
+    takeBoundsInternal(*renderLineBreak, WTFMove(mappedPaintRect));
+}
+
 void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& renderObject, IntRect&& paintRect)
 {
-    if (auto* view = renderObject.document().view())
+    if (RefPtr view = renderObject.document().view())
         paintRect = view->contentsToRootView(paintRect);
 
     if (auto* cache = renderObject.document().axObjectCache())
@@ -91,10 +117,10 @@ void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& 
 // Note that this function takes the bounds of a textbox that is associated with a RenderText, and not the RenderText itself.
 // RenderTexts are not painted atomically. Instead, they are painted as multiple `InlineIterator::TextBox`s, where a textbox might represent
 // the text on a single line. This method takes the paint rect of a single textbox and unites it with the other textbox rects painted for |renderText|.
-void AccessibilityRegionContext::takeBounds(const RenderText& renderText, FloatRect paintRect)
+void AccessibilityRegionContext::takeBounds(const RenderText& renderText, FloatRect paintRect, size_t lineIndex)
 {
     auto mappedPaintRect = enclosingIntRect(mapRect(WTFMove(paintRect)));
-    if (auto* view = renderText.document().view())
+    if (RefPtr view = renderText.document().view())
         mappedPaintRect = view->contentsToRootView(mappedPaintRect);
 
     auto accumulatedRectIterator = m_accumulatedRenderTextRects.find(renderText);
@@ -102,6 +128,13 @@ void AccessibilityRegionContext::takeBounds(const RenderText& renderText, FloatR
         m_accumulatedRenderTextRects.set(renderText, mappedPaintRect);
     else
         accumulatedRectIterator->value.unite(mappedPaintRect);
+
+    if (CheckedPtr cache = renderText.document().axObjectCache()) {
+        // Note that the line-index provided here is relative to the containing-block, which could include lines
+        // belonging to other RenderTexts. Concretely, this means the first painted line for |renderText| could
+        // have a line index greater than zero. We adjust this later in AXObjectCache::onAccessibilityPaintFinished.
+        cache->onPaint(renderText, lineIndex);
+    }
 }
 
 void AccessibilityRegionContext::onPaint(const ScrollView& scrollView)
@@ -116,8 +149,8 @@ void AccessibilityRegionContext::onPaint(const ScrollView& scrollView)
 
     auto relativeFrame = frameView->frameRectShrunkByInset();
     // Only normalize the rect to the root view if this scrollview isn't already associated with the root view (i.e. it has a frame owner).
-    if (auto* frameOwnerElement = frameView->frame().ownerElement()) {
-        if (auto* ownerDocumentFrameView = frameOwnerElement->document().view())
+    if (RefPtr frameOwnerElement = frameView->frame().ownerElement()) {
+        if (RefPtr ownerDocumentFrameView = frameOwnerElement->document().view())
             relativeFrame = ownerDocumentFrameView->contentsToRootView(relativeFrame);
     }
 

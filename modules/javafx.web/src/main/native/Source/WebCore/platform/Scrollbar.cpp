@@ -498,12 +498,12 @@ IntRect Scrollbar::convertFromContainingView(const IntRect& parentRect) const
     return m_scrollableArea.convertFromContainingViewToScrollbar(*this, parentRect);
 }
 
-IntPoint Scrollbar::convertToContainingView(const IntPoint& localPoint) const
+IntPoint Scrollbar::convertToContainingView(IntPoint localPoint) const
 {
     return m_scrollableArea.convertFromScrollbarToContainingView(*this, localPoint);
 }
 
-IntPoint Scrollbar::convertFromContainingView(const IntPoint& parentPoint) const
+IntPoint Scrollbar::convertFromContainingView(IntPoint parentPoint) const
 {
     return m_scrollableArea.convertFromContainingViewToScrollbar(*this, parentPoint);
 }

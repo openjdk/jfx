@@ -21,6 +21,7 @@
 #include "JSPluginElementFunctions.h"
 
 #include "BridgeJSC.h"
+#include "DOMTimer.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
 #include "JSHTMLElement.h"

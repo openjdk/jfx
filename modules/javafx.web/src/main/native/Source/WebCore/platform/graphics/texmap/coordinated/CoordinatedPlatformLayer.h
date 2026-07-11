@@ -97,8 +97,8 @@ public:
     void invalidateTarget();
 
 #if ENABLE(DAMAGE_TRACKING)
-    void setDamagePropagation(bool enabled) { m_damagePropagation = enabled; }
-    bool damagePropagation() const { return m_damagePropagation; }
+    void setDamagePropagationEnabled(bool enabled) { m_damagePropagationEnabled = enabled; }
+    void setDamageInGlobalCoordinateSpace(std::shared_ptr<Damage> damage) { m_damageInGlobalCoordinateSpace = WTFMove(damage); }
 #endif
 
     void setPosition(FloatPoint&&);
@@ -153,10 +153,7 @@ public:
     void setContentsColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
-    void setDirtyRegion(Vector<IntRect, 1>&&);
-#if ENABLE(DAMAGE_TRACKING)
-    void setDamage(Damage&&);
-#endif
+    void setDirtyRegion(Damage&&);
 
     void setFilters(const FilterOperations&);
     void setMask(CoordinatedPlatformLayer*);
@@ -249,7 +246,8 @@ private:
     bool m_needsTilesUpdate { false };
 
 #if ENABLE(DAMAGE_TRACKING)
-    bool m_damagePropagation { false };
+    bool m_damagePropagationEnabled { false };
+    std::shared_ptr<Damage> m_damageInGlobalCoordinateSpace;
 #endif
 
     Lock m_lock;
@@ -301,7 +299,7 @@ private:
     float m_debugBorderWidth WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     int m_repaintCount WTF_GUARDED_BY_LOCK(m_lock) { -1 };
 #if ENABLE(DAMAGE_TRACKING)
-    Damage m_damage WTF_GUARDED_BY_LOCK(m_lock);
+    std::optional<Damage> m_damage WTF_GUARDED_BY_LOCK(m_lock);
 #endif
 #if ENABLE(SCROLLING_THREAD)
     Markable<ScrollingNodeID> m_scrollingNodeID WTF_GUARDED_BY_LOCK(m_lock);

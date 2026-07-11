@@ -72,7 +72,7 @@ IDBKey::IDBKey(IndexedDB::KeyType type, double number)
 IDBKey::IDBKey(const String& value)
     : m_type(IndexedDB::KeyType::String)
     , m_value(value)
-    , m_sizeEstimate(OverheadSize + value.length() * sizeof(UChar))
+    , m_sizeEstimate(OverheadSize + value.length() * sizeof(char16_t))
 {
 }
 
@@ -107,54 +107,47 @@ bool IDBKey::isValid() const
     return true;
 }
 
-int IDBKey::compare(const IDBKey& other) const
+std::weak_ordering IDBKey::compare(const IDBKey& other) const
 {
     if (m_type != other.m_type)
-        return m_type > other.m_type ? -1 : 1;
+        return other.m_type <=> m_type;
 
     switch (m_type) {
     case IndexedDB::KeyType::Array: {
         auto& array = std::get<IDBKeyVector>(m_value);
         auto& otherArray = std::get<IDBKeyVector>(other.m_value);
         for (size_t i = 0; i < array.size() && i < otherArray.size(); ++i) {
-            if (int result = array[i]->compare(*otherArray[i]))
+            if (auto result = array[i]->compare(*otherArray[i]); is_neq(result))
                 return result;
         }
-        if (array.size() < otherArray.size())
-            return -1;
-        if (array.size() > otherArray.size())
-            return 1;
-        return 0;
+        return array.size() <=> otherArray.size();
     }
     case IndexedDB::KeyType::Binary:
         return compareBinaryKeyData(std::get<ThreadSafeDataBuffer>(m_value), std::get<ThreadSafeDataBuffer>(other.m_value));
     case IndexedDB::KeyType::String:
-        return -codePointCompare(std::get<String>(other.m_value), std::get<String>(m_value));
+        return codePointCompare(std::get<String>(m_value), std::get<String>(other.m_value));
     case IndexedDB::KeyType::Date:
-    case IndexedDB::KeyType::Number: {
-        auto number = std::get<double>(m_value);
-        auto otherNumber = std::get<double>(other.m_value);
-        return (number < otherNumber) ? -1 : ((number > otherNumber) ? 1 : 0);
-    }
+    case IndexedDB::KeyType::Number:
+        return weakOrderingCast(std::get<double>(m_value) <=> std::get<double>(other.m_value));
     case IndexedDB::KeyType::Invalid:
     case IndexedDB::KeyType::Min:
     case IndexedDB::KeyType::Max:
         ASSERT_NOT_REACHED();
-        return 0;
+        return std::weak_ordering::equivalent;
     }
 
     ASSERT_NOT_REACHED();
-    return 0;
+    return std::weak_ordering::equivalent;
 }
 
 bool IDBKey::isLessThan(const IDBKey& other) const
 {
-    return compare(other) == -1;
+    return is_lt(compare(other));
 }
 
 bool IDBKey::isEqual(const IDBKey& other) const
 {
-    return !compare(other);
+    return is_eq(compare(other));
 }
 
 #if !LOG_DISABLED

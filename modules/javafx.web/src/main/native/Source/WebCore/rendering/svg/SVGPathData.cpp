@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGPathData.h"
 
+#include "ContainerNodeInlines.h"
 #include "NodeName.h"
 #include "Path.h"
 #include "RenderElement.h"

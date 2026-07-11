@@ -40,7 +40,7 @@ public:
     Site(const Site&) = default;
     Site& operator=(const Site&) = default;
 
-    const String& protocol() const { return m_protocol; }
+    WEBCORE_EXPORT const String& protocol() const;
     const RegistrableDomain& domain() const { return m_domain; }
     WEBCORE_EXPORT String toString() const;
     bool isEmpty() const { return m_domain.isEmpty(); }
@@ -53,7 +53,6 @@ public:
     WEBCORE_EXPORT unsigned hash() const;
 
     bool operator==(const Site&) const = default;
-    bool operator!=(const Site&) const = default;
 
     struct Hash {
         static unsigned hash(const Site& site) { return site.hash(); }

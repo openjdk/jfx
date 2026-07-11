@@ -139,6 +139,9 @@ public:
         }
     }
 
+    EncodedJSValue* begin() { return m_buffer; }
+    EncodedJSValue* end() { return m_buffer + m_size; }
+
     auto at(unsigned i) const -> decltype(auto)
     {
         if constexpr (std::is_same_v<T, JSValue>) {
@@ -226,7 +229,7 @@ public:
         if (OverflowHandler::hasOverflowed())
             return;
         if (!isUsingInlineBuffer()) {
-        if (LIKELY(!m_markSet)) {
+            if (!m_markSet) [[likely]] {
             m_markSet = &vm.heap.markListSet();
             m_markSet->add(this);
         }

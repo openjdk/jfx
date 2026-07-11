@@ -28,6 +28,7 @@
 
 #include "HTTPHeaderNames.h"
 #include <utility>
+#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -186,13 +187,13 @@ public:
     template<size_t length> bool contains(ASCIILiteral) = delete;
     template<size_t length> bool remove(ASCIILiteral) = delete;
 
-    const CommonHeadersVector& commonHeaders() const { return m_commonHeaders; }
-    const UncommonHeadersVector& uncommonHeaders() const { return m_uncommonHeaders; }
-    CommonHeadersVector& commonHeaders() { return m_commonHeaders; }
-    UncommonHeadersVector& uncommonHeaders() { return m_uncommonHeaders; }
+    const CommonHeadersVector& commonHeaders() const LIFETIME_BOUND { return m_commonHeaders; }
+    const UncommonHeadersVector& uncommonHeaders() const LIFETIME_BOUND { return m_uncommonHeaders; }
+    CommonHeadersVector& commonHeaders() LIFETIME_BOUND { return m_commonHeaders; }
+    UncommonHeadersVector& uncommonHeaders() LIFETIME_BOUND { return m_uncommonHeaders; }
 
-    const_iterator begin() const { return const_iterator(*this, 0, 0); }
-    const_iterator end() const { return const_iterator(*this, m_commonHeaders.size(), m_uncommonHeaders.size()); }
+    const_iterator begin() const LIFETIME_BOUND { return const_iterator(*this, 0, 0); }
+    const_iterator end() const LIFETIME_BOUND { return const_iterator(*this, m_commonHeaders.size(), m_uncommonHeaders.size()); }
 
     friend bool operator==(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
     {

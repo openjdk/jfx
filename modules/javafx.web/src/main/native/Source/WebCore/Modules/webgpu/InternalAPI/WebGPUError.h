@@ -28,11 +28,10 @@
 #include "WebGPUInternalError.h"
 #include "WebGPUOutOfMemoryError.h"
 #include "WebGPUValidationError.h"
-#include <variant>
 #include <wtf/Ref.h>
 
 namespace WebCore::WebGPU {
 
-using Error = std::variant<Ref<OutOfMemoryError>, Ref<ValidationError>, Ref<InternalError>>;
+using Error = Variant<Ref<OutOfMemoryError>, Ref<ValidationError>, Ref<InternalError>>;
 
 } // namespace WebCore::WebGPU

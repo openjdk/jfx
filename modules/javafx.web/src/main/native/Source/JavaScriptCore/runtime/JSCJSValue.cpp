@@ -220,7 +220,7 @@ bool JSValue::putToPrimitive(JSGlobalObject* globalObject, PropertyName property
     // Check if there are any setters or getters in the prototype chain
     JSObject* obj = synthesizePrototype(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !obj);
-    if (UNLIKELY(!obj))
+    if (!obj) [[unlikely]]
         return false;
     RELEASE_AND_RETURN(scope, obj->methodTable()->put(obj, globalObject, propertyName, value, slot));
 }
@@ -237,7 +237,7 @@ bool JSValue::putToPrimitiveByIndex(JSGlobalObject* globalObject, unsigned prope
 
     JSObject* prototype = synthesizePrototype(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !prototype);
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return false;
     bool putResult = false;
     bool success = prototype->attemptToInterceptPutByIndexOnHoleForPrototype(globalObject, *this, propertyName, value, shouldThrow, putResult);

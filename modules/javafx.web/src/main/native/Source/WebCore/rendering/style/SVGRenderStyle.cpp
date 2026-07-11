@@ -7,7 +7,7 @@
     Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
     Copyright (C) 1999-2003 Lars Knoll (knoll@kde.org)
     Copyright (C) 2002-2003 Dirk Mueller (mueller@kde.org)
-    Copyright (C) 2002 Apple Inc.
+    Copyright (C) 2002 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -157,12 +157,11 @@ bool SVGRenderStyle::changeRequiresLayout(const SVGRenderStyle& other) const
         || m_inheritedFlags.glyphOrientationHorizontal != other.m_inheritedFlags.glyphOrientationHorizontal
         || m_inheritedFlags.glyphOrientationVertical != other.m_inheritedFlags.glyphOrientationVertical
         || m_nonInheritedFlags.flagBits.alignmentBaseline != other.m_nonInheritedFlags.flagBits.alignmentBaseline
-        || m_nonInheritedFlags.flagBits.dominantBaseline != other.m_nonInheritedFlags.flagBits.dominantBaseline
-        || m_nonInheritedFlags.flagBits.baselineShift != other.m_nonInheritedFlags.flagBits.baselineShift)
+        || m_nonInheritedFlags.flagBits.dominantBaseline != other.m_nonInheritedFlags.flagBits.dominantBaseline)
         return true;
 
     // Text related properties influence layout.
-    if (m_miscData->baselineShiftValue != other.m_miscData->baselineShiftValue)
+    if (m_miscData->baselineShift != other.m_miscData->baselineShift)
         return true;
 
     // The x or y properties require relayout.
@@ -170,12 +169,12 @@ bool SVGRenderStyle::changeRequiresLayout(const SVGRenderStyle& other) const
         return true;
 
     // Some stroke properties, requires relayouts, as the cached stroke boundaries need to be recalculated.
-        if (m_strokeData->paintType != other.m_strokeData->paintType
-            || m_strokeData->paintUri != other.m_strokeData->paintUri
+    if (m_strokeData->paint.type != other.m_strokeData->paint.type
+        || m_strokeData->paint.url != other.m_strokeData->paint.url
             || m_strokeData->dashArray != other.m_strokeData->dashArray
             || m_strokeData->dashOffset != other.m_strokeData->dashOffset
-            || m_strokeData->visitedLinkPaintUri != other.m_strokeData->visitedLinkPaintUri
-            || m_strokeData->visitedLinkPaintType != other.m_strokeData->visitedLinkPaintType)
+        || m_strokeData->visitedLinkPaint.type != other.m_strokeData->visitedLinkPaint.type
+        || m_strokeData->visitedLinkPaint.url != other.m_strokeData->visitedLinkPaint.url)
         return true;
 
     // vector-effect changes require a re-layout.
@@ -187,9 +186,18 @@ bool SVGRenderStyle::changeRequiresLayout(const SVGRenderStyle& other) const
 
 bool SVGRenderStyle::changeRequiresRepaint(const SVGRenderStyle& other, bool currentColorDiffers) const
 {
+    if (this == &other) {
+        ASSERT(currentColorDiffers);
+        return containsCurrentColor(m_strokeData->paint.color)
+            || containsCurrentColor(m_strokeData->visitedLinkPaint.color)
+            || containsCurrentColor(m_miscData->floodColor)
+            || containsCurrentColor(m_miscData->lightingColor)
+            || containsCurrentColor(m_fillData->paint.color); // FIXME: Should this be checking m_fillData->visitedLinkPaint.color as well?
+    }
+
     if (m_strokeData->opacity != other.m_strokeData->opacity
-        || colorChangeRequiresRepaint(m_strokeData->paintColor, other.m_strokeData->paintColor, currentColorDiffers)
-        || colorChangeRequiresRepaint(m_strokeData->visitedLinkPaintColor, other.m_strokeData->visitedLinkPaintColor, currentColorDiffers))
+        || colorChangeRequiresRepaint(m_strokeData->paint.color, other.m_strokeData->paint.color, currentColorDiffers)
+        || colorChangeRequiresRepaint(m_strokeData->visitedLinkPaint.color, other.m_strokeData->visitedLinkPaint.color, currentColorDiffers))
         return true;
 
     // Painting related properties only need repaints.
@@ -199,9 +207,9 @@ bool SVGRenderStyle::changeRequiresRepaint(const SVGRenderStyle& other, bool cur
         return true;
 
     // If fill data changes, we just need to repaint. Fill boundaries are not influenced by this, only by the Path, that RenderSVGPath contains.
-    if (m_fillData->paintType != other.m_fillData->paintType
-        || colorChangeRequiresRepaint(m_fillData->paintColor, other.m_fillData->paintColor, currentColorDiffers)
-        || m_fillData->paintUri != other.m_fillData->paintUri
+    if (m_fillData->paint.type != other.m_fillData->paint.type
+        || colorChangeRequiresRepaint(m_fillData->paint.color, other.m_fillData->paint.color, currentColorDiffers)
+        || m_fillData->paint.url != other.m_fillData->paint.url
         || m_fillData->opacity != other.m_fillData->opacity)
         return true;
 
@@ -233,12 +241,7 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
     auto conservativelyCollectChangedAnimatablePropertiesViaFillData = [&](auto& first, auto& second) {
         if (first.opacity != second.opacity)
             changingProperties.m_properties.set(CSSPropertyFillOpacity);
-        if (first.paintColor != second.paintColor
-            || first.visitedLinkPaintColor != second.visitedLinkPaintColor
-            || first.paintUri != second.paintUri
-            || first.visitedLinkPaintUri != second.visitedLinkPaintUri
-            || first.paintType != second.paintType
-            || first.visitedLinkPaintType != second.visitedLinkPaintType)
+        if (first.paint != second.paint || first.visitedLinkPaint != second.visitedLinkPaint)
             changingProperties.m_properties.set(CSSPropertyFill);
     };
 
@@ -249,12 +252,7 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
             changingProperties.m_properties.set(CSSPropertyStrokeDashoffset);
         if (first.dashArray != second.dashArray)
             changingProperties.m_properties.set(CSSPropertyStrokeDasharray);
-        if (first.paintColor != second.paintColor
-            || first.visitedLinkPaintColor != second.visitedLinkPaintColor
-            || first.paintUri != second.paintUri
-            || first.visitedLinkPaintUri != second.visitedLinkPaintUri
-            || first.paintType != second.paintType
-            || first.visitedLinkPaintType != second.visitedLinkPaintType)
+        if (first.paint != second.paint || first.visitedLinkPaint != second.visitedLinkPaint)
             changingProperties.m_properties.set(CSSPropertyStroke);
     };
 
@@ -272,7 +270,7 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
             changingProperties.m_properties.set(CSSPropertyFloodColor);
         if (first.lightingColor != second.lightingColor)
             changingProperties.m_properties.set(CSSPropertyLightingColor);
-        if (first.baselineShiftValue != second.baselineShiftValue)
+        if (first.baselineShift != second.baselineShift)
             changingProperties.m_properties.set(CSSPropertyBaselineShift);
     };
 
@@ -326,8 +324,6 @@ void SVGRenderStyle::conservativelyCollectChangedAnimatableProperties(const SVGR
     auto conservativelyCollectChangedAnimatablePropertiesViaNonInheritedFlags = [&](auto& first, auto& second) {
         if (first.flagBits.alignmentBaseline != second.flagBits.alignmentBaseline)
             changingProperties.m_properties.set(CSSPropertyAlignmentBaseline);
-        if (first.flagBits.baselineShift != second.flagBits.baselineShift)
-            changingProperties.m_properties.set(CSSPropertyBaselineShift);
         if (first.flagBits.bufferedRendering != second.flagBits.bufferedRendering)
             changingProperties.m_properties.set(CSSPropertyBufferedRendering);
         if (first.flagBits.dominantBaseline != second.flagBits.dominantBaseline)
@@ -374,7 +370,6 @@ void SVGRenderStyle::NonInheritedFlags::dumpDifferences(TextStream& ts, const SV
 {
     LOG_IF_DIFFERENT_WITH_CAST(AlignmentBaseline, flagBits.alignmentBaseline);
     LOG_IF_DIFFERENT_WITH_CAST(DominantBaseline, flagBits.dominantBaseline);
-    LOG_IF_DIFFERENT_WITH_CAST(BaselineShift, flagBits.baselineShift);
     LOG_IF_DIFFERENT_WITH_CAST(VectorEffect, flagBits.vectorEffect);
     LOG_IF_DIFFERENT_WITH_CAST(BufferedRendering, flagBits.bufferedRendering);
     LOG_IF_DIFFERENT_WITH_CAST(MaskType, flagBits.maskType);

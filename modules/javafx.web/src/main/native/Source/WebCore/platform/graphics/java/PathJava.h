@@ -39,14 +39,14 @@ class PathStream;
 class PathJava final : public PathImpl {
 public:
     static Ref<PathJava> create();
-    static Ref<PathJava> create(const PathSegment&);
-    static Ref<PathJava> create(const PathStream&);
+    static Ref<PathJava> create(std::span<const PathSegment> segments);
     static Ref<PathJava> create(RefPtr<RQRef>&&, RefPtr<PathStream>&& = nullptr);
 
     PathJava();
     PathJava(RefPtr<RQRef>&&, RefPtr<PathStream>&&);
 
     PlatformPathPtr platformPath() const;
+    static PlatformPathPtr emptyPlatformPath();
 
     void addPath(const PathJava&, const AffineTransform&);
     bool definitelyEqual(const PathImpl&) const final;
@@ -78,7 +78,7 @@ private:
 
     void applySegments(const PathSegmentApplier&) const final;
 
-    bool isEmpty() const final;
+    bool isEmpty() const;
 
     FloatPoint currentPoint() const final;
 

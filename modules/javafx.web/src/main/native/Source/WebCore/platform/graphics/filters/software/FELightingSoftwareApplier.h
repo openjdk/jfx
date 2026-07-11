@@ -92,18 +92,18 @@ protected:
 
     struct LightingData {
         // This structure contains only read-only (SMP safe) data
-        RefPtr<const Filter> filter;
-        RefPtr<const FilterImage> result;
+        const Filter* filter;
+        const FilterImage* result;
         FilterEffect::Type filterType;
         Color lightingColor;
         float surfaceScale;
         float diffuseConstant;
         float specularConstant;
         float specularExponent;
-        RefPtr<const LightSource> lightSource;
+        const LightSource* lightSource;
         const DestinationColorSpace* operatingColorSpace;
 
-        RefPtr<PixelBuffer> pixels;
+        PixelBuffer* pixels;
         int widthMultipliedByPixelSize;
         int width;
         int height;
@@ -124,7 +124,7 @@ protected:
 
     virtual void applyPlatformParallel(const LightingData&, const LightSource::PaintingData&) const = 0;
     void applyPlatform(const LightingData&) const;
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

@@ -26,7 +26,9 @@
 #pragma once
 
 #include "EditingBoundary.h"
+#include "LayoutRect.h"
 #include "Position.h"
+#include "RenderObject.h"
 
 namespace WebCore {
 
@@ -107,11 +109,7 @@ private:
 
 bool operator==(const VisiblePosition&, const VisiblePosition&);
 
-WEBCORE_EXPORT std::partial_ordering documentOrder(const VisiblePosition&, const VisiblePosition&);
-bool operator<(const VisiblePosition&, const VisiblePosition&);
-bool operator>(const VisiblePosition&, const VisiblePosition&);
-bool operator<=(const VisiblePosition&, const VisiblePosition&);
-bool operator>=(const VisiblePosition&, const VisiblePosition&);
+WEBCORE_EXPORT std::partial_ordering operator<=>(const VisiblePosition&, const VisiblePosition&);
 
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPoint(const VisiblePosition&);
 
@@ -153,26 +151,6 @@ inline bool operator==(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Is it correct and helpful for this to be ignoring differences in affinity?
     return a.deepEquivalent() == b.deepEquivalent();
-}
-
-inline bool operator<(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_lt(documentOrder(a, b));
-}
-
-inline bool operator>(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_gt(documentOrder(a, b));
-}
-
-inline bool operator<=(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_lteq(documentOrder(a, b));
-}
-
-inline bool operator>=(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_gteq(documentOrder(a, b));
 }
 
 } // namespace WebCore

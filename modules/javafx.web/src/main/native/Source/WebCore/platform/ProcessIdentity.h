@@ -31,7 +31,6 @@
 #include <wtf/ArgumentCoder.h>
 #include <wtf/MachSendRight.h>
 #else
-#include <variant>
 #endif
 
 namespace WebCore {

@@ -309,6 +309,30 @@ arm64: MultiplySignExtend32 U:G:32, U:G:32, D:G:64
 arm64: MultiplyZeroExtend32 U:G:32, U:G:32, D:G:64
     Tmp, Tmp, Tmp
 
+arm64: MulHigh32 U:G:32, U:G:32, D:G:32
+    Tmp, Tmp, Tmp
+
+arm64: UMulHigh32 U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp
+
+arm64: MulHigh64 U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp
+
+arm64: UMulHigh64 U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp
+
+x86: X86MulHigh32 U:G:32, UD:G:32, D:G:32
+    Tmp, Tmp*, Tmp*
+
+x86: X86UMulHigh32 U:G:32, UD:G:32, D:G:32
+    Tmp, Tmp*, Tmp*
+
+x86_64: X86MulHigh64 U:G:64, UD:G:64, D:G:64
+    Tmp, Tmp*, Tmp*
+
+x86_64: X86UMulHigh64 U:G:64, UD:G:64, D:G:64
+    Tmp, Tmp*, Tmp*
+
 arm64: Div32 U:G:32, U:G:32, ZD:G:32
     Tmp, Tmp, Tmp
 
@@ -664,6 +688,12 @@ ConvertInt32ToFloat U:G:32, D:F:32
     Tmp, Tmp
     x86_64: Addr, Tmp
 
+arm64: ConvertUInt32ToDouble U:G:32, D:F:64
+    Tmp, Tmp
+
+arm64: ConvertUInt32ToFloat U:G:32, D:F:32
+    Tmp, Tmp
+
 CountLeadingZeros32 U:G:32, ZD:G:32
     Tmp, Tmp
     x86: Addr, Tmp
@@ -770,7 +800,7 @@ ZeroExtend8To32 U:G:8, ZD:G:32
     x86: Addr, Tmp as load8
     x86: Index, Tmp as load8
 
-SignExtend8To32 U:G:8, D:G:32
+SignExtend8To32 U:G:8, ZD:G:32
     Tmp, Tmp
     x86: Addr, Tmp as load8SignedExtendTo32
     x86: Index, Tmp as load8SignedExtendTo32
@@ -780,7 +810,7 @@ ZeroExtend16To32 U:G:16, ZD:G:32
     x86: Addr, Tmp as load16
     x86: Index, Tmp as load16
 
-SignExtend16To32 U:G:16, D:G:32
+SignExtend16To32 U:G:16, ZD:G:32
     Tmp, Tmp
     x86: Addr, Tmp as load16SignedExtendTo32
     x86: Index, Tmp as load16SignedExtendTo32
@@ -823,6 +853,9 @@ arm64: StorePairDouble U:F:64, U:F:64, D:F:128
     Index, Tmp as loadVector
     Tmp, Addr as storeVector
     Tmp, Index as storeVector
+
+64: MoveVector U:F:128, D:F:128, S:F:128
+    Addr, Addr, Tmp
 
 MoveZeroToDouble D:F:64
     Tmp
@@ -882,11 +915,11 @@ Store8 U:G:8, D:G:8
 arm: StoreRel8 U:G:8, D:G:8 /effects
     Tmp, SimpleAddr
 
-Load8SignedExtendTo32 U:G:8, D:G:32
+Load8SignedExtendTo32 U:G:8, ZD:G:32
     Addr, Tmp
     Index, Tmp
 
-arm: LoadAcq8SignedExtendTo32 U:G:8, D:G:32 /effects
+arm: LoadAcq8SignedExtendTo32 U:G:8, ZD:G:32 /effects
     SimpleAddr, Tmp
 
 Load16 U:G:16, ZD:G:32
@@ -896,11 +929,11 @@ Load16 U:G:16, ZD:G:32
 arm: LoadAcq16 U:G:16, ZD:G:32 /effects
     SimpleAddr, Tmp
 
-Load16SignedExtendTo32 U:G:16, D:G:32
+Load16SignedExtendTo32 U:G:16, ZD:G:32
     Addr, Tmp
     Index, Tmp
 
-arm: LoadAcq16SignedExtendTo32 U:G:16, D:G:32 /effects
+arm: LoadAcq16SignedExtendTo32 U:G:16, ZD:G:32 /effects
     SimpleAddr, Tmp
 
 Store16 U:G:16, D:G:16
@@ -2075,6 +2108,18 @@ arm64: VectorAddPairwise U:G:8, U:F:128, U:F:128, D:F:128
 
 64: VectorAvgRound U:G:8, U:F:128, U:F:128, D:F:128
     SIMDInfo, Tmp, Tmp, Tmp
+
+arm64: VectorMulHigh U:G:8, U:F:128, U:F:128, D:F:128
+    SIMDInfo, Tmp, Tmp, Tmp
+
+x86_64: VectorMulHigh U:G:8, U:F:128, U:F:128, D:F:128, S:F:128
+    SIMDInfo, Tmp, Tmp, Tmp, Tmp
+
+arm64: VectorMulLow U:G:8, U:F:128, U:F:128, D:F:128
+    SIMDInfo, Tmp, Tmp, Tmp
+
+x86_64: VectorMulLow U:G:8, U:F:128, U:F:128, D:F:128, S:F:128
+    SIMDInfo, Tmp, Tmp, Tmp, Tmp
 
 arm64: VectorMulSat U:F:128, U:F:128, D:F:128
     Tmp, Tmp, Tmp

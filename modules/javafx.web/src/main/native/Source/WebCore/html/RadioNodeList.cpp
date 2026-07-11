@@ -63,7 +63,7 @@ static RefPtr<HTMLInputElement> nonEmptyRadioButton(Node& node)
     if (!inputElement)
         return nullptr;
 
-    if (!inputElement->isRadioButton() || inputElement->value().isEmpty())
+    if (!inputElement->isRadioButton() || inputElement->value()->isEmpty())
         return nullptr;
     return inputElement;
 }

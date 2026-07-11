@@ -80,8 +80,8 @@ public:
     void deleteSelection(bool smartDelete);
     void setCompositionType(TextCompositionType type) { m_compositionType = type; }
     void setIsAutocompletion(bool isAutocompletion) { m_isAutocompletion = isAutocompletion; }
-    bool triggeringEventWasCreatedFromBindings() const { return m_triggeringEventWasCreatedFromBindings; }
-    void setTriggeringEventWasCreatedFromBindings(bool value) { m_triggeringEventWasCreatedFromBindings = value; }
+    bool triggeringEventIsUntrusted() const { return m_triggeringEventIsUntrusted; }
+    void setTriggeringEventIsUntrusted(bool value) { m_triggeringEventIsUntrusted = value; }
 
 #if PLATFORM(IOS_FAMILY)
     void setEndingSelectionOnLastInsertCommand(const VisibleSelection& selection);
@@ -164,7 +164,7 @@ private:
 
     bool m_shouldRetainAutocorrectionIndicator;
     bool m_shouldPreventSpellChecking;
-    bool m_triggeringEventWasCreatedFromBindings { false };
+    bool m_triggeringEventIsUntrusted { false };
 };
 
 } // namespace WebCore

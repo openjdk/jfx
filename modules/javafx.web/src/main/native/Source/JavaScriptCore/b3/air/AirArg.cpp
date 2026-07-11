@@ -190,6 +190,8 @@ void Arg::dump(PrintStream& out) const
         if (offset())
             out.print(offset());
         out.print("(", base(), ",", index());
+        if (extend() != MacroAssembler::Extend::None)
+            out.print(",", extend());
         if (scale() != 1)
             out.print(",", scale());
         out.print(")");

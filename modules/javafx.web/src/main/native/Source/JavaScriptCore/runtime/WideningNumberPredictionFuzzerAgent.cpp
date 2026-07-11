@@ -62,11 +62,11 @@ SpeculatedType WideningNumberPredictionFuzzerAgent::getPrediction(CodeBlock* cod
     for (unsigned i = 0; i < numberOfTypesToAdd; i++) {
         unsigned indexOfNewType = m_random.getUint32(numberTypesNotIncludedInSpeculation.size());
         mergeSpeculation(generated, numberTypesNotIncludedInSpeculation[indexOfNewType]);
-        numberTypesNotIncludedInSpeculation.remove(indexOfNewType);
+        numberTypesNotIncludedInSpeculation.removeAt(indexOfNewType);
     }
 
     if (Options::dumpFuzzerAgentPredictions())
-        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
+        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredNameWithHash(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
 
     return generated;
 }

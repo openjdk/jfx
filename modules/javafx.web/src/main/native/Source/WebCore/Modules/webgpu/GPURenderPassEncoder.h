@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "GPUColorDict.h"
 #include "GPUIndexFormat.h"
 #include "GPUIntegralTypes.h"
@@ -45,6 +44,7 @@ class GPUBuffer;
 class GPUQuerySet;
 class GPURenderBundle;
 class GPURenderPipeline;
+template<typename> class ExceptionOr;
 
 namespace WebGPU {
 class Device;
@@ -75,10 +75,10 @@ public:
     void drawIndirect(const GPUBuffer& indirectBuffer, GPUSize64 indirectOffset);
     void drawIndexedIndirect(const GPUBuffer& indirectBuffer, GPUSize64 indirectOffset);
 
-    void setBindGroup(GPUIndex32, const GPUBindGroup&,
+    void setBindGroup(GPUIndex32, const GPUBindGroup*,
         std::optional<Vector<GPUBufferDynamicOffset>>&& dynamicOffsets);
 
-    ExceptionOr<void> setBindGroup(GPUIndex32, const GPUBindGroup&,
+    ExceptionOr<void> setBindGroup(GPUIndex32, const GPUBindGroup*,
         const Uint32Array& dynamicOffsetsData,
         GPUSize64 dynamicOffsetsDataStart,
         GPUSize32 dynamicOffsetsDataLength);
@@ -108,6 +108,8 @@ public:
 
 private:
     GPURenderPassEncoder(Ref<WebGPU::RenderPassEncoder>&& backing, WebGPU::Device&);
+
+    Ref<WebGPU::RenderPassEncoder> protectedBacking() { return m_backing; }
 
     Ref<WebGPU::RenderPassEncoder> m_backing;
     WeakPtr<WebGPU::Device> m_device;

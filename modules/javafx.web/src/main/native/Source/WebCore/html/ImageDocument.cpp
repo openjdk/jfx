@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentLoader.h"
 #include "EventListener.h"
 #include "EventNames.h"
@@ -38,6 +39,7 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
+#include "LayoutSize.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
@@ -49,6 +51,7 @@
 #include "RawDataDocumentParser.h"
 #include "RenderElement.h"
 #include "Settings.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -255,9 +258,9 @@ void ImageDocument::createDocumentStructure()
     else
         imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"_s);
     imageElement->setLoadManually(true);
-    imageElement->setSrc(AtomString { url().string() });
+    imageElement->setAttributeWithoutSynchronization(srcAttr, AtomString { url().string() });
     if (auto* cachedImage = imageElement->cachedImage(); documentLoader && cachedImage)
-        cachedImage->setResponse(documentLoader->response());
+        cachedImage->setResponse(ResourceResponse { documentLoader->response() });
     body->appendChild(imageElement);
     imageElement->setLoadManually(false);
 
@@ -329,8 +332,8 @@ void ImageDocument::resizeImageToFit()
     LayoutSize imageSize = this->imageSize();
 
     float scale = this->scale();
-    m_imageElement->setWidth(static_cast<int>(imageSize.width() * scale));
-    m_imageElement->setHeight(static_cast<int>(imageSize.height() * scale));
+    m_imageElement->setIntegralAttribute(widthAttr, imageSize.width() * scale);
+    m_imageElement->setIntegralAttribute(heightAttr, imageSize.height() * scale);
 
     m_imageElement->setInlineStyleProperty(CSSPropertyCursor, CSSValueZoomIn);
 }
@@ -341,8 +344,8 @@ void ImageDocument::restoreImageSize()
         return;
 
     LayoutSize imageSize = this->imageSize();
-    m_imageElement->setWidth(imageSize.width().toUnsigned());
-    m_imageElement->setHeight(imageSize.height().toUnsigned());
+    m_imageElement->setUnsignedIntegralAttribute(widthAttr, imageSize.width().toUnsigned());
+    m_imageElement->setUnsignedIntegralAttribute(heightAttr, imageSize.height().toUnsigned());
 
     if (imageFitsInWindow())
         m_imageElement->removeInlineStyleProperty(CSSPropertyCursor);

@@ -30,9 +30,12 @@
 
 #include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
+#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebCodecsVideoEncoderSupport.h"
 #include "Logging.h"
+#include "Settings.h"
+#include "ScriptExecutionContextInlines.h"
 #include "WebCodecsControlMessage.h"
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCodecsEncodedVideoChunkMetadata.h"
@@ -43,6 +46,8 @@
 #include "WebCodecsVideoEncoderEncodeOptions.h"
 #include "WebCodecsVideoFrame.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
@@ -68,7 +73,7 @@ WebCodecsVideoEncoder::WebCodecsVideoEncoder(ScriptExecutionContext& context, In
 
 WebCodecsVideoEncoder::~WebCodecsVideoEncoder() = default;
 
-static bool isSupportedEncoderCodec(const String& codec, const Settings::Values& settings)
+static bool isSupportedEncoderCodec(const String& codec, const SettingsValues& settings)
 {
     return codec.startsWith("vp8"_s) || codec.startsWith("vp09.00"_s) || codec.startsWith("avc1."_s)
 #if ENABLE(WEB_RTC)
@@ -81,7 +86,7 @@ static bool isSupportedEncoderCodec(const String& codec, const Settings::Values&
 
 static bool isValidEncoderConfig(const WebCodecsVideoEncoderConfig& config)
 {
-    if (StringView(config.codec).trim(isASCIIWhitespace<UChar>).isEmpty())
+    if (StringView(config.codec).trim(isASCIIWhitespace<char16_t>).isEmpty())
         return false;
 
     if (!config.width || !config.height)
@@ -171,7 +176,7 @@ ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& conte
 
     bool isSupportedCodec = isSupportedEncoderCodec(config.codec, context.settingsValues());
     queueControlMessageAndProcess({ *this, [this, config = WTFMove(config), isSupportedCodec]() mutable {
-        if (isSupportedCodec && isSameConfigurationExceptBitrateAndFramerate(m_baseConfiguration, config)) {
+        if (isSupportedCodec && m_internalEncoder && isSameConfigurationExceptBitrateAndFramerate(m_baseConfiguration, config)) {
             updateRates(config);
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -183,6 +188,7 @@ ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& conte
         if (!isSupportedCodec) {
             postTaskToCodec<WebCodecsVideoEncoder>(identifier, *this, [] (auto& encoder) {
                 encoder.closeEncoder(Exception { ExceptionCode::NotSupportedError, "Codec is not supported"_s });
+                encoder.unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -191,6 +197,7 @@ ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& conte
         if (encoderConfig.hasException()) {
             postTaskToCodec<WebCodecsVideoEncoder>(identifier, *this, [message = encoderConfig.releaseException().message()] (auto& encoder) mutable {
                 encoder.closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(message) });
+                encoder.unblockControlMessageQueue();
             });
             return WebCodecsControlMessageOutcome::Processed;
         }
@@ -214,7 +221,7 @@ ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& conte
                 result.duration,
                 BufferSource { WTFMove(buffer) }
             });
-                encoder.m_output->handleEvent(WTFMove(chunk), encoder.createEncodedChunkMetadata(result.temporalIndex));
+                encoder.m_output->invoke(WTFMove(chunk), encoder.createEncodedChunkMetadata(result.temporalIndex));
             });
         });
 
@@ -222,13 +229,15 @@ ExceptionOr<void> WebCodecsVideoEncoder::configure(ScriptExecutionContext& conte
             auto protectedThis = weakThis.get();
             if (!protectedThis)
                 return;
+            auto scopeExit = makeScopeExit([protectedThis] {
+                protectedThis->unblockControlMessageQueue();
+            });
             if (!result) {
                 protectedThis->closeEncoder(Exception { ExceptionCode::NotSupportedError, WTFMove(result.error()) });
                 return;
             }
             protectedThis->setInternalEncoder(WTFMove(*result));
             protectedThis->m_hasNewActiveConfiguration = true;
-            protectedThis->unblockControlMessageQueue();
         });
 
         return WebCodecsControlMessageOutcome::Processed;
@@ -364,7 +373,7 @@ ExceptionOr<void> WebCodecsVideoEncoder::closeEncoder(Exception&& exception)
     setState(WebCodecsCodecState::Closed);
     m_internalEncoder = nullptr;
     if (exception.code() != ExceptionCode::AbortError)
-            m_error->handleEvent(DOMException::create(WTFMove(exception)));
+        m_error->invoke(DOMException::create(WTFMove(exception)));
 
     return { };
 }

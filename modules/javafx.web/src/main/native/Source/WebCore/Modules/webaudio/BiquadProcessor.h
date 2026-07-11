@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@ namespace WebCore {
 
 class BiquadProcessor final : public AudioDSPKernelProcessor {
     WTF_MAKE_TZONE_ALLOCATED(BiquadProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BiquadProcessor);
 public:
     BiquadProcessor(BaseAudioContext&, float sampleRate, size_t numberOfChannels, bool autoInitialize);
 
@@ -47,7 +48,7 @@ public:
 
     std::unique_ptr<AudioDSPKernel> createKernel() override;
 
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) override;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) override;
     void processOnlyAudioParams(size_t framesToProcess) final;
 
     // Get the magnitude and phase response of the filter at the given
@@ -74,10 +75,10 @@ private:
 
     BiquadFilterType m_type { BiquadFilterType::Lowpass };
 
-    Ref<AudioParam> m_parameter1;
-    Ref<AudioParam> m_parameter2;
-    Ref<AudioParam> m_parameter3;
-    Ref<AudioParam> m_parameter4;
+    const Ref<AudioParam> m_parameter1;
+    const Ref<AudioParam> m_parameter2;
+    const Ref<AudioParam> m_parameter3;
+    const Ref<AudioParam> m_parameter4;
 
     // so DSP kernels know when to re-compute coefficients
     bool m_filterCoefficientsDirty { true };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ public class VirtualizedControlTestUtils {
     public static void fireMouseOnVerticalTrack(Control control) {
         ScrollBar scrollBar = getVerticalScrollBar(control);
         Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
+        MouseEventFirer firer = new MouseEventFirer(track);
         firer.fireMousePressAndRelease();
         Toolkit.getToolkit().firePulse();
     }
@@ -65,7 +65,7 @@ public class VirtualizedControlTestUtils {
     public static void fireMouseOnHorizontalTrack(Control control) {
         ScrollBar scrollBar = getHorizontalScrollBar(control);
         Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
+        MouseEventFirer firer = new MouseEventFirer(track);
         firer.fireMousePressAndRelease();
         Toolkit.getToolkit().firePulse();
     }

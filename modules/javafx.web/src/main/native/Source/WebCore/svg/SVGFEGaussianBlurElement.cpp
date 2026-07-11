@@ -29,6 +29,7 @@
 #include "SVGFilter.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
@@ -102,7 +103,7 @@ void SVGFEGaussianBlurElement::svgAttributeChanged(const QualifiedName& attrName
         markFilterEffectForRebuild();
         return;
     }
-        FALLTHROUGH;
+        [[fallthrough]];
     }
     case AttributeNames::edgeModeAttr: {
         InstanceInvalidationGuard guard(*this);

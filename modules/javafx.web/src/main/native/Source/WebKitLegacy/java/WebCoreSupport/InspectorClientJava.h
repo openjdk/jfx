@@ -26,16 +26,16 @@
 #pragma once
 
 #include <JavaScriptCore/InspectorFrontendChannel.h>
-#include <WebCore/InspectorClient.h>
+#include <WebCore/InspectorBackendClient.h>
 #include <WebCore/PlatformJavaClasses.h>
 
 namespace WebCore {
 
 class InspectorClientJava final
-    : public InspectorClient,
+    : public InspectorBackendClient,
       public Inspector::FrontendChannel
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(InspectorClientJava);
 public:
     InspectorClientJava(const JLObject &webPage);
 

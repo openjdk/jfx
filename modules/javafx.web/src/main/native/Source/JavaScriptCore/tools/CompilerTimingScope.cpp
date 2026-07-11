@@ -88,13 +88,13 @@ CompilerTimingScope::CompilerTimingScope(ASCIILiteral compilerName, ASCIILiteral
     : m_compilerName(compilerName)
     , m_name(name)
 {
-    if (UNLIKELY(Options::logPhaseTimes() || Options::reportTotalPhaseTimes()))
+    if (Options::logPhaseTimes() || Options::reportTotalPhaseTimes()) [[unlikely]]
         m_before = MonotonicTime::now();
 }
 
 CompilerTimingScope::~CompilerTimingScope()
 {
-    if (UNLIKELY(Options::logPhaseTimes() || Options::reportTotalPhaseTimes())) {
+    if (Options::logPhaseTimes() || Options::reportTotalPhaseTimes()) [[unlikely]] {
         Seconds duration = MonotonicTime::now() - m_before;
         auto total = compilerTimingScopeState().addToTotal(m_compilerName, m_name, duration);
         if (Options::logPhaseTimes()) {

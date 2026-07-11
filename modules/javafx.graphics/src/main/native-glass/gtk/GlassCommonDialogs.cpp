@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,12 +112,9 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
         return create_empty_result();
     }
 
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(chooser_title, gdk_window_handle_to_gtk(parent),
+    GtkFileChooserNative* chooser = gtk_file_chooser_native_new(chooser_title, gdk_window_handle_to_gtk(parent),
             static_cast<GtkFileChooserAction>(chooser_type),
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            (chooser_type == GTK_FILE_CHOOSER_ACTION_OPEN ? GTK_STOCK_OPEN : GTK_STOCK_SAVE),
-            GTK_RESPONSE_ACCEPT,
+            NULL,
             NULL);
 
     if (chooser_type == GTK_FILE_CHOOSER_ACTION_SAVE) {
@@ -129,7 +126,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), chooser_folder);
     GSList* filters = setup_GtkFileFilters(GTK_FILE_CHOOSER(chooser), env, jFilters, default_filter_index);
 
-    if (gtk_dialog_run(GTK_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
         GSList* fnames_gslist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(chooser));
         guint fnames_list_len = g_slist_length(fnames_gslist);
         LOG1("FileChooser selected files: %d\n", fnames_list_len)
@@ -179,7 +176,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     LOG_EXCEPTION(env)
 
     g_slist_free(filters);
-    gtk_widget_destroy(chooser);
+    g_object_unref(chooser);
 
     jstring_to_utf_release(env, folder, chooser_folder);
     jstring_to_utf_release(env, title, chooser_title);
@@ -206,14 +203,11 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
         return NULL;
     }
 
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(
+    GtkFileChooserNative* chooser = gtk_file_chooser_native_new(
             chooser_title,
             gdk_window_handle_to_gtk(parent),
             GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            GTK_STOCK_OPEN,
-            GTK_RESPONSE_ACCEPT,
+            NULL,
             NULL);
 
     if (chooser_folder != NULL) {
@@ -221,7 +215,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
                                             chooser_folder);
     }
 
-    if (gtk_dialog_run(GTK_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
         gchar* filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
         jfilename = env->NewStringUTF(filename);
         LOG1("Selected folder: %s\n", filename);
@@ -231,7 +225,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
     jstring_to_utf_release(env, folder, chooser_folder);
     jstring_to_utf_release(env, title, chooser_title);
 
-    gtk_widget_destroy(chooser);
+    g_object_unref(chooser);
     return jfilename;
 }
 

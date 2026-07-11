@@ -149,6 +149,11 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representat
             m_type |= SpecInt52Any;
         }
 
+        if (m_type & SpecNonIntAsDouble) {
+            m_type &= ~SpecNonIntAsDouble;
+            m_type |= SpecInt52Any;
+        }
+
         if (m_type & SpecInt32Only) {
             m_type &= ~SpecInt32Only;
             m_type |= SpecInt32AsInt52;

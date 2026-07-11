@@ -53,7 +53,7 @@ struct PendingDisplayNoneActions {
     Vector<uint32_t> clientLocations;
 };
 
-using PendingDisplayNoneActionsMap = UncheckedKeyHashMap<Trigger, PendingDisplayNoneActions, TriggerHash, TriggerHashTraits>;
+using PendingDisplayNoneActionsMap = HashMap<Trigger, PendingDisplayNoneActions, TriggerHash, TriggerHashTraits>;
 
 static void resolvePendingDisplayNoneActions(Vector<SerializedActionByte>& actions, Vector<uint32_t>& actionLocations, PendingDisplayNoneActionsMap& map)
 {
@@ -74,10 +74,10 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
     Vector<uint32_t> actionLocations;
 
     using ActionLocation = uint32_t;
-    using ActionMap = UncheckedKeyHashMap<ResourceFlags, ActionLocation, DefaultHash<ResourceFlags>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>;
-    using StringActionMap = UncheckedKeyHashMap<std::pair<String, ResourceFlags>, ActionLocation, DefaultHash<std::pair<String, ResourceFlags>>, PairHashTraits<HashTraits<String>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
-    using RedirectActionMap = UncheckedKeyHashMap<std::pair<RedirectAction, ResourceFlags>, ActionLocation, DefaultHash<std::pair<RedirectAction, ResourceFlags>>, PairHashTraits<HashTraits<RedirectAction>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
-    using ModifyHeadersActionMap = UncheckedKeyHashMap<std::pair<ModifyHeadersAction, ResourceFlags>, ActionLocation, DefaultHash<std::pair<ModifyHeadersAction, ResourceFlags>>, PairHashTraits<HashTraits<ModifyHeadersAction>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
+    using ActionMap = HashMap<ResourceFlags, ActionLocation, DefaultHash<ResourceFlags>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>;
+    using StringActionMap = HashMap<std::pair<String, ResourceFlags>, ActionLocation, DefaultHash<std::pair<String, ResourceFlags>>, PairHashTraits<HashTraits<String>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
+    using RedirectActionMap = HashMap<std::pair<RedirectAction, ResourceFlags>, ActionLocation, DefaultHash<std::pair<RedirectAction, ResourceFlags>>, PairHashTraits<HashTraits<RedirectAction>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
+    using ModifyHeadersActionMap = HashMap<std::pair<ModifyHeadersAction, ResourceFlags>, ActionLocation, DefaultHash<std::pair<ModifyHeadersAction, ResourceFlags>>, PairHashTraits<HashTraits<ModifyHeadersAction>, WTF::UnsignedWithZeroKeyHashTraits<ResourceFlags>>>;
     ActionMap blockLoadActionsMap;
     ActionMap blockCookiesActionsMap;
     PendingDisplayNoneActionsMap cssDisplayNoneActionsMap;
@@ -89,7 +89,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
 
     for (auto& rule : ruleList) {
         auto& actionData = rule.action().data();
-        if (std::holds_alternative<IgnorePreviousRulesAction>(actionData)) {
+        if (std::holds_alternative<IgnorePreviousRulesAction>(actionData) || std::holds_alternative<IgnoreFollowingRulesAction>(actionData)) {
             resolvePendingDisplayNoneActions(actions, actionLocations, cssDisplayNoneActionsMap);
 
             blockLoadActionsMap.clear();
@@ -97,16 +97,22 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             cssDisplayNoneActionsMap.clear();
             makeHTTPSActionsMap.clear();
             notifyActionsMap.clear();
-        } else
+        }
+
+        if (!std::holds_alternative<IgnorePreviousRulesAction>(actionData))
             ignorePreviousRuleActionsMap.clear();
 
         // Anything with condition is just pushed.
         // We could try to merge conditions but that case is not common in practice.
-        if (!rule.trigger().conditions.isEmpty()) {
+        //
+        // Also, if the rule is an ignore-following-rules rule, we shouldn't try to
+        // combine them so that we maintain the position of the rule when we process
+        // them later.
+        if (!rule.trigger().conditions.isEmpty() || std::holds_alternative<IgnoreFollowingRulesAction>(actionData)) {
             actionLocations.append(actions.size());
 
             actions.append(actionData.index());
-            std::visit(WTF::makeVisitor([&](const auto& member) {
+            WTF::visit(WTF::makeVisitor([&](const auto& member) {
                 member.serialize(actions);
             }), actionData);
             continue;
@@ -140,7 +146,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             }).iterator->value;
         };
 
-        auto actionLocation = std::visit(WTF::makeVisitor([&] (const CSSDisplayNoneSelectorAction& actionData) {
+        auto actionLocation = WTF::visit(WTF::makeVisitor([&] (const CSSDisplayNoneSelectorAction& actionData) {
             const auto addResult = cssDisplayNoneActionsMap.add(rule.trigger(), PendingDisplayNoneActions());
             auto& pendingStringActions = addResult.iterator->value;
             if (!pendingStringActions.combinedSelectors.isEmpty())
@@ -152,6 +158,9 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
             return std::numeric_limits<ActionLocation>::max();
         }, [&] (const IgnorePreviousRulesAction&) {
             return findOrMakeActionLocation(ignorePreviousRuleActionsMap);
+        }, [&] (const IgnoreFollowingRulesAction&) {
+            ASSERT_NOT_REACHED();
+            return static_cast<ActionLocation>(0);
         }, [&] (const BlockLoadAction&) {
             return findOrMakeActionLocation(blockLoadActionsMap);
         }, [&] (const BlockCookiesAction&) {
@@ -171,7 +180,7 @@ static Vector<unsigned> serializeActions(const Vector<ContentExtensionRule>& rul
     return actionLocations;
 }
 
-using UniversalActionSet = UncheckedKeyHashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+using UniversalActionSet = HashSet<uint64_t, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
 
 static void addUniversalActionsToDFA(DFA& dfa, UniversalActionSet&& universalActions)
 {
@@ -272,7 +281,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
 {
 #if ASSERT_ENABLED
     callOnMainThread([ruleJSON = ruleJSON.isolatedCopy(), parsedRuleList = crossThreadCopy(parsedRuleList)] {
-        ASSERT(parseRuleList(ruleJSON).value() == parsedRuleList);
+        ASSERT(parseRuleList(ruleJSON, WebCore::ContentExtensions::CSSSelectorsAllowed::Yes).value() == parsedRuleList);
     });
 #endif
 

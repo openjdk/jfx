@@ -237,7 +237,7 @@ void InlineContentBuilder::computeIsFirstIsLastBoxAndBidiReorderingForInlineCont
         return;
     }
 
-    UncheckedKeyHashMap<const Layout::Box*, size_t> lastDisplayBoxForLayoutBoxIndexes;
+    HashMap<const Layout::Box*, size_t> lastDisplayBoxForLayoutBoxIndexes;
     lastDisplayBoxForLayoutBoxIndexes.reserveInitialCapacity(boxes.size() - 1);
 
     ASSERT(boxes[0].isRootInlineBox());

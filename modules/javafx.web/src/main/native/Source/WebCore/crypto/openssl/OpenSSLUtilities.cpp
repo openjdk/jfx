@@ -65,10 +65,10 @@ std::optional<Vector<uint8_t>> calculateDigest(const EVP_MD* algorithm, const Ve
     if (EVP_DigestInit_ex(ctx.get(), algorithm, nullptr) != 1)
         return std::nullopt;
 
-    if (EVP_DigestUpdate(ctx.get(), message.data(), message.size()) != 1)
+    if (EVP_DigestUpdate(ctx.get(), message.span().data(), message.size()) != 1)
         return std::nullopt;
 
-    if (EVP_DigestFinal_ex(ctx.get(), digest.data(), nullptr) != 1)
+    if (EVP_DigestFinal_ex(ctx.get(), digest.mutableSpan().data(), nullptr) != 1)
         return std::nullopt;
 
     return digest;
@@ -77,7 +77,7 @@ std::optional<Vector<uint8_t>> calculateDigest(const EVP_MD* algorithm, const Ve
 Vector<uint8_t> convertToBytes(const BIGNUM* bignum)
 {
     Vector<uint8_t> bytes(BN_num_bytes(bignum));
-    BN_bn2bin(bignum, bytes.data());
+    BN_bn2bin(bignum, bytes.mutableSpan().data());
     return bytes;
 }
 
@@ -97,13 +97,13 @@ Vector<uint8_t> convertToBytesExpand(const BIGNUM* bignum, size_t minimumBufferS
         for (size_t i = 0; i < paddingLength; i++)
             bytes[i] = padding;
     }
-    BN_bn2bin(bignum, bytes.data() + paddingLength);
+    BN_bn2bin(bignum, bytes.mutableSpan().subspan(paddingLength).data());
     return bytes;
 }
 
 BIGNUMPtr convertToBigNumber(const Vector<uint8_t>& bytes)
 {
-    return BIGNUMPtr(BN_bin2bn(bytes.data(), bytes.size(), nullptr));
+    return BIGNUMPtr(BN_bin2bn(bytes.span().data(), bytes.size(), nullptr));
 }
 
 bool AESKey::setKey(const Vector<uint8_t>& key, int enc)
@@ -113,13 +113,13 @@ bool AESKey::setKey(const Vector<uint8_t>& key, int enc)
         return false;
 
     if (enc == AES_ENCRYPT) {
-        if (AES_set_encrypt_key(key.data(), keySize, &m_key) < 0)
+        if (AES_set_encrypt_key(key.span().data(), keySize, &m_key) < 0)
             return false;
         return true;
     }
 
     if (enc == AES_DECRYPT) {
-        if (AES_set_decrypt_key(key.data(), keySize, &m_key) < 0)
+        if (AES_set_decrypt_key(key.span().data(), keySize, &m_key) < 0)
             return false;
         return true;
     }

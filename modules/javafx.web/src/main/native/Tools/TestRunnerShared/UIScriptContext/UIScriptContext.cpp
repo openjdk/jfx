@@ -174,7 +174,7 @@ void UIScriptContext::tryToCompleteUIScriptForCurrentParentCallback()
 
     JSStringRef result = m_uiScriptResultsPendingCompletion.take(m_currentScriptCallbackID);
 #if !PLATFORM(JAVA)
-    String scriptResult({ reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result) });
+    String scriptResult({ reinterpret_cast<const char16_t*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result) });
 #else
     auto charactersSpan = std::span<const UChar>(reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(result)), JSStringGetLength(result));
     String scriptResult(charactersSpan);

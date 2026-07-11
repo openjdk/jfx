@@ -66,9 +66,6 @@ public:
 
     using LegacyInlineBox::setIsInGlyphDisplayListCache;
 
-    LayoutUnit baselinePosition(FontBaseline) const final;
-    LayoutUnit lineHeight() const final;
-
     void setLogicalOverflowRect(const LayoutRect&);
 
     virtual void dirtyOwnLineBoxes() { dirtyLineBoxes(); }

@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -26,7 +26,6 @@
 #include "Image.h"
 #include "ImageObserver.h"
 #include "IntRect.h"
-#include "IntSizeHash.h"
 #include "LayoutSize.h"
 #include "SVGImageCache.h"
 #include <wtf/HashMap.h>
@@ -97,10 +96,7 @@ public:
     LayoutSize unclampedImageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType = UsedSize) const;
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
-    Headroom headroom() const;
-#if HAVE(SUPPORT_HDR_DISPLAY)
-    bool isHDR() const { return headroom() > Headroom::None; }
-#endif
+    bool hasHDRContent() const;
 
     bool isManuallyCached() const { return m_isManuallyCached; }
     RevalidationDecision makeRevalidationDecision(CachePolicy) const override;
@@ -122,8 +118,6 @@ public:
 
 private:
     void clear();
-
-    CachedImage(CachedImage&, const ResourceRequest&, PAL::SessionID);
 
     void setBodyDataFrom(const CachedResource&) final;
 
@@ -148,7 +142,7 @@ private:
     EncodedDataStatus updateImageData(bool allDataReceived);
     void updateData(const SharedBuffer&) override;
     void error(CachedResource::Status) override;
-    void responseReceived(const ResourceResponse&) override;
+    void responseReceived(ResourceResponse&&) override;
 
     // For compatibility, images keep loading even if there are HTTP errors.
     bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
@@ -175,6 +169,7 @@ private:
         bool canDestroyDecodedData(const Image&) const final;
         void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) final;
         void changedInRect(const Image&, const IntRect*) final;
+        void imageContentChanged(const Image&) final;
         void scheduleRenderingUpdate(const Image&) final;
 
         bool allowsAnimation(const Image&) const final;
@@ -189,6 +184,7 @@ private:
     bool canDestroyDecodedData(const Image&) const;
     void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid);
     void changedInRect(const Image&, const IntRect*);
+    void imageContentChanged(const Image&);
     void scheduleRenderingUpdate(const Image&);
 
     void updateBufferInternal(const FragmentedSharedBuffer&);

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -49,9 +49,9 @@ enum class ViolationReportType : uint8_t;
 
 class PingLoader {
 public:
-    static void loadImage(LocalFrame&, const URL&);
-    static void sendPing(LocalFrame&, const URL& pingURL, const URL& destinationURL);
-    WEBCORE_EXPORT static void sendViolationReport(LocalFrame&, const URL& reportURL, Ref<FormData>&& report, ViolationReportType);
+    static void loadImage(LocalFrame&, URL&&);
+    static void sendPing(LocalFrame&, URL&& pingURL, const URL& destinationURL);
+    WEBCORE_EXPORT static void sendViolationReport(LocalFrame&, URL&& reportURL, Ref<FormData>&& report, ViolationReportType);
 
     static String sanitizeURLForReport(const URL&);
 

@@ -40,7 +40,7 @@ public:
     RenderTableCol(Document&, RenderStyle&&);
     virtual ~RenderTableCol();
 
-    void clearPreferredLogicalWidthsDirtyBits();
+    void clearNeedsPreferredLogicalWidthsUpdate();
 
     unsigned span() const { return m_span; }
     void setSpan(unsigned span) { m_span = span; }
@@ -88,6 +88,7 @@ private:
     void paint(PaintInfo&, const LayoutPoint&) override { }
 
     RenderTable* table() const;
+    CheckedPtr<RenderTable> checkedTable() const;
 
     unsigned m_span { 1 };
 };

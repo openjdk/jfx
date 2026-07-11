@@ -31,6 +31,7 @@
 #include "ThreadGlobalData.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/JSMicrotask.h>
 #include <JavaScriptCore/Microtask.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/MainThread.h>
@@ -113,11 +114,7 @@ public:
         return profiledEvaluate(lexicalGlobalObject, reason, source, thisValue, unused);
     }
 
-    static void runTask(JSC::JSGlobalObject* lexicalGlobalObject, JSC::Microtask& task)
-    {
-        JSExecState currentState(lexicalGlobalObject);
-        task.run(lexicalGlobalObject);
-    }
+    static void runTask(JSC::JSGlobalObject*, JSC::QueuedTask&);
 
     static JSC::JSInternalPromise* loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const URL& topLevelModuleURL, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
     {
@@ -139,7 +136,7 @@ public:
         {
             JSExecState currentState(&lexicalGlobalObject);
             returnValue = JSC::linkAndEvaluateModule(&lexicalGlobalObject, moduleKey, scriptFetcher);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 returnedException = scope.exception();
                 if (!vm.hasPendingTerminationException())
                     scope.clearException();

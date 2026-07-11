@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -150,8 +150,7 @@ public:
     v(NeedTermination) \
     v(NeedWatchdogCheck) \
     v(NeedDebuggerBreak) \
-    v(NeedExceptionHandling) \
-    v(DeferTrapHandling) // Must come last in the enum. This defers all events except NeedExceptionHandling.
+    v(NeedExceptionHandling)
 
 #define DECLARE_VMTRAPS_EVENT_BIT_SHIFT(event__)  event__##BitShift,
     enum EventBitShift {
@@ -161,8 +160,7 @@ public:
 
 
 #define COUNT_EVENT(event) + 1
-    static constexpr BitField NumberOfEvents = FOR_EACH_VMTRAPS_EVENTS(COUNT_EVENT) - 1; // Don't count DeferTrapHandling.
-    static constexpr BitField NumberOfEventsIncludingDefer = FOR_EACH_VMTRAPS_EVENTS(COUNT_EVENT);
+    static constexpr BitField NumberOfEvents = FOR_EACH_VMTRAPS_EVENTS(COUNT_EVENT);
 #undef COUNT_EVENT
 
     using Event = BitField;
@@ -177,12 +175,16 @@ public:
 
     static constexpr Event NoEvent = 0;
 
-    static_assert(NumberOfEventsIncludingDefer <= bitsInBitField);
+    static_assert(NumberOfEvents <= bitsInBitField);
     static constexpr BitField AllEvents = (1ull << NumberOfEvents) - 1;
-    static constexpr BitField AllEventsIncludingDefer = (1ull << NumberOfEventsIncludingDefer) - 1;
     static constexpr BitField AsyncEvents = AllEvents & ~NeedExceptionHandling;
     static constexpr BitField NonDebuggerEvents = AllEvents & ~NeedDebuggerBreak;
     static constexpr BitField NonDebuggerAsyncEvents = AsyncEvents & ~NeedDebuggerBreak;
+
+    static constexpr bool isAsyncEvent(BitField event)
+    {
+        return AsyncEvents & event;
+    }
 
     static constexpr bool onlyContainsAsyncEvents(BitField events)
     {
@@ -198,10 +200,7 @@ public:
 
     ALWAYS_INLINE bool needHandling(BitField mask) const
     {
-        auto maskedValue = m_trapBits.loadRelaxed() & (mask | DeferTrapHandling);
-        if (UNLIKELY(maskedValue))
-            return (maskedValue & NeedExceptionHandling) || !(maskedValue & DeferTrapHandling);
-        return false;
+        return m_trapBits.loadRelaxed() & mask;
     }
     // Designed to be a fast check to rule out if we might need handling, and we need to ensure needHandling on the slow path.
     ALWAYS_INLINE bool maybeNeedHandling() const { return m_trapBits.loadRelaxed(); }
@@ -214,8 +213,8 @@ public:
     };
 
     bool isDeferringTermination() const { return m_deferTerminationCount; }
-    void deferTermination(DeferAction);
-    void undoDeferTermination(DeferAction);
+    inline void deferTermination(DeferAction);
+    inline void undoDeferTermination(DeferAction);
 
     void notifyGrabAllLocks()
     {
@@ -232,14 +231,20 @@ public:
         BitField maskedBits = event & mask;
         return m_trapBits.loadRelaxed() & maskedBits;
     }
-    void clearTrapBit(Event event) { m_trapBits.exchangeAnd(~event); }
-    void setTrapBit(Event event)
+    ALWAYS_INLINE void clearTrap(Event event)
     {
-        ASSERT((event & ~AllEventsIncludingDefer) == 0);
+        clearTrapWithoutCancellingThreadStop(event);
+        if (isAsyncEvent(event))
+            cancelThreadStopIfNeeded();
+    }
+    ALWAYS_INLINE void fireTrap(Event event)
+    {
+        ASSERT((event & ~AllEvents) == 0);
         m_trapBits.exchangeOr(event);
+        if (isAsyncEvent(event))
+            requestThreadStopIfNeeded(event);
     }
 
-    JS_EXPORT_PRIVATE void fireTrap(Event);
     void handleTraps(BitField mask = AsyncEvents);
 
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
@@ -252,9 +257,16 @@ public:
 private:
     VM& vm() const;
 
+    ALWAYS_INLINE void clearTrapWithoutCancellingThreadStop(Event event)
+    {
+        m_trapBits.exchangeAnd(~event);
+    }
+
+    JS_EXPORT_PRIVATE void cancelThreadStopIfNeeded();
+    JS_EXPORT_PRIVATE void requestThreadStopIfNeeded(Event);
+
     JS_EXPORT_PRIVATE void deferTerminationSlow(DeferAction);
     JS_EXPORT_PRIVATE void undoDeferTerminationSlow(DeferAction);
-    Event takeTopPriorityTrap(BitField mask);
 
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
     class SignalSender;
@@ -273,13 +285,16 @@ private:
 
     static constexpr BitField NeedExceptionHandlingMask = ~(1 << NeedExceptionHandling);
 
-    Box<Lock> m_lock;
-    Box<Condition> m_condition;
     Atomic<BitField> m_trapBits { 0 };
-    bool m_needToInvalidatedCodeBlocks { false };
+    unsigned m_deferTerminationCount { 0 };
+    bool m_needToInvalidateCodeBlocks { false };
     bool m_isShuttingDown { false };
     bool m_suspendedTerminationException { false };
-    unsigned m_deferTerminationCount { 0 };
+    bool m_threadStopRequested { false };
+    bool m_trapsDeferred { false };
+
+    Box<Lock> m_lock;
+    Box<Condition> m_condition;
 
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
     RefPtr<SignalSender> m_signalSender;
@@ -287,6 +302,7 @@ private:
 
     friend class LLIntOffsetsExtractor;
     friend class SignalSender;
+    friend class DeferTraps;
 };
 
 class DeferTraps {
@@ -295,7 +311,7 @@ public:
     ~DeferTraps();
 private:
     VMTraps& m_traps;
-    bool m_isActive;
+    bool m_previousTrapsDeferred;
 };
 
 } // namespace JSC

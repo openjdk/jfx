@@ -28,7 +28,7 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "PlatformView.h"
+#include "CocoaView.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>
@@ -39,7 +39,7 @@ class FloatRect;
 class MediaPlaybackTarget;
 
 class MediaPlaybackTargetPicker : public CanMakeCheckedPtr<MediaPlaybackTargetPicker> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MediaPlaybackTargetPicker);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlaybackTargetPicker);
 public:
     class Client {
@@ -54,7 +54,7 @@ public:
 
     virtual ~MediaPlaybackTargetPicker();
 
-    virtual void showPlaybackTargetPicker(PlatformView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance);
+    virtual void showPlaybackTargetPicker(CocoaView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance);
     virtual void startingMonitoringPlaybackTargets();
     virtual void stopMonitoringPlaybackTargets();
     virtual void invalidatePlaybackTargets();

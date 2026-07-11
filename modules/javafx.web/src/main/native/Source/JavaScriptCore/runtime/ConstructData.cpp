@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ JSObject* construct(JSGlobalObject* globalObject, JSValue constructorObject, JSV
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto constructData = JSC::getConstructData(constructorObject);
-    if (UNLIKELY(constructData.type == CallData::Type::None)) {
+    if (constructData.type == CallData::Type::None) [[unlikely]] {
         throwTypeError(globalObject, scope, errorMessage);
         return nullptr;
     }

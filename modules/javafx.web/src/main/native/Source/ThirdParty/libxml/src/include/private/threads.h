@@ -7,9 +7,16 @@
   #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #ifdef _WIN32_WINNT
-      #undef _WIN32_WINNT
+      #if _WIN32_WINNT < 0x0600
+        #undef _WIN32_WINNT
+      #endif
+    #else
+      /* get the default version of the SDK */
+      #include <sdkddkver.h>
     #endif
-    #define _WIN32_WINNT 0x0600
+    #ifndef _WIN32_WINNT
+      #define _WIN32_WINNT 0x0600
+    #endif
     #include <windows.h>
     #define HAVE_WIN32_THREADS
   #else
@@ -49,13 +56,28 @@ struct _xmlRMutex {
 };
 
 XML_HIDDEN void
-xmlInitMutex(xmlMutexPtr mutex);
+xmlInitMutex(xmlMutex *mutex);
 XML_HIDDEN void
-xmlCleanupMutex(xmlMutexPtr mutex);
+xmlCleanupMutex(xmlMutex *mutex);
 
 XML_HIDDEN void
-xmlInitRMutex(xmlRMutexPtr mutex);
+xmlInitRMutex(xmlRMutex *mutex);
 XML_HIDDEN void
-xmlCleanupRMutex(xmlRMutexPtr mutex);
+xmlCleanupRMutex(xmlRMutex *mutex);
+
+#ifdef LIBXML_SCHEMAS_ENABLED
+XML_HIDDEN void
+xmlInitSchemasTypesInternal(void);
+XML_HIDDEN void
+xmlCleanupSchemasTypesInternal(void);
+#endif
+
+#ifdef LIBXML_RELAXNG_ENABLED
+XML_HIDDEN void
+xmlInitRelaxNGInternal(void);
+XML_HIDDEN void
+xmlCleanupRelaxNGInternal(void);
+#endif
+
 
 #endif /* XML_THREADS_H_PRIVATE__ */

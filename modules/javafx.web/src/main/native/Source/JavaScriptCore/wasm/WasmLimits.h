@@ -39,8 +39,8 @@ namespace Wasm {
 
 constexpr size_t maxTypes = 1000000;
 constexpr size_t maxFunctions = 1000000;
-constexpr size_t maxImports = 100000;
-constexpr size_t maxExports = 100000;
+constexpr size_t maxImports = 1000000;
+constexpr size_t maxExports = 1000000;
 constexpr size_t maxExceptions = 100000;
 constexpr size_t maxGlobals = 1000000;
 constexpr size_t maxDataSegments = 100000;

@@ -30,6 +30,7 @@
 #pragma once
 
 #include "Breakpoint.h"
+#include "ContentSearchUtilities.h"
 #include "Debugger.h"
 #include "DebuggerPrimitives.h"
 #include "InspectorAgentBase.h"
@@ -66,7 +67,7 @@ public:
     static const ASCIILiteral backtraceObjectGroup;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
     virtual bool enabled() const { return m_enabled; }
 
@@ -245,15 +246,35 @@ private:
     using AsyncCallIdentifier = std::pair<unsigned, uint64_t>;
     static AsyncCallIdentifier asyncCallIdentifier(AsyncCallType, uint64_t callbackId);
 
-    std::unique_ptr<DebuggerFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<DebuggerBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<DebuggerFrontendDispatcher> m_frontendDispatcher;
+    const Ref<DebuggerBackendDispatcher> m_backendDispatcher;
 
     JSC::Debugger& m_debugger;
     InjectedScriptManager& m_injectedScriptManager;
     UncheckedKeyHashMap<JSC::SourceID, JSC::Debugger::Script> m_scripts;
 
-    using BlackboxParameters = std::tuple<String /* url */, bool /* caseSensitive */, bool /* isRegex */>;
-    UncheckedKeyHashMap<BlackboxParameters, UncheckedKeyHashSet<JSC::Debugger::BlackboxRange>> m_blackboxedURLs;
+    struct BlackboxedScript {
+        String url;
+        bool caseSensitive { true };
+        bool isRegex { false };
+
+        // This is only used to restrict where within the script to ignore pausing.
+        // Put another way, it doesn't change whether the script is blackboxed.
+        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> ranges;
+
+        inline bool operator==(const BlackboxedScript& other) const
+        {
+            return url == other.url
+                && caseSensitive == other.caseSensitive
+                && isRegex == other.isRegex;
+        }
+
+        bool matches(const String& url);
+
+    private:
+        std::optional<ContentSearchUtilities::Searcher> m_urlSearcher;
+    };
+    Vector<BlackboxedScript> m_blackboxedScripts;
 
     UncheckedKeyHashSet<Listener*> m_listeners;
 
@@ -271,8 +292,8 @@ private:
     DebuggerFrontendDispatcher::Reason m_pauseReason;
     RefPtr<JSON::Object> m_pauseData;
 
-    DebuggerFrontendDispatcher::Reason m_preBlackboxPauseReason;
-    RefPtr<JSON::Object> m_preBlackboxPauseData;
+    DebuggerFrontendDispatcher::Reason m_lastPauseReason;
+    RefPtr<JSON::Object> m_lastPauseData;
 
     UncheckedKeyHashMap<AsyncCallIdentifier, RefPtr<AsyncStackTrace>> m_pendingAsyncCalls;
     Vector<AsyncCallIdentifier> m_currentAsyncCallIdentifierStack;
@@ -289,7 +310,7 @@ private:
         // This is only used for the breakpoint configuration (i.e. it's irrelevant when comparing).
         RefPtr<JSC::Breakpoint> specialBreakpoint;
 
-        // Avoid having to (re)match the regex each time a function as called.
+        // Avoid having to (re)match the searcher each time a function as called.
         UncheckedKeyHashSet<String> knownMatchingSymbols;
 
         inline bool operator==(const SymbolicBreakpoint& other) const
@@ -302,7 +323,7 @@ private:
         bool matches(const String&);
 
     private:
-        std::optional<JSC::Yarr::RegularExpression> m_symbolMatchRegex;
+        std::optional<ContentSearchUtilities::Searcher> m_symbolSearcher;
     };
     Vector<SymbolicBreakpoint> m_symbolicBreakpoints;
 

@@ -76,6 +76,17 @@ OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase&
 {
 }
 
+void OffscreenCanvasRenderingContext2D::drawText(const String& text, double x, double y, bool fill, std::optional<double> maxWidth)
+{
+    if (!canDrawText(x, y, fill, maxWidth))
+        return;
+
+    String normalizedText = normalizeSpaces(text);
+    auto direction = (state().direction == Direction::Rtl) ? TextDirection::RTL : TextDirection::LTR;
+    TextRun textRun(normalizedText, 0, 0, ExpansionBehavior::allowRightOnly(), direction, false, true);
+    drawTextUnchecked(textRun, x, y, fill, maxWidth);
+}
+
 OffscreenCanvasRenderingContext2D::~OffscreenCanvasRenderingContext2D() = default;
 
 void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
@@ -90,7 +101,7 @@ void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
 
     // According to http://lists.w3.org/Archives/Public/public-html/2009Jul/0947.html,
     // the "inherit" and "initial" values must be ignored. CSSPropertyParserHelpers::parseFont() ignores these.
-    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, context, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
     if (!unresolvedFont)
         return;
 
@@ -128,6 +139,11 @@ RefPtr<ImageBuffer> OffscreenCanvasRenderingContext2D::transferToImageBuffer()
     // by buffer(), to avoid resetting the context state, we have to make a copy and
     // clear the original buffer rather than returning the original buffer.
     RefPtr result = buffer->clone();
+#if USE(SKIA)
+    // Ensure GPU commands are flushed before the ImageBuffer may be transferred cross-thread.
+    if (result)
+        result->flushDrawingContext();
+#endif
     clearCanvas();
     return result;
 }

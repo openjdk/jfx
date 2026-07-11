@@ -39,8 +39,8 @@ class ResourceMonitorThrottlerHolder final : public ThreadSafeRefCountedAndCanMa
 public:
     WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create();
     WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create(size_t count, Seconds duration, size_t maxHosts);
-    WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create(const String& databasePath);
-    WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create(const String& databasePath, size_t count, Seconds duration, size_t maxHosts);
+    WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create(const String& databaseDirectoryPath);
+    WEBCORE_EXPORT static Ref<ResourceMonitorThrottlerHolder> create(const String& databaseDirectoryPath, size_t count, Seconds duration, size_t maxHosts);
 
     WEBCORE_EXPORT ~ResourceMonitorThrottlerHolder();
 

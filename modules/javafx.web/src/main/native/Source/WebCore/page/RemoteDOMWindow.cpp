@@ -26,6 +26,8 @@
 #include "config.h"
 #include "RemoteDOMWindow.h"
 
+#include "Document.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
@@ -36,6 +38,7 @@
 #include "RemoteFrameClient.h"
 #include "SecurityOrigin.h"
 #include "SerializedScriptValue.h"
+#include "UserGestureIndicator.h"
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -141,7 +144,7 @@ void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& compl
         return;
 
     RefPtr frame = this->frame();
-    if (UNLIKELY(navigationState != CanNavigateState::Able))
+    if (navigationState != CanNavigateState::Able) [[unlikely]]
         navigationState = activeDocument->canNavigate(frame.get(), completedURL);
     if (navigationState == CanNavigateState::Unable)
         return;

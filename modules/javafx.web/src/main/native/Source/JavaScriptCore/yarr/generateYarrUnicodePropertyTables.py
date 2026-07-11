@@ -779,6 +779,8 @@ class Scripts:
             else:
                 self.unknownScript.addRange(lastAssignedCodePoint + 1, MaxUnicode)
 
+        self.scriptsByName["Unknown"] = self.unknownScript
+
         self.scriptsParsed = True
 
     def parseScriptExtensionsFile(self, file):

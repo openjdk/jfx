@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,19 +28,19 @@
 
 namespace WebCore {
 
-AXRemoteFrame::AXRemoteFrame(AXID axID)
-    : AccessibilityMockObject(axID)
+AXRemoteFrame::AXRemoteFrame(AXID axID, AXObjectCache& cache)
+    : AccessibilityMockObject(axID, cache)
 {
 }
 
-Ref<AXRemoteFrame> AXRemoteFrame::create(AXID axID)
+Ref<AXRemoteFrame> AXRemoteFrame::create(AXID axID, AXObjectCache& cache)
 {
-    return adoptRef(*new AXRemoteFrame(axID));
+    return adoptRef(*new AXRemoteFrame(axID, cache));
 }
 
 LayoutRect AXRemoteFrame::elementRect() const
 {
-    auto* parent = parentObject();
+    RefPtr parent = parentObject();
     return parent ? parent->elementRect() : LayoutRect();
 }
 

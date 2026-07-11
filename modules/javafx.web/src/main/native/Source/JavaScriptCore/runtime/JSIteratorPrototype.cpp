@@ -56,7 +56,6 @@ void JSIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.iterator]"_s, iteratorProtoFuncIterator, ImplementationVisibility::Public, IteratorIntrinsic);
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, iteratorFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    if (Options::useIteratorHelpers()) {
         // https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.constructor
         putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->constructor, CustomGetterSetter::create(vm, iteratorProtoConstructorGetter, iteratorProtoConstructorSetter), static_cast<unsigned>(PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor));
         // https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype-@@tostringtag
@@ -83,7 +82,6 @@ void JSIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("drop"_s, jsIteratorPrototypeDropCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         // https://tc39.es/proposal-iterator-helpers/#sec-iteratorprototype.flatmap
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().flatMapPublicName(), jsIteratorPrototypeFlatMapCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    }
 
     if (Options::useIteratorChunking()) {
         // https://tc39.es/proposal-iterator-chunking/#sec-iterator.prototype.chunks
@@ -91,6 +89,9 @@ void JSIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
         // https://tc39.es/proposal-iterator-chunking/#sec-iterator.prototype.windows
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("windows"_s, jsIteratorPrototypeWindowsCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
+
+    if (Options::useExplicitResourceManagement())
+        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->disposeSymbol, jsIteratorPrototypeDisposeCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncIterator, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -140,7 +141,7 @@ JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncToArray, (JSGlobalObject* globalObject
     MarkedArgumentBuffer value;
     forEachInIteratorProtocol(globalObject, thisValue, [&value, &scope](VM&, JSGlobalObject* globalObject, JSValue nextItem) {
         value.append(nextItem);
-        if (UNLIKELY(value.hasOverflowed()))
+        if (value.hasOverflowed()) [[unlikely]]
             throwOutOfMemoryError(globalObject, scope);
     });
     RETURN_IF_EXCEPTION(scope, { });
@@ -163,8 +164,11 @@ JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncForEach, (JSGlobalObject* globalObject
 
     JSValue callbackArg = callFrame->argument(0);
     if (!callbackArg.isCallable()) {
+        {
+            auto catchScope = DECLARE_CATCH_SCOPE(vm);
         iteratorClose(globalObject, thisValue);
-        RETURN_IF_EXCEPTION(scope, { });
+            catchScope.clearException();
+        }
         return throwVMTypeError(globalObject, scope, "Iterator.prototype.forEach requires the callback argument to be callable."_s);
     }
 
@@ -173,7 +177,7 @@ JSC_DEFINE_HOST_FUNCTION(iteratorProtoFuncForEach, (JSGlobalObject* globalObject
 
     uint64_t counter = 0;
 
-    if (LIKELY(callData.type == CallData::Type::JS)) {
+    if (callData.type == CallData::Type::JS) [[likely]] {
         CachedCall cachedCall(globalObject, jsCast<JSFunction*>(callbackArg), 2);
         RETURN_IF_EXCEPTION(scope, { });
 

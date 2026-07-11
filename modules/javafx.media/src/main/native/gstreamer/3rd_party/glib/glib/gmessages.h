@@ -646,6 +646,7 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
 
 #else /* !G_DISABLE_CHECKS */
 
+#ifndef GSTREAMER_LITE
 #define g_return_if_fail(expr) \
   G_STMT_START { \
     if (G_LIKELY (expr)) \
@@ -693,6 +694,37 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
            G_STRFUNC); \
     return (val); \
   } G_STMT_END
+#else // GSTREAMER_LITE
+#define g_return_if_fail(expr) \
+  G_STMT_START { \
+    if (G_LIKELY (expr)) \
+      { } \
+    else \
+      { \
+        return; \
+      } \
+  } G_STMT_END
+
+#define g_return_val_if_fail(expr, val) \
+  G_STMT_START { \
+    if (G_LIKELY (expr)) \
+      { } \
+    else \
+      { \
+        return (val); \
+      } \
+  } G_STMT_END
+
+#define g_return_if_reached() \
+  G_STMT_START { \
+    return; \
+  } G_STMT_END
+
+#define g_return_val_if_reached(val) \
+  G_STMT_START { \
+    return (val); \
+  } G_STMT_END
+#endif // GSTREAMER_LITE
 
 #endif /* !G_DISABLE_CHECKS */
 

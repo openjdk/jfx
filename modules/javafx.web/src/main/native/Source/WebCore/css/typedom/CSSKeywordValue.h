@@ -33,7 +33,7 @@ namespace WebCore {
 
 template<typename> class ExceptionOr;
 class CSSKeywordValue;
-using CSSKeywordish = std::variant<String, RefPtr<CSSKeywordValue>>;
+using CSSKeywordish = Variant<String, RefPtr<CSSKeywordValue>>;
 
 class CSSKeywordValue final : public CSSStyleValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSKeywordValue);
