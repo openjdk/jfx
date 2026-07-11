@@ -319,7 +319,6 @@ public class ProxyBuilderTest {
         pb.put("label", "hello");
 
         // Simulate what FXMLLoader does: obtain the container and add entries.
-        @SuppressWarnings("unchecked")
         Map<String, Object> container = (Map<String, Object>) pb.get("properties");
         container.put("myKey", "myValue");
         container.put("otherKey", 42);
@@ -337,7 +336,6 @@ public class ProxyBuilderTest {
     public void testArrayListUnwrapsFirstElementForScalarArg() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithPlainListAndScalarArg.class);
 
-        @SuppressWarnings("unchecked")
         List<String> container = (List<String>) pb.get("child");
         container.add("expectedValue");
 
@@ -358,7 +356,6 @@ public class ProxyBuilderTest {
         assertTrue(pb.containsKey("child"),
                 "containsKey must be true for the plain-List getter");
 
-        @SuppressWarnings("unchecked")
         Set<String> container = (Set<String>) pb.get("child");
         container.add("expectedValue");
 
@@ -391,7 +388,6 @@ public class ProxyBuilderTest {
     public void testReadOnlyObservableIntegerArray() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
 
-        @SuppressWarnings("unchecked")
         List<Integer> container = (List<Integer>) pb.get("intArray");
         container.add(10);
         container.add(20);
@@ -410,7 +406,6 @@ public class ProxyBuilderTest {
     public void testReadOnlyObservableFloatArray() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
 
-        @SuppressWarnings("unchecked")
         List<Float> container = (List<Float>) pb.get("floatArray");
         container.add(1.5f);
         container.add(2.5f);
@@ -430,7 +425,6 @@ public class ProxyBuilderTest {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
         pb.put("label", "testLabel");
 
-        @SuppressWarnings("unchecked")
         List<Integer> container = (List<Integer>) pb.get("intArray");
         container.add(7);
         container.add(8);
@@ -450,7 +444,6 @@ public class ProxyBuilderTest {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
         pb.put("label", "testLabel");
 
-        @SuppressWarnings("unchecked")
         List<Float> container = (List<Float>) pb.get("floatArray");
         container.add(0.1f);
         container.add(0.2f);
