@@ -579,8 +579,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     Class<?> argType[] = m.getParameterTypes();
                     if (Collection.class.isAssignableFrom(retType) && argType.length == 0) {
                         strsMap.put(propName, new Getter(m, retType));
-                    } else if (Map.class.isAssignableFrom(retType) && argType.length == 0
-                            && !strsMap.containsKey(propName)) {
+                    } else if (Map.class.isAssignableFrom(retType) && argType.length == 0) {
                         strsMap.put(propName, new MapGetter(m, retType));
                     } else if (ObservableArray.class.isAssignableFrom(retType) && argType.length == 0) {
                         strsMap.put(propName, new ObservableArrayGetter(m, retType));
