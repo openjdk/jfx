@@ -345,7 +345,7 @@ public class ProxyBuilderTest {
                 (ClassWithPlainListAndScalarArg) pb.build();
 
         assertEquals("expectedValue", result.child,
-                "ProxyBuilder must unwrap the first ArrayListWrapper element "
+                "ProxyBuilder must unwrap the first temporary ArrayList element "
                 + "and pass it as the scalar @NamedArg constructor argument");
     }
 
@@ -365,7 +365,7 @@ public class ProxyBuilderTest {
         ClassWithPlainSetAndScalarArg result = (ClassWithPlainSetAndScalarArg) pb.build();
 
         assertEquals("expectedValue", result.child,
-                "ProxyBuilder must unwrap the first ArrayListWrapper element "
+                "ProxyBuilder must unwrap the first temporary ArrayList element "
                         + "and pass it as the scalar @NamedArg constructor argument");
     }
 

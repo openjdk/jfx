@@ -31,13 +31,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Fixture class for testing the {@code ArrayListWrapper} unwrapping path in
+ * Fixture class for testing the temporary {@code ArrayList} unwrapping path in
  * {@code ProxyBuilder}.
  *
  * <p>The combination of a plain {@code List} getter (not {@code ObservableList})
  * and a {@code @NamedArg} constructor parameter of a non-collection type for the
  * <em>same</em> property name exercises the branch in {@code getUserValue} that
- * unwraps the first element of the temporary {@code ArrayListWrapper} container.
+ * unwraps the first element of the temporary {@code ArrayList} container.
  *
  * <p>This mirrors what the FXML loader does when it encounters:
  * <pre>{@code

@@ -479,7 +479,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             try {
                 return convertListToArray(val, type);
             } catch (RuntimeException ex) {
-                // conversion failed, maybe the ArrayListWrapper is
+                // conversion failed, maybe the temporary ArrayList is
                 // used for storing single value
             }
         }
