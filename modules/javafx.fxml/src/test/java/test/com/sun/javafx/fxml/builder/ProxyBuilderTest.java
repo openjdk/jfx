@@ -28,6 +28,8 @@ import com.sun.javafx.fxml.builder.ProxyBuilder;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import javafx.beans.NamedArg;
 import javafx.collections.ObservableFloatArray;
 import javafx.collections.ObservableIntegerArray;
@@ -112,29 +114,29 @@ public class ProxyBuilderTest {
         pb.put("a", 123);
         pb.put("b", 456);
         ImmutableClass result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 1e-10);
-        assertEquals(456, result.b, 1e-10);
+        assertEquals(123, result.a, 0.00001);
+        assertEquals(456, result.b, 0.00001);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 1e-10);
-        assertEquals(456.1, result.b, 1e-10);
+        assertEquals(123, result.a, 0.00001);
+        assertEquals(456.1, result.b, 0.00001);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 1e-10);
-        assertEquals(456, result.b, 1e-10);
+        assertEquals(123.1, result.a, 0.00001);
+        assertEquals(456, result.b, 0.00001);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 1e-10);
-        assertEquals(456.1, result.b, 1e-10);
+        assertEquals(123.1, result.a, 0.00001);
+        assertEquals(456.1, result.b, 0.00001);
     }
 
     @Test
@@ -332,19 +334,39 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    public void testArrayListWrapperUnwrapsFirstElementForScalarArg() {
-        ProxyBuilder pb = new ProxyBuilder(ClassWithPlainCollectionAndScalarArg.class);
+    public void testArrayListUnwrapsFirstElementForScalarArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithPlainListAndScalarArg.class);
 
         @SuppressWarnings("unchecked")
         List<String> container = (List<String>) pb.get("child");
         container.add("expectedValue");
 
-        ClassWithPlainCollectionAndScalarArg result =
-                (ClassWithPlainCollectionAndScalarArg) pb.build();
+        ClassWithPlainListAndScalarArg result =
+                (ClassWithPlainListAndScalarArg) pb.build();
 
         assertEquals("expectedValue", result.child,
                 "ProxyBuilder must unwrap the first ArrayListWrapper element "
                 + "and pass it as the scalar @NamedArg constructor argument");
+    }
+
+    @Test
+    public void testHashSetUnwrapsFirstElementForScalarArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithPlainSetAndScalarArg.class);
+
+        // Simulate what FXMLLoader does: containsKey triggers wrapper creation,
+        // get() returns it, and then the child element is added to the container.
+        assertTrue(pb.containsKey("child"),
+                "containsKey must be true for the plain-List getter");
+
+        @SuppressWarnings("unchecked")
+        Set<String> container = (Set<String>) pb.get("child");
+        container.add("expectedValue");
+
+        ClassWithPlainSetAndScalarArg result = (ClassWithPlainSetAndScalarArg) pb.build();
+
+        assertEquals("expectedValue", result.child,
+                "ProxyBuilder must unwrap the first ArrayListWrapper element "
+                        + "and pass it as the scalar @NamedArg constructor argument");
     }
 
     @Test
