@@ -100,7 +100,9 @@ gst_isoff_qt_sidx_parser_add_data (GstSidxParser * parser,
       parser->sidx.flags = gst_byte_reader_get_uint24_le_unchecked (&reader);
 
       parser->status = GST_ISOFF_QT_SIDX_PARSER_HEADER;
-      /* FALLTHROUGH */
+#ifndef GSTREAMER_LITE
+      G_GNUC_FALLTHROUGH;
+#endif // GSTREAMER_LITE
     case GST_ISOFF_QT_SIDX_PARSER_HEADER:
       remaining = gst_byte_reader_get_remaining (&reader);
       if (remaining < 12 + (parser->sidx.version == 0 ? 8 : 16)) {
@@ -141,7 +143,9 @@ gst_isoff_qt_sidx_parser_add_data (GstSidxParser * parser,
       parser->sidx.entry_index = 0;
 
       parser->status = GST_ISOFF_QT_SIDX_PARSER_DATA;
-
+#ifndef GSTREAMER_LITE
+      G_GNUC_FALLTHROUGH;
+#endif // GSTREAMER_LITE
     case GST_ISOFF_QT_SIDX_PARSER_DATA:
       while (parser->sidx.entry_index < parser->sidx.entries_count) {
         GstSidxBoxEntry *entry =
@@ -168,10 +172,14 @@ gst_isoff_qt_sidx_parser_add_data (GstSidxParser * parser,
         parser->sidx.entry_index++;
       }
 
-      if (parser->sidx.entry_index == parser->sidx.entries_count)
+      if (parser->sidx.entry_index == parser->sidx.entries_count) {
         parser->status = GST_ISOFF_QT_SIDX_PARSER_FINISHED;
-      else
+      } else {
         break;
+      }
+#ifndef GSTREAMER_LITE
+      G_GNUC_FALLTHROUGH;
+#endif // GSTREAMER_LITE
     case GST_ISOFF_QT_SIDX_PARSER_FINISHED:
       parser->sidx.entry_index = 0;
       res = GST_ISOFF_QT_PARSER_DONE;

@@ -359,11 +359,11 @@ count_power (guint v)
 }
 
 /**
- * gst_video_dither_new: (skip)
+ * gst_video_dither_new: (constructor) (skip)
  * @method: a #GstVideoDitherMethod
  * @flags: a #GstVideoDitherFlags
  * @format: a #GstVideoFormat
- * @quantizer: quantizer
+ * @quantizer: (array fixed-size=4): quantizer
  * @width: the width of the lines
  *
  * Make a new dither object for dithering lines of @format using the

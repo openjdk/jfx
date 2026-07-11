@@ -38,6 +38,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -123,6 +124,14 @@ public class FX {
         applyMnemonic(mi);
         lastMenu(b).getItems().add(mi);
         a.attach(mi);
+        return mi;
+    }
+
+    public static CheckMenuItem checkItem(MenuBar b, String text, BooleanProperty p) {
+        CheckMenuItem mi = new CheckMenuItem(text);
+        applyMnemonic(mi);
+        lastMenu(b).getItems().add(mi);
+        mi.selectedProperty().bindBidirectional(p);
         return mi;
     }
 

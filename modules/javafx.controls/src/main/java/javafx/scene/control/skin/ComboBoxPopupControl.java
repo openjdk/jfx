@@ -361,7 +361,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 // end of fix
             } else {
                 String stringValue = c.toString(value);
-                if (value == null || stringValue == null) {
+                if (stringValue == null) {
                     textField.setText("");
                 } else if (! stringValue.equals(textField.getText())) {
                     textField.setText(stringValue);

@@ -687,6 +687,7 @@ GUnicodeScript g_unicode_script_from_iso15924 (guint32        iso15924);
 
 /* These are all analogs of the <ctype.h> functions.
  */
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isalnum   (gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
@@ -742,6 +743,7 @@ gint g_unichar_xdigit_value (gunichar c) G_GNUC_CONST;
 /* Return the Unicode character type of a given character.  */
 GLIB_AVAILABLE_IN_ALL
 GUnicodeType g_unichar_type (gunichar c) G_GNUC_CONST;
+#endif // GSTREAMER_LITE
 
 /* Return the line break property for a given character */
 GLIB_AVAILABLE_IN_ALL
@@ -931,6 +933,7 @@ gboolean g_utf8_validate_len (const gchar  *str,
                               gsize         max_len,
                               const gchar **end);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_strup   (const gchar *str,
                        gssize       len) G_GNUC_MALLOC;
@@ -940,6 +943,7 @@ gchar *g_utf8_strdown (const gchar *str,
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_casefold (const gchar *str,
                         gssize       len) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 
 /**
  * GNormalizeMode:

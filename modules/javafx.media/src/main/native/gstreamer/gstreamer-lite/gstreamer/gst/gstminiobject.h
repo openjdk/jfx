@@ -285,7 +285,7 @@ GST_API
 gpointer        gst_mini_object_get_qdata       (GstMiniObject *object, GQuark quark);
 
 GST_API
-gpointer        gst_mini_object_steal_qdata     (GstMiniObject *object, GQuark quark);
+gpointer        gst_mini_object_steal_qdata     (GstMiniObject *object, GQuark quark) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_mini_object_add_parent      (GstMiniObject *object, GstMiniObject *parent);

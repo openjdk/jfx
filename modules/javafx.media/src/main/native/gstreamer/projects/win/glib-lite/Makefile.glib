@@ -42,7 +42,6 @@ C_SOURCES = \
         ghostutils.c \
         giochannel.c \
         giowin32.c \
-        gkeyfile.c \
         glib-init.c \
         glib-private.c \
         glist.c \
@@ -91,7 +90,6 @@ C_SOURCES = \
         gunibreak.c \
         gunicollate.c \
         gunidecomp.c \
-        guniprop.c \
         guri.c \
         gutf8.c \
         gutils.c \

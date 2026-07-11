@@ -28,6 +28,9 @@
 
 G_BEGIN_DECLS
 
+/* Master was renamed to Main in Xcode 13, and Master was deprecated */
+#define kAudioObjectPropertyElementMain 0
+
 typedef struct
 {
   GMutex lock;
@@ -58,20 +61,19 @@ gboolean gst_core_audio_open_device                       (GstCoreAudio *core_au
                                                            OSType sub_type,
                                                            const gchar *adesc);
 
-OSStatus gst_core_audio_render_notify                     (GstCoreAudio * core_audio,
-                                                           AudioUnitRenderActionFlags * ioActionFlags,
-                                                           const AudioTimeStamp * inTimeStamp,
-                                                           unsigned int inBusNumber,
-                                                           unsigned int inNumberFrames,
-                                                           AudioBufferList * ioData);
-
 AudioChannelLabel gst_audio_channel_position_to_core_audio (GstAudioChannelPosition position, int channel);
 
-GstAudioChannelPosition gst_core_audio_channel_label_to_gst (AudioChannelLabel label, int channel, gboolean warn);
+GstAudioChannelPosition gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
+                                                             int channel,
+                                                             gboolean warn,
+                                                             AudioDeviceID device_id);
 
-#ifndef HAVE_IOS
-char * gst_core_audio_device_get_prop (AudioDeviceID device_id,
-                                       AudioObjectPropertyElement prop_id);
+#if TARGET_OS_OSX
+char * gst_core_audio_device_get_prop_str (AudioDeviceID device_id,
+                                           AudioObjectPropertyElement prop_id);
+
+UInt32 gst_core_audio_device_get_prop_uint32 (AudioDeviceID device_id,
+                                              AudioObjectPropertyElement prop_id);
 #endif
 
 G_END_DECLS

@@ -167,7 +167,7 @@ gst_tag_register_tags_internal (gpointer unused)
 
   gst_tag_register_static (GST_TAG_CAPTURING_LIGHT_SOURCE, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("capturing light source"),
-      _("The light source indicates the kind of light when capturing an"
+      _("The light source indicates the kind of light when capturing an "
           "image"), NULL);
 
   gst_tag_register_static (GST_TAG_CAPTURING_CONTRAST, GST_TAG_FLAG_META,
@@ -241,6 +241,7 @@ gst_tag_register_musicbrainz_tags (void)
   g_once (&mb_once, gst_tag_register_tags_internal, NULL);
 }
 
+#ifndef G_DISABLE_CHECKS
 static inline gboolean
 gst_tag_image_type_is_valid (GstTagImageType type)
 {
@@ -254,6 +255,7 @@ gst_tag_image_type_is_valid (GstTagImageType type)
 
   return res;
 }
+#endif
 
 /**
  * gst_tag_parse_extended_comment:

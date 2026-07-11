@@ -46,11 +46,9 @@ import javafx.stage.StageStyle;
  *       so they do not obstruct existing draggable areas.
  * </ul>
  *
- * @since 25
- * @deprecated This is a preview feature which may be changed or removed in a future release.
  * @see HeaderBar#setDragType(Node, HeaderDragType)
+ * @since 27
  */
-@Deprecated(since = "25")
 public enum HeaderDragType {
 
     /**
@@ -98,7 +96,9 @@ public enum HeaderDragType {
      * <p>
      * In contrast to {@link #DRAGGABLE}, which positively identifies a node as a draggable part of the
      * {@code HeaderBar}, this option excludes a node from draggable-area hit testing: the header bar
-     * behaves as if the node was not present and continues hit testing unimpeded.
+     * behaves as if the node was not present and continues hit testing unimpeded. The next eligible node
+     * behind the transparent node is then considered for determining whether the location is part of a
+     * draggable header area.
      * <p>
      * This drag type can be used not only on descendants of the header bar, but also on other nodes that
      * may overlap it (for example, a sibling shown on top of the header bar). In that case, the overlapping
@@ -112,8 +112,6 @@ public enum HeaderDragType {
      * This drag type does not apply to descendants of the node on which it is set. However, it does
      * not stop an inherited {@link #TRANSPARENT_SUBTREE} drag type from being inherited by descendants
      * of the node.
-     *
-     * @since 26
      */
     TRANSPARENT,
 
@@ -123,7 +121,8 @@ public enum HeaderDragType {
      * In contrast to {@link #DRAGGABLE_SUBTREE}, which positively identifies a node and its descendants
      * as a draggable part of the {@code HeaderBar}, this option excludes a node and its descendants from
      * draggable-area hit testing: the header bar behaves as if the node and its descendants were not
-     * present and continues hit testing unimpeded.
+     * present and continues hit testing unimpeded. The next eligible node behind the transparent node is
+     * then considered for determining whether the location is part of a draggable header area.
      * <p>
      * This drag type can be used not only on descendants of the header bar, but also on other nodes that
      * may overlap it (for example, a sibling shown on top of the header bar). In that case, the overlapping
@@ -135,8 +134,6 @@ public enum HeaderDragType {
      * mouse events in incompatible ways.
      * <p>
      * This drag type is inherited by descendants of the node until a descendant specifies {@link #NONE}.
-     *
-     * @since 26
      */
     TRANSPARENT_SUBTREE
 }

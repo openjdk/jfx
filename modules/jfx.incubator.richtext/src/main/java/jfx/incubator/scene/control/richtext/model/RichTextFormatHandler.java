@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
@@ -53,7 +54,21 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * The handler uses a simple text-based format:<p>
  * (*) denotes an optional element.
  * <pre>
+ * VERSION_STRING
+ * DOCUMENT_PROPERTIES
  * PARAGRAPH[]
+ *
+ * VERSION_STRING*: {
+ *     "{\@"
+ *     version
+ *     "}"
+ * }
+ *
+ * DOCUMENT_PROPERTIES: {
+ *     "{#"
+ *     key|value|...
+ *     "}"
+ * }
  *
  * PARAGRAPH: {
  *     TEXT_SEGMENT[],
@@ -117,10 +132,13 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
+    private static final StringConverter<TabStops> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
     // String -> Handler
     // StyleAttribute -> Handler
     private final HashMap<Object,Handler> handlers = new HashMap<>(64);
+    private static Comparator<StyleAttribute<?>> styleAttributeComparator = initStyleAttributeComparator();
+    private static Comparator<String> stringComparator = initStringComparator();
     private static final RichTextFormatHandler instance = new RichTextFormatHandler();
 
     /**
@@ -143,6 +161,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttributeMap.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
         addHandler(StyleAttributeMap.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.STRIKE_THROUGH, "ss");
+        addHandler(StyleAttributeMap.TAB_STOPS, "tabs", TAB_STOPS_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
@@ -188,13 +207,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
     private StyledOutput createStyledOutput(StyleResolver r, Writer wr) {
         Charset cs = Charset.forName("utf-8");
-        boolean buffered = isBuffered(wr);
-        if (buffered) {
-            return new RichStyledOutput(r, wr);
-        } else {
+        if (!isBuffered(wr)) {
             wr = new BufferedWriter(wr);
-            return new RichStyledOutput(r, wr);
         }
+        return new RichStyledOutput(r, wr);
     }
 
     private static boolean isBuffered(Writer x) {
@@ -260,8 +276,32 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
     private static void log(Object x) {
         if (DEBUG) {
-            System.err.println(x);
+            if (x instanceof Throwable e) {
+                e.printStackTrace();
+            } else {
+                System.err.println(x);
+            }
         }
+    }
+
+    private static Comparator<StyleAttribute<?>> initStyleAttributeComparator() {
+        return new Comparator<StyleAttribute<?>>() {
+            @Override
+            public int compare(StyleAttribute<?> a, StyleAttribute<?> b) {
+                String sa = a.getName();
+                String sb = b.getName();
+                return sa.compareTo(sb);
+            }
+        };
+    }
+
+    private static Comparator<String> initStringComparator() {
+        return new Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                return a.compareTo(b);
+            }
+        };
     }
 
     /** exporter */
@@ -304,7 +344,41 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     wr.write(text);
                 }
                 break;
+            case DOCUMENT_PROPERTIES:
+                Map<String,String> dp = seg.getDocumentProperties();
+                emitDocumentProperties(dp);
+                break;
+            case VERSION:
+                String ver = seg.getVersion();
+                emitVersion(ver);
+                break;
             }
+        }
+
+        private void emitVersion(String ver) throws IOException {
+            wr.write("{@");
+            ver = encode(ver);
+            wr.write(ver);
+            wr.write("}");
+        }
+
+        private void emitDocumentProperties(Map<String, String> props) throws IOException {
+            wr.write("{#");
+            ArrayList<String> keys = new ArrayList<>(props.keySet());
+            keys.sort(stringComparator);
+            boolean sep = false;
+            for (String k : keys) {
+                String v = props.get(k);
+                if (sep) {
+                    wr.write("|");
+                } else {
+                    sep = true;
+                }
+                wr.write(encode(k));
+                wr.write("|");
+                wr.write(encode(v));
+            }
+            wr.write("}");
         }
 
         private void emitAttributes(StyleAttributeMap attrs, boolean forParagraph) throws IOException {
@@ -319,14 +393,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     ArrayList<StyleAttribute<?>> as = new ArrayList<>(attrs.getAttributes());
                     // sort by name to make serialized output stable
                     // the overhead is very low since this is done once per style
-                    Collections.sort(as, new Comparator<StyleAttribute<?>>() {
-                        @Override
-                        public int compare(StyleAttribute<?> a, StyleAttribute<?> b) {
-                            String sa = a.getName();
-                            String sb = b.getName();
-                            return sa.compareTo(sb);
-                        }
-                    });
+                    Collections.sort(as, styleAttributeComparator);
 
                     for (StyleAttribute<?> a : as) {
                         Handler h = handlers.get(a);
@@ -336,7 +403,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 if (h.isAllowed(v)) {
                                     String id = h.getId();
                                     String ss = h.write(v);
-                                    if(ss != null) {
+                                    if (ss != null) {
                                         ss = encode(ss);
                                     }
 
@@ -446,6 +513,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         private StringBuilder sb;
         private final ArrayList<StyleAttributeMap> styles = new ArrayList<>();
         private int line = 1;
+        private String version;
 
         public RichStyledInput(String text) {
             this.text = text;
@@ -463,16 +531,34 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     line++;
                     return StyledSegment.LINE_BREAK;
                 case '{':
-                    StyleAttributeMap a = parseAttributes(true);
-                    if (a != null) {
-                        if (a.isEmpty()) {
-                            a = null;
+                    switch (charAt(1)) {
+                    case '#':
+                        // document properties
+                        index += 2;
+                        Map<String,String> dp = parseDocumentProperties();
+                        return StyledSegment.ofDocumentProperties(dp);
+                    case '@':
+                        // version string
+                        index += 2;
+                        // TODO check if already exists
+                        String ver = parseString();
+                        if(version != null) {
+                            throw err("Invalid format");
                         }
-                        return StyledSegment.ofParagraphAttributes(a);
-                    } else {
-                        a = parseAttributes(false);
-                        String text = decodeText();
-                        return StyledSegment.of(text, a);
+                        version = ver;
+                        return StyledSegment.ofVersion(ver);
+                    default:
+                        StyleAttributeMap a = parseAttributes(true);
+                        if (a != null) {
+                            if (a.isEmpty()) {
+                                a = null;
+                            }
+                            return StyledSegment.ofParagraphAttributes(a);
+                        } else {
+                            a = parseAttributes(false);
+                            String text = decodeText();
+                            return StyledSegment.of(text, a);
+                        }
                     }
                 }
                 String text = decodeText();
@@ -485,6 +571,32 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         @Override
         public void close() throws IOException {
+        }
+
+        private String parseString() throws IOException {
+            int ix = text.indexOf('}', index);
+            if (ix < 0) {
+                throw err("missing }");
+            }
+            String s = text.substring(index, ix);
+            index = ix + 1;
+            return s;
+        }
+
+        private Map<String, String> parseDocumentProperties() throws IOException {
+            String s = parseString();
+            String[] ss = s.split("\\|", -1);
+            int sz = ss.length;
+            if ((sz & 0x01) != 0) {
+                throw err("malformed document properties");
+            }
+            HashMap<String, String> m = new HashMap<>(sz / 2);
+            for (int i = 0; i < sz;) {
+                String k = decode(ss[i++]);
+                String v = decode(ss[i++]);
+                m.put(k, v);
+            }
+            return m;
         }
 
         private StyleAttributeMap parseAttributes(boolean forParagraph) throws IOException {
@@ -539,13 +651,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     } else {
                         Object v = h.read(args);
                         StyleAttribute a = h.getStyleAttribute();
-                        if (a.isParagraphAttribute() != forParagraph) {
-                            throw err("paragraph type mismatch");
+                        if (StyleAttributeMapHelper.isAcceptable(a, forParagraph)) {
+                            if (b == null) {
+                                b = StyleAttributeMap.builder();
+                            }
+                            b.set(a, v);
+                        } else {
+                            log("ignoring attribute: " + name);
                         }
-                        if (b == null) {
-                            b = StyleAttributeMap.builder();
-                        }
-                        b.set(a, v);
                     }
                     index = ix + 1;
                 } else {
@@ -586,6 +699,36 @@ public class RichTextFormatHandler extends DataFormatHandler {
             }
         }
 
+        private static String decode(String text) throws IOException {
+            StringBuilder sb = null;
+            int sz = text.length();
+            for (int i = 0; i < sz; i++) {
+                char c = text.charAt(i);
+                switch (c) {
+                case '%':
+                    // decoding hex
+                    if (sb == null) {
+                        sb = new StringBuilder(sz);
+                        if (i > 0) {
+                            sb.append(text, 0, i);
+                        }
+                    }
+                    char ch = decodeHexByte(text, i + 1);
+                    i += 2;
+                    sb.append(ch);
+                    break;
+                default:
+                    if (sb != null) {
+                        sb.append(c);
+                    }
+                }
+            }
+            if (sb != null) {
+                return sb.toString();
+            }
+            return text;
+        }
+
         private String decodeText(int start, int ix) throws IOException {
             if (sb == null) {
                 sb = new StringBuilder();
@@ -617,6 +760,11 @@ public class RichTextFormatHandler extends DataFormatHandler {
             index++;
             ch += decodeHex(charAt(0));
             return ch;
+        }
+
+        private static char decodeHexByte(String text, int offset) throws IOException {
+            int v = decodeHex(text.charAt(offset++)) << 4;
+            return (char)(v | decodeHex(text.charAt(offset)));
         }
 
         private static int decodeHex(int ch) throws IOException {

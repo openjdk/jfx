@@ -25,31 +25,24 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
-import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import javafx.application.ColorScheme;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -67,53 +60,54 @@ import javafx.util.Subscription;
  * <em>double-click to maximize</em> behaviors that are usually afforded by system-provided header bars.
  * The entire {@code HeaderBar} background is draggable by default, but its content is not. Applications
  * can specify draggable content nodes of the {@code HeaderBar} with the {@link #dragTypeProperty(Node) dragType}
- * property.
+ * attached property.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
  * {@link #leftProperty() left}, {@link #centerProperty() center}, and {@link #rightProperty() right}.
  * All areas can be {@code null}. The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is
- * set to match the height of the platform-specific default header buttons.
+ * set to match {@link #systemMinHeightProperty(Stage) systemMinHeight} (unless explicitly set by a stylesheet or
+ * application code), which usually corresponds to the height of the system-provided header buttons.
  *
  * <h2>Single header bar</h2>
  * Most applications should only add a single {@code HeaderBar} to the scene graph, placed at the top of the
  * scene and extending its entire width. This ensures that the reported values for
  * {@link #leftSystemInsetProperty(Stage) leftSystemInset} and {@link #rightSystemInsetProperty(Stage) rightSystemInset},
- * which describe the area reserved for the system-provided window buttons, correctly align with the location
+ * which describe the areas reserved for the system-provided header buttons, correctly align with the location
  * of the {@code HeaderBar} and are taken into account when the contents of the {@code HeaderBar} are laid out.
  *
  * <h2>Multiple header bars</h2>
  * Applications that use multiple header bars might need to configure the additional padding inserted into the
  * layout to account for the system-reserved areas. For example, when two header bars are placed next to each
- * other in the horizontal direction, the default configuration incorrectly adds additional padding between the
+ * other in the horizontal direction, the default configuration adds unnecessary additional padding between the
  * two header bars. In this case, the {@link #leftSystemPaddingProperty() leftSystemPadding} and
  * {@link #rightSystemPaddingProperty() rightSystemPadding} properties can be used to remove the padding
  * that is not needed.
  *
  * <h2>Header button height</h2>
- * Applications can specify the preferred height for system-provided header buttons by setting the
- * {@link #prefButtonHeightProperty(Stage) prefButtonHeight} property on the {@code Stage} associated with
- * the header bar. This can be used to achieve a more cohesive visual appearance by having the system-provided
+ * Applications can specify the preferred height for the system-provided header buttons by setting the
+ * {@link #systemButtonHeightProperty(Stage) systemButtonHeight} attached property for the {@code Stage} associated
+ * with the header bar. This can be used to achieve a more cohesive visual appearance by having the system-provided
  * header buttons match the height of the client-area header bar.
  *
  * <h2>Color scheme</h2>
- * The color scheme of the default header buttons is automatically adjusted to remain easily recognizable
- * by inspecting the {@link Scene#fillProperty() Scene.fill} property to gauge the brightness of the user
- * interface. Applications should set the scene fill to a color that matches the user interface of the header
- * bar area, even if the scene fill is not visible because it is obscured by other controls.
+ * The color scheme of the system-provided default header buttons is automatically adjusted to match the
+ * {@linkplain Scene.Preferences#colorSchemeProperty() scene color scheme}.
+ * Applications can specify a different color scheme for the system-provided header buttons with the
+ * {@link HeaderBar#systemColorSchemeProperty(Stage) systemColorScheme} attached property.
  *
  * <h2>Custom header buttons</h2>
  * If more control over the header buttons is desired, applications can opt out of the system-provided header
- * buttons by setting the {@link #prefButtonHeightProperty(Stage) prefButtonHeight} property on the {@code Stage}
- * associated with the header bar to zero and place custom header buttons in the JavaFX scene graph instead.
- * Any JavaFX control can be used as a custom header button by specifying its semantic type with the
- * {@link #buttonTypeProperty(Node) buttonType} property.
+ * buttons by setting the {@link #systemButtonHeightProperty(Stage) systemButtonHeight} attached property for
+ * the {@code Stage} associated with the header bar to zero and place custom header buttons in the JavaFX
+ * scene graph instead. Any JavaFX control can be used as a custom header button by specifying its semantic
+ * type with the {@link #buttonTypeProperty(Node) buttonType} attached property.
  *
  * <h2>System menu</h2>
  * Some platforms support a system menu that can be summoned by right-clicking the draggable area.
  * The system menu will not be shown when:
  * <ol>
- *     <li>the {@code Stage} is in {@link Stage#fullScreenProperty() full-screen mode}, or
- *     <li>the {@code HeaderBar} has {@link Event#consume() consumed} the
+ *     <li>the {@code Stage} is in {@linkplain Stage#fullScreenProperty() full-screen mode}, or
+ *     <li>the {@code HeaderBar} has {@linkplain Event#consume() consumed} the
  *         {@link ContextMenuEvent#CONTEXT_MENU_REQUESTED} event.
  * </ol>
  *
@@ -121,8 +115,8 @@ import javafx.util.Subscription;
  * The {@code left} and {@code right} children will be resized to their preferred widths and extend the
  * height of the {@code HeaderBar}. The {@code center} child will be resized to fill the available space.
  * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. If a child's resizable
- * range prevents it from be resized to fit within its position, it will be vertically centered relative to the
- * available space; this alignment can be customized with a layout constraint.
+ * range prevents it from being resized to fit within its position, it will be vertically centered relative to
+ * the available space; this alignment can be customized with a layout constraint.
  * <p>
  * An application may set constraints on individual children to customize their layout.
  * For each constraint, {@code HeaderBar} provides static getter and setter methods.
@@ -149,7 +143,7 @@ import javafx.util.Subscription;
  * be horizontally centered within the {@code Stage}.
  * <p>
  * If a child should instead be centered with respect to the {@code center} area only, a possible solution is to
- * place another layout container like {@link BorderPane} in the {@code center} area, and then center the child
+ * place another layout container (such as {@link BorderPane}) in the {@code center} area, and then center the child
  * within the other layout container.
  *
  * <h2>Example</h2>
@@ -176,18 +170,16 @@ import javafx.util.Subscription;
  * }
  * }</pre>
  *
- * @since 25
- * @deprecated This is a preview feature which may be changed or removed in a future release.
+ * @since 27
  */
-@Deprecated(since = "25")
 public class HeaderBar extends Region {
 
-    private static final Dimension2D EMPTY = new Dimension2D(0, 0);
     private static final String ALIGNMENT = "headerbar-alignment";
     private static final String MARGIN = "headerbar-margin";
 
     /**
-     * Sets the value of the {@link #dragTypeProperty(Node) dragType} property for the specified child.
+     * Sets the value of the {@link #dragTypeProperty(Node) dragType}
+     * attached property for the specified child.
      *
      * @param child the child node
      * @param value the {@code HeaderDragType}, or {@code null} to remove the flag
@@ -199,7 +191,8 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Gets the value of the {@link #dragTypeProperty(Node) dragType} property of the specified child.
+     * Gets the value of the {@link #dragTypeProperty(Node) dragType}
+     * attached property for the specified child.
      *
      * @param child the child node
      * @return the {@code HeaderDragType}, or {@code null} if not set
@@ -216,13 +209,12 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Specifies the {@code HeaderDragType} of the child, indicating whether it is a draggable part
+     * Specifies the {@link HeaderDragType} of the child, indicating whether it is a draggable part
      * of the {@code HeaderBar}. A value of {@code null} indicates that the drag type is not set.
      *
      * @param child the child node
      * @return the {@code dragType} property
      * @defaultValue {@code null}
-     * @since 26
      */
     @SuppressWarnings("unchecked")
     public static ObjectProperty<HeaderDragType> dragTypeProperty(Node child) {
@@ -236,7 +228,8 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Sets the value of the {@link #buttonTypeProperty(Node) buttonType} property for the specified child.
+     * Sets the value of the {@link #buttonTypeProperty(Node) buttonType}
+     * attached property for the specified child.
      *
      * @param child the child node
      * @param value the {@code HeaderButtonType}, or {@code null}
@@ -248,7 +241,8 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Gets the value of the {@link #buttonTypeProperty(Node) buttonType} property of the specified child.
+     * Gets the value of the {@link #buttonTypeProperty(Node) buttonType}
+     * attached property for the specified child.
      *
      * @param child the child node
      * @return the {@code HeaderButtonType}, or {@code null}
@@ -265,16 +259,15 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Specifies the {@code HeaderButtonType} of the child, indicating its semantic use in the header bar.
+     * Specifies the {@link HeaderButtonType} of the child, indicating its semantic use in the header bar.
      * <p>
-     * This property can be set on any {@link Node}. Specifying a header button type also provides the behavior
-     * associated with the button type. If the default behavior is not desired, applications can register an
-     * event filter on the child node that consumes the {@link MouseEvent#MOUSE_RELEASED} event.
+     * This property can be set on any {@link Node}. Specifying a {@code HeaderButtonType} also provides the
+     * behavior associated with the button type. If the default behavior is not desired, applications can
+     * register an event filter on the child node that consumes the {@link MouseEvent#MOUSE_RELEASED} event.
      *
      * @param child the child node
      * @return the {@code buttonType} property
      * @defaultValue {@code null}
-     * @since 26
      */
     @SuppressWarnings("unchecked")
     public static ObjectProperty<HeaderButtonType> buttonTypeProperty(Node child) {
@@ -304,35 +297,78 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * Sentinel value that can be used for the {@link #prefButtonHeightProperty(Stage) prefButtonHeight}
-     * property to indicate that the platform should choose the platform-specific default button height.
+     * Sets the value of the {@link #systemColorSchemeProperty(Stage) systemColorScheme}
+     * attached property for the specified {@code Stage}.
+     *
+     * @param stage the {@code Stage}
+     * @param value the color scheme, or {@code null} to indicate no preference
+     */
+    public static void setSystemColorScheme(Stage stage, ColorScheme value) {
+        StageHelper.getExtendedProperties(stage).systemColorSchemeProperty().set(value);
+    }
+
+    /**
+     * Gets the value of the {@link #systemColorSchemeProperty(Stage) systemColorScheme}
+     * attached property for the specified {@code Stage}.
+     *
+     * @param stage the {@code Stage}
+     * @return the color scheme
+     */
+    public static ColorScheme getSystemColorScheme(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemColorSchemeProperty().get();
+    }
+
+    /**
+     * Specifies the color scheme of the system-provided header buttons for the specified {@code Stage}.
+     * <p>
+     * This is a <em>null-coalescing</em> property: if set to {@code null} (using the setter method,
+     * {@link Property#setValue(Object)}, or with a binding), the property evaluates to the value of
+     * {@link Scene.Preferences#colorSchemeProperty()}. Likewise, specifying a non-null value will
+     * override the scene-provided value. Overriding the scene-provided color scheme is usually only
+     * necessary in the rare case when an application needs different color schemes for header buttons
+     * and the window content (bright title bar in dark mode, or a dark title bar in light mode).
+     * <p>
+     * The specified color scheme is only a hint for the platform window toolkit and may be ignored.
+     *
+     * @param stage the {@code Stage}
+     * @return the {@code systemColorScheme} attached property
+     * @defaultValue {@link Scene.Preferences#getColorScheme()}
+     * @see Scene.Preferences#colorSchemeProperty()
+     */
+    public static ObjectProperty<ColorScheme> systemColorSchemeProperty(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemColorSchemeProperty();
+    }
+
+    /**
+     * Sentinel value that can be used for the {@link #systemButtonHeightProperty(Stage) systemButtonHeight}
+     * attached property to indicate that the platform should choose the platform-specific default button height.
      */
     public static final double USE_DEFAULT_SIZE = -1;
 
     /**
-     * Sets the value of the {@link #prefButtonHeightProperty(Stage) prefButtonHeight} property
-     * for the specified {@code Stage}.
+     * Sets the value of the {@link #systemButtonHeightProperty(Stage) systemButtonHeight}
+     * attached property for the specified {@code Stage}.
      *
      * @param stage the {@code Stage}
      * @param height the preferred height, or 0 to hide the system-provided header buttons
      */
-    public static void setPrefButtonHeight(Stage stage, double height) {
-        AttachedProperties.of(stage).prefButtonHeight.set(height);
+    public static void setSystemButtonHeight(Stage stage, double height) {
+        StageHelper.getExtendedProperties(stage).systemButtonHeightProperty().set(height);
     }
 
     /**
-     * Gets the value of the {@link #prefButtonHeightProperty(Stage) prefButtonHeight} property
-     * of the specified {@code Stage}.
+     * Gets the value of the {@link #systemButtonHeightProperty(Stage) systemButtonHeight}
+     * attached property for the specified {@code Stage}.
      *
      * @param stage the {@code Stage}
      * @return the preferred height of the system-provided header buttons
      */
-    public static double getPrefButtonHeight(Stage stage) {
-        return AttachedProperties.of(stage).prefButtonHeight.get();
+    public static double getSystemButtonHeight(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemButtonHeightProperty().get();
     }
 
     /**
-     * Specifies the preferred height of the system-provided header buttons of the specified {@code Stage}.
+     * Specifies the preferred height of the system-provided header buttons for the specified {@code Stage}.
      * <p>
      * Any value except zero and {@link #USE_DEFAULT_SIZE} is only a hint for the platform window toolkit.
      * The platform might accommodate the preferred height in various ways, such as by stretching the header
@@ -346,95 +382,88 @@ public class HeaderBar extends Region {
      * The default value {@code USE_DEFAULT_SIZE} indicates that the platform should choose the button height.
      *
      * @param stage the {@code Stage}
-     * @return the {@code prefButtonHeight} property
+     * @return the {@code systemButtonHeight} attached property
      * @defaultValue {@code USE_DEFAULT_SIZE}
-     * @since 26
      */
-    public static DoubleProperty prefButtonHeightProperty(Stage stage) {
-        return AttachedProperties.of(stage).prefButtonHeight;
+    public static DoubleProperty systemButtonHeightProperty(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemButtonHeightProperty();
     }
 
     /**
-     * Describes the size of the left system-reserved inset of the specified {@code Stage}, which is an area
+     * Gets the value of the {@link #systemMinHeightProperty(Stage) systemMinHeight}
+     * attached property for the specified {@code Stage}.
+     *
+     * @param stage the {@code Stage}
+     * @return the system-recommended minimum height for the {@code HeaderBar}
+     */
+    public static double getSystemMinHeight(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemMinHeightProperty().get();
+    }
+
+    /**
+     * Specifies the system-recommended minimum height for the {@code HeaderBar} for the specified {@code Stage},
+     * which usually corresponds to the height of the default header buttons. Applications can use this value
+     * as a sensible lower limit for the height of the {@code HeaderBar}.
+     * <p>
+     * By default, {@link #minHeightProperty() minHeight} is set to the value of {@code systemMinHeight},
+     * unless {@code minHeight} is explicitly set by a stylesheet or application code.
+     *
+     * @param stage the {@code Stage}
+     * @return the {@code systemMinHeight} attached property
+     */
+    public static ReadOnlyDoubleProperty systemMinHeightProperty(Stage stage) {
+        return StageHelper.getExtendedProperties(stage).systemMinHeightProperty();
+    }
+
+    /**
+     * Describes the size of the left system-reserved inset for the specified {@code Stage}, which is an area
      * reserved for the iconify, maximize, and close window buttons. If there are no window buttons on the left
      * side of the window, the returned area is an empty {@code Dimension2D}.
      *
      * @param stage the {@code Stage}
-     * @return the {@code leftSystemInset} property
-     * @since 26
+     * @return the {@code leftSystemInset} attached property
      */
     public static ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty(Stage stage) {
-        return AttachedProperties.of(stage).leftSystemInset.getReadOnlyProperty();
+        return StageHelper.getExtendedProperties(stage).leftSystemInsetProperty();
     }
 
     /**
-     * Gets the value of the {@link #leftSystemInsetProperty(Stage) leftSystemInset} property
-     * of the specified {@code Stage}.
+     * Gets the value of the {@link #leftSystemInsetProperty(Stage) leftSystemInset}
+     * attached property for the specified {@code Stage}.
      *
      * @param stage the {@code Stage}
      * @return the size of the left system-reserved inset
-     * @since 26
      */
     public static Dimension2D getLeftSystemInset(Stage stage) {
-        return AttachedProperties.of(stage).leftSystemInset.get();
+        return StageHelper.getExtendedProperties(stage).leftSystemInsetProperty().get();
     }
 
     /**
-     * Describes the size of the right system-reserved inset of the specified {@code Stage}, which is an area
+     * Describes the size of the right system-reserved inset for the specified {@code Stage}, which is an area
      * reserved for the iconify, maximize, and close window buttons. If there are no window buttons on the right
      * side of the window, the returned area is an empty {@code Dimension2D}.
      *
      * @param stage the {@code Stage}
-     * @return the {@code rightSystemInset} property
-     * @since 26
+     * @return the {@code rightSystemInset} attached property
      */
     public static ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty(Stage stage) {
-        return AttachedProperties.of(stage).rightSystemInset.getReadOnlyProperty();
+        return StageHelper.getExtendedProperties(stage).rightSystemInsetProperty();
     }
 
     /**
-     * Gets the value of the {@link #rightSystemInsetProperty(Stage) rightSystemInset} property
-     * of the specified {@code Stage}.
+     * Gets the value of the {@link #rightSystemInsetProperty(Stage) rightSystemInset}
+     * attached property for the specified {@code Stage}.
      *
      * @param stage the {@code Stage}
      * @return the size of the right system-reserved inset
-     * @since 26
      */
     public static Dimension2D getRightSystemInset(Stage stage) {
-        return AttachedProperties.of(stage).rightSystemInset.get();
-    }
-
-    /**
-     * The system-provided minimum recommended height for the {@code HeaderBar} of the specified {@code Stage},
-     * which usually corresponds to the height of the default header buttons. Applications can use this value
-     * as a sensible lower limit for the height of the {@code HeaderBar}.
-     * <p>
-     * By default, {@code HeaderBar}.{@link #minHeightProperty() minHeight} is set to the value of
-     * {@code minSystemHeight}, unless {@code minHeight} is explicitly set by a stylesheet or application code.
-     *
-     * @param stage the {@code Stage}
-     * @return the {@code minSystemHeight} property
-     * @since 26
-     */
-    public static ReadOnlyDoubleProperty minSystemHeightProperty(Stage stage) {
-        return AttachedProperties.of(stage).minSystemHeight.getReadOnlyProperty();
-    }
-
-    /**
-     * Gets the value of the {@link #minSystemHeightProperty(Stage) minSystemHeight} property
-     * of the specified {@code Stage}.
-     *
-     * @param stage the {@code Stage}
-     * @return the system-provided minimum recommended height for the {@code HeaderBar}
-     * @since 26
-     */
-    public static double getMinSystemHeight(Stage stage) {
-        return AttachedProperties.of(stage).minSystemHeight.get();
+        return StageHelper.getExtendedProperties(stage).rightSystemInsetProperty().get();
     }
 
     /**
      * Sets the alignment for the child when contained in a {@code HeaderBar}.
-     * If set, will override the header bar's default alignment for the child's position.
+     * If set, it will override the header bar's default alignment for the child's position.
      * Setting the value to {@code null} will remove the constraint.
      *
      * @param child the child node
@@ -482,8 +511,6 @@ public class HeaderBar extends Region {
      * Creates a new {@code HeaderBar}.
      */
     public HeaderBar() {
-        PreviewFeature.HEADER_BAR.checkEnabled();
-
         // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
@@ -512,20 +539,25 @@ public class HeaderBar extends Region {
      * The left area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
-     * @since 26
      */
-    private final ObjectProperty<Node> left = new NodeProperty("left");
+    private ObjectProperty<Node> left;
 
     public final ObjectProperty<Node> leftProperty() {
+        if (left == null) {
+            left = new NodeProperty("left");
+        }
+
         return left;
     }
 
     public final Node getLeft() {
-        return left.get();
+        return left != null ? left.get() : null;
     }
 
     public final void setLeft(Node value) {
-        left.set(value);
+        if (left != null || value != null) {
+            leftProperty().set(value);
+        }
     }
 
     /**
@@ -533,38 +565,49 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> center = new NodeProperty("center");
+    private ObjectProperty<Node> center;
 
     public final ObjectProperty<Node> centerProperty() {
+        if (center == null) {
+            center = new NodeProperty("center");
+        }
+
         return center;
     }
 
     public final Node getCenter() {
-        return center.get();
+        return center != null ? center.get() : null;
     }
 
     public final void setCenter(Node value) {
-        center.set(value);
+        if (center != null || value != null) {
+            centerProperty().set(value);
+        }
     }
 
     /**
      * The right area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
-     * @since 26
      */
-    private final ObjectProperty<Node> right = new NodeProperty("right");
+    private ObjectProperty<Node> right;
 
     public final ObjectProperty<Node> rightProperty() {
+        if (right == null) {
+            right = new NodeProperty("right");
+        }
+
         return right;
     }
 
     public final Node getRight() {
-        return right.get();
+        return right != null ? right.get() : null;
     }
 
     public final void setRight(Node value) {
-        right.set(value);
+        if (right != null || value != null) {
+            rightProperty().set(value);
+        }
     }
 
     /**
@@ -579,35 +622,40 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #rightSystemPaddingProperty() rightSystemPadding
-     * @since 26
      */
-    private final BooleanProperty leftSystemPadding = new BooleanPropertyBase(true) {
-        @Override
-        public Object getBean() {
-            return HeaderBar.this;
-        }
-
-        @Override
-        public String getName() {
-            return "leftSystemPadding";
-        }
-
-        @Override
-        protected void invalidated() {
-            requestLayout();
-        }
-    };
+    private BooleanProperty leftSystemPadding;
 
     public final BooleanProperty leftSystemPaddingProperty() {
+        if (leftSystemPadding == null) {
+            leftSystemPadding = new BooleanPropertyBase(true) {
+                @Override
+                public Object getBean() {
+                    return HeaderBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "leftSystemPadding";
+                }
+
+                @Override
+                protected void invalidated() {
+                    requestLayout();
+                }
+            };
+        }
+
         return leftSystemPadding;
     }
 
     public final boolean isLeftSystemPadding() {
-        return leftSystemPadding.get();
+        return leftSystemPadding == null || leftSystemPadding.get();
     }
 
     public final void setLeftSystemPadding(boolean value) {
-        leftSystemPadding.set(value);
+        if (leftSystemPadding != null || !value) {
+            leftSystemPaddingProperty().set(value);
+        }
     }
 
     /**
@@ -622,35 +670,40 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #leftSystemPaddingProperty() leftSystemPadding
-     * @since 26
      */
-    private final BooleanProperty rightSystemPadding = new BooleanPropertyBase(true) {
-        @Override
-        public Object getBean() {
-            return HeaderBar.this;
-        }
-
-        @Override
-        public String getName() {
-            return "rightSystemPadding";
-        }
-
-        @Override
-        protected void invalidated() {
-            requestLayout();
-        }
-    };
+    private BooleanProperty rightSystemPadding;
 
     public final BooleanProperty rightSystemPaddingProperty() {
+        if (rightSystemPadding == null) {
+            rightSystemPadding = new BooleanPropertyBase(true) {
+                @Override
+                public Object getBean() {
+                    return HeaderBar.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "rightSystemPadding";
+                }
+
+                @Override
+                protected void invalidated() {
+                    requestLayout();
+                }
+            };
+        }
+
         return rightSystemPadding;
     }
 
     public final boolean isRightSystemPadding() {
-        return rightSystemPadding.get();
+        return rightSystemPadding == null || rightSystemPadding.get();
     }
 
     public final void setRightSystemPadding(boolean value) {
-        rightSystemPadding.set(value);
+        if (rightSystemPadding != null || !value) {
+            rightSystemPaddingProperty().set(value);
+        }
     }
 
     @Override
@@ -685,14 +738,14 @@ public class HeaderBar extends Region {
             : null;
 
         if (stage != null) {
-            var attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
             } else {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
             }
         }
 
@@ -772,14 +825,14 @@ public class HeaderBar extends Region {
             : null;
 
         if (stage != null) {
-            AttachedProperties attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
             } else {
-                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
-                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                leftSystemPaddingWidth = isLeftSystemPadding() ? properties.leftSystemInsetProperty().get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? properties.rightSystemInsetProperty().get().getWidth() : 0;
             }
         }
 
@@ -905,10 +958,10 @@ public class HeaderBar extends Region {
         subscriptions.unsubscribe();
 
         if (stage != null) {
-            var attachedProperties = AttachedProperties.of(stage);
+            var properties = StageHelper.getExtendedProperties(stage);
 
             subscriptions = Subscription.combine(
-                attachedProperties.minSystemHeight.subscribe(height -> {
+                properties.systemMinHeightProperty().subscribe(height -> {
                     var minHeight = (StyleableDoubleProperty)minHeightProperty();
 
                     // Only change minHeight if it was not set by a stylesheet or application code.
@@ -916,7 +969,7 @@ public class HeaderBar extends Region {
                         minHeight.applyStyle(null, height);
                     }
                 }),
-                attachedProperties.subscribeLayoutInvalidated(this::requestLayout)
+                properties.subscribeLayoutInvalidated(this::requestLayout)
             );
         }
     }
@@ -950,95 +1003,6 @@ public class HeaderBar extends Region {
             if (value != null) {
                 getChildren().add(value);
             }
-        }
-    }
-
-    /**
-     * This class holds attached properties that are defined on {@code HeaderBar}, but associated
-     * with and stored per {@code Stage}. {@code HeaderBar} uses these properties for layout purposes,
-     * and also subscribes to invalidation notifications that cause {@code HeaderBar} to request a
-     * new layout pass.
-     */
-    private static final class AttachedProperties {
-
-        private final Stage stage;
-        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
-        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
-        private final ReadOnlyDoubleWrapper minSystemHeight;
-        private final DoubleProperty prefButtonHeight;
-        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
-
-        private boolean currentFullScreen;
-        private HeaderButtonMetrics currentMetrics;
-
-        AttachedProperties(Stage stage) {
-            this.stage = stage;
-            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
-            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
-            this.minSystemHeight = new ReadOnlyDoubleWrapper(stage, "minSystemHeight");
-            this.prefButtonHeight = new SimpleDoubleProperty(
-                    stage, "prefButtonHeight", StageHelper.getPrefHeaderButtonHeight(stage)) {
-                @Override
-                protected void invalidated() {
-                    StageHelper.setPrefHeaderButtonHeight(stage, get());
-                }
-            };
-
-            StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
-            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
-            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
-        }
-
-        public static AttachedProperties of(Stage stage) {
-            var instance = (AttachedProperties)Objects.requireNonNull(stage, "Stage cannot be null")
-                .getProperties()
-                .get(AttachedProperties.class);
-
-            if (instance == null) {
-                instance = new AttachedProperties(stage);
-                stage.getProperties().put(AttachedProperties.class, instance);
-            }
-
-            return instance;
-        }
-
-        public Subscription subscribeLayoutInvalidated(Runnable listener) {
-            layoutInvalidatedListeners.add(listener);
-            return () -> layoutInvalidatedListeners.remove(listener);
-        }
-
-        private void onMetricsChanged(HeaderButtonMetrics metrics) {
-            currentMetrics = metrics;
-
-            updateInsets(stage.getScene() instanceof Scene scene
-                ? scene.getEffectiveNodeOrientation()
-                : NodeOrientation.LEFT_TO_RIGHT);
-        }
-
-        private void onFullScreenChanged(boolean fullScreen) {
-            currentFullScreen = fullScreen;
-
-            updateInsets(stage.getScene() instanceof Scene scene
-                ? scene.getEffectiveNodeOrientation()
-                : NodeOrientation.LEFT_TO_RIGHT);
-        }
-
-        private void updateInsets(NodeOrientation orientation) {
-            if (currentFullScreen || currentMetrics == null) {
-                leftSystemInset.set(EMPTY);
-                rightSystemInset.set(EMPTY);
-                minSystemHeight.set(0);
-            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-                leftSystemInset.set(currentMetrics.leftInset());
-                rightSystemInset.set(currentMetrics.rightInset());
-                minSystemHeight.set(currentMetrics.minHeight());
-            } else {
-                leftSystemInset.set(currentMetrics.rightInset());
-                rightSystemInset.set(currentMetrics.leftInset());
-                minSystemHeight.set(currentMetrics.minHeight());
-            }
-
-            layoutInvalidatedListeners.forEach(Runnable::run);
         }
     }
 }

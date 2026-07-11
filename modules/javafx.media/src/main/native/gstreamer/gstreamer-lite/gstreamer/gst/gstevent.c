@@ -2513,3 +2513,43 @@ gst_event_copy (const GstEvent * event)
       GST_EVENT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST
           (event)));
 }
+
+/**
+ * gst_event_is_writable:
+ * @event: a #GstEvent
+ *
+ * Tests if you can safely modify @event. It is only safe to modify event when
+ * there is only one owner of the event - ie, the object is writable.
+ */
+gboolean
+gst_event_is_writable (const GstEvent * event)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (event));
+}
+
+/**
+ * gst_event_make_writable:
+ * @event: (transfer full): a #GstEvent
+ *
+ * Returns a writable copy of @event.
+ *
+ * If there is only one reference count on @event, the caller must be the owner,
+ * and so this function will return the event object unchanged. If on the other
+ * hand there is more than one reference on the object, a new event object will
+ * be returned. The caller's reference on @event will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the event in the argument and refs the event
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_event_ref().
+ *
+ * Returns: (transfer full): a writable event which may or may not be the
+ *     same as @event
+ */
+GstEvent *
+gst_event_make_writable (GstEvent * event)
+{
+  return
+      GST_EVENT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (event)));
+}

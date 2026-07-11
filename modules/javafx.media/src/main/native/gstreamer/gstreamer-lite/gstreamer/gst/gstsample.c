@@ -498,3 +498,51 @@ gst_clear_sample (GstSample ** sample_ptr)
 {
   gst_clear_mini_object ((GstMiniObject **) sample_ptr);
 }
+
+/**
+ * gst_sample_is_writable:
+ * @sample: A #GstSample
+ *
+ * Tests if you can safely set the buffer and / or buffer list of @sample.
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_sample_is_writable (const GstSample * sample)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (sample));
+}
+
+/**
+ * gst_sample_make_writable:
+ * @sample: (transfer full): A #GstSample
+ *
+ * Returns a writable copy of @sample. If the source sample is
+ * already writable, this will simply return the same sample.
+ *
+ * Use this function to ensure that a sample can be safely modified before
+ * making changes to it, for example before calling gst_sample_set_buffer()
+ *
+ * If the reference count of the source sample @sample is exactly one, the caller
+ * is the sole owner and this function will return the sample object unchanged.
+ *
+ * If there is more than one reference on the object, a copy will be made using
+ * gst_sample_copy(). The passed-in @sample will be unreffed in that case, and the
+ * caller will now own a reference to the new returned sample object.
+ *
+ * In short, this function unrefs the sample in the argument and refs the sample
+ * that it returns. Don't access the argument after calling this function unless
+ * you have an additional reference to it.
+ *
+ * Returns: (transfer full): a writable sample which may or may not be the
+ *     same as @sample
+ *
+ * Since: 1.16
+ */
+GstSample *
+gst_sample_make_writable (GstSample * sample)
+{
+  return
+      GST_SAMPLE_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (sample)));
+}

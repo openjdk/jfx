@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 #import "GlassMenu.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
+#import "GlassWindow+Java.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -178,8 +179,19 @@ static jfieldID  jPixelsScaleYField = 0;
 
 // JDK-8096139: do not use menuNeedsUpdate here, even though Cocoa prohibits
 // changing the menu structure during menuWillOpen...
-- (void)menuWillOpen: (NSMenu *)menu
+- (void)menuWillOpen: (NSMenu *)_menu
 {
+    if ([GlassWindow _hasGrab]) {
+        // If an auto-hide popup window is showing, it has an active grab.
+        // In this case, we close the popup instead of opening the menu:
+        [_menu cancelTrackingWithoutAnimation];
+
+        // _resetGrab fires FOCUS_UNGRAB on the popup's owner window, which
+        // will trigger doAutoHide() -> hide() on the popup.
+        [GlassWindow _resetGrab];
+        return;
+    }
+
     GET_MAIN_JENV;
     if (env != NULL)
     {
