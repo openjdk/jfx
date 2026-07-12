@@ -108,35 +108,34 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    @Disabled
     public void testImmutableTwoConstructorsWithSameArgNames() {
         ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);
         pb.put("b", 456);
         ImmutableClass result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 0.00001);
-        assertEquals(456, result.b, 0.00001);
+        assertEquals(123, result.a, 1e-5);
+        assertEquals(456, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 0.00001);
-        assertEquals(456.1, result.b, 0.00001);
+        assertEquals(123, result.a, 1e-5);
+        assertEquals(456.1, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 0.00001);
-        assertEquals(456, result.b, 0.00001);
+        assertEquals(123.1, result.a, 1e-5);
+        assertEquals(456, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 0.00001);
-        assertEquals(456.1, result.b, 0.00001);
+        assertEquals(123.1, result.a, 1e-5);
+        assertEquals(456.1, result.b, 1e-5);
     }
 
     @Test
