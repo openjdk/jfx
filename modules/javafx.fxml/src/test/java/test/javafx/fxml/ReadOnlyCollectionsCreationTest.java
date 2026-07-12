@@ -48,9 +48,6 @@ public class ReadOnlyCollectionsCreationTest {
         assertEquals(3, widget.getObservableList().size());
         assertEquals(3, widget.getObservableSet().size());
         assertEquals(2, widget.getObservableMap().size());
-
-//        assertEquals(3, widget.getNames().length);
-//        assertEquals(3, widget.getRatios().length);
     }
 
     @Test
@@ -65,9 +62,6 @@ public class ReadOnlyCollectionsCreationTest {
         assertEquals(3, widget.getObservableList().size());
         assertEquals(3, widget.getObservableSet().size());
         assertEquals(2, widget.getObservableMap().size());
-
-//        assertEquals(3, widget.getNames().length);
-//        assertEquals(3, widget.getRatios().length);
     }
 
     @Test
@@ -77,7 +71,6 @@ public class ReadOnlyCollectionsCreationTest {
 
         assertEquals("hello", result.child,
                 "FXMLLoader must unwrap the single ArrayList element and pass it as the scalar @NamedArg constructor argument");
-
     }
 
     @Test

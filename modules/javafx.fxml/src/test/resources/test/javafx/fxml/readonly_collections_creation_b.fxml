@@ -28,8 +28,6 @@ questions.
 <?import test.javafx.fxml.ClassWithCollections2?>
 <ClassWithCollections2 xmlns:fx="http://javafx.com/fxml"
                       id="RT_8203870">
-<!--                      names="a, b, c"-->
-<!--                      ratios="1.0, 2.0, 3.0"-->
 
     <!-- Standard collection creation -->
 
