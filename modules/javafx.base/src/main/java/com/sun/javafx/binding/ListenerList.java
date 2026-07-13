@@ -129,6 +129,13 @@ public class ListenerList<T> extends ListenerListBase {
             ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize)
             : changeListenersSize;
 
+        /*
+         * The maxChanges local represents the number of change listeners that existed at the
+         * start of the notification. A property that had change listeners when invalidated must
+         * become valid during notification (by reading its value). The loop below will ensure this,
+         * even if all change listeners were removed by an invalidation listener.
+         */
+
         T newValue = null;
 
         progress = NESTED_NOTIFICATION_COMPLETED;  // reset progress to ensure latest value is queried at least once
@@ -136,12 +143,12 @@ public class ListenerList<T> extends ListenerListBase {
         for (int i = 0; i < maxChanges; i++) {
             ChangeListener<T> listener = getChangeListener(i);
 
-            // skip if this listener was removed during a notification:
-            if (listener == null) {
-                continue;
-            }
+            /*
+             * Obtain the new value if this is the first loop, or a nested notification occurred (as
+             * the value must have changed then). Even if all change listeners have been removed during
+             * notification, the property must become valid before the notification completes.
+             */
 
-            // only get the latest value if this is the first loop or a nested notification occurred
             if (progress < 0) {
                 newValue = observableValue.getValue();
 
@@ -152,6 +159,15 @@ public class ListenerList<T> extends ListenerListBase {
 
                     return wasLocked ? false : unlock();
                 }
+            }
+
+            /*
+             * Skip if this listener was removed during a notification; this must be after the progress check above
+             * to ensure the property always become valid, regardless of whether any change listeners are actually notified.
+             */
+
+            if (listener == null) {
+                continue;
             }
 
             // communicate to a lower level loop (if triggered) how many listeners were notified so far:

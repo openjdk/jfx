@@ -29,9 +29,12 @@ import com.sun.javafx.binding.ListenerManagerBase;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
@@ -155,5 +158,84 @@ public abstract class AbstractListenerManagerTest {
         public void invalidated(Observable observable) {
             notifications.add(name + ": invalidated");
         }
+    }
+
+    /*
+     * The shouldKeepPropertyValid tests ensure that if there was a change listener present
+     * at the start of a notification that, regardless of the end state, the property will
+     * be valid.
+     */
+
+    @Test
+    void shouldKeepPropertyValidWhenExistingChangeListenerIsRemovedDuringNotification() {
+        ObjectProperty<String> p = new SimpleObjectProperty<>("A");
+        List<String> changes = new ArrayList<>();
+        ChangeListener<String> cl = (_, old, val) -> changes.add("1: " + old + " -> " + val);
+
+        AtomicBoolean replace = new AtomicBoolean(true);
+
+        p.addListener(_ -> {
+            changes.add("invalidated");
+
+            if (replace.getAndSet(false)) {
+                p.removeListener(cl);
+            }
+        });
+
+        p.addListener(cl);
+        p.set("B");
+        p.set("C");
+
+        assertEquals(List.of("invalidated", "invalidated"), changes);
+    }
+
+    @Test
+    void shouldKeepPropertyValidWhenChangeListenerIsReplacedDuringNotification() {
+        ObjectProperty<String> p = new SimpleObjectProperty<>("A");
+        List<String> changes = new ArrayList<>();
+        ChangeListener<String> cl1 = (_, old, val) -> changes.add("1: " + old + " -> " + val);
+        ChangeListener<String> cl2 = (_, old, val) -> changes.add("2: " + old + " -> " + val);
+
+        AtomicBoolean replace = new AtomicBoolean(true);
+
+        p.addListener(_ -> {
+            changes.add("invalidated");
+
+            if (replace.getAndSet(false)) {
+                p.removeListener(cl1);
+                p.addListener(cl2);
+            }
+        });
+
+        p.addListener(cl1);
+        p.set("B");
+        p.set("C");
+
+        assertEquals(List.of("invalidated", "invalidated", "2: B -> C"), changes);
+    }
+
+    @Test
+    void shouldKeepPropertyValidWhenNewChangeListenerIsAddedBeforeExistingOneIsRemovedDuringNotification() {
+        ObjectProperty<String> p = new SimpleObjectProperty<>("A");
+        List<String> changes = new ArrayList<>();
+        ChangeListener<String> cl1 = (_, old, val) -> changes.add("1: " + old + " -> " + val);
+        ChangeListener<String> cl2 = (_, old, val) -> changes.add("2: " + old + " -> " + val);
+
+        AtomicBoolean replace = new AtomicBoolean(true);
+
+        p.addListener(_ -> {
+            changes.add("invalidated");
+
+            if (replace.getAndSet(false)) {
+                p.addListener(cl2);
+                p.removeListener(cl1);
+            }
+        });
+
+        p.addListener(cl1);
+        p.set("B");
+        p.set("C");
+
+        assertEquals(List.of("invalidated", "invalidated", "2: B -> C"), changes);
     }
 }
