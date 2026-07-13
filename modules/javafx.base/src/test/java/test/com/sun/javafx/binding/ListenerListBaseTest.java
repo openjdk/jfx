@@ -180,15 +180,19 @@ public class ListenerListBaseTest {
     void shouldNeverSilentlyRemoveWeakListeners() {
 
         /*
-         * Weak listeners should only ever be removed as part of a
-         * add or remove listener call (although more listeners can be removed
-         * than just the given one during such a call). It should never
-         * happen during the unlock operation as the listener count then
-         * changes unexpectedly. This is also the behavior of the old
-         * ExpressionHelper.
+         * Properties which track whether they are observed must always remain aware
+         * of whether there are listeners or not. For this purpose, the internal
+         * listener removal path returns a boolean flag, indicating whether any listeners
+         * are still left or not.
          *
-         * WeakListeners that remove themselves during notification are
-         * not a problem as this always goes through a removeListener call.
+         * As this is the only means by which such properties can know whether they
+         * are still being observed themselves, we cannot allow weak listeners to
+         * be removed during operations other than addListener or removeListener (unless
+         * we make such removals go through the expected removeListener path somehow).
+         *
+         * The addListener call is safe by default, as at least one listener must be present
+         * after the call completes, and so removing any dead weak listeners will not
+         * impact the observed state.
          */
 
         AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
