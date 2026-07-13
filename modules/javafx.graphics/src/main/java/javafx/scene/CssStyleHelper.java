@@ -87,9 +87,15 @@ final class CssStyleHelper {
      * Creates a new StyleHelper.
      */
     static CssStyleHelper createStyleHelper(final Node node) {
-        // need to know how far we are to root in order to init arrays.
-        // TODO: should we hang onto depth to avoid this nonsense later?
-        // TODO: is there some other way of knowing how far from the root a node is?
+        boolean userSetFont;
+        if (node.styleHelper == null) {
+            // Node styleHelper can not be reused later, because it does not exist.
+            // We can therefore safely set this true and ignore the property for the rest of this method.
+            userSetFont = true;
+        } else {
+            userSetFont = isUserSetFont(node);
+        }
+
         Node styleableAncestor = null;
         Styleable parent = node;
         int depth = 0;
@@ -97,13 +103,14 @@ final class CssStyleHelper {
             depth++;
             parent = parent.getStyleableParent();
 
-            if (styleableAncestor == null && parent instanceof Node parentNode && isStyleableAncestor(parentNode)) {
-                styleableAncestor = parentNode;
+            if (parent instanceof Node parentNode) {
+                if (styleableAncestor == null && parentNode.styleHelper != null) {
+                    styleableAncestor = parentNode;
+                }
+                if (!userSetFont) {
+                    userSetFont = isUserSetFont(parentNode);
+                }
             }
-        }
-
-        if (node.styleHelper != null) {
-            setFirstStyleableAncestor(node.styleHelper, styleableAncestor);
         }
 
         // The List<CacheEntry> should only contain entries for those
@@ -123,7 +130,7 @@ final class CssStyleHelper {
         //
         // reuse the existing styleHelper if possible.
         //
-        if ( canReuseStyleHelper(node, styleMap) ) {
+        if ( canReuseStyleHelper(node, styleMap, styleableAncestor) ) {
             //
             // JDK-8123731
             //
@@ -134,7 +141,7 @@ final class CssStyleHelper {
             // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
             // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
             //
-            if (node.styleHelper.cacheContainer != null && node.styleHelper.isUserSetFont(node)) {
+            if (userSetFont) {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
@@ -143,6 +150,7 @@ final class CssStyleHelper {
                 node.styleHelper.triggerStates.addAll(triggerStates[0]);
             }
 
+            setFirstStyleableAncestor(node.styleHelper, null);
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
         }
@@ -180,7 +188,6 @@ final class CssStyleHelper {
         }
 
         final CssStyleHelper helper = new CssStyleHelper();
-        setFirstStyleableAncestor(helper, styleableAncestor);
 
         if (triggerStates[0] != null) {
             helper.triggerStates.addAll(triggerStates[0]);
@@ -233,39 +240,40 @@ final class CssStyleHelper {
         }
     }
 
-    //
-    // return true if the fontStyleableProperty's origin is USER
-    //
-    private boolean isUserSetFont(Styleable node) {
-
-        if (node == null) return false; // should never happen, but just to be safe...
-
-        CssMetaData<Styleable, Font> fontCssMetaData = cacheContainer != null ? cacheContainer.fontProp : null;
-        if (fontCssMetaData != null) {
-            StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
-            if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
-        }
-
-        Node styleableParent = getCachedStyleableAncestor(node);
-        CssStyleHelper parentStyleHelper = getStyleHelper(styleableParent);
-
-        if (parentStyleHelper != null) {
-            return parentStyleHelper.isUserSetFont(styleableParent);
-        } else {
+    private static boolean isUserSetFont(Node node) {
+        if (node.styleHelper == null || node.styleHelper.cacheContainer == null) {
             return false;
         }
+        CssMetaData<Styleable, Font> fontMetadata = node.styleHelper.cacheContainer.fontProp;
+        if (fontMetadata != null) {
+            StyleableProperty<Font> fontStyleableProperty = fontMetadata.getStyleableProperty(node);
+            if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static CssStyleHelper getStyleHelper(Node n) {
         return (n != null)? n.styleHelper : null;
     }
 
+    /**
+     * Finds the first styleable ancestor of this styleable.
+     * Will first check if we have a cached ancestor, otherwise walk up and find one.
+     */
     private static Node findFirstStyleableAncestor(Styleable styleable) {
+        // Root node.
+        if (styleable.getStyleableParent() == null) {
+            return null;
+        }
+
         Node ancestor = getCachedStyleableAncestor(styleable);
         if (ancestor != null) {
             return ancestor;
         }
 
+        // This path is only called for the first time if we have no cached ancestor yet.
         ancestor = findFirstStyleableAncestorInParent(styleable);
         if (styleable instanceof Node node) {
             setFirstStyleableAncestor(node.styleHelper, ancestor);
@@ -329,7 +337,7 @@ final class CssStyleHelper {
     //
     // return true if the Node's current styleHelper can be reused.
     //
-    private static boolean canReuseStyleHelper(final Node node, final StyleMap styleMap) {
+    private static boolean canReuseStyleHelper(final Node node, final StyleMap styleMap, Node styleableAncestor) {
 
         // Obviously, we cannot reuse the node's style helper if it doesn't have one.
         if (node == null || node.styleHelper == null) {
@@ -369,8 +377,7 @@ final class CssStyleHelper {
             return true;
         }
 
-        CssStyleHelper parentHelper = getStyleHelper(getCachedStyleableAncestor(node));
-
+        CssStyleHelper parentHelper = getStyleHelper(styleableAncestor);
         if (parentHelper != null && parentHelper.cacheContainer != null) {
 
             int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
