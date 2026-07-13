@@ -29,6 +29,7 @@
 #import "com_sun_glass_ui_mac_MacAccessible.h"
 #import "com_sun_glass_ui_mac_MacVariant.h"
 #import "common.h"
+#include <stdlib.h>
 
 static NSMutableDictionary * rolesMap;
 
@@ -50,6 +51,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE"];
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE_VIEW"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXTableAccessibility" forKey:@"LIST_VIEW"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU"];
     [rolesMap setObject:@"JFXMenuBarAccessibility" forKey:@"MENU_BAR"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
@@ -63,6 +65,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
     [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
     [rolesMap setObject:@"JFXTabGroupAccessibility" forKey:@"TAB_PANE"];
+    [rolesMap setObject:@"JFXTableAccessibility" forKey:@"TABLE_VIEW"];
     [rolesMap setObject:@"JFXStaticTextAccessibility" forKey:@"TEXT"];
     [rolesMap setObject:@"JFXNavigableTextAccessibility" forKey:@"TEXT_AREA"];
     [rolesMap setObject:@"JFXNavigableTextAccessibility" forKey:@"TEXT_FIELD"];
@@ -149,6 +152,34 @@ static NSMutableDictionary * rolesMap;
                                               (jlong)attribute, (jlong)parameter);
     GLASS_CHECK_EXCEPTION(env);
     return variantToID(env, jresult);
+}
+
+- (NSInteger)requestNodeArrayAttributeCount:(NSString *)attribute
+{
+    GET_MAIN_JENV;
+    if (env == NULL) {
+        return -1;
+    }
+    jint jresult = (*env)->CallIntMethod(env, [self getJAccessible],
+                                         jAccessibilityArrayAttributeCount,
+                                         (jlong)attribute);
+    GLASS_CHECK_EXCEPTION(env);
+    return jresult;
+}
+
+- (NSArray *)requestNodeArrayAttribute:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
+{
+     GET_MAIN_JENV;
+     if (env == NULL) {
+         return nil;
+     }
+     jlongArray jresult = (jlongArray)(*env)->CallObjectMethod(env, [self getJAccessible],
+                                                               jAccessibilityArrayAttributeValues,
+                                                               (jlong)attribute,
+                                                               (jint)index,
+                                                               (jint)maxCount);
+     GLASS_CHECK_EXCEPTION(env);
+     return jArrayToNSArray(env, jresult, jLongToID);
 }
 
 /*
