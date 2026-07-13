@@ -254,7 +254,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     }
 
     @Test
-    void shouldNotGetCurrentValueWhenChangeListenersWereRemovedBeforeBeingCalled() {
+    void shouldStillGetCurrentValueWhenChangeListenersWereRemovedBeforeBeingCalled() {
         L list = create(il1, cl1);
 
         list.add((InvalidationListener) _ -> list.remove(cl1));
@@ -267,7 +267,27 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
             "IL1: invalidated"
         );
 
+        assertEquals(1, getterCalled);
+    }
+
+    @Test
+    void shouldStillGetCurrentValueWhenChangeListenersWasReplacedBeforeBeingCalled() {
+        L list = create(il1, cl1);
+
+        list.add((InvalidationListener) _ -> {
+            list.remove(cl1);
+            list.add(cl1);
+        });
+
         assertEquals(0, getterCalled);
+
+        notifyListeners(list, property, "-");
+
+        assertRecords(
+            "IL1: invalidated"
+        );
+
+        assertEquals(1, getterCalled);
     }
 
     @Nested
