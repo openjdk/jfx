@@ -411,7 +411,8 @@ public abstract class ListenerListBase {
 
     /**
      * Checks whether this list has any change listeners. Note: this does not
-     * update while locked.
+     * update while locked, which means the value returned is the number of
+     * change listeners present before notification started.
      *
      * @return {@code true} if there were change listeners, otherwise {@code false}
      */
