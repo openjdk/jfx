@@ -564,7 +564,7 @@ public final class TextCell extends BorderPane {
         private int offset;
         private int lastCount;
         private final ArrayList<DecorationRun> runs = new ArrayList<>(4);
-        private HashMap<StyleAttribute<?>,DecorationRun> byType = new HashMap<>();
+        private HashMap<StyleAttribute<?>, DecorationRun> byType = new HashMap<>();
         private static Comparator<DecorationRun> sorter;
 
         public Decorator(TextFlow flow) {
@@ -578,7 +578,7 @@ public final class TextCell extends BorderPane {
                 Node n = flow.getChildren().get(i);
                 if (n instanceof Text t) {
                     offset += t.getText().length();
-                } else if(n.isManaged()) { // ignoring highlights added in VFlow:824
+                } else if (n.isManaged()) { // ignoring highlights added in VFlow:824
                     offset++;
                 }
             }

@@ -183,7 +183,7 @@ public final class RichUtils {
         for (Node n : f.getChildrenUnmodifiable()) {
             if (n instanceof Text t) {
                 len += t.getText().length();
-            } else if(n.isManaged()) {
+            } else if (n.isManaged()) {
                 // treat non-Text nodes as having 1 character (excluding decorations)
                 len++;
             }

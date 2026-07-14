@@ -166,6 +166,7 @@ public sealed abstract class StyleAttribute<T> {
                 (isCharacterAttribute() == a.isCharacterAttribute()) &&
                 (isDocumentAttribute() == a.isDocumentAttribute()) &&
                 (isParagraphAttribute() == a.isParagraphAttribute()) &&
+                (isInlineNode() == a.isInlineNode()) &&
                 (type == a.type) &&
                 name.equals(a.name);
         }
@@ -174,7 +175,10 @@ public sealed abstract class StyleAttribute<T> {
 
     @Override
     public int hashCode() {
-        int h = getClass().hashCode();
+        int h = isCharacterAttribute() ? 1 : 0;
+        h = 31 * h + (isDocumentAttribute() ? 1 : 0);
+        h = 31 * h + (isParagraphAttribute() ? 1 : 0);
+        h = 31 * h + (isInlineNode() ? 1 : 0);
         h = 31 * h + name.hashCode();
         h = 31 * h + type.hashCode();
         return h;

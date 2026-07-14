@@ -51,19 +51,19 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  * @author Andy Goryachev
  */
 public class DemoModel extends SimpleViewOnlyStyledModel {
-    private static final StyleAttributeMap OVERLAP1 = StyleAttributeMap.builder().
-        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
-        setFontSize(16).
-        build();
-    private static final StyleAttributeMap OVERLAP2 = StyleAttributeMap.builder().
-        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
-        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
-        setFontSize(16).
-        build();
-    private static final StyleAttributeMap OVERLAP3 = StyleAttributeMap.builder().
-        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
-        setFontSize(16).
-        build();
+    private static final StyleAttributeMap OVERLAP1 = StyleAttributeMap.builder()
+        .set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE)
+        .setFontSize(16)
+        .build();
+    private static final StyleAttributeMap OVERLAP2 = StyleAttributeMap.builder()
+        .set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE)
+        .set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE)
+        .setFontSize(16)
+        .build();
+    private static final StyleAttributeMap OVERLAP3 = StyleAttributeMap.builder()
+        .set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE)
+        .setFontSize(16)
+        .build();
 
     private final SimpleStringProperty textField = new SimpleStringProperty();
 
