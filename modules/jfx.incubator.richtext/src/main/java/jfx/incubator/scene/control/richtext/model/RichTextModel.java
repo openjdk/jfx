@@ -479,7 +479,7 @@ public class RichTextModel extends StyledTextModel {
                         }
                         if (ix < toSplit.length()) {
                             String s2 = toSplit.substring(ix);
-                            insertSegment2(i, s2, a);
+                            insertSegment2(i, s2, RichUtils.filterOutNodeAttributes(a));
                         }
                         return;
                     }
@@ -518,7 +518,7 @@ public class RichTextModel extends StyledTextModel {
                 }
             } else if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (a.equals(prev.attrs())) {
+                if (!RichUtils.containsInlineNodes(prev.attrs()) && a.equals(prev.attrs())) {
                     // combine
                     prev.append(text);
                     return false;

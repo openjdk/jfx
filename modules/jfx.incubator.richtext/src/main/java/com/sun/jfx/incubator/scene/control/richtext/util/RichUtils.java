@@ -754,7 +754,7 @@ public final class RichUtils {
         return map;
     }
 
-    private static boolean containsInlineNodes(StyleAttributeMap map) {
+    public static boolean containsInlineNodes(StyleAttributeMap map) {
         for (StyleAttribute<?> a : map.getAttributes()) {
             if (a.isInlineNode()) {
                 return true;
