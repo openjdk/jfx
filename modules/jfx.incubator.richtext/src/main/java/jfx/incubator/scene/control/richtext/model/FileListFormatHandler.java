@@ -50,7 +50,7 @@ public class FileListFormatHandler extends DataFormatHandler {
     /**
      * Constructor.
      */
-    public FileListFormatHandler() {
+    private FileListFormatHandler() {
         super(DataFormat.FILES);
     }
 
