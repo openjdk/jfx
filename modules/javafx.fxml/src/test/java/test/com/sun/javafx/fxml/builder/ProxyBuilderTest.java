@@ -361,8 +361,7 @@ public class ProxyBuilderTest {
         ClassWithPlainSetAndScalarArg result = (ClassWithPlainSetAndScalarArg) pb.build();
 
         assertEquals("expectedValue", result.child,
-                "ProxyBuilder must unwrap the first temporary ArrayList element "
-                        + "and pass it as the scalar @NamedArg constructor argument");
+                "ProxyBuilder must unwrap first ArrayList item for @NamedArg scalar arg");
     }
 
     @Test
@@ -420,7 +419,7 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    public void testReadOnlyObservableIntegerArrayWithNamedArg() {
+    public void testReadOnlyObservableIntegerArrayWxithNamedArg() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
         pb.put("label", "testLabel");
 
