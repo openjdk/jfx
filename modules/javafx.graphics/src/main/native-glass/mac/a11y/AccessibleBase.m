@@ -51,7 +51,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE"];
     [rolesMap setObject:@"JFXImageAccessibility" forKey:@"IMAGE_VIEW"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
-    [rolesMap setObject:@"JFXTableAccessibility" forKey:@"LIST_VIEW"];
+    [rolesMap setObject:@"JFXListAccessibility" forKey:@"LIST_VIEW"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU"];
     [rolesMap setObject:@"JFXMenuBarAccessibility" forKey:@"MENU_BAR"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
@@ -256,6 +256,16 @@ static NSMutableDictionary * rolesMap;
 - (NSArray *)accessibilityChildren
 {
     return [self requestNodeAttribute:@"AXChildren"];
+}
+
+- (id)accessibilityFocusedUIElement
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    id result = (id)(*env)->CallLongMethod(env, self->jAccessible,
+                                           jAccessibilityFocusedUIElement);
+    GLASS_CHECK_EXCEPTION(env);
+    return result;
 }
 
 - (id)accessibilityRoleDescription

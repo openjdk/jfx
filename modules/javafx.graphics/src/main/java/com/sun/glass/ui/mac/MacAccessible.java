@@ -1723,12 +1723,15 @@ final class MacAccessible extends Accessible {
                     if (variant != null && variant.longArray != null && variant.longArray.length > 0) {
                         long[] ids = variant.longArray;
                         ObservableList<Node> items = FXCollections.observableArrayList();
+                        AccessibleRole controlRole = (AccessibleRole)getAttribute(ROLE);
                         for (long id : ids) {
                             MacAccessible acc = GlassAccessibleToMacAccessible(id);
                             if (acc != null) {
                                 Integer index = (Integer)acc.getAttribute(INDEX);
                                 if (index != null) {
-                                    Node cell = (Node)getAttribute(ROW_AT_INDEX, index);
+                                    AccessibleAttribute itemAttribute = controlRole == AccessibleRole.LIST_VIEW
+                                            ? ITEM_AT_INDEX : ROW_AT_INDEX;
+                                    Node cell = (Node)getAttribute(itemAttribute, index);
                                     if (cell != null) {
                                         items.add(cell);
                                     }
