@@ -64,6 +64,8 @@ import com.sun.javafx.scene.control.ContextMenuContentShim;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import javafx.scene.control.skin.ButtonSkin;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ContextMenuTest {
 
@@ -695,6 +697,32 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
     }
 
+    @Test public void test_css_skin_counter() {
+        anchorBtn.getScene().getStylesheets().add(
+                getClass().getResource("test_css_skin_counter.css").toExternalForm()
+        );
+        anchorBtn.getStyleClass().add("anchor");
+        AtomicInteger skinCounter = new AtomicInteger(0);
+        Button button = new Button();
+        button.skinProperty().subscribe(skin -> {
+            System.out.println("new Skin: " + skin);
+            new Exception().printStackTrace();
+            skinCounter.incrementAndGet();
+        });
+        menuItem.setGraphic(button);
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.TOP, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
+
+        assertEquals(2, skinCounter.get());
+    }
+
 
     @Test public void test_position_withCSS() {
         anchorBtn.getScene().getStylesheets().add(
@@ -774,5 +802,12 @@ public class ContextMenuTest {
         assertEquals(0, padding.getBottom(), 0.0);
         assertEquals(0, padding.getLeft(), 0.0);
         anchorBtn.setGraphic(null);
+    }
+
+    public static class ButtonSkin1 extends ButtonSkin {
+        public ButtonSkin1(Button button) { super(button); }
+    }
+    public static class ButtonSkin2 extends ButtonSkin {
+        public ButtonSkin2(Button button) { super(button); }
     }
 }

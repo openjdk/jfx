@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -44,6 +46,7 @@ import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
+import com.sun.javafx.stage.PopupWindowHelper;
 
 /**
  * <p>
@@ -249,10 +252,9 @@ public class ContextMenu extends PopupControl {
         if (anchor == null) return;
         if (getItems().size() == 0) return;
 
-        getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        if (getScene().getStylesheets().isEmpty()) {
-            getScene().getStylesheets().setAll(anchor.getScene().getStylesheets());
-        }
+        PopupWindowHelper.ownerWindow(this).set(anchor.getScene().getWindow());
+        PopupWindowHelper.ownerNode(this).set(anchor);
+        PopupWindowHelper.applyStylesheetFromOwner(this, anchor.getScene().getWindow());
 
         HPos hpos = side == Side.LEFT ? HPos.LEFT : side == Side.RIGHT ? HPos.RIGHT : HPos.CENTER;
         VPos vpos = side == Side.TOP ? VPos.TOP : side == Side.BOTTOM ? VPos.BOTTOM : VPos.CENTER;
