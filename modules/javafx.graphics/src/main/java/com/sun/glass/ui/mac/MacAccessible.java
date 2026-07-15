@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,9 @@ package com.sun.glass.ui.mac;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -1300,6 +1302,31 @@ final class MacAccessible extends Accessible {
             return null;
         }
         Object result = getAttribute(jfxAttr);
+        if (attr == MacAttribute.NSAccessibilitySelectedRowsAttribute
+                && role == AccessibleRole.TABLE_VIEW) {
+            @SuppressWarnings("unchecked")
+            ObservableList<Node> selectedCells = (ObservableList<Node>)result;
+            Set<Node> selectedRows = new LinkedHashSet<>();
+            if (selectedCells != null) {
+                for (Node cell : selectedCells) {
+                    Accessible cellAccessible = getAccessible(cell);
+                    if (cellAccessible == null) {
+                        continue;
+                    }
+
+                    Integer rowIndex = (Integer)cellAccessible.getAttribute(ROW_INDEX);
+                    if (rowIndex == null) {
+                        continue;
+                    }
+
+                    Node row = (Node)getAttribute(ROW_AT_INDEX, rowIndex);
+                    if (row != null) {
+                        selectedRows.add(row);
+                    }
+                }
+            }
+            result = FXCollections.observableArrayList(selectedRows);
+        }
         if (result == null) {
             switch (attr) {
                 case NSAccessibilityParentAttribute: break;
