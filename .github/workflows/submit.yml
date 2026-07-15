@@ -155,9 +155,9 @@ jobs:
     env:
       # FIXME: read this information from a property file
       # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
-      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
-      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
-      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_SHA256 }}"
       BOOT_JDK_VERSION: "25.0.1"
       BOOT_JDK_FILENAME: "jdk-25.0.1_linux-aarch64_bin.tar.gz"
       BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_linux-aarch64_bin.tar.gz"
