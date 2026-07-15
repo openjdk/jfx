@@ -255,6 +255,7 @@ public class ContextMenu extends PopupControl {
         PopupWindowHelper.ownerWindow(this).set(anchor.getScene().getWindow());
         PopupWindowHelper.ownerNode(this).set(anchor);
         PopupWindowHelper.applyStylesheetFromOwner(this, anchor.getScene().getWindow());
+        getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
 
         HPos hpos = side == Side.LEFT ? HPos.LEFT : side == Side.RIGHT ? HPos.RIGHT : HPos.CENTER;
         VPos vpos = side == Side.TOP ? VPos.TOP : side == Side.BOTTOM ? VPos.BOTTOM : VPos.CENTER;
