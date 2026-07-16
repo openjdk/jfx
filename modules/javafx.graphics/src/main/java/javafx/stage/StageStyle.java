@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,8 @@ package javafx.stage;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HeaderBar;
-import javafx.scene.layout.HeaderButtonType;
 
 /**
  * This enum defines the possible styles for a {@code Stage}.
@@ -87,7 +84,8 @@ public enum StageStyle {
     /**
      * Defines a {@code Stage} style in which the client area is extended into the header bar area, removing
      * the separation between the two areas and allowing applications to place scene graph nodes in the header
-     * bar area of the stage.
+     * bar area of the stage. Refer to the documentation of {@link HeaderBar} for more information on how to
+     * configure the header bar area.
      * <p>
      * This is a conditional feature, to check if it is supported see {@link Platform#isSupported(ConditionalFeature)}.
      * If the feature is not supported by the platform, this style downgrades to {@link StageStyle#DECORATED}.
@@ -114,27 +112,13 @@ public enum StageStyle {
      * }
      * }</pre>
      *
-     * <h4>Color scheme</h4>
-     * The color scheme of the default header buttons is automatically adjusted to remain easily recognizable
-     * by inspecting the {@link Scene#fillProperty() Scene.fill} property to gauge the brightness of the user
-     * interface. Applications should set the scene fill to a color that matches the user interface of the header
-     * bar area, even if the scene fill is not visible because it is obscured by other controls.
+     * <h4>Title text and application icon</h4>
+     * In an extended stage, the platform does not provide title text or an application icon in the header bar area.
+     * Applications that require either or both need to provide their own implementation, for example by placing a
+     * {@code Label} or a similar control in the custom header bar. Note that the value of {@link Stage#titleProperty()}
+     * may still be used by the platform, for example in the title of miniaturized preview windows.
      *
-     * <h4>Custom header buttons</h4>
-     * If more control over the header buttons is desired, applications can opt out of the default header buttons
-     * by setting {@link HeaderBar#setPrefButtonHeight(Stage, double)} to zero and providing custom header buttons
-     * instead. Any JavaFX control can be used as a custom header button by setting its semantic type with the
-     * {@link HeaderBar#setButtonType(Node, HeaderButtonType)} method.
-     *
-     * <h4>Title text</h4>
-     * An extended stage has no title text. Applications that require title text need to provide their own
-     * implementation by placing a {@code Label} or a similar control in the custom header bar.
-     * Note that the value of {@link Stage#titleProperty()} may still be used by the platform, for example
-     * in the title of miniaturized preview windows.
-     *
-     * @since 25
-     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     * @since 27
      */
-    @Deprecated(since = "25")
     EXTENDED
 }

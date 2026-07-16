@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
 import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -49,6 +50,12 @@ import test.jfx.incubator.scene.control.richtext.support.RTUtil;
  * Tests RichTextModel.
  */
 public class TestRichTextModel {
+
+    /** RichTextModel version segment */
+    public static final String VERSION = "{@" + Params.VERSION_3 + "}";
+    /** standard document properties */
+    public static final String DOC_PROPS = "{#tabs|0.0}";
+
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap BULLET = StyleAttributeMap.builder().setBullet("x").build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
@@ -350,5 +357,9 @@ public class TestRichTextModel {
         assertEquals(1, counter.get());
         String text = p.getPlainText();
         assertEquals("1yo!", text);
+    }
+
+    public static String header() {
+        return VERSION + DOC_PROPS;
     }
 }

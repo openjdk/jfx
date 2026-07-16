@@ -57,7 +57,7 @@ class WinWindow extends Window {
         super(owner, screen, styleMask);
 
         if (isExtendedWindow()) {
-            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+            headerButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
         }
     }
 
@@ -403,7 +403,8 @@ class WinWindow extends Window {
             isModal() || getOwner() != null, isUtilityWindow(),
             (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
-        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        overlay.buttonPrefHeightProperty().bind(headerButtonHeightProperty());
+        overlay.buttonDarkStyleProperty().bind(headerButtonDarkStyleProperty());
         return overlay;
     }
 

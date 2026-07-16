@@ -2011,6 +2011,21 @@ public class Scene implements EventTarget {
 
         if (gesture.target != null && (!gesture.finished || e.isInertia())) {
             pickedTarget = gesture.target.get();
+            if (pickedTarget instanceof Node) {
+                // During a scroll gesture the initial target may have
+                // scrolled out of sight and been removed from the scene
+                // graph.
+                Node pickedNode = (Node) pickedTarget;
+                if (pickedNode.getScene() == null) {
+                    gesture.target = null;
+                    pickedTarget = e.getPickResult().getIntersectedNode();
+                    if (pickedTarget != null) {
+                        gesture.target = new WeakReference<>(pickedTarget);
+                    } else {
+                        pickedTarget = this;
+                    }
+                }
+            }
         } else {
             pickedTarget = e.getPickResult().getIntersectedNode();
             if (pickedTarget == null) {

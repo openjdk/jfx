@@ -1230,7 +1230,7 @@ public class GridPane extends Pane {
         computeGridMetrics();
         performingLayout = true;
         try {
-            final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
+            final CompositeSize heights = height == -1 ? null : computeHeightsToFit(height);
 
             return snapSpaceX(getInsets().getLeft()) +
                     computeMinWidths(heights).computeTotalWithMultiSize() +
@@ -1245,7 +1245,7 @@ public class GridPane extends Pane {
         computeGridMetrics();
         performingLayout = true;
         try {
-            final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
+            final CompositeSize widths = width == -1 ? null : computeWidthsToFit(width);
 
             return snapSpaceY(getInsets().getTop()) +
                     computeMinHeights(widths).computeTotalWithMultiSize() +
@@ -1259,7 +1259,7 @@ public class GridPane extends Pane {
         computeGridMetrics();
         performingLayout = true;
         try {
-            final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
+            final CompositeSize heights = height == -1 ? null : computeHeightsToFit(height);
 
             return snapSpaceX(getInsets().getLeft()) +
                     computePrefWidths(heights).computeTotalWithMultiSize() +
@@ -1273,7 +1273,7 @@ public class GridPane extends Pane {
         computeGridMetrics();
         performingLayout = true;
         try {
-            final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
+            final CompositeSize widths = width == -1 ? null : computeWidthsToFit(width);
 
             return snapSpaceY(getInsets().getTop()) +
                     computePrefHeights(widths).computeTotalWithMultiSize() +
@@ -1369,15 +1369,11 @@ public class GridPane extends Pane {
         return true;
     }
 
-    private double getTotalWidthOfNodeColumns(Node child, double[] widths) {
+    private double getTotalWidthOfNodeColumns(Node child, CompositeSize widths) {
         if (getNodeColumnSpan(child) == 1) {
-            return widths[getNodeColumnIndex(child)];
+            return widths.getSize(getNodeColumnIndex(child));
         } else {
-            double total = 0;
-            for (int i = getNodeColumnIndex(child), last = getNodeColumnEndConvertRemaining(child); i <= last; ++i) {
-                total += widths[i];
-            }
-            return total;
+            return widths.computeTotal(getNodeColumnIndex(child), getNodeColumnEndConvertRemaining(child) + 1);
         }
     }
 
@@ -1411,7 +1407,7 @@ public class GridPane extends Pane {
         return rowMaxHeight;
     }
 
-    private CompositeSize computePrefHeights(double[] widths) {
+    private CompositeSize computePrefHeights(CompositeSize widths) {
         CompositeSize result;
         if (widths == null) {
             if (rowPrefHeight != null) {
@@ -1465,7 +1461,7 @@ public class GridPane extends Pane {
         return result;
     }
 
-    private CompositeSize computeMinHeights(double[] widths) {
+    private CompositeSize computeMinHeights(CompositeSize widths) {
         CompositeSize result;
         if (widths == null) {
             if (rowMinHeight != null) {
@@ -1511,15 +1507,11 @@ public class GridPane extends Pane {
         return result;
     }
 
-    private double getTotalHeightOfNodeRows(Node child, double[] heights) {
+    private double getTotalHeightOfNodeRows(Node child, CompositeSize heights) {
         if (getNodeRowSpan(child) == 1) {
-            return heights[getNodeRowIndex(child)];
+            return heights.getSize(getNodeRowIndex(child));
         } else {
-            double total = 0;
-            for (int i = getNodeRowIndex(child), last = getNodeRowEndConvertRemaining(child); i <= last; ++i) {
-                total += heights[i];
-            }
-            return total;
+            return heights.computeTotal(getNodeRowIndex(child), getNodeRowEndConvertRemaining(child) + 1);
         }
     }
 
@@ -1553,7 +1545,7 @@ public class GridPane extends Pane {
         return columnMaxWidth;
     }
 
-    private CompositeSize computePrefWidths(double[] heights) {
+    private CompositeSize computePrefWidths(CompositeSize heights) {
         CompositeSize result;
         if (heights == null) {
             if (columnPrefWidth != null) {
@@ -1610,7 +1602,7 @@ public class GridPane extends Pane {
         return result;
     }
 
-    private CompositeSize computeMinWidths(double[] heights) {
+    private CompositeSize computeMinWidths(CompositeSize heights) {
         CompositeSize result;
         if (heights == null) {
             if (columnMinWidth != null) {
@@ -1741,12 +1733,12 @@ public class GridPane extends Pane {
             } else if (contentBias == Orientation.HORIZONTAL) {
                 widths = (CompositeSize) computePrefWidths(null).clone();
                 columnTotal = adjustColumnWidths(widths, width);
-                heights = computePrefHeights(widths.asArray());
+                heights = computePrefHeights(widths);
                 rowTotal = adjustRowHeights(heights, height);
             } else {
                 heights = (CompositeSize) computePrefHeights(null).clone();
                 rowTotal = adjustRowHeights(heights, height);
-                widths = computePrefWidths(heights.asArray());
+                widths = computePrefWidths(heights);
                 columnTotal = adjustColumnWidths(widths, width);
             }
 
@@ -1820,8 +1812,9 @@ public class GridPane extends Pane {
                                         cs = widths.getLength() - c;
                                     }
                                     double w = widths.getSize(c);
-                                    for (int j = 2; j <= cs; j++) {
-                                        w += widths.getSize(c + j - 1) + snaphgap;
+                                    for (int j = c + 1; j < cs + c; j++) {
+                                        w += widths.hasGapBefore(j) ? snaphgap : 0;
+                                        w += widths.getSize(j);
                                     }
                                     return w;
                                 },

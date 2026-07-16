@@ -1639,6 +1639,35 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonStyl
 
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setWindowButtonAppearance
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonAppearance
+(JNIEnv *env, jobject jWindow, jlong jPtr, jboolean darkAppearance)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setWindowButtonAppearance");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        if (window && window->nsWindow) {
+            NSAppearance* appearance = darkAppearance
+                ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
+                : [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+
+            [[window->nsWindow standardWindowButton:NSWindowCloseButton] setAppearance:appearance];
+            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setAppearance:appearance];
+            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setAppearance:appearance];
+        }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _isRightToLeftLayoutDirection
  * Signature: ()Z;
  */
