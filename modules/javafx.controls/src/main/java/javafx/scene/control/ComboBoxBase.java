@@ -77,7 +77,7 @@ import com.sun.javafx.tk.Toolkit;
  *      entered in to this ComboBox.
  * @since JavaFX 2.1
  */
-public abstract class ComboBoxBase<T> extends Control {
+public abstract class ComboBoxBase<T> extends FocusDelegatingControl {
 
 
     /* *************************************************************************

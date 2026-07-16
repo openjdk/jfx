@@ -1694,7 +1694,7 @@ public class SpinnerTest {
             spinner.requestFocus();
             tk.firePulse();
 
-            KeyEventFirer keyboard = new KeyEventFirer(spinner.getEditor());
+            KeyEventFirer keyboard = new KeyEventFirer(spinner);
             keyboard.doKeyPress(KeyCode.UP);
             tk.firePulse();
 

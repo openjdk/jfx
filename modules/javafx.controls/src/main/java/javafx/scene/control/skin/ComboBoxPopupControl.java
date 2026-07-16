@@ -106,8 +106,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
     };
 
-    private EventHandler<? super InputMethodEvent> inputMethodTextChangedHandler;
-
 
 
     /* *************************************************************************
@@ -170,8 +168,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     // Fix for the regression noted in a comment in JDK-8115009.
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
+                    // textField.fireEvent(ke.copyFor(textField, textField));
+                    // ke.consume();
                 }
             }
         });
@@ -179,18 +177,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
     @Override
     public void install() {
-        // JDK-8096136: Forward input method events to TextField if editable.
-        if (comboBoxBase.getOnInputMethodTextChanged() == null) {
-            inputMethodTextChangedHandler = event -> {
-                if (textField != null && getEditor() != null && comboBoxBase.getScene().getFocusOwner() == comboBoxBase) {
-                    if (textField.getOnInputMethodTextChanged() != null) {
-                        textField.getOnInputMethodTextChanged().handle(event);
-                    }
-                }
-            };
-            comboBoxBase.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
-        }
-
         // Fix for JDK-8094715, where focus traversal was getting stuck inside the ComboBox
         ParentHelper.setTraversalEngine(comboBoxBase,
                 new ParentTraversalEngine(comboBoxBase, new Algorithm() {
@@ -214,12 +200,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     @Override
     public void dispose() {
         removeTextFieldEventFilters();
-
-        if (inputMethodTextChangedHandler != null) {
-            if (comboBoxBase.getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
-                comboBoxBase.setOnInputMethodTextChanged(null);
-            }
-        }
 
         super.dispose();
     }
@@ -374,8 +354,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (textField != null) {
             textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
             textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
-
-            comboBoxBase.setInputMethodRequests(null);
         }
     }
 
@@ -392,37 +370,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // properly for the ComboBox.
             newTextField.addEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
             newTextField.addEventFilter(DragEvent.ANY, textFieldDragEventHandler);
-
-            // JDK-8096136: Forward input method requests to TextField.
-            comboBoxBase.setInputMethodRequests(new ExtendedInputMethodRequests() {
-                @Override public Point2D getTextLocation(int offset) {
-                    return newTextField.getInputMethodRequests().getTextLocation(offset);
-                }
-
-                @Override public int getLocationOffset(int x, int y) {
-                    return newTextField.getInputMethodRequests().getLocationOffset(x, y);
-                }
-
-                @Override public void cancelLatestCommittedText() {
-                    newTextField.getInputMethodRequests().cancelLatestCommittedText();
-                }
-
-                @Override public String getSelectedText() {
-                    return newTextField.getInputMethodRequests().getSelectedText();
-                }
-
-                @Override public int getInsertPositionOffset() {
-                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getInsertPositionOffset();
-                }
-
-                @Override public String getCommittedText(int begin, int end) {
-                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedText(begin, end);
-                }
-
-                @Override public int getCommittedTextLength() {
-                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedTextLength();
-                }
-            });
         }
 
         textField = newTextField;
@@ -606,7 +553,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
             } else if (textField != null) {
-                textField.fireEvent(ke);
+                // textField.fireEvent(ke);
             }
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // JDK-8115456: The TextField fires F10 and ESCAPE key events
