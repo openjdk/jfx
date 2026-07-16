@@ -419,7 +419,7 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    public void testReadOnlyObservableIntegerArrayWxithNamedArg() {
+    public void testReadOnlyObservableIntegerArrayWithNamedArg() {
         ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
         pb.put("label", "testLabel");
 
