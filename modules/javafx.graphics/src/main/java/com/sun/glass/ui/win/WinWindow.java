@@ -462,7 +462,12 @@ class WinWindow extends Window {
 
     @Override
     public boolean emulateBackdrop() {
-        return true;
+        var preferences = Platform.getPreferences();
+        var highcontrast = preferences.get("Windows.SPI.HighContrast");
+        if (highcontrast instanceof Boolean hc) {
+            return hc == true;
+        }
+        return false;
     }
 
     final static public class BackdropID {
