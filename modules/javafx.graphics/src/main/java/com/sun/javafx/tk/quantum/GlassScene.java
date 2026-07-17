@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.scene.input.InputMethodRequests;
 import javafx.stage.StageStyle;
@@ -309,18 +310,21 @@ abstract class GlassScene implements TKScene {
 
     protected Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
-        if (windowStage != null && windowStage.getPlatformWindow() != null &&
-                windowStage.getPlatformWindow().isTransparentWindow()) {
+        var platformWindow = (windowStage != null ? windowStage.getPlatformWindow() : null);
+        if (platformWindow != null && platformWindow.isTransparentWindow()) {
             return (Color.TRANSPARENT);
         } else {
             if (fillPaint == null) {
                 return Color.WHITE;
             } else if (fillPaint.isOpaque() ||
-                    (windowStage != null && windowStage.getPlatformWindow() != null &&
-                    windowStage.allowsTransparentFill())) {
+                (platformWindow != null && windowStage.allowsTransparentFill())) {
                 //For bare windows the transparent fill is allowed
                 if (fillPaint.getType() == Paint.Type.COLOR) {
-                    return (Color)fillPaint;
+                    Color fillColor = (Color)fillPaint;
+                    if (!fillColor.isOpaque() && platformWindow != null && windowStage.emulateBackdrop()) {
+                        fillColor = getBackdropFill();
+                    }
+                    return fillColor;
                 } else if (depthBuffer) {
                     // Must set clearColor in order for the depthBuffer to be cleared
                     return Color.TRANSPARENT;
@@ -331,6 +335,23 @@ abstract class GlassScene implements TKScene {
                 return Color.WHITE;
             }
         }
+    }
+
+    private Color getBackdropFill() {
+        WindowStage windowStage = (WindowStage) stage;
+        var prefs = Platform.getPreferences();
+        var globalDark = prefs.getColorScheme() == ColorScheme.DARK;
+        var localDark = windowStage.getDarkFrame();
+        var background = prefs.getBackgroundColor();
+        if (globalDark != localDark) {
+            if (localDark) {
+                background = javafx.scene.paint.Color.BLACK;
+            } else {
+                background = javafx.scene.paint.Color.WHITE;
+            }
+        }
+        return new Color((float) background.getRed(), (float) background.getGreen(),
+                (float) background.getBlue(), (float) background.getOpacity());
     }
 
     final Paint getCurrentPaint() {

@@ -804,6 +804,10 @@ public abstract class Window {
         return (this.backdropID >= 0);
     }
 
+    public boolean emulateBackdrop() {
+        return false;
+    }
+
     protected abstract boolean _requestFocus(long ptr, int event);
     /**
      * Requests or resigns focus on this window.

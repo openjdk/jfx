@@ -191,13 +191,19 @@ public class BackdropTest extends Application {
         }
     }
 
+    private Parent labeledSection(Label label) {
+        VBox box = new VBox(label);
+        box.setSpacing(5);
+        return box;
+    }
+
     private Label newLabel(String text, ObjectProperty<Color> textColor) {
         var label = new Label(text);
         label.textFillProperty().bind(textColor);
         return label;
     }
 
-    private Parent labeledSection(String text, ObjectProperty<Color> textColor, Parent section) {
+    private Parent labeledSection(String text, Parent section, ObjectProperty<Color> textColor) {
         var label = newLabel(text, textColor);
         VBox box = new VBox(label, section);
         box.setSpacing(5);
@@ -206,12 +212,22 @@ public class BackdropTest extends Application {
 
     private Parent labeledSection(String text, ObjectProperty<Color> textColor) {
         var label = newLabel(text, textColor);
-        VBox box = new VBox(label);
-        box.setSpacing(5);
-        return box;
+        return labeledSection(label);
+    }
+
+    private void updateColorsLabel(Label label) {
+        var prefs = Platform.getPreferences();
+        String text = "Background color is " + prefs.getBackgroundColor() + ", foreground color is " + prefs.getForegroundColor();
+        var winColor = prefs.get("Windows.SysColor.COLOR_HOTLIGHT");
+        if (winColor instanceof Color color) {
+            text += ", win color is " + color;
+        }
+        label.setText(text);
     }
 
     private void buildScene(Stage stage, StageStyleChoice stageStyle, StageBackdropStyleChoice backdropStyle) {
+
+        ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
 
         var iconifyButton = new Button("Iconify");
         iconifyButton.setOnAction(e -> {
@@ -236,8 +252,6 @@ public class BackdropTest extends Application {
         var actionButtons = new HBox(fullscreenButton, maximizeButton, iconifyButton, closeButton);
         actionButtons.setSpacing(5);
         actionButtons.setAlignment(Pos.BASELINE_RIGHT);
-
-        ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
 
         // For creating new stages
         var styleLabel = newLabel("Style", textColor);
@@ -268,13 +282,25 @@ public class BackdropTest extends Application {
         ChoiceBox<OpacityChoice> opacityChoice = new ChoiceBox<>();
         opacityChoice.getItems().setAll(OpacityChoice.values());
 
+        Label colorsLabel = newLabel("Placeholder", textColor);
+        updateColorsLabel(colorsLabel);
+
+        Platform.getPreferences().backgroundColorProperty().addListener((obs, oldValue, newValue) -> {
+            updateColorsLabel(colorsLabel);
+        });
+
+        Platform.getPreferences().foregroundColorProperty().addListener((obs, oldValue, newValue) -> {
+            updateColorsLabel(colorsLabel);
+        });
+
         // Pull it together
         VBox controls = new VBox(
             labeledSection("This stage is " + stageStyle + " and the backdrop style is " + backdropStyle, textColor),
-            labeledSection("New stage", textColor, stageCreationControls),
-            labeledSection("Fill color for this stage", textColor, fillChoice),
-            labeledSection("Color scheme for this stage", textColor, schemeChoice),
-            labeledSection("Opacity of this stage", textColor, opacityChoice)
+            labeledSection(colorsLabel),
+            labeledSection("New stage", stageCreationControls, textColor),
+            labeledSection("Fill color for this stage", fillChoice, textColor),
+            labeledSection("Color scheme for this stage", schemeChoice, textColor),
+            labeledSection("Opacity of this stage", opacityChoice, textColor)
         );
 
         controls.setAlignment(Pos.BASELINE_LEFT);

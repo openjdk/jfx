@@ -460,6 +460,11 @@ class WinWindow extends Window {
         };
     }
 
+    @Override
+    public boolean emulateBackdrop() {
+        return true;
+    }
+
     final static public class BackdropID {
         @Native public static final int WINDOW     = 50;
         @Native public static final int TABBED     = 51;
