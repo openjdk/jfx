@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -128,10 +128,10 @@ public class ObservableValueTest {
     @ParameterizedTest
     @MethodSource("inputs")
     <T> void shouldRejectNullListener(Action<T> action) {
-        assertThrows(NullPointerException.class, () -> action.addListener((InvalidationListener)null));
-        assertThrows(NullPointerException.class, () -> action.addListener((ChangeListener<T>)null));
-        assertThrows(NullPointerException.class, () -> action.removeListener((InvalidationListener)null));
-        assertThrows(NullPointerException.class, () -> action.removeListener((ChangeListener<T>)null));
+        assertThrows(NullPointerException.class, () -> action.addListener((InvalidationListener) null));
+        assertThrows(NullPointerException.class, () -> action.addListener((ChangeListener<T>) null));
+        assertThrows(NullPointerException.class, () -> action.removeListener((InvalidationListener) null));
+        assertThrows(NullPointerException.class, () -> action.removeListener((ChangeListener<T>) null));
     }
 
     /*
@@ -151,8 +151,8 @@ public class ObservableValueTest {
              * exception thrown here is a failure.
              */
 
-            assertDoesNotThrow(() -> action.removeListener(obs -> {}));
-            assertDoesNotThrow(() -> action.removeListener((obs, old, current) -> {}));
+            assertDoesNotThrow(() -> action.removeListener(_ -> {}));
+            assertDoesNotThrow(() -> action.removeListener((_, _, _) -> {}));
         }
     }
 
@@ -207,7 +207,7 @@ public class ObservableValueTest {
 
         try {
             // Temporarily replace exception handler in order to check for thrown exceptions:
-            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exceptions.addAndGet(1));
+            Thread.currentThread().setUncaughtExceptionHandler((_, _) -> exceptions.addAndGet(1));
 
             for (ListenerCounts counts : new Combinations(LISTENER_COUNTS)) {
                 int invalidationListenerCount = counts.invalidationListeners;
@@ -270,15 +270,15 @@ public class ObservableValueTest {
          * Create three listeners, with the "middle" one modifying the value back to value1.
          */
 
-        action.addListener((obs, old, current) -> changes.add(new Change("A", old, current)));
-        action.addListener((obs, old, current) -> {
+        action.addListener((_, old, current) -> changes.add(new Change("A", old, current)));
+        action.addListener((_, old, current) -> {
             changes.add(new Change("B", old, current));
 
             if (current.equals(value2)) {
                 valueSetter.accept(value1);
             }
         });
-        action.addListener((obs, old, current) -> changes.add(new Change("C", old, current)));
+        action.addListener((_, old, current) -> changes.add(new Change("C", old, current)));
 
         /*
          * Start test:
@@ -302,7 +302,7 @@ public class ObservableValueTest {
          * Create one listener, which modifies the value back to value1.
          */
 
-        action.addListener((obs, old, current) -> {
+        action.addListener((_, old, current) -> {
             changes.add(new Change("B", old, current));
 
             if (current.equals(value2)) {
@@ -333,10 +333,10 @@ public class ObservableValueTest {
          * value back to value1.
          */
 
-        ChangeListener<? super T> firstListener = (obs, old, current) -> changes.add(new Change("A", old, current));
+        ChangeListener<? super T> firstListener = (_, old, current) -> changes.add(new Change("A", old, current));
 
         action.addListener(firstListener);
-        action.addListener((obs, old, current) -> {
+        action.addListener((_, old, current) -> {
             changes.add(new Change("B", old, current));
 
             if (Objects.equals(current, value2)) {
@@ -344,7 +344,7 @@ public class ObservableValueTest {
                 valueSetter.accept(value1);
             }
         });
-        action.addListener((obs, old, current) -> changes.add(new Change("C", old, current)));
+        action.addListener((_, old, current) -> changes.add(new Change("C", old, current)));
 
         /*
          * Start test:
@@ -376,7 +376,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {50, 25, 13, 6, 3, 2, 1, 1, 1}  // won't reach 0 as a new listener is added each time
         );
@@ -401,7 +401,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {100, 50, 25, 12, 6, 3, 1, 0}
         );
@@ -428,7 +428,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {10, 7, 4, 1, 0}
         );
@@ -455,7 +455,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {50, 25, 13, 6, 3, 2, 1, 1, 1}  // won't reach 0 as a new listener is added each time
         );
@@ -480,7 +480,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {100, 50, 25, 12, 6, 3, 1, 0}
         );
@@ -506,7 +506,7 @@ public class ObservableValueTest {
         }
 
         assertCalls(
-            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            _ -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
             calls,
             new int[] {10, 7, 4, 1, 0}
         );
@@ -584,7 +584,7 @@ public class ObservableValueTest {
             for (int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
                 int j = i;
 
-                InvalidationListener invalidationListener = obs -> eventRecords.add("Invalidation of " + j);
+                InvalidationListener invalidationListener = _ -> eventRecords.add("Invalidation of " + j);
 
                 invalidationListeners.add(invalidationListener);
                 observableValue.addListener(invalidationListener);
@@ -593,7 +593,7 @@ public class ObservableValueTest {
             for (int i = changeListeners.size(); i < changeListenerCount; i++) {
                 int j = i;
 
-                ChangeListener<Object> changeListener = (obs, old, current) ->
+                ChangeListener<Object> changeListener = (_, old, current) ->
                     eventRecords.add("Change of " + j + " from " + old + " to " + current);
 
                 changeListeners.add(changeListener);
@@ -631,7 +631,7 @@ public class ObservableValueTest {
             for (int i = invalidationListeners.size(); i < invalidationListenerCount; i++) {
                 int j = i;
 
-                InvalidationListener invalidationListener = obs -> {
+                InvalidationListener invalidationListener = _ -> {
                     eventRecords.add("Invalidation of " + j);
                     throw new RuntimeException("this listener throws an exception");
                 };
@@ -643,7 +643,7 @@ public class ObservableValueTest {
             for (int i = changeListeners.size(); i < changeListenerCount; i++) {
                 int j = i;
 
-                ChangeListener<Object> changeListener = (obs, old, current) -> {
+                ChangeListener<Object> changeListener = (_, old, current) -> {
                     eventRecords.add("Change of " + j + " from " + old + " to " + current);
                     throw new RuntimeException("this listener throws an exception");
                 };
@@ -886,7 +886,7 @@ public class ObservableValueTest {
 
             // ensure new value of last change matches expected last value:
             changes.stream()
-                .reduce((first, second) -> second)
+                .reduce((_, second) -> second)
                 .ifPresent(c -> assertEquals(c.current, expectedLastValue));
 
             // ensure there were changes if the first and last value were different:
