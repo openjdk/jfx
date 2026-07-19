@@ -33,13 +33,31 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
+ * Caches the calculated value of each styleable property a specific combination of
+ * pseudo-class states and font size (see {@link Key}).  An entry is shared by every
+ * {@code Styleable} that has that same combination.
+ * <p>
+ * {@link #get(String)} returning {@code null} means only that no one has evaluated that
+ * property for this entry yet; it should never be treated as "no style applies"(!). This
+ * because when an entry is absent, it could be because the property was bound, or the property
+ * didn't exist at the time of evaluation (because a Skin with that property wasn't attached yet
+ * or Skins were swapped).
+ * <p>
+ * Therefore, callers must always resolve a miss with a real lookup before trusting the result; only
+ * a value actually stored via {@link #put(String, CalculatedValue)} can be trusted to be reused.
  */
 public final class StyleCacheEntry {
 
     public StyleCacheEntry() {
     }
 
+    /**
+     * Returns the {@link CalculatedValue} for the given property, or {@code null}
+     * if none was cached.
+     *
+     * @param property a property to look up, cannot be {@code null}
+     * @return a {@link CalculatedValue}, or {@code null} if none has been cached yet
+     */
     public CalculatedValue get(String property) {
 
         CalculatedValue cv = null;
@@ -49,6 +67,12 @@ public final class StyleCacheEntry {
         return cv;
     }
 
+    /**
+     * Stores the given {@link CalculatedValue} for a property.
+     *
+     * @param property a property to store a {@link CalculatedValue} for, cannot be {@code null}
+     * @param calculatedValue a {@link CalculatedValue} to store, cannot be {@code null}
+     */
     public void put(String property, CalculatedValue calculatedValue) {
 
         if (calculatedValues == null) {
