@@ -42,6 +42,7 @@ import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
 import javafx.scene.paint.Color;
+import javafx.stage.StageBackdropStyle;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -331,7 +332,7 @@ final class GtkApplication extends Application implements
 
     @Override
     public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
-        return new GtkWindow(owner, screen, styleMask);
+        return new GtkWindow(owner, screen, styleMask, backdropID);
     }
 
     @Override
@@ -448,6 +449,20 @@ final class GtkApplication extends Application implements
     @Override
     protected boolean _supportsExtendedWindows() {
         return true;
+    }
+
+    @Override protected boolean _supportsWindowBackdrops() {
+        return true;
+    }
+
+    @Override
+    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
+        if (style == StageBackdropStyle.WINDOW) {
+            return 1;
+        } else if (style == StageBackdropStyle.PARTIAL) {
+            return 2;
+        }
+        return Window.NO_BACKDROP_ID;
     }
 
     @Override
