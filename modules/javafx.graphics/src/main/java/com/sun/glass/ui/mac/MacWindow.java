@@ -317,11 +317,24 @@ final class MacWindow extends Window {
 
     @Override
     public void setBackdropOption(String name, Object option) {
-        if (name == "TintColor" && option instanceof Color color) {
-            _setBackdropOption(getRawHandle(), BackdropOptionID.TINT_COLOR, color.getRed(), color.getGreen(),
-                color.getBlue(), color.getOpacity());
-        } else if (name == "CornerRadius" && option instanceof Number radius) {
-            _setBackdropOption(getRawHandle(), BackdropOptionID.CORNER_RADIUS, radius.doubleValue(), 0.0, 0.0, 0.0);
+        if (name == "TintColor") {
+            double red = -1.0;
+            double green = -1.0;
+            double blue = -1.0;
+            double opacity = -1.0;
+            if (option instanceof Color color) {
+                red = color.getRed();
+                green = color.getGreen();
+                blue = color.getBlue();
+                opacity = color.getOpacity();
+            }
+            _setBackdropOption(getRawHandle(), BackdropOptionID.TINT_COLOR, red, green, blue, opacity);
+        } else if (name == "CornerRadius") {
+            double radius = 0.0;
+            if (option instanceof Number r) {
+                radius = r.doubleValue();
+            }
+            _setBackdropOption(getRawHandle(), BackdropOptionID.CORNER_RADIUS, radius, 0.0, 0.0, 0.0);
         }
     }
 }

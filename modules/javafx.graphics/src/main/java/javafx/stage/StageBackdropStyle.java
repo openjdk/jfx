@@ -61,10 +61,10 @@ import com.sun.javafx.stage.PlatformStageBackdropStyle;
  *
  * Some backdrop styles support options which can be set dynamically. The
  * style provides the list of available options. To set an option for a
- * stage's backdrop see {@link Stage#getBackdrop}.
- * @since 27
+ * stage's backdrop see {@link StageBackdrop#setOption}.
+ * @since 28
  */
-@Deprecated(since = "27")
+@Deprecated(since = "28")
 public sealed interface StageBackdropStyle permits StandardStageBackdropStyle, PlatformStageBackdropStyle {
 
     /**

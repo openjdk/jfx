@@ -25,32 +25,44 @@
 
 package javafx.stage;
 
-import java.util.Map;
 import java.util.HashMap;
-import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.Objects;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 
-import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.stage.StageBackdropHelper;
 
 /**
  * The backdrop of a {@code Stage}. Each {@code Stage} has at most one
- * backdrop and each backdrop is associated with a single stage.
+ * backdrop.
  *
- * @since 27
+ * @since 28
  */
-@Deprecated(since = "27")
+@Deprecated(since = "28")
 public final class StageBackdrop {
 
     private final StageBackdropStyle style;
-    private WeakReference<Stage> stage;
-    private Map<String, Object> options;
+    private ObservableMap<String, Object> options;
 
-    StageBackdrop(StageBackdropStyle style, Stage stage) {
-        this.style = style;
-        this.stage = new WeakReference(stage);
+    static {
+        StageBackdropHelper.setStageBackdropAccessor(
+                new StageBackdropHelper.StageBackdropAccessor() {
+                    @Override
+                    public ObservableMap<String, Object> getOptions(StageBackdrop backdrop) {
+                        return backdrop.getOptions();
+                    }
+                });
     }
 
-    void clearStage() {
-        stage = null;
+    /**
+     * Construct a new StageBackdrop with the given style
+     *
+     * @param style the style of the backdrop
+     */
+    public StageBackdrop(StageBackdropStyle style) {
+        Objects.requireNonNull(style, "Stage backdrop style cannot be null");
+        this.style = style;
     }
 
     /**
@@ -59,36 +71,31 @@ public final class StageBackdrop {
      * @return the style of the backdrop
      */
     public final StageBackdropStyle getStyle() {
-        return this.style;
+        return style;
     }
 
     /**
-     * Set a new value for an option.
+     * Set a new value for an option. Pass {@code null} to set the option to
+     * its default value.
      *
      * @param name the name of the option
      * @param option the new value of the option
      */
     public final void setOption(String name, Object option) {
-        if (stage == null) return;
-        if (stage.get() == null) return;
-        if (stage.get().getBackdrop() != this) return;
-
         var avail = style.getAvailableOptions();
         var optionClass = avail.get(name);
-        if (optionClass != null && optionClass.isInstance(option)) {
-            if (options == null) {
-                options = new HashMap<>();
-            }
-            options.put(name, option);
-            var peerWindow = WindowHelper.getPeer(stage.get());
-            if (peerWindow != null) {
-                peerWindow.setBackdropOption(name, option);
+        if (optionClass != null) {
+            options = getOptions();
+            if (option == null) {
+                options.remove(name);
+            } else if (optionClass.isInstance(option)) {
+                options.put(name, option);
             }
         }
     }
 
     /**
-     * Get the current value for an option.
+     * Get the current value for an option
      *
      * @param name the name of the option
      * @return the value of the option
@@ -96,6 +103,17 @@ public final class StageBackdrop {
     public final Object getOption(String name) {
         if (options == null) return null;
         return options.get(name);
+    }
+
+    // Called when setting or observing options. Returns null if there are no
+    // available options.
+    private ObservableMap<String, Object> getOptions() {
+        if (options == null) {
+            if (style.getAvailableOptions().size() > 0) {
+                options = FXCollections.observableMap(new HashMap<>());
+            }
+        }
+        return options;
     }
 }
 

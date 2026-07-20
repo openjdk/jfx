@@ -41,6 +41,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdrop;
 import javafx.stage.StageBackdropStyle;
 import javafx.stage.Window;
 import java.util.List;
@@ -179,10 +180,8 @@ public class BackdropTest extends Application {
         }
     }
 
-    private ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
-
     private void updateTextColor(Stage stage, ObjectProperty<Color> textColor) {
-        if (stage.getBackdropStyle() == null) {
+        if (stage.getBackdrop() == null) {
             textColor.set(Color.BLACK);
         } else if (stage.getScene().getPreferences().getColorScheme() == ColorScheme.DARK) {
             textColor.set(Color.WHITE);
@@ -296,7 +295,7 @@ public class BackdropTest extends Application {
         // Pull it together
         VBox controls = new VBox(
             labeledSection("This stage is " + stageStyle + " and the backdrop style is " + backdropStyle, textColor),
-            labeledSection(colorsLabel),
+            // labeledSection(colorsLabel),
             labeledSection("New stage", stageCreationControls, textColor),
             labeledSection("Fill color for this stage", fillChoice, textColor),
             labeledSection("Color scheme for this stage", schemeChoice, textColor),
@@ -356,16 +355,19 @@ public class BackdropTest extends Application {
         updateTextColor(stage, textColor);
     }
 
-    private void showStage(Stage stage, StageStyleChoice style, StageBackdropStyleChoice backdropStyle)
+    private void showStage(Stage stage, StageStyleChoice stageStyleChoice, StageBackdropStyleChoice backdropChoice)
     {
-        stage.setTitle(style.toString());
-        stage.initStyle(style.getStageStyle());
-        stage.initBackdropStyle(backdropStyle.getBackdropStyle());
-        var backdrop = stage.getBackdrop();
-        if (backdrop != null) {
-            backdrop.setOption("TintColor", Color.RED);
+        stage.setTitle(stageStyleChoice.toString());
+        stage.initStyle(stageStyleChoice.getStageStyle());
+        var backdropStyle = backdropChoice.getBackdropStyle();
+        if (backdropStyle != null) {
+            var backdrop = new StageBackdrop(backdropStyle);
+            stage.initBackdrop(backdrop);
+            if (backdrop != null) {
+                backdrop.setOption("TintColor", Color.RED);
+            }
         }
-        buildScene(stage, style, backdropStyle);
+        buildScene(stage, stageStyleChoice, backdropChoice);
         stage.show();
     }
 

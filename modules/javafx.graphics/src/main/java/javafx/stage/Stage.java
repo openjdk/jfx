@@ -563,14 +563,13 @@ public class Stage extends Window {
         return owner;
     }
 
-    private StageBackdropStyle backdropStyle = null;
     private StageBackdrop backdrop = null;
 
     /**
-     * Specifies the backdrop style for this stage. This must be done prior to
+     * Specifies the backdrop for this stage. This must be done prior to
      * making the stage visible.
      *
-     * @param style the backdrop style for this stage
+     * @param backdrop the backdrop for this stage
      *
      * @throws IllegalStateException if this property is set after the stage
      * has ever been made visible.
@@ -578,27 +577,14 @@ public class Stage extends Window {
      * @defaultValue null
      */
     @SuppressWarnings("deprecation")
-    public final void initBackdropStyle(StageBackdropStyle style) {
+    public final void initBackdrop(StageBackdrop backdrop) {
         PreviewFeature.WINDOW_BACKDROP.checkEnabled();
 
         if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set backdrop style once stage has been set visible");
+            throw new IllegalStateException("Cannot set backdrop once stage has been set visible");
         }
 
-        this.backdropStyle = style;
-        if (this.backdrop != null) {
-            this.backdrop.clearStage();
-            this.backdrop = null;
-        }
-    }
-
-    /**
-     * Retrieves the backdrop style for this stage.
-     *
-     * @return the backdrop style.
-     */
-    public final StageBackdropStyle getBackdropStyle() {
-        return backdropStyle;
+        this.backdrop = backdrop;
     }
 
     /**
@@ -607,9 +593,6 @@ public class Stage extends Window {
      * @return the backdrop. May be null if no backdrop style has been set.
      */
     public final StageBackdrop getBackdrop() {
-        if (backdrop == null && backdropStyle != null) {
-            backdrop = new StageBackdrop(backdropStyle, this);
-        }
         return backdrop;
     }
 
@@ -1164,9 +1147,10 @@ public class Stage extends Window {
                 ? scene.getPreferences().getColorScheme()
                 : PlatformImpl.getPlatformPreferences().getColorScheme();
             StageStyle stageStyle = getStyle();
+            StageBackdropStyle backdropStyle = (backdrop == null ? null : backdrop.getStyle());
             setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
                     getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK,
-                    this.backdropStyle));
+                    backdropStyle));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),

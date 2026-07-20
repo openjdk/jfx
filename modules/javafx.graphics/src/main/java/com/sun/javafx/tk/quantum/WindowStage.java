@@ -31,6 +31,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javafx.collections.MapChangeListener;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -44,6 +45,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
 import com.sun.javafx.stage.HeaderButtonMetrics;
+import com.sun.javafx.stage.StageBackdropHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
@@ -73,6 +75,8 @@ public class WindowStage extends GlassStage {
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
     private boolean isAlwaysOnTop = false;
+
+    private MapChangeListener<String, Object> stageBackdropOptionsListener;
 
     // An active window is visible && enabled && focusable.
     // The list is maintained in the z-order, so that the last element
@@ -222,12 +226,22 @@ public class WindowStage extends GlassStage {
 
             if (fxStage != null && fxStage.getBackdrop() != null) {
                 var backdrop = fxStage.getBackdrop();
-                backdrop.getStyle().getAvailableOptions().forEach((name, optionClass) -> {
-                    var option = backdrop.getOption(name);
-                    if (option != null) {
-                        platformWindow.setBackdropOption(name, option);
-                    }
-                });
+                var options = StageBackdropHelper.getOptions(backdrop);
+                if (options != null) {
+                    stageBackdropOptionsListener = new MapChangeListener<String, Object>() {
+                        @Override
+                        public void onChanged(Change<? extends String, ? extends Object> change) {
+                            if (platformWindow != null) {
+                                if (change.wasAdded()) {
+                                    platformWindow.setBackdropOption(change.getKey(), change.getValueAdded());
+                                } else if (change.wasRemoved()) {
+                                    platformWindow.setBackdropOption(change.getKey(), null);
+                                }
+                            }
+                        }
+                    };
+                    options.addListener(stageBackdropOptionsListener);
+                }
             }
         }
         platformWindows.put(platformWindow, this);
@@ -792,6 +806,13 @@ public class WindowStage extends GlassStage {
             if (oldScene != null) {
                 oldScene.updateSceneState();
                 disposeScenePainter(oldScene);
+            }
+            if (fxStage != null && fxStage.getBackdrop() != null) {
+                var backdrop = fxStage.getBackdrop();
+                var options = StageBackdropHelper.getOptions(backdrop);
+                if (options != null) {
+                    options.removeListener(stageBackdropOptionsListener);
+                }
             }
             return null;
         });
