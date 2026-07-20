@@ -214,16 +214,6 @@ public class BackdropTest extends Application {
         return labeledSection(label);
     }
 
-    private void updateColorsLabel(Label label) {
-        var prefs = Platform.getPreferences();
-        String text = "Background color is " + prefs.getBackgroundColor() + ", foreground color is " + prefs.getForegroundColor();
-        var winColor = prefs.get("Windows.SysColor.COLOR_HOTLIGHT");
-        if (winColor instanceof Color color) {
-            text += ", win color is " + color;
-        }
-        label.setText(text);
-    }
-
     private void buildScene(Stage stage, StageStyleChoice stageStyle, StageBackdropStyleChoice backdropStyle) {
 
         ObjectProperty<Color> textColor = new SimpleObjectProperty<>(Color.BLACK);
@@ -281,21 +271,9 @@ public class BackdropTest extends Application {
         ChoiceBox<OpacityChoice> opacityChoice = new ChoiceBox<>();
         opacityChoice.getItems().setAll(OpacityChoice.values());
 
-        Label colorsLabel = newLabel("Placeholder", textColor);
-        updateColorsLabel(colorsLabel);
-
-        Platform.getPreferences().backgroundColorProperty().addListener((obs, oldValue, newValue) -> {
-            updateColorsLabel(colorsLabel);
-        });
-
-        Platform.getPreferences().foregroundColorProperty().addListener((obs, oldValue, newValue) -> {
-            updateColorsLabel(colorsLabel);
-        });
-
         // Pull it together
         VBox controls = new VBox(
             labeledSection("This stage is " + stageStyle + " and the backdrop style is " + backdropStyle, textColor),
-            // labeledSection(colorsLabel),
             labeledSection("New stage", stageCreationControls, textColor),
             labeledSection("Fill color for this stage", fillChoice, textColor),
             labeledSection("Color scheme for this stage", schemeChoice, textColor),
@@ -380,6 +358,6 @@ public class BackdropTest extends Application {
     @Override
     public void start(Stage stage) {
         initBackdropStyleList();
-        showStage(stage, StageStyleChoice.EXTENDED, backdropStyles.get(0));
+        showStage(stage, StageStyleChoice.EXTENDED, backdropStyles.get(1));
     }
 }

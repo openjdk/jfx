@@ -228,6 +228,9 @@ public class WindowStage extends GlassStage {
                 var backdrop = fxStage.getBackdrop();
                 var options = StageBackdropHelper.getOptions(backdrop);
                 if (options != null) {
+                    options.forEach((name, option) -> {
+                        platformWindow.setBackdropOption(name, option);
+                    });
                     stageBackdropOptionsListener = new MapChangeListener<String, Object>() {
                         @Override
                         public void onChanged(Change<? extends String, ? extends Object> change) {

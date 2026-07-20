@@ -1704,10 +1704,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackdropOption
         GlassWindow *window = getGlassWindow(env, jPtr);
         if (window) {
             if (optionID == com_sun_glass_ui_mac_MacWindow_BackdropOptionID_TINT_COLOR) {
-                NSColor* t = [NSColor colorWithSRGBRed:r green:g blue:b alpha:a];
-                [window->hostView setTintColor: t];
+                if (r < 0.0 || g < 0.0 || b < 0.0 || a < 0.0) {
+                    [window->hostView setTintColor: NSColor.clearColor];
+                } else {
+                    NSColor* t = [NSColor colorWithSRGBRed:r green:g blue:b alpha:a];
+                    [window->hostView setTintColor: t];
+                }
             }
             else if (optionID == com_sun_glass_ui_mac_MacWindow_BackdropOptionID_CORNER_RADIUS) {
+                if (r < 0) {
+                    r = 0;
+                }
                 [window->hostView setCornerRadius: r];
             }
         }
