@@ -2311,9 +2311,12 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 static Editor* getEditor(Page* page) {
     ASSERT(page);
     LocalFrame* framePtr = page->focusController().focusedOrMainFrame();
+    ASSERT(framePtr);
+
     if (framePtr) {
         return &framePtr->editor();
     }
+    return nullptr;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkExecuteCommand
