@@ -96,7 +96,7 @@ public class ListenerList<T> extends ListenerListBase {
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
+    public boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
