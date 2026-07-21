@@ -96,13 +96,35 @@ public class ListenerList<T> extends ListenerListBase {
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
+    boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
             lock();
         }
 
+        boolean modifiedWhileLocked = false;
+
+        try {
+
+            /*
+             * Note: even though this block is guarded by try/finally, this call
+             * is not allowed nor expected to throw any (non-error) exceptions under any
+             * circumstances.
+             */
+
+            notifyWhileLocked(observableValue, oldValue, wasLocked);
+        }
+        finally {
+            if (wasLocked) {
+                modifiedWhileLocked = unlock();
+            }
+        }
+
+        return modifiedWhileLocked;
+    }
+
+    private void notifyWhileLocked(ObservableValue<? extends T> observableValue, T oldValue, boolean wasLocked) {
         int initialProgress = progress;  // save as it will be modified soon
         int invalidationListenersSize = invalidationListenersSize();
         int maxInvalidations = wasLocked
@@ -157,7 +179,7 @@ public class ListenerList<T> extends ListenerListBase {
                 if (Objects.equals(newValue, oldValue)) {
                     progress = NESTED_NOTIFICATION_ABORTED;  // Indicate an early exit before notifying all listeners intended at this level
 
-                    return wasLocked ? false : unlock();
+                    return;
                 }
             }
 
@@ -201,11 +223,8 @@ public class ListenerList<T> extends ListenerListBase {
             }
         }
 
-        // communicate to a higher level loop that a nested notification completed (if
-        // there is a higher loop):
+        // communicate to a higher level loop that a nested notification completed (if there is a higher loop):
         progress = NESTED_NOTIFICATION_COMPLETED;
-
-        return wasLocked ? false : unlock();
     }
 
     /**
