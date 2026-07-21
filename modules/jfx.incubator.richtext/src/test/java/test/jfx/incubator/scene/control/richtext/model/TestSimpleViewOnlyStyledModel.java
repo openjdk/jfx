@@ -27,27 +27,107 @@ package test.jfx.incubator.scene.control.richtext.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.scene.layout.Region;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Tests SimpleViewOnlyStyledModel.
  */
 public class TestSimpleViewOnlyStyledModel {
+
+    private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final StyleAttributeMap UNDER = StyleAttributeMap.builder().setUnderline(true).build();
+    private SimpleViewOnlyStyledModel model;
+
+    @BeforeEach
+    public void beforeEach() {
+        model = new SimpleViewOnlyStyledModel();
+    }
+
     @Test
     public void addTextAfterRegion() {
-        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
-        m.addParagraph(() -> new Region());
-        m.addNodeSegment(() -> new Region());
-        assertEquals(2, m.size());
+        model.addParagraph(() -> new Region());
+        model.addNodeSegment(() -> new Region());
+        assertEquals(2, model.size());
     }
 
     @Test
     public void addTextAfterRegionAfterText() {
-        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
-        m.addNodeSegment(() -> new Region());
-        m.addParagraph(() -> new Region());
-        m.addSegment("text");
-        assertEquals(3, m.size());
+        model.addNodeSegment(() -> new Region());
+        model.addParagraph(() -> new Region());
+        model.addSegment("text");
+        assertEquals(3, model.size());
+    }
+
+    private void aa(int index, int charIndex, boolean leading, boolean forInsert, StyleAttributeMap expected) {
+        int off = charIndex + (leading ? 0 : 1);
+        TextPos p = new TextPos(index, off, charIndex, leading);
+        StyleAttributeMap a = model.getStyleAttributeMap(null, p, forInsert);
+        assertEquals(expected, a);
+    }
+
+    @Test
+    public void getStyleAttributeMap() {
+        model.addSegment("BB", BOLD);
+        model.addSegment("II", ITALIC);
+        model.nl();
+        model.addSegment("X", UNDER);
+
+        // exact
+        aa(0, 0, true, false, BOLD);
+        aa(0, 0, false, false, BOLD);
+        aa(0, 1, true, false, BOLD);
+        aa(0, 1, false, false, BOLD);
+        aa(0, 2, true, false, ITALIC);
+        aa(0, 2, false, false, ITALIC);
+        aa(0, 3, true, false, ITALIC);
+        aa(0, 3, false, false, ITALIC);
+        aa(0, 4, true, false, ITALIC);
+        aa(0, 4, false, false, ITALIC);
+        aa(0, 999, true, false, ITALIC);
+        aa(0, 999, false, false, ITALIC);
+
+        // for insert
+        aa(0, 0, true, true, BOLD);
+        aa(0, 0, false, true, BOLD);
+        aa(0, 1, true, true, BOLD);
+        aa(0, 1, false, true, BOLD);
+        aa(0, 2, true, true, BOLD);
+        aa(0, 2, false, true, ITALIC); // sic!
+        aa(0, 3, true, true, ITALIC);
+        aa(0, 3, false, true, ITALIC);
+        aa(0, 4, true, true, ITALIC);
+        aa(0, 4, false, true, ITALIC);
+        aa(0, 999, true, true, ITALIC);
+        aa(0, 999, false, true, ITALIC);
+
+        // line 2
+
+        // exact
+        aa(1, 0, true, false, UNDER);
+        aa(1, 0, false, false, UNDER);
+        aa(1, 1, true, false, UNDER);
+        aa(1, 1, false, false, UNDER);
+        aa(1, 999, true, false, UNDER);
+        aa(1, 999, false, false, UNDER);
+
+        // for insert
+
+        aa(1, 0, true, true, UNDER);
+        aa(1, 0, false, true, UNDER);
+        aa(1, 1, true, true, UNDER);
+        aa(1, 1, false, true, UNDER);
+        aa(1, 999, true, true, UNDER);
+        aa(1, 999, false, true, UNDER);
+
+        // beyond eof
+        aa(999, 999, false, false, StyleAttributeMap.EMPTY);
+        aa(999, 999, false, true, StyleAttributeMap.EMPTY);
+
+        // TODO grapheme clusters
     }
 }

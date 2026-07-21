@@ -6623,6 +6623,39 @@
 
     <h4><a id="richtextarea">RichTextArea</a></h4>
     <p class="styleclass">Style class: rich-text-area</p>
+
+    <table class="csspropertytable">
+      <caption>Available Style Classes</caption>
+      <thead>
+        <tr>
+          <th class="propertyname" scope="col">Style Class</th>
+          <th scope="col">Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" class="propertyname">
+            text-highlight-1<br>
+            text-highlight-2<br>
+            text-highlight-3<br>
+            text-highlight-4<br>
+            text-highlight-5
+          </th>
+          <td>The text highlight styles.</td>
+        </tr>
+        <tr>
+          <th scope="row" class="propertyname">
+            wavy-underline-1<br>
+            wavy-underline-2<br>
+            wavy-underline-3
+         </th>
+          <td>The wavy underline styles.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>&nbsp;</p>
+
       <table class="csspropertytable">
         <caption>Available CSS Properties</caption>
         <thead>
@@ -6632,7 +6665,7 @@
             <th scope="col">Default</th>
             <th scope="col">Comments</th>
           </tr>
-        </thead>   
+        </thead>
         <tbody>
           <tr>
             <th class="propertyname" scope="row">-fx-caret-blink-period</th>
@@ -6642,12 +6675,12 @@
           </tr>
           <tr>
             <th class="propertyname" scope="row">-fx-content-padding</th>
-			<td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
-			  | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-			    class="typelink">&lt;size&gt;</a>
-			  <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
-			    class="typelink">&lt;size&gt;</a>
-			</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
+                | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+                <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+            </td>
             <td>0 0 0 0</td>
             <td>Amount of padding in the content area.</td>
           </tr>
@@ -6713,22 +6746,27 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>main-pane &mdash; Pane
+      <li>rich-text-area &mdash; Pane</li>
         <ul>
-          <li>vflow &mdash; Pane
+          <li>vflow &mdash; Pane</li>
           <ul>
-            <li>content &mdash; Pane
-            <ul>
-              <li>caret-line &mdash; Path</li>
-              <li>selection-highlight &mdash; Path</li>
-              <li>flow &mdash; Pane</li>
-              <li>caret &mdash; Path</li>
-            </ul></li>
             <li>left-side &mdash; Pane</li>
             <li>right-side &mdash; Pane</li>
+            <li>scroll-bar:vertical &mdash; ScrollBar</li>
+            <li>scroll-bar:horizontal &mdash; ScrollBar</li>
+            <li>vport &mdash; Pane</li>
+            <ul>
+              <li>content &mdash; Pane</li>
+              <ul>
+                <li>drop-target &mdash; Path</li>
+                <li>caret &mdash; Path</li>
+                <li>(paragraphs cells)</li>
+                <li>selection-highlight &mdash; Path</li>
+                <li>caret-line &mdash; Path</li>
+                
+              </ul></li>
+            </ul></li>
           </ul></li>
-          <li>scroll-bar:vertical &mdash; ScrollBar</li>
-          <li>scroll-bar:horizontal &mdash; ScrollBar</li>
         </ul></li>
     </ul>
 

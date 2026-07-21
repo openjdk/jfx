@@ -216,6 +216,9 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #if PLATFORM(GTK) || PLATFORM(WPE)
         || url.protocolIs("resource"_s)
 #endif
+#if PLATFORM(JAVA)
+        || url.protocolIs("jar:file"_s)
+#endif
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)
 #endif

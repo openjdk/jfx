@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -288,7 +288,7 @@ public class RTFImportTest {
     private <T> void checkCharAttr(int paragraphIndex, StyleAttribute<T> attribute, T value) {
         TextPos end = model.getEndOfParagraphTextPos(paragraphIndex);
         TextPos p = TextPos.ofLeading(paragraphIndex, end.charIndex() / 2);
-        StyleAttributeMap attrs = model.getStyleAttributeMap(null, p);
+        StyleAttributeMap attrs = model.getStyleAttributeMap(null, p, true);
 
         assertEquals(value, attrs.get(attribute));
     }
