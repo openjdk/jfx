@@ -116,7 +116,7 @@ public class ListenerList<T> extends ListenerListBase {
             notifyWhileLocked(observableValue, oldValue, wasLocked);
         }
         finally {
-            if (wasLocked) {
+            if (!wasLocked) {
                 modifiedWhileLocked = unlock();
             }
         }
