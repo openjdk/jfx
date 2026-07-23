@@ -34,11 +34,11 @@ import java.util.Set;
 
 /**
  * Caches the calculated value of each styleable property a specific combination of
- * pseudo-class states and font size (see {@link Key}).  An entry is shared by every
+ * pseudo-class states and font size (see {@link Key}). An entry is shared by every
  * {@code Styleable} that has that same combination.
  * <p>
  * {@link #get(String)} returning {@code null} means only that no one has evaluated that
- * property for this entry yet; it should never be treated as "no style applies"(!). This
+ * property for this entry yet; it should never be treated as "no style applies"(!). This is
  * because when an entry is absent, it could be because the property was bound, or the property
  * didn't exist at the time of evaluation (because a Skin with that property wasn't attached yet
  * or Skins were swapped).
