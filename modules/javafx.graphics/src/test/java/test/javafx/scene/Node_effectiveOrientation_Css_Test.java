@@ -120,7 +120,7 @@ public class Node_effectiveOrientation_Css_Test {
 
     @Disabled("JDK-8234152")
     @Test
-    public void test_CompounSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_ltr() {
+    public void test_CompoundSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_ltr() {
         Stylesheet stylesheet = new CssParser().parse(
                 ".root:dir(rtl) .rect { -fx-fill: #ff0000; }" +
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
@@ -164,7 +164,7 @@ public class Node_effectiveOrientation_Css_Test {
 
     @Disabled("JDK-8234152")
     @Test
-    public void test_CompounSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_ltr() {
+    public void test_CompoundSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_ltr() {
         Stylesheet stylesheet = new CssParser().parse(
                 ".root .rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
@@ -241,7 +241,7 @@ public class Node_effectiveOrientation_Css_Test {
     }
 
     @Test
-    public void testCssUpdates() {
+    public void testChangeNodeOrientationWillReapplyCss() {
         Group root = new Group();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
