@@ -316,20 +316,22 @@ abstract class GlassScene implements TKScene {
         } else {
             if (fillPaint == null) {
                 return Color.WHITE;
-            } else if (fillPaint.isOpaque() ||
-                (platformWindow != null && windowStage.allowsTransparentFill())) {
-                //For bare windows the transparent fill is allowed
+            } else if (fillPaint.isOpaque()) {
+                // Solid color fills are handled during clearing
                 if (fillPaint.getType() == Paint.Type.COLOR) {
-                    Color fillColor = (Color)fillPaint;
-                    if (!fillColor.isOpaque() && platformWindow != null && windowStage.emulateBackdrop()) {
-                        fillColor = getBackdropFill();
-                    }
-                    return fillColor;
+                    return (Color)fillPaint;
                 } else if (depthBuffer) {
                     // Must set clearColor in order for the depthBuffer to be cleared
                     return Color.TRANSPARENT;
                 } else {
+                    // Fill is opaque so we don't need to clear
                     return null;
+                }
+            } else if (platformWindow != null && windowStage.allowsTransparentFill()) {
+                if (windowStage.emulateBackdrop()) {
+                    return getBackdropFillColor();
+                } else {
+                    return Color.TRANSPARENT;
                 }
             } else {
                 return Color.WHITE;
@@ -337,7 +339,12 @@ abstract class GlassScene implements TKScene {
         }
     }
 
-    private Color getBackdropFill() {
+    private Color getBackdropFillColor() {
+        // The background color of a platform-provided backdrop changes based
+        // on the window's color scheme and we want to emulate that here. The
+        // background color provided in the platform preferences is only
+        // valid if the window's color scheme matches the platform's.
+        // Otherwise we guess at an appropriate color.
         WindowStage windowStage = (WindowStage) stage;
         var prefs = Platform.getPreferences();
         var globalDark = prefs.getColorScheme() == ColorScheme.DARK;

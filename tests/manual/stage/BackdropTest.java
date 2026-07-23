@@ -31,11 +31,14 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.Paint;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -113,23 +116,31 @@ public class BackdropTest extends Application {
         });
     }
 
+    static private ImagePattern createSolidImageFill(Color color) {
+        var image = new WritableImage(1, 1);
+        var writer = image.getPixelWriter();
+        writer.setColor(0, 0, color);
+        return new ImagePattern(image, 0, 0, 1, 1, true);
+    }
+
     private enum FillChoice {
         NONE("None", null),
         TRANSPARENT("Transparent", Color.TRANSPARENT),
         BLUE("Light blue", Color.LIGHTBLUE),
         TRANSLUCENT_RED("Red (50% opaque)", new Color(1.0, 0.0, 0.0, 0.5)),
-        TRANSLUCENT_GREEN("Green (20% opaque)", new Color(0.0, 1.0, 0.0, 0.2));
+        TRANSLUCENT_GREEN("Green (20% opaque)", new Color(0.0, 1.0, 0.0, 0.2)),
+        IMAGE_TRANSLUCENT_BLUE("Blue Image (20% opaque)", createSolidImageFill(new Color(0.0, 0.0, 1.0, 0.2)));
 
         private String label;
-        private Color color;
+        private Paint paint;
 
-        FillChoice(String label, Color color) {
+        FillChoice(String label, Paint paint) {
             this.label = label;
-            this.color = color;
+            this.paint = paint;
         }
 
-        Color getFill() {
-            return color;
+        Paint getFill() {
+            return paint;
         }
 
         public String toString() {
@@ -183,10 +194,19 @@ public class BackdropTest extends Application {
     private void updateTextColor(Stage stage, ObjectProperty<Color> textColor) {
         if (stage.getBackdrop() == null) {
             textColor.set(Color.BLACK);
-        } else if (stage.getScene().getPreferences().getColorScheme() == ColorScheme.DARK) {
-            textColor.set(Color.WHITE);
-        } else {
+        } else if (stage.getScene().getFill() == null) {
             textColor.set(Color.BLACK);
+        } else {
+            var platformPrefs = Platform.getPreferences();
+            var platformScheme = platformPrefs.getColorScheme();
+            var sceneScheme = stage.getScene().getPreferences().getColorScheme();
+            if (platformScheme == sceneScheme) {
+                textColor.set(platformPrefs.getForegroundColor());
+            } else if (sceneScheme == ColorScheme.DARK) {
+                textColor.set(Color.WHITE);
+            } else {
+                textColor.set(Color.BLACK);
+            }
         }
     }
 
@@ -331,6 +351,9 @@ public class BackdropTest extends Application {
         opacityChoice.setValue(OpacityChoice.P100);
 
         updateTextColor(stage, textColor);
+        Platform.getPreferences().colorSchemeProperty().addListener(obs -> {
+            updateTextColor(stage, textColor);
+        });
     }
 
     private void showStage(Stage stage, StageStyleChoice stageStyleChoice, StageBackdropStyleChoice backdropChoice)
