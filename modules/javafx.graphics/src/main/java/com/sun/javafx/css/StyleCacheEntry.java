@@ -45,6 +45,12 @@ import java.util.Set;
  * <p>
  * Therefore, callers must always resolve a miss with a real lookup before trusting the result; only
  * a value actually stored via {@link #put(String, CalculatedValue)} can be trusted to be reused.
+ * <p>
+ * Entries are (currently) keyed purely by property name, with no check that a cached value's type
+ * still matches what the current lookup expects. This is harmless as long as every {@code
+ * Styleable} that could share an entry agrees on the type behind a given property name (which
+ * is generally standard for CSS properties). It is not a problem for two different {@code
+ * CssMetaData} instances to have the same property name, only if their types would also differ.
  */
 public final class StyleCacheEntry {
 
