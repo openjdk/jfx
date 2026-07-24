@@ -35,10 +35,12 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 #if !OS(WINDOWS)
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -67,7 +69,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 static String fromStdFileSystemPath(const std::filesystem::path& path)
 {
 #if HAVE(MISSING_U8STRING)
-    return String::fromUTF8(unsafeSpan8(path.u8string().c_str()));
+    // FIXME: This uses u8string so how can it be correct inside HAVE(MISSING_U8STRING)?
+    return String::fromUTF8(unsafeSpan(path.u8string().c_str()));
 #else
     return String::fromUTF8(span(path.u8string()));
 #endif
@@ -117,7 +120,7 @@ constexpr std::array<bool, 128> needsEscaping = {
     false, false, false, false, true,  false, false, true,  /* 78-7F */
 };
 
-static inline bool shouldEscapeUChar(char16_t character, char16_t previousCharacter, char16_t nextCharacter)
+static inline bool shouldEscapeChar16(char16_t character, char16_t previousCharacter, char16_t nextCharacter)
 {
     if (character <= 127)
         return needsEscaping[character];
@@ -168,7 +171,7 @@ String encodeForFileName(const String& inputString)
     char16_t nextCharacter = inputString[0];
     for (unsigned i = 0; i < length; ++i) {
         auto character = std::exchange(nextCharacter, i + 1 < length ? inputString[i + 1] : 0);
-        if (shouldEscapeUChar(character, previousCharacter, nextCharacter)) {
+        if (shouldEscapeChar16(character, previousCharacter, nextCharacter)) {
             if (character <= 0xFF)
                 result.append('%', hex(character, 2));
             else
@@ -235,12 +238,6 @@ String decodeFromFilename(const String& inputString)
 
 String lastComponentOfPathIgnoringTrailingSlash(const String& path)
 {
-#if OS(WINDOWS)
-    char pathSeparator = '\\';
-#else
-    char pathSeparator = '/';
-#endif
-
     auto position = path.reverseFind(pathSeparator);
     if (position == notFound)
         return path;
@@ -330,10 +327,27 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHa
     if (!handle)
         return { };
 
+    bool succeeded = false;
+    auto removeOrphanOnFailure = makeScopeExit([&] {
+        if (!succeeded)
+            FileSystem::deleteFile(path);
+    });
+
     if (!handle.truncate(bytesSize)) {
         RELEASE_LOG_FAULT(MemoryPressure, "Unable to truncate file");
         return { };
     }
+
+#if HAVE(FALLOCATE) && !PLATFORM(JAVA)
+    // Reserve real blocks so a later mmap'd memcpy() can't SIGBUS on ENOSPC.
+    // EOPNOTSUPP: filesystem doesn't support pre-allocation -> preserve old behavior.
+    // posix_fallocate is avoided because it falls back to zero-filling when pre-allocation
+    // is not supported by the FS.
+    if (fallocate(handle.platformHandle(), 0, 0, bytesSize) == -1 && errno != EOPNOTSUPP) {
+        RELEASE_LOG_ERROR(MemoryPressure, "Unable to reserve %zu bytes for cache file (errno=%d)", bytesSize, errno);
+        return { };
+    }
+#endif
 
     if (!FileSystem::makeSafeToUseMemoryMapForPath(path))
         return { };
@@ -343,9 +357,10 @@ MappedFileData createMappedFileData(const String& path, size_t bytesSize, FileHa
         return { };
 
     if (outputHandle)
-        *outputHandle = WTFMove(handle);
+        *outputHandle = WTF::move(handle);
 
-    return WTFMove(*mappedFile);
+    succeeded = true;
+    return WTF::move(*mappedFile);
 }
 
 void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
@@ -704,13 +719,24 @@ bool isAncestor(const String& possibleAncestor, const String& possibleChild)
         possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
     if (possibleAncestorLexicallyNormal.endsWith(static_cast<char16_t>(std::filesystem::path::preferred_separator)))
         possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
-    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
+    return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal)
+        && possibleChildLexicallyNormal.length() > possibleAncestorLexicallyNormal.length()
+        && possibleChildLexicallyNormal[possibleAncestorLexicallyNormal.length()] == static_cast<char16_t>(std::filesystem::path::preferred_separator);
 }
 
 String createTemporaryFile(StringView prefix, StringView suffix)
 {
     auto [path, handle] = openTemporaryFile(prefix, suffix);
     return path;
+}
+
+FileHandle createDumpFile(StringView filename, StringView extension, StringView path)
+{
+    if (path.isEmpty()) {
+        auto [p, handle] = openTemporaryFile(filename, extension);
+        return WTF::move(handle);
+    }
+    return openFile(makeString(path, pathSeparator, filename, extension), FileOpenMode::Truncate);
 }
 
 #if !PLATFORM(PLAYSTATION)
@@ -731,7 +757,7 @@ Vector<String> listDirectory(const String& path)
     for (auto it = std::filesystem::begin(entries), end = std::filesystem::end(entries); !ec && it != end; it.increment(ec)) {
         auto fileName = fromStdFileSystemPath(it->path().filename());
         if (!fileName.isNull())
-            fileNames.append(WTFMove(fileName));
+            fileNames.append(WTF::move(fileName));
     }
     return fileNames;
 }
@@ -781,7 +807,7 @@ String pathByAppendingComponents(StringView path, std::span<const StringView> co
 
 #endif
 
-#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION)
+#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION) && !PLATFORM(GLIB)
 
 String createTemporaryDirectory()
 {

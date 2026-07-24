@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
+#include <WebCore/CSSPrimitiveValue.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -174,7 +174,7 @@ private:
     bool m_valueIs8Bit : 1 { false };
     bool m_isBackedByStringLiteral : 1 { false };
     unsigned m_valueLength { 0 };
-    const void* m_valueDataCharRaw { nullptr }; // Either LChar* or char16_t*.
+    const void* m_valueDataCharRaw { nullptr }; // Either Latin1Character* or char16_t*.
 
     union {
         char16_t m_delimiter;

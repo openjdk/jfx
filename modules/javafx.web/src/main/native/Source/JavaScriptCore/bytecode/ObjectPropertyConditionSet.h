@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ObjectPropertyCondition.h"
+#include <JavaScriptCore/ObjectPropertyCondition.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Hasher.h>
 #include <wtf/RefCountedFixedVector.h>

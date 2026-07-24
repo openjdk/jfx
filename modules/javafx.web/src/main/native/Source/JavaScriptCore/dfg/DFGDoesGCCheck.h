@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <cstdint>
 #include <wtf/Assertions.h>
 
@@ -39,6 +40,7 @@ struct DoesGCCheck {
         Uninitialized,
         DFGOSRExit,
         FTLOSRExit,
+        Termination,
         NumberOfSpecials
     };
 

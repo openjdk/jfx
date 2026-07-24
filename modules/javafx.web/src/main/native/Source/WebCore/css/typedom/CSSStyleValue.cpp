@@ -36,13 +36,14 @@
 #include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
 #include "ExceptionOr.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSStyleValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSStyleValue);
 
 ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(Document& document, const AtomString& property, const String& cssText)
 {
@@ -57,7 +58,7 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(Document& document, const A
     if (returnValue.isEmpty())
         return Exception { ExceptionCode::SyntaxError, makeString(cssText, " cannot be parsed as a "_s, property) };
 
-    return WTFMove(returnValue.at(0));
+    return WTF::move(returnValue.at(0));
 }
 
 ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(Document& document, const AtomString& property, const String& cssText)
@@ -68,7 +69,7 @@ ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(Document& docume
 
 Ref<CSSStyleValue> CSSStyleValue::create(RefPtr<CSSValue>&& cssValue, String&& property)
 {
-    return adoptRef(*new CSSStyleValue(WTFMove(cssValue), WTFMove(property)));
+    return adoptRef(*new CSSStyleValue(WTF::move(cssValue), WTF::move(property)));
 }
 
 Ref<CSSStyleValue> CSSStyleValue::create()
@@ -77,8 +78,8 @@ Ref<CSSStyleValue> CSSStyleValue::create()
 }
 
 CSSStyleValue::CSSStyleValue(RefPtr<CSSValue>&& cssValue, String&& property)
-    : m_customPropertyName(WTFMove(property))
-    , m_propertyValue(WTFMove(cssValue))
+    : m_customPropertyName(WTF::move(property))
+    , m_propertyValue(WTF::move(cssValue))
 {
 }
 
@@ -94,5 +95,7 @@ void CSSStyleValue::serialize(StringBuilder& builder, OptionSet<SerializationArg
     if (m_propertyValue)
         builder.append(m_propertyValue->cssText(CSS::defaultSerializationContext()));
 }
+
+CSSStyleValue::~CSSStyleValue() = default;
 
 } // namespace WebCore

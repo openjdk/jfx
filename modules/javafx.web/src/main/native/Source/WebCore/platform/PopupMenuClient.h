@@ -22,9 +22,11 @@
 #ifndef PopupMenuClient_h
 #define PopupMenuClient_h
 
-#include "LayoutUnit.h"
-#include "PopupMenuStyle.h"
-#include "ScrollTypes.h"
+#include <WebCore/LayoutUnit.h>
+#include <WebCore/PopupMenuStyle.h>
+#include <WebCore/ScrollTypes.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -35,7 +37,7 @@ class HostWindow;
 class Scrollbar;
 class ScrollableArea;
 
-class PopupMenuClient {
+class PopupMenuClient : public AbstractCanMakeCheckedPtr  {
 public:
     virtual ~PopupMenuClient() = default;
     virtual void valueChanged(unsigned listIndex, bool fireEvents = true) = 0;
@@ -55,7 +57,7 @@ public:
     virtual LayoutUnit clientPaddingLeft() const = 0;
     virtual LayoutUnit clientPaddingRight() const = 0;
     virtual int listSize() const = 0;
-    virtual int selectedIndex() const = 0;
+    virtual int popupSelectedIndex() const = 0;
     virtual void popupDidHide() = 0;
     virtual bool itemIsSeparator(unsigned listIndex) const = 0;
     virtual bool itemIsLabel(unsigned listIndex) const = 0;
@@ -64,7 +66,7 @@ public:
     virtual void setTextFromItem(unsigned listIndex) = 0;
 
     virtual void listBoxSelectItem(int /*listIndex*/, bool /*allowMultiplySelections*/, bool /*shift*/, bool /*fireOnChangeNow*/ = true) { ASSERT_NOT_REACHED(); }
-    virtual bool multiple() const
+    virtual bool popupMultiple() const
     {
         ASSERT_NOT_REACHED();
         return false;
@@ -74,12 +76,6 @@ public:
     virtual HostWindow* hostWindow() const = 0;
 
     virtual Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) = 0;
-
-    // CheckedPtr interface.
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
 };
 
 }

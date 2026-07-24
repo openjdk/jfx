@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
+#if PLATFORM(COCOA)
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <wtf/RetainPtr.h>
 
@@ -36,3 +40,5 @@ class StringView;
 WTF_EXPORT_PRIVATE RetainPtr<CFStringRef> createContextualizedCFString(StringView, StringView priorContext);
 
 } // namespace WTF
+
+#endif // PLATFORM(COCOA)

@@ -25,7 +25,7 @@
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
 #include "CSSRuleList.h"
-#include "Document.h"
+#include "DocumentSecurityOrigin.h"
 #include "HTMLLinkElement.h"
 #include "HTMLStyleElement.h"
 #include "JSCSSStyleSheet.h"
@@ -92,17 +92,17 @@ static bool isAcceptableCSSStyleSheetParent(Node* parentNode)
 
 Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, CSSImportRule* ownerRule, std::optional<bool> isOriginClean)
 {
-    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerRule, isOriginClean));
+    return adoptRef(*new CSSStyleSheet(WTF::move(sheet), ownerRule, isOriginClean));
 }
 
 Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, Node& ownerNode, const std::optional<bool>& isCleanOrigin)
 {
-    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerNode, TextPosition(), false, isCleanOrigin));
+    return adoptRef(*new CSSStyleSheet(WTF::move(sheet), ownerNode, TextPosition(), false, isCleanOrigin));
 }
 
 Ref<CSSStyleSheet> CSSStyleSheet::createInline(Ref<StyleSheetContents>&& sheet, Element& owner, const TextPosition& startPosition)
 {
-    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), owner, startPosition, true, true));
+    return adoptRef(*new CSSStyleSheet(WTF::move(sheet), owner, startPosition, true, true));
 }
 
 ExceptionOr<Ref<CSSStyleSheet>> CSSStyleSheet::create(Document& document, Init&& init)
@@ -118,11 +118,11 @@ ExceptionOr<Ref<CSSStyleSheet>> CSSStyleSheet::create(Document& document, Init&&
 
     CSSParserContext parserContext(document, baseURL);
     parserContext.shouldIgnoreImportRules = true;
-    return adoptRef(*new CSSStyleSheet(StyleSheetContents::create(parserContext), document, WTFMove(init)));
+    return adoptRef(*new CSSStyleSheet(StyleSheetContents::create(parserContext), document, WTF::move(init)));
 }
 
 CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* ownerRule, std::optional<bool> isOriginClean)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
     , m_isOriginClean(isOriginClean)
     , m_ownerRule(ownerRule)
 {
@@ -133,7 +133,7 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* 
 }
 
 CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node& ownerNode, const TextPosition& startPosition, bool isInlineStylesheet, const std::optional<bool>& isOriginClean)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
     , m_isInlineStylesheet(isInlineStylesheet)
     , m_isOriginClean(isOriginClean)
     , m_styleScope(Style::Scope::forNode(ownerNode))
@@ -146,7 +146,7 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node& ownerNode
 
 // https://w3c.github.io/csswg-drafts/cssom-1/#dom-cssstylesheet-cssstylesheet
 CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Document& document, Init&& options)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
     , m_isDisabled(options.disabled)
     , m_wasConstructedByJS(true)
     , m_isOriginClean(true)
@@ -155,9 +155,9 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Document& docum
     m_contents->registerClient(this);
     m_contents->checkLoaded();
 
-    WTF::switchOn(WTFMove(options.media), [this](RefPtr<MediaList>&& mediaList) {
+    WTF::switchOn(WTF::move(options.media), [this](RefPtr<MediaList>&& mediaList) {
         if (auto queries = mediaList->mediaQueries(); !queries.isEmpty())
-            setMediaQueries(WTFMove(queries));
+            setMediaQueries(WTF::move(queries));
     }, [this](String&& mediaString) {
         setMediaQueries(MQ::MediaQueryParser::parse(mediaString, strictCSSParserContext()));
     });
@@ -189,7 +189,7 @@ RefPtr<StyleRuleWithNesting> CSSStyleSheet::prepareChildStyleRuleForNesting(Styl
     auto& rules = m_contents->m_childRules;
     for (size_t i = 0 ; i < rules.size() ; i++) {
         if (rules[i].ptr() == &styleRule) {
-            auto styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(styleRule));
+            auto styleRuleWithNesting = StyleRuleWithNesting::create(WTF::move(styleRule));
             rules[i] = styleRuleWithNesting;
             return styleRuleWithNesting;
         }
@@ -306,7 +306,7 @@ void CSSStyleSheet::setDisabled(bool disabled)
 
 void CSSStyleSheet::setMediaQueries(MQ::MediaQueryList&& mediaQueries)
 {
-    m_mediaQueries = WTFMove(mediaQueries);
+    m_mediaQueries = WTF::move(mediaQueries);
 }
 
 unsigned CSSStyleSheet::length() const
@@ -528,7 +528,7 @@ String CSSStyleSheet::cssText(const CSS::SerializationContext& context)
 // https://w3c.github.io/csswg-drafts/cssom-1/#dom-cssstylesheet-replace
 void CSSStyleSheet::replace(String&& text, Ref<DeferredPromise>&& promise)
 {
-    auto result = replaceSync(WTFMove(text));
+    auto result = replaceSync(WTF::move(text));
     if (result.hasException())
         promise->reject(result.releaseException());
     promise->resolve<IDLInterface<CSSStyleSheet>>(*this);
@@ -549,9 +549,9 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
             m_contents = *cachedContents;
             m_contents->registerClient(this);
         } else {
-            m_contents->parseString(WTFMove(text));
+            m_contents->parseString(WTF::move(text));
             if (m_contents->isCacheable())
-                Style::StyleSheetContentsCache::singleton().add(WTFMove(key), m_contents);
+                Style::StyleSheetContentsCache::singleton().add(WTF::move(key), m_contents);
         }
         return { };
     }
@@ -563,7 +563,7 @@ ExceptionOr<void> CSSStyleSheet::replaceSync(String&& text)
         childRuleWrapper->setParentStyleSheet(nullptr);
     m_childRuleCSSOMWrappers.clear();
 
-    m_contents->parseString(WTFMove(text));
+    m_contents->parseString(WTF::move(text));
     return { };
 }
 
@@ -598,7 +598,7 @@ Ref<StyleSheetContents> CSSStyleSheet::protectedContents()
     return m_contents;
 }
 
-void CSSStyleSheet::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+void CSSStyleSheet::getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>& childStyleSheets)
 {
     RefPtr ruleList = cssRules();
     if (!ruleList)

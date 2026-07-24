@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "MediaPlayerEnums.h"
+#include <WebCore/MediaPlayerEnums.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>

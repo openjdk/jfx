@@ -157,6 +157,8 @@ public:
         return *this == ICEvent(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream&) const;
 
     void log() const;
@@ -169,20 +171,11 @@ private:
     PropertyLocation m_propertyLocation;
 };
 
-struct ICEventHash {
-    static unsigned hash(const ICEvent& key) { return key.hash(); }
-    static bool equal(const ICEvent& a, const ICEvent& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::ICEvent::Kind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ICEvent> : JSC::ICEventHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ICEvent> : SimpleClassHashTraits<JSC::ICEvent> {

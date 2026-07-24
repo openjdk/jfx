@@ -59,12 +59,12 @@ public:
 
     bool isInitialized() const { return !(m_pointer & lazyTag); }
 
-    const T& get(const OwnerType& owner) const
+    T& get(OwnerType& owner) const LIFETIME_BOUND
     {
-        return const_cast<LazyUniqueRef&>(*this).get(const_cast<OwnerType&>(owner));
+        return const_cast<LazyUniqueRef&>(*this).get(owner);
     }
 
-    T& get(OwnerType& owner)
+    T& get(OwnerType& owner) LIFETIME_BOUND
     {
         ASSERT(m_pointer);
         ASSERT(!(m_pointer & initializingTag));
@@ -75,12 +75,12 @@ public:
         return *std::bit_cast<T*>(m_pointer);
     }
 
-    const T* getIfExists() const
+    const T* getIfExists() const LIFETIME_BOUND
     {
         return const_cast<LazyUniqueRef&>(*this).getIfExists();
     }
 
-    T* getIfExists()
+    T* getIfExists() LIFETIME_BOUND
     {
         ASSERT(m_pointer);
         if (m_pointer & lazyTag)
@@ -88,8 +88,8 @@ public:
         return std::bit_cast<T*>(m_pointer);
     }
 
-    T* ptr(OwnerType& owner) RETURNS_NONNULL { &get(owner); }
-    T* ptr(const OwnerType& owner) const RETURNS_NONNULL { return &get(owner); }
+    T* ptr(OwnerType& owner) LIFETIME_BOUND RETURNS_NONNULL { &get(owner); }
+    T* ptr(const OwnerType& owner) const LIFETIME_BOUND RETURNS_NONNULL { return &get(owner); }
 
     template<typename Func>
     void initLater(const Func&)
@@ -107,7 +107,7 @@ public:
 
     void set(UniqueRef<T>&& ref)
     {
-        UniqueRef<T> local = WTFMove(ref);
+        UniqueRef<T> local = WTF::move(ref);
         m_pointer = std::bit_cast<uintptr_t>(local.moveToUniquePtr().release());
     }
 
@@ -125,7 +125,7 @@ private:
         return std::bit_cast<T*>(ref.m_pointer);
     }
 
-    uintptr_t m_pointer { 0 };
+    mutable uintptr_t m_pointer { 0 };
 };
 
 } // namespace WTF

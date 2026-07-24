@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ReportBody.h"
-#include "ViolationReportType.h"
+#include <WebCore/ReportBody.h>
+#include <WebCore/ViolationReportType.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
@@ -36,7 +36,7 @@ namespace WebCore {
 class FormData;
 
 class DeprecationReportBody final : public ReportBody {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DeprecationReportBody);
+    WTF_MAKE_TZONE_ALLOCATED(DeprecationReportBody);
 public:
     WEBCORE_EXPORT static Ref<DeprecationReportBody> create(String&& id, WallTime anticipatedRemoval, String&& message, String&& sourceFile, std::optional<unsigned> lineNumber, std::optional<unsigned> columnNumber);
 

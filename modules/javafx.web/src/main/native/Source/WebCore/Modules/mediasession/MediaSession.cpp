@@ -28,8 +28,10 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "JSDOMPromiseDeferred.h"
@@ -42,8 +44,8 @@
 #include "MediaSessionCoordinator.h"
 #include "Navigator.h"
 #include "NowPlayingInfo.h"
-#include "Page.h"
 #include "PlatformMediaSessionManager.h"
+#include "Settings.h"
 #include "UserMediaController.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/JSONValues.h>
@@ -72,7 +74,7 @@ static ASCIILiteral logClassName()
 
 static PlatformMediaSession::RemoteControlCommandType platformCommandForMediaSessionAction(MediaSessionAction action)
 {
-    static constexpr std::pair<MediaSessionAction, PlatformMediaSession::RemoteControlCommandType> mappings[] {
+    static constexpr SortedArrayMap map { std::to_array<std::pair<MediaSessionAction, PlatformMediaSession::RemoteControlCommandType>>({
         { MediaSessionAction::Play, PlatformMediaSession::RemoteControlCommandType::PlayCommand },
         { MediaSessionAction::Pause, PlatformMediaSession::RemoteControlCommandType::PauseCommand },
         { MediaSessionAction::Seekbackward, PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand },
@@ -82,8 +84,7 @@ static PlatformMediaSession::RemoteControlCommandType platformCommandForMediaSes
         { MediaSessionAction::Skipad, PlatformMediaSession::RemoteControlCommandType::NextTrackCommand },
         { MediaSessionAction::Stop, PlatformMediaSession::RemoteControlCommandType::StopCommand },
         { MediaSessionAction::Seekto, PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    }) };
     return map.get(action, PlatformMediaSession::RemoteControlCommandType::NoCommand);
 }
 
@@ -152,7 +153,7 @@ MediaSession::MediaSession(Navigator& navigator)
     : ActiveDOMObject(navigator.scriptExecutionContext())
     , m_navigator(navigator)
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
-    , m_coordinator(MediaSessionCoordinator::create(navigator.scriptExecutionContext()))
+    , m_coordinator(MediaSessionCoordinator::create(navigator.protectedScriptExecutionContext().get()))
 #endif
 {
     m_logger = Document::sharedLogger();
@@ -160,7 +161,7 @@ MediaSession::MediaSession(Navigator& navigator)
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
     RefPtr frame = navigator.frame();
-    auto* page = frame ? frame->page() : nullptr;
+    RefPtr page = frame ? frame->page() : nullptr;
     if (page && page->mediaSessionCoordinator())
         m_coordinator->setMediaSessionCoordinatorPrivate(*page->mediaSessionCoordinator());
     m_coordinator->setMediaSession(this);
@@ -204,7 +205,7 @@ void MediaSession::setMetadata(RefPtr<MediaMetadata>&& metadata)
     ALWAYS_LOG(LOGIDENTIFIER);
     if (m_metadata)
         m_metadata->resetMediaSession();
-    m_metadata = WTFMove(metadata);
+    m_metadata = WTF::move(metadata);
     if (m_metadata)
         m_metadata->setMediaSession(*this);
     notifyMetadataObservers(m_metadata);
@@ -239,7 +240,7 @@ ExceptionOr<void> MediaSession::setPlaylist(ScriptExecutionContext& context, Vec
         resolvedPlaylist.append(resolvedEntry.releaseReturnValue());
     }
 
-    m_playlist = WTFMove(resolvedPlaylist);
+    m_playlist = WTF::move(resolvedPlaylist);
 
     return { };
 }
@@ -373,7 +374,7 @@ ExceptionOr<void> MediaSession::setPositionState(std::optional<MediaPositionStat
         && state->playbackRate))
         return Exception { ExceptionCode::TypeError };
 
-    m_positionState = WTFMove(state);
+    m_positionState = WTF::move(state);
     m_lastReportedPosition = m_positionState->position;
     m_timeAtLastPositionUpdate = MonotonicTime::now();
     notifyPositionStateObservers();
@@ -415,7 +416,7 @@ RefPtr<MediaSessionManagerInterface> MediaSession::sessionManager() const
     if (!page)
         return nullptr;
 
-    return &page->mediaSessionManager();
+    return page->mediaSessionManager();
 }
 
 void MediaSession::metadataUpdated(const MediaMetadata& metadata)
@@ -545,7 +546,7 @@ void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
     if (!m_defaultArtworkAttempted && (!m_metadata || m_metadata->artwork().isEmpty())) {
         m_defaultArtworkAttempted = true;
         if (auto images = fallbackArtwork(protectedDocument() ? protectedDocument()->loader() : nullptr); images.size())
-            m_defaultMetadata = MediaMetadata::create(*this, WTFMove(images));
+            m_defaultMetadata = MediaMetadata::create(*this, WTF::move(images));
     }
 
     if (RefPtr metadataWithImage = m_metadata && m_metadata->artworkImage() ? m_metadata : (m_defaultMetadata && m_defaultMetadata->artworkImage() ? m_defaultMetadata : nullptr)) {
@@ -584,13 +585,13 @@ void MediaSession::updateCaptureState(bool isActive, DOMPromiseDeferred<void>&& 
         return;
     }
 
-    controller->updateCaptureState(*document, isActive, kind, [weakDocument = WeakPtr { document.get() }, promise = WTFMove(promise)] (auto&& exception) mutable {
+    controller->updateCaptureState(*document, isActive, kind, [weakDocument = WeakPtr { document.get() }, promise = WTF::move(promise)] (auto&& exception) mutable {
         RefPtr protectedDocument = weakDocument.get();
         if (!protectedDocument)
             return;
-        protectedDocument->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTFMove(promise), exception = WTFMove(exception)] () mutable {
+        protectedDocument->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTF::move(promise), exception = WTF::move(exception)] () mutable {
             if (exception) {
-                promise.reject(WTFMove(*exception));
+                promise.reject(WTF::move(*exception));
                 return;
             }
             promise.resolve();

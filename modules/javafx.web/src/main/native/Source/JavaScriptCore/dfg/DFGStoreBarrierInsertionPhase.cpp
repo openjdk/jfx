@@ -243,7 +243,7 @@ private:
             switch (m_node->op()) {
             case PutByValDirect:
             case PutByVal:
-            case PutByValAlias: {
+            case PutByValDirectResolved: {
                 switch (m_node->arrayMode().modeForPut().type()) {
                 case Array::Generic:
                 case Array::Float16Array:
@@ -490,7 +490,6 @@ private:
                 clobberize(m_graph, m_node, readFunc, writeFunc, NoOpClobberize());
 
                 if (wroteHeapOrStack) {
-
                     auto escapeToTheStack = [&] (Node* node) {
                         if (node->epoch() == m_currentEpoch) {
                             RELEASE_ASSERT(!!preciseStackWrite);

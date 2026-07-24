@@ -72,8 +72,19 @@ String toString(const Types&... values)
     return stream.toString();
 }
 
+template<typename... Types>
+std::optional<String> toStringWithBoundsCheck(const Types&... values)
+{
+    StringPrintStream stream;
+    stream.print(values...);
+    if (stream.length() > WTF::String::MaxLength)
+        return std::nullopt;
+    return stream.toString();
+}
+
 } // namespace WTF
 
 using WTF::StringPrintStream;
 using WTF::toCString;
 using WTF::toString;
+using WTF::toStringWithBoundsCheck;

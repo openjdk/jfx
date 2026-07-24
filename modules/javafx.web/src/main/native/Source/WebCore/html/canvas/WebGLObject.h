@@ -45,20 +45,19 @@ class WebGLBindingPoint {
 public:
     WebGLBindingPoint() = default;
     explicit WebGLBindingPoint(RefPtr<T> object)
-        : m_object(WTFMove(object))
+        : m_object(WTF::move(object))
     {
         if (m_object)
             didBind(*m_object);
     }
     WebGLBindingPoint(WebGLBindingPoint&&) = default;
-    ~WebGLBindingPoint() = default;
     WebGLBindingPoint& operator=(WebGLBindingPoint&&) = default;
 
     WebGLBindingPoint& operator=(RefPtr<T> object)
     {
         if (m_object == object)
             return *this;
-        m_object = WTFMove(object);
+        m_object = WTF::move(object);
         if (RefPtr object = m_object)
             didBind(*object);
         return *this;
@@ -70,6 +69,7 @@ public:
     T* operator->() const { return m_object.get(); }
     T& operator*() const { return *m_object; }
     operator RefPtr<T>() const { return m_object; }
+    Ref<T> releaseNonNull() { return m_object.releaseNonNull(); }
 
 private:
     void didBind(T& object)
@@ -87,9 +87,8 @@ class WebGLObject : public RefCounted<WebGLObject> {
 public:
     virtual ~WebGLObject();
 
-    WebGLRenderingContextBase* context() const;
-    RefPtr<WebGLRenderingContextBase> protectedContext() const;
-    GraphicsContextGL* graphicsContextGL() const;
+    RefPtr<WebGLRenderingContextBase> context() const;
+    RefPtr<GraphicsContextGL> graphicsContextGL() const;
 
     PlatformGLObject object() const { return m_object; }
 

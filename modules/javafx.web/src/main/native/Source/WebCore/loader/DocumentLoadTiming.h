@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "ResourceLoadTiming.h"
+#include <WebCore/ResourceLoadTiming.h>
 
 namespace WebCore {
 

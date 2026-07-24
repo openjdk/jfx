@@ -42,11 +42,9 @@ combined_depfile_fd = open(
 # argument lists for all active architectures, and the build script phase
 # declares all known output paths as outputs.
 #
-# FIXME: Computing platform defines is duplicated by DerivedSources.make in
-# JSC, WebCore, WebKit, DumpRenderTree, and WebKitTestRunner. Computing search
-# path arguments is duplicated by migrate-header-rule in WebKitLegacy. We could
-# share this implementation and generate bash-compatible and Make-compatible
-# variables for these use cases as well.
+# FIXME: Computing search path arguments is duplicated by migrate-header-rule
+# in WebKitLegacy. We could share this implementation and generate
+# bash-compatible variables for these use cases as well.
 
 with open(f'{output_dir}/rdar150228472.swift', 'w') as fd:
     fd.write('// generate-platform-args: empty file to work around dependency '
@@ -101,7 +99,8 @@ for arch in archs:
         f'-D{name}'
         for name, value in definitions.items()
         if value == 1 and (name.startswith('HAVE_') or name.startswith('USE_') or
-                           name.startswith('ENABLE_') or name.startswith('WTF_PLATFORM'))
+                           name.startswith('ENABLE_') or name.startswith('WTF_PLATFORM') or
+                           name.startswith('ASSERT_'))
     )
     print(f'{output_file}:\t', swift_args.replace('\n', ' '))
     open(output_file, 'w').write(swift_args)

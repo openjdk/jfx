@@ -33,7 +33,7 @@
 
 #if ENABLE(MHTML)
 
-#include "SharedBuffer.h"
+#include <WebCore/SharedBuffer.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

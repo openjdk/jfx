@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "QualifiedName.h"
+#include <WebCore/QualifiedName.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -39,7 +39,7 @@ class Element;
 class WeakPtrImplWithEventTargetData;
 
 class CustomElementDefaultARIA final : public CanMakeCheckedPtr<CustomElementDefaultARIA> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CustomElementDefaultARIA);
+    WTF_MAKE_TZONE_ALLOCATED(CustomElementDefaultARIA);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CustomElementDefaultARIA);
 public:
     CustomElementDefaultARIA();

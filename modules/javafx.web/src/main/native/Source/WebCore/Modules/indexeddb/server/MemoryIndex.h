@@ -110,7 +110,7 @@ private:
     WeakPtr<MemoryObjectStore> m_objectStore;
 
     WeakPtr<MemoryBackingStoreTransaction> m_writeTransaction;
-    HashMap<IDBKeyData, Vector<IDBKeyData>, IDBKeyDataHash, IDBKeyDataHashTraits> m_transactionModifiedRecords;
+    HashMap<IDBKeyData, Vector<IDBKeyData>, DefaultHash<IDBKeyData>, IDBKeyDataHashTraits> m_transactionModifiedRecords;
     std::unique_ptr<IndexValueStore> m_records;
 
     HashMap<IDBResourceIdentifier, RefPtr<MemoryIndexCursor>> m_cursors;

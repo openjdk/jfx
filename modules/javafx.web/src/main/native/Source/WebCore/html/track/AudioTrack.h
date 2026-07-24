@@ -28,8 +28,8 @@
 
 #if ENABLE(VIDEO)
 
-#include "AudioTrackPrivateClient.h"
-#include "TrackBase.h"
+#include <WebCore/AudioTrackPrivateClient.h>
+#include <WebCore/TrackBase.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
@@ -46,7 +46,11 @@ public:
     {
         return adoptRef(*new AudioTrack(context, trackPrivate));
     }
-    virtual ~AudioTrack();
+    WEBCORE_EXPORT virtual ~AudioTrack();
+
+    // AudioTrackPrivateClient.
+    void ref() const final { MediaTrackBase::ref(); }
+    void deref() const final { MediaTrackBase::deref(); }
 
     static const AtomString& descriptionKeyword();
     static const AtomString& mainDescKeyword();
@@ -60,6 +64,7 @@ public:
 
     size_t inbandTrackIndex() const;
 
+    Ref<AudioTrackPrivate> protectedPrivate() const;
     const AudioTrackPrivate& privateTrack() const { return m_private; }
     void setPrivate(AudioTrackPrivate&);
 
@@ -82,8 +87,8 @@ private:
 
     // TrackPrivateBaseClient
     void idChanged(TrackID) final;
-    void labelChanged(const AtomString&) final;
-    void languageChanged(const AtomString&) final;
+    void labelChanged(const String&) final;
+    void languageChanged(const String&) final;
     void willRemove() final;
 
     void updateKindFromPrivate();

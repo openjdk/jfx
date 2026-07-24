@@ -30,32 +30,40 @@
 #if ENABLE(WEBXR)
 
 #include "ContextDestructionObserverInlines.h"
-#include "DocumentInlines.h"
+#include "DOMPointReadOnly.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
+#include "JSWebXRHitTestSource.h"
 #include "JSWebXRReferenceSpace.h"
+#include "JSWebXRTransientInputHitTestSource.h"
 #include "Page.h"
 #include "PlatformXR.h"
 #include "SecurityOrigin.h"
 #include "WebCoreOpaqueRoot.h"
 #include "WebXRBoundedReferenceSpace.h"
 #include "WebXRFrame.h"
+#include "WebXRHitTestSource.h"
 #include "WebXRSystem.h"
+#include "WebXRTransientInputHitTestSource.h"
 #include "WebXRView.h"
 #include "XRFrameRequestCallback.h"
+#include "XRGPUProjectionLayerInit.h"
+#include "XRHitTestOptionsInit.h"
 #include "XRRenderStateInit.h"
 #include "XRSessionEvent.h"
+#include "XRTransientInputHitTestOptionsInit.h"
 #include <wtf/RefPtr.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRSession);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRSession);
 
 Ref<WebXRSession> WebXRSession::create(Document& document, WebXRSystem& system, XRSessionMode mode, PlatformXR::Device& device, FeatureList&& requestedFeatures)
 {
-    auto session = adoptRef(*new WebXRSession(document, system, mode, device, WTFMove(requestedFeatures)));
+    auto session = adoptRef(*new WebXRSession(document, system, mode, device, WTF::move(requestedFeatures)));
     session->suspendIfNeeded();
     return session;
 }
@@ -66,14 +74,15 @@ WebXRSession::WebXRSession(Document& document, WebXRSystem& system, XRSessionMod
     , m_xrSystem(system)
     , m_mode(mode)
     , m_device(device)
-    , m_requestedFeatures(WTFMove(requestedFeatures))
+    , m_requestedFeatures(WTF::move(requestedFeatures))
     , m_activeRenderState(WebXRRenderState::create(mode))
-    , m_viewerReferenceSpace(WebXRViewerSpace::create(document, *this))
+    , m_viewerReferenceSpace(WebXRReferenceSpace::create(document, *this, XRReferenceSpaceType::Viewer))
     , m_timeOrigin(MonotonicTime::now())
     , m_views(device.views(mode))
 {
     device.setTrackingAndRenderingClient(*this);
-    device.initializeTrackingAndRendering(document.securityOrigin().data(), mode, m_requestedFeatures);
+    if (!m_requestedFeatures.contains(PlatformXR::SessionFeature::WebGPU))
+        device.initializeTrackingAndRendering(document.securityOrigin().data(), mode, m_requestedFeatures, std::nullopt);
 
     // https://immersive-web.github.io/webxr/#ref-for-dom-xrreferencespacetype-viewer%E2%91%A2
     // Every session MUST support viewer XRReferenceSpaces.
@@ -85,6 +94,8 @@ WebXRSession::WebXRSession(Document& document, WebXRSystem& system, XRSessionMod
     auto minimumNearClipPlaneFromPlatform = device.minimumNearClipPlane();
     if (minimumNearClipPlaneFromPlatform >= 0)
         m_minimumNearClipPlane = minimumNearClipPlaneFromPlatform;
+
+    document.registerForVisibilityStateChangedCallbacks(*this);
 }
 
 WebXRSession::~WebXRSession()
@@ -96,7 +107,7 @@ WebXRSession::~WebXRSession()
 
 XREnvironmentBlendMode WebXRSession::environmentBlendMode() const
 {
-    return m_environmentBlendMode;
+    return m_frameData.environmentBlendMode;
 }
 
 XRInteractionMode WebXRSession::interactionMode() const
@@ -121,7 +132,7 @@ const Vector<String> WebXRSession::enabledFeatures() const
     for (const auto& feature : m_requestedFeatures) {
         String sessionFeature = PlatformXR::sessionFeatureDescriptor(feature);
         if (sessionFeature != ""_s)
-            enabledFeatureArray.append(WTFMove(sessionFeature));
+            enabledFeatureArray.append(WTF::move(sessionFeature));
     }
 
     return enabledFeatureArray;
@@ -137,13 +148,16 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
 
     // 3. If newState's baseLayer was created with an XRSession other than session,
     //    throw an InvalidStateError and abort these steps.
-    if (newState.baseLayer && newState.baseLayer->session() != this)
+    if (newState.baseLayer && newState.baseLayer.value() && newState.baseLayer.value()->session() != this)
         return Exception { ExceptionCode::InvalidStateError };
 
     // 4. If newState's inlineVerticalFieldOfView is set and session is an immersive session,
     //    throw an InvalidStateError and abort these steps.
     if (newState.inlineVerticalFieldOfView && isImmersive(m_mode))
         return Exception { ExceptionCode::InvalidStateError };
+
+    if (newState.baseLayer.has_value() && newState.layers)
+        return Exception { ExceptionCode::NotSupportedError, "Cannot set both baseLayer and layers in the same call to updateRenderState."_s };
 
     // 5. If none of newState's depthNear, depthFar, inlineVerticalFieldOfView, baseLayer,
     //    layers are set, abort these steps.
@@ -155,23 +169,8 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
     if (!m_pendingRenderState)
         m_pendingRenderState = m_activeRenderState->clone();
 
-    // 6. Run update the pending layers state with session and newState.
-    // https://www.w3.org/TR/webxrlayers-1/#updaterenderstatechanges
-#if ENABLE(WEBXR_LAYERS)
-    if (newState.layers) {
-        /* If session was not created with "layers" enabled and newState’s layers contains more than 1 instance, throw a NotSupportedError and abort these steps.
-         If session’s pending render state is null, set it to a copy of activeState.
-         If newState’s layers contains duplicate instances, throw a TypeError and abort these steps.
-         For each layer in newState’s layers:
-
-         If layer is an XRCompositionLayer and layer’s session is different from session, throw a TypeError and abort these steps.
-         If layer is an XRWebGLLayer and layer’s session is different from session, throw a TypeError and abort these steps.
-         Set session’s pending render state's baseLayer to null.
-         Set session’s pending render state's layers to newState’s layers.
-         */
-        m_pendingRenderState->setLayers(*newState.layers);
-    }
-#endif
+    if (newState.passthroughFullyObscured)
+        m_pendingRenderState->setPassthroughFullyObscured(newState.passthroughFullyObscured.value());
 
     // 9. If newState's depthNear value is set, set session's pending render state's depthNear to newState's depthNear.
     if (newState.depthNear)
@@ -188,7 +187,30 @@ ExceptionOr<void> WebXRSession::updateRenderState(const XRRenderStateInit& newSt
 
     // 12. If newState's baseLayer is set, set session's pending render state's baseLayer to newState's baseLayer.
     if (newState.baseLayer)
-        m_pendingRenderState->setBaseLayer(newState.baseLayer.get());
+        m_pendingRenderState->setBaseLayer(newState.baseLayer->get());
+    // https://www.w3.org/TR/webxrlayers-1/#updaterenderstatechanges
+#if ENABLE(WEBXR_LAYERS)
+    else if (newState.layers) {
+        if (!m_requestedFeatures.contains(PlatformXR::SessionFeature::Layers) && newState.layers->size() > 1)
+            return Exception { ExceptionCode::NotSupportedError, "Cannot set layers when the Layers feature is not enabled for this session."_s };
+
+        if (!m_pendingRenderState)
+            m_pendingRenderState = m_activeRenderState->clone();
+
+        for (size_t i = 0; i < newState.layers->size(); ++i) {
+            auto& layer = newState.layers->at(i);
+
+            if (i != newState.layers->reverseFind(layer))
+                return Exception { ExceptionCode::TypeError, "Cannot set the same XRLayer instance multiple times in the layers array."_s };
+
+            if (layer->isWebXRWebGLLayer() && downcast<WebXRWebGLLayer>(layer.get()).session() != this)
+                return Exception { ExceptionCode::TypeError, "XRWebGLLayer's session does not match the XRSession."_s };
+        }
+
+        m_pendingRenderState->setBaseLayer(nullptr);
+        m_pendingRenderState->setLayers(*newState.layers);
+    }
+#endif
 
     return { };
 }
@@ -243,13 +265,13 @@ void WebXRSession::requestReferenceSpace(XRReferenceSpaceType type, RequestRefer
 
     // 1. Let promise be a new Promise.
     // 2. Run the following steps in parallel:
-    scriptExecutionContext()->postTask([this, weakThis = WeakPtr { *this }, promise = WTFMove(promise), type](auto&) mutable {
+    scriptExecutionContext()->postTask([this, weakThis = WeakPtr { *this }, promise = WTF::move(promise), type](auto&) mutable {
         if (!weakThis)
             return;
         // 2.1. If the result of running reference space is supported for type and session is false, queue a task to reject promise
         // with a NotSupportedError and abort these steps.
         if (!referenceSpaceIsSupported(type)) {
-            queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [promise = WTFMove(promise)](auto&) mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [promise = WTF::move(promise)](auto&) mutable {
                 promise.reject(Exception { ExceptionCode::NotSupportedError });
             });
             return;
@@ -259,7 +281,7 @@ void WebXRSession::requestReferenceSpace(XRReferenceSpaceType type, RequestRefer
             device->initializeReferenceSpace(type);
 
         // 2.3. Queue a task to run the following steps:
-        queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [type, promise = WTFMove(promise)](auto& session) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [type, promise = WTF::move(promise)](auto& session) mutable {
             if (!session.scriptExecutionContext()) {
                 promise.reject(Exception { ExceptionCode::InvalidStateError });
                 return;
@@ -293,7 +315,7 @@ unsigned WebXRSession::requestAnimationFrame(Ref<XRFrameRequestCallback>&& callb
     // 3. Append callback to session's list of animation frame callbacks, associated with session's
     // animation frame callback identifier's current value.
     callback->setCallbackId(newId);
-    m_callbacks.append(WTFMove(callback));
+    m_callbacks.append(WTF::move(callback));
 
     // Script can add multiple requestAnimationFrame callbacks but we should only request a device frame once.
     // When requestAnimationFrame is called during processing RAF callbacks the next requestFrame is scheduled
@@ -423,7 +445,7 @@ void WebXRSession::didCompleteShutdown()
     // From https://immersive-web.github.io/webxr/#shut-down-the-session
     // 7. Queue a task that fires an XRSessionEvent named end on session.
     auto event = XRSessionEvent::create(eventNames().endEvent, { RefPtr { this } });
-    queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTF::move(event));
 }
 
 ScriptExecutionContext* WebXRSession::scriptExecutionContext() const
@@ -442,7 +464,7 @@ ExceptionOr<void> WebXRSession::end(EndPromise&& promise)
         return Exception { ExceptionCode::InvalidStateError, "Cannot end a session more than once"_s };
 
     ASSERT(!m_endPromise);
-    m_endPromise = makeUnique<EndPromise>(WTFMove(promise));
+    m_endPromise = makeUnique<EndPromise>(WTF::move(promise));
 
     // 1. Let promise be a new Promise.
     // 2. Shut down the target XRSession object.
@@ -464,7 +486,7 @@ void WebXRSession::sessionDidInitializeInputSources(Vector<PlatformXR::FrameData
     // https://immersive-web.github.io/webxr/#dom-xrsystem-requestsession
     // 5.4.11 Queue a task to perform the following steps: NOTE: These steps ensure that initial inputsourceschange
     // events occur after the initial session is resolved.
-    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [inputSources = WTFMove(inputSources)](auto& session) mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [inputSources = WTF::move(inputSources)](auto& session) mutable {
         //  1. Set session's promise resolved flag to true.
         session.m_inputInitialized = true;
         //  2. Let sources be any existing input sources attached to session.
@@ -499,7 +521,7 @@ void WebXRSession::updateSessionVisibilityState(PlatformXR::VisibilityState visi
     // A user agent MUST dispatch a visibilitychange event on an XRSession each time the
     // visibility state of the XRSession has changed. The event MUST be of type XRSessionEvent.
     auto event = XRSessionEvent::create(eventNames().visibilitychangeEvent, { RefPtr { this } });
-    queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::WebXR, WTF::move(event));
 }
 
 void WebXRSession::applyPendingRenderState()
@@ -508,7 +530,7 @@ void WebXRSession::applyPendingRenderState()
     // 1. Let activeState be session’s active render state.
     // 2. Let newState be session’s pending render state.
     // 3. Set session’s pending render state to null.
-    auto newState = WTFMove(m_pendingRenderState);
+    auto newState = WTF::move(m_pendingRenderState);
     ASSERT(newState);
     ASSERT(!m_pendingRenderState);
 
@@ -550,7 +572,9 @@ void WebXRSession::applyPendingRenderState()
         m_activeRenderState->setOutputCanvas(nullptr);
     }
 
-    m_requestData = {{ .depthRange = PlatformXR::DepthRange { static_cast<float>(m_activeRenderState->depthNear()), static_cast<float>(m_activeRenderState->depthFar()) } }}; // NOLINT
+    m_requestData = { {
+        .isPassthroughFullyObscured = m_activeRenderState->passthroughFullyObscured().value_or(false),
+        .depthRange = PlatformXR::DepthRange { static_cast<float>(m_activeRenderState->depthNear()), static_cast<float>(m_activeRenderState->depthFar()) } }}; // NOLINT
 }
 
 void WebXRSession::minimalUpdateRendering()
@@ -602,9 +626,9 @@ void WebXRSession::requestFrameIfNeeded()
     if (!device)
         return;
     m_isDeviceFrameRequestPending = true;
-    device->requestFrame(WTFMove(m_requestData), [this, protectedThis = Ref { *this }](auto&& frameData) {
+    device->requestFrame(WTF::move(m_requestData), [this, protectedThis = Ref { *this }](auto&& frameData) {
         m_isDeviceFrameRequestPending = false;
-        onFrame(WTFMove(frameData));
+        onFrame(WTF::move(frameData));
     });
     m_requestData.reset();
 }
@@ -624,11 +648,11 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
         return;
 
     // Queue a task to perform the following steps.
-    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [frameData = WTFMove(frameData)](auto& session) mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::WebXR, [frameData = WTF::move(frameData)](auto& session) mutable {
         if (session.m_ended || session.m_visibilityState == XRVisibilityState::Hidden)
             return;
 
-        session.m_frameData = WTFMove(frameData);
+        session.m_frameData = WTF::move(frameData);
         //  1.Let now be the current high resolution time.
         auto now = (MonotonicTime::now() - session.m_timeOrigin).milliseconds();
 
@@ -702,7 +726,7 @@ void WebXRSession::onFrame(PlatformXR::FrameData&& frameData)
                 frameLayers.append(session.m_activeRenderState->baseLayer()->endFrame());
 
             if (auto device = session.m_device.get())
-                device->submitFrame(WTFMove(frameLayers));
+                device->submitFrame(WTF::move(frameLayers));
         }
 
         session.requestFrameIfNeeded();
@@ -734,6 +758,105 @@ bool WebXRSession::isHandTrackingEnabled() const
     return m_requestedFeatures.contains(PlatformXR::SessionFeature::HandTracking);
 }
 #endif
+
+#if ENABLE(WEBXR_HIT_TEST)
+template <typename OptionsInit>
+Vector<XRHitTestTrackableType> entityTypesFromOptions(const OptionsInit& options)
+{
+    if (options.entityTypes.isEmpty())
+        return { XRHitTestTrackableType::Plane };
+    return options.entityTypes;
+}
+
+// https://immersive-web.github.io/hit-test/#dom-xrsession-requesthittestsource
+void WebXRSession::requestHitTestSource(const XRHitTestOptionsInit& init, RequestHitTestSourcePromise&& promise)
+{
+    if (!m_requestedFeatures.contains(PlatformXR::SessionFeature::HitTest)) {
+        promise.reject(Exception { ExceptionCode::NotSupportedError });
+        return;
+    }
+    if (m_ended) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "The session was already ended"_s });
+        return;
+    }
+    RefPtr device = this->device();
+    if (!device) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError });
+        return;
+    }
+    auto maybeNativeOrigin = init.space->nativeOriginInformation();
+    if (!maybeNativeOrigin) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Unable to retrieve the native origin from XRSpace"_s });
+        return;
+    }
+    auto toFloatPoint3D = [](auto& point) {
+        return FloatPoint3D(point.x(), point.y(), point.z());
+    };
+    PlatformXR::Ray ray { { 0, 0, 0 }, { 0, 0, -1 } };
+    if (init.offsetRay)
+        ray = PlatformXR::Ray { toFloatPoint3D(init.offsetRay->origin()), toFloatPoint3D(init.offsetRay->direction()) };
+    PlatformXR::HitTestOptions options = { *WTF::move(maybeNativeOrigin), entityTypesFromOptions(init), WTF::move(ray) };
+    device->requestHitTestSource(options, [protectedThis = Ref { *this }, promise = WTF::move(promise)](ExceptionOr<PlatformXR::HitTestSource> exceptionOrSource) mutable {
+        if (exceptionOrSource.hasException())
+            promise.reject(exceptionOrSource.releaseException());
+        else
+            promise.resolve(WebXRHitTestSource::create(protectedThis, exceptionOrSource.releaseReturnValue()));
+    });
+}
+
+// https://immersive-web.github.io/hit-test/#dom-xrsession-requesthittestsourcefortransientinput
+void WebXRSession::requestHitTestSourceForTransientInput(const XRTransientInputHitTestOptionsInit& init, RequestHitTestSourceForTransientInputPromise&& promise)
+{
+    if (!m_requestedFeatures.contains(PlatformXR::SessionFeature::HitTest)) {
+        promise.reject(Exception { ExceptionCode::NotSupportedError });
+        return;
+    }
+    if (m_ended) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "The session was already ended"_s });
+        return;
+    }
+    RefPtr device = this->device();
+    if (!device) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError });
+        return;
+    }
+    auto toFloatPoint3D = [](auto& point) {
+        return FloatPoint3D(point.x(), point.y(), point.z());
+    };
+    PlatformXR::Ray ray { { 0, 0, 0 }, { 0, 0, -1 } };
+    if (init.offsetRay)
+        ray = PlatformXR::Ray { toFloatPoint3D(init.offsetRay->origin()), toFloatPoint3D(init.offsetRay->direction()) };
+    PlatformXR::TransientInputHitTestOptions options = { init.profile, entityTypesFromOptions(init), WTF::move(ray) };
+    device->requestTransientInputHitTestSource(options, [protectedThis = Ref { *this }, promise = WTF::move(promise)](ExceptionOr<PlatformXR::TransientInputHitTestSource> exceptionOrSource) mutable {
+        if (exceptionOrSource.hasException())
+            promise.reject(exceptionOrSource.releaseException());
+        else
+            promise.resolve(WebXRTransientInputHitTestSource::create(protectedThis, exceptionOrSource.releaseReturnValue()));
+    });
+}
+#endif
+
+void WebXRSession::initializeTrackingAndRendering(std::optional<XRCanvasConfiguration>&& init)
+{
+    RefPtr document = downcast<Document>(scriptExecutionContext());
+    auto device = this->device();
+    if (document && device)
+        device->initializeTrackingAndRendering(document->securityOrigin().data(), m_mode, m_requestedFeatures, WTF::move(init));
+}
+
+void WebXRSession::visibilityStateChanged()
+{
+    RefPtr sessionDocument = downcast<Document>(scriptExecutionContext());
+    if (!sessionDocument)
+        return;
+
+    // For inline sessions the visibility state MUST mirror the Document’s visibilityState
+    // https://immersive-web.github.io/webxr/#xrsession-visibility-state
+    if (m_mode != XRSessionMode::Inline)
+        return;
+
+    updateSessionVisibilityState(sessionDocument->hidden() ? PlatformXR::VisibilityState::Hidden : PlatformXR::VisibilityState::Visible);
+}
 
 WebCoreOpaqueRoot root(WebXRSession* session)
 {

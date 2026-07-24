@@ -35,7 +35,8 @@
 namespace WebCore {
 
 class WaveShaperNode final : public AudioBasicProcessorNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WaveShaperNode);
+    WTF_MAKE_TZONE_ALLOCATED(WaveShaperNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WaveShaperNode);
 public:
     static ExceptionOr<Ref<WaveShaperNode>> create(BaseAudioContext&, const WaveShaperOptions& = { });
 
@@ -68,5 +69,7 @@ template<> struct LogArgument<WebCore::OverSampleType> {
 };
 
 } // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(WaveShaperNode, NodeTypeWaveShaper);
 
 #endif // ENABLE(WEB_AUDIO)

@@ -142,7 +142,7 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
         ASSERT(!child.isRenderSVGRoot());
 
         auto transform = SVGLayerTransformComputation(child).computeAccumulatedTransform(m_renderer.ptr(), TransformState::TrackSVGCTMMatrix);
-        return transform.isIdentity() ? std::nullopt : std::make_optional(WTFMove(transform));
+        return transform.isIdentity() ? std::nullopt : std::make_optional(WTF::move(transform));
     };
 
     auto uniteBoundingBoxRespectingValidity = [] (bool& boxValid, FloatRect& box, const RenderLayerModelObject& child, const FloatRect& childBoundingBox) {
@@ -289,7 +289,7 @@ void SVGBoundingBoxComputation::adjustBoxForClippingAndEffects(const SVGBounding
     }
 
     if (options.contains(DecorationOption::IncludeOutline))
-        box.inflate(m_renderer->outlineStyleForRepaint().outlineSize());
+        box.inflate(m_renderer->outlineStyleForRepaint().usedOutlineSize());
 }
 
 LayoutRect SVGBoundingBoxComputation::computeVisualOverflowRect(const RenderLayerModelObject& renderer)

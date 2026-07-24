@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-IntSize PlatformImageNativeImageBackend::size() const
+IntSize NativeImage::size() const
 {
     if (!m_platformImage) return { };
     // read from Native Image , no need to call jni
@@ -48,7 +48,7 @@ IntSize PlatformImageNativeImageBackend::size() const
     return IntSize(f_size.width(), f_size.height());
 }
 
-bool PlatformImageNativeImageBackend::hasAlpha() const
+bool NativeImage::hasAlpha() const
 {
     // FIXME-java: Get alpha details from ImageMetadata class
     return true;
@@ -59,7 +59,7 @@ std::optional<Color> NativeImage::singlePixelSolidColor() const
     return {};
 }
 
-Headroom PlatformImageNativeImageBackend::headroom() const
+Headroom NativeImage::headroom() const
 {
     return Headroom::None;
 }
@@ -68,7 +68,7 @@ void NativeImage::clearSubimages()
     notImplemented();
 }
 
-DestinationColorSpace PlatformImageNativeImageBackend::colorSpace() const //TBD
+DestinationColorSpace NativeImage::colorSpace() const //TBD
 {
     notImplemented();
     return DestinationColorSpace::SRGB();

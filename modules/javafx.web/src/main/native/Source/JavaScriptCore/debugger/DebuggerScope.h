@@ -50,7 +50,7 @@ public:
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     DECLARE_EXPORT_INFO;
@@ -108,12 +108,12 @@ private:
     friend class DebuggerCallFrame;
 };
 
-inline DebuggerScope::iterator DebuggerScope::begin()
+inline DebuggerScope::iterator DebuggerScope::begin() LIFETIME_BOUND
 {
     return iterator(this);
 }
 
-inline DebuggerScope::iterator DebuggerScope::end()
+inline DebuggerScope::iterator DebuggerScope::end() LIFETIME_BOUND
 {
     return iterator(nullptr);
 }

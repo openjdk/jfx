@@ -26,7 +26,7 @@
 #include "LegacyRenderSVGPath.h"
 #include "LegacyRenderSVGResource.h"
 #include "RenderAncestorIterator.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerInlines.h"
 #include "RenderSVGHiddenContainer.h"
@@ -40,24 +40,26 @@
 #include "SVGRenderSupport.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
+#include "StyleTransformResolver.h"
 #include "TransformOperationData.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGGraphicsElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGGraphicsElement);
 
 SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry, OptionSet<TypeFlag> typeFlags)
-    : SVGElement(tagName, document, WTFMove(propertyRegistry), typeFlags)
+    : SVGElement(tagName, document, WTF::move(propertyRegistry), typeFlags)
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
     , m_transform(SVGAnimatedTransformList::create(this))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::transformAttr, &SVGGraphicsElement::m_transform>();
-    });
+    }
 }
 
 SVGGraphicsElement::~SVGGraphicsElement() = default;
@@ -106,8 +108,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
     if (hasSpecifiedTransform || (style && (style->hasTranslate() || style->hasScale() || style->hasRotate()))) {
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
-        TransformationMatrix transform;
-        style->applyTransform(transform, TransformOperationData(renderer->transformReferenceBoxRect(), renderer.get()));
+        auto transform = Style::TransformResolver::computeTransform(*style, TransformOperationData(renderer->transformReferenceBoxRect(), renderer.get()));
 
         // Flatten any 3D transform.
         matrix = transform.toAffineTransform();
@@ -115,7 +116,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 
     // If we didn't have the CSS "transform" property set, we must account for the "transform" attribute.
     if (!hasSpecifiedTransform && style && !transform().isEmpty()) {
-        auto t = style->computeTransformOrigin(renderer->transformReferenceBoxRect()).xy();
+        auto t = Style::TransformResolver::computeTransformOrigin(*style, renderer->transformReferenceBoxRect()).xy();
         matrix.translate(t);
         matrix *= transform().concatenate();
         matrix.translate(-t.x(), -t.y());
@@ -154,9 +155,10 @@ void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
                 return;
             }
 
-        if (CheckedPtr renderer = this->renderer())
+        if (CheckedPtr renderer = this->renderer()) {
             renderer->setNeedsTransformUpdate();
         updateSVGRendererForElementChange();
+        }
         return;
     }
 
@@ -187,8 +189,8 @@ FloatRect SVGGraphicsElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
 RenderPtr<RenderElement> SVGGraphicsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-        return createRenderer<RenderSVGPath>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGPath>(*this, WTFMove(style));
+        return createRenderer<RenderSVGPath>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGPath>(*this, WTF::move(style));
 }
 
 void SVGGraphicsElement::didAttachRenderers()

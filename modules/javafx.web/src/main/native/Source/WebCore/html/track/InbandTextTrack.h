@@ -33,10 +33,14 @@
 namespace WebCore {
 
 class InbandTextTrack : public TextTrack, private InbandTextTrackPrivateClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InbandTextTrack);
+    WTF_MAKE_TZONE_ALLOCATED(InbandTextTrack);
 public:
     static Ref<InbandTextTrack> create(ScriptExecutionContext&, InbandTextTrackPrivate&);
     virtual ~InbandTextTrack();
+
+    // InbandTextTrackPrivateClient.
+    void ref() const final { TextTrack::ref(); }
+    void deref() const final { TextTrack::deref(); }
 
     bool isClosedCaptions() const override;
     bool isSDH() const override;
@@ -47,9 +51,10 @@ public:
     bool isDefault() const override;
     size_t inbandTrackIndex();
 
-    AtomString inBandMetadataTrackDispatchType() const override;
+    String inBandMetadataTrackDispatchType() const override;
 
     void setPrivate(InbandTextTrackPrivate&);
+    Ref<InbandTextTrackPrivate> protectedPrivate() const;
 #if !RELEASE_LOG_DISABLED
     void setLogger(const Logger&, uint64_t) final;
 #endif
@@ -67,8 +72,8 @@ protected:
 private:
     bool isInband() const final { return true; }
     void idChanged(TrackID) override;
-    void labelChanged(const AtomString&) override;
-    void languageChanged(const AtomString&) override;
+    void labelChanged(const String&) override;
+    void languageChanged(const String&) override;
     void willRemove() override;
 
     void addDataCue(const MediaTime&, const MediaTime&, std::span<const uint8_t>) override { ASSERT_NOT_REACHED(); }

@@ -53,7 +53,7 @@ ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::decode(const BufferS
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::flush()
@@ -68,7 +68,7 @@ ExceptionOr<RefPtr<Uint8Array>> DecompressionStreamDecoder::flush()
     if (!compressedData->byteLength())
         return nullptr;
 
-    return RefPtr { Uint8Array::create(WTFMove(compressedData)) };
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompress(std::span<const uint8_t> input)
@@ -79,9 +79,6 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompress(std::s
 #endif
     return decompressZlib(input);
 }
-
-
-
 
 // The decompression algorithm is broken up into 2 steps.
 // 1. Decompression of Data
@@ -179,14 +176,14 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> DecompressionStreamDecoder::decompressZlib(st
         storage.append(output);
     }
 
-    RefPtr decompressedData = storage.takeAsArrayBuffer();
+    RefPtr decompressedData = storage.takeBufferAsArrayBuffer();
     if (!decompressedData)
 
 #else
     UNUSED_PARAM(input);
-        //UNUSED_PARAM(inputLength);
+    //UNUSED_PARAM(inputLength);
     auto storage = SharedBufferBuilder();
-        auto decompressedData = storage.takeAsArrayBuffer();
+    auto decompressedData = storage.takeBufferAsArrayBuffer();
     if (!decompressedData)
         return Exception { ExceptionCode::OutOfMemoryError };
 

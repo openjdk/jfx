@@ -41,9 +41,7 @@ IsoHeapImplBase::IsoHeapImplBase(Mutex& lock)
 {
 }
 
-IsoHeapImplBase::~IsoHeapImplBase()
-{
-}
+IsoHeapImplBase::~IsoHeapImplBase() = default;
 
 void IsoHeapImplBase::addToAllIsoHeaps()
 {

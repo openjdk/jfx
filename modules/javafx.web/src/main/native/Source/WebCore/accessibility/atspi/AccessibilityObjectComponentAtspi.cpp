@@ -29,7 +29,8 @@
 #include "Document.h"
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 
@@ -147,9 +148,10 @@ bool AccessibilityObjectAtspi::focus() const
     if (!m_coreObject)
         return false;
 
-    m_coreObject->setFocused(true);
-    m_coreObject->updateBackingStore();
-    return m_coreObject->isFocused();
+    Ref coreObject = *m_coreObject;
+    coreObject->setFocused(true);
+    coreObject->updateBackingStore();
+    return coreObject->isFocused();
 }
 
 float AccessibilityObjectAtspi::opacity() const
@@ -211,7 +213,7 @@ void AccessibilityObjectAtspi::scrollToPoint(const IntPoint& point, Atspi::Coord
         if (auto* frameView = m_coreObject->documentFrameView())
             convertedPoint = frameView->contentsToWindow(frameView->screenToContents(point));
     }
-    m_coreObject->scrollToGlobalPoint(WTFMove(convertedPoint));
+    m_coreObject->scrollToGlobalPoint(WTF::move(convertedPoint));
 }
 
 } // namespace WebCore

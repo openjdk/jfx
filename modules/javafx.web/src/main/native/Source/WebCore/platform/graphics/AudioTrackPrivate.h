@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AudioTrackPrivateClient.h"
-#include "PlatformAudioTrackConfiguration.h"
-#include "TrackPrivateBase.h"
+#include <WebCore/AudioTrackPrivateClient.h>
+#include <WebCore/PlatformAudioTrackConfiguration.h>
+#include <WebCore/TrackPrivateBase.h>
 #include <wtf/Function.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-struct AudioInfo;
+class AudioInfo;
 
 class AudioTrackPrivate : public TrackPrivateBase {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioTrackPrivate);
@@ -60,14 +60,14 @@ public:
     virtual bool isBackedByMediaStreamTrack() const { return false; }
 
     using EnabledChangedCallback = Function<void(AudioTrackPrivate&, bool enabled)>;
-    void setEnabledChangedCallback(EnabledChangedCallback&& callback) { m_enabledChangedCallback = WTFMove(callback); }
+    void setEnabledChangedCallback(EnabledChangedCallback&& callback) { m_enabledChangedCallback = WTF::move(callback); }
 
     const PlatformAudioTrackConfiguration& configuration() const { return m_configuration; }
     void setConfiguration(PlatformAudioTrackConfiguration&& configuration)
     {
         if (configuration == m_configuration)
             return;
-        m_configuration = WTFMove(configuration);
+        m_configuration = WTF::move(configuration);
         notifyClients([configuration = m_configuration](auto& client) {
             downcast<AudioTrackPrivateClient>(client).configurationChanged(configuration);
         });

@@ -34,7 +34,7 @@ class LegacyRenderSVGResourceContainer;
 class SVGSVGElement;
 
 class LegacyRenderSVGRoot final : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGRoot);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGRoot);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGRoot);
 public:
     LegacyRenderSVGRoot(SVGSVGElement&, RenderStyle&&);
@@ -46,7 +46,8 @@ public:
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
 
-    std::pair<FloatSize, FloatSize> computeIntrinsicSizeAndPreferredAspectRatio() const override;
+    FloatSize computeIntrinsicSize() const final;
+    FloatSize preferredAspectRatio() const final;
     bool hasIntrinsicAspectRatio() const final;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
@@ -82,13 +83,14 @@ private:
     void insertedIntoTree() override;
     void willBeRemovedFromTree() override;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     const AffineTransform& localToParentTransform() const override;
 
     FloatRect objectBoundingBox() const override { return m_objectBoundingBox.value_or(FloatRect()); }
     FloatRect strokeBoundingBox() const override;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override;
+    FloatRect decoratedBoundingBox() const override;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
@@ -110,8 +112,6 @@ private:
     bool shouldApplyViewportClip() const;
     void updateCachedBoundaries();
     void buildLocalToBorderBoxTransform();
-
-    FloatSize calculateIntrinsicSize() const;
 
     IntSize m_containerSize;
     FloatRect m_repaintBoundingBox;

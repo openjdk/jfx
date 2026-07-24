@@ -604,7 +604,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
             if (op.type == GlobalVar || op.type == GlobalVarWithVarInjectionChecks || op.type == GlobalLexicalVar || op.type == GlobalLexicalVarWithVarInjectionChecks)
                 metadata.m_watchpointSet = op.watchpointSet;
             else if (op.structure)
-                metadata.m_structure.set(vm, this, op.structure);
+                metadata.m_structureID.set(vm, this, op.structure);
             metadata.m_operand = op.operand;
             break;
         }
@@ -643,7 +643,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
                 if (op.watchpointSet)
                     op.watchpointSet->invalidate(vm, PutToScopeFireDetail(this, ident));
             } else if (op.structure)
-                metadata.m_structure.set(vm, this, op.structure);
+                metadata.m_structureID.set(vm, this, op.structure);
             metadata.m_operand = op.operand;
             break;
         }
@@ -718,7 +718,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
             }
 
             std::pair<TypeLocation*, bool> locationPair = vm.typeProfiler()->typeLocationCache()->getTypeLocation(globalVariableID,
-                ownerExecutable->sourceID(), divotStart, divotEnd, WTFMove(globalTypeSet), &vm);
+                ownerExecutable->sourceID(), divotStart, divotEnd, WTF::move(globalTypeSet), &vm);
             TypeLocation* location = locationPair.first;
             bool isNewLocation = locationPair.second;
 
@@ -820,7 +820,7 @@ void CodeBlock::setupWithUnlinkedBaselineCode(Ref<BaselineJITCode> jitCode)
             }
             }
         }
-        setBaselineJITData(WTFMove(baselineJITData));
+        setBaselineJITData(WTF::move(baselineJITData));
 
         // Set optimization thresholds only after instructions is initialized and JITData is initialized, since these
         // rely on the instruction count (and are in theory permitted to also inspect the instruction stream to more accurate assess the cost of tier-up).
@@ -842,7 +842,7 @@ void CodeBlock::setupWithUnlinkedBaselineCode(Ref<BaselineJITCode> jitCode)
     }
 
     if (jitCode->m_isShareable && !unlinkedCodeBlock()->m_unlinkedBaselineCode && Options::useBaselineJITCodeSharing())
-        unlinkedCodeBlock()->m_unlinkedBaselineCode = WTFMove(jitCode);
+        unlinkedCodeBlock()->m_unlinkedBaselineCode = WTF::move(jitCode);
 }
 #endif // ENABLE(JIT)
 
@@ -1656,7 +1656,7 @@ void CodeBlock::finalizeLLIntInlineCaches()
             if (getPutInfo.resolveType() == GlobalVar || getPutInfo.resolveType() == GlobalVarWithVarInjectionChecks
                 || getPutInfo.resolveType() == ResolvedClosureVar || getPutInfo.resolveType() == GlobalLexicalVar || getPutInfo.resolveType() == GlobalLexicalVarWithVarInjectionChecks)
                 return;
-            WriteBarrierBase<Structure>& structure = metadata.m_structure;
+            WriteBarrierStructureID& structure = metadata.m_structureID;
             if (!structure || vm.heap.isMarked(structure.get()))
                 return;
             dataLogLnIf(Options::verboseOSR(), "Clearing scope access with structure ", RawPointer(structure.get()));
@@ -2905,7 +2905,7 @@ bool CodeBlock::hasIdentifier(UniquedStringImpl* uid)
             }
 #endif
             WTF::storeStoreFence();
-            m_cachedIdentifierUids = WTFMove(cachedIdentifierUids);
+            m_cachedIdentifierUids = WTF::move(cachedIdentifierUids);
         }
         return m_cachedIdentifierUids.contains(uid);
     }

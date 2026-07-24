@@ -451,7 +451,7 @@ void JIT::privateCompileMainPass()
         }
 
         if (sizeMarker) [[unlikely]]
-            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
+            m_vm->jitSizeStatistics->markEnd(WTF::move(*sizeMarker), *this, m_plan);
 
         if (JITInternal::verbose)
             dataLog("At ", bytecodeOffset, ": ", m_slowCases.size(), "\n");
@@ -614,15 +614,15 @@ void JIT::privateCompileSlowCases()
         if (JITInternal::verbose)
             dataLog("At ", firstTo, " slow: ", iter - m_slowCases.begin(), "\n");
 
-        RELEASE_ASSERT_WITH_MESSAGE(iter == m_slowCases.end() || firstTo.offset() != iter->to.offset(), "Not enough jumps linked in slow case codegen.");
-        RELEASE_ASSERT_WITH_MESSAGE(firstTo.offset() == (iter - 1)->to.offset(), "Too many jumps linked in slow case codegen.");
+        RELEASE_ASSERT_WITH_MESSAGE(iter == m_slowCases.end() || firstTo.offset() != iter->to.offset(), "Not enough jumps linked in slow case codegen while handling %s.", toCString(currentInstruction->opcodeID()).data());
+        RELEASE_ASSERT_WITH_MESSAGE(firstTo.offset() == (iter - 1)->to.offset(), "Too many jumps linked in slow case codegen while handling %s.", toCString(currentInstruction->opcodeID()).data());
 
         jump().linkTo(fastPathResumePoint(), this);
         ++bytecodeCountHavingSlowCase;
 
         if (sizeMarker) [[unlikely]] {
             m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset() + currentInstruction->size());
-            m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
+            m_vm->jitSizeStatistics->markEnd(WTF::move(*sizeMarker), *this, m_plan);
         }
     }
 
@@ -809,7 +809,7 @@ RefPtr<BaselineJITCode> JIT::compileAndLinkWithoutFinalizing(JITCompilationEffor
     RELEASE_ASSERT(!JITCode::isJIT(m_profiledCodeBlock->jitType()));
 
     if (sizeMarker) [[unlikely]]
-        m_vm->jitSizeStatistics->markEnd(WTFMove(*sizeMarker), *this, m_plan);
+        m_vm->jitSizeStatistics->markEnd(WTF::move(*sizeMarker), *this, m_plan);
 
     privateCompileMainPass();
     privateCompileLinkPass();
@@ -972,7 +972,7 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
 
     std::unique_ptr<PCToCodeOriginMap> pcToCodeOriginMap;
     if (m_pcToCodeOriginMapBuilder.didBuildMapping())
-        pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), patchBuffer);
+        pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(WTF::move(m_pcToCodeOriginMapBuilder), patchBuffer);
 
     // FIXME: Make a version of CodeBlockWithJITType that knows about UnlinkedCodeBlock.
     CodeRef<JSEntryPtrTag> result = FINALIZE_BASELINE_CODE(
@@ -986,7 +986,7 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
     if (jitCode->m_unlinkedCalls.size()) {
         std::move(m_unlinkedCalls.begin(), m_unlinkedCalls.end(), jitCode->m_unlinkedCalls.begin());
         // It is almost always already sorted.
-        WTF::bubbleSort(jitCode->m_unlinkedCalls.begin(), jitCode->m_unlinkedCalls.end(),
+        WTF::bubbleSort(jitCode->m_unlinkedCalls.mutableSpan(),
             [](const auto& lhs, const auto& rhs) {
                 return lhs.bytecodeIndex < rhs.bytecodeIndex;
             });
@@ -994,13 +994,13 @@ RefPtr<BaselineJITCode> JIT::link(LinkBuffer& patchBuffer)
     jitCode->m_unlinkedStubInfos = FixedVector<BaselineUnlinkedStructureStubInfo>(m_unlinkedStubInfos.size());
     if (jitCode->m_unlinkedStubInfos.size())
         std::move(m_unlinkedStubInfos.begin(), m_unlinkedStubInfos.end(), jitCode->m_unlinkedStubInfos.begin());
-    jitCode->m_switchJumpTables = WTFMove(m_switchJumpTables);
-    jitCode->m_stringSwitchJumpTables = WTFMove(m_stringSwitchJumpTables);
+    jitCode->m_switchJumpTables = WTF::move(m_switchJumpTables);
+    jitCode->m_stringSwitchJumpTables = WTF::move(m_stringSwitchJumpTables);
     jitCode->m_jitCodeMap = jitCodeMapBuilder.finalize();
     jitCode->adoptMathICs(m_mathICs);
-    jitCode->m_constantPool = WTFMove(m_constantPool);
+    jitCode->m_constantPool = WTF::move(m_constantPool);
     jitCode->m_isShareable = m_isShareable;
-    jitCode->m_pcToCodeOriginMap = WTFMove(pcToCodeOriginMap);
+    jitCode->m_pcToCodeOriginMap = WTF::move(pcToCodeOriginMap);
 
     if (JITInternal::verbose)
         dataLogF("JIT generated code for %p at [%p, %p).\n", m_unlinkedCodeBlock, result.executableMemory()->start().untaggedPtr(), result.executableMemory()->end().untaggedPtr());

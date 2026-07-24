@@ -30,6 +30,8 @@
 #include "JSObjectInlines.h"
 #include "StructureInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo ScopedArgumentsTable::s_info = { "ScopedArgumentsTable"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(ScopedArgumentsTable) };
@@ -92,7 +94,7 @@ ScopedArgumentsTable* ScopedArgumentsTable::trySetLength(VM& vm, uint32_t newLen
         for (unsigned i = std::min(m_length, newLength); i--;)
             newArguments.at(i) = this->at(i);
         m_length = newLength;
-        m_arguments = WTFMove(newArguments);
+        m_arguments = WTF::move(newArguments);
         m_watchpointSets.resize(newLength);
         return this;
     }
@@ -141,3 +143,4 @@ Structure* ScopedArgumentsTable::createStructure(VM& vm, JSGlobalObject* globalO
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

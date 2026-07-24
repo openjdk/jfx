@@ -63,13 +63,13 @@ ExceptionOr<Ref<TransformStream>> TransformStream::create(JSC::JSGlobalObject& g
         return result.releaseException();
 
     auto transformResult = result.releaseReturnValue();
-    return adoptRef(*new TransformStream(transformResult.transform, WTFMove(transformResult.readable), WTFMove(transformResult.writable)));
+    return adoptRef(*new TransformStream(transformResult.transform, WTF::move(transformResult.readable), WTF::move(transformResult.writable)));
 }
 
 TransformStream::TransformStream(JSC::JSValue internalTransformStream, Ref<ReadableStream>&& readable, Ref<WritableStream>&& writable)
     : m_internalTransformStream(internalTransformStream)
-    , m_readable(WTFMove(readable))
-    , m_writable(WTFMove(writable))
+    , m_readable(WTF::move(readable))
+    , m_writable(WTF::move(writable))
 {
 }
 

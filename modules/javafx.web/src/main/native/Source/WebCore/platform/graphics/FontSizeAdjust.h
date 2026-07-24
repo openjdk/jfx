@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FontMetrics.h"
+#include <WebCore/FontMetrics.h>
 #include <wtf/Markable.h>
 #include <wtf/text/TextStream.h>
 

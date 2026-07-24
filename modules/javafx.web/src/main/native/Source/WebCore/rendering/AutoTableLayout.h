@@ -21,7 +21,6 @@
 #pragma once
 
 #include "LayoutUnit.h"
-#include "Length.h"
 #include "StylePreferredSize.h"
 #include "TableLayout.h"
 #include <wtf/Vector.h>
@@ -59,6 +58,7 @@ private:
         float effectiveMaxLogicalWidth { 0 };
         float computedLogicalWidth { 0 };
         bool emptyCellsOnly { true };
+        float usedZoom { 1.0f };
     };
 
     Vector<Layout> m_layoutStruct;

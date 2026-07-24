@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "IDBBackingStore.h"
-#include "IDBDatabaseIdentifier.h"
-#include "IDBDatabaseInfo.h"
-#include "IDBDatabaseNameAndVersion.h"
-#include "IDBGetResult.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "ServerOpenDBRequest.h"
-#include "UniqueIDBDatabaseTransaction.h"
+#include <WebCore/IDBBackingStore.h>
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBDatabaseNameAndVersion.h>
+#include <WebCore/IDBGetResult.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/ServerOpenDBRequest.h>
+#include <WebCore/UniqueIDBDatabaseTransaction.h>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/HashCountedSet.h>
@@ -45,11 +45,6 @@ namespace WebCore {
 namespace IDBServer {
 class UniqueIDBDatabase;
 }
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::IDBServer::UniqueIDBDatabase> : std::true_type { };
 }
 
 namespace WebCore {
@@ -79,8 +74,9 @@ using GetResultCallback = Function<void(const IDBError&, const IDBGetResult&)>;
 using GetAllResultsCallback = Function<void(const IDBError&, const IDBGetAllResult&)>;
 using CountCallback = Function<void(const IDBError&, uint64_t)>;
 
-class UniqueIDBDatabase : public CanMakeWeakPtr<UniqueIDBDatabase> {
+class UniqueIDBDatabase final : public CanMakeWeakPtr<UniqueIDBDatabase>, public CanMakeThreadSafeCheckedPtr<UniqueIDBDatabase> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(UniqueIDBDatabase, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(UniqueIDBDatabase);
 public:
     WEBCORE_EXPORT UniqueIDBDatabase(UniqueIDBDatabaseManager&, const IDBDatabaseIdentifier&);
     UniqueIDBDatabase(UniqueIDBDatabase&) = delete;
@@ -97,6 +93,7 @@ public:
         Pass,
         Fail
     };
+    enum class DidCreateIndexInBackingStore : bool { No, Yes };
     void createObjectStore(UniqueIDBDatabaseTransaction&, const IDBObjectStoreInfo&, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void deleteObjectStore(UniqueIDBDatabaseTransaction&, const String& objectStoreName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void renameObjectStore(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
@@ -135,6 +132,8 @@ public:
     WEBCORE_EXPORT bool hasDataInMemory() const;
     WEBCORE_EXPORT void handleLowMemoryWarning();
 
+    WEBCORE_EXPORT bool isVersionChangeTransactionFinishingOrFinished(const IDBResourceIdentifier& transactionIdentifier) const;
+
 private:
     void handleDatabaseOperations();
     void handleCurrentOperation();
@@ -164,17 +163,18 @@ private:
     void clearStalePendingOpenDBRequests();
     void clearTransactionsOnConnection(UniqueIDBDatabaseConnection&);
     void createIndexAsyncAfterQuotaCheck(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, SpaceCheckResult);
-    enum class DidCreateIndexInBackingStore : bool { No, Yes };
     void didCreateIndexAsyncForTransaction(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, const IDBError&, DidCreateIndexInBackingStore = DidCreateIndexInBackingStore::Yes);
+
+    CheckedPtr<IDBBackingStore> checkedBackingStore() const;
 
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
     IDBDatabaseIdentifier m_identifier;
 
-    ListHashSet<RefPtr<ServerOpenDBRequest>> m_pendingOpenDBRequests;
+    ListHashSet<Ref<ServerOpenDBRequest>> m_pendingOpenDBRequests;
     RefPtr<ServerOpenDBRequest> m_currentOpenDBRequest;
     HashSet<IDBResourceIdentifier> m_openDBRequestsForSpaceCheck;
 
-    ListHashSet<RefPtr<UniqueIDBDatabaseConnection>> m_openDatabaseConnections;
+    ListHashSet<Ref<UniqueIDBDatabaseConnection>> m_openDatabaseConnections;
 
     RefPtr<UniqueIDBDatabaseConnection> m_versionChangeDatabaseConnection;
     RefPtr<UniqueIDBDatabaseTransaction> m_versionChangeTransaction;
@@ -183,8 +183,8 @@ private:
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
     std::unique_ptr<IDBDatabaseInfo> m_mostRecentDeletedDatabaseInfo;
 
-    Deque<RefPtr<UniqueIDBDatabaseTransaction>> m_pendingTransactions;
-    HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabaseTransaction>> m_inProgressTransactions;
+    Deque<Ref<UniqueIDBDatabaseTransaction>> m_pendingTransactions;
+    HashMap<IDBResourceIdentifier, Ref<UniqueIDBDatabaseTransaction>> m_inProgressTransactions;
 
     // The keys into these sets are the object store ID.
     // These sets help to decide which transactions can be started and which must be deferred.

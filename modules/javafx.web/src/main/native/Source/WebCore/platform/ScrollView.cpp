@@ -86,7 +86,6 @@ bool ScrollView::setHasVerticalScrollbar(bool hasBar, bool* contentSizeAffected)
 
 bool ScrollView::setHasScrollbarInternal(RefPtr<Scrollbar>& scrollbar, ScrollbarOrientation orientation, bool hasBar, bool* contentSizeAffected)
 {
-
     if (hasBar && !scrollbar) {
         scrollbar = createScrollbar(orientation);
         addChild(*scrollbar);
@@ -906,11 +905,26 @@ FloatPoint ScrollView::viewToContents(const FloatPoint& point) const
     return point + toIntSize(documentScrollPositionRelativeToViewOrigin());
 }
 
+DoublePoint ScrollView::viewToContents(const DoublePoint& point) const
+{
+    if (delegatesScrollingToNativeView())
+        return point;
+
+    return point + toDoubleSize(documentScrollPositionRelativeToViewOrigin());
+}
+
 FloatPoint ScrollView::contentsToView(const FloatPoint& point) const
 {
     if (delegatesScrollingToNativeView())
         return point;
     return point - toFloatSize(documentScrollPositionRelativeToViewOrigin());
+}
+
+DoublePoint ScrollView::contentsToView(const DoublePoint& point) const
+{
+    if (delegatesScrollingToNativeView())
+        return point;
+    return point - toDoubleSize(documentScrollPositionRelativeToViewOrigin());
 }
 
 IntRect ScrollView::viewToContents(IntRect rect) const
@@ -969,6 +983,11 @@ IntRect ScrollView::contentsToContainingViewContents(IntRect rect) const
     return contentsToView(rect);
 }
 
+DoublePoint ScrollView::rootViewToContents(const DoublePoint& rootViewPoint) const
+{
+    return viewToContents(convertFromRootView(rootViewPoint));
+}
+
 FloatPoint ScrollView::rootViewToContents(const FloatPoint& rootViewPoint) const
 {
     return viewToContents(convertFromRootView(rootViewPoint));
@@ -985,6 +1004,11 @@ IntPoint ScrollView::contentsToRootView(const IntPoint& contentsPoint) const
 }
 
 FloatPoint ScrollView::contentsToRootView(const FloatPoint& contentsPoint) const
+{
+    return convertToRootView(contentsToView(contentsPoint));
+}
+
+DoublePoint ScrollView::contentsToRootView(const DoublePoint& contentsPoint) const
 {
     return convertToRootView(contentsToView(contentsPoint));
 }
@@ -1052,6 +1076,11 @@ IntPoint ScrollView::windowToContents(IntPoint windowPoint) const
 }
 
 FloatPoint ScrollView::windowToContents(FloatPoint windowPoint) const
+{
+    return viewToContents(convertFromContainingWindow(windowPoint));
+}
+
+DoublePoint ScrollView::windowToContents(DoublePoint windowPoint) const
 {
     return viewToContents(convertFromContainingWindow(windowPoint));
 }
@@ -1161,6 +1190,16 @@ FloatPoint ScrollView::convertChildToSelf(const Widget* child, FloatPoint point)
     return point;
 }
 
+DoublePoint ScrollView::convertChildToSelf(const Widget* child, DoublePoint point) const
+{
+    if (!isScrollViewScrollbar(child)) {
+        FloatSize scrollPosition = toFloatSize(documentScrollPositionRelativeToViewOrigin());
+        point.move(-scrollPosition.width(), -scrollPosition.height());
+    }
+    point.moveBy(child->location());
+    return point;
+}
+
 IntPoint ScrollView::convertSelfToChild(const Widget* child, IntPoint point) const
 {
     if (!isScrollViewScrollbar(child))
@@ -1173,6 +1212,14 @@ FloatPoint ScrollView::convertSelfToChild(const Widget* child, FloatPoint point)
 {
     if (!isScrollViewScrollbar(child))
         point += toIntSize(documentScrollPositionRelativeToViewOrigin());
+    point.moveBy(-child->location());
+    return point;
+}
+
+DoublePoint ScrollView::convertSelfToChild(const Widget* child, DoublePoint point) const
+{
+    if (!isScrollViewScrollbar(child))
+        point.move(toIntSize(documentScrollPositionRelativeToViewOrigin()));
     point.moveBy(-child->location());
     return point;
 }

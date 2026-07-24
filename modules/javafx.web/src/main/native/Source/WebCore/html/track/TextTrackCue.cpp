@@ -36,7 +36,9 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMRect.h"
+#include "DocumentPage.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -45,7 +47,6 @@
 #include "Logging.h"
 #include "NodeInlines.h"
 #include "NodeTraversal.h"
-#include "Page.h"
 #include "ScriptDisallowedScope.h"
 #include "Text.h"
 #include "TextTrack.h"
@@ -63,8 +64,8 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextTrackCue);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextTrackCueBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextTrackCue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextTrackCueBox);
 
 Ref<TextTrackCueBox> TextTrackCueBox::create(Document& document, TextTrackCue& cue)
 {
@@ -187,7 +188,7 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
             return result.releaseException();
     }
 
-    auto fragment = DocumentFragment::create(document);
+    Ref fragment = DocumentFragment::create(document);
     for (RefPtr node = cueFragment.firstChild(); node; node = node->nextSibling()) {
         auto result = fragment->ensurePreInsertionValidity(*node, nullptr);
         if (result.hasException())
@@ -207,7 +208,7 @@ ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double s
     if (!nodeTypes.contains(RequiredNodes::CueBackground))
         return Exception { ExceptionCode::InvalidNodeTypeError, "Missing required attribute: cuebackground"_s };
 
-    auto textTrackCue = adoptRef(*new TextTrackCue(document, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), WTFMove(fragment)));
+    Ref textTrackCue = adoptRef(*new TextTrackCue(document, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), WTF::move(fragment)));
     textTrackCue->suspendIfNeeded();
     return textTrackCue;
 }
@@ -216,7 +217,7 @@ TextTrackCue::TextTrackCue(Document& document, const MediaTime& start, const Med
     : ActiveDOMObject(document)
     , m_startTime(start)
     , m_endTime(end)
-    , m_cueNode(WTFMove(cueFragment))
+    , m_cueNode(WTF::move(cueFragment))
 {
 }
 
@@ -256,8 +257,8 @@ void TextTrackCue::willChange()
     if (++m_processingCueChanges > 1)
         return;
 
-    if (m_track)
-        m_track->cueWillChange(*this);
+    if (RefPtr track = m_track.get())
+        track->cueWillChange(*this);
 }
 
 void TextTrackCue::didChange(bool affectOrder)
@@ -268,8 +269,8 @@ void TextTrackCue::didChange(bool affectOrder)
 
     m_displayTreeNeedsUpdate = true;
 
-    if (m_track)
-        m_track->cueDidChange(*this, affectOrder);
+    if (RefPtr track = m_track.get())
+        track->cueDidChange(*this, affectOrder);
 }
 
 TextTrack* TextTrackCue::track() const
@@ -335,15 +336,6 @@ void TextTrackCue::setPauseOnExit(bool value)
     m_pauseOnExit = value;
 }
 
-void TextTrackCue::dispatchEvent(Event& event)
-{
-    // When a TextTrack's mode is disabled: no cues are active, no events fired.
-    if (!track() || track()->mode() == TextTrack::Mode::Disabled)
-        return;
-
-    EventTarget::dispatchEvent(event);
-}
-
 bool TextTrackCue::isActive() const
 {
     return m_isActive && track() && track()->mode() != TextTrack::Mode::Disabled;
@@ -364,10 +356,13 @@ void TextTrackCue::setIsActive(bool active)
 unsigned TextTrackCue::cueIndex() const
 {
     ASSERT(m_track && m_track->cuesInternal());
-    if (!m_track || !m_track->cuesInternal())
+    if (!m_track)
+        return std::numeric_limits<unsigned>::max();
+    RefPtr cuesInternal = m_track->cuesInternal();
+    if (!cuesInternal)
         return std::numeric_limits<unsigned>::max();
 
-    return m_track->cuesInternal()->cueIndex(*this);
+    return cuesInternal->cueIndex(*this);
 }
 
 bool TextTrackCue::isOrderedBefore(const TextTrackCue* other) const
@@ -401,10 +396,10 @@ bool TextTrackCue::isEqual(const TextTrackCue& other, TextTrackCue::CueMatchRule
 bool TextTrackCue::hasEquivalentStartTime(const TextTrackCue& cue) const
 {
     MediaTime startTimeVariance = MediaTime::zeroTime();
-    if (track())
-        startTimeVariance = track()->startTimeVariance();
-    else if (cue.track())
-        startTimeVariance = cue.track()->startTimeVariance();
+    if (RefPtr track = m_track.get())
+        startTimeVariance = track->startTimeVariance();
+    else if (RefPtr track = cue.track())
+        startTimeVariance = track->startTimeVariance();
 
     return abs(abs(startMediaTime()) - abs(cue.startMediaTime())) <= startTimeVariance;
 }
@@ -457,7 +452,7 @@ RefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
     if (!document)
         return nullptr;
 
-    auto clonedFragment = DocumentFragment::create(*document);
+    Ref clonedFragment = DocumentFragment::create(*document);
     m_cueNode->cloneChildNodes(*document, nullptr, clonedFragment);
 
     for (RefPtr node = clonedFragment->firstChild(); node; node = node->nextSibling())
@@ -513,18 +508,18 @@ void TextTrackCue::rebuildDisplayTree()
     ScriptDisallowedScope::EventAllowedScope allowedScopeForReferenceTree(*m_cueNode);
 
     if (!m_displayTree) {
-        m_displayTree = TextTrackCueBox::create(*document, *this);
+        lazyInitialize(m_displayTree, TextTrackCueBox::create(*document, *this));
         m_displayTree->setUserAgentPart(UserAgentParts::webkitGenericCueRoot());
     }
 
     m_displayTree->removeChildren();
-    auto clonedFragment = DocumentFragment::create(*document);
+    Ref clonedFragment = DocumentFragment::create(*document);
     m_cueNode->cloneChildNodes(*document, nullptr, clonedFragment);
     m_displayTree->appendChild(clonedFragment);
 
     if (m_fontSize) {
         if (RefPtr page = document->page()) {
-            auto style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
+            Ref style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
             style->setTextContent(makeString(page->captionUserPreferencesStyleSheet(),
                 " ::"_s, UserAgentParts::cue(), "{font-size:"_s, m_fontSize, m_fontSizeIsImportant ? "px !important}"_s : "px}"_s));
             m_displayTree->appendChild(style);
@@ -534,9 +529,9 @@ void TextTrackCue::rebuildDisplayTree()
     if (track()) {
         if (const auto& styleSheets = track()->styleSheets()) {
             for (const auto& cssString : *styleSheets) {
-                auto style = HTMLStyleElement::create(HTMLNames::styleTag, m_displayTree->document(), false);
+                Ref style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
                 style->setTextContent(String { cssString });
-                m_displayTree->appendChild(WTFMove(style));
+                m_displayTree->appendChild(WTF::move(style));
             }
         }
     }

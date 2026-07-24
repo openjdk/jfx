@@ -22,7 +22,6 @@
 #include "config.h"
 #include "BlendingKeyframes.h"
 
-#include "Animation.h"
 #include "CSSAnimation.h"
 #include "CSSCustomPropertyValue.h"
 #include "CSSKeyframeRule.h"
@@ -34,10 +33,12 @@
 #include "Element.h"
 #include "KeyframeEffect.h"
 #include "RenderObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleInterpolation.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
+#include "StyleTransform.h"
+#include "StyleTranslate.h"
 #include "TransformOperations.h"
 #include "TranslateTransformOperation.h"
 #include <wtf/CryptographicallyRandomNumber.h>
@@ -97,14 +98,14 @@ void BlendingKeyframes::insert(BlendingKeyframe&& keyframe)
     for (; i < m_keyframes.size(); ++i) {
         if (m_keyframes[i].offset() > keyframe.offset()) {
             // insert before
-            m_keyframes.insert(i, WTFMove(keyframe));
+            m_keyframes.insert(i, WTF::move(keyframe));
             inserted = true;
             break;
         }
     }
 
     if (!inserted)
-        m_keyframes.append(WTFMove(keyframe));
+        m_keyframes.append(WTF::move(keyframe));
 
     auto& insertedKeyframe = m_keyframes[i];
     for (auto& property : insertedKeyframe.properties())
@@ -125,7 +126,7 @@ void BlendingKeyframes::copyKeyframes(const BlendingKeyframes& other)
 {
     for (auto& keyframe : other) {
         auto copy = keyframe;
-        insert(WTFMove(copy));
+        insert(WTF::move(copy));
     }
 }
 
@@ -183,12 +184,12 @@ void BlendingKeyframes::fillImplicitKeyframes(const KeyframeEffect& effect, cons
             return true;
 
         if (RefPtr cssAnimation = dynamicDowncast<CSSAnimation>(effect.animation())) {
-            RefPtr animationWideTimingFunction = cssAnimation->backingAnimation().defaultTimingFunctionForKeyframes();
+            auto animationWideTimingFunction = cssAnimation->backingStyleAnimation().defaultTimingFunctionForKeyframes();
             // If we're dealing with a CSS Animation and if that CSS Animation's backing animation
             // has a default timing function set, then if that keyframe's timing function matches,
             // that keyframe is suitable.
             if (animationWideTimingFunction)
-                return timingFunction == animationWideTimingFunction;
+                return timingFunction == animationWideTimingFunction->value.ptr();
             // Otherwise, the keyframe will be suitable if its timing function matches the default.
             return timingFunction == &CubicBezierTimingFunction::defaultTimingFunction();
         }
@@ -216,7 +217,7 @@ void BlendingKeyframes::fillImplicitKeyframes(const KeyframeEffect& effect, cons
                 Style::Interpolation::interpolate(property, *keyframeStyle, underlyingStyle, underlyingStyle, 1, CompositeOperation::Replace, effect);
                 existingImplicitBlendingKeyframe->addProperty(property);
             }
-            existingImplicitBlendingKeyframe->setStyle(WTFMove(keyframeStyle));
+            existingImplicitBlendingKeyframe->setStyle(WTF::move(keyframeStyle));
             return;
         }
 
@@ -229,7 +230,7 @@ void BlendingKeyframes::fillImplicitKeyframes(const KeyframeEffect& effect, cons
         // default composite property as "replace" for CSS Animations.
         if (is<CSSAnimation>(effect.animation()))
             blendingKeyframe.setCompositeOperation(CompositeOperation::Replace);
-        insert(WTFMove(blendingKeyframe));
+        insert(WTF::move(blendingKeyframe));
     };
 
     auto zeroKeyframeImplicitProperties = expectedExplicitProperties.differenceWith(zeroKeyframeExplicitProperties);
@@ -353,7 +354,7 @@ void BlendingKeyframes::updatePropertiesMetadata(const StyleProperties& properti
 
 void BlendingKeyframes::analyzeKeyframe(const BlendingKeyframe& keyframe)
 {
-    auto* style = keyframe.style();
+    CheckedPtr style = keyframe.style();
     if (!style)
         return;
 
@@ -362,26 +363,15 @@ void BlendingKeyframes::analyzeKeyframe(const BlendingKeyframe& keyframe)
             return;
 
         if (keyframe.animatesProperty(CSSPropertyTransform)) {
-            for (auto& operation : style->transform()) {
-                if (RefPtr translate = dynamicDowncast<TranslateTransformOperation>(operation.get())) {
-                    if (translate->x().isPercent())
-                        m_hasWidthDependentTransform = true;
-                    if (translate->y().isPercent())
-                        m_hasHeightDependentTransform = true;
-                }
-            }
+            auto [isWidthDependent, isHeightDependent] = style->transform().computeSizeDependencies();
+            m_hasWidthDependentTransform = isWidthDependent;
+            m_hasHeightDependentTransform = isHeightDependent;
         }
 
         if (keyframe.animatesProperty(CSSPropertyTranslate)) {
-            WTF::switchOn(style->translate(),
-                [&](const CSS::Keyword::None&) { },
-                [&](const Style::Translate::Operation& operation) {
-                    if (operation->x().isPercent())
-                    m_hasWidthDependentTransform = true;
-                    if (operation->y().isPercent())
-                    m_hasHeightDependentTransform = true;
-            }
-            );
+            auto [isWidthDependent, isHeightDependent] = style->translate().computeSizeDependencies();
+            m_hasWidthDependentTransform = isWidthDependent;
+            m_hasHeightDependentTransform = isHeightDependent;
         }
     };
 
@@ -431,8 +421,8 @@ uint64_t BlendingKeyframes::nextAnonymousIdentifier()
 }
 
 BlendingKeyframe::BlendingKeyframe(Offset&& offset, std::unique_ptr<RenderStyle>&& style)
-    : m_specifiedOffset(WTFMove(offset))
-    , m_style(WTFMove(style))
+    : m_specifiedOffset(WTF::move(offset))
+    , m_style(WTF::move(style))
 {
     if (!usesRangeOffset())
         m_computedOffset = m_specifiedOffset.value;
@@ -467,7 +457,7 @@ bool BlendingKeyframe::animatesProperty(KeyframeInterpolation::Property property
 
 bool BlendingKeyframe::usesRangeOffset() const
 {
-    return m_specifiedOffset.name != SingleTimelineRange::Name::Omitted && m_specifiedOffset.name != SingleTimelineRange::Name::Normal;
+    return m_specifiedOffset.name != Style::SingleAnimationRangeName::Omitted && m_specifiedOffset.name != Style::SingleAnimationRangeName::Normal;
 }
 
 } // namespace WebCore

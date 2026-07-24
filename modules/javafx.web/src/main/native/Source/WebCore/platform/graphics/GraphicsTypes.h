@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatSize.h"
-#include "WindRule.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/WindRule.h>
 #include <optional>
 #include <wtf/Forward.h>
 

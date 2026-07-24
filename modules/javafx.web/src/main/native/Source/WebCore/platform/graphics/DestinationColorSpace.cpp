@@ -47,11 +47,7 @@ using KnownColorSpaceAccessor = sk_sp<SkColorSpace>();
 #endif
 template<KnownColorSpaceAccessor accessor> static const DestinationColorSpace& knownColorSpace()
 {
-    static LazyNeverDestroyed<DestinationColorSpace> colorSpace;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        colorSpace.construct(accessor());
-    });
+    static NeverDestroyed<DestinationColorSpace> colorSpace { accessor() };
     return colorSpace.get();
 }
 #else
@@ -125,7 +121,9 @@ const DestinationColorSpace& DestinationColorSpace::ExtendedRec2020()
 bool operator==(const DestinationColorSpace& a, const DestinationColorSpace& b)
 {
 #if USE(CG)
-    return CGColorSpaceEqualToColorSpace(a.platformColorSpace(), b.platformColorSpace());
+    // Do not protect the platformColorSpace here as it is not strictly required for safety and
+    // this code is performance sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceEqualToColorSpace(a.platformColorSpace(), b.platformColorSpace());
 #elif USE(SKIA)
     return SkColorSpace::Equals(a.platformColorSpace().get(), b.platformColorSpace().get());
 #else
@@ -136,7 +134,8 @@ bool operator==(const DestinationColorSpace& a, const DestinationColorSpace& b)
 std::optional<DestinationColorSpace> DestinationColorSpace::asRGB() const
 {
 #if USE(CG)
-    CGColorSpaceRef colorSpace = platformColorSpace();
+    // Avoid refing colorSpace here as this is performance-sensitive code.
+    SUPPRESS_UNRETAINED_LOCAL CGColorSpaceRef colorSpace = platformColorSpace();
     if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelIndexed)
         colorSpace = CGColorSpaceGetBaseColorSpace(colorSpace);
 
@@ -164,8 +163,9 @@ std::optional<DestinationColorSpace> DestinationColorSpace::asExtended() const
     if (usesExtendedRange())
         return *this;
 #if USE(CG)
-    if (RetainPtr colorSpace = adoptCF(CGColorSpaceCreateExtended(platformColorSpace())))
-        return DestinationColorSpace(WTFMove(colorSpace));
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG if (RetainPtr colorSpace = adoptCF(CGColorSpaceCreateExtended(platformColorSpace())))
+        return DestinationColorSpace(WTF::move(colorSpace));
 #endif
     return std::nullopt;
 }
@@ -173,7 +173,8 @@ std::optional<DestinationColorSpace> DestinationColorSpace::asExtended() const
 bool DestinationColorSpace::supportsOutput() const
 {
 #if USE(CG)
-    return CGColorSpaceSupportsOutput(platformColorSpace());
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceSupportsOutput(platformColorSpace());
 #else
     notImplemented();
     return true;
@@ -183,7 +184,8 @@ bool DestinationColorSpace::supportsOutput() const
 bool DestinationColorSpace::usesExtendedRange() const
 {
 #if USE(CG)
-    return CGColorSpaceUsesExtendedRange(platformColorSpace());
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceUsesExtendedRange(platformColorSpace());
 #else
     notImplemented();
     return false;
@@ -193,7 +195,8 @@ bool DestinationColorSpace::usesExtendedRange() const
 bool DestinationColorSpace::usesITUR_2100TF() const
 {
 #if USE(CG)
-    return CGColorSpaceUsesITUR_2100TF(platformColorSpace());
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceUsesITUR_2100TF(platformColorSpace());
 #else
     notImplemented();
     return false;
@@ -219,7 +222,7 @@ TextStream& operator<<(TextStream& ts, const DestinationColorSpace& colorSpace)
         ts << "ExtendedRec2020"_s;
 #endif
 #if USE(CG)
-    else if (auto description = adoptCF(CGColorSpaceCopyICCProfileDescription(colorSpace.platformColorSpace())))
+    else if (RetainPtr description = adoptCF(CGColorSpaceCopyICCProfileDescription(colorSpace.protectedPlatformColorSpace().get())))
         ts << String(description.get());
 #endif
 

@@ -111,7 +111,7 @@ static Node* previousRenderedEditable(Node* node)
 }
 
 Position::Position(RefPtr<Node>&& anchorNode, unsigned offset, LegacyEditingPositionFlag)
-    : m_anchorNode(WTFMove(anchorNode))
+    : m_anchorNode(WTF::move(anchorNode))
     , m_offset(offset)
     , m_anchorType(anchorTypeForLegacyEditingPosition(m_anchorNode.get(), m_offset))
     , m_isLegacyEditingPosition(true)
@@ -121,7 +121,7 @@ Position::Position(RefPtr<Node>&& anchorNode, unsigned offset, LegacyEditingPosi
 }
 
 Position::Position(RefPtr<Node>&& anchorNode, AnchorType anchorType)
-    : m_anchorNode(WTFMove(anchorNode))
+    : m_anchorNode(WTF::move(anchorNode))
     , m_offset(0)
     , m_anchorType(anchorType)
     , m_isLegacyEditingPosition(false)
@@ -134,7 +134,7 @@ Position::Position(RefPtr<Node>&& anchorNode, AnchorType anchorType)
 }
 
 Position::Position(RefPtr<Node>&& anchorNode, unsigned offset, AnchorType anchorType)
-    : m_anchorNode(WTFMove(anchorNode))
+    : m_anchorNode(WTF::move(anchorNode))
     , m_offset(offset)
     , m_anchorType(anchorType)
     , m_isLegacyEditingPosition(false)
@@ -143,7 +143,7 @@ Position::Position(RefPtr<Node>&& anchorNode, unsigned offset, AnchorType anchor
 }
 
 Position::Position(RefPtr<Text>&& textNode, unsigned offset)
-    : m_anchorNode(WTFMove(textNode))
+    : m_anchorNode(WTF::move(textNode))
     , m_offset(offset)
     , m_anchorType(PositionIsOffsetInAnchor)
     , m_isLegacyEditingPosition(false)
@@ -380,13 +380,13 @@ Position Position::previous(PositionMoveType moveType) const
         //      Going from 1 to 0 is correct.
         switch (moveType) {
         case CodePoint:
-            return makeDeprecatedLegacyPosition(WTFMove(node), offset - 1);
+            return makeDeprecatedLegacyPosition(WTF::move(node), offset - 1);
         case Character: {
             auto previousOffset = uncheckedPreviousOffset(node.get(), offset);
-            return makeDeprecatedLegacyPosition(WTFMove(node), previousOffset);
+            return makeDeprecatedLegacyPosition(WTF::move(node), previousOffset);
         } case BackwardDeletion: {
             auto previousOffset = uncheckedPreviousOffsetForBackwardDeletion(node.get(), offset);
-            return makeDeprecatedLegacyPosition(WTFMove(node), previousOffset);
+            return makeDeprecatedLegacyPosition(WTF::move(node), previousOffset);
         }
     }
     }
@@ -402,7 +402,7 @@ Position Position::previous(PositionMoveType moveType) const
     if (previousSibling && positionBeforeOrAfterNodeIsCandidate(*previousSibling))
         return positionAfterNode(previousSibling.get());
 
-    return makeContainerOffsetPosition(WTFMove(parent), node->computeNodeIndex());
+    return makeContainerOffsetPosition(WTF::move(parent), node->computeNodeIndex());
 }
 
 Position Position::next(PositionMoveType moveType) const
@@ -437,7 +437,7 @@ Position Position::next(PositionMoveType moveType) const
         //   2) The new offset is a bogus offset like (<br>, 1), and there is no child.
         //      Going from 0 to 1 is correct.
         auto nextOffset = moveType == Character ? uncheckedNextOffset(node.get(), offset) : offset + 1;
-        return makeDeprecatedLegacyPosition(WTFMove(node), nextOffset);
+        return makeDeprecatedLegacyPosition(WTF::move(node), nextOffset);
     }
 
     RefPtr parent = node->parentNode();
@@ -451,7 +451,7 @@ Position Position::next(PositionMoveType moveType) const
     if (nextSibling && positionBeforeOrAfterNodeIsCandidate(*nextSibling))
         return positionBeforeNode(nextSibling.get());
 
-    return makeContainerOffsetPosition(WTFMove(parent), node->computeNodeIndex() + 1);
+    return makeContainerOffsetPosition(WTF::move(parent), node->computeNodeIndex() + 1);
 }
 
 int Position::uncheckedPreviousOffset(const Node* n, unsigned current)
@@ -965,7 +965,7 @@ RefPtr<Node> Position::rootUserSelectAllForNode(Node* node)
         }
         if (!nodeIsUserSelectAll(parent.get()))
             break;
-        candidateRoot = WTFMove(parent);
+        candidateRoot = WTF::move(parent);
         parent = candidateRoot->parentNode();
     }
     return candidateRoot;
@@ -1259,7 +1259,7 @@ InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity, TextDirection
             if (renderBlockFlow && hasRenderedNonAnonymousDescendantsWithHeight(*renderBlockFlow)) {
             // Try a visually equivalent position with possibly opposite editability. This helps in case |this| is in
             // an editable block but surrounded by non-editable positions. It acts to negate the logic at the beginning
-            // of RenderObject::createVisiblePosition().
+                // of RenderObject::createPositionWithAffinity().
             Position equivalent = downstreamIgnoringEditingBoundaries(*this);
             if (equivalent == *this) {
                 equivalent = upstreamIgnoringEditingBoundaries(*this);

@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "StyleValueTypes.h"
+#include <WebCore/StyleValueTypes.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -46,7 +46,7 @@ struct BlockEllipsis {
 
     BlockEllipsis(AtomString&& string)
         : m_type { Type::String }
-        , m_string { WTFMove(string) }
+        , m_string { WTF::move(string) }
     {
     }
 

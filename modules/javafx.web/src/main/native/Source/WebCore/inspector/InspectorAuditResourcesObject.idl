@@ -24,8 +24,7 @@
  */
 
 [
-    JSGenerateToJSObject,
-    LegacyNoInterfaceObject,
+    LegacyNoInterfaceObject
 ] interface InspectorAuditResourcesObject {
     [CallWith=CurrentDocument] sequence<Resource> getResources();
     [CallWith=CurrentDocument] ResourceContent getResourceContent(DOMString id);
@@ -33,6 +32,7 @@
 
 [
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary Resource {
     DOMString id;
     DOMString url;
@@ -41,6 +41,7 @@
 
 [
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ResourceContent {
     DOMString data;
     boolean base64Encoded;

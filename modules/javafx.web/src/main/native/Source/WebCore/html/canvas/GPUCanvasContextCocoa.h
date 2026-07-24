@@ -47,14 +47,8 @@ class Document;
 class GPUDisplayBufferDisplayDelegate;
 
 class GPUCanvasContextCocoa final : public GPUCanvasContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GPUCanvasContextCocoa);
+    WTF_MAKE_TZONE_ALLOCATED(GPUCanvasContextCocoa);
 public:
-#if ENABLE(OFFSCREEN_CANVAS)
-    using CanvasType = Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
-#else
-    using CanvasType = Variant<RefPtr<HTMLCanvasElement>>;
-#endif
-
     static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&, Document*);
 
     DestinationColorSpace colorSpace() const override;
@@ -62,7 +56,7 @@ public:
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
-    ImageBufferPixelFormat pixelFormat() const override;
+    PixelFormat pixelFormat() const override;
     bool isOpaque() const override;
     void reshape() override;
 
@@ -73,7 +67,7 @@ public:
     ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
     std::optional<GPUCanvasConfiguration> getConfiguration() const override;
-    ExceptionOr<RefPtr<GPUTexture>> getCurrentTexture() override;
+    ExceptionOr<Ref<GPUTexture>> getCurrentTexture() override;
     RefPtr<ImageBuffer> transferToImageBuffer() override;
 
 #if HAVE(SUPPORT_HDR_DISPLAY) && ENABLE(PIXEL_FORMAT_RGBA16F)
@@ -123,7 +117,7 @@ private:
     GPUIntegerCoordinate m_height { 0 };
 #if HAVE(SUPPORT_HDR_DISPLAY)
     using ScreenPropertiesChangedObserver = Observer<void(PlatformDisplayID)>;
-    std::optional<ScreenPropertiesChangedObserver> m_screenPropertiesChangedObserver;
+    RefPtr<ScreenPropertiesChangedObserver> m_screenPropertiesChangedObserver;
     PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
     float m_currentEDRHeadroom { 1 };
     bool m_suppressEDR { false };

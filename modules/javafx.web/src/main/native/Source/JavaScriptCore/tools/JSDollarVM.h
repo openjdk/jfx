@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "Options.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Options.h>
 
 namespace JSC {
 
@@ -77,7 +77,7 @@ private:
     void addFunction(VM&, JSGlobalObject*, ASCIILiteral name, NativeFunction, unsigned arguments);
     void addConstructibleFunction(VM&, JSGlobalObject*, ASCIILiteral name, NativeFunction, unsigned arguments);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     WriteBarrierStructureID m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID;
 };

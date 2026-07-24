@@ -78,7 +78,7 @@ std::pair<SourceTaintedOrigin, URL> sourceTaintedOriginFromStack(VM& vm, CallFra
         return IterationStatus::Done;
     });
 
-    return { result, WTFMove(sourceURL) };
+    return { result, WTF::move(sourceURL) };
 }
 
 SourceTaintedOrigin computeNewSourceTaintedOriginFromStack(VM& vm, CallFrame* callFrame)

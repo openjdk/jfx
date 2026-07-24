@@ -99,3 +99,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSKeyframeRule)
+    static bool isType(const WebCore::CSSRule& rule) { return rule.styleRuleType() == WebCore::StyleRuleType::Keyframe; }
+SPECIALIZE_TYPE_TRAITS_END()

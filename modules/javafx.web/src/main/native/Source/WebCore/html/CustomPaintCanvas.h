@@ -82,5 +82,8 @@ private:
     mutable RefPtr<Image> m_copiedImage;
 };
 
-}
-SPECIALIZE_TYPE_TRAITS_CANVAS(WebCore::CustomPaintCanvas, isCustomPaintCanvas())
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CustomPaintCanvas)
+    static bool isType(const WebCore::CanvasBase& base) { return base.isCustomPaintCanvas(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -753,7 +753,7 @@ void CSSParserToken::serialize(StringBuilder& builder, const CSSParserToken* nex
         break;
     case NonNewlineWhitespaceToken: {
         auto count = mode == SerializationMode::CustomProperty ? m_whitespaceCount : 1;
-        for (auto i = 0u; i < count; ++i)
+        for (decltype(count) i = 0; i < count; ++i)
         builder.append(' ');
         break;
     }

@@ -47,7 +47,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
 
 bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext& context)
 {
@@ -64,7 +64,7 @@ bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext
 
 std::unique_ptr<OffscreenCanvasRenderingContext2D> OffscreenCanvasRenderingContext2D::create(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings)
 {
-    auto renderingContext = std::unique_ptr<OffscreenCanvasRenderingContext2D>(new OffscreenCanvasRenderingContext2D(canvas, WTFMove(settings)));
+    auto renderingContext = std::unique_ptr<OffscreenCanvasRenderingContext2D>(new OffscreenCanvasRenderingContext2D(canvas, WTF::move(settings)));
 
     InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
 
@@ -72,7 +72,7 @@ std::unique_ptr<OffscreenCanvasRenderingContext2D> OffscreenCanvasRenderingConte
 }
 
 OffscreenCanvasRenderingContext2D::OffscreenCanvasRenderingContext2D(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings)
-    : CanvasRenderingContext2DBase(canvas, Type::Offscreen2D, WTFMove(settings), false)
+    : CanvasRenderingContext2DBase(canvas, Type::Offscreen2D, WTF::move(settings), false)
 {
 }
 
@@ -91,7 +91,7 @@ OffscreenCanvasRenderingContext2D::~OffscreenCanvasRenderingContext2D() = defaul
 
 void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
 {
-    auto& context = *canvasBase().scriptExecutionContext();
+    Ref context = *canvasBase().scriptExecutionContext();
 
     if (newFont.isEmpty())
         return;
@@ -117,9 +117,9 @@ void OffscreenCanvasRenderingContext2D::setFont(const String& newFont)
     fontDescription.setSpecifiedSize(DefaultFontSize);
     fontDescription.setComputedSize(DefaultFontSize);
 
-    if (auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTFMove(fontDescription), context)) {
-        ASSERT(context.cssFontSelector());
-        modifiableState().font.initialize(*context.cssFontSelector(), *fontCascade);
+    if (auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTF::move(fontDescription), context)) {
+        ASSERT(context->cssFontSelector());
+        modifiableState().font.initialize(*context->cssFontSelector(), *fontCascade);
 
         String letterSpacing;
         setLetterSpacing(std::exchange(modifiableState().letterSpacing, letterSpacing));
