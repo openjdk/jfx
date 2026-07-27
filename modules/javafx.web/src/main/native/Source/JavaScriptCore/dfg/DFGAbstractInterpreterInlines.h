@@ -1513,7 +1513,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
                 break;
             }
             if (producesInteger(node->arithRoundingMode())) {
-                int32_t roundedValueAsInt32 = static_cast<int32_t>(roundedValue);
+                int32_t roundedValueAsInt32 = truncateDoubleToInt32(roundedValue);
                 if (roundedValueAsInt32 == roundedValue) {
                     if (shouldCheckNegativeZero(node->arithRoundingMode())) {
                         if (roundedValueAsInt32 || !std::signbit(roundedValue)) {
@@ -3680,7 +3680,12 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             break;
         }
 
-        setForNode(node, m_vm.cellButterflyStructure(CopyOnWriteArrayWithContiguous));
+        {
+            RegisteredStructureSet structureSet;
+            structureSet.add(m_graph.registerStructure(m_vm.cellButterflyStructure(CopyOnWriteArrayWithContiguous)));
+            structureSet.add(m_graph.registerStructure(m_vm.cellButterflyOnlyAtomStringsStructure.get()));
+            setForNode(node, structureSet);
+        }
         break;
 
     case NewArrayBuffer:

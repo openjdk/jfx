@@ -26,10 +26,14 @@
 #include "config.h"
 
 #include "GCController.h"
+#include <jni.h>
+
+extern "C" JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection(JNIEnv*, jclass);
+extern "C" void WebPage_doJSCGarbageCollection();
 
 void GCController::collect() const
 {
-    // NOT IMPLEMENTED
+    WebPage_doJSCGarbageCollection();
 }
 
 void GCController::collectOnAlternateThread(bool waitUntilDone) const

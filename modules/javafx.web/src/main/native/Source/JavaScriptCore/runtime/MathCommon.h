@@ -31,6 +31,7 @@
 #include <climits>
 #include <cmath>
 #include <optional>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -240,21 +241,6 @@ inline std::optional<double> safeReciprocalForDivByConst(double constant)
     return reciprocal;
 }
 
-ALWAYS_INLINE bool canBeStrictInt32(double value)
-{
-    if (std::isinf(value) || std::isnan(value))
-        return false;
-    const int32_t asInt32 = static_cast<int32_t>(value);
-    return !(asInt32 != value || (!asInt32 && std::signbit(value))); // true for -0.0
-}
-
-ALWAYS_INLINE bool canBeInt32(double value)
-{
-    if (std::isinf(value) || std::isnan(value))
-        return false;
-    return static_cast<int32_t>(value) == value;
-}
-
 extern "C" {
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRound, double, (double));
 }
@@ -366,6 +352,7 @@ JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundDouble, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(jsRoundDouble, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(roundFloat, float, (float));
 
+// FIXME: Remote them. These functions were only used in 32bit wasm.
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_nearest, float, (float));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f64_nearest, double, (double));
 JSC_DECLARE_NOEXCEPT_JIT_OPERATION(f32_roundeven, float, (float));
