@@ -30,7 +30,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidClassException;
 import java.io.ObjectInput;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
@@ -247,6 +249,49 @@ final class QuantumClipboard implements TKClipboard {
         systemAssistant.flush();
     }
 
+    // Read a direct serialized String from the input stream using a restrictive
+    // ObjectInputStream and ObjectInputFilter. The ObjectInputStream prevents
+    // resolving any classes or interfaces via the class loader.
+    // The ObjectInputFilter rejects all classes.
+    // Note that String objects are handled specially. They bypass the class
+    // resolver and filtering, and are accepted by a post-read instanceof check.
+    private Object readObjectFiltered(ByteArrayInputStream bis)
+            throws IOException, ClassNotFoundException {
+
+        // Define an ObjectInputStream that throws an exception on an attempt
+        // to resolve any class
+        ObjectInputStream in = new ObjectInputStream(bis) {
+            @Override
+            protected Class<?> resolveClass(ObjectStreamClass desc)
+                    throws IOException, ClassNotFoundException {
+
+                throw new InvalidClassException("Resolving classes is unsupported");
+            }
+
+            @Override
+            protected Class<?> resolveProxyClass(String[] interfaces)
+                    throws IOException, ClassNotFoundException {
+
+                throw new InvalidClassException("Resolving interfaces is unsupported");
+            }
+        };
+
+        // Set a restrictive serialization filter that rejects all classes.
+        // java.lang.String objects bypass the filter and are checked later.
+        ObjectInputFilter filter = (ObjectInputFilter.FilterInfo filterInfo) -> {
+            return ObjectInputFilter.Status.REJECTED;
+        };
+        in.setObjectInputFilter(filter);
+
+        // Read the object from the stream using the restrictive object input
+        // stream and filter. Then verify that the returned object is a String.
+        Object o = in.readObject();
+        if (o instanceof String) {
+            return o;
+        }
+        throw new InvalidClassException("Class not supported");
+    }
+
     @Override public Object getContent(DataFormat dataFormat) {
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
@@ -282,20 +327,20 @@ final class QuantumClipboard implements TKClipboard {
                     ByteBuffer bb = (ByteBuffer) data;
                     ByteArrayInputStream bis = new ByteArrayInputStream(
                             bb.array());
-                    ObjectInput in = new ObjectInputStream(bis) {
-                        @Override protected Class<?> resolveClass(
-                                ObjectStreamClass desc)
-                                throws IOException, ClassNotFoundException {
-                            return Class.forName(desc.getName(), false,
-                                    Thread.currentThread().getContextClassLoader());
-                        }
-                    };
                     boolean deserializeObjGraphDND = Boolean.parseBoolean(
                             System.getProperty("javafx.dnd.deserializeObjectGraph", "false"));
                     if (deserializeObjGraphDND) {
+                        ObjectInput in = new ObjectInputStream(bis) {
+                            @Override protected Class<?> resolveClass(
+                                    ObjectStreamClass desc)
+                                    throws IOException, ClassNotFoundException {
+                                return Class.forName(desc.getName(), false,
+                                        Thread.currentThread().getContextClassLoader());
+                            }
+                        };
                         data = in.readObject();
                     } else {
-                        // ignore , just return the ByteBuffer if not enabled
+                        data = readObjectFiltered(bis);
                     }
                 } catch (IOException e) {
                     // ignore, just return the ByteBuffer if we cannot parse it
