@@ -91,12 +91,22 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
     }
 
     @Override
+    public Number fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Number fromNonEmptyString(String string) {
         try {
             return numberFormat.parse(string);
         } catch (ParseException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    @Override
+    public String toString(Number value) {
+        return super.toString(value);
     }
 
     @Override
