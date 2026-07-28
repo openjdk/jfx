@@ -91,4 +91,14 @@ public class LocalTimeStringConverter extends BaseTemporalStringConverter<LocalT
     TemporalQuery<LocalTime> getTemporalQuery() {
         return LocalTime::from;
     }
+
+    @Override
+    public LocalTime fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
+    public String toString(LocalTime value) {
+        return super.toString(value);
+    }
 }

@@ -126,12 +126,22 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     }
 
     @Override
+    public Date fromString(String value) {
+        return super.fromString(value);
+    }
+
+    @Override
     Date fromNonEmptyString(String string) {
         try {
             return dateFormat.parse(string);
         } catch (ParseException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    @Override
+    public String toString(Date value) {
+        return super.toString(value);
     }
 
     @Override
